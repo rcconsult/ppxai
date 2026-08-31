@@ -102,7 +102,6 @@ class TestFilterPaths:
 
     def _filter(self, names):
         from ppxai.tui.widgets.file_tree import FileTree
-        import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

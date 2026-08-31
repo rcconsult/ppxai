@@ -140,7 +140,6 @@ class TestPremiumWebSearchIntegration:
 
     def test_tool_usage_tracking_structure(self):
         """Test ToolUsage dataclass has all required fields."""
-        from ppxai.engine.types import ToolUsage
 
         usage = ToolUsage(
             call_count=2,
@@ -158,7 +157,6 @@ class TestPremiumWebSearchIntegration:
 
     def test_usage_stats_includes_tool_calls(self):
         """Test UsageStats has tool_calls field for tracking tools."""
-        from ppxai.engine.types import UsageStats
 
         stats = UsageStats(
             prompt_tokens=1000,
@@ -173,7 +171,6 @@ class TestPremiumWebSearchIntegration:
 
     def test_tool_usage_aggregation(self):
         """Test adding tool usage from multiple calls."""
-        from ppxai.engine.types import ToolUsage
 
         usage = ToolUsage(provider="perplexity")
 
@@ -222,7 +219,6 @@ class TestPremiumWebSearchIntegration:
     @patch('ppxai.engine.tools.builtin.web_premium.web_search_perplexity')
     async def test_perplexity_search_integration(self, mock_search):
         """Test Perplexity search function is called correctly."""
-        from ppxai.engine.types import ToolUsage
 
         # Mock Perplexity response
         mock_search.return_value = (
@@ -247,7 +243,6 @@ class TestPremiumWebSearchIntegration:
     @patch('ppxai.engine.tools.builtin.web_premium.web_search_gemini')
     async def test_gemini_search_integration(self, mock_search):
         """Test Gemini search function is called correctly."""
-        from ppxai.engine.types import ToolUsage
 
         # Mock Gemini response
         mock_search.return_value = (
@@ -302,7 +297,6 @@ class TestPremiumWebSearchIntegration:
 
     def test_session_aggregates_tool_usage(self):
         """Test session manager properly aggregates tool usage."""
-        from ppxai.engine.types import UsageStats, ToolUsage
 
         # Create usage stats with tool calls
         usage = UsageStats(
@@ -345,7 +339,6 @@ class TestPremiumWebSearchIntegration:
 
     def test_mixed_provider_usage(self):
         """Test session tracking mixed LLM + tool usage."""
-        from ppxai.engine.types import UsageStats, ToolUsage
 
         stats = UsageStats(
             prompt_tokens=2000,
@@ -394,7 +387,6 @@ class TestPremiumWebSearchIntegration:
 
     def test_tool_usage_with_fallback_scenario(self):
         """Test tool usage tracking when fallback occurs."""
-        from ppxai.engine.types import ToolUsage
 
         # If premium API fails, falls back to DuckDuckGo
         fallback_usage = ToolUsage(

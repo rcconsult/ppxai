@@ -352,7 +352,6 @@ class TestFileCheckpointBackend:
     def test_cleanup_old_checkpoints(self, temp_dirs):
         """Test that old checkpoints are cleaned up."""
         import shutil
-        from unittest.mock import patch
         from datetime import datetime, timedelta
         working_dir, session_id = temp_dirs
         # Use unique session ID to avoid interference from other tests

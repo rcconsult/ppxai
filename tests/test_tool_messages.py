@@ -13,6 +13,11 @@ from ppxai.engine.types import Message
 from ppxai.engine.session import SessionManager
 from ppxai.engine.providers.base import BaseProvider
 from ppxai.engine.providers.wire.responses import ResponsesHandler
+import asyncio
+from unittest.mock import patch
+from ppxai.engine.chat import chat_with_tools, _execute_single_tool
+from ppxai.engine.types import Event, EventType, ProviderCapabilities
+from ppxai.engine.model_facts import ModelFacts
 
 
 # ---------------------------------------------------------------------------
@@ -311,7 +316,6 @@ class TestNonStreamResponsesContentExtraction:
 
     def _run(self, output_items, output_text=None):
         """Drive ResponsesHandler._non_stream with mocked client.responses.create."""
-        import asyncio
         from unittest.mock import MagicMock, patch
         from ppxai.engine.providers.openai_native import OpenAINativeProvider
         from ppxai.engine.types import EventType
@@ -339,7 +343,6 @@ class TestNonStreamResponsesContentExtraction:
 
     @staticmethod
     def _text_part(text):
-        from unittest.mock import MagicMock
         part = MagicMock()
         part.type = "output_text"
         part.text = text
@@ -347,7 +350,6 @@ class TestNonStreamResponsesContentExtraction:
 
     @staticmethod
     def _message_item(content):
-        from unittest.mock import MagicMock
         item = MagicMock()
         item.type = "message"
         item.content = content
@@ -367,7 +369,6 @@ class TestNonStreamResponsesContentExtraction:
 
     def test_content_as_bool_does_not_raise(self):
         """Bug 9.1: content=True (bool) must not raise TypeError and logs a warning."""
-        from unittest.mock import patch
         item = self._message_item(True)  # ← the bad value seen in production
         # ADR 0012 W2: the warning now fires from the handler's own logger,
         # because the extraction moved the code that emits it.
@@ -640,11 +641,6 @@ class TestGetMessagesAsDicts:
 # Multi-tool execution tests (Step 4)
 # ---------------------------------------------------------------------------
 
-import asyncio
-from unittest.mock import patch
-from ppxai.engine.chat import chat_with_tools, _execute_single_tool
-from ppxai.engine.types import Event, EventType, ProviderCapabilities
-from ppxai.engine.model_facts import ModelFacts
 
 
 class MockProvider:

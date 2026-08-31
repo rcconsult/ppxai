@@ -479,7 +479,6 @@ async def main():
     initialize()
 
     # Clean up invalid SSL_CERT_FILE from .env (e.g., Windows paths on WSL)
-    import os
     env_cert = os.environ.get("SSL_CERT_FILE", "")
     if env_cert and not os.path.exists(env_cert):
         os.environ.pop("SSL_CERT_FILE", None)

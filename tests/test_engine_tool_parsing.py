@@ -702,7 +702,7 @@ class TestNativeToolCalling:
         """Test that OpenAI provider correctly parses tool_calls from response."""
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
         from ppxai.engine.types import EventType, ProviderCapabilities, Message
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import MagicMock
         from types import SimpleNamespace
 
         # Create provider with native tool calling enabled
@@ -762,7 +762,7 @@ class TestNativeToolCalling:
         """Test that tools are not sent when native_tool_calling is disabled."""
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
         from ppxai.engine.types import ProviderCapabilities, Message
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import MagicMock
 
         # Create provider WITHOUT native tool calling
         caps = ProviderCapabilities()

@@ -2142,7 +2142,6 @@ class TestWidgetLifecycle:
                 # Widget should be gone
                 assert len(app.query(MessageBox)) == 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_chat_view_mount_unmount(self):
@@ -2167,7 +2166,6 @@ class TestWidgetLifecycle:
                 # Widget should be gone
                 assert len(app.query(ChatView)) == 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_status_bar_mount_unmount(self):
@@ -2192,7 +2190,6 @@ class TestWidgetLifecycle:
                 # Widget should be gone
                 assert len(app.query(StatusBar)) == 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_input_box_mount_unmount(self):
@@ -2217,7 +2214,6 @@ class TestWidgetLifecycle:
                 # Widget should be gone
                 assert len(app.query(InputBox)) == 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_tree_viewer_mount_unmount(self):
@@ -2242,7 +2238,6 @@ class TestWidgetLifecycle:
                 # Widget should be gone
                 assert len(app.query(TreeViewer)) == 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_code_editor_mount_unmount(self):
@@ -2267,7 +2262,6 @@ class TestWidgetLifecycle:
                 # Widget should be gone
                 assert len(app.query(CodeEditor)) == 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_data_viewer_mount_unmount(self):
@@ -2292,7 +2286,6 @@ class TestWidgetLifecycle:
                 # Widget should be gone
                 assert len(app.query(DataViewer)) == 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_image_viewer_mount_unmount(self):
@@ -2325,7 +2318,6 @@ class TestWidgetLifecycle:
                 # Cleanup
                 app.temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_table_viewer_mount_unmount(self):
@@ -2350,7 +2342,6 @@ class TestWidgetLifecycle:
                 # Widget should be gone
                 assert len(app.query(TableViewer)) == 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_side_panel_mount_unmount(self):
@@ -2375,7 +2366,6 @@ class TestWidgetLifecycle:
                 # Widget should be gone
                 assert len(app.query(SidePanel)) == 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_focus_navigation_chat_to_input(self):
@@ -2408,7 +2398,6 @@ class TestWidgetLifecycle:
                 # Check if focused widget is input box or its descendant
                 assert focused == input_box or input_box in focused.ancestors
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_focus_navigation_side_panel(self):
@@ -2451,7 +2440,6 @@ class TestWidgetLifecycle:
                 finally:
                     temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_event_bubbling_message_box(self):
@@ -2492,7 +2480,6 @@ class TestWidgetLifecycle:
                 # App should receive the bubbled event
                 assert app.event_received is True
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_reactive_updates_status_bar(self):
@@ -2520,7 +2507,6 @@ class TestWidgetLifecycle:
                 # Should have updated
                 assert status_bar.provider == "openai"
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_reactive_updates_data_viewer(self):
@@ -2549,7 +2535,6 @@ class TestWidgetLifecycle:
                 # Should have updated
                 assert viewer.view_mode == "source"
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_widget_composition_side_panel(self):
@@ -2592,7 +2577,6 @@ class TestWidgetLifecycle:
                 finally:
                     temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_widget_composition_data_viewer(self):
@@ -2632,7 +2616,6 @@ class TestWidgetLifecycle:
                 code_editor = app.query_one("#source-view CodeEditor", CodeEditor)
                 assert code_editor is not None
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_multiple_widgets_cleanup(self):
@@ -2665,7 +2648,6 @@ class TestWidgetLifecycle:
                 assert len(app.query(ChatView)) == 0
                 assert len(app.query(InputBox)) == 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_widget_state_preservation(self):
@@ -2702,7 +2684,6 @@ class TestWidgetLifecycle:
                 assert viewer._source == '{"test": "data"}'
                 assert viewer._filename == "test.json"
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_message_passing_between_widgets(self):
@@ -2753,7 +2734,6 @@ class TestWidgetLifecycle:
                 finally:
                     temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
 
@@ -2788,7 +2768,6 @@ class TestThemeConsistency:
                 # Default theme should be textual-dark
                 assert app.theme is not None
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_status_bar_across_themes(self):
@@ -2818,7 +2797,6 @@ class TestThemeConsistency:
                     assert status_bar is not None
                     assert status_bar.provider is not None
 
-            import asyncio
             asyncio.run(run_test())
 
     def test_chat_view_across_themes(self):
@@ -2852,7 +2830,6 @@ class TestThemeConsistency:
                     # Message should be visible
                     assert len(chat_view._messages) == 1
 
-            import asyncio
             asyncio.run(run_test())
 
     def test_data_viewer_across_themes(self):
@@ -2885,7 +2862,6 @@ class TestThemeConsistency:
                     await pilot.pause()
                     assert viewer.view_mode == "source"
 
-            import asyncio
             asyncio.run(run_test())
 
     def test_code_editor_syntax_themes(self):
@@ -2916,7 +2892,6 @@ class TestThemeConsistency:
                     assert editor.text == "def test():\n    pass\n"
                     assert editor.language == "python"
 
-            import asyncio
             asyncio.run(run_test())
 
     def test_table_viewer_across_themes(self):
@@ -2951,7 +2926,6 @@ class TestThemeConsistency:
                     await pilot.pause()
                     assert viewer.view_mode == "source"
 
-            import asyncio
             asyncio.run(run_test())
 
     def test_side_panel_across_themes(self):
@@ -2992,7 +2966,6 @@ class TestThemeConsistency:
                     finally:
                         temp_path.unlink(missing_ok=True)
 
-            import asyncio
             asyncio.run(run_test())
 
     def test_custom_themes_work(self):
@@ -3015,7 +2988,6 @@ class TestThemeConsistency:
                 await pilot.pause()
                 assert app.theme == "matrix"
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_theme_switching_preserves_state(self):
@@ -3054,7 +3026,6 @@ class TestThemeConsistency:
                 assert viewer.view_mode == "source"
                 assert viewer._source == '{"test": "data"}'
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_message_box_styles_with_themes(self):
@@ -3088,7 +3059,6 @@ class TestThemeConsistency:
                     # All messages should be visible
                     assert len(chat_view._messages) == 3
 
-            import asyncio
             asyncio.run(run_test())
 
     def test_input_box_across_themes(self):
@@ -3114,7 +3084,6 @@ class TestThemeConsistency:
                     input_box = app.query_one("#input-box", InputBox)
                     assert input_box is not None
 
-            import asyncio
             asyncio.run(run_test())
 
     def test_tree_viewer_across_themes(self):
@@ -3140,7 +3109,6 @@ class TestThemeConsistency:
                     viewer = app.query_one("#tree-viewer", TreeViewer)
                     assert viewer is not None
 
-            import asyncio
             asyncio.run(run_test())
 
     def test_widgets_visible_after_theme_change(self):
@@ -3175,7 +3143,6 @@ class TestThemeConsistency:
                 assert app.query_one("#chat-view", ChatView) is not None
                 assert app.query_one("#input-box", InputBox) is not None
 
-        import asyncio
         asyncio.run(run_test())
 
 
@@ -3202,7 +3169,6 @@ class TestKeyboardNavigation:
                 # Should have focus somewhere
                 assert app.focused is not None
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_escape_closes_side_panel(self):
@@ -3242,7 +3208,6 @@ class TestKeyboardNavigation:
                 finally:
                     temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_v_toggles_data_viewer(self):
@@ -3278,7 +3243,6 @@ class TestKeyboardNavigation:
                 # Should toggle back to tree
                 assert viewer.view_mode == "tree"
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_v_toggles_table_viewer(self):
@@ -3316,7 +3280,6 @@ class TestKeyboardNavigation:
                 # Should be back in table mode
                 assert viewer.view_mode == "table"
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_language_detection_in_side_panel(self):
@@ -3351,7 +3314,6 @@ class TestKeyboardNavigation:
                 finally:
                     temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_no_dead_ends_in_navigation(self):
@@ -3376,7 +3338,6 @@ class TestKeyboardNavigation:
                     # Should always have focus somewhere
                     assert app.focused is not None
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_arrow_keys_in_chat_view(self):
@@ -3411,7 +3372,6 @@ class TestKeyboardNavigation:
                 await pilot.press("up")
                 await pilot.pause()
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_home_end_keys_in_input_box(self):
@@ -3444,7 +3404,6 @@ class TestKeyboardNavigation:
                 await pilot.press("end")
                 await pilot.pause()
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_close_method_works(self):
@@ -3484,7 +3443,6 @@ class TestKeyboardNavigation:
                 finally:
                     temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_focus_stays_within_app(self):
@@ -3510,7 +3468,6 @@ class TestKeyboardNavigation:
                     # Focus should not be lost
                     # (May be None initially, but after pressing a key should have focus)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_shift_tab_reverses_navigation(self):
@@ -3544,7 +3501,6 @@ class TestKeyboardNavigation:
                 # Should be able to navigate (focus changes)
                 # Can't guarantee specific order, but focus should exist
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_keyboard_shortcuts_dont_conflict(self):
@@ -3585,7 +3541,6 @@ class TestKeyboardNavigation:
                 finally:
                     temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_enter_key_in_input_box(self):
@@ -3614,7 +3569,6 @@ class TestKeyboardNavigation:
                 await pilot.press("enter")
                 await pilot.pause()
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_f6_switches_focus_to_side_panel(self):
@@ -3655,7 +3609,6 @@ class TestKeyboardNavigation:
                 finally:
                     temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_multiple_escape_presses(self):
@@ -3694,7 +3647,6 @@ class TestKeyboardNavigation:
                 finally:
                     temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_page_up_down_in_chat_view(self):
@@ -3731,7 +3683,6 @@ class TestKeyboardNavigation:
                 await pilot.press("pageup")
                 await pilot.pause()
 
-        import asyncio
         asyncio.run(run_test())
 
 
@@ -3755,7 +3706,6 @@ class TestEdgeCases:
                 # Should start with zero messages
                 assert len(chat_view._messages) == 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_empty_string_message(self):
@@ -3773,7 +3723,6 @@ class TestEdgeCases:
                 msg = app.query_one(MessageBox)
                 assert msg.content == ""
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_data_viewer_with_empty_json(self):
@@ -3793,7 +3742,6 @@ class TestEdgeCases:
                 viewer = app.query_one("#data-viewer", DataViewer)
                 assert viewer._source == '{}'
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_table_viewer_with_empty_csv(self):
@@ -3814,7 +3762,6 @@ class TestEdgeCases:
                 # Should handle empty data gracefully
                 assert viewer._source == ""
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_unicode_in_messages(self):
@@ -3834,14 +3781,12 @@ class TestEdgeCases:
                 msg = app.query_one(MessageBox)
                 assert unicode_text in msg.content
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_unicode_in_data_viewer(self):
         """DataViewer should support Unicode in JSON."""
         from ppxai.tui.widgets import DataViewer
         from textual.app import App
-        import json
 
         unicode_data = {"message": "Hello 世界", "emoji": "🎉"}
 
@@ -3884,7 +3829,6 @@ class TestEdgeCases:
                 # Should handle long message
                 assert len(chat_view._messages) == 1
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_many_messages_performance(self):
@@ -3912,7 +3856,6 @@ class TestEdgeCases:
                 # Should have all messages
                 assert len(chat_view._messages) == 100
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_invalid_json_handling(self):
@@ -3936,7 +3879,6 @@ class TestEdgeCases:
                 # Should return False for invalid JSON
                 assert result is False
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_special_characters_in_filenames(self):
@@ -3970,7 +3912,6 @@ class TestEdgeCases:
                 finally:
                     temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_newlines_in_messages(self):
@@ -3991,7 +3932,6 @@ class TestEdgeCases:
                 assert "\n" in msg.content
                 assert msg.content == multiline_content
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_code_editor_with_empty_text(self):
@@ -4009,14 +3949,12 @@ class TestEdgeCases:
                 editor = app.query_one("#editor", CodeEditor)
                 assert editor.text == ""
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_large_json_file(self):
         """DataViewer should handle large JSON."""
         from ppxai.tui.widgets import DataViewer
         from textual.app import App
-        import json
 
         # Create large JSON structure
         large_data = {"items": [{"id": i, "name": f"Item {i}"} for i in range(100)]}
@@ -4061,7 +3999,6 @@ class TestEdgeCases:
                 # May be limited by MAX_INITIAL_ROWS
                 assert len(viewer._rows) > 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_mixed_line_endings(self):
@@ -4082,7 +4019,6 @@ class TestEdgeCases:
                 # Should have the content
                 assert len(editor.text) > 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_status_bar_with_long_values(self):
@@ -4104,7 +4040,6 @@ class TestEdgeCases:
                 # Should have the values
                 assert "very-long" in status_bar.provider
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_side_panel_rapid_open_close(self):
@@ -4141,7 +4076,6 @@ class TestEdgeCases:
                 finally:
                     temp_path.unlink(missing_ok=True)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_data_viewer_view_mode_toggle_many_times(self):
@@ -4168,7 +4102,6 @@ class TestEdgeCases:
                 # Should end in tree mode
                 assert viewer.view_mode == "tree"
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_malformed_yaml(self):
@@ -4192,7 +4125,6 @@ class TestEdgeCases:
                 # Should return False
                 assert result is False
 
-        import asyncio
         asyncio.run(run_test())
 
 
@@ -4219,7 +4151,6 @@ class TestAppIntegration:
                 # App should exit cleanly
                 await pilot.exit(0)
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_help_command(self):
@@ -4241,7 +4172,6 @@ class TestAppIntegration:
                 assert last_msg.role == "system"
                 assert "Commands" in last_msg.content or "help" in last_msg.content.lower()
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_clear_command(self):
@@ -4266,7 +4196,6 @@ class TestAppIntegration:
                 # Chat should have fewer messages than before (may have system notification)
                 assert len(chat_view._messages) < initial_count
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_theme_command(self):
@@ -4284,7 +4213,6 @@ class TestAppIntegration:
                 # Theme index should have changed
                 assert app._current_theme_index != original_theme_index
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_show_command_code_file(self, tmp_path):
@@ -4313,7 +4241,6 @@ class TestAppIntegration:
                 # Should have system message
                 assert len(chat_view._messages) > 0
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_show_command_json_file(self, tmp_path):
@@ -4321,7 +4248,6 @@ class TestAppIntegration:
         from ppxai.tui.app import PPXAIDEApp
         from ppxai.tui.widgets import SidePanel
         from ppxai.tui.widgets.chat_view import ChatView
-        import json
 
         # Create temporary JSON file
         test_file = tmp_path / "data.json"
@@ -4389,7 +4315,6 @@ class TestAppIntegration:
                     # Fallback - just verify side panel opened
                     assert side_panel.is_open
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_edit_command(self, tmp_path):
@@ -4416,7 +4341,6 @@ class TestAppIntegration:
                 code_editor = side_panel.query_one(CodeEditor)
                 assert code_editor is not None
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_cd_pwd_commands(self, tmp_path):
@@ -4457,7 +4381,6 @@ class TestAppIntegration:
                     engine_wd = app._engine_client.get_working_dir()
                     assert "subdir" in engine_wd, f"Engine client working dir not updated: {engine_wd}"
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_status_command(self):
@@ -4480,7 +4403,6 @@ class TestAppIntegration:
                 # Status should contain provider/model info
                 assert "Provider" in last_msg.content or "Model" in last_msg.content
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_multiple_commands_sequence(self, tmp_path):
@@ -4507,14 +4429,12 @@ class TestAppIntegration:
                 # Chat should have messages from commands
                 assert len(chat_view._messages) >= 3
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_side_panel_with_different_content_types(self, tmp_path):
         """Side panel should handle different content types."""
         from ppxai.tui.app import PPXAIDEApp
         from ppxai.tui.widgets import SidePanel
-        import json
 
         # Create different file types
         py_file = tmp_path / "code.py"
@@ -4577,7 +4497,6 @@ class TestAppIntegration:
                 assert side_panel.is_open
                 assert len(chat_view._messages) >= 3  # /show message + 2 new messages
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_theme_switching_preserves_state(self, tmp_path):
@@ -4608,7 +4527,6 @@ class TestAppIntegration:
                 current_user_msg_count = len([m for m in chat_view._messages if m.role == "user"])
                 assert current_user_msg_count == initial_user_msg_count
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_input_history_navigation(self):
@@ -4632,7 +4550,6 @@ class TestAppIntegration:
                 input_box.clear_history()
                 assert input_box.get_history() == []
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_error_recovery(self):
@@ -4655,7 +4572,6 @@ class TestAppIntegration:
                 # Should have messages from all attempts
                 assert len(chat_view._messages) >= 3
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_multiple_files_in_sequence(self, tmp_path):
@@ -4685,7 +4601,6 @@ class TestAppIntegration:
                 await app._handle_command(f"/show {file2.name}")
                 assert side_panel.is_open
 
-        import asyncio
         asyncio.run(run_test())
 
     def test_concurrent_widget_updates(self, tmp_path):
@@ -4717,7 +4632,6 @@ class TestAppIntegration:
                 assert len(chat_view._messages) >= 1
                 assert app._current_theme_index != original_theme_index
 
-        import asyncio
         asyncio.run(run_test())
 
 

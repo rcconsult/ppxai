@@ -908,7 +908,6 @@ class TestPerTurnUsagePersistence:
     def test_rich_main_auto_save_calls_save_usage_to_persistent_storage(self):
         """Read rich/main.py source and verify the auto-save block
         calls save_usage_to_persistent_storage right next to save_dirty."""
-        from pathlib import Path
         rich_main = (
             Path(__file__).parent.parent / "ppxai" / "rich" / "main.py"
         )
@@ -941,7 +940,6 @@ class TestPerTurnUsagePersistence:
 
     def test_textual_stream_handler_auto_save_calls_save_usage(self):
         """Same invariant for Textual TUI's per-turn auto-save."""
-        from pathlib import Path
         path = (
             Path(__file__).parent.parent
             / "ppxai" / "tui" / "stream_handler.py"
