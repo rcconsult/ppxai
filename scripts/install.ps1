@@ -405,21 +405,27 @@ function Get-ConfigTemplate {
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-2.5-flash",
-      "coding_model": "gemini-2.5-pro",
+      "default_model": "gemini-3.5-flash",
+      "coding_model": "gemini-3.1-pro-preview",
+      "__comment_models": "The 2.5 line (2.5-flash / 2.5-pro) sunsets from 2026-10-16 - ai.google.dev deprecations. These are its successors; prices match ppxai-config.example.json, which is the reviewed source. See debt Item 54.",
       "models": {
-        "gemini-2.5-flash": {
-          "name": "Gemini 2.5 Flash",
-          "description": "Latest fast model, best price/performance"
+        "gemini-3.5-flash": {
+          "name": "Gemini 3.5 Flash",
+          "description": "Fast model, best price/performance"
         },
-        "gemini-2.5-pro": {
-          "name": "Gemini 2.5 Pro",
-          "description": "Most capable model for complex reasoning"
+        "gemini-3.1-pro-preview": {
+          "name": "Gemini 3.1 Pro (preview)",
+          "description": "Most capable model for complex reasoning. Still PREVIEW - there is no GA successor in the Pro tier yet."
+        },
+        "gemini-3.1-flash-lite": {
+          "name": "Gemini 3.1 Flash Lite",
+          "description": "Cheapest tier. Carries its own 2027-05-07 sunset."
         }
       },
       "pricing": {
-        "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
-        "gemini-2.5-pro": {"input": 1.25, "output": 5.00}
+        "gemini-3.5-flash": {"input": 0.50, "output": 3.00},
+        "gemini-3.1-pro-preview": {"input": 2.00, "output": 12.00},
+        "gemini-3.1-flash-lite": {"input": 0.10, "output": 0.40}
       },
       "capabilities": {
         "web_search": true,
@@ -551,7 +557,7 @@ function Get-EnvTemplate {
 # GOOGLE GEMINI (Free tier available)
 # =============================================================================
 # Google's multimodal AI with web search grounding.
-# Models: gemini-2.5-flash, gemini-2.5-pro, gemini-3-flash-preview
+# Models: gemini-3.5-flash, gemini-3.1-pro-preview, gemini-3.1-flash-lite
 #
 # GEMINI_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 

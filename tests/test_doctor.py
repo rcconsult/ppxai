@@ -19,7 +19,7 @@ Three layers of coverage:
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -64,23 +64,41 @@ class TestClassifyModel:
         assert info["shutdown_date"] == "2026-03-09"
         assert "days_remaining" not in info
 
+    # These three test the classifier's DATE ARITHMETIC, not any particular
+    # model — so the dates are derived from the row rather than hardcoded.
+    # They previously pinned gemini-2.5-flash's 2026-06-17, and broke when
+    # that row was corrected to the real sunset (2026-10-16) on 2026-08-31:
+    # a data fix should not fail a logic test. The row is still named so a
+    # deleted row fails loudly rather than silently skipping.
+    SUBJECT = "gemini-2.5-flash"
+
+    def _shutdown(self):
+        from ppxai.engine.model_deprecations import ALL_DEPRECATIONS
+
+        dep = ALL_DEPRECATIONS.get(self.SUBJECT)
+        assert dep is not None, f"{self.SUBJECT} left the deprecation table"
+        return date.fromisoformat(dep.shutdown_date), dep
+
     def test_shutdown_in_future_is_deprecated(self):
-        # gemini-2.5-flash shuts down 2026-06-17
-        info = classify_model("gemini-2.5-flash", today=date(2026, 4, 6))
+        shutdown, dep = self._shutdown()
+        today = shutdown - timedelta(days=72)
+        info = classify_model(self.SUBJECT, today=today)
         assert info is not None
         assert info["status"] == "deprecated"
         assert info["days_remaining"] == "72"
-        assert info["replacement"] == "gemini-3-flash-preview"
+        assert info["replacement"] == dep.replacement
 
     def test_exact_shutdown_date_still_deprecated(self):
         # Day-of the shutdown: delta = 0, still counts as deprecated.
-        info = classify_model("gemini-2.5-flash", today=date(2026, 6, 17))
+        shutdown, _ = self._shutdown()
+        info = classify_model(self.SUBJECT, today=shutdown)
         assert info is not None
         assert info["status"] == "deprecated"
         assert info["days_remaining"] == "0"
 
     def test_day_after_shutdown_is_dead(self):
-        info = classify_model("gemini-2.5-flash", today=date(2026, 6, 18))
+        shutdown, _ = self._shutdown()
+        info = classify_model(self.SUBJECT, today=shutdown + timedelta(days=1))
         assert info["status"] == "shutdown"
 
     def test_entry_includes_reason(self):
@@ -119,21 +137,39 @@ class TestAuditConfigModels:
         assert result["healthy"] == ["gemini-3-flash-preview"]
 
     def test_upcoming_sorted_by_urgency(self):
-        # Three deprecations with staggered dates — closest first.
-        provider_models = {
-            "gemini": [
-                "gemini-2.5-flash-lite",  # 2026-07-22 (furthest)
-                "gemini-2.0-flash",       # 2026-06-01 (closest)
-                "gemini-2.5-flash",       # 2026-06-17 (middle)
-            ],
-        }
-        result = audit_config_models(provider_models, today=date(2026, 4, 6))
-        ordered_models = [e["model"] for e in result["upcoming"]]
-        assert ordered_models == [
-            "gemini-2.0-flash",
-            "gemini-2.5-flash",
-            "gemini-2.5-flash-lite",
+        """Closest shutdown first — asserted as the PROPERTY, not a frozen list.
+
+        This used to pin an expected order computed by hand from three
+        hardcoded dates, so correcting a shutdown date in the table (as the
+        2026-08-31 Gemini fix did) failed a test about SORTING. Worse, two of
+        those rows now share a date, making any fixed order arbitrary.
+
+        Sorting is the invariant; the dates are data. Reading them from the
+        table keeps this test true across every future data correction, and
+        the shuffled input still proves the function sorts rather than
+        echoing insertion order.
+        """
+        from ppxai.engine.model_deprecations import ALL_DEPRECATIONS
+
+        models = ["gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.5-flash"]
+        for m in models:
+            assert m in ALL_DEPRECATIONS, f"{m} left the deprecation table"
+
+        earliest = min(
+            date.fromisoformat(ALL_DEPRECATIONS[m].shutdown_date) for m in models
+        )
+        result = audit_config_models(
+            {"gemini": models}, today=earliest - timedelta(days=30)
+        )
+        dates = [
+            date.fromisoformat(ALL_DEPRECATIONS[e["model"]].shutdown_date)
+            for e in result["upcoming"]
         ]
+        assert dates == sorted(dates), (
+            f"upcoming is not ordered by shutdown date: "
+            f"{[(e['model']) for e in result['upcoming']]}"
+        )
+        assert len(dates) == len(models), "an upcoming deprecation was dropped"
 
     def test_provider_attached_to_each_entry(self):
         provider_models = {"gemini": ["gemini-2.5-flash"]}

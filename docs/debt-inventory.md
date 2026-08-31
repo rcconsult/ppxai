@@ -452,7 +452,9 @@ reading a list of what is present. **Calling the endpoint** returns
 `HTTP 410 Gone` with an explicit end-of-life timestamp in the body. The
 listing tells you what exists; only a call tells you your own ids are dead.
 Future sweeps must check configured ids against the API, not scan the
-catalog for familiar names.
+catalog for familiar names. **Promoted to
+[`docs/lessons/absence-is-invisible-in-listings.md`](lessons/absence-is-invisible-in-listings.md)**
+— it is cross-host, grep-verifiable, and not specific to NIM.
 
 **A compounding defect the same sweep exposed:** four *existing* deprecation
 rows named `deepseek-ai/deepseek-v4-pro` or `qwen/qwen3-next-80b-a3b-instruct`
@@ -952,6 +954,43 @@ per-request. **Until decided, disclose:** `/cost` = interactive session only.
 **Planned:** `v1.19.x` — deadline-driven, the only fleet item with a date on
 it. Filed 2026-08-01 from the provider-fleet web sweep (official
 [deprecations page](https://ai.google.dev/gemini-api/docs/deprecations)).
+
+**MOSTLY CLOSED 2026-08-31 (Phase B).** All four numbered facts addressed:
+
+1. **Deprecation rows corrected.** The three 2.5 rows carried dates that had
+   already PASSED (2026-06-17 / 2026-07-22) while the models were verifiably
+   live — a `/doctor` table telling users a model died two months ago when it
+   had not. Now `2026-10-16`, the real earliest-sunset. `gemini-2.5-flash`'s
+   replacement moved from `gemini-3-flash-preview` to **`gemini-3.6-flash`**:
+   GA beats preview for a hint users follow, and 3.6-flash was smoke-tested
+   live on the real path (generateContent + google_search, grounding chunks
+   returned) before the swap.
+2. **The code default is fixed.** `tools.web_search.gemini_model` no longer
+   defaults to `gemini-2.5-flash`. A default in CODE outlives every user's
+   config, so the web_search fallback backend would have died on sunset for
+   everyone who never set the key. Fenced by
+   `TestCodeDefaultsAreNotDeprecatedModels`, which asserts against the
+   deprecation TABLE rather than a literal — so it fails for the next such
+   default too, not just this one.
+3. **SDK bumped** `2.11.0` → `2.20.0`, its own commit, gated on the
+   `thought_signature` tests (see 4). Changelog 2.12→2.20 reviewed rather
+   than bumped blind: no breaking changes; the only deprecation warnings
+   cover Imagen and Live-API surfaces, which ppxai does not import (grepped).
+   Pin widened to Google's recommended `<3.0.0`.
+4. **The `thought_signature` chain rules are no longer untested** — 16 tests
+   in `test_gemini_thought_signature.py`, including one that validates the
+   part against the REAL SDK type, all passing at 2.20.0.
+
+**Also done:** `install.sh`, `scripts/install.ps1` migrated off the 2.5 line
+(they defaulted to `gemini-2.5-flash` / `gemini-2.5-pro`) to
+`gemini-3.5-flash` / `gemini-3.1-pro-preview`, with prices taken from the
+example config rather than invented. The example config itself needed no
+change — it had already moved to 3.x.
+
+**What remains:** nothing on the deadline path. `gemini-3.1-pro-preview` is
+still a PREVIEW replacement — there is no GA successor in the Pro tier — and
+`gemini-3.1-flash-lite` carries its own 2027-05-07 sunset. Both are noted in
+the rows themselves; revisit when Google ships a GA Pro.
 
 **Facts (verified on ai.google.dev 2026-08-01):**
 1. **2.5-line shutdown, earliest 2026-10-16:** `gemini-2.5-flash` →

@@ -78,19 +78,35 @@ GEMINI_DEPRECATIONS: Dict[str, Deprecation] = {
         reason="Gemini 2.0 family end-of-life.",
     ),
     "gemini-2.5-pro": Deprecation(
-        shutdown_date="2026-06-17",
+        shutdown_date="2026-10-16",
         replacement="gemini-3.1-pro-preview",
-        reason="Gemini 2.5 Pro retiring; 3.1 Pro delivers SWE-Bench 80.6% vs 2.5-Pro's ~70%.",
+        reason=(
+            "Gemini 2.5 line sunset, EARLIEST 2026-10-16 (ai.google.dev "
+            "deprecations page). 3.1 Pro delivers SWE-Bench 80.6% vs "
+            "2.5-Pro's ~70%. NB the replacement is itself still PREVIEW — "
+            "there is no GA successor in the Pro tier yet."
+        ),
     ),
     "gemini-2.5-flash": Deprecation(
-        shutdown_date="2026-06-17",
-        replacement="gemini-3-flash-preview",
-        reason="Gemini 2.5 Flash retiring; 3-flash-preview has 100% benchmark score.",
+        shutdown_date="2026-10-16",
+        replacement="gemini-3.6-flash",
+        reason=(
+            "Gemini 2.5 line sunset, EARLIEST 2026-10-16. Replacement moved "
+            "from gemini-3-flash-preview to gemini-3.6-flash: the latter is "
+            "GA and verified live (2026-08-31, generateContent + "
+            "google_search with grounding), and a GA successor beats a "
+            "preview one for a migration hint users will follow."
+        ),
     ),
     "gemini-2.5-flash-lite": Deprecation(
-        shutdown_date="2026-07-22",
+        shutdown_date="2026-10-16",
         replacement="gemini-3.1-flash-lite",
-        reason="2.5 Flash Lite retiring; 3.1 Flash Lite same price tier, better quality.",
+        reason=(
+            "Gemini 2.5 line sunset, EARLIEST 2026-10-16. 3.1 Flash Lite is "
+            "the same price tier at better quality — but note it carries its "
+            "OWN sunset date (2027-05-07 -> gemini-3.5-flash-lite), so this "
+            "hint has a shelf life."
+        ),
     ),
     "gemini-3.1-flash-lite-preview": Deprecation(
         shutdown_date="2026-05-25",

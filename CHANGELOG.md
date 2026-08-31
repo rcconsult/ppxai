@@ -57,6 +57,36 @@ because that fallback is what produced the confabulated results.
 uses Perplexity's Jobs API, not chat completions, so it was never usable
 on the endpoint ppxai calls.
 
+### Fixed — the Gemini 2.5 line is retired ahead of its 2026-10-16 sunset
+
+Google sunsets the Gemini 2.5 line from **2026-10-16** (earliest). Three
+things pointed at it and are now moved:
+
+- **`/doctor`'s deprecation rows** carried dates that had already PASSED
+  (2026-06-17, 2026-07-22) while the models were verifiably live — telling
+  users a model died two months ago when it had not. Corrected to the real
+  sunset date. `gemini-2.5-flash`'s replacement moves from
+  `gemini-3-flash-preview` to **`gemini-3.6-flash`**: GA beats a preview for
+  a hint users act on, and it was smoke-tested live (generateContent +
+  `google_search`, grounding returned) before the swap.
+- **`tools.web_search.gemini_model`** defaulted to `gemini-2.5-flash` **in
+  code**, so the web_search fallback backend would have died on sunset for
+  everyone who never set the key. Now `gemini-3.6-flash`.
+- **`install.sh` / `install.ps1`** defaulted fresh installs to
+  `gemini-2.5-flash` / `gemini-2.5-pro`; now `gemini-3.5-flash` /
+  `gemini-3.1-pro-preview`, with prices taken from the reviewed example
+  config rather than invented.
+
+A code default outlives every user's config, so it is now fenced against the
+deprecation *table* rather than a literal — the check fails for the next such
+default too, not only this one.
+
+`google-genai` moves `2.11.0` → `2.20.0` (pin widened to Google's
+recommended `<3.0.0`) in its own commit, gated on the `thought_signature`
+chain-rule tests. The 2.12→2.20 changelog was reviewed rather than bumped
+blind: no breaking changes, and the deprecation warnings cover Imagen and
+Live-API surfaces ppxai does not import.
+
 ### Fixed — four dead NVIDIA models were shipping in the example config
 
 The 2026-08-31 catalog sweep found `qwen/qwen3.5-122b-a10b` — the shipped

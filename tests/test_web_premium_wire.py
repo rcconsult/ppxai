@@ -207,6 +207,64 @@ class TestCitationsComeFromSearchResultItems:
         assert citations == []
 
 
+class TestCodeDefaultsAreNotDeprecatedModels:
+    """A default in CODE outlives every user's config.
+
+    `tools.web_search.gemini_model` defaulted to `gemini-2.5-flash`, whose
+    line sunsets from 2026-10-16 — so the web_search fallback backend would
+    have died for everyone who never set the key, which is most people. That
+    is the same shape as the Perplexity chat wire: a code default quietly
+    holding a retiring model.
+
+    Asserted against the deprecation table rather than a literal, so this
+    fails the day ANY code default becomes deprecated — including the next
+    one, which will not be this one.
+    """
+
+    def test_the_gemini_web_search_default_is_not_deprecated(self):
+        import inspect
+        import re
+
+        from ppxai.engine.model_deprecations import ALL_DEPRECATIONS
+
+        src = inspect.getsource(web_premium.web_search_gemini)
+        m = re.search(r'tool_config\.get\("gemini_model",\s*"([^"]+)"\)', src)
+        assert m, "the gemini_model default moved — update this fence"
+        default = m.group(1)
+        dep = ALL_DEPRECATIONS.get(default)
+        assert dep is None, (
+            f"the web_search Gemini default {default!r} is deprecated "
+            f"(shutdown {dep.shutdown_date}, use {dep.replacement!r}). A code "
+            "default outlives every user's config — it must not name a model "
+            "with a sunset date."
+        )
+
+    def test_the_perplexity_web_search_default_is_not_deprecated(self):
+        """Same rule, the other backend.
+
+        This one currently NAMES a deprecated model on purpose: `sonar` is
+        the chat-wire id, deprecated 2026-09-27 in favour of
+        `perplexity/sonar`. It is asserted as a KNOWN exception rather than
+        skipped, so the exception has to be re-argued if it survives the
+        cutover.
+        """
+        import inspect
+        import re
+
+        from ppxai.engine.model_deprecations import ALL_DEPRECATIONS
+
+        src = inspect.getsource(web_premium.web_search_perplexity)
+        m = re.search(r'tool_config\.get\("perplexity_model",\s*"([^"]+)"\)', src)
+        assert m, "the perplexity_model default moved — update this fence"
+        default = m.group(1)
+        dep = ALL_DEPRECATIONS.get(default)
+        if dep is not None:
+            assert default == "sonar" and dep.shutdown_date == "2026-09-27", (
+                f"{default!r} is deprecated and is NOT the known 2026-09-27 "
+                "Sonar case — a code default must not name a sunset model"
+            )
+
+
 class TestEgressAllowlistCoversBothWires:
     """Plan W3 fence: "verified in W3, not assumed"."""
 

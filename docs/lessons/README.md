@@ -131,6 +131,12 @@ discoverable later.
   clients serve the web UI from `~/.ppxai/web`, not the repo source tree;
   editing `web/` in-repo has no effect on a running server without
   `PPXAI_WEB_DIR` pointed at the checkout
+- [absence-is-invisible-in-listings.md](absence-is-invisible-in-listings.md) —
+  a `/models` sweep cannot detect your own dead ids: a retired model vanishes
+  from the listing, so it looks like an id you never noticed. Call each
+  configured id; a 410 carries the EOL date. Four models shipped broken for
+  six weeks this way. Also: a `replacement` is a liveness claim, so re-verify
+  replacements whenever a provider is swept.
 - [resolver-vs-direct-path-checks.md](resolver-vs-direct-path-checks.md) —
   calling a parser with a path you chose proves the file parses, not that it
   is the file the app loads. `find_bootstrap_file()` picks `AGENTS.md` here,

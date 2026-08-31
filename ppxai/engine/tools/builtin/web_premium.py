@@ -297,9 +297,15 @@ async def web_search_gemini(query: str, num_results: int = 5) -> Tuple[str, List
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set")
 
-    # Get model from config, default to gemini-2.5-flash (2.0 deprecated March 2026)
+    # Get model from config. Default is gemini-3.6-flash since 2026-08-31:
+    # the 2.5 line has a sunset date (EARLIEST 2026-10-16, ai.google.dev), and
+    # this default is CODE, not user config — the web_search fallback backend
+    # would have died on sunset for everyone who never set the key. 3.6-flash
+    # is GA and was smoke-tested live on this path (generateContent +
+    # google_search, grounding chunks returned) before the swap. See debt
+    # Item 54.
     tool_config = get_tool_config("web_search")
-    gemini_model = tool_config.get("gemini_model", "gemini-2.5-flash")
+    gemini_model = tool_config.get("gemini_model", "gemini-3.6-flash")
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent"
 
