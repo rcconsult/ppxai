@@ -171,3 +171,11 @@ discoverable later.
   ran, and check WHICH test failed. Cost: two sessions read the same false
   "not covered", and this file's own snippets were wrong until someone ran
   them (2026-08-31).
+- [ruff-safe-fixes-are-not-semantically-safe.md](ruff-safe-fixes-are-not-semantically-safe.md)
+  — ruff's safe/unsafe split is confidence about SYNTAX, not meaning. A
+  *safe* `UP045` fix rewrote `Optional[callable]` to `callable | None`,
+  which raises `TypeError` at import and would have stopped the product
+  starting; an *unsafe* `F841` fix leaves the right-hand side as a bare
+  statement — dead code that still executes. A 384-file bulk `--fix` also
+  regressed `F811` and `E402` from zero, caught by the CI ratchet rather
+  than by a green suite (2026-09-01).
