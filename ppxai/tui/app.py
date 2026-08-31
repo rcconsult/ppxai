@@ -63,6 +63,11 @@ from ppxai.commands.attach import build_multimodal_content, _load_file as _attac
 from ppxai.commands.protocol import CommandContext
 from ppxai.commands.results import CommandResult, DirectoryListingResult, DirectoryTreeResult
 from ppxai.rendering.textual_renderer import TextualRenderer
+from .session_restore_ops import check_session_restoration
+from .session_restore_ops import restore_session
+from ..config import set_tui_config
+from ..engine.task_backend import configure_task_backend
+from .run_consent import RunConsentWatcher
 
 
 class PPXAIDEApp(App):
@@ -768,7 +773,6 @@ class PPXAIDEApp(App):
         `self.run_worker(self._check_session_restoration(), ...)`,
         which needs a bound coroutine.
         """
-        from .session_restore_ops import check_session_restoration
         await check_session_restoration(self)
 
     async def _restore_session(self, session_name: str, session_state: dict) -> bool:
@@ -777,7 +781,6 @@ class PPXAIDEApp(App):
         See `tui/session_restore_ops.py::restore_session` for the body.
         Returns True on full successful restoration.
         """
-        from .session_restore_ops import restore_session
         return await restore_session(self, session_name, session_state)
 
     # ========================================================================
@@ -1669,7 +1672,6 @@ class PPXAIDEApp(App):
             Logger.disable_all()
         # Persist so next startup enables logger BEFORE session-recovery prompt
         # — see memory/feedback_session_recovery_ordering.md
-        from ..config import set_tui_config
         set_tui_config("debug_log", enabled)
         # Sync to AppState
         if self._engine_client:
@@ -1874,7 +1876,6 @@ class PPXAIDEApp(App):
         engine = self._engine_client
         if engine is None:
             return
-        from ..engine.task_backend import configure_task_backend
 
         def _mirror(summary=None):
             # The registry's on_change passes no args in some paths; read the
@@ -1900,7 +1901,6 @@ class PPXAIDEApp(App):
         """
         watcher = getattr(self, "_run_consent_watcher", None)
         if watcher is None:
-            from .run_consent import RunConsentWatcher
 
             watcher = RunConsentWatcher(self)
             self._run_consent_watcher = watcher

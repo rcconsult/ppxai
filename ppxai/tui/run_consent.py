@@ -28,6 +28,7 @@ from typing import Any, Optional
 
 from ..common.logger import get_logger
 from ..engine.task_backend import get_task_backend
+from .screens.consent import RunConsentScreen
 
 logger = get_logger("tui")
 
@@ -139,7 +140,6 @@ class RunConsentWatcher:
         return waiting.get("token") or None
 
     def _prompt(self, meta: Any, token: str) -> None:
-        from .screens.consent import RunConsentScreen
 
         waiting = getattr(meta, "waiting", None) or {}
         screen = RunConsentScreen(

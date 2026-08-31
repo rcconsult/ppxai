@@ -55,6 +55,44 @@ import pytest
 
 PPXAI = pathlib.Path(__file__).resolve().parent.parent / "ppxai"
 
+#: Rows retained ON PURPOSE, with the reason. Everything in `BASELINE` that
+#: is NOT here is simply "not hoisted yet" — step 2 work still to do.
+#:
+#: Without this split, step 3 inherits the whole baseline with no way to tell
+#: "nobody got to it" from "moving this would break something", and the
+#: obvious next action (hoist the rest) is wrong for these.
+RETAINED_ON_PURPOSE = {
+    # --- genuine import cycles (8) -------------------------------------
+    # Hoisting raises ImportError from a partially initialized module.
+    # Measured by actually hoisting, not by reading the graph. Step 3 fixes
+    # these structurally, via a Protocol in a leaf module.
+    ("ppxai.common.consent", "ppxai.engine.tools.wrappers"): "cycle",
+    ("ppxai.config.execution", "ppxai.engine.model_facts"): "cycle",
+    ("ppxai.config.loader", "ppxai.config.tls"): "cycle",
+    ("ppxai.engine.model_facts", "ppxai.config.facts_config"): "cycle",
+    ("ppxai.engine.model_facts", "ppxai.engine.providers.openai_compat"): "cycle",
+    ("ppxai.rendering.rich_renderer", "ppxai.common.markdown_links"): "cycle",
+    ("ppxai.rendering.rich_renderer", "ppxai.tui.renderable.iterm2"): "cycle",
+    ("ppxai.rendering.textual_renderer", "ppxai.common.markdown_links"): "cycle",
+    # --- patch semantics (3) -------------------------------------------
+    # The module imports cleanly when hoisted, and tests then fail: a
+    # call-time lookup sees `patch.object(source_module, name)`, a
+    # module-level binding made at import time does not. Each was reverted
+    # after MEASURING a failure, not on suspicion.
+    #
+    # `doctor.py`'s other three rows are NOT here: they were reverted with
+    # the file, and no test patches what they import. They are ordinary
+    # step-2 work that needs retrying per-import rather than per-file.
+    ("ppxai.commands.doctor", "ppxai.config"): "patch-semantics",
+    ("ppxai.commands.doctor", "ppxai.config.execution"): "patch-semantics",
+    ("ppxai.config.execution", "ppxai.config.tools"): "patch-semantics",
+    # --- empty block (1) -----------------------------------------------
+    # The import is the SOLE statement of its block, so removing it leaves
+    # `try:` with no body. More to the point, an import alone in a try is
+    # deliberately conditional — a judgement call, not a mechanical move.
+    ("ppxai.commands.handler", "ppxai.rendering.rich_renderer"): "empty-block",
+}
+
 #: Internal function-level imports present when the fence was written,
 #: measured at `12a2c9b7`. Every entry is a known violation awaiting steps
 #: 2 and 3 — REMOVE rows as they are fixed; never add one.
@@ -134,15 +172,6 @@ BASELINE = {
     ("ppxai.server.state", "ppxai.config.loader"),
     ("ppxai.server.state", "ppxai.engine.task_runner"),
     ("ppxai.server.state", "ppxai.server.secrets"),
-    ("ppxai.tui", "ppxai.config"),
-    ("ppxai.tui.app", "ppxai.config"),
-    ("ppxai.tui.app", "ppxai.engine.task_backend"),
-    ("ppxai.tui.app", "ppxai.tui.run_consent"),
-    ("ppxai.tui.app", "ppxai.tui.session_restore_ops"),
-    ("ppxai.tui.run_consent", "ppxai.tui.screens.consent"),
-    ("ppxai.tui.widgets.image_handlers", "ppxai.tui.widgets.iterm2_widget"),
-    ("ppxai.tui.widgets.message_box", "ppxai.engine.artifact_projector"),
-    ("ppxai.tui.widgets.message_box", "ppxai.engine.types"),
 }
 
 
@@ -295,6 +324,52 @@ class TestNoNewLazyImports:
             "so it keeps describing the tree:\n  "
             + "\n  ".join(f"{m} -> {t}" for m, t in stale)
         )
+
+
+class TestRetentionReasonsStayHonest:
+    """`RETAINED_ON_PURPOSE` is a claim about the code, so test it as one.
+
+    An annotation nobody checks rots into folklore: a row could be marked
+    "cycle" long after the cycle is gone, and step 3 would skip it forever.
+    """
+
+    def test_every_retained_row_is_in_the_baseline(self):
+        orphans = sorted(set(RETAINED_ON_PURPOSE) - BASELINE)
+        assert not orphans, (
+            "these rows are marked retained-on-purpose but are no longer in "
+            "BASELINE — the import was fixed, so drop the annotation too:\n  "
+            + "\n  ".join(f"{m} -> {t}" for m, t in orphans)
+        )
+
+    def test_the_reasons_are_from_the_known_set(self):
+        allowed = {"cycle", "patch-semantics", "empty-block"}
+        bad = {k: v for k, v in RETAINED_ON_PURPOSE.items() if v not in allowed}
+        assert not bad, (
+            f"unknown retention reason(s) {bad}. Add the category here "
+            f"deliberately rather than inventing one at a call site."
+        )
+
+    def test_the_empty_block_row_really_is_a_sole_statement(self):
+        """The one claim that is cheap to verify from source, so verify it —
+        it is also the one most likely to become false, since any edit adding
+        a second statement to that block silently invalidates the reason."""
+        sole = [k for k, v in RETAINED_ON_PURPOSE.items() if v == "empty-block"]
+        assert sole, "the empty-block category is documented but unused"
+        for module, _target in sole:
+            path = PPXAI.parent / (module.replace(".", "/") + ".py")
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            singles = [
+                n
+                for n in ast.walk(tree)
+                for field in ("body", "orelse", "finalbody")
+                if isinstance(getattr(n, field, None), list)
+                and len(getattr(n, field)) == 1
+                and isinstance(getattr(n, field)[0], (ast.Import, ast.ImportFrom))
+            ]
+            assert singles, (
+                f"{module} is marked empty-block, but no block in it has an "
+                f"import as its only statement — the reason no longer holds"
+            )
 
 
 class TestTheBaselineIsShrinking:

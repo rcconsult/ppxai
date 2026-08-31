@@ -20,6 +20,7 @@ from ppxai import __version__
 from ppxai.common.logger import get_logger
 from ppxai.config import initialize
 from ppxai.tui.app import PPXAIDEApp
+from ..config import get_debug_log_enabled
 
 __all__ = ["PPXAIDEApp", "main"]
 
@@ -68,7 +69,6 @@ def main():
     initialize()
 
     # Pick up persisted state for the app's internal debug flags
-    from ..config import get_debug_log_enabled
     persisted_debug = get_debug_log_enabled()
 
     # Create app instance

@@ -25,6 +25,7 @@ from ppxai.tui.terminal import (
     get_user_terminal_override,
 )
 from ppxai.tui.validation import format_file_size
+from ppxai.tui.widgets.iterm2_widget import ITerm2ImageWidget
 
 
 # Check if textual-image is available
@@ -83,7 +84,6 @@ def _get_image_widget_class():
     if protocol_override is not None:
         if protocol_override == ImageProtocol.ITERM2:
             if _ITerm2Image is not None:
-                from ppxai.tui.widgets.iterm2_widget import ITerm2ImageWidget
                 return ITerm2ImageWidget
         elif protocol_override == ImageProtocol.KITTY:
             if _TGPImage is not None:

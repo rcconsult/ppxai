@@ -12,6 +12,8 @@ from textual.reactive import reactive
 from textual.widgets import Static, Markdown, Button
 
 from ..clipboard import copy_to_clipboard
+from ppxai.engine.artifact_projector import TextMarkerProjector
+from ppxai.engine.types import _synthesize_block_ref
 
 
 def normalize_content_to_text(content: Any) -> str:
@@ -38,8 +40,6 @@ def normalize_content_to_text(content: Any) -> str:
     # VSCode all show identical `[File: name (media_type)]` markers.
     # Local imports — keeps tui/widgets independent from engine
     # registration ordering at module load time.
-    from ppxai.engine.artifact_projector import TextMarkerProjector
-    from ppxai.engine.types import _synthesize_block_ref
 
     parts: List[str] = []
     for idx, block in enumerate(content):
