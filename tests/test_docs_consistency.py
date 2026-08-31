@@ -654,6 +654,23 @@ class TestEveryLessonIsDiscoverable:
         rename is a dead reference with no link syntax for the repo-wide test
         to find. Measured before writing this: a bare `ghost-lesson.md` line
         passed all 30 tests.
+
+        **What this deliberately does NOT catch**, so the next reader does not
+        mistake the line for an oversight: the exclusion below is repo-wide,
+        which excuses ~280 distinct `.md` basenames. A lesson renamed away
+        whose old basename *collides* with any other `.md` in the repo slips
+        through in bare-mention form — measured: a bare `architecture.md`
+        line passes, because `docs/architecture.md` exists. Its linked form
+        is still caught by `TestDocLinksResolve` from the other side.
+
+        Left open on purpose. No current lesson basename is duplicated
+        anywhere outside this directory (measured: zero collisions across 17
+        lessons and 280 other basenames), so no real rename can hit it today;
+        it opens only if someone names a future lesson after an existing repo
+        file. The alternative — an allowlist of the prose citations this
+        index legitimately makes — trades a broad, self-maintaining exclusion
+        for a hand-maintained list, and a hand-maintained list is the thing
+        that rots. "Exists somewhere in the repo" is the deliberate line.
         """
         root = Path(__file__).resolve().parents[1] / "docs" / "lessons"
         index = (root / "README.md").read_text(encoding="utf-8")
