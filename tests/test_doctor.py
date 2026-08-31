@@ -664,6 +664,109 @@ class TestDeprecationTableInvariants:
             "from model_deprecations.py if they've been un-deprecated."
         )
 
+    # ------------------------------------------------------------------
+    # The same rules, applied to EVERY tracked config -- not just the
+    # example.
+    #
+    # The repo ships TWO configs (`git ls-files 'ppxai-config*.json'`), and
+    # every invariant above scoped only the example. So the tracked root
+    # config kept `sonar-pro` as its default for a full day after the
+    # deprecation rows landed, and its NVIDIA block still pointed at models
+    # that had answered HTTP 410 for six weeks -- suite green throughout,
+    # because no test read that file.
+    #
+    # Written over the tracked SET rather than duplicated per file, so a
+    # third config joins the fence by existing.
+
+    @staticmethod
+    def _tracked_configs():
+        import pathlib
+        import subprocess
+
+        root = pathlib.Path(__file__).parent.parent
+        try:
+            out = subprocess.run(
+                ["git", "ls-files", "ppxai-config*.json"],
+                cwd=root, capture_output=True, text=True, timeout=30,
+            ).stdout.split()
+        except Exception:  # noqa: BLE001 -- no git (sdist, vendored tree)
+            out = []
+        # Fall back to the known pair so the fence still runs without git,
+        # and so a missing `git` cannot silently empty the parametrisation.
+        names = out or ["ppxai-config.example.json", "ppxai-config.json"]
+        return [root / n for n in names if (root / n).exists()]
+
+    def test_the_tracked_config_set_is_not_empty(self):
+        """A set that silently resolves to zero is a fence that cannot fail
+        -- the exact failure mode this block is fixing."""
+        found = self._tracked_configs()
+        assert len(found) >= 2, (
+            f"expected at least the example + root config, found {found}"
+        )
+
+    def test_every_tracked_config_defaults_to_a_live_model(self):
+        """Defaults are the rule that actually broke.
+
+        A deprecated model may stay in a config as an explicit, commented
+        record (see the next test). It may never be the thing a fresh user
+        is pointed AT.
+        """
+        import json
+
+        violations = []
+        for path in self._tracked_configs():
+            cfg = json.loads(path.read_text(encoding="utf-8-sig"))
+            for pname, pblock in (cfg.get("providers") or {}).items():
+                if not isinstance(pblock, dict):
+                    continue
+                for key in ("default_model", "coding_model"):
+                    mid = pblock.get(key)
+                    if mid in ALL_DEPRECATIONS:
+                        e = ALL_DEPRECATIONS[mid]
+                        violations.append(
+                            f"{path.name}: providers.{pname}.{key} = {mid} "
+                            f"(shutdown {e.shutdown_date}, use {e.replacement})"
+                        )
+        assert not violations, (
+            "a tracked config points a default at a deprecated model:\n  "
+            + "\n  ".join(violations)
+        )
+
+    def test_a_deprecated_model_in_a_tracked_config_is_acknowledged(self):
+        """Keeping a dead model is allowed; keeping it SILENTLY is not.
+
+        The root config deliberately retains ids that answer 410/404 so an
+        operator's hand-tuned `generation_params` survive the migration --
+        a defensible choice and an indefensible silence. So the entry has to
+        say so, in the file, where whoever reads the config sees it.
+        """
+        import json
+
+        MARKERS = ("__comment_DEAD", "__comment_RETIRES", "__comment_migrated")
+        violations = []
+        for path in self._tracked_configs():
+            cfg = json.loads(path.read_text(encoding="utf-8-sig"))
+            for pname, pblock in (cfg.get("providers") or {}).items():
+                if not isinstance(pblock, dict):
+                    continue
+                for mid, mblock in (pblock.get("models") or {}).items():
+                    if mid not in ALL_DEPRECATIONS:
+                        continue
+                    if not isinstance(mblock, dict) or not any(
+                        k in mblock for k in MARKERS
+                    ):
+                        e = ALL_DEPRECATIONS[mid]
+                        violations.append(
+                            f"{path.name}: providers.{pname}.models.{mid} "
+                            f"(shutdown {e.shutdown_date}, replacement "
+                            f"{e.replacement}) -- remove it, or add one of "
+                            f"{MARKERS} saying why it stays"
+                        )
+        assert not violations, (
+            "deprecated models kept with no explanation:\n  "
+            + "\n  ".join(violations)
+        )
+
 
 class TestGroundingSection:
     """F5 (ADR 0009 §4): /doctor reports the effective oneshot grounding

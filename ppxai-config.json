@@ -55,8 +55,8 @@
       "name": "Perplexity AI",
       "base_url": "https://api.perplexity.ai",
       "api_key_env": "PERPLEXITY_API_KEY",
-      "default_model": "sonar-pro",
-      "coding_model": "sonar-pro",
+      "default_model": "perplexity/sonar",
+      "coding_model": "perplexity/sonar",
       "system_prompt": "You have two capabilities: (1) NATIVE WEB SEARCH for research, facts, and current information - use this automatically for questions and cite sources as markdown links. (2) EXTERNAL TOOLS for file operations, shell commands, and editing - when tools are available and the user asks to DO something (cd, ls, edit, fix, run, create, analyze), execute the appropriate tool immediately instead of explaining how. For actions: act first, report results briefly. For questions: search and cite. Never tell the user to do manually what a tool can do.",
       "generation_params": {
         "temperature": 0.2,
@@ -73,13 +73,15 @@
             "top_p": 0.85,
             "max_tokens": 2048,
             "frequency_penalty": 0.2
-          }
+          },
+          "__comment_RETIRES": "\u26a0\ufe0f Retires 2026-09-27 with the Perplexity chat-completions endpoint. Verified 2026-08-31: NOT served on /v1/responses. Use `perplexity/sonar` after that."
         },
         "sonar-pro": {
           "name": "Sonar Pro",
           "description": "Advanced search model for complex queries",
           "context_limit": 200000,
-          "__comment_best_for": "Complex refactoring, multi-file changes, architecture decisions, code review, debugging. Best all-around model for agentic coding tasks (73.4% benchmark)."
+          "__comment_best_for": "Complex refactoring, multi-file changes, architecture decisions, code review, debugging. Best all-around model for agentic coding tasks (73.4% benchmark).",
+          "__comment_RETIRES": "\u26a0\ufe0f Retires 2026-09-27 with the Perplexity chat-completions endpoint. Verified 2026-08-31: NOT served on /v1/responses. Use `perplexity/sonar` after that."
         },
         "sonar-reasoning-pro": {
           "name": "Sonar Reasoning Pro",
@@ -91,13 +93,30 @@
             "top_p": 0.9,
             "max_tokens": 12288,
             "frequency_penalty": 0.15
-          }
+          },
+          "__comment_RETIRES": "\u26a0\ufe0f Retires 2026-09-27 with the Perplexity chat-completions endpoint. Verified 2026-08-31: NOT served on /v1/responses. Use `perplexity/sonar` after that."
         },
         "sonar-deep-research": {
           "name": "Sonar Deep Research",
           "description": "Exhaustive research with comprehensive reports (Async Jobs API)",
           "__comment_best_for": "Comprehensive documentation, multi-step research, technical writing",
           "__comment_note": "Uses Jobs API with reasoning_effort parameter (low/medium/high), not chat completions"
+        },
+        "perplexity/sonar": {
+          "name": "Sonar (Responses wire)",
+          "description": "Lightweight search model with real-time grounding. The ONLY Sonar id that answers on /v1/responses \u2014 verified by calling it 2026-08-31. sonar-pro and sonar-reasoning-pro return 'validation failed: model not supported' there, bare and namespaced, so they have NO successor.",
+          "__comment_best_for": "Quick file operations, simple edits, list/read tasks, directory navigation",
+          "generation_params": {
+            "temperature": 0.1,
+            "top_p": 0.85,
+            "max_tokens": 2048,
+            "frequency_penalty": 0.2
+          },
+          "facts": {
+            "wire_protocol": "responses"
+          },
+          "__comment_deadline": "\u23f0 The chat-completions endpoint every OTHER sonar id uses retires 2026-09-27. This entry is on the surviving wire.",
+          "__comment_tool_mode": "tool_mode intentionally NOT overridden: the shipped row says `auto` (native attempt, prompt-based fallback) so a model that stops accepting a tools array degrades instead of erroring. Forcing `native` here removes that safety net."
         }
       },
       "pricing": {
@@ -165,14 +184,14 @@
           "name": "Gemma 4 26B (MoE)",
           "description": "Mixture-of-Experts 26B (3.8B active) with text + vision, 256K context. Faster inference than 31B dense for similar quality.",
           "context_limit": 262144,
-          "__comment_best_for": "Workloads benefiting from MoE efficiency — lower latency per token with 3.8B active parameters."
+          "__comment_best_for": "Workloads benefiting from MoE efficiency \u2014 lower latency per token with 3.8B active parameters."
         },
         "gemini-3.5-flash": {
           "name": "Gemini 3.5 Flash",
-          "description": "Google's newest GA flash model (2026) — most intelligent flash tier for agentic and coding tasks. Supersedes gemini-3-flash-preview. 1M context, text + image + video input.",
+          "description": "Google's newest GA flash model (2026) \u2014 most intelligent flash tier for agentic and coding tasks. Supersedes gemini-3-flash-preview. 1M context, text + image + video input.",
           "context_limit": 1048576,
           "__comment_best_for": "Recommended default. Everyday coding, editing, agentic tool loops.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — profile cloned from gemini-3-flash (Tier S). Run benchmarks/llm-eval before tuning."
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 profile cloned from gemini-3-flash (Tier S). Run benchmarks/llm-eval before tuning."
         }
       },
       "pricing": {
@@ -197,7 +216,7 @@
         "gemini-3.5-flash": {
           "input": 0.5,
           "output": 3,
-          "__comment": "approximate — verify against current Gemini pricing"
+          "__comment": "approximate \u2014 verify against current Gemini pricing"
         }
       },
       "capabilities": {
@@ -214,8 +233,8 @@
       "name": "OpenAI",
       "base_url": "https://api.openai.com/v1",
       "api_key_env": "OPENAI_API_KEY",
-      "default_model": "gpt-5.4-mini",
-      "coding_model": "gpt-5.4-mini",
+      "default_model": "gpt-5.6-terra",
+      "coding_model": "gpt-5.6-terra",
       "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "generation_params": {
         "temperature": 0.2,
@@ -226,75 +245,113 @@
         "preferred": "gemini"
       },
       "models": {
+        "gpt-5.6-terra": {
+          "name": "GPT-5.6 Terra",
+          "description": "Cost-efficient flagship (GA 2026-08-01). $2/$12 per MTok \u2014 40% of gpt-5.5's price at measured parity (median 91.5 vs 88.3 over 3 clean runs each; spread 7.9 > the 3.2 delta, permutation p=0.15 \u2014 parity, NOT superiority).",
+          "context_limit": 1048576,
+          "__comment_wire": "wire_protocol MUST be responses. Verified 2026-08-31 against the live API: terra + a tools array on /v1/chat/completions returns HTTP 400 'Function tools with reasoning_effort are not supported' \u2014 with NO reasoning_effort sent. The engine's seed globs resolve this model to chat_completions + prompt_based, so stating the wire here is REQUIRED, not decorative.",
+          "facts": {
+            "wire_protocol": "responses",
+            "tool_mode": "native",
+            "max_tokens": 128000,
+            "max_tool_iterations": 20,
+            "supports_reasoning": true,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "A",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false
+          },
+          "__comment_vision": "supports_vision is the conservative floor, NOT a measurement \u2014 the 2026-08-31 benchmark covered tool calling and quality only."
+        },
         "gpt-5.5": {
           "name": "GPT-5.5",
-          "description": "Newest OpenAI flagship (released 2026-04-23). 1M context, $5/$30 per MTok — 2× the price of GPT-5.4. First fully retrained base since GPT-4.5.",
+          "description": "Newest OpenAI flagship (released 2026-04-23). 1M context, $5/$30 per MTok \u2014 2\u00d7 the price of GPT-5.4. First fully retrained base since GPT-4.5.",
           "context_limit": 1048576,
-          "__comment_best_for": "Hardest reasoning, novel algorithm design, long-context refactors. Expensive — prefer gpt-5.4-mini for everyday work.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — hints cloned from gpt-5.4 as starting point. Run benchmarks/llm-eval before tuning."
+          "__comment_best_for": "Hardest reasoning, novel algorithm design, long-context refactors. Expensive \u2014 prefer gpt-5.4-mini for everyday work.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 hints cloned from gpt-5.4 as starting point. Run benchmarks/llm-eval before tuning."
         },
         "gpt-5.5-pro": {
           "name": "GPT-5.5 Pro",
-          "description": "Premium tier of GPT-5.5 (released 2026-04-23). $30/$180 per MTok — highest available capability.",
+          "description": "Premium tier of GPT-5.5 (released 2026-04-23). $30/$180 per MTok \u2014 highest available capability.",
           "context_limit": 1048576,
-          "__comment_best_for": "Critical code review, ADR drafting, multi-day investigation work. ~6× the cost of gpt-5.4-pro.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — likely cost-prohibitive for the 36-test suite (~$15-20 per run)."
+          "__comment_best_for": "Critical code review, ADR drafting, multi-day investigation work. ~6\u00d7 the cost of gpt-5.4-pro.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 likely cost-prohibitive for the 36-test suite (~$15-20 per run).",
+          "facts": {
+            "wire_protocol": "responses"
+          },
+          "__comment_wire": "2026-08-31: 404 on /v1/chat/completions, 200 on /v1/responses (both called). The engine's globs do not route this id to Responses, so the config must."
         },
         "gpt-5.4": {
           "name": "GPT-5.4",
           "description": "Current flagship (released 2026-03-05). 1M context, 75% computer use benchmark, best overall intelligence.",
           "context_limit": 1048576,
           "__comment_best_for": "Complex refactoring, architecture decisions, multi-file changes, agentic workflows with browser/computer use.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED by ppxai — using stub hints from gpt-5.2*. Refine after running benchmarks/llm-eval."
+          "__comment_benchmark_status": "NOT YET BENCHMARKED by ppxai \u2014 using stub hints from gpt-5.2*. Refine after running benchmarks/llm-eval."
         },
         "gpt-5.4-pro": {
           "name": "GPT-5.4 Pro",
           "description": "Premium tier of GPT-5.4 (released 2026-03-05). Highest capability for difficult tasks.",
           "context_limit": 1048576,
           "__comment_best_for": "Hardest problems, novel algorithm design, critical code review. Expensive but top-of-line.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 using stub hints. Refine after benchmark run.",
           "generation_params": {
             "temperature": 0.1,
             "max_tokens": 16384
-          }
+          },
+          "facts": {
+            "wire_protocol": "responses"
+          },
+          "__comment_wire": "2026-08-31: 404 on /v1/chat/completions, 200 on /v1/responses (both called). The engine's globs do not route this id to Responses, so the config must."
         },
         "gpt-5.4-mini": {
           "name": "GPT-5.4 Mini",
           "description": "Newest small model (released 2026-03-17). 400K context, $0.75/$4.50 per MTok. OpenAI's 'most capable small model yet'.",
           "context_limit": 400000,
           "__comment_best_for": "Everyday coding, edits, explanations at lower cost than full GPT-5.4. Good price/performance sweet spot.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run."
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 using stub hints. Refine after benchmark run."
         },
         "gpt-5.4-nano": {
           "name": "GPT-5.4 Nano",
           "description": "Cheapest GPT-5.4 variant (released 2026-03-17). API-only. $0.20/$1.25 per MTok.",
           "context_limit": 400000,
           "__comment_best_for": "Simple edits, file operations, high-volume quick Q&A. Lowest-cost GPT-5.4 option.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 using stub hints. Refine after benchmark run.",
           "generation_params": {
             "max_tokens": 8192
           }
         },
         "gpt-5.3-codex": {
           "name": "GPT-5.3 Codex",
-          "description": "Code-specialized model — \"most capable agentic coding model to date\" per OpenAI. 400K context, 128K max output. Note: gpt-5.4 mainline has absorbed these capabilities, but the Codex variant remains for users who want the dedicated coding-tuned model.",
+          "description": "Code-specialized model \u2014 \"most capable agentic coding model to date\" per OpenAI. 400K context, 128K max output. Note: gpt-5.4 mainline has absorbed these capabilities, but the Codex variant remains for users who want the dedicated coding-tuned model.",
           "context_limit": 400000,
           "__comment_best_for": "Long-horizon agentic coding sessions, multi-file refactors with extensive tool chains.",
           "generation_params": {
             "max_tokens": 16384
-          }
+          },
+          "facts": {
+            "wire_protocol": "responses"
+          },
+          "__comment_wire": "2026-08-31: 404 on /v1/chat/completions, 200 on /v1/responses (both called). The engine's globs do not route this id to Responses, so the config must."
         }
       },
       "pricing": {
+        "gpt-5.6-terra": {
+          "input": 2,
+          "output": 12,
+          "__comment": "GA 2026-08-01 pricing, verified 2026-08-01 (debt Item 55). 40% of gpt-5.5."
+        },
         "gpt-5.5": {
           "input": 5,
           "output": 30,
-          "__comment": "Released 2026-04-23. 2× the price of gpt-5.4."
+          "__comment": "Released 2026-04-23. 2\u00d7 the price of gpt-5.4."
         },
         "gpt-5.5-pro": {
           "input": 30,
           "output": 180,
-          "__comment": "Released 2026-04-23. 2× the price of gpt-5.4-pro. Verify against https://platform.openai.com/docs/pricing"
+          "__comment": "Released 2026-04-23. 2\u00d7 the price of gpt-5.4-pro. Verify against https://platform.openai.com/docs/pricing"
         },
         "gpt-5.4": {
           "input": 2.5,
@@ -303,7 +360,7 @@
         "gpt-5.4-pro": {
           "input": 15,
           "output": 75,
-          "__comment": "Premium tier — verify against https://platform.openai.com/docs/pricing"
+          "__comment": "Premium tier \u2014 verify against https://platform.openai.com/docs/pricing"
         },
         "gpt-5.3-codex": {
           "input": 1.75,
@@ -386,12 +443,12 @@
       "name": "NVIDIA NIM (build.nvidia.com)",
       "base_url": "https://integrate.api.nvidia.com/v1",
       "api_key_env": "NVIDIA_API_KEY",
-      "default_model": "qwen/qwen3.5-122b-a10b",
-      "coding_model": "qwen/qwen3.5-122b-a10b",
-      "__comment_coding_model": "Was qwen/qwen3-coder-480b-a35b-instruct until 2026-05-02 — removed because free-tier sustained-load throttling makes it unusable here. Engine ModelProfile entry retained (`*/qwen3-coder-480b*` in engine/model_profiles.py) so users with paid NIM access can re-add this model to their own config and get the right Tier S characteristics.",
-      "__comment_benchmark": "Tier A NVIDIA NIM sweep (2026-05-01 + 2026-05-02 rerun, full 36-test suite). Healthy: qwen3.5-122b-a10b 77.4%, qwen3-next-80b-thinking 76.6%, qwen3-next-80b-instruct 68.3%. qwen3-coder-480b excluded from this curated set as of 2026-05-02 — two free-tier runs both scored 19.0% with the same low-tool-call/short-duration contamination signature that healthy peers don't share (9-11 calls in 75-86s vs 74-89 calls in 197-1836s). Requires paid-tier access; users with that should re-add it manually.",
-      "__comment_known_issues": "1) Free-tier hangs on long agentic_tool_loops tests for some models (mistral-large-3, llama-3.3-nemotron). 2) llama-4-maverick is regionally restricted ('NIM unavailable in your location' from EU). 3) qwen2.5-coder-32b returns HTTP 400 'Tool use has not been enabled' — set tool_calling.mode='prompt_based' for that model.",
-      "system_prompt": "You are an expert AI coding assistant served via NVIDIA NIM. Be concise and precise. Call tools directly using native function calling — never output tool-call JSON in response text. After tool failures, acknowledge the actual error message before retrying.",
+      "default_model": "moonshotai/kimi-k3",
+      "coding_model": "moonshotai/kimi-k3",
+      "__comment_coding_model": "Was qwen/qwen3-coder-480b-a35b-instruct until 2026-05-02 \u2014 removed because free-tier sustained-load throttling makes it unusable here. Engine ModelProfile entry retained (`*/qwen3-coder-480b*` in engine/model_profiles.py) so users with paid NIM access can re-add this model to their own config and get the right Tier S characteristics.",
+      "__comment_benchmark": "Tier A NVIDIA NIM sweep (2026-05-01 + 2026-05-02 rerun, full 36-test suite). Healthy: qwen3.5-122b-a10b 77.4%, qwen3-next-80b-thinking 76.6%, qwen3-next-80b-instruct 68.3%. qwen3-coder-480b excluded from this curated set as of 2026-05-02 \u2014 two free-tier runs both scored 19.0% with the same low-tool-call/short-duration contamination signature that healthy peers don't share (9-11 calls in 75-86s vs 74-89 calls in 197-1836s). Requires paid-tier access; users with that should re-add it manually.",
+      "__comment_known_issues": "1) Free-tier hangs on long agentic_tool_loops tests for some models (mistral-large-3, llama-3.3-nemotron). 2) llama-4-maverick is regionally restricted ('NIM unavailable in your location' from EU). 3) qwen2.5-coder-32b returns HTTP 400 'Tool use has not been enabled' \u2014 set tool_calling.mode='prompt_based' for that model.",
+      "system_prompt": "You are an expert AI coding assistant served via NVIDIA NIM. Be concise and precise. Call tools directly using native function calling \u2014 never output tool-call JSON in response text. After tool failures, acknowledge the actual error message before retrying.",
       "generation_params": {
         "temperature": 0.2,
         "top_p": 0.9
@@ -412,12 +469,13 @@
             "temperature": 0.2,
             "top_p": 0.9
           },
-          "__comment_extra_body": "v1.18.3 plumbed extra_body through openai_compat. To enable Qwen3.5's reasoning mode, uncomment the block below. Roughly doubles latency — leave off unless you need extended chain-of-thought. NVIDIA's chat_template_kwargs.enable_thinking is the toggle.",
+          "__comment_extra_body": "v1.18.3 plumbed extra_body through openai_compat. To enable Qwen3.5's reasoning mode, uncomment the block below. Roughly doubles latency \u2014 leave off unless you need extended chain-of-thought. NVIDIA's chat_template_kwargs.enable_thinking is the toggle.",
           "__example_extra_body": {
             "chat_template_kwargs": {
               "enable_thinking": true
             }
-          }
+          },
+          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-07-20. No live successor in this family; kept rather than deleted so the tuning survives."
         },
         "qwen/qwen3-next-80b-a3b-instruct": {
           "name": "Qwen3-Next 80B-A3B Instruct",
@@ -428,18 +486,20 @@
           "generation_params": {
             "temperature": 0.7,
             "top_p": 0.8
-          }
+          },
+          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-07-27. No live successor in this family; kept rather than deleted so the tuning survives."
         },
         "mistralai/mistral-large-3-675b-instruct-2512": {
           "name": "Mistral Large 3 675B",
           "description": "Mistral's frontier dense model. NVIDIA-recommended params: temp=0.2, top_p=0.95, max_tokens=4096. Tier A benchmark: hung at agentic_tool_loops on free tier (no score).",
           "context_limit": 256000,
           "max_tokens": 4096,
-          "__comment_best_for": "Reasoning/instruction-following workloads on paid tier. Free-tier hangs on long tool loops — schedule with extra timeout.",
+          "__comment_best_for": "Reasoning/instruction-following workloads on paid tier. Free-tier hangs on long tool loops \u2014 schedule with extra timeout.",
           "generation_params": {
             "temperature": 0.2,
             "top_p": 0.95
-          }
+          },
+          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-07-23. No live successor in this family; kept rather than deleted so the tuning survives."
         },
         "nvidia/llama-3.3-nemotron-super-49b-v1.5": {
           "name": "Llama-3.3 Nemotron Super 49B v1.5",
@@ -452,37 +512,61 @@
             "top_p": 0.95
           },
           "reasoning_trigger": "/think",
-          "__comment_reasoning_trigger": "v1.18.3: nemotron toggles reasoning via in-prompt '/think' (enable) or '/no_think' (disable). Engine appends this to the system message before sending."
+          "__comment_reasoning_trigger": "v1.18.3: nemotron toggles reasoning via in-prompt '/think' (enable) or '/no_think' (disable). Engine appends this to the system message before sending.",
+          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-08-26. No live successor in this family; kept rather than deleted so the tuning survives."
         },
         "meta/llama-4-maverick-17b-128e-instruct": {
           "name": "Llama-4 Maverick 17B-128E",
-          "description": "Meta's Llama-4 MoE (17B active, 128 experts). Regionally restricted — returns 'This NIM is unavailable in your location' from EU.",
+          "description": "Meta's Llama-4 MoE (17B active, 128 experts). Regionally restricted \u2014 returns 'This NIM is unavailable in your location' from EU.",
           "context_limit": 1048576,
-          "max_tokens": 4096
+          "max_tokens": 4096,
+          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-07-27. No live successor in this family; kept rather than deleted so the tuning survives."
         },
         "qwen/qwen3.5-397b-a17b": {
           "name": "Qwen3.5 397B-A17B",
           "description": "Larger sibling of qwen3.5-122b-a10b. Probe failed both 2026-05-01 and 2026-05-02 (endpoint timeout >60s). Try again periodically.",
           "context_limit": 256000,
-          "max_tokens": 4096
+          "max_tokens": 4096,
+          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-07-27. No live successor in this family; kept rather than deleted so the tuning survives."
         },
-        "deepseek-ai/deepseek-v4-pro": {
+        "deepseek-ai/deepseek-v4-pro-0813": {
           "name": "DeepSeek V4 Pro",
           "description": "DeepSeek frontier (1.6T MoE, multimodal). 1M-token context via Compressed Sparse Attention. Replaces retired deepseek-v3.2. Added 2026-05-31 from live NIM /models; not yet benchmarked.",
           "context_limit": 1000000,
-          "max_tokens": 8192
+          "max_tokens": 8192,
+          "__comment_migrated": "2026-08-31: renamed from `deepseek-ai/deepseek-v4-pro` (410 EOL 2026-08-07 (renamed)). Successor verified by CALLING it (HTTP 200), not by reading /models."
         },
-        "deepseek-ai/deepseek-v4-flash": {
+        "deepseek-ai/deepseek-v4-flash-0731": {
           "name": "DeepSeek V4 Flash",
           "description": "Fast 284B variant of DeepSeek V4. 1M-token context, lower latency than V4 Pro. Added 2026-05-31; not yet benchmarked.",
           "context_limit": 1000000,
-          "max_tokens": 8192
+          "max_tokens": 8192,
+          "__comment_migrated": "2026-08-31: renamed from `deepseek-ai/deepseek-v4-flash` (410 EOL 2026-08-07 (renamed)). Successor verified by CALLING it (HTTP 200), not by reading /models."
         },
-        "moonshotai/kimi-k2.6": {
+        "moonshotai/kimi-k3": {
           "name": "Kimi K2.6",
           "description": "Moonshot K2.6 (non-reasoning). 262K context, strong open-weight coding/agentic. Replaces retired kimi-k2-thinking. Added 2026-05-31; not yet benchmarked.",
           "context_limit": 262144,
-          "max_tokens": 8192
+          "max_tokens": 8192,
+          "__comment_migrated": "2026-08-31: renamed from `moonshotai/kimi-k2.6` (404 \"not found for account\"). Successor verified by CALLING it (HTTP 200), not by reading /models.",
+          "facts": {
+            "wire_protocol": "chat_completions",
+            "tool_mode": "native",
+            "max_tokens": 8192,
+            "max_tool_iterations": 20,
+            "supports_reasoning": true,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "B",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false
+          },
+          "generation_params": {
+            "top_p": 0.95,
+            "__comment": "top_p is IMMUTABLE at 0.95 for kimi-k3 \u2014 NVIDIA rejects any other value ('`top_p` is immutable for this model'). A provider-level 0.9 breaks every request."
+          }
         }
       },
       "pricing": {
@@ -511,16 +595,16 @@
           "input": 0,
           "output": 0
         },
-        "deepseek-ai/deepseek-v4-pro": {
+        "deepseek-ai/deepseek-v4-pro-0813": {
           "input": 0,
           "output": 0,
           "__comment": "NVIDIA NIM free tier (rate-limited)"
         },
-        "deepseek-ai/deepseek-v4-flash": {
+        "deepseek-ai/deepseek-v4-flash-0731": {
           "input": 0,
           "output": 0
         },
-        "moonshotai/kimi-k2.6": {
+        "moonshotai/kimi-k3": {
           "input": 0,
           "output": 0
         }
@@ -542,7 +626,7 @@
       "coding_model": "Qwen3-4B-quantized.w4a16",
       "__comment_hw": "RTX 3050 6GB, INT4 w4a16 quantized, vLLM 0.16.0, compressed-tensors",
       "__comment_thinking": "Qwen3 supports thinking mode via <think> tags. Use /no_think in message or enable_thinking=false to suppress.",
-      "system_prompt": "You are a coding assistant running locally as Qwen3-4B on an RTX 3050 via vLLM.\n\nRules:\n1. ALWAYS output a visible text response — never reply with silence. After every tool call or failure, write at least one sentence.\n2. When a tool fails or returns an error, explicitly say so: 'The tool failed: <reason>. I will try X instead.'\n3. For code tasks: output the complete, correct solution — do not truncate\n4. For apply+verify tasks: call apply_patch first, then read_file to confirm the change was applied\n5. Prefer apply_patch over write_file for existing files\n6. Use read_file instead of cat/shell commands for reading\n7. Do NOT re-read a file you already read unless the content changed",
+      "system_prompt": "You are a coding assistant running locally as Qwen3-4B on an RTX 3050 via vLLM.\n\nRules:\n1. ALWAYS output a visible text response \u2014 never reply with silence. After every tool call or failure, write at least one sentence.\n2. When a tool fails or returns an error, explicitly say so: 'The tool failed: <reason>. I will try X instead.'\n3. For code tasks: output the complete, correct solution \u2014 do not truncate\n4. For apply+verify tasks: call apply_patch first, then read_file to confirm the change was applied\n5. Prefer apply_patch over write_file for existing files\n6. Use read_file instead of cat/shell commands for reading\n7. Do NOT re-read a file you already read unless the content changed",
       "generation_params": {
         "temperature": 0.1,
         "top_p": 0.9,
@@ -573,13 +657,13 @@
     }
   },
   "execution": {
-    "__comment": "ADR 0010/0011 third config axis: how each execution surface runs. execution.run.* governs the one-off tier (/run family + /v1/oneshot facade). web_search: expose the web_search tool loop to oneshot (ADR 0009 enrichment, default off). grounding: provider-NATIVE search on oneshot (supersedes tools.web_search.oneshot_grounding; dual-read keeps the legacy key working). collect (U4): how /run + /task results reach the active session — auto (always auto-merge on completion) | yes (held until the Collect button/verb finalizes+merges; default) | no (collect disabled: button greyed, verb warns, result stays on the run record).",
+    "__comment": "ADR 0010/0011 third config axis: how each execution surface runs. execution.run.* governs the one-off tier (/run family + /v1/oneshot facade). web_search: expose the web_search tool loop to oneshot (ADR 0009 enrichment, default off). grounding: provider-NATIVE search on oneshot (supersedes tools.web_search.oneshot_grounding; dual-read keeps the legacy key working). collect (U4): how /run + /task results reach the active session \u2014 auto (always auto-merge on completion) | yes (held until the Collect button/verb finalizes+merges; default) | no (collect disabled: button greyed, verb warns, result stays on the run record).",
     "run": {
       "web_search": false,
       "grounding": false
     },
     "collect": "yes",
-    "__comment_task": "v1.19.1 BREAKING (ADR 0010): the tool-capable /v1/agent/task tier moved here wholesale from tools.agent.* — NO dual-read, the legacy keys are gone. enabled (was task_tier_enabled), sandbox (was tools.agent.sandbox), consent.spawn_consent, consent.consent_ttl_s, budgets.result_retention_s. Run /doctor for the full old->new mapping.",
+    "__comment_task": "v1.19.1 BREAKING (ADR 0010): the tool-capable /v1/agent/task tier moved here wholesale from tools.agent.* \u2014 NO dual-read, the legacy keys are gone. enabled (was task_tier_enabled), sandbox (was tools.agent.sandbox), consent.spawn_consent, consent.consent_ttl_s, budgets.result_retention_s. Run /doctor for the full old->new mapping.",
     "task": {
       "enabled": false,
       "consent": {
@@ -725,7 +809,7 @@
       "preferred": "auto",
       "perplexity_model": "sonar",
       "gemini_model": "gemini-2.5-flash",
-      "__comment_egress": "ADR 0009 §2 per-tool egress baseline: hosts merged into any run that GRANTS this tool (task tier + oneshot facade). Supersedes task_default_allow (legacy, dual-read).",
+      "__comment_egress": "ADR 0009 \u00a72 per-tool egress baseline: hosts merged into any run that GRANTS this tool (task tier + oneshot facade). Supersedes task_default_allow (legacy, dual-read).",
       "egress": [
         "duckduckgo.com",
         "html.duckduckgo.com",
@@ -745,7 +829,7 @@
       }
     },
     "get_weather": {
-      "__comment_egress": "ADR 0009 §2 (retires Item 52): the weather chain's full superset — wttr.in + Open-Meteo (key-free) + premium search hosts (used only when keyed). Config-driven so granted weather runs work on every tier.",
+      "__comment_egress": "ADR 0009 \u00a72 (retires Item 52): the weather chain's full superset \u2014 wttr.in + Open-Meteo (key-free) + premium search hosts (used only when keyed). Config-driven so granted weather runs work on every tier.",
       "egress": [
         "wttr.in",
         "api.open-meteo.com",

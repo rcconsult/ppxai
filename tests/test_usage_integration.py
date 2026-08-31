@@ -233,13 +233,20 @@ def _assert_table_matches_raw_usage(result_dict: dict, raw_usage: dict, provider
     assert len(model_rows) >= 1, \
         f"No row for provider '{provider_id}' in {rows}"
 
-    # The model row should reference the model we used
+    # The model row should reference the model we used.
+    #
+    # The usage key is built as `f"{provider}/{model}"` (session.py), and the
+    # table splits it ONCE (`key.split("/", 1)`) - so column 1 is everything
+    # after the first slash: the model id verbatim, slashes included.
+    #
+    # This previously stripped a leading prefix off `model_id`, which assumed
+    # a model id never contains "/". ADR 0012's namespaced ids broke that:
+    # `perplexity/sonar` keys as `perplexity/perplexity/sonar` and displays as
+    # `perplexity/sonar` - correct, but not what the strip predicted. The bug
+    # was invisible while every configured default happened to be a bare id.
     model_row = model_rows[0]
-    # model_id may have provider prefix (e.g. "openai/gpt-5-mini" → model part is "gpt-5-mini")
-    # The table splits on "/" so model_row[1] is the model part
-    expected_model = model_id.split("/", 1)[-1] if "/" in model_id else model_id
-    assert model_row[1] == expected_model, \
-        f"Model row shows '{model_row[1]}', expected '{expected_model}'"
+    expected_model = model_id
+    assert model_row[1] == expected_model,         f"Model row shows '{model_row[1]}', expected '{expected_model}'"
 
     # Model row token counts should be > 0
     model_in = _parse_comma_int(model_row[2])
@@ -249,7 +256,7 @@ def _assert_table_matches_raw_usage(result_dict: dict, raw_usage: dict, provider
 
     # Per-model row must match the by_model data
     by_model = raw_usage.get("by_model", {})
-    model_key = f"{provider_id}/{expected_model}"
+    model_key = f"{provider_id}/{model_id}"
     if model_key in by_model:
         bm = by_model[model_key]
         assert model_in == bm["prompt_tokens"], \
