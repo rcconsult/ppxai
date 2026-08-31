@@ -322,7 +322,7 @@ NVIDIA_DEPRECATIONS: Dict[str, Deprecation] = {
     # date-suffixed ids, and the suffixed forms answer 200 (verified).
     "qwen/qwen3.5-122b-a10b": Deprecation(
         shutdown_date="2026-07-20",
-        replacement="moonshotai/kimi-k2.6",
+        replacement="moonshotai/kimi-k3",
         reason=(
             "HTTP 410: \"has reached its end of life on 2026-07-20T00:00:00Z\". "
             "No successor in the qwen family remains on NIM — the whole family "
@@ -333,7 +333,7 @@ NVIDIA_DEPRECATIONS: Dict[str, Deprecation] = {
     ),
     "qwen/qwen3-next-80b-a3b-instruct": Deprecation(
         shutdown_date="2026-07-27",
-        replacement="moonshotai/kimi-k2.6",
+        replacement="moonshotai/kimi-k3",
         reason=(
             "HTTP 410: \"has reached its end of life on 2026-07-27T00:00:00Z\". "
             "Same as its 122b sibling: no qwen model remains on NIM."
@@ -356,25 +356,75 @@ NVIDIA_DEPRECATIONS: Dict[str, Deprecation] = {
             "date-suffixed id; the suffixed form is present on /models."
         ),
     ),
+    # Found 2026-08-31 by sweeping the OPERATOR's configured ids rather than
+    # the example config's. None of these five had a deprecation row, so a
+    # user running them got no /doctor warning at all — the table only knew
+    # the models WE ship. Each date is quoted from that id's own 410 body.
+    "qwen/qwen3-coder-480b-a35b-instruct": Deprecation(
+        shutdown_date="2026-06-11",
+        replacement="moonshotai/kimi-k3",
+        reason=(
+            "HTTP 410: \"end of life on 2026-06-11T00:00:00Z\" (measured "
+            "2026-08-31). The qwen family is entirely gone from NIM, so the "
+            "replacement crosses vendors; K3 is the live open-weight coder."
+        ),
+    ),
+    "qwen/qwen3.5-397b-a17b": Deprecation(
+        shutdown_date="2026-07-27",
+        replacement="moonshotai/kimi-k3",
+        reason=(
+            "HTTP 410: \"end of life on 2026-07-27T00:00:00Z\". Same NIM-wide "
+            "qwen withdrawal as its 122b sibling."
+        ),
+    ),
+    "nvidia/llama-3.3-nemotron-super-49b-v1.5": Deprecation(
+        shutdown_date="2026-08-26",
+        replacement="moonshotai/kimi-k3",
+        reason=(
+            "HTTP 410: \"end of life on 2026-08-26T00:00:00Z\" — five days "
+            "before the sweep that found it, and NVIDIA's own model. NIM "
+            "publishes no deprecation calendar, so only a per-id call surfaces "
+            "a retirement this fresh."
+        ),
+    ),
+    "meta/llama-4-maverick-17b-128e-instruct": Deprecation(
+        shutdown_date="2026-07-27",
+        replacement="moonshotai/kimi-k3",
+        reason=(
+            "HTTP 410: \"end of life on 2026-07-27T00:00:00Z\". Previously "
+            "noted only as regionally restricted (EU 'NIM unavailable in your "
+            "location'); it is now withdrawn everywhere."
+        ),
+    ),
+    "mistralai/mistral-large-3-675b-instruct-2512": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="moonshotai/kimi-k3",
+        reason=(
+            "HTTP 410: \"end of life on 2026-07-23T00:00:00Z\". The mistral "
+            "line on NIM is gone with it: mistral-small-4-119b-2603 and "
+            "mistral-medium-3.5-128b both answer 410 as well (measured "
+            "2026-08-31), so there is no mistral successor to name."
+        ),
+    ),
     "qwen/qwen3-next-80b-a3b-thinking": Deprecation(
         shutdown_date="2026-05-31",
-        replacement="moonshotai/kimi-k2.6",
+        replacement="moonshotai/kimi-k3",
         reason=(
             "Retired from NIM catalog 2026-05-31. Its instruct sibling was the "
             "replacement until that ALSO reached end of life 2026-07-27 "
-            "(HTTP 410, measured 2026-08-31), so this now points at a model "
-            "verified live."
+            "(HTTP 410, measured 2026-08-31), so this now points at Kimi K3 — "
+            "verified by CALLING it (200), not by finding it in /models."
         ),
     ),
     "qwen/qwen2.5-coder-32b-instruct": Deprecation(
         shutdown_date="2026-05-31",
         replacement="deepseek-ai/deepseek-v4-pro-0813",
-        reason="Retired from NIM catalog. Use a current coder/agentic model (DeepSeek V4 date-suffixed, or Kimi K2.6).",
+        reason="Retired from NIM catalog. Use a current coder/agentic model (DeepSeek V4 date-suffixed, or Kimi K3).",
     ),
     "moonshotai/kimi-k2-thinking": Deprecation(
         shutdown_date="2026-05-31",
-        replacement="moonshotai/kimi-k2.6",
-        reason="Retired from NIM catalog; superseded by Kimi K2.6.",
+        replacement="moonshotai/kimi-k3",
+        reason="Retired from NIM catalog; superseded by Kimi K3.",
     ),
     "deepseek-ai/deepseek-v3.2": Deprecation(
         shutdown_date="2026-05-31",
@@ -405,6 +455,18 @@ ALL_DEPRECATIONS: Dict[str, Deprecation] = {
 # Listed in priority order — /doctor shows the first few as "consider
 # adding" so newcomers don't have to read provider changelogs.
 RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
+    {
+        "provider": "openai",
+        "model": "gpt-5.6-terra",
+        "reason": (
+            "Benchmarked 2026-08-31 at PARITY with gpt-5.5 (median 91.5 vs "
+            "88.3 across 3 clean runs each) for 40% of the price "
+            "($2/$12 vs $5/$30). Not a superiority claim — the spread "
+            "exceeds the delta — but parity at 40% is the whole case. "
+            "REQUIRES facts.wire_protocol='responses': the 5.6 line 400s on "
+            "any tools array over chat-completions."
+        ),
+    },
     {
         "provider": "openai",
         "model": "gpt-5.5",
@@ -468,18 +530,13 @@ RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
     },
     {
         "provider": "nvidia",
-        "model": "moonshotai/kimi-k2.6",
-        "reason": "Best NIM model still live (2026-08-31 sweep). Replaces the qwen recommendation — the whole qwen family reached end of life on NIM.",
+        "model": "moonshotai/kimi-k3",
+        "reason": "Best NIM model still live — the only Kimi id that answers 200 (2026-08-31 per-id sweep; k2.6 is listed but 404s \"not found for account\"). Replaces both the qwen recommendation and retired kimi-k2-thinking.",
     },
     {
         "provider": "nvidia",
         "model": "deepseek-ai/deepseek-v4-pro-0813",
         "reason": "DeepSeek V4 frontier (1.6T MoE, multimodal, 1M context). NVIDIA moved to date-suffixed ids; the unsuffixed form now answers 410.",
-    },
-    {
-        "provider": "nvidia",
-        "model": "moonshotai/kimi-k2.6",
-        "reason": "Strong open-weight agentic coder (262K context). Replaces retired kimi-k2-thinking.",
     },
 ]
 
@@ -488,9 +545,9 @@ RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
 # warnings and as the suggested default for a fresh config.
 RECOMMENDED_DEFAULTS: Dict[str, str] = {
     "gemini": "gemini-3.5-flash",     # Updated 2026-05-31 (was gemini-3-flash-preview; superseded by 3.5-flash GA)
-    "openai": "gpt-5.4",              # Updated 2026-04-12 (was gpt-5.2)
+    "openai": "gpt-5.6-terra",        # 2026-08-31: parity with gpt-5.5 at 40% price
     "perplexity": "perplexity/sonar",  # ADR 0012: only Sonar on the surviving wire
-    "nvidia": "moonshotai/kimi-k2.6",  # 2026-08-31: the qwen line hit EOL (410)
+    "nvidia": "moonshotai/kimi-k3",  # 2026-08-31: the qwen line hit EOL (410)
     "anthropic": "claude-sonnet-4-6",
 }
 

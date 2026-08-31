@@ -329,9 +329,9 @@
       "name": "OpenAI",
       "base_url": "https://api.openai.com/v1",
       "api_key_env": "OPENAI_API_KEY",
-      "default_model": "gpt-5.4",
-      "__comment_default_model": "Updated to gpt-5.4 (released 2026-03-05) in v1.17.4 alongside Gemini 2.x removal. Previous default was gpt-5.2 (still shipped).",
-      "coding_model": "gpt-5.4",
+      "default_model": "gpt-5.6-terra",
+      "__comment_default_model": "Updated to gpt-5.6-terra 2026-08-31 (debt Item 55): benchmarked at parity with gpt-5.5 (median 91.5 vs 88.3 over 3 clean runs each \u2014 the spread exceeds the delta, so this is parity, NOT superiority) at 40% of the price. The case is cost, not quality. Previous defaults: gpt-5.4 (v1.17.4), gpt-5.2 (still shipped).",
+      "coding_model": "gpt-5.6-terra",
       "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "generation_params": {
         "temperature": 0.2,
@@ -346,6 +346,28 @@
         "preferred": "gemini"
       },
       "models": {
+        "gpt-5.6-terra": {
+          "name": "GPT-5.6 Terra",
+          "description": "Cost-efficient flagship (GA 2026-08-01). $2/$12 per MTok \u2014 40% of gpt-5.5's price at parity on our suite.",
+          "context_limit": 1048576,
+          "__comment_benchmark_status": "BENCHMARKED 2026-08-31, 3 clean full-suite runs: median 91.5 vs gpt-5.5's 88.3. NOT a superiority claim \u2014 Terra's own spread (7.9) exceeds the delta and a permutation test gives p=0.15. The supportable finding is PARITY at 40% of the price. See benchmarks/tuning/openai-5.6-terra-vs-5.5.json.",
+          "__comment_wire": "wire_protocol MUST be responses. The 5.6 line 400s on ANY tools array over chat-completions \u2014 'Function tools with reasoning_effort are not supported' \u2014 even with no reasoning_effort sent, because the line defaults to a non-'none' effort. Measured; see benchmarks/tuning/openai-5.6-tools-hazard.json. Setting this back to chat_completions breaks every tool-carrying request.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "responses",
+            "max_tokens": 128000,
+            "max_tool_iterations": 20,
+            "supports_reasoning": true,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "A"
+          },
+          "__comment_vision": "supports_vision is the conservative floor (ADR 0012 Q0a), NOT a measurement: gpt-5.6-terra matches no seed glob, and the 2026-08-31 benchmark measured tool calling and quality only. An earlier draft stated true on no evidence and the migration fence caught it. Measure before raising it."
+        },
         "gpt-5.5": {
           "name": "GPT-5.5",
           "description": "Newest OpenAI flagship (released 2026-04-23). 1M context, $5/$30 per MTok \u2014 2\u00d7 the price of GPT-5.4. First fully retrained base since GPT-4.5.",
@@ -522,6 +544,11 @@
         }
       },
       "pricing": {
+        "gpt-5.6-terra": {
+          "input": 2,
+          "output": 12,
+          "__comment": "GA 2026-08-01 pricing, verified 2026-08-01 (debt Item 55). 40% of gpt-5.5."
+        },
         "gpt-5.5": {
           "input": 5,
           "output": 30,
@@ -748,8 +775,8 @@
       "name": "NVIDIA NIM (build.nvidia.com)",
       "base_url": "https://integrate.api.nvidia.com/v1",
       "api_key_env": "NVIDIA_API_KEY",
-      "default_model": "moonshotai/kimi-k2.6",
-      "coding_model": "moonshotai/kimi-k2.6",
+      "default_model": "moonshotai/kimi-k3",
+      "coding_model": "moonshotai/kimi-k3",
       "system_prompt": "You are an expert AI coding assistant served via NVIDIA NIM. Be concise and precise. Call tools directly using native function calling \u2014 never output tool-call JSON in response text. After tool failures, acknowledge the actual error message before retrying.",
       "generation_params": {
         "temperature": 0.2,
@@ -799,9 +826,9 @@
           },
           "__comment_rename": "NVIDIA moved to date-suffixed ids; `deepseek-ai/deepseek-v4-flash` answers HTTP 410 \"end of life 2026-08-07\" (measured 2026-08-31). Same model."
         },
-        "moonshotai/kimi-k2.6": {
-          "name": "Kimi K2.6",
-          "description": "Moonshot K2.6 (non-reasoning). 262K context, strong open-weight coding/agentic. Replaces retired kimi-k2-thinking. Added 2026-05-31; not yet benchmarked.",
+        "moonshotai/kimi-k3": {
+          "name": "Kimi K3",
+          "description": "Moonshot K3. 262K context, strong open-weight coding/agentic. Replaces kimi-k2.6, which is present in NIM's /models listing but returns HTTP 404 \"not found for account\" when called (measured 2026-08-31) \u2014 listed is not the same as entitled. Verified live by calling it; not yet benchmarked.",
           "context_limit": 262144,
           "max_tokens": 8192,
           "facts": {
@@ -813,11 +840,12 @@
             "wire_protocol": "chat_completions",
             "max_tokens": 8192,
             "max_tool_iterations": 20,
-            "supports_reasoning": false,
+            "supports_reasoning": true,
             "supports_vision": false,
             "restricted_params": [],
             "tier": "B"
-          }
+          },
+          "__comment_reasoning": "K3 returns a `reasoning_content` field on plain chat completions (observed 2026-08-31), unlike K2.6."
         }
       },
       "pricing": {
@@ -830,7 +858,7 @@
           "input": 0,
           "output": 0
         },
-        "moonshotai/kimi-k2.6": {
+        "moonshotai/kimi-k3": {
           "input": 0,
           "output": 0
         }

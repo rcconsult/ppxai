@@ -66,6 +66,34 @@ Three `/doctor` invariants caught these, one per defect
 check, the recommended-new-model check). They are cheap and they earned their
 keep: each failure named the exact contradiction.
 
+## Presence is not entitlement either (added the same day, the hard way)
+
+The fix for the above set the NVIDIA default to `moonshotai/kimi-k2.6`,
+justified as "verified live" — because the id was **in** the `/models`
+listing. Calling it says otherwise:
+
+```
+HTTP 404 {"status":404,"title":"Not Found",
+          "detail":"Function '…': Not found for account '…'"}
+```
+
+The id exists. The account is not entitled to it. `/models` cannot express
+that, so a listing check reports success for a model that fails every real
+request. `moonshotai/kimi-k3` answers 200 and is the working default.
+
+This was committed **hours after this file was written**, in the very commit
+that fixed the defect this file describes. That is worth stating plainly,
+because it shows the failure mode is not ignorance of the rule:
+
+> The listing tells you about *names*. Only a call tells you about *your
+> ability to use them*. Absence and presence are BOTH uninformative — a
+> retired model vanishes, and an un-entitled model is indistinguishable from
+> a working one.
+
+So the rule has no "unless you can see it in the catalog" exemption. Reaching
+for the listing is fastest exactly when you are confident, which is exactly
+when the check is load-bearing.
+
 ## Cost of learning it the other way
 
 Four models shipped broken for up to six weeks, including the NVIDIA default,

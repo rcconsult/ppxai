@@ -438,26 +438,32 @@ function Get-ConfigTemplate {
       "name": "OpenAI ChatGPT",
       "base_url": "https://api.openai.com/v1",
       "api_key_env": "OPENAI_API_KEY",
-      "default_model": "gpt-4o",
-      "coding_model": "gpt-4o",
+      "default_model": "gpt-5.6-terra",
+      "coding_model": "gpt-5.6-terra",
+      "__comment_models": "gpt-5.6-terra benchmarked at parity with gpt-5.5 for 40% of the price (2026-08-31; benchmarks/tuning/openai-5.6-terra-vs-5.5.json). Its facts row is REQUIRED: the 5.6 line 400s on any tools array over chat-completions, so wire_protocol must be responses - see benchmarks/tuning/openai-5.6-tools-hazard.json. gpt-5.5 stays configured as a fallback; it has no sunset.",
       "models": {
-        "gpt-4o": {
-          "name": "GPT-4o",
-          "description": "Latest flagship model with vision"
+        "gpt-5.6-terra": {
+          "name": "GPT-5.6 Terra",
+          "description": "Cost-efficient flagship. Parity with gpt-5.5 at 40% of the price.",
+          "facts": {
+            "wire_protocol": "responses",
+            "tool_mode": "native",
+            "max_tokens": 128000
+          }
         },
-        "gpt-4o-mini": {
-          "name": "GPT-4o Mini",
+        "gpt-5.5": {
+          "name": "GPT-5.5",
+          "description": "Previous flagship. Kept as a fallback - no sunset announced."
+        },
+        "gpt-5.4-mini": {
+          "name": "GPT-5.4 Mini",
           "description": "Fast and affordable for simple tasks"
-        },
-        "o1": {
-          "name": "o1",
-          "description": "Advanced reasoning model"
         }
       },
       "pricing": {
-        "gpt-4o": {"input": 2.50, "output": 10.00},
-        "gpt-4o-mini": {"input": 0.15, "output": 0.60},
-        "o1": {"input": 15.00, "output": 60.00}
+        "gpt-5.6-terra": {"input": 2.00, "output": 12.00},
+        "gpt-5.5": {"input": 5.00, "output": 30.00},
+        "gpt-5.4-mini": {"input": 0.25, "output": 2.00}
       },
       "capabilities": {
         "web_search": false,

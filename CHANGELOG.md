@@ -131,9 +131,14 @@ three siblings. Every fresh install using NVIDIA pointed at a retired model.
 | `deepseek-ai/deepseek-v4-flash` | 2026-08-07 | **renamed** `…-flash-0731` |
 
 The deepseek pair was not withdrawn — NVIDIA moved to date-suffixed ids, and
-the suffixed forms answer 200. Defaults move to `moonshotai/kimi-k2.6`
+the suffixed forms answer 200. Defaults move to `moonshotai/kimi-k3`
 (verified live), and all four ids gain `/doctor` deprecation rows carrying
 the EOL date from the 410 body.
+
+The default first landed as `moonshotai/kimi-k2.6` and was corrected the same
+day: that id is present in NIM's `/models` listing but returns HTTP 404
+`"Not found for account"` when called. Being listed is not being entitled —
+the same asymmetry this entry documents, in the opposite direction.
 
 **Also fixed: `/doctor` was migrating users from one dead model to another.**
 Four *existing* deprecation rows named `deepseek-v4-pro` or

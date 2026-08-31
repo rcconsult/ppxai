@@ -85,21 +85,26 @@ const DEFAULT_CONFIG: PpxaiConfig = {
             name: "OpenAI",
             base_url: "https://api.openai.com/v1",
             api_key_env: "OPENAI_API_KEY",
-            default_model: "gpt-4o",
-            coding_model: "gpt-4o",
+            default_model: "gpt-5.6-terra",
+            coding_model: "gpt-5.6-terra",
             models: {
-                "gpt-4o": { name: "GPT-4o", description: "Most capable model" },
-                "gpt-4o-mini": { name: "GPT-4o Mini", description: "Fast and efficient" },
-                "gpt-4-turbo": { name: "GPT-4 Turbo", description: "Previous generation flagship" },
-                "o1": { name: "o1", description: "Advanced reasoning" },
-                "o1-mini": { name: "o1 Mini", description: "Fast reasoning" }
+                // gpt-5.6-terra: parity with gpt-5.5 at 40% of the price
+                // (benchmarked 2026-08-31). Its facts row is REQUIRED — the
+                // 5.6 line 400s on any tools array over chat-completions, so
+                // wire_protocol must be "responses". See
+                // benchmarks/tuning/openai-5.6-tools-hazard.json.
+                "gpt-5.6-terra": {
+                    name: "GPT-5.6 Terra",
+                    description: "Cost-efficient flagship — parity with gpt-5.5 at 40% of the price",
+                    facts: { wire_protocol: "responses", tool_mode: "native", max_tokens: 128000 }
+                },
+                "gpt-5.5": { name: "GPT-5.5", description: "Previous flagship — kept as a fallback, no sunset" },
+                "gpt-5.4-mini": { name: "GPT-5.4 Mini", description: "Fast and efficient" }
             },
             pricing: {
-                "gpt-4o": { input: 2.5, output: 10.0 },
-                "gpt-4o-mini": { input: 0.15, output: 0.6 },
-                "gpt-4-turbo": { input: 10.0, output: 30.0 },
-                "o1": { input: 15.0, output: 60.0 },
-                "o1-mini": { input: 3.0, output: 12.0 }
+                "gpt-5.6-terra": { input: 2.0, output: 12.0 },
+                "gpt-5.5": { input: 5.0, output: 30.0 },
+                "gpt-5.4-mini": { input: 0.25, output: 2.0 }
             }
         },
         "openrouter": {

@@ -607,10 +607,31 @@ class TestDeprecationTableInvariants:
         for k in NVIDIA_DEPRECATIONS:
             assert k in ALL_DEPRECATIONS
 
-    def test_openai_default_is_current(self):
-        # The recommended OpenAI default must match the current flagship
-        # in ppxai-config.example.json. Updated 2026-04-12 to gpt-5.4.
-        assert RECOMMENDED_DEFAULTS["openai"] == "gpt-5.4"
+    @pytest.mark.parametrize("provider", ["openai", "gemini", "perplexity", "nvidia"])
+    def test_recommended_default_matches_the_example_config(self, provider):
+        """The INTENT, asserted instead of a hardcoded literal.
+
+        This pinned `RECOMMENDED_DEFAULTS["openai"] == "gpt-5.4"`, so every
+        legitimate default change failed a test whose real subject is
+        AGREEMENT between the recommendation and what ppxai actually ships.
+        Reading the example config expresses that, covers every provider
+        rather than one, and cannot go stale — the 2026-08-31 Terra swap is
+        exactly the change it should have permitted and did not.
+        """
+        import json
+        from pathlib import Path
+
+        cfg = json.loads(
+            (Path(__file__).resolve().parents[1] / "ppxai-config.example.json")
+            .read_text(encoding="utf-8")
+        )
+        shipped = (cfg.get("providers", {}).get(provider) or {}).get("default_model")
+        if not shipped:
+            pytest.skip(f"{provider} has no default_model in the example config")
+        assert RECOMMENDED_DEFAULTS[provider] == shipped, (
+            f"/doctor recommends {RECOMMENDED_DEFAULTS[provider]!r} for "
+            f"{provider} but the shipped config defaults to {shipped!r}"
+        )
 
     def test_example_config_has_no_deprecated_models(self):
         """The shipped `ppxai-config.example.json` must not advertise any

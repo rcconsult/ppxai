@@ -169,6 +169,15 @@ RETIRED = {
     "nvidia::deepseek-ai/deepseek-v4-flash": (
         "2026-08-31 — RENAMED to `deepseek-ai/deepseek-v4-flash-0731`."
     ),
+    "nvidia::moonshotai/kimi-k2.6": (
+        "2026-08-31 — the one record retired for ENTITLEMENT, not end of life. "
+        "It is still in NIM's /models listing, and it still 404s when called: "
+        "\"Not found for account\". The Item 38 fix briefly made it the shipped "
+        "default on exactly that listing evidence; `moonshotai/kimi-k3` answers "
+        "200 and replaces it. Kept distinct from the 410 rows above because the "
+        "failure is account-scoped — another deployment may well be entitled to "
+        "it, which is precisely why a catalog scan cannot decide this."
+    ),
 }
 
 

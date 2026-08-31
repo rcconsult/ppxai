@@ -442,7 +442,15 @@ for weeks: two of the four reached end of life **before** the previous sweep
 
 `qwen/qwen3.5-122b-a10b` was the shipped NVIDIA **default and coding model**,
 so every fresh install pointed at a 410. Defaults moved to
-`moonshotai/kimi-k2.6` (verified live).
+`moonshotai/kimi-k3` (verified live by CALLING it: 200).
+
+⚠️ **Corrected 2026-08-31, same day.** The first fix set the default to
+`moonshotai/kimi-k2.6` and called it "verified live" on the strength of its
+presence in `/models`. Calling it returns **HTTP 404 `"Not found for account"`**
+— NVIDIA lists the id but the account is not entitled to it. That is the very
+error this Item documents, committed in the fix for this Item (`81a21b80`),
+hours after writing the lesson. A listing is not a liveness check even when the
+id you are looking for IS in it. `kimi-k3` answers 200 and is now the default.
 
 **Why the previous sweep missed it, and what changed in the method.** That
 sweep read each provider's `/models` listing — and a retired NIM model simply
@@ -564,12 +572,21 @@ date bumped to 2026-07-11; no new table entries needed.
    worth a look at next refresh: `gemini-omni-flash-preview`,
    `deep-research-*`, `antigravity-preview-05-2026`.
 
-4. **NVIDIA next-refresh candidates** (no action now): `z-ai/glm-5.2`,
-   `minimaxai/minimax-m3`, `mistralai/mistral-small-4-119b-2603`,
-   `mistralai/mistral-medium-3.5-128b`, `google/gemma-4-31b-it`,
-   `moonshotai/kimi-k2.6` (already configured). NVIDIA publishes no
-   deprecation calendar — the live-catalog diff IS the check; re-run the
-   sweep at the next release prep.
+4. **NVIDIA next-refresh candidates** — ⚠️ **the candidate list itself was
+   stale**. Probed per-id 2026-08-31: `z-ai/glm-5.2` **410**,
+   `mistralai/mistral-small-4-119b-2603` **410**,
+   `mistralai/mistral-medium-3.5-128b` **410** — three of five candidates were
+   already dead while sitting on a "consider these next" list.
+   `minimaxai/minimax-m3` answers **200**; `google/gemma-4-31b-it` **times out**
+   rather than answering, which is not a liveness verdict either way and needs
+   a re-probe. Live and confirmed: `moonshotai/kimi-k3` (now the configured
+   default; `kimi-k2.6` is listed but 404s "not found for account"),
+   `deepseek-ai/deepseek-v4-pro-0813`, `deepseek-ai/deepseek-v4-flash-0731`.
+
+   NVIDIA publishes no deprecation calendar, and a catalog diff cannot see
+   either retirement or entitlement — **only a per-id call is the check**.
+   Note also that a `000` (timeout) is not a 410: the deepseek pair answered
+   200 early in the same sweep and timed out later under load.
 
 **Trigger:** gpt-5.6 GA announcement, Perplexity Agent API docs stabilizing,
 or the next release prep — whichever comes first. **Two of the three have
@@ -1279,6 +1296,44 @@ rather than inferred, plus a row-count canary that trips the moment the
 re-authoring starts.
 
 ---
+
+### Item 66 — the deprecation table only knows the models WE ship [providers / doctor]
+
+**Filed 2026-08-31.** Found by sweeping the **operator's** configured ids
+instead of the example config's — a distinct defect from Item 38, which swept
+what ppxai ships.
+
+Ten NVIDIA models were configured on the operator's machine. **All ten are
+dead**: nine HTTP 410 with dated end-of-life bodies, plus
+`moonshotai/kimi-k2.6` returning HTTP 404 `"not found for account"`. Five of
+the ten had **no deprecation row at all**, so `/doctor` said nothing about
+them:
+
+| id | EOL (from its own 410) | previously in table? |
+|---|---|---|
+| `qwen/qwen3-coder-480b-a35b-instruct` | 2026-06-11 | ❌ |
+| `qwen/qwen3.5-397b-a17b` | 2026-07-27 | ❌ |
+| `meta/llama-4-maverick-17b-128e-instruct` | 2026-07-27 | ❌ |
+| `mistralai/mistral-large-3-675b-instruct-2512` | 2026-07-23 | ❌ |
+| `nvidia/llama-3.3-nemotron-super-49b-v1.5` | 2026-08-26 | ❌ |
+
+Rows for all five are now shipped. The nemotron date is the instructive one:
+**2026-08-26, five days before the sweep.** No catalog diff run weekly would
+have been late enough to matter, and NIM publishes no deprecation calendar.
+
+**The structural point.** `MODEL_DEPRECATIONS` is populated from the ids in
+`ppxai-config.example.json` — so `/doctor`'s coverage is bounded by what *we*
+ship, while its job is warning about what the *user* runs. A user on a model
+we never shipped gets silence, which is indistinguishable from approval. The
+five rows above patch this instance; the general fix is for `/doctor` to treat
+"configured id absent from the provider's catalog" as a finding in its own
+right, rather than relying on a hand-maintained table to have anticipated it.
+
+**Not fixed here**, because it needs a design decision: a catalog lookup makes
+`/doctor` network-dependent, which it currently is not. Options are an
+opt-in `--probe` flag, a shipped-with-release catalog snapshot, or leaving it
+manual and scheduling the sweep. Related: [[Item 38]] (the shipped-config half)
+and `docs/lessons/absence-is-invisible-in-listings.md`.
 
 ### Item 63 — benchmark conclusions are hand-typed into code, unlinked and unchecked [benchmarks / providers]
 
