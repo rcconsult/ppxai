@@ -29,8 +29,7 @@ logger = get_logger("session_manager")
 # made it un-importable from the engine layer without inverting
 # Engine -> Server -> Clients — which blocked engine/task_runner.py. Callers
 # doing `from ..session_manager import get_default_working_dir` still work.
-__all__ = ["get_default_working_dir", "SessionManager", "Session",
-           "get_session_manager", "get_idle_timeout"]
+__all__ = ["get_default_working_dir", "SessionManager", "Session"]
 
 
 @dataclass
