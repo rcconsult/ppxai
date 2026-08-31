@@ -1376,79 +1376,60 @@ profiles used it.
 where every commit had to answer "is this lint mine or pre-existing?" — a
 question that only exists because nothing enforces an answer.
 
-**✅ The 10 `F821` undefined names are FIXED** (`7458a0a0`) — see below
-for what they were and why they were the urgent half. Three of the four
-sites were genuinely reachable, including two inside `except` handlers.
-Fenced by `tests/test_undefined_names_are_bound.py` (9 tests, 8 of which
-fail against the pre-fix source). Repo-wide `F821` is now **zero**, and the
-total moved 3,907 → **3,897**.
+**✅ The 10 `F821` undefined names are FIXED** (`7458a0a0`) — see below for
+what they were and why they were the urgent half. Three of the four sites
+were genuinely reachable, including two inside `except` handlers. Fenced by
+`tests/test_undefined_names_are_bound.py` (9 tests, 8 of which fail against
+the pre-fix source). Repo-wide `F821` is now **zero**.
 
-**The rest of this item stands.** `ruff check .` reports **3,907 findings, of which 3,418 are auto-fixable**
-(derived 2026-08-31; re-derive before quoting). The first version of this
-entry said "3,418 findings" — that is the *fixable subset*, and quoting it as
-the total understated the problem by exactly the 489 findings that plain
-`--fix` leaves alone. Corrected below.
+**The rest of this item stands.** `grep -rn ruff .github/workflows/*.yml`
+returns **nothing** — ruff is configured in the project but never runs in CI,
+which is why findings accumulate without anyone noticing.
 
-`grep -rn ruff .github/workflows/*.yml` returns **nothing** — ruff is
-configured in the project but never runs in CI, which is why the count can
-grow without anyone noticing.
+**Derive the counts; do not read them from here.** This entry stored a total
+three times and it was stale three times — after the F821 fixes, after the
+fixable-vs-total confusion, and again the moment code changed. A number that
+needs correcting on every commit is asking to be computed:
 
-**Start with the 489 that plain `--fix` leaves alone**, because that is where
-the defects are rather than the style. Two different things live in that tail,
-and the difference is the whole point:
+```bash
+ruff check .                 # total, and the safely-fixable subset
+ruff check . --unsafe-fixes  # what a machine COULD rewrite
+ruff check . --statistics    # per-rule (the trustworthy per-rule source)
+```
 
-- **118 are fixable only via `--unsafe-fixes`** — ruff *can* rewrite them but
-  declines to by default, because the rewrite may change behaviour. 109 of
-  those 118 are `F841`: deleting an assignment is unsafe when its right-hand
-  side has side effects, so the machine correctly refuses to guess. These are
-  the ones a human should read, precisely because a rewrite exists and might
-  be wrong.
-- **371 have no fix at all**, safe or unsafe — including every `F821`. There
-  is no mechanical answer to "what did the author mean by `logger` here".
+As of 2026-08-31 that was ~3.9k total with ~3.4k safely fixable, but the
+shape matters more than the digits and the shape is stable:
 
-(Measured: `ruff check .` → 3,418 fixable; `--unsafe-fixes` → 3,536. The
-first version of this section called all 489 "unfixable", which invites
-hand-editing where 118 of them mostly need a decision about one `--unsafe-fixes`
-run.)
+**The tail `--fix` leaves alone splits in two, and the split is the point:**
 
-Counts below are that 489-finding tail, **not** each rule's total — `F841` is
-112 overall, of which 3 are safely fixable:
+- **Fixable only via `--unsafe-fixes`** — ruff *can* rewrite them and declines
+  to, because the rewrite may change behaviour. Almost all of these are
+  `F841`: deleting an assignment is unsafe when its right-hand side has side
+  effects, so the machine correctly refuses to guess. These want a human read
+  precisely *because* a rewrite exists and might be wrong.
+- **No fix at all**, safe or unsafe. `F821` was here — there is no mechanical
+  answer to "what did the author mean by `logger`", which is exactly why
+  those ten were defects rather than debt.
 
-| rule | in the tail | what it means |
+| rule | what it means | how to treat it |
 |---|---|---|
-| `F821` | ~~10~~ ✅ | undefined name — **fixed in `7458a0a0`** |
-| `F841` | 109 | assigned, never read — often a check whose result was dropped |
-| `UP035` | 220 | deprecated `typing` import (mechanical, but not auto-fixed) |
-| `E402` | 38 | import not at top of file |
-| `N802`/`N806`/`N818` | 56 | naming convention |
+| ~~`F821`~~ | undefined name | ✅ fixed in `7458a0a0` |
+| `F841` | assigned, never read — often a check whose result was dropped | read, then one `--unsafe-fixes` run |
+| `F811` | redefined while unused — one definition silently shadowing another | read individually |
+| `UP006`/`UP045`/`I001`/`UP035`/`F401` | typing modernisation + import hygiene | `--fix`, one commit |
 
-The `F821`s are worth reading **today**, not at cleanup time. Verified by
-AST, not just by ruff's word:
+`F811` deserves the same suspicion as `F841` even though it is auto-fixable:
+in a test file, a shadowed definition is a test that no longer runs under a
+name someone believes is covered — the species behind Item 66,
+`test_the_parser_sees_every_row`, and the harness regression in Item 65.
 
-    ppxai/engine/context.py:212,246   `logger` — never defined or imported
-                                       in the module, and BOTH uses are
-                                       inside `except` handlers. If that
-                                       branch fires, the error path itself
-                                       raises NameError.
-    ppxai/commands/provider.py:318,320 `bootstrap_ctx` — never assigned
-                                       anywhere in the module.
-    ppxai/tui/app.py:1094-1099         `status_bar` — assigned elsewhere in
-                                       the file but not on these paths;
-                                       a scope question, needs reading.
-
-An exception handler that crashes on exception is the same failure shape this
-inventory keeps recording: the thing meant to report a problem is the thing
-that breaks, so the original problem is never seen.
-
-`F811` (115, redefined-while-unused) is auto-fixable but deserves the same
-suspicion: one definition silently shadowing another. In a test file that is
-a test which no longer runs under a name someone believes is covered — the
-exact species behind Item 66, `test_the_parser_sees_every_row`, and the
-harness-integrity regression in Item 65.
-
-**The mechanical bulk**, for scale: `UP006` 1135 (`Dict` → `dict`), `UP045`
-805 (`Optional[X]` → `X | None`), `I001` 564 (import order), `F401` 520
-(unused imports). All `--fix` material.
+⚠️ **Two counting traps, both met while writing this entry.** `ruff check .
+--select <RULE>` reports a *different* count than a full run, because
+selecting a rule changes which files are examined (per-file ignores stop
+applying) — use `--statistics` for per-rule figures. And a rule's total is
+not its unfixable count: `F841` is ~112 overall of which only 3 are *safely*
+fixable, so quoting either number without saying which denominator it uses
+misleads.
 
 **Why this was not fixed while passing through.** Every commit in this arc
 that touched a linted file measured its count at the parent, found it
