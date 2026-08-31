@@ -78,7 +78,7 @@ search = [
 # upstream issue tracks it. Every ceiling raise goes through the benchmark
 # gate in docs/known-issues.md.
 gemini = [
-    "google-genai>=1.0.0,<2.12.0",
+    "google-genai>=1.0.0,<3.0.0",
 ]
 
 # Data processing support (v1.13.8 yaml/hcl, v1.17.4 multimodal file upload)
@@ -157,7 +157,7 @@ dev = [
     "sse-starlette>=1.6.0",
     # Gemini native SDK — ceiling-pinned via the KI-001 benchmark gate
     # (docs/known-issues.md); keep in sync with the `gemini` extra above.
-    "google-genai>=1.0.0,<2.12.0",
+    "google-genai>=1.0.0,<3.0.0",
     # Web search (ddgs - renamed from duckduckgo-search)
     "ddgs>=9.0.0",
     # Interactive shell
