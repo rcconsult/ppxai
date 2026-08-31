@@ -1370,13 +1370,20 @@ and §3's assumption that `api_path="auto"` had rows behind it — zero
 profiles used it.
 ---
 
-### Item 67 — ruff is not in CI, and 10 undefined names are live [tooling / defect]
+### Item 67 — ruff is not in CI [tooling / hygiene]
 
 **Filed 2026-08-31.** Surfaced repeatedly during the Item 64/65/66 work,
 where every commit had to answer "is this lint mine or pre-existing?" — a
 question that only exists because nothing enforces an answer.
 
-`ruff check .` reports **3,907 findings, of which 3,418 are auto-fixable**
+**✅ The 10 `F821` undefined names are FIXED** (`7458a0a0`) — see below
+for what they were and why they were the urgent half. Three of the four
+sites were genuinely reachable, including two inside `except` handlers.
+Fenced by `tests/test_undefined_names_are_bound.py` (9 tests, 8 of which
+fail against the pre-fix source). Repo-wide `F821` is now **zero**, and the
+total moved 3,907 → **3,897**.
+
+**The rest of this item stands.** `ruff check .` reports **3,907 findings, of which 3,418 are auto-fixable**
 (derived 2026-08-31; re-derive before quoting). The first version of this
 entry said "3,418 findings" — that is the *fixable subset*, and quoting it as
 the total understated the problem by exactly the 489 findings that plain
@@ -1409,7 +1416,7 @@ Counts below are that 489-finding tail, **not** each rule's total — `F841` is
 
 | rule | in the tail | what it means |
 |---|---|---|
-| `F821` | **10** | **undefined name — a live `NameError` waiting to fire** |
+| `F821` | ~~10~~ ✅ | undefined name — **fixed in `7458a0a0`** |
 | `F841` | 109 | assigned, never read — often a check whose result was dropped |
 | `UP035` | 220 | deprecated `typing` import (mechanical, but not auto-fixed) |
 | `E402` | 38 | import not at top of file |
@@ -1452,8 +1459,8 @@ the mechanical change from the meaningful one. The disposition is recorded,
 but a commit message is not a place anyone will find it again — hence this
 item.
 
-**Suggested shape, not a decision:** read the 10 `F821`s first as their own
-change (they are potential runtime failures, not debt); then decide `F841` —
+**Suggested shape, not a decision:** ~~read the 10 `F821`s first~~ ✅ done;
+then decide `F841` —
 one `--unsafe-fixes` run would clear 109 of them, but each deletion is only
 safe if the right-hand side has none, so this is a read-then-run rather than
 a run; then `F811` individually; then the mechanical rules as ONE commit
