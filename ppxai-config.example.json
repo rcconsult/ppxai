@@ -748,8 +748,8 @@
       "name": "NVIDIA NIM (build.nvidia.com)",
       "base_url": "https://integrate.api.nvidia.com/v1",
       "api_key_env": "NVIDIA_API_KEY",
-      "default_model": "qwen/qwen3.5-122b-a10b",
-      "coding_model": "qwen/qwen3.5-122b-a10b",
+      "default_model": "moonshotai/kimi-k2.6",
+      "coding_model": "moonshotai/kimi-k2.6",
       "system_prompt": "You are an expert AI coding assistant served via NVIDIA NIM. Be concise and precise. Call tools directly using native function calling \u2014 never output tool-call JSON in response text. After tool failures, acknowledge the actual error message before retrying.",
       "generation_params": {
         "temperature": 0.2,
@@ -757,63 +757,7 @@
         "__comment": "Provider-level defaults. NVIDIA portal recommends different params per model \u2014 see model-level overrides below."
       },
       "models": {
-        "qwen/qwen3.5-122b-a10b": {
-          "name": "Qwen3.5 122B-A10B",
-          "description": "Frontier MoE (122B total, 10B active). NVIDIA-recommended params: temp=0.2, top_p=0.9, max_tokens=4096. Tier A benchmark: 77.4% (28/36).",
-          "context_limit": 256000,
-          "max_tokens": 4096,
-          "__comment_best_for": "All-around coding, multi-step tool loops, strong instruction following. Best Tier A NVIDIA model overall.",
-          "generation_params": {
-            "temperature": 0.2,
-            "top_p": 0.9
-          },
-          "__comment_extra_body": "v1.18.3 plumbed extra_body through openai_compat. To enable Qwen3.5's reasoning mode, uncomment the block below. Roughly doubles latency \u2014 leave off unless you need extended chain-of-thought. NVIDIA's chat_template_kwargs.enable_thinking is the toggle.",
-          "__example_extra_body": {
-            "chat_template_kwargs": {
-              "enable_thinking": true
-            }
-          },
-          "facts": {
-            "tool_mode": "native",
-            "fallback_on_empty": true,
-            "fallback_on_failure": false,
-            "strip_json_from_text": true,
-            "parallel_tool_calls": false,
-            "wire_protocol": "chat_completions",
-            "max_tokens": 4096,
-            "max_tool_iterations": 0,
-            "supports_reasoning": false,
-            "supports_vision": false,
-            "restricted_params": [],
-            "tier": "A"
-          }
-        },
-        "qwen/qwen3-next-80b-a3b-instruct": {
-          "name": "Qwen3-Next 80B-A3B Instruct",
-          "description": "Hybrid Gated DeltaNet + MoE (80B total, 3B active). NVIDIA-recommended params: temp=0.7, top_p=0.8, max_tokens=4096. Tier A benchmark: 68.3% (24/36).",
-          "context_limit": 262144,
-          "max_tokens": 4096,
-          "__comment_best_for": "Cheap fast tool-calling for everyday tasks. Strong tool_calling/format/error_recovery (100%); weak instruction_following (28.6%).",
-          "generation_params": {
-            "temperature": 0.7,
-            "top_p": 0.8
-          },
-          "facts": {
-            "tool_mode": "native",
-            "fallback_on_empty": true,
-            "fallback_on_failure": false,
-            "strip_json_from_text": true,
-            "parallel_tool_calls": false,
-            "wire_protocol": "chat_completions",
-            "max_tokens": 8192,
-            "max_tool_iterations": 0,
-            "supports_reasoning": false,
-            "supports_vision": false,
-            "restricted_params": [],
-            "tier": "C"
-          }
-        },
-        "deepseek-ai/deepseek-v4-pro": {
+        "deepseek-ai/deepseek-v4-pro-0813": {
           "name": "DeepSeek V4 Pro",
           "description": "DeepSeek frontier (1.6T MoE, multimodal). 1M-token context via Compressed Sparse Attention. Replaces retired deepseek-v3.2. Added 2026-05-31 from live NIM /models; not yet benchmarked.",
           "context_limit": 1000000,
@@ -831,9 +775,10 @@
             "supports_vision": true,
             "restricted_params": [],
             "tier": "B"
-          }
+          },
+          "__comment_rename": "NVIDIA moved to date-suffixed ids; `deepseek-ai/deepseek-v4-pro` answers HTTP 410 \"end of life 2026-08-07\" (measured 2026-08-31). Same model."
         },
-        "deepseek-ai/deepseek-v4-flash": {
+        "deepseek-ai/deepseek-v4-flash-0731": {
           "name": "DeepSeek V4 Flash",
           "description": "Fast 284B variant of DeepSeek V4. 1M-token context, lower latency than V4 Pro. Added 2026-05-31; not yet benchmarked.",
           "context_limit": 1000000,
@@ -851,7 +796,8 @@
             "supports_vision": true,
             "restricted_params": [],
             "tier": "B"
-          }
+          },
+          "__comment_rename": "NVIDIA moved to date-suffixed ids; `deepseek-ai/deepseek-v4-flash` answers HTTP 410 \"end of life 2026-08-07\" (measured 2026-08-31). Same model."
         },
         "moonshotai/kimi-k2.6": {
           "name": "Kimi K2.6",
@@ -875,21 +821,12 @@
         }
       },
       "pricing": {
-        "qwen/qwen3.5-122b-a10b": {
+        "deepseek-ai/deepseek-v4-pro-0813": {
           "input": 0,
           "output": 0,
           "__comment": "NVIDIA NIM free tier (rate-limited)"
         },
-        "qwen/qwen3-next-80b-a3b-instruct": {
-          "input": 0,
-          "output": 0
-        },
-        "deepseek-ai/deepseek-v4-pro": {
-          "input": 0,
-          "output": 0,
-          "__comment": "NVIDIA NIM free tier (rate-limited)"
-        },
-        "deepseek-ai/deepseek-v4-flash": {
+        "deepseek-ai/deepseek-v4-flash-0731": {
           "input": 0,
           "output": 0
         },

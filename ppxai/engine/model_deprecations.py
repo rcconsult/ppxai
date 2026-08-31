@@ -293,15 +293,67 @@ PERPLEXITY_DEPRECATIONS: Dict[str, Deprecation] = {
 # who still reference them in their own configs get a migration hint.
 
 NVIDIA_DEPRECATIONS: Dict[str, Deprecation] = {
+    # ---- Found by the Item 38 sweep, 2026-08-31 -------------------------
+    # These four were CONFIGURED in the shipped example and answer HTTP 410
+    # Gone with an explicit end-of-life date in the body. Two died BEFORE the
+    # previous sweep (2026-07-11) and were missed: that sweep read the
+    # /models listing, and a retired NIM model simply vanishes from it, so an
+    # id nobody thought to look for looks identical to an id that is fine.
+    # Calling the endpoint is what surfaces the date. The 410 body is quoted
+    # in each reason because it is the primary evidence.
+    #
+    # The deepseek pair is not gone, it is RENAMED: NVIDIA moved to
+    # date-suffixed ids, and the suffixed forms answer 200 (verified).
+    "qwen/qwen3.5-122b-a10b": Deprecation(
+        shutdown_date="2026-07-20",
+        replacement="moonshotai/kimi-k2.6",
+        reason=(
+            "HTTP 410: \"has reached its end of life on 2026-07-20T00:00:00Z\". "
+            "No successor in the qwen family remains on NIM — the whole family "
+            "is absent from /models (measured 2026-08-31), so the replacement "
+            "crosses vendors deliberately rather than naming a sibling that is "
+            "also gone."
+        ),
+    ),
+    "qwen/qwen3-next-80b-a3b-instruct": Deprecation(
+        shutdown_date="2026-07-27",
+        replacement="moonshotai/kimi-k2.6",
+        reason=(
+            "HTTP 410: \"has reached its end of life on 2026-07-27T00:00:00Z\". "
+            "Same as its 122b sibling: no qwen model remains on NIM."
+        ),
+    ),
+    "deepseek-ai/deepseek-v4-pro": Deprecation(
+        shutdown_date="2026-08-07",
+        replacement="deepseek-ai/deepseek-v4-pro-0813",
+        reason=(
+            "HTTP 410: \"has reached its end of life on 2026-08-07T09:00:00Z\". "
+            "NOT withdrawn — NVIDIA moved to date-suffixed ids. The suffixed "
+            "form answers 200 (verified 2026-08-31), so this is a rename."
+        ),
+    ),
+    "deepseek-ai/deepseek-v4-flash": Deprecation(
+        shutdown_date="2026-08-07",
+        replacement="deepseek-ai/deepseek-v4-flash-0731",
+        reason=(
+            "HTTP 410, same EOL timestamp as the Pro sibling. Same rename to a "
+            "date-suffixed id; the suffixed form is present on /models."
+        ),
+    ),
     "qwen/qwen3-next-80b-a3b-thinking": Deprecation(
         shutdown_date="2026-05-31",
-        replacement="qwen/qwen3-next-80b-a3b-instruct",
-        reason="Retired from NIM catalog (absent from live /models 2026-05-31). Instruct sibling remains available.",
+        replacement="moonshotai/kimi-k2.6",
+        reason=(
+            "Retired from NIM catalog 2026-05-31. Its instruct sibling was the "
+            "replacement until that ALSO reached end of life 2026-07-27 "
+            "(HTTP 410, measured 2026-08-31), so this now points at a model "
+            "verified live."
+        ),
     ),
     "qwen/qwen2.5-coder-32b-instruct": Deprecation(
         shutdown_date="2026-05-31",
-        replacement="deepseek-ai/deepseek-v4-pro",
-        reason="Retired from NIM catalog. Use a current coder/agentic model (DeepSeek V4 or qwen3.5-122b-a10b).",
+        replacement="deepseek-ai/deepseek-v4-pro-0813",
+        reason="Retired from NIM catalog. Use a current coder/agentic model (DeepSeek V4 date-suffixed, or Kimi K2.6).",
     ),
     "moonshotai/kimi-k2-thinking": Deprecation(
         shutdown_date="2026-05-31",
@@ -310,12 +362,12 @@ NVIDIA_DEPRECATIONS: Dict[str, Deprecation] = {
     ),
     "deepseek-ai/deepseek-v3.2": Deprecation(
         shutdown_date="2026-05-31",
-        replacement="deepseek-ai/deepseek-v4-pro",
+        replacement="deepseek-ai/deepseek-v4-pro-0813",
         reason="Retired from NIM catalog; superseded by DeepSeek V4 (Pro/Flash).",
     ),
     "mistralai/devstral-2-123b-instruct-2512": Deprecation(
         shutdown_date="2026-05-31",
-        replacement="deepseek-ai/deepseek-v4-pro",
+        replacement="deepseek-ai/deepseek-v4-pro-0813",
         reason="Retired from NIM catalog (absent from live /models 2026-05-31).",
     ),
 }
@@ -400,13 +452,13 @@ RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
     },
     {
         "provider": "nvidia",
-        "model": "qwen/qwen3.5-122b-a10b",
-        "reason": "Best all-around NVIDIA NIM model (Tier A 77.4%). Frontier MoE, strong tool calling. Recommended default.",
+        "model": "moonshotai/kimi-k2.6",
+        "reason": "Best NIM model still live (2026-08-31 sweep). Replaces the qwen recommendation — the whole qwen family reached end of life on NIM.",
     },
     {
         "provider": "nvidia",
-        "model": "deepseek-ai/deepseek-v4-pro",
-        "reason": "DeepSeek V4 frontier (1.6T MoE, multimodal, 1M context). Replaces retired deepseek-v3.2.",
+        "model": "deepseek-ai/deepseek-v4-pro-0813",
+        "reason": "DeepSeek V4 frontier (1.6T MoE, multimodal, 1M context). NVIDIA moved to date-suffixed ids; the unsuffixed form now answers 410.",
     },
     {
         "provider": "nvidia",
@@ -422,7 +474,7 @@ RECOMMENDED_DEFAULTS: Dict[str, str] = {
     "gemini": "gemini-3.5-flash",     # Updated 2026-05-31 (was gemini-3-flash-preview; superseded by 3.5-flash GA)
     "openai": "gpt-5.4",              # Updated 2026-04-12 (was gpt-5.2)
     "perplexity": "perplexity/sonar",  # ADR 0012: only Sonar on the surviving wire
-    "nvidia": "qwen/qwen3.5-122b-a10b",  # Added 2026-05-31 — best Tier A NIM model
+    "nvidia": "moonshotai/kimi-k2.6",  # 2026-08-31: the qwen line hit EOL (410)
     "anthropic": "claude-sonnet-4-6",
 }
 

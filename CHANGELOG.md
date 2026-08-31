@@ -57,6 +57,37 @@ because that fallback is what produced the confabulated results.
 uses Perplexity's Jobs API, not chat completions, so it was never usable
 on the endpoint ppxai calls.
 
+### Fixed — four dead NVIDIA models were shipping in the example config
+
+The 2026-08-31 catalog sweep found `qwen/qwen3.5-122b-a10b` — the shipped
+NVIDIA **default and coding model** — answering `HTTP 410 Gone`, along with
+three siblings. Every fresh install using NVIDIA pointed at a retired model.
+
+| model | end of life | now |
+|---|---|---|
+| `qwen/qwen3.5-122b-a10b` | 2026-07-20 | dropped — the whole qwen family left NIM |
+| `qwen/qwen3-next-80b-a3b-instruct` | 2026-07-27 | dropped |
+| `deepseek-ai/deepseek-v4-pro` | 2026-08-07 | **renamed** `…-pro-0813` |
+| `deepseek-ai/deepseek-v4-flash` | 2026-08-07 | **renamed** `…-flash-0731` |
+
+The deepseek pair was not withdrawn — NVIDIA moved to date-suffixed ids, and
+the suffixed forms answer 200. Defaults move to `moonshotai/kimi-k2.6`
+(verified live), and all four ids gain `/doctor` deprecation rows carrying
+the EOL date from the 410 body.
+
+**Also fixed: `/doctor` was migrating users from one dead model to another.**
+Four *existing* deprecation rows named `deepseek-v4-pro` or
+`qwen3-next-80b-a3b-instruct` as their replacement, and the "recommended new
+models" list recommended a model that had been dead for six weeks. A
+replacement is a claim that a model is alive, and claims decay — those are
+re-verified now.
+
+Two of the four died **before** the previous sweep (2026-07-11) and it missed
+them, because that sweep read each provider's `/models` listing and a retired
+NIM model simply vanishes from the listing. Absence is invisible when you are
+reading a list of what is present; calling the endpoint returns the 410 and
+its date. The sweep method in debt Item 38 is corrected accordingly.
+
 ### Changed — `ModelFacts` is the source of truth; profiles are seed data
 
 Follow-on to ADR 0012. `supports_vision()` — the last behaviour-bearing

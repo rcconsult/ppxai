@@ -426,7 +426,47 @@ missing abstraction visible).
 
 ---
 
-### Item 38 — model-catalog watch list (verified live 2026-07-11)
+### Item 38 — model-catalog watch list (verified live 2026-08-31)
+
+**Sweep 2026-08-31 — FOUR CONFIGURED NVIDIA MODELS WERE DEAD.** The first
+sweep in this item's history to find real breakage, and it had been shipping
+for weeks: two of the four reached end of life **before** the previous sweep
+(2026-07-11) and were missed by it.
+
+| model | EOL (from the 410 body) | resolution |
+|---|---|---|
+| `qwen/qwen3.5-122b-a10b` | 2026-07-20 | no successor — whole qwen family gone from NIM |
+| `qwen/qwen3-next-80b-a3b-instruct` | 2026-07-27 | same |
+| `deepseek-ai/deepseek-v4-pro` | 2026-08-07 | **renamed** → `...-pro-0813` |
+| `deepseek-ai/deepseek-v4-flash` | 2026-08-07 | **renamed** → `...-flash-0731` |
+
+`qwen/qwen3.5-122b-a10b` was the shipped NVIDIA **default and coding model**,
+so every fresh install pointed at a 410. Defaults moved to
+`moonshotai/kimi-k2.6` (verified live).
+
+**Why the previous sweep missed it, and what changed in the method.** That
+sweep read each provider's `/models` listing — and a retired NIM model simply
+*vanishes* from the listing, so an id nobody thought to look for is
+indistinguishable from an id that is fine. Absence is invisible when you are
+reading a list of what is present. **Calling the endpoint** returns
+`HTTP 410 Gone` with an explicit end-of-life timestamp in the body. The
+listing tells you what exists; only a call tells you your own ids are dead.
+Future sweeps must check configured ids against the API, not scan the
+catalog for familiar names.
+
+**A compounding defect the same sweep exposed:** four *existing* deprecation
+rows named `deepseek-ai/deepseek-v4-pro` or `qwen/qwen3-next-80b-a3b-instruct`
+as their `replacement` — so `/doctor` was migrating users from one dead model
+to another. Repointed at verified-live successors. A deprecation table needs
+its replacements re-verified whenever its provider is swept; a replacement is
+a claim about a model being alive, and claims decay.
+
+Also verified live 2026-08-31: OpenAI 7/7 configured models live (124 in the
+catalog); Gemini 7/7 live, and **`gemini-3.6-flash` is present** (the Item 54
+/ B2 target); Perplexity still has no `/models` (404) and its chat wire still
+serves all three shipped Sonar models.
+
+#### Item 38 — previous sweep (verified live 2026-07-11)
 
 Full live sweep 2026-07-11 (method: `set -a; . ~/.ppxai/.env; set +a` + curl
 each provider's `/models` with bearer; Perplexity has no `/models` — verified
@@ -988,6 +1028,17 @@ deprecation-table rows for 5.5/5.5-pro if bench confirms. Effort: (a) ~30min;
 
 **Filed 2026-08-31.** Deadline-carrying, and the shortest item here that can
 still break users.
+
+**Probe 1 of 2 — 2026-08-31: STILL 400.** `perplexity/sonar-pro`,
+`perplexity/sonar-reasoning-pro` and bare `sonar-pro` all answer
+`400 validation failed: model "..." is not supported` on the Responses wire.
+The shipped deprecation rows are correct as written; no change needed.
+
+**⏰ PROBE 2 IS DUE 2026-09-20** — a commitment, not a suggestion. That is one
+week before the cutover: late enough for Perplexity to have shipped the pro
+line, early enough to change the rows and cut a release if they have. If
+probe 2 also returns 400, the rows stand as final and this item closes on
+2026-09-27 with the endpoint.
 
 `PERPLEXITY_DEPRECATIONS` tells every `sonar-pro` / `sonar-reasoning-pro`
 operator to migrate to **`perplexity/sonar`** — the *lighter* model — because

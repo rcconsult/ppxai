@@ -50,8 +50,8 @@ value. Behaviour-neutral for today's readers (`chat.py:312`/`:397` test
 **Deviation 2 — `supports_vision` survives an override.** Three
 rows carry `supports_vision: true` where HEAD-effective resolved `false`:
 
-    nvidia   deepseek-ai/deepseek-v4-pro
-    nvidia   deepseek-ai/deepseek-v4-flash
+    nvidia   deepseek-ai/deepseek-v4-pro-0813
+    nvidia   deepseek-ai/deepseek-v4-flash-0731
     qwen36-agent  Qwen/Qwen3.6-27B-FP8-agent
 
 Their glob rows say `true`. HEAD answered `false` only because
@@ -151,6 +151,24 @@ RETIRED = {
     "perplexity::sonar-reasoning-pro": (
         "2026-08-31 — same as sonar-pro: absent from the Responses wire."
     ),
+    # NVIDIA, found by the Item 38 sweep 2026-08-31. Unlike the Sonar rows
+    # these were already BROKEN in the shipped config — HTTP 410 with an
+    # explicit end-of-life date, two of them predating the previous sweep.
+    "nvidia::qwen/qwen3.5-122b-a10b": (
+        "2026-08-31 — HTTP 410, EOL 2026-07-20. The whole qwen family is gone "
+        "from NIM, so there is no sibling to rename to."
+    ),
+    "nvidia::qwen/qwen3-next-80b-a3b-instruct": (
+        "2026-08-31 — HTTP 410, EOL 2026-07-27. Same: no qwen model remains."
+    ),
+    "nvidia::deepseek-ai/deepseek-v4-pro": (
+        "2026-08-31 — RENAMED, not withdrawn: NVIDIA moved to date-suffixed "
+        "ids. The record lives on at `deepseek-ai/deepseek-v4-pro-0813`, "
+        "which is in this fixture's place and carries the same measurements."
+    ),
+    "nvidia::deepseek-ai/deepseek-v4-flash": (
+        "2026-08-31 — RENAMED to `deepseek-ai/deepseek-v4-flash-0731`."
+    ),
 }
 
 
@@ -171,14 +189,20 @@ class TestBehaviourIsPreserved:
             "remove them from RETIRED rather than carrying a false exemption"
         )
 
+    #: NB the two `deepseek-v4-*` vision deviations that used to sit here are
+    #: gone — not reverted, RENAMED. NVIDIA moved to date-suffixed ids
+    #: (2026-08-31), so those records are in `RETIRED` and their old keys no
+    #: longer resolve. A DECLARED entry is measured against the HEAD fixture,
+    #: which knows only the old ids, so the deviation cannot be re-checked
+    #: here; `TestTheVisionFixReachesTheConfig` carries it instead, reading
+    #: the config under the NEW id against the seed.
+    #:
     #: The declared deviations (ADR 0012 §2 Q0d). Listed EXPLICITLY rather
     #: than baked into the fixture, so the fence measures them instead of
     #: hiding them — a fixture quietly edited to match new behaviour proves
     #: nothing at all.
     DECLARED = {
         ("perplexity::__endpoint__", "citations"),
-        ("nvidia::deepseek-ai/deepseek-v4-pro", "supports_vision"),
-        ("nvidia::deepseek-ai/deepseek-v4-flash", "supports_vision"),
         ("qwen36-agent::Qwen/Qwen3.6-27B-FP8-agent", "supports_vision"),
     }
 
@@ -324,8 +348,8 @@ class TestTheVisionFixReachesTheConfig:
     """
 
     VISION_MODELS = [
-        ("nvidia", "deepseek-ai/deepseek-v4-pro"),
-        ("nvidia", "deepseek-ai/deepseek-v4-flash"),
+        ("nvidia", "deepseek-ai/deepseek-v4-pro-0813"),
+        ("nvidia", "deepseek-ai/deepseek-v4-flash-0731"),
         ("qwen36-agent", "Qwen/Qwen3.6-27B-FP8-agent"),
     ]
 
