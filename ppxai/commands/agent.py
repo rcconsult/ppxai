@@ -31,6 +31,7 @@ from .results import (
 from ..common.logger import get_logger
 from ..rich.event_handler import TUIEventHandler
 from ..rich.ui import console
+from ..config.defaults import DEFAULT_AGENT_MAX_ITERATIONS, DEFAULT_AGENT_MIN_TASK_WORDS
 
 
 def _handle_agent_interrupt(
@@ -649,10 +650,6 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
     # Get agent config. Fall back to the canonical constants rather than
     # repeating literals here — a duplicated default silently diverges the
     # day the constant changes.
-    from ..config.defaults import (
-        DEFAULT_AGENT_MAX_ITERATIONS,
-        DEFAULT_AGENT_MIN_TASK_WORDS,
-    )
 
     agent_config = context.engine_client.get_agent_config()
     min_words = agent_config.get("min_task_words", DEFAULT_AGENT_MIN_TASK_WORDS)

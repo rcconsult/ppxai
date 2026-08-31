@@ -43,6 +43,9 @@ from .results import (
     ResultStatus,
     SideEffectKind,
 )
+from ..engine.model_facts import supports_vision as _sv
+from ..engine.artifact_projector import ContextAttachmentProjector
+from ..engine.multimodal_ops import _synthesize_refs_from_content
 
 _attach_logger = get_logger("attach")
 
@@ -665,7 +668,6 @@ def handle_attach(context: Any, args: str) -> CommandResult:
                 engine_client.state.get("model_supports_vision")
             )
         except (AttributeError, KeyError):
-            from ..engine.model_facts import supports_vision as _sv
             model_has_vision = _sv(active_model) if active_model else False
         if not model_has_vision:
             names = ", ".join(pf.name for pf in image_attachments)
@@ -761,8 +763,6 @@ def collect_context_attachments(session: Any) -> List[ContextAttachment]:
     # the engine.multimodal_ops scanner uses; kept here purely to
     # keep this standalone fallback usable in tests without booting
     # an engine.
-    from ..engine.artifact_projector import ContextAttachmentProjector
-    from ..engine.multimodal_ops import _synthesize_refs_from_content
 
     seen: set[str] = set()
     result: List[ContextAttachment] = []

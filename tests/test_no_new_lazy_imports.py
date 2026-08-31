@@ -59,21 +59,12 @@ PPXAI = pathlib.Path(__file__).resolve().parent.parent / "ppxai"
 #: measured at `12a2c9b7`. Every entry is a known violation awaiting steps
 #: 2 and 3 — REMOVE rows as they are fixed; never add one.
 BASELINE = {
-    ("ppxai.commands.agent", "ppxai.config.defaults"),
-    ("ppxai.commands.attach", "ppxai.engine.artifact_projector"),
-    ("ppxai.commands.attach", "ppxai.engine.model_facts"),
-    ("ppxai.commands.attach", "ppxai.engine.multimodal_ops"),
-    ("ppxai.commands.display", "ppxai.engine.tools.builtin.preview_log"),
+    ("ppxai.commands.handler", "ppxai.rendering.rich_renderer"),
     ("ppxai.commands.doctor", "ppxai.config"),
     ("ppxai.commands.doctor", "ppxai.config.execution"),
     ("ppxai.commands.doctor", "ppxai.config.facts_config"),
     ("ppxai.commands.doctor", "ppxai.config.tls"),
     ("ppxai.commands.doctor", "ppxai.engine.tools.search_backends"),
-    ("ppxai.commands.handler", "ppxai.rendering.rich_renderer"),
-    ("ppxai.commands.provider", "ppxai.config.facts_config"),
-    ("ppxai.commands.provider", "ppxai.engine.model_facts"),
-    ("ppxai.commands.provider", "ppxai.engine.providers"),
-    ("ppxai.commands.system", "ppxai.commands.context"),
     ("ppxai.common.consent", "ppxai.engine.tools.wrappers"),
     ("ppxai.config.execution", "ppxai.config.tools"),
     ("ppxai.config.execution", "ppxai.engine.model_facts"),

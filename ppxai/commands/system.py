@@ -27,6 +27,7 @@ from .results import (
     SideEffectKind,
     TextResult,
 )
+from .context import ServerCommandContext
 
 
 # =============================================================================
@@ -62,7 +63,6 @@ def handle_help(context: CommandContext, args: str) -> CommandResult:
     """
     # Lazy import — context.py imports system.py transitively at
     # module load.
-    from .context import ServerCommandContext
 
     is_http = isinstance(context, ServerCommandContext)
     args = args.strip().lower() if args else ""
@@ -674,7 +674,6 @@ def handle_keys(context: CommandContext, args: str) -> CommandResult:
     """
     # Lazy import to avoid pulling in `ppxai.commands.context` at module
     # load time — context.py imports results.py which imports system.py.
-    from .context import ServerCommandContext
 
     is_http = isinstance(context, ServerCommandContext)
 

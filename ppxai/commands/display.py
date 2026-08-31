@@ -41,6 +41,7 @@ from ppxai.common.file_type import (
     get_view_mode,
     get_language_for_extension,
 )
+from ppxai.engine.tools.builtin.preview_log import read_preview_log
 
 # Helper function for file search (used by both old and new handlers)
 def _search_files(handler: Any, query: str, max_results: int = 10) -> List[Path]:
@@ -706,7 +707,6 @@ def handle_preview(context: CommandContext, args: str) -> CommandResult:
     # AI-driven inspection share one source of truth.
     logs_match = re.match(r"^logs(?:\s+(\d+))?\s*$", args.strip(), re.IGNORECASE)
     if logs_match:
-        from ppxai.engine.tools.builtin.preview_log import read_preview_log
         n_lines = int(logs_match.group(1)) if logs_match.group(1) else 100
         log_text = read_preview_log(lines=n_lines)
         return TextResult(

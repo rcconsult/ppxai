@@ -26,6 +26,9 @@ from .results import (
     ErrorResult,
     KeyValueResult,
 )
+from ..config.facts_config import model_fact_overrides
+from ..engine.model_facts import is_unmeasured, shipped_facts_for_model
+from ..engine.providers import get_provider_class
 
 
 def handle_model(context: CommandContext, args: str) -> CommandResult:
@@ -289,9 +292,6 @@ def handle_model_info(context: CommandContext, provider: str, model_id: str) -> 
     # merge a third time — its own layer order, its own field list — which is
     # how `api_path` came to be shown here while nothing routed on it (debt
     # Item 61). It now reports what the send path will actually do.
-    from ..config.facts_config import model_fact_overrides
-    from ..engine.model_facts import is_unmeasured, shipped_facts_for_model
-    from ..engine.providers import get_provider_class
 
     try:
         provider_table = getattr(
