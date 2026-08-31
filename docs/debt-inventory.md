@@ -1272,7 +1272,7 @@ obligations are tracked.
 
 ---
 
-### Item 65 — `BUILTIN_PROFILES` is still the seed vocabulary; the bridge needs a scheduled death [providers / config]
+### Item 65 — ✅ IMPLEMENTED — `BUILTIN_PROFILES` retired [providers / config]
 
 **Filed 2026-08-31.** ADR 0012 refactor (b), second half. Not deadline-bound,
 but time-sensitive in a different way: an adapter with no scheduled removal
@@ -1305,7 +1305,114 @@ flattens to its facts row, field for field, with the mapping written out
 rather than inferred, plus a row-count canary that trips the moment the
 re-authoring starts.
 
+
 ---
+
+**✅ IMPLEMENTED 2026-08-31**, in two commits as planned, plus two fixes.
+
+| | commit | what |
+|---|---|---|
+| step 1 | `ba8b89ac` | 65 rows re-authored as `ModelFacts` literals; nothing deleted |
+| step 2 | `ed3c069a` | profile vocabulary deleted; `model_profiles.py` gone (net −1,035 lines) |
+| fix | `eb57147c` | stale comments repointed; test file renamed to `test_shipped_model_facts.py` |
+| fix | `0463760c` | benchmark harness import repaired (see below) |
+
+Rows were **generated from the seed output, not retyped** — the entire risk
+of a 65-row × 12-field migration is transcription error, and removing the
+human from that loop removes the risk class rather than testing for it. Every
+row states every field: the old "a code row may rely on dataclass defaults"
+argument holds while rows are generated and fails the moment someone edits
+one, and `ToolCallingProfile.mode` defaulted to `native` where
+`ModelFacts.tool_mode` defaults to `prompt_based` (Q0a), with 52 of 65 rows
+relying on the old default.
+
+**⚠️ The fence this entry promised did not exist.** The paragraph above says
+`test_every_profile_row_flattens_to_its_facts_row` makes the migration
+checkable. It does not: that test compares `facts_from_profile(profile)`
+against the *profile*, so it fences the flattener and never reads
+`SHIPPED_MODEL_FACTS`. Measured during step 1 — mutating `tool_mode` in a
+literal row left all 135 tests green, and `grep -c SHIPPED_MODEL_FACTS
+tests/` returned **0** across the whole suite. The shipped table every
+provider resolves had no test in front of it at all.
+
+The real fence was built as part of step 1 and rewritten in step 2 (row
+count, a parser-sees-every-row check so a drifted regex cannot make the
+source checks vacuous, every row states every field, the 15 non-default
+wires pinned, per-row validity, and `import model_profiles` must raise).
+Mutation-verified by test *name*, each mutation confirmed applied first.
+
+**The regression worth remembering.** Step 2 broke
+`benchmarks/llm-eval/test_cases.py`, which imported `get_profile`. It did not
+go red — `pytest.importorskip` made the 28-test harness-integrity suite go
+**silent**, and the only trace was the suite's skip count moving 32 → 33.
+Two causes, both structural: the reference survey scoped `ppxai/` and
+`tests/` while `.graphifyignore` excludes `benchmarks/`, so neither the graph
+nor the grep saw the call site; and the first fix commit was pushed without
+the file ever being staged, so origin stayed broken while the local tree was
+correct. **A survey is only as wide as its roots, and the proof of a fix is
+a number derived from origin — not from the tree you fixed.**
+
+**Still open under this item:**
+
+- **§4b reference-data validation** — the 15 `wire_protocol` rows, the 23
+  `supports_vision: False` rows and the 14 `restricted_params` rows checked
+  against published model cards. Now a real judgement call rather than
+  bookkeeping: the table is *authored* rather than derived, and a wrong
+  `supports_vision: False` degrades output silently (the VL sidecar captions
+  an image the model could have read) instead of erroring.
+- **§4c per-row provenance** — whether each row should record where its value
+  came from. Overlaps [[Item 63]]; **owner's call**, deliberately not settled
+  in code.
+
+Plan: `docs/handoff-item-65.md` (committed in `ba8b89ac`). Two of its claims
+were wrong and are corrected there and here: §5's safety argument (above),
+and §3's assumption that `api_path="auto"` had rows behind it — zero
+profiles used it.
+---
+
+### Item 67 — ruff is not in CI, and 3,418 findings have accumulated [tooling / hygiene]
+
+**Filed 2026-08-31.** Surfaced repeatedly during the Item 64/65/66 work,
+where every commit had to answer "is this lint mine or pre-existing?" — a
+question that only exists because nothing enforces an answer.
+
+`ruff check .` reports **3,418 findings** (derived 2026-08-31; re-derive
+before quoting). `grep -rn ruff .github/workflows/*.yml` returns **nothing**
+— ruff is configured in the project but never runs in CI, which is why the
+count can grow without anyone noticing.
+
+Most of it is typing modernisation and import hygiene, mechanical and safe:
+
+| rule | count | what |
+|---|---|---|
+| `UP006` | 1135 | `Dict` → `dict` in annotations |
+| `UP045` | 805 | `Optional[X]` → `X \| None` |
+| `I001` | 564 | unsorted import blocks |
+| `F401` | 520 | imported but unused |
+| `UP035` | 266 | deprecated `typing` imports |
+
+**Two of the tails are not style.** `F811` (115) is a name redefined before
+use — one definition silently shadowing another, which is a live-defect
+shape this repo has already met in other forms. `F841` (112) is an assigned
+variable never read, which is often a check whose result nobody consults.
+Those two deserve reading individually; the rest are `--fix` material.
+
+**Why this was not fixed while passing through.** Every commit in this arc
+that touched a linted file measured its count at the parent, found it
+identical, and said so in the message rather than reformatting. That was
+deliberate: a whole-file typing modernisation inside a data migration or a
+docs commit makes the real diff unreviewable, and the reviewer cannot tell
+the mechanical change from the meaningful one. The disposition is recorded,
+but a commit message is not a place anyone will find it again — hence this
+item.
+
+**Suggested shape, not a decision:** land the mechanical rules
+(`--fix` for UP006/UP045/I001/UP035) as ONE commit that touches nothing else,
+read `F811` and `F841` individually as their own change, then add ruff to CI
+so the count cannot climb again. The last step is the one that matters — the
+other two are undone by a month of drift without it.
+
+**Not started.** Filed so it stops being rediscovered per-commit.
 
 ### Item 66 — the deprecation table only knows the models WE ship [providers / doctor]
 
