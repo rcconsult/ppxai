@@ -963,10 +963,15 @@ def _reject_tool_incapable_model(
     if not tools or not provider or not model:
         return
     try:
-        from .model_facts import facts_without_an_instance
-        from .providers import get_provider_class
+        from .model_facts import FactsResolver
 
-        if get_provider_class(provider) is None:
+        resolver = FactsResolver(provider)
+        if not resolver.is_registered:
+            # A name we do not recognise as a registered provider. The gate
+            # declines to judge rather than guessing — but it asks the
+            # resolver, not `get_provider_class(...) is None`, because that
+            # comparison IS the openai_compat fallback rule spelled a fourth
+            # time (ADR 0012 refactor (a)).
             return
         # ADR 0012 §2 Q0e: resolution is a pure function of (model, provider
         # table, operator config), so this gate reads the same answer the
@@ -976,7 +981,7 @@ def _reject_tool_incapable_model(
         # the "fall back to the provider default" branch it required, are
         # both gone. The default was the dangerous half: it is what let a
         # provider-wide `native_tool_calling: true` speak for `sonar`.
-        facts = facts_without_an_instance(provider, model)
+        facts = resolver.facts(model)
     except Exception:  # noqa: BLE001 — never block on a lookup failure
         return
 

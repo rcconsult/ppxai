@@ -329,42 +329,18 @@ def shipped_facts_for_model(
 def provider_class_for(provider: str):
     """The class that will actually serve `provider`.
 
-    `get_provider_class()` alone is NOT the answer: it returns `None` for
-    every openai_compat-TYPE provider — openrouter, nvidia, a vLLM box, an
-    Ollama host — because those are configured by name, not registered.
-    `provider_ops` falls back to `OpenAICompatibleProvider` for exactly
-    that reason, so a caller that stops at `None` disagrees with the
-    deployment about what a provider is.
-
-    That disagreement was a live defect: the oneshot enrichment gate read
-    `get_provider_class(provider).default_capabilities`, raised
-    `AttributeError` for every type-based provider, and silently answered
-    "no endpoint record" — so provider-native grounding never resolved for
-    any of them.
+    Thin wrapper over :attr:`FactsResolver.provider_class` — kept because it
+    has callers and reads well at a call site that needs only the class.
     """
-    from .providers import get_provider_class
-    from .providers.openai_compat import OpenAICompatibleProvider
-
-    try:
-        cls = get_provider_class(provider)
-    except Exception:  # noqa: BLE001
-        cls = None
-    return cls if cls is not None else OpenAICompatibleProvider
+    return FactsResolver(provider).provider_class
 
 
 def capabilities_without_an_instance(provider: str):
     """Resolve the ENDPOINT record from the provider CLASS.
 
-    The `get_capabilities()` counterpart to
-    :func:`facts_without_an_instance`, for the same callers and the same
-    reason — so the admission guard, the enrichment gate and `/doctor` all
-    read one answer instead of three spellings of one.
+    Thin wrapper over :meth:`FactsResolver.capabilities`.
     """
-    from ..config.facts_config import apply_provider_overrides
-
-    return apply_provider_overrides(
-        provider_class_for(provider).default_capabilities, provider
-    )
+    return FactsResolver(provider).capabilities()
 
 
 def can_drive_a_tool_loop(facts: ModelFacts) -> bool:
@@ -391,26 +367,104 @@ def can_drive_a_tool_loop(facts: ModelFacts) -> bool:
 def facts_without_an_instance(provider: str, model: str) -> ModelFacts:
     """Resolve `model` on `provider` from the provider CLASS.
 
-    The one resolution path for callers that have no provider instance —
-    the admission guard (no API key at admission time), the oneshot
-    enrichment gate, `/doctor`, `/provider`. Before this existed each of
-    them spelled out the same four-line incantation: fetch the class, read
-    `shipped_model_facts` off it with a `getattr` default, call
-    `shipped_facts_for_model`, then `resolve_model_facts`. Four copies of
-    one sequence is how a fifth caller gets one rung wrong — and this
-    ADR exists because that already happened, twice.
-
-    Falls back to the conservative floor for an unknown provider, which is
-    the safe direction: a model nothing can resolve is not tool-capable.
+    Thin wrapper over :meth:`FactsResolver.facts`. The one resolution path
+    for callers with no provider instance — the admission guard (no API key
+    at admission time), the oneshot enrichment gate, `/doctor`, `/provider`.
+    Each used to spell out the same four-line incantation; four copies of one
+    sequence is how a fifth caller gets a rung wrong, which had already
+    happened twice when this was written.
     """
-    from ..config.facts_config import resolve_model_facts
+    return FactsResolver(provider).facts(model)
 
-    cls = provider_class_for(provider)
-    table = getattr(cls, "shipped_model_facts", {}) or {}
-    floor = getattr(cls, "unmeasured_facts", None)
-    return resolve_model_facts(
-        shipped_facts_for_model(model, table, floor), provider, model
-    )
+
+@dataclass(frozen=True)
+class FactsResolver:
+    """Everything resolvable about a provider from its NAME alone.
+
+    Constructed from a provider key; resolves the class once (by the one
+    fallback rule), then answers the endpoint record, any model's facts, and
+    whether a model can drive a tool loop.
+
+    **Why a type rather than three functions.** `provider_class_for`,
+    `capabilities_without_an_instance` and `facts_without_an_instance` were
+    function-shaped carving around one missing abstraction: each re-derived
+    the class, and callers that needed two answers resolved it twice. Worse,
+    the "unknown name means `OpenAICompatibleProvider`" rule had grown FIVE
+    spellings across the tree — `provider_class_for`, `provider_ops`'s
+    construction fallback, `task_authorizer`'s `get_provider_class(...) is
+    None` early return, and `facts_config`'s fallback to a bare
+    `ProviderCapabilities()`. That last one agrees with the real answer only
+    because `ProviderCapabilities()` and
+    `OpenAICompatibleProvider.default_capabilities` happen to be equal today;
+    change either and `/doctor` starts scaffolding a record the engine does
+    not use, silently.
+
+    One type, one rule, one resolution. The three functions remain as thin
+    wrappers — they have callers, and a resolver whose adoption requires
+    touching every call site in one commit is a worse trade than one that
+    can be adopted where it helps.
+    """
+
+    provider: str
+
+    @property
+    def provider_class(self):
+        """The class that will actually serve this provider.
+
+        `get_provider_class()` alone is NOT the answer: it returns `None`
+        for every openai_compat-TYPE provider — openrouter, nvidia, a vLLM
+        box, an Ollama host — because those are configured by name, not
+        registered. A caller that stops at `None` disagrees with the
+        deployment about what a provider is, which was a live defect on the
+        oneshot enrichment gate.
+        """
+        from .providers import get_provider_class
+        from .providers.openai_compat import OpenAICompatibleProvider
+
+        try:
+            cls = get_provider_class(self.provider)
+        except Exception:  # noqa: BLE001
+            cls = None
+        return cls if cls is not None else OpenAICompatibleProvider
+
+    @property
+    def is_registered(self) -> bool:
+        """Whether this name is a REGISTERED provider, not a type-based one.
+
+        The honest form of `get_provider_class(p) is None`. Callers wanting
+        "do we know this provider at all?" should ask this rather than
+        re-deriving it — and should notice that the answer being `False`
+        does not mean unserviceable, only unregistered.
+        """
+        from .providers import get_provider_class
+
+        try:
+            return get_provider_class(self.provider) is not None
+        except Exception:  # noqa: BLE001
+            return False
+
+    def capabilities(self):
+        """The ENDPOINT record, with operator overrides applied."""
+        from ..config.facts_config import apply_provider_overrides
+
+        return apply_provider_overrides(
+            self.provider_class.default_capabilities, self.provider
+        )
+
+    def facts(self, model: str) -> ModelFacts:
+        """The MODEL record: shipped table, provider floor, operator config."""
+        from ..config.facts_config import resolve_model_facts
+
+        cls = self.provider_class
+        table = getattr(cls, "shipped_model_facts", {}) or {}
+        floor = getattr(cls, "unmeasured_facts", None)
+        return resolve_model_facts(
+            shipped_facts_for_model(model, table, floor), self.provider, model
+        )
+
+    def can_drive_a_tool_loop(self, model: str) -> bool:
+        """Whether `model` can run a tool loop at all — any strategy."""
+        return can_drive_a_tool_loop(self.facts(model))
 
 
 def is_unmeasured(

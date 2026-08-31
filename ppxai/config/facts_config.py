@@ -397,22 +397,21 @@ def complete_record_for(
     """
     from dataclasses import asdict
 
-    from ..engine.model_facts import facts_without_an_instance
+    from ..engine.model_facts import FactsResolver
 
-    try:
-        from ..engine.providers import get_provider_class
-
-        provider_cls = get_provider_class(provider)
-    except Exception:  # noqa: BLE001 — an unknown provider still scaffolds
-        provider_cls = None
+    # ADR 0012 refactor (a): ONE resolver, so the record `/doctor` offers to
+    # paste is the record the engine will resolve. This used to fall back to a
+    # bare `ProviderCapabilities()` for any name `get_provider_class` did not
+    # know — which agreed with the real answer only because that default and
+    # `OpenAICompatibleProvider.default_capabilities` happen to be equal.
+    # Change either and /doctor would have started scaffolding a record the
+    # engine does not use, silently and for every openai_compat provider.
+    resolver = FactsResolver(provider)
 
     if model is None:
-        caps = getattr(provider_cls, "default_capabilities", None)
-        if caps is None:
-            caps = ProviderCapabilities()
-        return asdict(apply_provider_overrides(caps, provider))
+        return asdict(resolver.capabilities())
 
-    record = asdict(facts_without_an_instance(provider, model))
+    record = asdict(resolver.facts(model))
     if isinstance(record.get("restricted_params"), tuple):
         record["restricted_params"] = list(record["restricted_params"])
     return record
