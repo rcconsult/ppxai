@@ -1064,10 +1064,12 @@ correctly is exactly what the old field also did.
 
 **A fourth drift, unfiled until now:** `gpt-5.5-pro` was sent to Responses by
 **neither** mechanism — no prefix entry, and its profile declares `chat`. It
-was registered by the same `c4b6f431` as `gpt-5.3-codex`. Its row is by
-**analogy** with its siblings, not separately probed, and is marked as such
-in the table: nothing ever routed it to Chat Completions, so no 404 was ever
-observed for that model specifically. A live probe would settle it.
+was registered by the same `c4b6f431` as `gpt-5.3-codex`. Its row was filed
+by **analogy** with its siblings and then **probed live 2026-08-31**:
+`/v1/chat/completions` answers `404 "This is not a chat model and thus not
+supported in the v1/chat/completions endpoint"` — the same error, verbatim,
+that its siblings gave. The analogy is now a measurement, and every row in
+the resolved table rests on an observed response.
 
 ---
 

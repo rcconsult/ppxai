@@ -159,6 +159,67 @@ sets that build `shipped_model_facts` state *different fields* of one record
 would lose one fact to dict-merge order, so a fence asserts they never
 overlap.
 
+## Graph 2c — one account, two wires (ADR 0012 W3)
+
+Perplexity is the first provider to speak two protocols. Nothing about the
+routing changed to allow it — the same `_wire_for` reader, the same handler
+registry. What it needed was a second *transport*, because the two wires sit
+at different paths on one host.
+
+```
+PerplexityProvider                    ← owns the ACCOUNT
+  ├─ client              → https://api.perplexity.ai      (/chat/completions)
+  ├─ _responses_client   → https://api.perplexity.ai/v1   (/responses)
+  │
+  ├─ _wire_for(model) = get_facts_for_model(model).wire_protocol
+  │       │
+  │       ├─ "chat_completions" → sonar · sonar-pro · sonar-reasoning-pro
+  │       │                        (this provider's own code path)
+  │       │
+  │       └─ "responses"        → anthropic/* · openai/* · google/*
+  │                                xai/* · perplexity/*
+  │                                    │
+  │                                    ▼
+  │                          get_handler("responses").chat/oneshot(
+  │                              ctx = _WireCtx(self), …)
+  │
+  └─ _WireCtx(host)      ← a VIEW, not a copy
+         .client         = host._responses_client     ← the ONLY override
+         .__getattr__    → host                        ← everything else
+             (api_key · capabilities · get_facts_for_model ·
+              _get_max_tokens · _get_extra_body · _classify_throttle ·
+              _format_error · _log_error_traceback · provider_id)
+```
+
+The view is the point. A second provider *instance* would imply a second
+account and duplicate the config, price table and usage counters; mutating
+`self.client` per request would make the transport mutable state on a shared
+object. One object owns the account; only the transport is swapped.
+
+### What the live trial caught that no unit test would have
+
+The canary failed twice before it passed, both times on **this ADR's own
+defect shape — a declared value the wire never sees**:
+
+```
+  1st failure   AttributeError: 'PerplexityProvider' object has no
+                attribute 'enable_web_search'
+                → the handler's host contract was implicit-by-docstring.
+                  ONE provider had the attribute, so "reads it from ctx"
+                  looked total while being OpenAI-only.
+
+  2nd failure   400 "max_output_tokens is required when using Anthropic
+                models"
+                → the handler asked ctx._get_max_tokens(), which reads
+                  CONFIG ONLY. The fleet's ModelFacts.max_tokens=4096 was
+                  resolved, displayed, and unable to reach the request.
+```
+
+The second is worth dwelling on: a fact declared in the shipped table that
+the wire never sees is *exactly* debt Item 61, reproduced inside the handler
+built to fix Item 61. Two sources for one value is the bug; `_budget_for`
+now reads config first, then the fact, in one place.
+
 ## Graph 3 — resolution without a provider instance
 
 Some callers need an answer before any provider exists — there is no API key

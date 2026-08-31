@@ -982,10 +982,39 @@ gated on the owner's explicit go, per the arc's standing rule.
    from `glob` to `rglob` with `ctx.` added to its banned-attribute pattern,
    because the code it guards moved into a subpackage under a new receiver
    name.
-3. **Perplexity speaks both.** Register the Responses handler on `perplexity`;
-   add the fleet rows. Fence: live trial of `anthropic/claude-sonnet-5` through
-   `/task --tools read_file`, canary-verified end to end, per the arc's
-   trial-after rule.
+3. ✅ **DONE** (W3, 2026-08-31) — **Perplexity speaks both.** One provider,
+   two wires: Sonar stays on Chat Completions, the Agent fleet
+   (`anthropic/* · openai/* · google/* · xai/* · perplexity/*`) resolves
+   `responses`. The wires differ only in transport, so a thin `_WireCtx` view
+   swaps the SDK client and delegates everything else — key, capabilities,
+   facts, token/extra-body lookups, throttle and error handling — to the one
+   provider that owns the account.
+
+   **Canary verified live 2026-08-31**, end to end through
+   `PerplexityProvider.chat`: `anthropic/claude-sonnet-5` emitted a native
+   `function_call` for `read_file(path="/etc/hostname")`, `native=True`,
+   tool_call_id `toolu_bdrk_…`, routed entirely by `wire_protocol` with no
+   model-name branch anywhere.
+
+   **The trial earned its keep — it failed twice first, both times on this
+   ADR's own defect shape (a declared value the wire never sees):**
+   1. `enable_web_search` was a *required* host attribute that only
+      `OpenAINativeProvider` had, so the first request from a second host
+      raised `AttributeError` inside the handler. The host contract was
+      implicit-by-docstring; it is now read with a default, and a fence
+      checks every `ctx.` read against a real second host.
+   2. `ModelFacts.max_tokens` could not reach the request at all — the
+      handler asked `_get_max_tokens()`, which reads **config only**. The
+      fleet's 4096 sat in the table while the API answered *"max_output_tokens
+      is required when using Anthropic models"*. One resolver now reads
+      config first, then the fact.
+
+   **`perplexity/sonar` measured differently from bare `sonar`** on
+   2026-08-31: the namespaced ID on the Responses wire accepted a tools array
+   and called the tool, while bare `sonar` answers 400 *"Tool calling is not
+   supported for this model"* on Chat Completions. The same model, two wires,
+   two capabilities — the sharpest evidence in the tree that capability
+   cannot be a property of a provider.
 4. **`chat_completions` and `generate_content` become handlers.** Completes the
    model; `openai_compat` and `gemini` stop being special cases. This is the
    step that moves `convert_messages` into the handlers and retires Gemini's

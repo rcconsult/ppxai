@@ -74,12 +74,12 @@ RESPONSES_API_PREFIXES = ("gpt-5.1-codex", "codex", "gpt-5.2-pro", "gpt-5-pro", 
 #: sent to Responses (no prefix entry, profile says `chat`), registered by
 #: c4b6f431 alongside gpt-5.3-codex without updating the routing tuple.
 #:
-#: ⚠️ Its row is BY ANALOGY with its siblings, not separately probed. The
-#: other pro rows rest on an observed "not a chat model" 404 (5e1ace2f);
-#: gpt-5.5-pro was never routed to Chat Completions by anything, so nothing
-#: ever observed it either way. If a live probe shows it speaks Chat
-#: Completions, delete this glob — the analogy is the weakest evidence in
-#: this table and is marked as such deliberately.
+#: Its row began as an ANALOGY with its siblings and is now MEASURED:
+#: probed live 2026-08-31, `gpt-5.5-pro` on `/v1/chat/completions` returns
+#: **404 "This is not a chat model and thus not supported in the
+#: v1/chat/completions endpoint"** — the same error, verbatim, that put its
+#: siblings on this list. Every row in this table now rests on an observed
+#: response rather than on pattern-matching a model name.
 RESPONSES_WIRE_GLOBS = (
     "gpt-5.1-codex*",
     "gpt-5.3-codex*",

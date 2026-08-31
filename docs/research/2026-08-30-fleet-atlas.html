@@ -283,7 +283,7 @@
   <div class="stat"><div class="n">4</div><div class="l">provider classes behind them</div></div>
   <div class="stat"><div class="n">3<span style="font-size:20px;color:var(--muted)">+1</span></div><div class="l">wire protocols live today + Messages designed (ADR 0012)</div></div>
   <div class="stat"><div class="n">35</div><div class="l">models configured · 65 built-in behaviour profiles</div></div>
-  <div class="stat"><div class="n">38+</div><div class="l">models on Perplexity's Agent API, unreachable until I4b</div></div>
+  <div class="stat"><div class="n">38+</div><div class="l">models on Perplexity's Agent API — <b>reachable since W3</b> (2026-08-31)</div></div>
   <div class="stat alert"><div class="n">28<span style="font-size:18px">d</span></div><div class="l">until the Sonar chat-completions endpoint retires (2026-09-27)</div></div>
 </div>
 
@@ -647,7 +647,7 @@
       <tr><td class="mono">gpt-5.3-codex</td><td><span class="pill resp">responses</span></td><td><span class="pill chat">chat_completions</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>profile won</b> — codex 404s on Chat Completions; registered by <span class="mono">c4b6f431</span> without the tuple being updated</td></tr>
       <tr><td class="mono">gpt-5.2-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>router won</b> — <span class="mono">5e1ace2f</span> added it after a measured <em>"not a chat model"</em> 404</td></tr>
       <tr><td class="mono">gpt-5-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>router won</b> — same commit, same measured 404</td></tr>
-      <tr><td class="mono">gpt-5.5-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill chat">chat_completions</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>fourth drift, found in W2</b> — reached by <em>neither</em> mechanism. Row is <b>by analogy</b> with its siblings, <b>not separately probed</b></td></tr>
+      <tr><td class="mono">gpt-5.5-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill chat">chat_completions</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>fourth drift, found in W2</b> — reached by <em>neither</em> mechanism. Filed by analogy, then <b>probed 2026-08-31</b>: 404 <em>"This is not a chat model"</em>, same error as its siblings</td></tr>
       <tr><td class="mono">gpt-5.1-codex / -mini</td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td class="tiny">agreed — by coincidence, not construction</td></tr>
     </tbody>
   </table>
@@ -658,11 +658,12 @@
   built-in profile, and an operator override proven to change the <b>outgoing request</b> in both directions —
   asserted at the client spy, not at the resolver, because resolving correctly is exactly what the inert field
   also did.</p>
-  <p class="lede dim" style="margin-top:10px"><b>One row is weaker than the others and is marked as such.</b>
-  <code>gpt-5.5-pro</code> rests on analogy: nothing ever routed it to Chat Completions, so no 404 was ever
-  observed for that model specifically. Its siblings' rows rest on a commit-documented live failure. A single
-  probe would settle it — until then the assumption is visible in the table and in the code comment, rather than
-  buried in a glob.</p>
+  <p class="lede dim" style="margin-top:10px"><b>Every row now rests on an observed response.</b>
+  <code>gpt-5.5-pro</code> was the one exception — filed by analogy, because nothing had ever routed it to Chat
+  Completions and so no 404 had ever been seen for it. Probed <b>2026-08-31</b>: it answers
+  <code>404 "This is not a chat model and thus not supported in the v1/chat/completions endpoint"</code>, the same
+  error verbatim that put its siblings on the list. The assumption was marked as an assumption while it was one,
+  and the measurement confirmed it.</p>
 </section>
 
 <section id="future">
@@ -671,12 +672,23 @@
   <div class="prov">
     <div class="prov-head">
       <h3>Perplexity Agent API</h3>
-      <span class="cls">the same <span class="mono">perplexity</span> entry, second wire (ADR 0012 §5 · I4b)</span>
+      <span class="cls">the same <span class="mono">perplexity</span> entry, second wire (ADR 0012 §5 · W3)</span>
       <span class="pill resp">responses</span>
-      <span class="pill bad">mandatory by 2026-09-27</span>
+      <span class="pill ok">SHIPPED 2026-08-31</span>
+      <span class="pill bad">chat wire retires 2026-09-27</span>
     </div>
     <div class="prov-body">
-      <p class="prov-note" style="margin:0 0 12px">Roster fetched from <span class="mono">docs.perplexity.ai</span> 2026-08-13,
+      <p class="prov-note" style="margin:0 0 12px"><b>Live since ADR 0012 W3 (2026-08-31).</b> Routed as table data —
+      <span class="mono">anthropic/* · openai/* · google/* · xai/* · perplexity/*</span> resolve
+      <span class="mono">wire_protocol="responses"</span> on the one <span class="mono">perplexity</span> provider; no code
+      branch names a vendor. Canary verified end to end: <span class="mono">anthropic/claude-sonnet-5</span> emitted a native
+      <span class="mono">function_call</span> for <span class="mono">read_file(path="/etc/hostname")</span> with a real
+      <span class="mono">toolu_bdrk_…</span> id.<br><br>
+      <b>One model, two wires, two capabilities — measured.</b> <span class="mono">perplexity/sonar</span> on the Responses
+      wire accepted a tools array and called the tool; bare <span class="mono">sonar</span> answers
+      <span class="mono">400 "Tool calling is not supported for this model"</span> on Chat Completions. That is the sharpest
+      evidence anywhere in this atlas for why capability cannot be a property of a provider.<br><br>
+      Roster fetched from <span class="mono">docs.perplexity.ai</span> 2026-08-13,
       additions confirmed on the web 2026-08-30. All of it is <b>one Perplexity key, one bill, one accounting bucket</b> —
       which is why it stays one provider entry (§5), unlike Anthropic-direct (§7). Wire measured live:
       <code>anthropic/claude-sonnet-5</code> answered and emitted a real <code>function_call</code> through the stock OpenAI SDK.</p>

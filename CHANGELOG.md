@@ -57,6 +57,45 @@ because that fallback is what produced the confabulated results.
 uses Perplexity's Jobs API, not chat completions, so it was never usable
 on the endpoint ppxai calls.
 
+### Added (ADR 0012 W3) — Perplexity's Agent fleet, over the Responses wire
+
+**One Perplexity key now reaches Anthropic, OpenAI, Google and xAI models.**
+Perplexity serves Sonar over Chat Completions and its Agent fleet over the
+OpenAI *Responses* API. Same key, same bill, same price table — so this is
+one provider entry whose models pick a wire per request, not a second
+provider. The fleet is table data (`anthropic/* · openai/* · google/* ·
+xai/* · perplexity/*`); no code branch names a vendor, and a test asserts
+that.
+
+Verified live 2026-08-31, end to end through `PerplexityProvider.chat`:
+`anthropic/claude-sonnet-5` emitted a native `function_call` for
+`read_file(path="/etc/hostname")` with a real `toolu_bdrk_…` id.
+
+**`perplexity/sonar` behaves differently from bare `sonar`.** Measured the
+same day: the namespaced ID on the Responses wire accepted a tools array and
+called the tool, while bare `sonar` answers 400 *"Tool calling is not
+supported for this model"* on Chat Completions. One model, two wires, two
+capabilities — which is precisely why capability is a per-model fact.
+
+The live trial failed twice before it passed, both times on this ADR's own
+defect shape — a declared value the wire never sees:
+
+- `enable_web_search` was a **required** host attribute that only the OpenAI
+  provider had, so the first request from a second host raised
+  `AttributeError` inside the handler. Now read with a default, with a fence
+  that checks every host attribute the handler reads against a real second
+  host.
+- `ModelFacts.max_tokens` **could not reach the request**: the handler asked
+  `_get_max_tokens()`, which reads config only, so the fleet's budget sat in
+  the table while the API rejected every call with *"max_output_tokens is
+  required when using Anthropic models"*. One resolver now reads config
+  first, then the shipped fact.
+
+Also settled by measurement: `gpt-5.5-pro`'s W2 row was filed **by analogy**
+with its siblings; probed 2026-08-31 it answers `404 "This is not a chat
+model"` — the same error, verbatim. Every row in the resolved wire table now
+rests on an observed response.
+
 ### Fixed (ADR 0012 W2) — the wire protocol is finally what routes the request
 
 **Closes debt Item 61.** `api_path` — renamed `ModelFacts.wire_protocol` in

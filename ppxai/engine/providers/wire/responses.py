@@ -164,6 +164,25 @@ class ResponsesHandler:
     # Request building
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _budget_for(ctx: Any, model: str) -> Optional[int]:
+        """Output budget: operator config first, then the shipped fact.
+
+        `ctx._get_max_tokens()` reads CONFIG only. `ModelFacts.max_tokens` is
+        the shipped table's answer, and for some models it is not a
+        preference but a requirement — Perplexity's Agent API rejects
+        `anthropic/*` outright with *"max_output_tokens is required when
+        using Anthropic models"* (measured live 2026-08-31, W3 trial). A
+        table row saying 4096 that the wire never sees is the same
+        declared-but-inert shape this ADR exists to remove, so both sources
+        are read here, in one place, config first.
+        """
+        configured = ctx._get_max_tokens(model)
+        if configured:
+            return configured
+        facts = ctx.get_facts_for_model(model)
+        return getattr(facts, "max_tokens", 0) or None
+
     def build_request(
         self,
         ctx: Any,
@@ -188,17 +207,25 @@ class ResponsesHandler:
 
         if for_oneshot:
             token_budget = (
-                max_tokens if max_tokens is not None else ctx._get_max_tokens(model)
+                max_tokens if max_tokens is not None else self._budget_for(ctx, model)
             )
             if token_budget:
                 request_kwargs["max_output_tokens"] = token_budget
         else:
-            budget = ctx._get_max_tokens(model)
+            budget = self._budget_for(ctx, model)
             if budget:
                 request_kwargs["max_output_tokens"] = budget
 
             response_tools = []
-            if ctx.enable_web_search:
+            # OPTIONAL host attribute, not a required one. `web_search_preview`
+            # is OpenAI's server-side search tool; a host that does not offer
+            # it simply has no such flag — Perplexity, for one, has search
+            # built into the model and would be sent a tool its endpoint does
+            # not define. W3 found this the honest way: the first live request
+            # from a second host raised AttributeError here, because the host
+            # contract was implicit-by-docstring. Defaulting is right, and a
+            # named WireHost Protocol (W4) makes it explicit.
+            if getattr(ctx, "enable_web_search", False):
                 response_tools.append({"type": "web_search_preview"})
 
             # Per-model, not per-provider: get_facts_for_model() is the hook

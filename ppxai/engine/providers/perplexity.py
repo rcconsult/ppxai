@@ -2,14 +2,34 @@
 Perplexity AI provider.
 
 Perplexity has native web search and citation capabilities.
+
+**One account, two wires (ADR 0012 W3).** Perplexity serves Sonar over Chat
+Completions (`/chat/completions`) and its Agent fleet — Anthropic, OpenAI,
+Google and xAI models reached through a Perplexity key — over the OpenAI
+*Responses* API (`/v1/responses`). Same key, same bill, same price table, so
+this stays ONE provider entry whose models pick a wire per request
+(ADR 0012 §5). The wire is `ModelFacts.wire_protocol`; the handler is
+`wire.get_handler(...)`; nothing here branches on a model name.
+
+This also carries a deadline: the Sonar chat-completions endpoint retires
+**2026-09-27**, after which the Responses wire is the only one Perplexity
+serves.
 """
 
 import asyncio
 import json
 import re
+from dataclasses import replace
 from typing import List, AsyncIterator, Optional, Dict, Any
+
+import httpx
+from openai import OpenAI
+
+from ...config.tls import tls_verify
+from ..model_facts import ModelFacts, shipped_facts_for_model
 from ..types import Message, Event, EventType, ProviderCapabilities
 from .base import BaseProvider
+from .wire import get_handler
 
 
 def inject_citation_urls(content: str, citations: List[str]) -> str:
@@ -92,6 +112,108 @@ PERPLEXITY_TOOL_REJECTING_MODELS = frozenset({
 })
 
 
+#: The Agent fleet: models reached through a Perplexity key over the
+#: OpenAI **Responses** wire (ADR 0012 §5 / W3). Namespaced glob per
+#: vendor, because that is exactly how Perplexity names them — a row per
+#: model would be 38 rows restating one fact.
+#:
+#: Measured live at `https://api.perplexity.ai/v1/responses`:
+#: 2026-08-15 (`anthropic/claude-sonnet-5` answered; a `tools=[...]`
+#: request produced a real `function_call` item; the stock OpenAI SDK
+#: drove it unchanged) and re-verified **2026-08-31** by
+#: `scripts/probe-perplexity-capabilities.py --api-path responses`,
+#: which reported NATIVE and the model actually calling the tool.
+#:
+#: `max_tokens` is NOT decoration here. The Agent API answers **400 for
+#: `anthropic/*` without `max_output_tokens`** (measured at plan I2), and
+#: the Responses handler only sends that key when the budget is non-zero
+#: — so a fleet row resolving `max_tokens=0` would 400 on every request.
+#: The budget is per-model request shaping expressed as table data,
+#: which is the whole point: no code branch names a vendor.
+AGENT_FLEET_GLOBS = (
+    "anthropic/*",
+    "openai/*",
+    "google/*",
+    "xai/*",
+    # Sonar's OWN namespaced IDs. The bare form (`sonar`) is the
+    # chat-completions name and keeps that wire; the namespaced form exists
+    # on the Responses wire, and MEASURED 2026-08-31 it behaves differently
+    # there — `perplexity/sonar` accepted a tools array and called the tool,
+    # while bare `sonar` answers 400 "Tool calling is not supported for this
+    # model" on chat-completions.
+    #
+    # That is the clearest evidence for this ADR's premise anywhere in the
+    # tree: the SAME model has different capabilities on different wires, so
+    # capability cannot be a property of the provider. Routing the namespaced
+    # ID to chat-completions (which is where it landed before this row) sent
+    # it to a wire that may not serve it at all.
+    "perplexity/*",
+)
+
+#: The fleet does NATIVE tool calling — measured, not assumed. Without this
+#: the rows would inherit the conservative `prompt_based` floor (Q0a), which
+#: is the right default for an unmeasured model and simply wrong for a model
+#: whose native `function_call` we have watched arrive twice:
+#: 2026-08-15 (plan I2: a `tools=[...]` request produced
+#: `{"type": "function_call", "name": "read_file", "call_id": "toolu_..."}`)
+#: and 2026-08-31 (the probe reported NATIVE with the tool actually called).
+#:
+#: `auto` rather than `native`: native attempt, prompt-based fallback. The
+#: fleet spans four vendors behind one wire and the roster changes without
+#: notice, so a model that stops accepting a tools array degrades instead of
+#: erroring. Sonar's own rows use `auto` for exactly this reason.
+AGENT_FLEET_TOOL_MODE = "auto"
+
+#: Default output budget for the fleet. Conservative and uniform: the
+#: requirement being satisfied is "a budget is present", not any
+#: particular size, and an operator `facts.max_tokens` override replaces
+#: it per model.
+AGENT_FLEET_MAX_TOKENS = 4096
+
+#: The fleet's seed rows, assembled once at module scope. (These live here
+#: rather than in the class body because a comprehension inside a class body
+#: cannot see the class's own names — only module and function scopes are
+#: visible to it.)
+AGENT_FLEET_FACTS = {
+    glob: replace(
+        shipped_facts_for_model(glob.rstrip("*")),
+        wire_protocol="responses",
+        max_tokens=AGENT_FLEET_MAX_TOKENS,
+        tool_mode=AGENT_FLEET_TOOL_MODE,
+    )
+    for glob in AGENT_FLEET_GLOBS
+}
+
+
+class _WireCtx:
+    """A provider view whose `.client` is the Responses-wire client.
+
+    `ProtocolHandler.chat/oneshot` take a host `ctx` and read `ctx.client`
+    plus a handful of the host's own helpers. Perplexity's two wires sit at
+    different paths on one host, so the only thing that differs between them
+    is the SDK client; everything else — key, capabilities, facts, token and
+    extra-body lookups, throttle classification, error formatting — belongs
+    to the account and is shared.
+
+    A thin delegating view says exactly that. The alternatives say something
+    false: a second provider instance would imply a second account (and
+    would double the config, the price table and the usage counters), and
+    mutating `self.client` per request would make the transport a piece of
+    mutable state on a shared object.
+    """
+
+    __slots__ = ("_host", "client")
+
+    def __init__(self, host):
+        self._host = host
+        self.client = host.client_for_wire
+
+    def __getattr__(self, name):
+        # Only reached for names not in __slots__ — i.e. everything the
+        # handler needs from the account rather than the transport.
+        return getattr(self._host, name)
+
+
 class PerplexityProvider(BaseProvider):
     """Provider for Perplexity AI API.
 
@@ -112,6 +234,57 @@ class PerplexityProvider(BaseProvider):
         citations=True,
         streaming=True,
     )
+
+    #: The Agent fleet's Responses-wire rows (module-level
+    #: `AGENT_FLEET_FACTS`). Sonar keeps the chat-completions default,
+    #: so ONE provider serves both wires off one table.
+    shipped_model_facts = AGENT_FLEET_FACTS
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The two wires live at DIFFERENT paths on the same host:
+        # `/chat/completions` (what `base_url` points at) and
+        # `/v1/responses`. The OpenAI SDK builds paths relative to its
+        # base_url, so the Responses wire needs its own client rather than a
+        # per-call override. Same key, same TLS policy, same account — only
+        # the path differs, which is precisely why this is one provider.
+        self._responses_client = OpenAI(
+            api_key=self.api_key,
+            base_url=self._responses_base_url(),
+            http_client=httpx.Client(verify=tls_verify()),
+        )
+
+    def _responses_base_url(self) -> str:
+        """`{base_url}/v1`, tolerating a trailing slash or an existing /v1."""
+        root = (self.base_url or "https://api.perplexity.ai").rstrip("/")
+        return root if root.endswith("/v1") else root + "/v1"
+
+    @property
+    def client_for_wire(self):
+        """The client the Responses handler should use.
+
+        `ResponsesHandler` reads `ctx.client`. Perplexity's `self.client`
+        points at the Chat Completions root, so the handler is handed a
+        `_WireCtx` view (below) whose `.client` is the Responses client.
+        """
+        return self._responses_client
+
+    def _wire_ctx(self):
+        """A host view for the Responses handler with the right client.
+
+        Everything else the handler reads — `enable_web_search`,
+        `get_facts_for_model`, `_get_max_tokens`, `_get_extra_body`, the
+        error helpers — is this provider's own, so the view delegates by
+        `__getattr__` and overrides only `client`. A subclass or a mutated
+        copy would both be worse: this keeps ONE provider object owning the
+        account and swaps only the transport.
+        """
+        return _WireCtx(self)
+
+    def _wire_for(self, model: str) -> str:
+        """Which wire this model speaks. One reader, as in `openai_native`."""
+        return self.get_facts_for_model(model).wire_protocol
 
     async def chat(
         self,
@@ -146,6 +319,15 @@ class PerplexityProvider(BaseProvider):
         Yields:
             Event objects including citations when available
         """
+        # ADR 0012 W3: the Agent fleet speaks the Responses wire. Same key,
+        # same account — only the handler and the client path differ.
+        if self._wire_for(model) == "responses":
+            async for event in get_handler("responses").chat(
+                self._wire_ctx(), messages, model, stream, tools
+            ):
+                yield event
+            return
+
         try:
             api_messages = self._convert_messages(messages)
 
@@ -346,6 +528,12 @@ class PerplexityProvider(BaseProvider):
         if system:
             messages.append(Message(role="system", content=system))
         messages.append(Message(role="user", content=prompt))
+
+        # ADR 0012 W3 — same routing question as chat(), one reader.
+        if self._wire_for(model) == "responses":
+            return get_handler("responses").oneshot(
+                self._wire_ctx(), messages, model, max_tokens
+            )
 
         request_kwargs: Dict[str, Any] = {
             "model": model,

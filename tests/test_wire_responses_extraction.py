@@ -184,10 +184,10 @@ class TestRoutingReadsTheFact:
         profile declares `chat`. It was registered (c4b6f431) without either
         table being updated.
 
-        Its row is by ANALOGY with its siblings, not separately probed —
-        nothing ever routed it to Chat Completions, so no 404 was ever
-        observed for this model specifically. Pinned here so the assumption
-        is visible and falsifiable rather than buried in a glob.
+        Its row started as an analogy and was then PROBED (2026-08-31):
+        `/v1/chat/completions` answers 404 "This is not a chat model", the
+        same error its siblings gave. The assumption was pinned here while
+        it was an assumption, and the measurement confirmed it.
         """
         assert not "gpt-5.5-pro".startswith(RESPONSES_API_PREFIXES)
         assert provider._wire_for("gpt-5.5-pro") == "responses"
