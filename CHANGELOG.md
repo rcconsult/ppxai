@@ -13,6 +13,48 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
 
+### Changed — OpenAI default is now `gpt-5.6-terra` (fresh installs)
+
+> ⚠️ **Default change.** `ppxai-config.example.json` sets both
+> `default_model` and `coding_model` for the `openai` provider to
+> **`gpt-5.6-terra`** (was `gpt-5.4`). **Existing configs are untouched** —
+> this is what a *fresh* install gets. `gpt-5.5` and `gpt-5.5-pro` remain
+> configured and supported; nothing is removed.
+
+**The case is price, not quality.** Benchmarked 2026-08-31 (debt Item 55),
+three clean full-suite runs each, both models on their own shipped wire:
+
+| | median | runs | spread |
+|---|---|---|---|
+| `gpt-5.6-terra` | 91.5 | 96.0 / 91.5 / 88.1 | 7.9 |
+| `gpt-5.5` | 88.3 | 90.6 / 88.3 / 87.1 | 3.5 |
+
+Terra's median is +3.2 — but its own run-to-run spread (7.9) is **larger
+than the difference**, the ranges overlap, and an exact permutation test on
+the 3v3 split gives **p=0.15**. That is **parity, not superiority**, and it
+is stated that way deliberately: the reason to switch is **$2/$12 per MTok,
+about 40% of gpt-5.5's price**, at no measurable quality cost. Full data in
+`benchmarks/tuning/openai-5.6-terra-vs-5.5.json`.
+
+> ⚠️ **The 5.6 line REQUIRES `wire_protocol: "responses"` when tools are
+> enabled.** All three 5.6 models (`sol`, `terra`, `luna`) return **HTTP 400
+> on a tools array alone** over `/v1/chat/completions` — with *no*
+> `reasoning_effort` in the request. A widely-repeated community report
+> blamed a tools **+** `reasoning_effort` interaction on `sol` only; both
+> halves are wrong in the direction that matters. OpenAI's own error names
+> two remedies, and both were verified to produce a real tool call:
+> `reasoning_effort: "none"` (works, but disables the reasoning these models
+> are sold for) or the Responses wire (works, reasoning retained). ppxai
+> already speaks Responses (ADR 0012 W2), so the shipped row states
+> `wire_protocol: "responses"` and this is table data, not new code. Matrix
+> in `benchmarks/tuning/openai-5.6-tools-hazard.json`; reproduce with
+> `scripts/probe-openai-56-tools.py`.
+
+Both benchmark numbers post-date the harness fixes in the same branch —
+before those, infrastructure 400s scored as quality and the recorded
+tool-calling method reported the *request* rather than the *outcome*, so
+this comparison could not have been made honestly.
+
 ### Notice — Perplexity Sonar chat-completions endpoint retires 2026-09-27
 
 Web-verified 2026-08-30 (Perplexity forum + changelog): the legacy Sonar

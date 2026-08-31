@@ -366,7 +366,8 @@
             "restricted_params": [],
             "tier": "A"
           },
-          "__comment_vision": "supports_vision is the conservative floor (ADR 0012 Q0a), NOT a measurement: gpt-5.6-terra matches no seed glob, and the 2026-08-31 benchmark measured tool calling and quality only. An earlier draft stated true on no evidence and the migration fence caught it. Measure before raising it."
+          "__comment_vision": "supports_vision is the conservative floor (ADR 0012 Q0a), NOT a measurement: gpt-5.6-terra matches no seed glob, and the 2026-08-31 benchmark measured tool calling and quality only. An earlier draft stated true on no evidence and the migration fence caught it. Measure before raising it.",
+          "__comment_max_tokens": "facts.max_tokens=128000 is NOT a Terra-specific measurement: every OpenAI row in this file carries the same value, and Terra inherits the house figure rather than diverging from it. It is an OUTPUT ceiling, unrelated to context_limit (1M). Not measured here \u2014 the benchmark used the harness's own much smaller budget, which says nothing about the model's ceiling. Change it for the whole provider or not at all."
         },
         "gpt-5.5": {
           "name": "GPT-5.5",
