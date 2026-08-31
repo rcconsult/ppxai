@@ -138,6 +138,20 @@
         "agents_md_mode": "with"
       }
     ],
+    "codeai-qwen36/Qwen/Qwen3.6-27B-FP8-agent": [
+      {
+        "filename": "codeai-qwen36_Qwen_Qwen3.6-27B-FP8-agent_2026-06-18_19f81652.json",
+        "timestamp": "2026-06-18T17:46:18.088172",
+        "overall_score": 93.56435643564357,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "codeai-qwen36_Qwen_Qwen3.6-27B-FP8-agent_2026-06-18_68f9abdb.json",
+        "timestamp": "2026-06-18T17:20:21.673664",
+        "overall_score": 93.56435643564357,
+        "agents_md_mode": "without"
+      }
+    ],
     "custom/openai/gpt-oss-120b": [
       {
         "filename": "custom_openai_gpt-oss-120b_2026-02-05_eed66e22.json",
@@ -162,6 +176,26 @@
         "timestamp": "2026-02-23T14:58:27.157145",
         "overall_score": 85.31353135313532,
         "agents_md_mode": "with"
+      }
+    ],
+    "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4": [
+      {
+        "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_04cc9664.json",
+        "timestamp": "2026-05-12T17:27:07.166053",
+        "overall_score": 76.23762376237624,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_621e89f0.json",
+        "timestamp": "2026-05-12T16:14:34.388800",
+        "overall_score": 100.0,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_6fcddb58.json",
+        "timestamp": "2026-05-12T16:28:22.394286",
+        "overall_score": 67.22772277227723,
+        "agents_md_mode": "without"
       }
     ],
     "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4": [
@@ -250,6 +284,20 @@
         "agents_md_mode": "without"
       }
     ],
+    "dgx-spark/Qwen/Qwen3.6-35B-A3B-FP8": [
+      {
+        "filename": "dgx-spark_Qwen_Qwen3.6-35B-A3B-FP8_2026-05-05_53603240.json",
+        "timestamp": "2026-05-05T14:39:07.110694",
+        "overall_score": 83.16831683168317,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark_Qwen_Qwen3.6-35B-A3B-FP8_2026-05-05_824af129.json",
+        "timestamp": "2026-05-05T14:49:21.630440",
+        "overall_score": 85.14851485148515,
+        "agents_md_mode": "without"
+      }
+    ],
     "gemini/gemini-2.0-flash-exp": [
       {
         "filename": "gemini_gemini-2.0-flash-exp_2026-02-07_867361b9.json",
@@ -328,15 +376,15 @@
         "agents_md_mode": "with"
       },
       {
-        "filename": "gemini_gemini-2.5-flash_2026-07-11_6bab47dd.json",
-        "timestamp": "2026-07-11T20:18:02.330495",
-        "overall_score": 70.19801980198021,
-        "agents_md_mode": "with"
-      },
-      {
         "filename": "gemini_gemini-2.5-flash_2026-07-11_62513f1d.json",
         "timestamp": "2026-07-11T20:23:11.977066",
         "overall_score": 74.35643564356435,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-07-11_6bab47dd.json",
+        "timestamp": "2026-07-11T20:18:02.330495",
+        "overall_score": 70.19801980198021,
         "agents_md_mode": "with"
       },
       {
@@ -346,15 +394,15 @@
         "agents_md_mode": "with"
       },
       {
-        "filename": "gemini_gemini-2.5-flash_2026-07-12_f2abd86e.json",
-        "timestamp": "2026-07-12T19:33:33.783017",
-        "overall_score": 72.57425742574259,
-        "agents_md_mode": "with"
-      },
-      {
         "filename": "gemini_gemini-2.5-flash_2026-07-12_ec68c955.json",
         "timestamp": "2026-07-12T19:37:55.822066",
         "overall_score": 73.76237623762376,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-07-12_f2abd86e.json",
+        "timestamp": "2026-07-12T19:33:33.783017",
+        "overall_score": 72.57425742574259,
         "agents_md_mode": "with"
       }
     ],
@@ -1126,6 +1174,44 @@
         "timestamp": "2026-04-26T16:03:07.269824",
         "overall_score": 92.07920792079209,
         "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.5_2026-08-31_b0a4d3e9.json",
+        "timestamp": "2026-08-31T09:42:33.667714",
+        "overall_score": 87.12871287128714,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.5_2026-08-31_d2e06653.json",
+        "timestamp": "2026-08-31T09:45:59.260311",
+        "overall_score": 90.5940594059406,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.5_2026-08-31_e5d46bc3.json",
+        "timestamp": "2026-08-31T09:49:44.296838",
+        "overall_score": 88.31683168316832,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-5.6-terra": [
+      {
+        "filename": "openai_gpt-5.6-terra_2026-08-31_249e59c4.json",
+        "timestamp": "2026-08-31T09:38:06.328616",
+        "overall_score": 91.48514851485149,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.6-terra_2026-08-31_3ea3564a.json",
+        "timestamp": "2026-08-31T09:33:56.304506",
+        "overall_score": 88.11881188118812,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.6-terra_2026-08-31_b851adb9.json",
+        "timestamp": "2026-08-31T09:30:39.963551",
+        "overall_score": 96.03960396039604,
+        "agents_md_mode": "with"
       }
     ],
     "openai/gpt-5": [
@@ -1468,78 +1554,30 @@
         "agents_md_mode": "without"
       },
       {
-        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-05-05_e7529617.json",
-        "timestamp": "2026-05-05T14:50:58.470463",
-        "overall_score": 91.58415841584159,
-        "agents_md_mode": "with"
-      },
-      {
         "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-05-05_b57e4c00.json",
         "timestamp": "2026-05-05T14:52:39.929845",
         "overall_score": 93.96039603960396,
         "agents_md_mode": "without"
+      },
+      {
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-05-05_e7529617.json",
+        "timestamp": "2026-05-05T14:50:58.470463",
+        "overall_score": 91.58415841584159,
+        "agents_md_mode": "with"
       }
     ],
     "vllm-qwen36/Qwen/Qwen3.6-27B-FP8": [
-      {
-        "filename": "vllm-qwen36_Qwen_Qwen3.6-27B-FP8_2026-05-05_7cc85625.json",
-        "timestamp": "2026-05-05T14:28:34.942719",
-        "overall_score": 0.0,
-        "agents_md_mode": "with"
-      },
       {
         "filename": "vllm-qwen36_Qwen_Qwen3.6-27B-FP8_2026-05-05_35a4d24b.json",
         "timestamp": "2026-05-05T14:28:34.989895",
         "overall_score": 0.0,
         "agents_md_mode": "without"
-      }
-    ],
-    "dgx-spark/Qwen/Qwen3.6-35B-A3B-FP8": [
+      },
       {
-        "filename": "dgx-spark_Qwen_Qwen3.6-35B-A3B-FP8_2026-05-05_53603240.json",
-        "timestamp": "2026-05-05T14:39:07.110694",
-        "overall_score": 83.16831683168317,
+        "filename": "vllm-qwen36_Qwen_Qwen3.6-27B-FP8_2026-05-05_7cc85625.json",
+        "timestamp": "2026-05-05T14:28:34.942719",
+        "overall_score": 0.0,
         "agents_md_mode": "with"
-      },
-      {
-        "filename": "dgx-spark_Qwen_Qwen3.6-35B-A3B-FP8_2026-05-05_824af129.json",
-        "timestamp": "2026-05-05T14:49:21.630440",
-        "overall_score": 85.14851485148515,
-        "agents_md_mode": "without"
-      }
-    ],
-    "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4": [
-      {
-        "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_621e89f0.json",
-        "timestamp": "2026-05-12T16:14:34.388800",
-        "overall_score": 100.0,
-        "agents_md_mode": "without"
-      },
-      {
-        "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_6fcddb58.json",
-        "timestamp": "2026-05-12T16:28:22.394286",
-        "overall_score": 67.22772277227723,
-        "agents_md_mode": "without"
-      },
-      {
-        "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_04cc9664.json",
-        "timestamp": "2026-05-12T17:27:07.166053",
-        "overall_score": 76.23762376237624,
-        "agents_md_mode": "without"
-      }
-    ],
-    "codeai-qwen36/Qwen/Qwen3.6-27B-FP8-agent": [
-      {
-        "filename": "codeai-qwen36_Qwen_Qwen3.6-27B-FP8-agent_2026-06-18_68f9abdb.json",
-        "timestamp": "2026-06-18T17:20:21.673664",
-        "overall_score": 93.56435643564357,
-        "agents_md_mode": "without"
-      },
-      {
-        "filename": "codeai-qwen36_Qwen_Qwen3.6-27B-FP8-agent_2026-06-18_19f81652.json",
-        "timestamp": "2026-06-18T17:46:18.088172",
-        "overall_score": 93.56435643564357,
-        "agents_md_mode": "without"
       }
     ]
   },
@@ -1685,6 +1723,20 @@
       "agents_md_mode": "with"
     },
     {
+      "pair": "codeai-qwen36/Qwen/Qwen3.6-27B-FP8-agent",
+      "filename": "codeai-qwen36_Qwen_Qwen3.6-27B-FP8-agent_2026-06-18_19f81652.json",
+      "timestamp": "2026-06-18T17:46:18.088172",
+      "overall_score": 93.56435643564357,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "codeai-qwen36/Qwen/Qwen3.6-27B-FP8-agent",
+      "filename": "codeai-qwen36_Qwen_Qwen3.6-27B-FP8-agent_2026-06-18_68f9abdb.json",
+      "timestamp": "2026-06-18T17:20:21.673664",
+      "overall_score": 93.56435643564357,
+      "agents_md_mode": "without"
+    },
+    {
       "pair": "custom/openai/gpt-oss-120b",
       "filename": "custom_openai_gpt-oss-120b_2026-02-05_eed66e22.json",
       "timestamp": "2026-02-05T13:53:31.366561",
@@ -1711,6 +1763,27 @@
       "timestamp": "2026-02-23T14:58:27.157145",
       "overall_score": 85.31353135313532,
       "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_04cc9664.json",
+      "timestamp": "2026-05-12T17:27:07.166053",
+      "overall_score": 76.23762376237624,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_621e89f0.json",
+      "timestamp": "2026-05-12T16:14:34.388800",
+      "overall_score": 100.0,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_6fcddb58.json",
+      "timestamp": "2026-05-12T16:28:22.394286",
+      "overall_score": 67.22772277227723,
+      "agents_md_mode": "without"
     },
     {
       "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
@@ -1811,6 +1884,20 @@
       "agents_md_mode": "without"
     },
     {
+      "pair": "dgx-spark/Qwen/Qwen3.6-35B-A3B-FP8",
+      "filename": "dgx-spark_Qwen_Qwen3.6-35B-A3B-FP8_2026-05-05_53603240.json",
+      "timestamp": "2026-05-05T14:39:07.110694",
+      "overall_score": 83.16831683168317,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark/Qwen/Qwen3.6-35B-A3B-FP8",
+      "filename": "dgx-spark_Qwen_Qwen3.6-35B-A3B-FP8_2026-05-05_824af129.json",
+      "timestamp": "2026-05-05T14:49:21.630440",
+      "overall_score": 85.14851485148515,
+      "agents_md_mode": "without"
+    },
+    {
       "pair": "gemini/gemini-2.0-flash-exp",
       "filename": "gemini_gemini-2.0-flash-exp_2026-02-07_867361b9.json",
       "timestamp": "2026-02-07T23:00:49.075667",
@@ -1886,6 +1973,48 @@
       "timestamp": "2026-02-22T17:39:58.545423",
       "overall_score": 74.55445544554456,
       "agents_md_mode": "without"
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-07-11_3c890661.json",
+      "timestamp": "2026-07-11T20:11:34.039158",
+      "overall_score": 74.35643564356435,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-07-11_62513f1d.json",
+      "timestamp": "2026-07-11T20:23:11.977066",
+      "overall_score": 74.35643564356435,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-07-11_6bab47dd.json",
+      "timestamp": "2026-07-11T20:18:02.330495",
+      "overall_score": 70.19801980198021,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-07-12_10ac04a7.json",
+      "timestamp": "2026-07-12T19:28:48.388193",
+      "overall_score": 80.69306930693071,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-07-12_ec68c955.json",
+      "timestamp": "2026-07-12T19:37:55.822066",
+      "overall_score": 73.76237623762376,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-07-12_f2abd86e.json",
+      "timestamp": "2026-07-12T19:33:33.783017",
+      "overall_score": 72.57425742574259,
+      "agents_md_mode": "with"
     },
     {
       "pair": "gemini/gemini-2.5-pro",
@@ -2728,6 +2857,48 @@
       "agents_md_mode": "with"
     },
     {
+      "pair": "openai/gpt-5.5",
+      "filename": "openai_gpt-5.5_2026-08-31_b0a4d3e9.json",
+      "timestamp": "2026-08-31T09:42:33.667714",
+      "overall_score": 87.12871287128714,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.5",
+      "filename": "openai_gpt-5.5_2026-08-31_d2e06653.json",
+      "timestamp": "2026-08-31T09:45:59.260311",
+      "overall_score": 90.5940594059406,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.5",
+      "filename": "openai_gpt-5.5_2026-08-31_e5d46bc3.json",
+      "timestamp": "2026-08-31T09:49:44.296838",
+      "overall_score": 88.31683168316832,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.6-terra",
+      "filename": "openai_gpt-5.6-terra_2026-08-31_249e59c4.json",
+      "timestamp": "2026-08-31T09:38:06.328616",
+      "overall_score": 91.48514851485149,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.6-terra",
+      "filename": "openai_gpt-5.6-terra_2026-08-31_3ea3564a.json",
+      "timestamp": "2026-08-31T09:33:56.304506",
+      "overall_score": 88.11881188118812,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.6-terra",
+      "filename": "openai_gpt-5.6-terra_2026-08-31_b851adb9.json",
+      "timestamp": "2026-08-31T09:30:39.963551",
+      "overall_score": 96.03960396039604,
+      "agents_md_mode": "with"
+    },
+    {
       "pair": "openai/gpt-5",
       "filename": "openai_gpt-5_2026-02-17_04b44af2.json",
       "timestamp": "2026-02-17T20:52:06.150591",
@@ -3106,31 +3277,10 @@
       "agents_md_mode": "without"
     },
     {
-      "pair": "vllm-qwen36/Qwen/Qwen3.6-27B-FP8",
-      "filename": "vllm-qwen36_Qwen_Qwen3.6-27B-FP8_2026-05-05_7cc85625.json",
-      "timestamp": "2026-05-05T14:28:34.942719",
-      "overall_score": 0.0,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "vllm-qwen36/Qwen/Qwen3.6-27B-FP8",
-      "filename": "vllm-qwen36_Qwen_Qwen3.6-27B-FP8_2026-05-05_35a4d24b.json",
-      "timestamp": "2026-05-05T14:28:34.989895",
-      "overall_score": 0.0,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "dgx-spark/Qwen/Qwen3.6-35B-A3B-FP8",
-      "filename": "dgx-spark_Qwen_Qwen3.6-35B-A3B-FP8_2026-05-05_53603240.json",
-      "timestamp": "2026-05-05T14:39:07.110694",
-      "overall_score": 83.16831683168317,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "dgx-spark/Qwen/Qwen3.6-35B-A3B-FP8",
-      "filename": "dgx-spark_Qwen_Qwen3.6-35B-A3B-FP8_2026-05-05_824af129.json",
-      "timestamp": "2026-05-05T14:49:21.630440",
-      "overall_score": 85.14851485148515,
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-05-05_b57e4c00.json",
+      "timestamp": "2026-05-05T14:52:39.929845",
+      "overall_score": 93.96039603960396,
       "agents_md_mode": "without"
     },
     {
@@ -3141,88 +3291,18 @@
       "agents_md_mode": "with"
     },
     {
-      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
-      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-05-05_b57e4c00.json",
-      "timestamp": "2026-05-05T14:52:39.929845",
-      "overall_score": 93.96039603960396,
+      "pair": "vllm-qwen36/Qwen/Qwen3.6-27B-FP8",
+      "filename": "vllm-qwen36_Qwen_Qwen3.6-27B-FP8_2026-05-05_35a4d24b.json",
+      "timestamp": "2026-05-05T14:28:34.989895",
+      "overall_score": 0.0,
       "agents_md_mode": "without"
     },
     {
-      "pair": "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4",
-      "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_621e89f0.json",
-      "timestamp": "2026-05-12T16:14:34.388800",
-      "overall_score": 100.0,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4",
-      "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_6fcddb58.json",
-      "timestamp": "2026-05-12T16:28:22.394286",
-      "overall_score": 67.22772277227723,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4",
-      "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_04cc9664.json",
-      "timestamp": "2026-05-12T17:27:07.166053",
-      "overall_score": 76.23762376237624,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "codeai-qwen36/Qwen/Qwen3.6-27B-FP8-agent",
-      "filename": "codeai-qwen36_Qwen_Qwen3.6-27B-FP8-agent_2026-06-18_68f9abdb.json",
-      "timestamp": "2026-06-18T17:20:21.673664",
-      "overall_score": 93.56435643564357,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "gemini/gemini-2.5-flash",
-      "filename": "gemini_gemini-2.5-flash_2026-07-11_3c890661.json",
-      "timestamp": "2026-07-11T20:11:34.039158",
-      "overall_score": 74.35643564356435,
+      "pair": "vllm-qwen36/Qwen/Qwen3.6-27B-FP8",
+      "filename": "vllm-qwen36_Qwen_Qwen3.6-27B-FP8_2026-05-05_7cc85625.json",
+      "timestamp": "2026-05-05T14:28:34.942719",
+      "overall_score": 0.0,
       "agents_md_mode": "with"
-    },
-    {
-      "pair": "gemini/gemini-2.5-flash",
-      "filename": "gemini_gemini-2.5-flash_2026-07-11_6bab47dd.json",
-      "timestamp": "2026-07-11T20:18:02.330495",
-      "overall_score": 70.19801980198021,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "gemini/gemini-2.5-flash",
-      "filename": "gemini_gemini-2.5-flash_2026-07-11_62513f1d.json",
-      "timestamp": "2026-07-11T20:23:11.977066",
-      "overall_score": 74.35643564356435,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "gemini/gemini-2.5-flash",
-      "filename": "gemini_gemini-2.5-flash_2026-07-12_10ac04a7.json",
-      "timestamp": "2026-07-12T19:28:48.388193",
-      "overall_score": 80.69306930693071,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "gemini/gemini-2.5-flash",
-      "filename": "gemini_gemini-2.5-flash_2026-07-12_f2abd86e.json",
-      "timestamp": "2026-07-12T19:33:33.783017",
-      "overall_score": 72.57425742574259,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "gemini/gemini-2.5-flash",
-      "filename": "gemini_gemini-2.5-flash_2026-07-12_ec68c955.json",
-      "timestamp": "2026-07-12T19:37:55.822066",
-      "overall_score": 73.76237623762376,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "codeai-qwen36/Qwen/Qwen3.6-27B-FP8-agent",
-      "filename": "codeai-qwen36_Qwen_Qwen3.6-27B-FP8-agent_2026-06-18_19f81652.json",
-      "timestamp": "2026-06-18T17:46:18.088172",
-      "overall_score": 93.56435643564357,
-      "agents_md_mode": "without"
     }
   ]
 }

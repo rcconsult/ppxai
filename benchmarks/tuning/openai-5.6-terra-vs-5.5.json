@@ -1,0 +1,63 @@
+{
+  "artifact": "openai-5.6-terra-vs-5.5",
+  "measured": "2026-08-31",
+  "debt_item": 55,
+  "harness": {
+    "suite": "benchmarks/llm-eval, all 36 tests",
+    "runs_per_model": 3,
+    "all_runs_clean": true,
+    "note": "Run AFTER the harness fixes in e772d3f3. Before those, this comparison could not have been made honestly: infrastructure failures scored as quality, and the recorded tool_calling_method reported the REQUEST rather than the outcome."
+  },
+  "wire": {
+    "gpt-5.6-terra": "responses + tool_mode=native (the SHIPPED SHAPE a swap would use)",
+    "gpt-5.5": "chat_completions + tool_mode=native (its own shipped shape)",
+    "why": "The 5.6 default resolves prompt_based over chat-completions, which 400s on tools (see openai-5.6-tools-hazard.json). Benchmarking that would have measured a path the swap would never ship. Both sides recorded method=native, verified from the persisted metadata rather than assumed."
+  },
+  "scores": {
+    "gpt-5.6-terra": {
+      "runs": [
+        96.0,
+        91.5,
+        88.1
+      ],
+      "median": 91.5,
+      "spread": 7.9
+    },
+    "gpt-5.5": {
+      "runs": [
+        90.6,
+        88.3,
+        87.1
+      ],
+      "median": 88.3,
+      "spread": 3.5
+    }
+  },
+  "finding": "PARITY, not superiority. Terra's median is +3.2 over gpt-5.5, but its own run-to-run spread is 7.9 \u2014 larger than the difference \u2014 and the two ranges overlap (88.1-96.0 vs 87.1-90.6). An exact permutation test on the 3v3 split gives p=0.15, so the delta is NOT distinguishable from noise at n=3.",
+  "statistics": {
+    "observed_mean_delta": 3.2,
+    "exact_permutation_p": 0.15,
+    "ranges_overlap": true,
+    "honest_reading": "Terra performs at least as well as gpt-5.5 on this suite. Claiming it is BETTER would need more runs; claiming parity is supported now."
+  },
+  "price": {
+    "gpt-5.5": {
+      "input": 5.0,
+      "output": 30.0
+    },
+    "gpt-5.6-terra": {
+      "input": 2.0,
+      "output": 12.0
+    },
+    "terra_relative_cost": "40% of gpt-5.5",
+    "note": "Verified 2026-08-01 (Item 55); not re-fetched."
+  },
+  "conclusion": "Parity at 40% of the price is the decision-relevant result. The swap case does not rest on Terra being better \u2014 it rests on Terra not being worse while costing 60% less.",
+  "caveats": {
+    "n": "3 runs per model. Enough to show overlap; not enough to resolve a 3-point delta.",
+    "luna_long_context": "gpt-5.6-luna carries 2.6x the context of the 5.5 line but scores MRCR 41.3% vs ~90% for long-context recall (Item 55, 2026-08-01). It cannot reliably recall what fits in its own window \u2014 do not buy that context expecting recall. Not benchmarked here; this suite does not exercise long context.",
+    "sol": "Not benchmarked. It is the premium tier ($5/$30, SWE-Pro 64.6 vs 5.5's 59.4) and its positioning is against gpt-5.5-pro, which would need its own baseline runs.",
+    "no_sunset": "/models reports shutdown_date=None for gpt-5.5 and gpt-5.5-pro (verified 2026-08-31), so this swap is cost-driven, not deadline-driven. No /doctor deprecation rows are warranted."
+  },
+  "for_the_owner": "The swap decision is yours. If the 5.6 line is configured, each model needs wire_protocol='responses' as table data \u2014 without it, tools 400."
+}

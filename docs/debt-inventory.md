@@ -1130,6 +1130,46 @@ deltas, and the comparison must exercise the **shipped shape**
 (`wire_protocol="responses"`) rather than the default — otherwise it measures
 a path the swap would never use.
 
+**C2 MEASURED 2026-08-31 — the answer is PARITY, not superiority.** Artifact:
+[`benchmarks/tuning/openai-5.6-terra-vs-5.5.json`](../benchmarks/tuning/openai-5.6-terra-vs-5.5.json).
+3 runs each, full 36-test suite, all six `is_clean_run=True`, both sides
+recording `method=native` (read from the persisted metadata, not assumed).
+
+| model | runs | median | spread |
+|---|---|---|---|
+| `gpt-5.6-terra` | 96.0 / 91.5 / 88.1 | **91.5** | 7.9 |
+| `gpt-5.5` | 90.6 / 88.3 / 87.1 | **88.3** | 3.5 |
+
+Terra's median is **+3.2** — but its own run-to-run spread is **7.9, larger
+than the difference**, the ranges overlap (88.1–96.0 vs 87.1–90.6), and an
+exact permutation test on the 3v3 split gives **p = 0.15**. The delta is not
+distinguishable from noise at n=3.
+
+**That is still the decision-relevant result**, because Terra costs **40% of
+gpt-5.5** ($2/$12 vs $5/$30). The swap case does not rest on Terra being
+better; it rests on Terra not being worse while costing 60% less. Reporting
+"+3.2, Terra wins" would have been the tempting read and would not have
+survived one more run.
+
+**Not benchmarked, deliberately:** `sol` (premium tier — its comparison is
+against `gpt-5.5-pro`, which needs its own baseline) and `luna`.
+
+**Luna's long-context caveat, documented as C2 asked:** it carries **2.6× the
+context** of the 5.5 line but scores **MRCR 41.3%** against ~90% for
+long-context recall (verified 2026-08-01). It cannot reliably recall what
+fits inside its own window — that context should not be bought expecting
+recall. This suite does not exercise long context, so the caveat stands on
+the published figure rather than a local measurement.
+
+**No deprecation rows are warranted:** `/models` reports
+`shutdown_date=None` for both `gpt-5.5` and `gpt-5.5-pro` (verified
+2026-08-31). This swap is cost-driven, not deadline-driven.
+
+**⏳ The swap decision itself is the OWNER'S** and is deliberately not made
+here — no config, install script, pricing table or default was changed by
+Phase C. If the 5.6 line is configured, each model needs
+`wire_protocol="responses"` as table data, or tools 400 (C1).
+
 **Facts (verified 2026-08-01, post the 2026-07-30 price cuts — Luna −80%,
 Terra −20%; Item 38's Terra $2.50/$15 figure is stale):**
 | Model | $/M in/out | Context | Cutoff | vs configured |
