@@ -1376,26 +1376,54 @@ profiles used it.
 where every commit had to answer "is this lint mine or pre-existing?" — a
 question that only exists because nothing enforces an answer.
 
-`ruff check .` reports **3,418 findings** (derived 2026-08-31; re-derive
-before quoting). `grep -rn ruff .github/workflows/*.yml` returns **nothing**
-— ruff is configured in the project but never runs in CI, which is why the
-count can grow without anyone noticing.
+`ruff check .` reports **3,907 findings, of which 3,418 are auto-fixable**
+(derived 2026-08-31; re-derive before quoting). The first version of this
+entry said "3,418 findings" — that is the *fixable subset*, and quoting it as
+the total understated the problem by exactly the 489 findings that need
+human judgement rather than a `--fix` run. Corrected below.
 
-Most of it is typing modernisation and import hygiene, mechanical and safe:
+`grep -rn ruff .github/workflows/*.yml` returns **nothing** — ruff is
+configured in the project but never runs in CI, which is why the count can
+grow without anyone noticing.
 
-| rule | count | what |
+**Start with the 489 that `--fix` cannot touch**, because that is where the
+defects are rather than the style:
+
+| rule | count | what it means |
 |---|---|---|
-| `UP006` | 1135 | `Dict` → `dict` in annotations |
-| `UP045` | 805 | `Optional[X]` → `X \| None` |
-| `I001` | 564 | unsorted import blocks |
-| `F401` | 520 | imported but unused |
-| `UP035` | 266 | deprecated `typing` imports |
+| `F821` | **10** | **undefined name — a live `NameError` waiting to fire** |
+| `F841` | 109 | assigned, never read — often a check whose result was dropped |
+| `UP035` | 220 | deprecated `typing` import (mechanical, but not auto-fixed) |
+| `E402` | 38 | import not at top of file |
+| `N802`/`N806`/`N818` | 56 | naming convention |
 
-**Two of the tails are not style.** `F811` (115) is a name redefined before
-use — one definition silently shadowing another, which is a live-defect
-shape this repo has already met in other forms. `F841` (112) is an assigned
-variable never read, which is often a check whose result nobody consults.
-Those two deserve reading individually; the rest are `--fix` material.
+The `F821`s are worth reading **today**, not at cleanup time. Verified by
+AST, not just by ruff's word:
+
+    ppxai/engine/context.py:212,246   `logger` — never defined or imported
+                                       in the module, and BOTH uses are
+                                       inside `except` handlers. If that
+                                       branch fires, the error path itself
+                                       raises NameError.
+    ppxai/commands/provider.py:318,320 `bootstrap_ctx` — never assigned
+                                       anywhere in the module.
+    ppxai/tui/app.py:1094-1099         `status_bar` — assigned elsewhere in
+                                       the file but not on these paths;
+                                       a scope question, needs reading.
+
+An exception handler that crashes on exception is the same failure shape this
+inventory keeps recording: the thing meant to report a problem is the thing
+that breaks, so the original problem is never seen.
+
+`F811` (115, redefined-while-unused) is auto-fixable but deserves the same
+suspicion: one definition silently shadowing another. In a test file that is
+a test which no longer runs under a name someone believes is covered — the
+exact species behind Item 66, `test_the_parser_sees_every_row`, and the
+harness-integrity regression in Item 65.
+
+**The mechanical bulk**, for scale: `UP006` 1135 (`Dict` → `dict`), `UP045`
+805 (`Optional[X]` → `X | None`), `I001` 564 (import order), `F401` 520
+(unused imports). All `--fix` material.
 
 **Why this was not fixed while passing through.** Every commit in this arc
 that touched a linted file measured its count at the parent, found it
@@ -1406,11 +1434,11 @@ the mechanical change from the meaningful one. The disposition is recorded,
 but a commit message is not a place anyone will find it again — hence this
 item.
 
-**Suggested shape, not a decision:** land the mechanical rules
-(`--fix` for UP006/UP045/I001/UP035) as ONE commit that touches nothing else,
-read `F811` and `F841` individually as their own change, then add ruff to CI
-so the count cannot climb again. The last step is the one that matters — the
-other two are undone by a month of drift without it.
+**Suggested shape, not a decision:** read the 10 `F821`s first as their own
+change (they are potential runtime failures, not debt); then `F841` and
+`F811` individually; then the mechanical rules as ONE commit touching nothing
+else; then add ruff to CI. The last step is the one that matters — the rest
+is undone by a month of drift without it.
 
 **Not started.** Filed so it stops being rediscovered per-commit.
 
