@@ -601,6 +601,33 @@ class TestEveryLessonIsDiscoverable:
         found = self._lessons()
         assert len(found) >= 10, f"expected the lessons directory, found {found}"
 
+    def test_lesson_filenames_are_kebab_case(self):
+        """The convention the scan below RELIES on, made explicit.
+
+        `test_the_readme_does_not_name_lessons_that_are_gone` finds `*.md`
+        tokens with a lowercase-kebab pattern. A file named `GHOST.md` would
+        therefore be invisible to it — the token captures nothing, `named`
+        stays empty, and the check passes without having looked. That is the
+        same species as an empty glob, one level down.
+
+        Two ways to fix it: widen the scan, or make its assumption true.
+        Asserting the convention is better, because the convention already
+        holds for all 17 lessons and was previously implicit — this turns
+        "everyone happens to do it" into a rule a new file must follow, and
+        the scan's pattern into something guaranteed rather than hoped for.
+        (The scan is ALSO case-insensitive now, so the two are independent:
+        neither silently depends on the other.)
+        """
+        bad = [
+            p.name for p in self._lessons()
+            if not re.match(r"^[a-z0-9][a-z0-9-]*\.md$", p.name)
+        ]
+        assert not bad, (
+            f"lesson filenames must be lowercase kebab-case: {bad}\n"
+            "Anything else is skipped by the index scan in this class and "
+            "reads inconsistently in the directory listing."
+        )
+
     def test_every_lesson_is_listed_in_the_readme(self):
         root = Path(__file__).resolve().parents[1] / "docs" / "lessons"
         index = (root / "README.md").read_text(encoding="utf-8")
@@ -632,8 +659,25 @@ class TestEveryLessonIsDiscoverable:
         index = (root / "README.md").read_text(encoding="utf-8")
         present = {p.name for p in self._lessons()} | {"README.md"}
         # Every `*.md` token the index names, however it names it.
-        named = set(re.findall(r"[a-z0-9][a-z0-9-]*\.md", index))
-        dangling = sorted(named - present)
+        # Case-insensitive and underscore-aware so a name outside the kebab
+        # convention is still SEEN here rather than silently skipped — the
+        # convention is enforced by its own test above, and this scan does
+        # not quietly depend on it holding.
+        named = {
+            m.lower()
+            for m in re.findall(r"[A-Za-z0-9][A-Za-z0-9_-]*\.md", index)
+        }
+        present = {n.lower() for n in present}
+        # The index legitimately cites files OUTSIDE this directory in prose
+        # (AGENTS.md, CLAUDE.md, docs/mcp-integration-plan.md). Those are not
+        # dangling lesson references, and treating them as such was a false
+        # positive this scan produced the moment it was widened. Anything that
+        # exists somewhere in the repo is somebody else's file; only a name
+        # that exists NOWHERE is a lesson that went away.
+        repo = Path(__file__).resolve().parents[1]
+        elsewhere = {q.name.lower() for q in repo.rglob("*.md")
+                     if ".venv" not in q.parts and "node_modules" not in q.parts}
+        dangling = sorted(named - present - elsewhere)
         assert not dangling, (
             "docs/lessons/README.md names lesson files that do not exist: "
             f"{dangling}\n\nA renamed or deleted lesson leaves the old name "
