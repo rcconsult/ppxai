@@ -1379,19 +1379,35 @@ question that only exists because nothing enforces an answer.
 `ruff check .` reports **3,907 findings, of which 3,418 are auto-fixable**
 (derived 2026-08-31; re-derive before quoting). The first version of this
 entry said "3,418 findings" — that is the *fixable subset*, and quoting it as
-the total understated the problem by exactly the 489 findings that need
-human judgement rather than a `--fix` run. Corrected below.
+the total understated the problem by exactly the 489 findings that plain
+`--fix` leaves alone. Corrected below.
 
 `grep -rn ruff .github/workflows/*.yml` returns **nothing** — ruff is
 configured in the project but never runs in CI, which is why the count can
 grow without anyone noticing.
 
-**Start with the 489 that `--fix` cannot touch**, because that is where the
-defects are rather than the style. Counts below are the **unfixable subset**,
-not each rule's total — `F841`, for instance, is 112 overall of which only 3
-are auto-fixable:
+**Start with the 489 that plain `--fix` leaves alone**, because that is where
+the defects are rather than the style. Two different things live in that tail,
+and the difference is the whole point:
 
-| rule | unfixable | what it means |
+- **118 are fixable only via `--unsafe-fixes`** — ruff *can* rewrite them but
+  declines to by default, because the rewrite may change behaviour. 109 of
+  those 118 are `F841`: deleting an assignment is unsafe when its right-hand
+  side has side effects, so the machine correctly refuses to guess. These are
+  the ones a human should read, precisely because a rewrite exists and might
+  be wrong.
+- **371 have no fix at all**, safe or unsafe — including every `F821`. There
+  is no mechanical answer to "what did the author mean by `logger` here".
+
+(Measured: `ruff check .` → 3,418 fixable; `--unsafe-fixes` → 3,536. The
+first version of this section called all 489 "unfixable", which invites
+hand-editing where 118 of them mostly need a decision about one `--unsafe-fixes`
+run.)
+
+Counts below are that 489-finding tail, **not** each rule's total — `F841` is
+112 overall, of which 3 are safely fixable:
+
+| rule | in the tail | what it means |
 |---|---|---|
 | `F821` | **10** | **undefined name — a live `NameError` waiting to fire** |
 | `F841` | 109 | assigned, never read — often a check whose result was dropped |
@@ -1437,9 +1453,11 @@ but a commit message is not a place anyone will find it again — hence this
 item.
 
 **Suggested shape, not a decision:** read the 10 `F821`s first as their own
-change (they are potential runtime failures, not debt); then `F841` and
-`F811` individually; then the mechanical rules as ONE commit touching nothing
-else; then add ruff to CI. The last step is the one that matters — the rest
+change (they are potential runtime failures, not debt); then decide `F841` —
+one `--unsafe-fixes` run would clear 109 of them, but each deletion is only
+safe if the right-hand side has none, so this is a read-then-run rather than
+a run; then `F811` individually; then the mechanical rules as ONE commit
+touching nothing else; then add ruff to CI. The last step is the one that matters — the rest
 is undone by a month of drift without it.
 
 **Not started.** Filed so it stops being rediscovered per-commit.
