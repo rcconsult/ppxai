@@ -1370,7 +1370,7 @@ and §3's assumption that `api_path="auto"` had rows behind it — zero
 profiles used it.
 ---
 
-### Item 67 — ruff is not in CI [tooling / hygiene]
+### Item 67 ✅ — ruff lint backlog + CI ratchet [tooling / hygiene]
 
 **Filed 2026-08-31.** Surfaced repeatedly during the Item 64/65/66 work,
 where every commit had to answer "is this lint mine or pre-existing?" — a
@@ -1464,15 +1464,48 @@ the mechanical change from the meaningful one. The disposition is recorded,
 but a commit message is not a place anyone will find it again — hence this
 item.
 
-**Suggested shape, not a decision:** ~~read the 10 `F821`s first~~ ✅ done;
-then decide `F841` —
-one `--unsafe-fixes` run would clear 109 of them, but each deletion is only
-safe if the right-hand side has none, so this is a read-then-run rather than
-a run; then `F811` individually; then the mechanical rules as ONE commit
-touching nothing else; then add ruff to CI. The last step is the one that matters — the rest
-is undone by a month of drift without it.
+**✅ IMPLEMENTED 2026-09-01.** `3,889 -> 376`, in the order this entry
+proposed: defects first, mechanical bulk last, ratchet throughout.
 
-**Not started.** Filed so it stops being rediscovered per-commit.
+| rule | | commit |
+|---|---|---|
+| `F821` undefined name | 10 -> 0 | `7458a0a0` |
+| `F822` undefined export | 2 -> 0 | `2338cd6e` |
+| `invalid-syntax` | 4 -> 0 | `3a1c4d9c` |
+| `E402` import not at top | 38 -> 0 | `fcaca6df` |
+| `F811` redefined-while-unused | 115 -> 0 | `d13bb805` |
+| `F841` unused variable (production) | 13 -> 0 | `c3083a7f` |
+| `UP006`/`UP045`/`I001`/`F401`/`UP035`/`F541` | 3,555 fixed | `4f13cc12` |
+
+**The CI ratchet is the part that lasts.** `.github/workflows/build.yml`
+gates the rules standing at zero — `F821,F822,F823,F632,F811,E402` — and
+widens as classes reach zero. It has already earned it: the mechanical bulk
+regressed `F811` 0 -> 18 and `E402` 0 -> 4, both invisible to a green suite
+(5,684 passed either way) and both caught only because the ratchet was
+widened to cover them.
+
+**"Mechanical" was the wrong word**, and the reason is now a shared lesson —
+[docs/lessons/ruff-safe-fixes-are-not-semantically-safe.md](lessons/ruff-safe-fixes-are-not-semantically-safe.md).
+A rule ruff classifies **safe** (`UP045`) rewrote `Optional[callable]` to
+`callable | None`, which raises `TypeError` at import: `import ppxai` would
+not have started. An **unsafe** one (`F841`) produces code worse than the
+finding. Both were caught by reading the diff, not by the tool.
+
+**Left deliberately open, with reasons:**
+
+- **99 `F841` in tests.** In a test, `result = thing()` with `result` unread
+  is often "call it and assert it does not raise" — the call IS the
+  assertion. Deleting the binding is harmless; deleting the line is not, and
+  ruff chooses per instance. Low value against a real risk of silently
+  weakening tests. Its own item if anyone wants it.
+- **~32 `F401`/`UP035`** ruff will not auto-remove: re-exports, where the
+  "unused" import is the point.
+- **A handful of `E402`** marked `# noqa` with the reason — imports that must
+  follow `register_provider`, `sys.path.insert`, or `importorskip`.
+
+Each is a rule violation encoding a real constraint. Stated, not silenced by
+moving code that must not move — the same disposition as the 25
+patch-semantics rows in the lazy-import fence.
 
 ### Item 66 — the deprecation table only knows the models WE ship [providers / doctor]
 
