@@ -1,0 +1,58 @@
+{
+  "artifact": "openai-5.6-tools-hazard",
+  "measured": "2026-08-31",
+  "adr": "ADR 0012 Q0h \u2014 a tuning artifact, not a hand-typed code table",
+  "debt_item": 55,
+  "endpoint": "https://api.openai.com/v1/chat/completions",
+  "question": "Community report (unconfirmed): gpt-5.6-sol rejects function tools combined with reasoning_effort on chat completions. ppxai is chat-completions-shaped for OpenAI, so this would break tool calling.",
+  "finding": "The report is WRONG IN THE DIRECTION THAT MATTERS. It is not sol-only and it is not tools+effort: sending tools ALONE already 400s, on all three 5.6 models, with no reasoning_effort in the request at all. The 5.6 line evidently defaults to a non-'none' effort, so the caller does not have to ask for reasoning to hit it.",
+  "error": {
+    "status": 400,
+    "param": "reasoning_effort",
+    "message": "Function tools with reasoning_effort are not supported for gpt-5.6-{sol,terra,luna} in /v1/chat/completions. To use function tools, use /v1/responses or set reasoning_effort to 'none'."
+  },
+  "matrix": {
+    "gpt-5.6-sol": {
+      "baseline": "200",
+      "tools_only": "400 (the finding \u2014 no effort sent)",
+      "reasoning_effort_only": "200",
+      "tools_plus_effort": "400",
+      "tools_plus_effort_none": "200, tool_calls=1",
+      "tools_on_responses_wire": "200, function_call=1"
+    },
+    "gpt-5.6-terra": {
+      "baseline": "200",
+      "tools_only": "400 (the finding \u2014 no effort sent)",
+      "reasoning_effort_only": "200",
+      "tools_plus_effort": "400",
+      "tools_plus_effort_none": "200, tool_calls=1",
+      "tools_on_responses_wire": "200, function_call=1"
+    },
+    "gpt-5.6-luna": {
+      "baseline": "200",
+      "tools_only": "400 (the finding \u2014 no effort sent)",
+      "reasoning_effort_only": "200",
+      "tools_plus_effort": "400",
+      "tools_plus_effort_none": "200, tool_calls=1",
+      "tools_on_responses_wire": "200, function_call=1"
+    }
+  },
+  "remedies": {
+    "reasoning_effort_none": {
+      "works": true,
+      "verified": "tool_calls=1 on sol and terra",
+      "cost": "Disables reasoning on models sold FOR reasoning. Buying a reasoning model and pinning effort to none is close to buying the wrong model.",
+      "expressible_as": "generation_params.reasoning_effort = 'none'"
+    },
+    "responses_wire": {
+      "works": true,
+      "verified": "function_call=1 on sol and terra",
+      "cost": "None measured \u2014 reasoning is retained.",
+      "expressible_as": "ModelFacts.wire_protocol = \"responses\"",
+      "note": "ppxai already speaks this wire (ADR 0012 W2), and openai_native already routes per model on wire_protocol. This is a table row, not new code \u2014 which is the outcome ADR 0012 was built to make possible."
+    }
+  },
+  "recommendation": "If the 5.6 line is configured, give each model wire_protocol='responses'. It is the remedy OpenAI's own error message lists first, it costs nothing measured, and it needs no code. Pinning reasoning_effort='none' is the fallback and should be a stated row decision, not a default.",
+  "not_configured_today": "No 5.6 model is in ppxai-config.example.json, so nothing is broken right now. This artifact exists so the swap decision is made with the hazard measured rather than discovered afterwards.",
+  "reproduce": "scripts/probe-openai-56-tools.py"
+}

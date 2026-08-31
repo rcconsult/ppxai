@@ -1034,6 +1034,55 @@ snapshots shut down 2026-12-11, none configured). Filed 2026-08-01 from the
 provider-fleet web sweep (developers.openai.com model pages fetched directly).
 Supersedes Item 38 watch 1 (trigger FIRED).
 
+**C1 DONE 2026-08-31 — the hazard is REAL and WORSE than reported, and it is
+now measured rather than "unverified".** Artifact:
+[`benchmarks/tuning/openai-5.6-tools-hazard.json`](../benchmarks/tuning/openai-5.6-tools-hazard.json),
+reproducible with `scripts/probe-openai-56-tools.py --remedies`.
+
+The community report said `gpt-5.6-sol` rejects function tools *combined
+with* `reasoning_effort`. **Both halves are wrong in the direction that
+matters:**
+
+- **Not sol-only** — `terra` and `luna` behave identically.
+- **Not the combination** — sending `tools` **alone** already 400s, with no
+  `reasoning_effort` in the request at all. The line evidently defaults to a
+  non-`none` effort, so a caller never has to ask for reasoning to hit it.
+
+| case | sol | terra | luna |
+|---|---|---|---|
+| baseline | 200 | 200 | 200 |
+| **tools only** | **400** | **400** | **400** |
+| reasoning_effort only | 200 | 200 | 200 |
+| tools + effort | 400 | 400 | 400 |
+
+```
+400 invalid_request_error, param=reasoning_effort
+"Function tools with reasoning_effort are not supported for gpt-5.6-sol in
+ /v1/chat/completions. To use function tools, use /v1/responses or set
+ reasoning_effort to 'none'."
+```
+
+**Why this matters for ppxai specifically:** the OpenAI provider is
+chat-completions-shaped, so *any* tool-carrying request to a 5.6 model would
+400 out of the box. Nothing is broken today — no 5.6 model is configured —
+which is exactly why the measurement belongs here before the swap decision,
+not after it.
+
+**Both remedies verified to produce a REAL tool call** (not merely a 200):
+
+| remedy | result | cost |
+|---|---|---|
+| `reasoning_effort="none"` | `tool_calls=1` | disables reasoning on models sold FOR reasoning |
+| **`/v1/responses`** | `function_call=1` | **none measured** |
+
+**Recommendation for the swap decision:** give each configured 5.6 model
+`wire_protocol="responses"`. It is the remedy OpenAI's own error lists first,
+it costs nothing measured, and it needs **no code** — `openai_native` already
+routes per model on `wire_protocol` and already speaks that wire (ADR 0012
+W2). This is the case that ADR was built to absorb as table data.
+`reasoning_effort="none"` stays the fallback and would be a stated row
+decision, never a default.
+
 **Facts (verified 2026-08-01, post the 2026-07-30 price cuts — Luna −80%,
 Terra −20%; Item 38's Terra $2.50/$15 figure is stale):**
 | Model | $/M in/out | Context | Cutoff | vs configured |
