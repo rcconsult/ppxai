@@ -171,10 +171,13 @@ line-length = 100
 target-version = "py310"
 # Model OUTPUT captured by the tool-calling eval, not source. `test_cases.py`
 # prompts a model to write to a fictional `/src/` path and the file-write tool
-# saves whatever comes back — including `def function_{i}():` with the literal
-# placeholder, and a `calc.py` truncated mid-method. Committed as source by a
-# bulk "adding files to clean state"; every `invalid-syntax` ruff reports comes
-# from here. Excluded rather than repaired: there is nothing to repair.
+# saves whatever comes back — `functions.py` is the model echoing the prompt's
+# `def function_{i}():` template verbatim, placeholder and all, and is the one
+# file here that does not parse. The other four are syntactically valid model
+# output that nothing imports. Committed as source by a bulk "adding files to
+# clean state", while the sibling `debug/` output is correctly gitignored as
+# regenerable. Excluded because a directory of model transcripts does not
+# belong under a linter, not because the code is broken.
 extend-exclude = ["benchmarks/llm-eval/src"]
 
 [tool.ruff.lint]
