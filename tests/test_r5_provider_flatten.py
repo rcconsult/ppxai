@@ -31,6 +31,7 @@ from ppxai.engine.uploaded_file import (
     make_uploaded_file_block,
 )
 from ppxai.engine.providers.wire.responses import ResponsesHandler
+from ppxai.engine.providers.wire.generate_content import GenerateContentHandler
 
 
 def _pdf_block():
@@ -127,7 +128,7 @@ class TestGeminiFlatten:
             mock_genai.Client.return_value = MagicMock()
             provider = GeminiProvider(api_key="test")
 
-        parts = provider._content_to_gemini_parts([
+        parts = GenerateContentHandler._content_to_gemini_parts([
             {"type": "text", "text": "Here:"},
             _pdf_block(),
         ])
@@ -145,7 +146,7 @@ class TestGeminiFlatten:
             mock_genai.Client.return_value = MagicMock()
             provider = GeminiProvider(api_key="test")
 
-        parts = provider._content_to_gemini_parts([
+        parts = GenerateContentHandler._content_to_gemini_parts([
             {"type": "image_url", "image_url": {"url": "data:image/png;base64,QUFB"}},
             _pdf_block(),
         ])

@@ -7,16 +7,20 @@ revised in place per the README's Proposed-records rule; status corrected
 2026-08-30 from "no code written" to Accepted-in-part after §2 merged as
 `6b0f2214` — the header had drifted from shipped reality, which is the exact
 defect class this record exists to remove)
-**Status:** 🟡 **Accepted-in-part** — §1, §2 and §3 are **implemented and
-merged** (2026-08-30, `bugfix/v1.19.1`): the unified fact system as migration
-step 0 (`6b0f2214`, W1), then the `ProtocolHandler` contract, the Responses
-handler and `wire_protocol`-driven routing as steps 1–2 (W2). **Steps 3–4
-remain open**: Perplexity over the Responses wire (W3) and the remaining
-protocol handlers (W4). [Debt Item 61](../debt-inventory.md) is **closed** —
-an operator `wire_protocol` override now changes the outgoing request. Item 62
-is **half closed**: the ADR 0006 validator covers 2 of 3 wires, and
-`_convert_messages` is still the shared base's chat-completions emitter until
-step 4. §5–§7 remain design, revisable in place.
+**Status:** ✅ **Implemented** — all four migration steps merged on
+`bugfix/v1.19.1`: the unified fact system (step 0 / W1, `6b0f2214`), the
+`ProtocolHandler` contract + Responses handler + `wire_protocol` routing
+(steps 1–2 / W2, `1bf93de7`), Perplexity over the Responses wire (step 3 /
+W3, `a0d924ea` + `b15dd1aa`), and all three wires as handlers (step 4 / W4).
+**Debt Items 61 and 62 are both closed.** §6 (Messages) remains designed but
+unbuilt, by construction — it ships with `feat/anthropic-provider` on that
+work's own schedule, and this record exists so it lands as a handler rather
+than a fifth bespoke provider.
+
+One user-facing item is deliberately **not** shipped and needs an owner
+decision before 2026-09-27: the `sonar` → `perplexity/sonar` ID rename and
+the `/v1` base-url suffix in the shipped install scripts and VSCode
+bootstrap config. The code supports both IDs today, so nothing is blocked.
 Supersedes the `api_path` routing sketch in
 [`../plan-per-model-capabilities.md`](../plan-per-model-capabilities.md) §I4b,
 which assumed the slot merely needed filling in.
@@ -1015,12 +1019,35 @@ gated on the owner's explicit go, per the arc's standing rule.
    supported for this model"* on Chat Completions. The same model, two wires,
    two capabilities — the sharpest evidence in the tree that capability
    cannot be a property of a provider.
-4. **`chat_completions` and `generate_content` become handlers.** Completes the
-   model; `openai_compat` and `gemini` stop being special cases. This is the
-   step that moves `convert_messages` into the handlers and retires Gemini's
-   incompatible override — and where `assert_wire_blocks_clean` starts covering
-   all protocols. Fence: the ADR 0006 validator runs on every protocol's
-   output, asserted per handler.
+4. ✅ **DONE** (W4, 2026-08-31) — **`chat_completions` and `generate_content`
+   become handlers.** All three live wires are registered; each owns its
+   converter and declares its own return type. **Closes debt Item 62, both
+   halves.**
+
+   `GeminiProvider._convert_messages` is **deleted**, not narrowed, along
+   with the three helpers that moved with it. `BaseProvider._convert_messages`
+   survives as a *delegation* to the chat-completions handler — most
+   providers speak that wire — but is no longer one protocol's emitter
+   installed as everyone's default, which is what forced the incompatible
+   override in the first place.
+
+   `assert_wire_blocks_clean` now runs on **3 of 3** wires. The fence
+   parametrises over the handler **registry**, not a hand-written list, so a
+   fourth wire that forgets the validator fails on the day it is written —
+   and it greps each handler's source too, because Item 62 (a) was precisely
+   a validator that existed and was not called.
+
+   The extracted Gemini converter was diffed byte-for-byte against the
+   original across all four role paths before the override was removed.
+
+   **Simplification report.** Providers **−318 lines** net
+   (`openai_native` −351, `gemini` −168, `base` +20, `perplexity` +181 — the
+   last being W3's new two-wire capability, not moved code); `wire/` adds
+   983, of which a large share is the recorded measurement and rationale
+   these handlers now carry. Twelve methods verified absent from their
+   original files. The honest overall figure is **+665 lines** — this arc
+   bought a capability (a second Perplexity wire) and a closed defect class,
+   not a smaller tree.
 
 Steps 1–2 stand on their own merit — they fix measured drift and an inert
 config override — and are worth doing even if step 3 were abandoned.

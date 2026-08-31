@@ -32,8 +32,8 @@ from ...common.logger import get_logger
 from ...config.tls import tls_verify
 from ..model_facts import ModelFacts
 from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
-from ..uploaded_file import flatten_uploaded_file_blocks
 from .base import BaseProvider
+from .wire import get_handler
 
 
 # Try to import google-genai package (optional dependency, v1.12.5+)
@@ -341,7 +341,7 @@ class GeminiProvider(BaseProvider):
         """
         try:
             # Convert messages to Gemini format (now returns tuple with system instruction)
-            contents, system_instruction = self._convert_messages(messages)
+            contents, system_instruction = get_handler("generate_content").convert_messages(messages)
 
             # Load generation params from config (v1.15.2)
             generation_params = self._get_generation_params(model)
@@ -545,7 +545,7 @@ class GeminiProvider(BaseProvider):
         Returns:
             Assistant's response content
         """
-        contents, system_instruction = self._convert_messages(messages)
+        contents, system_instruction = get_handler("generate_content").convert_messages(messages)
         generation_params = self._get_generation_params(model)
         config = self._build_config(
             model=model,
@@ -599,7 +599,7 @@ class GeminiProvider(BaseProvider):
             messages.append(Message(role="system", content=system))
         messages.append(Message(role="user", content=prompt))
 
-        contents, system_instruction = self._convert_messages(messages)
+        contents, system_instruction = get_handler("generate_content").convert_messages(messages)
         generation_params = dict(self._get_generation_params(model) or {})
         if temperature is not None:
             generation_params["temperature"] = temperature
@@ -670,178 +670,6 @@ class GeminiProvider(BaseProvider):
             result["reasoning"] = reasoning
         return result
 
-    def _convert_messages(self, messages: List[Message]) -> tuple:
-        """Convert Message objects to Gemini format.
-
-        Gemini uses a different format than OpenAI:
-        - 'user' and 'model' roles (not 'assistant')
-        - 'parts' array instead of 'content' string
-        - System messages become system_instruction in config
-        - Native tool round-trips use function_call / function_response
-          parts instead of OpenAI's tool_calls / tool-role messages
-
-        The engine's native pairing branch (engine/chat.py) records tool
-        round-trips as an assistant message carrying `tool_calls` followed
-        by tool-role messages carrying `tool_call_id`. Gemini's wire format
-        has no id field on function responses — pairing is by function
-        NAME — so the id→name mapping is resolved here from the preceding
-        assistant turn. A tool result whose id can't be resolved falls back
-        to a plain user text turn rather than an invalid function_response.
-
-        Args:
-            messages: List of Message objects
-
-        Returns:
-            Tuple of (contents list, system_instruction string or None)
-        """
-        contents = []
-        system_parts = []
-        call_id_to_name: Dict[str, str] = {}
-
-        if not messages:
-            return contents, None
-
-        for m in messages:
-            if m.role == "system":
-                # Collect system messages for system_instruction. Gemini's
-                # system_instruction is text-only, so flatten any multimodal
-                # content to its text representation.
-                system_parts.append(m.text_content())
-            elif m.role == "assistant" and m.tool_calls:
-                parts: List[Dict[str, Any]] = []
-                text = m.text_content()
-                if text and text.strip():
-                    parts.append({"text": text})
-                for tc in m.tool_calls:
-                    func = (tc.get("function") or {}) if isinstance(tc, dict) else {}
-                    name = func.get("name", "")
-                    if not name:
-                        continue
-                    args = self._parse_tool_call_arguments(func.get("arguments"))
-                    call_id = tc.get("id")
-                    if call_id:
-                        call_id_to_name[call_id] = name
-                    fc_part: Dict[str, Any] = {
-                        "function_call": {"name": name, "args": args}
-                    }
-                    # Item 45: Gemini 3.x REQUIRES the signature it issued with
-                    # this call to come back on the functionCall part, or the
-                    # whole request 400s ("missing a thought_signature in
-                    # functionCall parts"). 2.5 never sets it → key absent →
-                    # unchanged behaviour there.
-                    sig = self._decode_thought_signature(
-                        tc.get("thought_signature") if isinstance(tc, dict) else None
-                    )
-                    if sig:
-                        fc_part["thought_signature"] = sig
-                    parts.append(fc_part)
-                if parts:
-                    contents.append({"role": "model", "parts": parts})
-            elif m.role == "tool":
-                name = call_id_to_name.get(m.tool_call_id or "")
-                if name:
-                    contents.append({
-                        "role": "user",
-                        "parts": [{
-                            "function_response": {
-                                "name": name,
-                                "response": {"result": m.text_content()},
-                            }
-                        }],
-                    })
-                else:
-                    # Unpaired tool result (e.g. restored session that lost
-                    # the assistant turn) — degrade to a plain user turn.
-                    contents.append({
-                        "role": "user",
-                        "parts": self._content_to_gemini_parts(m.content),
-                    })
-            else:
-                role = "model" if m.role == "assistant" else "user"
-                contents.append({
-                    "role": role,
-                    "parts": self._content_to_gemini_parts(m.content),
-                })
-
-        # Combine all system messages into one instruction
-        system_instruction = "\n\n".join(system_parts) if system_parts else None
-        return contents, system_instruction
-
-    @staticmethod
-    def _parse_tool_call_arguments(raw: Any) -> Dict[str, Any]:
-        """Normalize a recorded tool-call `arguments` value to a dict.
-
-        The engine stores arguments as a JSON string (OpenAI wire shape);
-        Gemini's function_call part wants the structured dict. Malformed
-        JSON degrades to {} — the call was already executed, the replayed
-        part only needs to exist for transcript coherence.
-        """
-        if isinstance(raw, dict):
-            return raw
-        if isinstance(raw, str) and raw:
-            try:
-                parsed = json.loads(raw)
-                return parsed if isinstance(parsed, dict) else {}
-            except json.JSONDecodeError:
-                return {}
-        return {}
-
-    @staticmethod
-    def _content_to_gemini_parts(content: Any) -> List[Dict[str, Any]]:
-        """Convert Message.content to Gemini `parts` list.
-
-        String content → single text part. List content (OpenAI multimodal
-        format) → mix of `{"text": ...}` and `{"inline_data": {mime_type, data}}`
-        parts. Data URIs (`data:image/png;base64,...`) are split into mime_type
-        and base64 payload. Remote `http(s)://` URLs are unsupported — Gemini
-        requires the caller to fetch and embed the bytes.
-
-        R5 (v1.17.6): `uploaded_file` blocks are flattened to legacy
-        text markers before the shape conversion, so the block-type
-        walk below only has to know about `text` and `image_url`.
-        """
-        if isinstance(content, str):
-            return [{"text": content}]
-        if not isinstance(content, list):
-            return [{"text": str(content)}]
-
-        # R5: collapse any uploaded_file blocks to their legacy text form
-        # before we walk the list. Keeps the block-type dispatch simple
-        # and guarantees Gemini sees the exact same marker string it did
-        # pre-R5.
-        content = flatten_uploaded_file_blocks(content)
-
-        parts: List[Dict[str, Any]] = []
-        for block in content:
-            if not isinstance(block, dict):
-                continue
-            btype = block.get("type")
-            if btype == "text":
-                parts.append({"text": block.get("text", "")})
-            elif btype == "image_url":
-                url = (block.get("image_url") or {}).get("url", "")
-                if url.startswith("data:"):
-                    # data:image/png;base64,AAAA...
-                    try:
-                        header, data = url.split(",", 1)
-                        mime_type = header[5:].split(";", 1)[0] or "image/png"
-                    except ValueError:
-                        # Malformed data URI — skip rather than crash.
-                        continue
-                    parts.append({
-                        "inline_data": {
-                            "mime_type": mime_type,
-                            "data": data,
-                        }
-                    })
-                # Non-data URIs are silently skipped; the preprocessing layer
-                # is responsible for inlining remote images before they reach
-                # the provider.
-        # Gemini rejects empty parts — fall back to a blank text part so the
-        # turn stays valid even if every block was filtered out.
-        if not parts:
-            parts.append({"text": ""})
-        return parts
 
     def _build_config(
         self,
@@ -1095,25 +923,6 @@ class GeminiProvider(BaseProvider):
                 return str(sig)
         return None
 
-    @staticmethod
-    def _decode_thought_signature(sig):
-        """Reverse `_thought_signature_of` for the outbound wire.
-
-        The SDK types `Part.thought_signature` as `Optional[bytes]` and
-        pydantic rejects a non-base64 str outright, so the value we stored
-        (base64 text, for JSON-safety in the session transcript) must be
-        decoded back to the ORIGINAL bytes before it goes out. Returns None
-        when the value cannot be decoded, so a malformed signature degrades to
-        "omit the field" rather than poisoning the whole request.
-        """
-        if not sig:
-            return None
-        if isinstance(sig, bytes):
-            return sig
-        try:
-            return base64.b64decode(sig, validate=True)
-        except Exception:
-            return None
 
     def _parse_grounding(self, grounding_metadata) -> List[Dict[str, str]]:
         """Parse grounding metadata to extract citations.

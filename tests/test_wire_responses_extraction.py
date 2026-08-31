@@ -284,9 +284,14 @@ class TestTheTwoSeedSetsStayDisjoint:
 
 class TestHandlerRegistry:
     def test_unknown_protocol_raises_rather_than_defaulting(self):
-        """A silent fallback is how `api_path` stayed inert for three releases."""
+        """A silent fallback is how `api_path` stayed inert for three releases.
+
+        The example used to be `generate_content`, which W4 then registered —
+        so the name is chosen to be one no wire will ever claim, rather than
+        one that happens to be unimplemented today.
+        """
         with pytest.raises(KeyError, match="no wire-protocol handler"):
-            get_handler("generate_content")
+            get_handler("carrier_pigeon")
 
     def test_responses_handler_is_registered_under_its_own_name(self):
         assert get_handler("responses") is HANDLERS["responses"]

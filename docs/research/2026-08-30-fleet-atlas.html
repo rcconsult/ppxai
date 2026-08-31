@@ -449,7 +449,7 @@
 </section>
 
 <section id="protocols">
-  <div class="sec-head"><h2>The four wire protocols</h2><span class="k">3 live · 1 designed</span></div>
+  <div class="sec-head"><h2>The four wire protocols</h2><span class="k">3 live, all three now handlers (ADR 0012 W4) · 1 designed</span></div>
   <div class="cards">
     <div class="card chat">
       <h3>chat_completions</h3>
@@ -457,8 +457,9 @@
       <p>The workhorse: 8 of 10 config entries end here. Tool calls go out as a <code>tools</code> array and come back as
       <code>tool_calls</code>; results return as <code>tool</code>-role messages.</p>
       <ul>
-        <li>Message conversion: <code>BaseProvider._convert_messages</code></li>
-        <li>The only wire guarded by ADR 0006's validator (Item 62)</li>
+        <li>Message conversion: <code>wire.ChatCompletionsHandler</code> (ADR 0012 W4;
+        <code>BaseProvider._convert_messages</code> now delegates to it)</li>
+        <li>ADR 0006's validator guards <b>all three</b> wires since W4 — it guarded only this one until then (Item 62, closed)</li>
         <li>Perplexity's copy of it retires 2026-09-27</li>
       </ul>
     </div>
@@ -479,7 +480,7 @@
       <p>Gemini's native wire: <code>parts</code> arrays, <code>user/model</code> roles, system prompts hoisted to
       <code>system_instruction</code>. No tool-call ids — pairing is by function <em>name</em>.</p>
       <ul>
-        <li>Overrides <code>_convert_messages</code> with an incompatible return type (Item 62)</li>
+        <li>Its incompatible <code>_convert_messages</code> override is <b>deleted</b> (ADR 0012 W4) — conversion lives in <code>wire.GenerateContentHandler</code> and returns its own honest shape (Item 62, closed)</li>
         <li>Gemini 3.x makes <code>thought_signature</code> mandatory (Item 54)</li>
         <li>Falls back to chat_completions if google-genai is absent</li>
       </ul>

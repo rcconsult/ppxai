@@ -16,6 +16,7 @@ from typing import Any, AsyncIterator
 from unittest.mock import MagicMock, patch
 
 from ppxai.engine.types import Event, EventType, Message
+from ppxai.engine.providers.wire.generate_content import GenerateContentHandler
 
 
 def _make_response_with_null_parts() -> Any:
@@ -175,7 +176,7 @@ class TestGeminiNoneIterableGuards:
     def test_content_to_gemini_parts_handles_none_content(self, provider):
         """Message content=None should produce an empty/blank text
         part, not crash on `for block in None`."""
-        result = provider._content_to_gemini_parts(None)
+        result = GenerateContentHandler._content_to_gemini_parts(None)
         assert isinstance(result, list)
         # Either empty parts OR a blank text fallback — both safe.
         assert len(result) >= 0

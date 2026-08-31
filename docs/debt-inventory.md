@@ -1138,6 +1138,34 @@ wired code. The wiring was right and the probe was wrong.
 chat-completions emitter in the shared base, and `GeminiProvider` still
 overrides it with an incompatible return type. Both resolve in W4.
 
+**CLOSED in W4 (2026-08-31).** Both halves.
+
+**(a)** `assert_wire_blocks_clean` now has **three** call sites, one inside
+each handler's converter — `chat_completions`, `responses`,
+`generate_content`. Coverage is 3 of 3 wires. The fence
+(`tests/test_wire_handlers_complete.py`) parametrises over the handler
+**registry** rather than a hand-written list, so a fourth wire that forgets
+the validator fails on the day it is written; it also greps each handler's
+source, because Item 62 (a) was exactly a validator that existed and was not
+called. Mutation-tested: removing the call fails 2 tests.
+
+**(b)** `GeminiProvider._convert_messages` is **deleted**, not narrowed —
+along with `_content_to_gemini_parts`, `_decode_thought_signature` and
+`_parse_tool_call_arguments`, which moved with it. Each wire owns its
+converter and declares its own return type (`List[Dict]`,
+`(instructions, input_items)`, `(contents, system_instruction)`), which is
+why `ProtocolHandler.convert_messages` is typed `-> Any`: the Liskov
+violation came from one wire's shape being imposed on all of them by the
+base's annotation. `BaseProvider._convert_messages` survives as a
+**delegation** to the chat-completions handler — most providers speak that
+wire and call it directly — but the body is no longer one protocol's emitter
+installed as everyone's default.
+
+Verified byte-identical across all four role paths (system, user, assistant
+with tool_calls, tool result) before the override was removed, and the
+name-pairing hazard that makes this wire unshareable is pinned by its own
+tests.
+
 ---
 
 ### Item 63 — benchmark conclusions are hand-typed into code, unlinked and unchecked [benchmarks / providers]

@@ -27,6 +27,7 @@ from __future__ import annotations
 import ppxai.engine.providers.gemini as gm
 from ppxai.engine.providers.gemini import GeminiProvider
 from ppxai.engine.types import Message
+from ppxai.engine.providers.wire.generate_content import GenerateContentHandler
 
 
 def _provider() -> GeminiProvider:
@@ -112,7 +113,7 @@ class TestSignatureReplay:
         import base64
         original = b"sig-bytes-1"
         stored = base64.b64encode(original).decode("ascii")
-        contents, _ = _provider()._convert_messages(self._msgs(sig=stored))
+        contents, _ = GenerateContentHandler.convert_messages(self._msgs(sig=stored))
         model_turn = contents[0]
         assert model_turn["role"] == "model"
         # Decoded back to the original bytes — the SDK types this as bytes.
@@ -122,12 +123,12 @@ class TestSignatureReplay:
 
     def test_no_signature_means_no_key_on_the_wire(self):
         """Gemini 2.5 path must be byte-identical to pre-fix behaviour."""
-        contents, _ = _provider()._convert_messages(self._msgs())
+        contents, _ = GenerateContentHandler.convert_messages(self._msgs())
         assert "thought_signature" not in contents[0]["parts"][0]
 
     def test_tool_result_still_pairs_by_name(self):
         """The Item 41 pairing contract must survive the change."""
-        contents, _ = _provider()._convert_messages(self._msgs(sig="SIG-1"))
+        contents, _ = GenerateContentHandler.convert_messages(self._msgs(sig="SIG-1"))
         assert contents[1]["parts"][0]["function_response"]["name"] == "read_file"
 
     def test_stored_signature_is_decoded_back_to_the_original_bytes(self):
@@ -140,7 +141,7 @@ class TestSignatureReplay:
         import base64
         original = b"\x01\x02\xff\xfe"
         stored = base64.b64encode(original).decode("ascii")
-        contents, _ = _provider()._convert_messages(self._msgs(sig=stored))
+        contents, _ = GenerateContentHandler.convert_messages(self._msgs(sig=stored))
         assert contents[0]["parts"][0]["thought_signature"] == original
 
     def test_part_is_accepted_by_the_real_sdk_type(self):
@@ -156,14 +157,14 @@ class TestSignatureReplay:
         import base64
         original = b"\x01\x02\xff\xfe"
         stored = base64.b64encode(original).decode("ascii")
-        contents, _ = _provider()._convert_messages(self._msgs(sig=stored))
+        contents, _ = GenerateContentHandler.convert_messages(self._msgs(sig=stored))
         part = types.Part.model_validate(contents[0]["parts"][0])
         assert part.thought_signature == original
         assert part.function_call.name == "read_file"
 
     def test_malformed_signature_is_dropped_not_fatal(self):
         """A corrupt stored value must degrade to omitting the field."""
-        contents, _ = _provider()._convert_messages(self._msgs(sig="not-base64!!"))
+        contents, _ = GenerateContentHandler.convert_messages(self._msgs(sig="not-base64!!"))
         assert "thought_signature" not in contents[0]["parts"][0]
 
 

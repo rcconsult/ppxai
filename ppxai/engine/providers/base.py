@@ -18,6 +18,7 @@ from ..model_facts import ModelFacts, shipped_facts_for_model
 from ..model_profiles import ModelProfile, get_profile
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
 from ..uploaded_file import flatten_uploaded_file_blocks, assert_wire_blocks_clean
+from .wire import get_handler
 from ...config import (
     get_generation_params,
     get_model_max_tokens,
@@ -396,51 +397,18 @@ class BaseProvider(ABC):
         return [{"role": "system", "content": trigger}, *api_messages]
 
     def _convert_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
-        """Convert Message objects to API format.
+        """Convert Message objects to Chat Completions wire format.
 
-        R5 (v1.17.6): any `uploaded_file` content blocks are flattened
-        back to their legacy `<uploaded_file>` text-marker form before
-        shaping the API request. Providers (OpenAI, Perplexity, and any
-        OpenAI-compatible endpoint) would reject an unknown block type
-        outright, so the structured type is an engine-internal schema
-        only. The flatten uses `format_uploaded_file_reference` under
-        the hood, so the LLM sees byte-identical strings whether the
-        producer emitted a legacy text marker (pre-R5) or a structured
-        block flattened here.
-
-        Args:
-            messages: List of Message objects
-
-        Returns:
-            List of dicts with 'role', 'content', and optional tool fields
+        ADR 0012 W4: the body moved to
+        `wire.chat_completions.ChatCompletionsHandler.convert_messages`. It
+        stays reachable here because most providers speak this wire and call
+        it directly, but it is now one protocol's converter *delegated to*
+        rather than one protocol's emitter *installed as the shared default*
+        — the distinction debt Item 62 (b) is about. A provider on another
+        wire asks its own handler instead of overriding this with an
+        incompatible return type.
         """
-        result = []
-        for m in messages:
-            content = flatten_uploaded_file_blocks(m.content)
-            # ADR 0006 Step 6 wire validator — `__debug__`-gated assertion
-            # that catches producer-side regressions (non-spec keys inside
-            # content blocks). Production builds with `python -O` strip
-            # this. Tests and dev builds get a loud failure naming the
-            # role + block + offending keys. Today this WILL fire on any
-            # image_url block carrying name/file_id — Steps 1-3+7 land
-            # the producer cleanup that makes those keys disappear.
-            # Until then, this validator is in WARN-MODE: tests that
-            # exercise the legacy path skip the assertion via test-side
-            # patches; the production path keeps working because callers
-            # ship without `python -O` and tests don't use this module
-            # path against legacy fixtures.
-            #
-            # NOTE FOR STEP 7 LANDING: when in-block keys are dropped
-            # from producers, this assertion becomes a true sentinel
-            # that prevents reintroduction.
-            assert_wire_blocks_clean(content, role=m.role)
-            msg: Dict[str, Any] = {"role": m.role, "content": content}
-            if m.tool_calls:
-                msg["tool_calls"] = m.tool_calls
-            if m.tool_call_id:
-                msg["tool_call_id"] = m.tool_call_id
-            result.append(msg)
-        return result
+        return get_handler("chat_completions").convert_messages(messages)
 
     def _parse_usage(self, usage) -> Optional[UsageStats]:
         """Parse usage from API response.

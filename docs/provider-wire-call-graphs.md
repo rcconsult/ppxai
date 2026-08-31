@@ -220,6 +220,56 @@ the wire never sees is *exactly* debt Item 61, reproduced inside the handler
 built to fix Item 61. Two sources for one value is the bug; `_budget_for`
 now reads config first, then the fact, in one place.
 
+## Graph 2d — the end state: 4 providers, 3 wires (ADR 0012 W4)
+
+Every wire is a handler. Conversion is protocol-owned, so there is no shared
+method left for two protocols to disagree about — the shape debt Item 62 (b)
+described.
+
+```
+  PROVIDERS (own an ACCOUNT: key, base_url, price table)
+  ┌──────────────────┬───────────────────┬──────────────┬───────────────┐
+  │ openai_native    │ perplexity        │ openai_compat│ gemini        │
+  └────────┬─────────┴─────────┬─────────┴──────┬───────┴───────┬───────┘
+           │                   │                │               │
+           │  get_facts_for_model(model).wire_protocol           │
+           │                   │                │               │
+    ┌──────┴──────┬────────────┴───┐            │               │
+    ▼             ▼                ▼            ▼               ▼
+ responses   chat_completions   responses   chat_completions  generate_content
+
+  HANDLERS (own a WIRE: conversion + request shape)
+  ┌───────────────────────┬──────────────────────┬────────────────────────┐
+  │ ChatCompletionsHandler│ ResponsesHandler     │ GenerateContentHandler │
+  │  -> List[Dict]        │  -> (instructions,   │  -> (contents,         │
+  │                       │      input_items)    │      system_instruction)│
+  └───────────┬───────────┴──────────┬───────────┴────────────┬───────────┘
+              │                      │                        │
+              └──────────────────────┴────────────────────────┘
+                                     │
+                        assert_wire_blocks_clean()
+                        ADR 0006 · 3 of 3 wires · was 1 of 3
+```
+
+**Three return types, deliberately.** `ProtocolHandler.convert_messages` is
+typed `-> Any` because each wire's request shape is genuinely its own. While
+conversion lived on `BaseProvider` typed `-> List[Dict[str, Any]]`, Gemini
+had to override it returning a `tuple` — a Liskov violation invisible to the
+type checker, because the base's annotation was one wire's shape imposed on
+all of them. Pretending they share a type is what produced the bug.
+
+**`BaseProvider._convert_messages` still exists** and still returns
+`List[Dict]` — but it is now a *delegation* to `ChatCompletionsHandler`, not
+an implementation. Most providers speak that wire and call it directly; the
+difference is that a provider on another wire now asks its own handler
+instead of overriding the shared one.
+
+**The validator travels with the conversion.** That is the whole fix for
+Item 62 (a): a sentinel attached to one protocol's emitter can only ever
+guard one protocol. The fence parametrises over the handler **registry**, so
+the fourth wire (`messages`, with `feat/anthropic-provider`) inherits the
+requirement rather than needing someone to remember it.
+
 ## Graph 3 — resolution without a provider instance
 
 Some callers need an answer before any provider exists — there is no API key

@@ -27,6 +27,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from ppxai.engine.types import Event, EventType, Message
+from ppxai.engine.providers.wire.generate_content import GenerateContentHandler
 
 
 def _fc(name: str, args: dict, call_id=None) -> SimpleNamespace:
@@ -139,7 +140,7 @@ class TestConvertMessagesNativeShape:
         ]
 
     def test_assistant_tool_calls_become_function_call_parts(self, provider):
-        contents, _ = provider._convert_messages(self._native_transcript())
+        contents, _ = GenerateContentHandler.convert_messages(self._native_transcript())
 
         model_turn = contents[1]
         assert model_turn["role"] == "model"
@@ -148,7 +149,7 @@ class TestConvertMessagesNativeShape:
         ]
 
     def test_tool_result_becomes_function_response_paired_by_name(self, provider):
-        contents, _ = provider._convert_messages(self._native_transcript())
+        contents, _ = GenerateContentHandler.convert_messages(self._native_transcript())
 
         tool_turn = contents[2]
         assert tool_turn["role"] == "user"
@@ -160,7 +161,7 @@ class TestConvertMessagesNativeShape:
         }]
 
     def test_no_synthetic_prose_in_native_transcript(self, provider):
-        contents, _ = provider._convert_messages(self._native_transcript())
+        contents, _ = GenerateContentHandler.convert_messages(self._native_transcript())
         flat = json.dumps(contents)
         assert "I'll use the" not in flat
 
@@ -170,7 +171,7 @@ class TestConvertMessagesNativeShape:
             "type": "function",
             "function": {"name": "read_file", "arguments": "{}"},
         }])]
-        contents, _ = provider._convert_messages(msgs)
+        contents, _ = GenerateContentHandler.convert_messages(msgs)
         assert contents[0]["parts"][0] == {"text": "Checking the file now."}
         assert contents[0]["parts"][1]["function_call"]["name"] == "read_file"
 
@@ -185,14 +186,14 @@ class TestConvertMessagesNativeShape:
             Message("tool", "content-a", tool_call_id="fc-a"),
             Message("tool", "out-b", tool_call_id="fc-b"),
         ]
-        contents, _ = provider._convert_messages(msgs)
+        contents, _ = GenerateContentHandler.convert_messages(msgs)
         assert [p["function_call"]["name"] for p in contents[0]["parts"]] == ["read_file", "shell"]
         assert contents[1]["parts"][0]["function_response"]["name"] == "read_file"
         assert contents[2]["parts"][0]["function_response"]["name"] == "shell"
 
     def test_unpaired_tool_result_degrades_to_text_turn(self, provider):
         msgs = [Message("tool", "orphan result", tool_call_id="fc-lost")]
-        contents, _ = provider._convert_messages(msgs)
+        contents, _ = GenerateContentHandler.convert_messages(msgs)
         assert contents[0]["role"] == "user"
         assert contents[0]["parts"] == [{"text": "orphan result"}]
 
@@ -202,7 +203,7 @@ class TestConvertMessagesNativeShape:
             "type": "function",
             "function": {"name": "shell", "arguments": "{not json"},
         }])]
-        contents, _ = provider._convert_messages(msgs)
+        contents, _ = GenerateContentHandler.convert_messages(msgs)
         assert contents[0]["parts"][0]["function_call"]["args"] == {}
 
     def test_plain_messages_unchanged(self, provider):
@@ -211,7 +212,7 @@ class TestConvertMessagesNativeShape:
             Message("user", "hi"),
             Message("assistant", "hello"),
         ]
-        contents, system_instruction = provider._convert_messages(msgs)
+        contents, system_instruction = GenerateContentHandler.convert_messages(msgs)
         assert system_instruction == "be terse"
         assert contents == [
             {"role": "user", "parts": [{"text": "hi"}]},

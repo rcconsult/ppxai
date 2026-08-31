@@ -57,6 +57,36 @@ because that fallback is what produced the confabulated results.
 uses Perplexity's Jobs API, not chat completions, so it was never usable
 on the endpoint ppxai calls.
 
+### Changed (ADR 0012 W4) — every wire is a handler; the validator covers all three
+
+**Closes debt Item 62, both halves.**
+
+`assert_wire_blocks_clean` (ADR 0006's wire-format sentinel) had exactly
+**one** call site — inside `BaseProvider._convert_messages`, the
+chat-completions emitter — so two of three wires reached the network
+unchecked. It now runs inside each handler's converter: **3 of 3**. The fence
+parametrises over the handler *registry* rather than a hand-written list, so
+a fourth wire that forgets it fails on the day it is written.
+
+`GeminiProvider._convert_messages` is **deleted**, not narrowed. It returned
+a `tuple` against a base annotated `-> List[Dict[str, Any]]` — a Liskov
+violation the type checker could not see, because the base's annotation was
+one wire's shape imposed on all of them. Each wire now owns its converter
+with its own honest return type. `BaseProvider._convert_messages` survives as
+a delegation to the chat-completions handler, since most providers speak that
+wire, but it is no longer one protocol's emitter installed as everyone's
+default.
+
+The extracted Gemini converter was diffed byte-for-byte against the original
+across all four role paths before the override was removed; the
+pairing-by-function-name hazard that makes that wire unshareable has its own
+tests.
+
+**Simplification:** providers −318 lines net (`openai_native` −351, `gemini`
+−168), twelve methods verified absent from their original files. The `wire/`
+package adds 983, so the honest overall figure is **+665** — this arc bought
+a capability and closed a defect class rather than shrinking the tree.
+
 ### Added — `tools.web_search.order`: the premium search chain is configurable
 
 `tools.web_search.preferred` chose only the FIRST backend; the rest of the
