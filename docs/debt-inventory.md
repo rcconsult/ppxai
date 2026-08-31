@@ -1370,7 +1370,7 @@ and §3's assumption that `api_path="auto"` had rows behind it — zero
 profiles used it.
 ---
 
-### Item 67 — ruff is not in CI, and 3,418 findings have accumulated [tooling / hygiene]
+### Item 67 — ruff is not in CI, and 10 undefined names are live [tooling / defect]
 
 **Filed 2026-08-31.** Surfaced repeatedly during the Item 64/65/66 work,
 where every commit had to answer "is this lint mine or pre-existing?" — a
@@ -1387,9 +1387,11 @@ configured in the project but never runs in CI, which is why the count can
 grow without anyone noticing.
 
 **Start with the 489 that `--fix` cannot touch**, because that is where the
-defects are rather than the style:
+defects are rather than the style. Counts below are the **unfixable subset**,
+not each rule's total — `F841`, for instance, is 112 overall of which only 3
+are auto-fixable:
 
-| rule | count | what it means |
+| rule | unfixable | what it means |
 |---|---|---|
 | `F821` | **10** | **undefined name — a live `NameError` waiting to fire** |
 | `F841` | 109 | assigned, never read — often a check whose result was dropped |
