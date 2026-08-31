@@ -1,8 +1,17 @@
-"""
-Tests for model profile system (v1.15.6).
+"""The shipped per-model facts table — data assertions and glob matching.
 
-Tests the ModelProfile dataclasses, ModelProfileRegistry glob matching,
-and built-in profile data integrity.
+Renamed from `test_model_profiles.py` by Item 65: the profile vocabulary it
+was named after is gone, and every test here now asserts against
+`SHIPPED_MODEL_FACTS`. The model-by-model expectations (which models are
+prompt-based, which use the Responses wire, which globs must not shadow each
+other) are the ORIGINAL ones — they were always about the data, not the
+container, so they survived the migration unchanged.
+
+Two classes were rewritten rather than retired: the dataclass-default tests
+now assert `ModelFacts`'s defaults (and the ONE that inverted — see
+`TestTheDefaultsThatChangedMeaning`), and the registry's glob-matching cases
+now exercise `match_table`, which resolves an exact id before any glob
+regardless of insertion order — a property the retired registry did not have.
 """
 
 

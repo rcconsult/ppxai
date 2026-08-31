@@ -60,14 +60,15 @@ override layer was present and omitted `supports_vision` — a LATENT bug
 fixed by this ADR (a `replace()` on a frozen record cannot lose a field).
 Latent because the wrong value never reached an image decision: that
 function's one caller read only the tool-loop fields, and every vision
-reader calls `model_profiles.supports_vision` directly.
+reader calls `model_facts.supports_vision` directly (it lived in
+`model_profiles` until Item 65 retired that module).
 
 Latent is still worth not freezing. A byte-identical migration would write
 `false` into the config rows, where it would outrank the corrected seed —
 turning a trap that never fired into a permanent, explicit statement that
 these three models have no vision. So the migration writes the glob's value and the fixture records the
 deviation. `TestTheVisionFixReachesTheConfig` below asserts it, and
-`test_supports_vision_survives_an_override` in `test_model_profiles.py`
+`test_supports_vision_survives_an_override` in `test_shipped_model_facts.py`
 fences the code half.
 """
 

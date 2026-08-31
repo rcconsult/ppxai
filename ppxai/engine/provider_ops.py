@@ -216,7 +216,7 @@ def _apply_model_switch(engine, model_id: str, reset_context: bool) -> bool:
     engine.state.set("model", model_id)
     # v1.18.6: drives the cross-client attach-button badge and per-file
     # warning when user attaches an image to a model that can't accept
-    # it. Single source of truth lives in model_profiles.supports_vision();
+    # it. Single source of truth lives in model_facts.supports_vision();
     # this just projects it onto AppState so the SSE_SYNC_FIELDS push
     # reaches every connected web/VSCode client transparently.
     from .model_facts import supports_vision as _supports_vision

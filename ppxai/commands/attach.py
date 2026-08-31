@@ -655,7 +655,7 @@ def handle_attach(context: Any, args: str) -> CommandResult:
     # active model can't accept images. Catches the silent-drop trap
     # before the user wastes a turn. Read from AppState (single source
     # of truth — same field the web/VSCode badge subscribes to). Fall
-    # back to model_profiles.supports_vision direct call if the engine
+    # back to model_facts.supports_vision direct call if the engine
     # doesn't expose state (test stubs etc.).
     image_attachments = [pf for pf in added if pf.kind == "image"]
     if image_attachments and engine_client is not None:
