@@ -83,6 +83,11 @@ from ...engine.task_authorizer import TIERS as _TIERS
 from ...engine.providers import create_provider
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
 from ...engine.types import ProviderCapabilities
+from ...engine.tools.search_backends import resolve_web_search_backend
+from ...engine.task_authorizer import authorize_oneshot
+from ..state import get_agent_run_registry
+from ...engine import task_runner as _task_runner
+from ...engine.task_authorizer import TaskAuthorizationError
 
 logger = get_logger("server")
 
@@ -248,7 +253,6 @@ def _web_search_egress_hosts(provider_name: Optional[str] = None) -> list:
     the same mechanism `/v1/agent/task` uses."""
     from urllib.parse import urlparse
 
-    from ...engine.tools.search_backends import resolve_web_search_backend
 
     hosts = resolve_web_search_backend(provider_name).egress_hosts
     return sorted({urlparse(u).netloc for u in hosts if urlparse(u).netloc})
@@ -320,7 +324,6 @@ def _authorize_oneshot_search_loop(task: str, provider_name: str, model: str):
     Raises `TaskAuthorizationError`; the caller maps it onto `HTTPException`
     exactly as `agent_v1` does.
     """
-    from ...engine.task_authorizer import authorize_oneshot
 
     return authorize_oneshot(task, provider=provider_name, model=model)
 
@@ -341,12 +344,10 @@ async def _oneshot_via_search_loop(
     """
     # Lazy: agent_v1 top-imports from this module (provider construction);
     # importing it at module level would be circular.
-    from ..state import get_agent_run_registry
     from .agent_v1 import _enriched_oneshot_egress_or_400
     # Through the module, never a from-import binding: the patch point
     # is task_runner.build_task_runner, and a bound reference captured
     # here would not see it (see that module's docstring).
-    from ...engine import task_runner as _task_runner
 
     # Effective backend egress set (resolver; step ④) + the operator's
     # tools.web_search.egress baseline (step ②), capped by
@@ -356,7 +357,6 @@ async def _oneshot_via_search_loop(
     # Admission FIRST — before any run is minted. The tier's policy (grant
     # source, operator kill-switches, provider validation) lives in one place
     # for every client; see task_authorizer.TIERS["oneshot"].
-    from ...engine.task_authorizer import TaskAuthorizationError
 
     try:
         _authorize_oneshot_search_loop(req.prompt, provider_name, model)
@@ -621,7 +621,6 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
         owner = _caller_owner(request)
     except Exception:
         owner = None
-    from ..state import get_agent_run_registry
 
     registry = get_agent_run_registry()
     meta = registry.start_run(

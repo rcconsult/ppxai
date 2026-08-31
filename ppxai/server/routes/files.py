@@ -18,6 +18,8 @@ from ...common.logger import get_logger
 from ...config import get_file_tree_ignore_dirs
 from ..models import FileReadRequest, FileSearchRequest, FileWriteRequest
 from ..state import Session, get_session, get_session_or_query, is_path_allowed, MIME_TYPES, with_drained_events
+from ...engine.tools.builtin.docx_tools import _extract_docx_text
+from ...common.docx_to_pdf import convert_docx_to_pdf
 
 logger = get_logger("server")
 
@@ -831,7 +833,6 @@ def render_office_preview(
     # ── Word document path ───────────────────────────────────────────
     if is_word:
         if libreoffice_ok:
-            from ...common.docx_to_pdf import convert_docx_to_pdf
             try:
                 pdf_path = convert_docx_to_pdf(file_path, cache_dir)
             except Exception as exc:
@@ -858,7 +859,6 @@ def render_office_preview(
                          f"(install it for a rendered preview). The model can "
                          f"still read the document via tools."),
             )
-        from ...engine.tools.builtin.docx_tools import _extract_docx_text
         try:
             text = _extract_docx_text(file_path)
         except Exception as exc:

@@ -29,6 +29,9 @@ from ...engine.types import Event, EventType
 from ..models import ChatRequest, CodingTaskRequest
 from ..state import Session, get_session
 from ..streaming import sse_event_generator, sse_coding_task_generator
+from ...engine.model_facts import supports_vision as _supports_vision
+from ...commands.agent import validate_agent_task
+from ...config.defaults import DEFAULT_AGENT_MIN_TASK_WORDS
 
 logger = get_logger("server")
 
@@ -126,7 +129,6 @@ def _build_chat_payload(
     # v1.18.6: precompute vision capability so we can detect the
     # image-on-non-vision-model case and emit a structured warning the
     # client can render distinctly from generic preprocess warnings.
-    from ...engine.model_facts import supports_vision as _supports_vision
     model_has_vision = _supports_vision(model) if model else False
 
     for attachment in files:
@@ -334,10 +336,8 @@ async def chat(
     # VSCode (single source: validate_agent_task in commands/agent.py).
     msg_text = (request.message or "").strip()
     if msg_text.startswith("/auto ") or msg_text.startswith("/auto\t"):
-        from ...commands.agent import validate_agent_task
         # Strip the /auto prefix to get just the task body
         task = msg_text.split(None, 1)[1] if " " in msg_text or "\t" in msg_text else ""
-        from ...config.defaults import DEFAULT_AGENT_MIN_TASK_WORDS
         agent_config = s.engine.get_agent_config()
         min_words = agent_config.get("min_task_words", DEFAULT_AGENT_MIN_TASK_WORDS)
         rejection = validate_agent_task(task.strip(), min_words)

@@ -18,6 +18,9 @@ from typing import Optional
 from fastapi import Header, HTTPException
 
 from ..engine import EngineClient
+from ..engine.task_runner import default_run_registry
+from ..config.loader import load_config
+from .secrets import build_chain_from_config
 
 
 @dataclass
@@ -203,7 +206,6 @@ def get_agent_run_registry():
         # independent resolutions of a load-bearing path is how it drifts.
         # The sweep and hooks below stay here — they are lifecycle concerns of
         # this process, not of building a registry.
-        from ..engine.task_runner import default_run_registry
         _agent_run_registry = default_run_registry()
         # T7: a fresh registry means a fresh process — any run still marked
         # pending/running/waiting/cancelling on disk was orphaned by the last
@@ -235,8 +237,6 @@ def get_secret_provider():
     """
     global _secret_provider
     if _secret_provider is None:
-        from ..config.loader import load_config
-        from .secrets import build_chain_from_config
         try:
             cfg = load_config()
         except Exception:

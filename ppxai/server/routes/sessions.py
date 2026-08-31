@@ -9,6 +9,9 @@ from typing import Optional
 
 from ...engine.session import SessionManager as EngineSessionManager
 from ..state import Session, get_session, with_drained_events
+from ...engine.types import Message
+from ..state import get_agent_run_registry
+from .agent_v1 import _caller_owner
 
 router = APIRouter()
 
@@ -43,10 +46,7 @@ async def merge_run_result(
     present it here).
     """
     from ...config.execution import get_execution_collect
-    from ...engine.types import Message
     from ..auth import _is_loopback
-    from ..state import get_agent_run_registry
-    from .agent_v1 import _caller_owner
 
     if get_execution_collect() == "no":
         raise HTTPException(

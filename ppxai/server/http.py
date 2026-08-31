@@ -48,6 +48,8 @@ from . import state as _state  # noqa: F401 — backing store for session_manage
 # We need reads/writes of `session_manager` on this module to proxy through to
 # the state module so route handlers (which import from state) see the same value.
 import types as _types  # noqa: E402
+from .state import all_preview_backends, remove_preview_backend, kill_preview_backend
+from .state import get_secret_provider
 
 _this = sys.modules[__name__]
 _original_getattr = None
@@ -164,7 +166,6 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown: Kill preview backends (v1.17.1)
-    from .state import all_preview_backends, remove_preview_backend, kill_preview_backend
     for sid, backend in list(all_preview_backends().items()):
         logger.info(f"Stopping preview backend for session {sid} (pid {backend.process.pid})")
         await kill_preview_backend(backend)
@@ -518,7 +519,6 @@ def run_server():
     # the obvious project file can silently have no effect. Print it.
     try:
         from ..config.loader import find_config_file
-        from .state import get_secret_provider
 
         _cfg_src = find_config_file()
         print(f"Config: {_cfg_src or '(builtin defaults — no config file found)'}")
