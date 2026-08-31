@@ -57,6 +57,38 @@ because that fallback is what produced the confabulated results.
 uses Perplexity's Jobs API, not chat completions, so it was never usable
 on the endpoint ppxai calls.
 
+### ⚠ Breaking — Perplexity's shipped default moves to `perplexity/sonar`
+
+**Perplexity retires the Sonar chat-completions endpoint on 2026-09-27.**
+ppxai's shipped defaults now point at the wire that survives.
+
+Measured live 2026-08-31, twice (probe + a plain SDK call), against
+`https://api.perplexity.ai/v1/responses`:
+
+| Model | Chat wire (retires 09-27) | Responses wire |
+|---|---|---|
+| `sonar` | served, **no** tool calling | **`perplexity/sonar`** — served, native tools |
+| `sonar-pro` | served, native tools | **400 "not supported"** |
+| `sonar-reasoning-pro` | served, native tools | **400 "not supported"** |
+
+So `sonar` has a successor and the pro models, today, do not — in either bare
+or namespaced form. `default_model` and `coding_model` therefore move to
+**`perplexity/sonar`** in the example config, both install scripts and the
+VSCode bootstrap; `CODING_MODEL` and `RECOMMENDED_DEFAULTS["perplexity"]`
+follow.
+
+**If you use `sonar-pro`**, nothing breaks today and `/doctor` now tells you
+what happens on 09-27: all three bare ids carry a deprecation row pointing at
+`perplexity/sonar`. That successor is the *lighter* model — the honest hint,
+because naming a replacement that 400s would send you to a second failure.
+Re-check before the date; if Perplexity ships the pro line on the Responses
+wire, the rows change.
+
+`base_url` **stays** `https://api.perplexity.ai`. An earlier plan item said to
+append `/v1`; that is now wrong — the provider derives the Responses root
+per-wire, and hardcoding `/v1` would break the chat wire, which the pro
+models still need.
+
 ### Changed (ADR 0012 W4) — every wire is a handler; the validator covers all three
 
 **Closes debt Item 62, both halves.**

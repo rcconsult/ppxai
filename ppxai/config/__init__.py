@@ -150,7 +150,11 @@ from .prompts import (
 # Legacy compatibility exports
 # Note: MODEL_PRICING is deprecated - use get_model_pricing() instead
 MODEL_PRICING = {}
-CODING_MODEL = "sonar-pro"
+# ADR 0012 W5: `sonar-pro` is chat-completions ONLY and Perplexity retires
+# that endpoint 2026-09-27 — it is not served on the Responses wire in either
+# bare or namespaced form (measured 2026-08-31). `perplexity/sonar` is the
+# only Sonar model on the surviving wire, so the shipped default points there.
+CODING_MODEL = "perplexity/sonar"
 
 
 # =============================================================================

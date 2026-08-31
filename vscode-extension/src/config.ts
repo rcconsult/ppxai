@@ -3,9 +3,23 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 
+/**
+ * A model's per-model facts (ADR 0012 §2). Mirrors the Python `ModelFacts`
+ * record; every field is optional here because this file writes a BOOTSTRAP
+ * config — anything omitted resolves from the engine's shipped table.
+ * Stated explicitly only where the shipped default would be wrong, e.g. a
+ * model on a non-default wire.
+ */
+export interface ModelFacts {
+    wire_protocol?: "chat_completions" | "responses" | "generate_content" | "messages";
+    tool_mode?: "native" | "prompt_based" | "auto";
+    max_tokens?: number;
+}
+
 export interface ModelInfo {
     name: string;
     description: string;
+    facts?: ModelFacts;
 }
 
 export interface ProviderConfig {
@@ -37,15 +51,26 @@ const DEFAULT_CONFIG: PpxaiConfig = {
             name: "Perplexity AI",
             base_url: "https://api.perplexity.ai",
             api_key_env: "PERPLEXITY_API_KEY",
-            default_model: "sonar",
-            coding_model: "sonar-pro",
+            default_model: "perplexity/sonar",
+            coding_model: "perplexity/sonar",
             models: {
-                "sonar": { name: "Sonar", description: "Fast, good for general queries" },
-                "sonar-pro": { name: "Sonar Pro", description: "Advanced reasoning and analysis" },
-                "sonar-reasoning": { name: "Sonar Reasoning", description: "Extended thinking for complex problems" },
-                "sonar-reasoning-pro": { name: "Sonar Reasoning Pro", description: "Most capable reasoning model" }
+                // ADR 0012 W3/W5. `perplexity/sonar` is the ONLY Sonar model
+                // Perplexity serves on the Responses wire (measured
+                // 2026-08-31); the bare IDs below are chat-completions only,
+                // and that endpoint retires 2026-09-27. Defaults point at the
+                // surviving wire so a fresh install keeps working.
+                "perplexity/sonar": {
+                    name: "Sonar",
+                    description: "Fast, good for general queries (Responses wire — survives 2026-09-27)",
+                    facts: { wire_protocol: "responses", tool_mode: "auto", max_tokens: 4096 }
+                },
+                "sonar": { name: "Sonar (chat wire)", description: "Chat-completions only — endpoint retires 2026-09-27" },
+                "sonar-pro": { name: "Sonar Pro", description: "Advanced reasoning. Chat-completions only — not served on the Responses wire" },
+                "sonar-reasoning": { name: "Sonar Reasoning", description: "Extended thinking. Chat-completions only" },
+                "sonar-reasoning-pro": { name: "Sonar Reasoning Pro", description: "Most capable reasoning. Chat-completions only" }
             },
             pricing: {
+                "perplexity/sonar": { input: 1.0, output: 1.0 },
                 "sonar": { input: 1.0, output: 1.0 },
                 "sonar-pro": { input: 3.0, output: 15.0 },
                 "sonar-reasoning": { input: 1.0, output: 5.0 },

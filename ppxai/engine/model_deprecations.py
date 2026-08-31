@@ -217,17 +217,61 @@ OPENAI_DEPRECATIONS: Dict[str, Deprecation] = {
 
 
 # =============================================================================
-# Perplexity deprecations — verified 2026-04-12 (no active deprecations)
+# Perplexity deprecations — the ENDPOINT retires, not the models
 # =============================================================================
 #
-# As of 2026-04-12 Perplexity has NO active deprecations in the 4 shipped Sonar
-# models (sonar, sonar-pro, sonar-reasoning-pro, sonar-deep-research). The
-# historical `llama-3.1-sonar-*` aliases were removed in Feb 2025 and predate
-# any supported ppxai config. The table stays empty as a placeholder so future
-# maintainers don't have to re-research the landscape.
+# Perplexity retires the Sonar **chat-completions** endpoint on 2026-09-27.
+# This is unlike every other table here: the models are not being withdrawn,
+# the wire they are served on is. ppxai routes per model via
+# `ModelFacts.wire_protocol` (ADR 0012), so the migration is an ID change
+# rather than a model change — but only where a replacement ID exists.
+#
+# MEASURED 2026-08-31 against `https://api.perplexity.ai/v1/responses`, twice
+# (probe + a plain SDK call, no framing):
+#
+#   perplexity/sonar                 200  — the ONLY Sonar on the new wire
+#   sonar-pro                        400  validation failed: not supported
+#   perplexity/sonar-pro             400  validation failed: not supported
+#   perplexity/sonar-reasoning-pro   400  validation failed: not supported
+#
+# So `sonar` has a successor and the pro models, as of today, do not. Their
+# entries below say that plainly instead of inventing a replacement ID that
+# would 400 — a wrong migration hint is worse than an honest dead end, since
+# the user would follow it and get a broken config. Re-probe before the date
+# with `scripts/probe-perplexity-capabilities.py --api-path responses`; if
+# Perplexity ships the pro models there, update `replacement` here.
 
 PERPLEXITY_DEPRECATIONS: Dict[str, Deprecation] = {
-    # Intentionally empty — see header comment.
+    "sonar": Deprecation(
+        shutdown_date="2026-09-27",
+        replacement="perplexity/sonar",
+        reason=(
+            "The Sonar chat-completions endpoint retires. The same model is "
+            "served on the Responses wire under the namespaced ID — and gains "
+            "native tool calling there, which the chat wire refuses for this "
+            "model (measured 2026-08-31)."
+        ),
+    ),
+    "sonar-pro": Deprecation(
+        shutdown_date="2026-09-27",
+        replacement="perplexity/sonar",
+        reason=(
+            "The Sonar chat-completions endpoint retires and Perplexity does "
+            "NOT serve sonar-pro on the Responses wire in either bare or "
+            "namespaced form (measured 2026-08-31 — both 400). "
+            "`perplexity/sonar` is the only Sonar successor available today; "
+            "it is the lighter model, so re-check before the date in case the "
+            "pro line lands on the new wire."
+        ),
+    ),
+    "sonar-reasoning-pro": Deprecation(
+        shutdown_date="2026-09-27",
+        replacement="perplexity/sonar",
+        reason=(
+            "Same as sonar-pro: chat-completions only, absent from the "
+            "Responses wire as of 2026-08-31."
+        ),
+    ),
 }
 
 
@@ -371,7 +415,7 @@ RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
 RECOMMENDED_DEFAULTS: Dict[str, str] = {
     "gemini": "gemini-3.5-flash",     # Updated 2026-05-31 (was gemini-3-flash-preview; superseded by 3.5-flash GA)
     "openai": "gpt-5.4",              # Updated 2026-04-12 (was gpt-5.2)
-    "perplexity": "sonar-pro",
+    "perplexity": "perplexity/sonar",  # ADR 0012: only Sonar on the surviving wire
     "nvidia": "qwen/qwen3.5-122b-a10b",  # Added 2026-05-31 — best Tier A NIM model
     "anthropic": "claude-sonnet-4-6",
 }

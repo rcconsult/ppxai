@@ -177,13 +177,45 @@ class TestRosterFollowsShippedConfig:
     def test_roster_read_from_example_config(self):
         roster = probe_mod.shipped_roster()
         assert roster, "probe found no Perplexity models to probe"
-        # Every model the table declares native must actually be shipped —
-        # a native claim for a model nobody can select is dead data.
+
+    def test_the_measurement_record_may_outlive_the_shipped_roster(self):
+        """`PERPLEXITY_NATIVE_TOOL_MODELS` records what was MEASURED.
+
+        This test used to require every recorded model to be in the shipped
+        roster — "a native claim for a model nobody can select is dead data".
+        That held while the two were the same set. On 2026-08-31 the example
+        config moved to `perplexity/sonar` because the Sonar chat-completions
+        endpoint retires 2026-09-27, and `sonar-pro`/`sonar-reasoning-pro`
+        have no successor id on the surviving wire — so they left the roster
+        while remaining perfectly real, tool-capable models an operator can
+        still configure.
+
+        The record is not dead data; it is the reason `/doctor` can tell such
+        an operator their models are tool-capable but endpoint-doomed. What
+        still must hold is the direction that matters: nothing in the SHIPPED
+        roster may contradict the record.
+        """
+        roster = probe_mod.shipped_roster()
+        for model in roster:
+            verdict = probe_mod.expected_verdict(model)
+            if model in probe_mod.PERPLEXITY_TOOL_REJECTING_MODELS:
+                assert verdict == probe_mod.REJECTS, model
+            elif model in NATIVE_TOOL_MODELS:
+                assert verdict == probe_mod.NATIVE, model
+
+    def test_recorded_models_are_still_reachable_facts(self):
+        """A recorded model must still RESOLVE, even if unshipped.
+
+        This is the honest replacement for the roster-membership check: the
+        record earns its place by being resolvable per-model, so `/doctor`
+        and the probe can still answer for an operator who configures one.
+        """
+        from ppxai.engine.model_facts import shipped_facts_for_model
+        from ppxai.engine.providers.perplexity import PerplexityProvider
+
+        table = PerplexityProvider.shipped_model_facts
         for model in NATIVE_TOOL_MODELS:
-            assert model in roster, (
-                f"{model} is declared natively tool-capable but is not in the "
-                f"shipped roster {roster}"
-            )
+            assert shipped_facts_for_model(model, table).tool_mode == "auto", model
 
     def test_dropped_model_is_not_probed_by_default(self):
         """I3 dropped `sonar-deep-research` from the shipped list.

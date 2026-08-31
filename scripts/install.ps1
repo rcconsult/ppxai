@@ -367,23 +367,29 @@ function Get-ConfigTemplate {
       "name": "Perplexity AI",
       "base_url": "https://api.perplexity.ai",
       "api_key_env": "PERPLEXITY_API_KEY",
-      "default_model": "sonar-pro",
-      "coding_model": "sonar-pro",
+      "default_model": "perplexity/sonar",
+      "coding_model": "perplexity/sonar",
       "models": {
-        "sonar": {
+        "perplexity/sonar": {
           "name": "Sonar",
-          "description": "Lightweight search model with real-time grounding"
+          "description": "Lightweight search model with real-time grounding (Responses wire - survives the 2026-09-27 retirement)",
+          "facts": {
+            "wire_protocol": "responses",
+            "tool_mode": "auto",
+            "max_tokens": 4096
+          }
         },
         "sonar-pro": {
           "name": "Sonar Pro",
-          "description": "Advanced search model for complex queries"
+          "description": "Advanced search model for complex queries. CHAT-COMPLETIONS ONLY - Perplexity retires that endpoint 2026-09-27 and does not serve this model on the Responses wire (measured 2026-08-31)."
         },
         "sonar-reasoning-pro": {
           "name": "Sonar Reasoning Pro",
-          "description": "Precision reasoning with Chain of Thought capabilities"
+          "description": "Precision reasoning with Chain of Thought. CHAT-COMPLETIONS ONLY - see sonar-pro."
         }
       },
       "pricing": {
+        "perplexity/sonar": {"input": 0.20, "output": 0.20},
         "sonar": {"input": 0.20, "output": 0.20},
         "sonar-pro": {"input": 3.00, "output": 15.00},
         "sonar-reasoning-pro": {"input": 5.00, "output": 15.00}

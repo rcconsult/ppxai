@@ -529,9 +529,27 @@ class TestDeprecationTableInvariants:
         assert len(OPENAI_DEPRECATIONS) == 16
 
     def test_perplexity_deprecation_count(self):
-        # Perplexity has no active deprecations (verified 2026-04-12).
-        # The empty dict is intentional — future shutdowns land here.
-        assert len(PERPLEXITY_DEPRECATIONS) == 0
+        """The three Sonar IDs served only on the retiring chat wire.
+
+        Was "no active deprecations, verified 2026-04-12" — true then. On
+        2026-09-27 Perplexity retires the Sonar chat-completions ENDPOINT,
+        which is unlike every other table here: the models are not withdrawn,
+        the wire they are served on is.
+
+        All three point at `perplexity/sonar` because that is the only Sonar
+        model measured live on the Responses wire (2026-08-31); `sonar-pro`
+        and `sonar-reasoning-pro` 400 there in both bare and namespaced form.
+        Naming a replacement that does not exist would be a worse hint than
+        naming a lighter one that does.
+        """
+        assert set(PERPLEXITY_DEPRECATIONS) == {
+            "sonar",
+            "sonar-pro",
+            "sonar-reasoning-pro",
+        }
+        for model, dep in PERPLEXITY_DEPRECATIONS.items():
+            assert dep.shutdown_date == "2026-09-27", model
+            assert dep.replacement == "perplexity/sonar", model
 
     def test_all_deprecations_merged_correctly(self):
         # ALL_DEPRECATIONS must be the union of every provider-specific dict.

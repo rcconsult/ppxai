@@ -132,10 +132,44 @@ def resolved(monkeypatch):
     return out
 
 
+#: Records the example config no longer ships, and WHY. Listed explicitly for
+#: the same reason as `DECLARED` below: a fixture quietly edited to match new
+#: behaviour proves nothing. This fence's job is proving W1 changed no
+#: behaviour, so a later PRODUCT decision that removes a record has to be
+#: stated here rather than allowed to look like a resolution failure.
+RETIRED = {
+    "perplexity::sonar": (
+        "2026-08-31 — Sonar chat-completions retires 2026-09-27; the example "
+        "config ships `perplexity/sonar`, the same model on the surviving "
+        "Responses wire (and tool-capable there, unlike the bare id)."
+    ),
+    "perplexity::sonar-pro": (
+        "2026-08-31 — chat-completions only. Measured twice: Perplexity does "
+        "NOT serve it on the Responses wire in bare or namespaced form (400 "
+        "'not supported'), so there is no successor id to ship."
+    ),
+    "perplexity::sonar-reasoning-pro": (
+        "2026-08-31 — same as sonar-pro: absent from the Responses wire."
+    ),
+}
+
+
 class TestBehaviourIsPreserved:
     def test_every_record_still_resolves(self, head_effective, resolved):
-        missing = sorted(set(head_effective) - set(resolved))
+        missing = sorted(set(head_effective) - set(resolved) - set(RETIRED))
         assert missing == [], f"records that no longer resolve: {missing}"
+
+    def test_each_retired_record_is_actually_gone(self, resolved):
+        """A RETIRED entry that still resolves is a stale excuse.
+
+        Same self-check as `test_each_declared_deviation_actually_deviates`:
+        an exemption nobody re-verifies becomes a hole in the fence.
+        """
+        still_present = sorted(k for k in RETIRED if k in resolved)
+        assert still_present == [], (
+            f"{still_present} are listed as retired but still resolve — "
+            "remove them from RETIRED rather than carrying a false exemption"
+        )
 
     #: The declared deviations (ADR 0012 §2 Q0d). Listed EXPLICITLY rather
     #: than baked into the fixture, so the fence measures them instead of
@@ -156,6 +190,8 @@ class TestBehaviourIsPreserved:
         """
         diffs = []
         for key, want in sorted(head_effective.items()):
+            if key in RETIRED:
+                continue  # deliberately no longer shipped — see RETIRED
             got = resolved[key]
             for field, wanted in sorted(want.items()):
                 if (key, field) in self.DECLARED:
@@ -194,11 +230,28 @@ class TestTheNamedFixtures:
         decision, not an implementation detail."""
         assert resolved["vllm-gpt-oss::openai/gpt-oss-120b"]["tool_mode"] == "native"
 
-    def test_perplexity_keeps_its_tool_capable_models(self, resolved):
-        """Attempt 1 demoted these to `prompt_based` — Item 43 inverted."""
-        assert resolved["perplexity::sonar-pro"]["tool_mode"] == "auto"
-        assert resolved["perplexity::sonar-reasoning-pro"]["tool_mode"] == "auto"
-        assert resolved["perplexity::sonar"]["tool_mode"] == "prompt_based"
+    def test_perplexity_keeps_its_tool_capable_models(self):
+        """Attempt 1 demoted these to `prompt_based` — Item 43 inverted.
+
+        Asserted against the RESOLVER rather than the example config, because
+        the config no longer ships these ids: on 2026-08-31 the Sonar
+        chat-completions endpoint was given a 2026-09-27 retirement date and
+        the example config moved to `perplexity/sonar`, the only Sonar model
+        Perplexity serves on the surviving wire. The models still exist and
+        are still tool-capable — an operator who configures them must not get
+        them demoted — so the property this fence exists for is unchanged and
+        is now checked where it actually lives.
+        """
+        from ppxai.engine.model_facts import shipped_facts_for_model
+        from ppxai.engine.providers.perplexity import PerplexityProvider
+
+        table = PerplexityProvider.shipped_model_facts
+        assert shipped_facts_for_model("sonar-pro", table).tool_mode == "auto"
+        assert shipped_facts_for_model("sonar-reasoning-pro", table).tool_mode == "auto"
+        assert shipped_facts_for_model("sonar", table).tool_mode == "prompt_based"
+        # The successor keeps native tools on the new wire (measured 2026-08-31:
+        # it accepted a tools array AND called the tool, unlike bare `sonar`).
+        assert shipped_facts_for_model("perplexity/sonar", table).tool_mode == "auto"
 
     @pytest.mark.parametrize(
         "provider",

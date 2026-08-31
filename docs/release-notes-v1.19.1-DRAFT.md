@@ -155,11 +155,27 @@ and both the provider and the `web_search` tool now follow
 `facts.wire_protocol` onto it — the tool used to run its own separate client
 that would have broken independently.
 
-> **One migration step is not yet shipped.** Perplexity's namespaced model
-> IDs (`perplexity/sonar` rather than `sonar`) and the `/v1` base-url suffix
-> are supported by the code but are **not** yet the default in the shipped
-> install scripts or the VSCode bootstrap config. If you drive Perplexity
-> after the retirement date, set them yourself.
+### The shipped default moved — and one model has no successor
+
+`default_model` and `coding_model` are now **`perplexity/sonar`** in the
+example config, `install.sh`, `scripts/install.ps1` and the VSCode bootstrap.
+A fresh install lands entirely on the surviving wire.
+
+Measured 2026-08-31, twice: the Responses wire serves **only**
+`perplexity/sonar`. Both `sonar-pro` (the previous default) and
+`sonar-reasoning-pro` answer `400 validation failed: model "..." is not
+supported` there, in bare **and** namespaced form. They keep working on the
+chat wire until 2026-09-27 and then have nowhere to go.
+
+`/doctor` carries deprecation rows for all three bare ids, all pointing at
+`perplexity/sonar` — the lighter model, and the only honest target. Naming a
+replacement that 400s would send you to a second failure. **Re-check before
+the date:** if Perplexity ships the pro line on the Responses wire, those
+rows change.
+
+`base_url` stays `https://api.perplexity.ai`. Do **not** append `/v1` — the
+provider derives the Responses root per wire, and pinning `/v1` would break
+the chat wire that `sonar-pro` still needs.
 
 ## New: `tools.web_search.order` — the whole search chain, not just its head
 
