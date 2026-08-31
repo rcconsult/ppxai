@@ -130,6 +130,83 @@ class TestTheDoctorScaffoldUsesTheSameResolution:
         )
 
 
+class TestTheInstancePathAgreesWithTheClassPath:
+    """The pair most likely to drift, and the one the other tests miss.
+
+    `BaseProvider.get_facts_for_model()` (a live provider, API key in hand)
+    and `FactsResolver.facts()` (no instance — the admission guard, the
+    enrichment gate, `/doctor`) are two spellings of the same
+    shipped -> resolve sequence. They share leaves, but each orchestrates
+    the sequence itself, so a step added to one silently diverges from the
+    other. Nothing else in this file compares them: the wrapper tests
+    compare functions to the resolver, and the scaffold tests compare
+    `/doctor` to the resolver — both class-path only.
+
+    Divergence here is not theoretical. The whole reason the class path
+    exists is that the guard cannot construct a provider, and the whole
+    reason it must agree is that the guard's refusal has to predict what the
+    send path will do.
+    """
+
+    @pytest.mark.parametrize(
+        "model",
+        ["sonar", "sonar-pro", "perplexity/sonar", "anthropic/claude-sonnet-5"],
+    )
+    def test_registered_provider_instance_matches_the_resolver(self, model):
+        provider = PerplexityProvider(
+            api_key="test-key", base_url="https://api.perplexity.ai"
+        )
+        assert provider.get_facts_for_model(model) == FactsResolver("perplexity").facts(
+            model
+        )
+
+    @pytest.mark.parametrize("model", ["some/model", "llama-3-70b"])
+    def test_type_based_provider_instance_matches_the_resolver(self, model):
+        """The openai_compat case — where the class path has to FALL BACK."""
+        provider = OpenAICompatibleProvider(
+            api_key="test-key",
+            base_url="https://example.invalid/v1",
+            provider_id="openrouter",
+        )
+        assert provider.get_facts_for_model(model) == FactsResolver("openrouter").facts(
+            model
+        )
+
+    def test_the_provider_floor_is_reached_by_both_paths(self):
+        """The case that actually distinguishes them.
+
+        My first version of this class compared Perplexity models only — and
+        a mutation that dropped `unmeasured_facts` from the instance path
+        passed all of it, because Perplexity HAS no floor (`None`) and every
+        model tested was in a shipped table. Gemini is the provider that owns
+        one, and an unlisted model is the only input that reads it: the
+        global floor says `chat_completions`, which Gemini cannot speak.
+
+        A fence that cannot fail is worse than no fence, so this is the row
+        that makes the class mean something.
+        """
+        from ppxai.engine.providers.gemini import GeminiProvider
+
+        model = "gemini-nothing-like-this-exists"
+        resolved = FactsResolver("gemini").facts(model)
+        assert resolved.wire_protocol == "generate_content", (
+            "the provider floor is not being reached at all"
+        )
+
+        # __new__ + the one attribute the accessor reads: constructing a
+        # real GeminiProvider needs the google-genai client, and this test is
+        # about resolution, not transport.
+        provider = GeminiProvider.__new__(GeminiProvider)
+        provider.provider_id = "gemini"
+        assert provider.get_facts_for_model(model) == resolved
+
+    def test_the_endpoint_record_agrees_too(self):
+        provider = PerplexityProvider(
+            api_key="test-key", base_url="https://api.perplexity.ai"
+        )
+        assert provider.get_capabilities() == FactsResolver("perplexity").capabilities()
+
+
 class TestOneResolutionAnswersEveryQuestion:
     def test_the_resolver_answers_all_three_from_one_construction(self):
         r = FactsResolver("perplexity")

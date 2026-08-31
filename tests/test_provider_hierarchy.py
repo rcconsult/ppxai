@@ -2,7 +2,7 @@
 Tests for provider hierarchy compliance (v1.16.0 Step 1).
 
 Verifies that all providers inherit from BaseProvider and implement
-the shared interface: needs_tool, get_model_profile, list_models,
+the shared interface: needs_tool, get_facts_for_model, list_models,
 validate_config, get_capabilities, get_facts_for_model, _get_generation_params,
 _get_max_tokens, _convert_messages, _parse_usage, _format_error,
 _log_error_traceback.
@@ -45,9 +45,11 @@ class TestProviderInterface:
         "list_models",
         "validate_config",
         "needs_tool",
-        "get_model_profile",
+        # `get_model_profile` was here until ADR 0012 refactor (b). It
+        # returned the retiring `ModelProfile` vocabulary and had zero
+        # callers; `get_facts_for_model` is the interface now.
         "get_capabilities",
-    "get_facts_for_model",
+        "get_facts_for_model",
         "_get_generation_params",
         "_get_max_tokens",
         "_format_error",

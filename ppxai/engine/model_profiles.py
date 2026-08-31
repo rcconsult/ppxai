@@ -942,6 +942,15 @@ def supports_vision(model: str) -> bool:
         model: Model ID (e.g., "gpt-5.2", "gemini-3-flash-preview")
 
     Returns:
-        True if the model's profile declares supports_vision=True.
+        True if the model's facts declare supports_vision=True.
+
+    ADR 0012 refactor (b): reads `ModelFacts` rather than `ModelProfile`, so
+    vision has ONE source. The two agreed across all 65 built-in globs when
+    this moved (asserted in `tests/test_model_facts_are_the_source.py`) —
+    they were bound to, since the profile table is the facts table's seed
+    data. Reading the derived record rather than the seed is what lets the
+    seed retire.
     """
-    return get_registry().get(model).supports_vision
+    from .model_facts import shipped_facts_for_model
+
+    return shipped_facts_for_model(model).supports_vision

@@ -57,6 +57,24 @@ because that fallback is what produced the confabulated results.
 uses Perplexity's Jobs API, not chat completions, so it was never usable
 on the endpoint ppxai calls.
 
+### Changed — `ModelFacts` is the source of truth; profiles are seed data
+
+Follow-on to ADR 0012. `supports_vision()` — the last behaviour-bearing
+reader of the old `ModelProfile` table — now reads `ModelFacts`, so vision
+has one source. Verified behaviour-preserving across all 65 built-in globs
+before the switch: the two agreed everywhere, as they must, since one is the
+other's seed.
+
+`BaseProvider.get_model_profile()` is **deleted**. It had zero callers
+outside docstring mentions — dead API keeping a retiring vocabulary
+reachable.
+
+`BUILTIN_PROFILES` stays for now, as the 65-row seed table. Re-authoring
+those rows as native `ModelFacts` literals is a data migration whose diff
+should not be mixed with a behaviour change; the fence that makes it safe
+whenever it happens is in place — every profile row must flatten to its facts
+row, field for field, with the mapping written out rather than inferred.
+
 ### ⚠ Breaking — Perplexity's shipped default moves to `perplexity/sonar`
 
 **Perplexity retires the Sonar chat-completions endpoint on 2026-09-27.**

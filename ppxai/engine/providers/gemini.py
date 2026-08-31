@@ -224,7 +224,7 @@ class GeminiProvider(BaseProvider):
     disabled for that request.
 
     Inherits from BaseProvider (v1.16.0) for shared interface: needs_tool(),
-    get_model_profile(), list_models(), validate_config(), get_facts_for_model(),
+    list_models(), validate_config(), get_facts_for_model(),
     _get_generation_params(), _get_max_tokens().
     """
 
