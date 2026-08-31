@@ -47,6 +47,8 @@ from .tools.network_policy import (
     grant_has_shell,
 )
 from .types import EventType
+from ..config.loader import PPXAI_HOME
+from .agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 
 # An egress allowlist entry is either a bare host ("example.com", any path) or
 # a scoped mapping {"host": ..., "paths": [...]}. Typed here because the
@@ -113,8 +115,6 @@ def default_run_registry():
     lifecycle concerns of whoever owns the process; `server/state.py` layers
     them on top.
     """
-    from ..config.loader import PPXAI_HOME
-    from .agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 
     return AgentRunRegistry(FilesystemAgentRunStore(PPXAI_HOME / "runs"))
 

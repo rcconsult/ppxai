@@ -29,6 +29,7 @@ from .providers.openai_compat import OpenAICompatibleProvider
 from .tools.builtin import register_all_builtin_tools
 from ..common.logger import get_logger
 from ..constants import Default
+from .model_facts import supports_vision as _supports_vision
 
 logger = get_logger("engine")
 
@@ -219,7 +220,6 @@ def _apply_model_switch(engine, model_id: str, reset_context: bool) -> bool:
     # it. Single source of truth lives in model_facts.supports_vision();
     # this just projects it onto AppState so the SSE_SYNC_FIELDS push
     # reaches every connected web/VSCode client transparently.
-    from .model_facts import supports_vision as _supports_vision
     engine.state.set("model_supports_vision", _supports_vision(model_id))
     engine.session.set_model(model_id)
     if reset_context and engine.session.messages:

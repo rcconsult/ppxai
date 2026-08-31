@@ -22,6 +22,8 @@ import threading
 from typing import List, Optional
 
 from .base import Wrapper
+from ....config import get_shell_config
+from .factory import make_wrapper, WrapperConfigError
 
 logger = logging.getLogger(__name__)
 
@@ -159,8 +161,6 @@ def _build_registry_from_config() -> WrapperRegistry:
     avoid circular dependencies between the wrappers package and the
     config layer.
     """
-    from ....config import get_shell_config
-    from .factory import make_wrapper, WrapperConfigError
 
     try:
         shell_config = get_shell_config()

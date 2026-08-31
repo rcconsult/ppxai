@@ -22,6 +22,7 @@ from .session_store import SessionFileStore
 from ..common.logger import get_logger
 from ..constants import ConsentMode
 from ..usage import save_session_usage
+from .types import ImageAttachmentRef
 
 logger = get_logger("session")
 
@@ -196,7 +197,6 @@ def _attachments_from_serialized_content(
     (data: URIs that didn't go through the file store, http URLs,
     etc.) — those have no file_id to record.
     """
-    from .types import ImageAttachmentRef
 
     refs: List[Any] = []
     for idx, block in enumerate(content):

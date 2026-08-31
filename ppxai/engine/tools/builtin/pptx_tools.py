@@ -25,6 +25,8 @@ from typing import Any, List, Optional, Tuple
 
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
+from ...file_ref import resolve_file_reference
+from ...file_ref import FILE_REF_PROPERTIES
 
 
 _MAX_TEXT_CHARS = 100_000
@@ -140,7 +142,6 @@ def _resolve_file(
     test fixtures using `SimpleNamespace(file_store=store)` keep
     working unchanged.
     """
-    from ...file_ref import resolve_file_reference
     return resolve_file_reference(engine, file_id=file_id, path=path)
 
 
@@ -181,7 +182,6 @@ class ListPptxSlidesTool(BaseTool):
             "'path' (for a workspace file visible in the file tree, "
             "addressable from any session) — exactly one is required."
         )
-        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": dict(FILE_REF_PROPERTIES),
@@ -255,7 +255,6 @@ class ReadPptxSlideTextTool(BaseTool):
             "slides. Pass either 'file_id' (chat attachment) or 'path' "
             "(workspace file) — exactly one is required."
         )
-        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {
@@ -466,7 +465,6 @@ class SummarizePptxVisualTool(BaseTool):
             "LibreOffice and a vision model. Pass either 'file_id' (chat "
             "attachment) or 'path' (workspace file) — exactly one is required."
         )
-        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {
@@ -555,7 +553,6 @@ class RenderPptxSlideTool(BaseTool):
             "first to see available slides. Pass either 'file_id' (chat "
             "attachment) or 'path' (workspace file) — exactly one is required."
         )
-        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {

@@ -34,6 +34,7 @@ from ..common.logger import get_logger
 from .agent_runs import RunMeta, resume_refusal
 from .task_authorizer import AuthorizedTask, check_tier_enabled
 from .task_runner import build_task_runner, default_run_registry
+from .types import Message
 
 logger = get_logger("engine")
 
@@ -296,7 +297,6 @@ class InProcessTaskBackend:
         watching a result disappear.
         """
         from ..config.execution import get_execution_collect
-        from .types import Message
 
         try:
             if get_execution_collect() == "no":

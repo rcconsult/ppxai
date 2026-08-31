@@ -43,9 +43,20 @@ from call time to import time:
 `config/execution.py` was reverted for exactly this — its lazy import sat
 inside a `try:` whose docstring states "a capability must never survive the
 failure of the config that governs it", and hoisting silently defeated both
-that fail-safe and the test asserting it. 18 of the 89 import a name that
-some test patches, so each batch needs its tests run, not just an import
-check.
+that fail-safe and the test asserting it. 24 of the 89 import a name that
+some test replaces on the source module, so each batch needs its tests run,
+not just an import check.
+
+**Both patching idioms count.** A sweep looking only for `patch` /
+`patch.object` found 18 and called the engine batch safe; it shipped 15
+failures, all of them `monkeypatch.setattr(module, "name", ...)`. Widening
+the search to that form took the count to 24. When looking for "what does a
+test replace at runtime", enumerate the idioms — missing one makes the sweep
+confidently wrong rather than silent.
+
+**A bare `import ppxai.tui.*` hangs** (Textual sets up the terminal at import
+time), on a clean tree as much as a modified one. Verify TUI modules with the
+suite; a per-module import check there burns a timeout and proves nothing.
 """
 
 import ast
@@ -107,42 +118,21 @@ BASELINE = {
     ("ppxai.config.execution", "ppxai.config.tools"),
     ("ppxai.config.execution", "ppxai.engine.model_facts"),
     ("ppxai.config.loader", "ppxai.config.tls"),
-    ("ppxai.engine.chat", "ppxai.config"),
-    ("ppxai.engine.chat", "ppxai.config.defaults"),
-    ("ppxai.engine.client", "ppxai.config"),
-    ("ppxai.engine.client", "ppxai.engine.file_ref"),
-    ("ppxai.engine.client", "ppxai.engine.tools.builtin.shell"),
     ("ppxai.engine.model_facts", "ppxai.config.facts_config"),
     ("ppxai.engine.model_facts", "ppxai.engine.providers"),
     ("ppxai.engine.model_facts", "ppxai.engine.providers.openai_compat"),
-    ("ppxai.engine.multimodal_ops", "ppxai.engine.types"),
-    ("ppxai.engine.multimodal_ops", "ppxai.engine.uploaded_file"),
-    ("ppxai.engine.provider_ops", "ppxai.engine.model_facts"),
     ("ppxai.engine.providers.base", "ppxai.config.facts_config"),
     ("ppxai.engine.providers.gemini", "ppxai.usage"),
     ("ppxai.engine.providers.openai_compat", "ppxai.usage"),
     ("ppxai.engine.providers.openai_native", "ppxai.usage"),
     ("ppxai.engine.providers.perplexity", "ppxai.usage"),
     ("ppxai.engine.providers.wire.responses", "ppxai.usage"),
-    ("ppxai.engine.session", "ppxai.engine.types"),
     ("ppxai.engine.task_authorizer", "ppxai.config.execution"),
-    ("ppxai.engine.task_authorizer", "ppxai.config.loader"),
     ("ppxai.engine.task_authorizer", "ppxai.engine.model_facts"),
     ("ppxai.engine.task_authorizer", "ppxai.engine.providers"),
-    ("ppxai.engine.task_authorizer", "ppxai.engine.tools.search_backends"),
     ("ppxai.engine.task_backend", "ppxai.config.execution"),
-    ("ppxai.engine.task_backend", "ppxai.engine.types"),
-    ("ppxai.engine.task_runner", "ppxai.config.loader"),
-    ("ppxai.engine.task_runner", "ppxai.engine.agent_runs"),
-    ("ppxai.engine.tools.builtin.docx_tools", "ppxai.engine.file_ref"),
-    ("ppxai.engine.tools.builtin.excel_tools", "ppxai.engine.file_ref"),
-    ("ppxai.engine.tools.builtin.pdf_tools", "ppxai.engine.file_ref"),
-    ("ppxai.engine.tools.builtin.pptx_tools", "ppxai.engine.file_ref"),
     ("ppxai.engine.tools.network_policy", "ppxai.config.execution"),
     ("ppxai.engine.tools.search_backends", "ppxai.config"),
-    ("ppxai.engine.tools.wrappers.registry", "ppxai.config"),
-    ("ppxai.engine.tools.wrappers.registry", "ppxai.engine.tools.wrappers.factory"),
-    ("ppxai.engine.types", "ppxai.engine.artifact_projector"),
     ("ppxai.rendering.rich_renderer", "ppxai.common.markdown_links"),
     ("ppxai.rendering.rich_renderer", "ppxai.tui.renderable.iterm2"),
     ("ppxai.rendering.textual_renderer", "ppxai.common.markdown_links"),

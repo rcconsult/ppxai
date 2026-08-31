@@ -51,6 +51,9 @@ from . import (
     provider_ops,
     session_ops,
 )
+from ..config import get_debug_log_enabled
+from .file_ref import resolve_file_reference as _resolve
+from .tools.builtin.shell import terminate_subprocess_tree
 
 logger = get_logger("tui")
 
@@ -235,7 +238,6 @@ class EngineClient:
         # and the whole "debug-log persistence works across restarts"
         # contract silently breaks for the web and VSCode clients.
         try:
-            from ..config import get_debug_log_enabled
             self.state.set("debug_log", bool(get_debug_log_enabled()))
         except Exception:
             # Config unavailable (tests, minimal bootstrap) — leave default.
@@ -479,7 +481,6 @@ class EngineClient:
         `(FileMetadata | FileRef, None)` on success or `(None, error)`
         on failure. Either argument may be passed but not both.
         """
-        from .file_ref import resolve_file_reference as _resolve
         return _resolve(self, file_id=file_id, path=path)
 
     def remove_context_attachment(self, name: str) -> int:
@@ -634,7 +635,6 @@ class EngineClient:
         on Linux CI; macOS happened to mask this with different orphan
         FD behavior.
         """
-        from .tools.builtin.shell import terminate_subprocess_tree
 
         self._interrupted = True
         self.state.set("cancel_requested", True)

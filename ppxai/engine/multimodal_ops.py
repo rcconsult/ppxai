@@ -38,6 +38,8 @@ from .uploaded_file import (
     parse_uploaded_file_markers,
     strip_uploaded_file_marker,
 )
+from .types import ImageAttachmentRef, TextAttachmentRef
+from .uploaded_file import UPLOADED_FILE_RE
 
 logger = get_logger("engine")
 
@@ -230,7 +232,6 @@ def _synthesize_refs_from_content(content: Any) -> List[Any]:
     refs: List[Any] = []
     # Local import — avoid circular dep at module load (artifact_projections
     # imports types which imports artifact_registry which... etc.)
-    from .types import ImageAttachmentRef, TextAttachmentRef
 
     for idx, block in enumerate(content):
         if not isinstance(block, dict):
@@ -499,7 +500,6 @@ def remove_context_attachment(engine, target: str) -> int:
                 if remove_all:
                     # Strip every marker from this text block; keep any
                     # surrounding user text that remains.
-                    from .uploaded_file import UPLOADED_FILE_RE
                     stripped_text = UPLOADED_FILE_RE.sub("", text).strip()
                     marker_count = len(parse_uploaded_file_markers(text))
                     removed_count += marker_count

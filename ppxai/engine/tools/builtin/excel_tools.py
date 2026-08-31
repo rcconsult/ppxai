@@ -26,6 +26,8 @@ from typing import Any, List, Optional, Tuple
 
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
+from ...file_ref import resolve_file_reference
+from ...file_ref import FILE_REF_PROPERTIES
 
 
 # Default row limits to prevent token-budget blowout on large sheets.
@@ -44,7 +46,6 @@ def _resolve_file(
     Accepts EITHER `file_id` (SessionFileStore chat attachment) or
     `path` (workspace file). v1.18.7 — see `engine.file_ref`.
     """
-    from ...file_ref import resolve_file_reference
     return resolve_file_reference(engine, file_id=file_id, path=path)
 
 
@@ -69,7 +70,6 @@ class ListExcelSheetsTool(BaseTool):
             "either 'file_id' (chat attachment) or 'path' (workspace file) — "
             "exactly one is required."
         )
-        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": dict(FILE_REF_PROPERTIES),
@@ -145,7 +145,6 @@ class ReadExcelSheetTool(BaseTool):
             "either 'file_id' (chat attachment) or 'path' (workspace file) — "
             "exactly one is required."
         )
-        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {

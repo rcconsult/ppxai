@@ -19,6 +19,8 @@ from typing import Any, List, Optional, Tuple
 
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
+from ...file_ref import resolve_file_reference
+from ...file_ref import FILE_REF_PROPERTIES
 
 
 _MAX_TEXT_CHARS = 100_000
@@ -37,7 +39,6 @@ def _resolve_file(
     Accepts EITHER `file_id` (SessionFileStore chat attachment) or
     `path` (workspace file). v1.18.7 — see `engine.file_ref`.
     """
-    from ...file_ref import resolve_file_reference
     return resolve_file_reference(engine, file_id=file_id, path=path)
 
 
@@ -90,7 +91,6 @@ class ReadDocxTool(BaseTool):
             "'file_id' (chat attachment) or 'path' (workspace file) — "
             "exactly one is required."
         )
-        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": dict(FILE_REF_PROPERTIES),

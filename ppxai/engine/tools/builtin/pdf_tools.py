@@ -32,6 +32,8 @@ from typing import Any, List, Optional, Tuple
 
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
+from ...file_ref import resolve_file_reference
+from ...file_ref import FILE_REF_PROPERTIES
 
 
 # Maximum characters to return from read_pdf per call. PDFs with thousands
@@ -107,7 +109,6 @@ def _resolve_file(
     test fixtures using `SimpleNamespace(file_store=store)` keep
     working unchanged.
     """
-    from ...file_ref import resolve_file_reference
     return resolve_file_reference(engine, file_id=file_id, path=path)
 
 
@@ -137,7 +138,6 @@ class ReadPdfTool(BaseTool):
             "Optionally restrict to specific pages with 'pages' "
             "(e.g., '1', '2-5', '1,3,5-7', or 'all')."
         )
-        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {
@@ -261,7 +261,6 @@ class GetPdfPageImageTool(BaseTool):
             "Pass either 'file_id' (chat attachment) or 'path' (workspace "
             "file) — exactly one is required — plus the 1-indexed page number."
         )
-        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {

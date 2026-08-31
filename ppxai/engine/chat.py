@@ -27,6 +27,8 @@ from .model_facts import shipped_facts_for_model
 from .providers.base import BaseProvider
 from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost
 from ..common.logger import get_logger
+from ..config.defaults import DEFAULT_AGENT_ZOMBIE_THRESHOLD
+from ..config import get_agent_config
 
 logger = get_logger("chat")
 
@@ -228,10 +230,8 @@ def _get_zombie_threshold(ctx: ChatContext) -> int:
     The fallback is `DEFAULT_AGENT_ZOMBIE_THRESHOLD`, not a literal: a
     duplicated default silently diverges the day the constant changes.
     """
-    from ..config.defaults import DEFAULT_AGENT_ZOMBIE_THRESHOLD
 
     try:
-        from ..config import get_agent_config
         return int(
             get_agent_config().get(
                 "zombie_threshold", DEFAULT_AGENT_ZOMBIE_THRESHOLD

@@ -7,6 +7,7 @@ These types are used across all layers (engine, server, clients) and have no UI 
 from dataclasses import dataclass, field
 from typing import ClassVar, List, Dict, Any, Optional, Callable, Protocol, Set, Tuple, Union, runtime_checkable
 from enum import Enum
+from .artifact_projector import TextMarkerProjector
 
 
 # Type alias for multimodal message content.
@@ -753,7 +754,6 @@ class Message:
         # for the lookup — same bridge `_synthesize_refs_from_content`
         # uses in multimodal_ops, kept local here to avoid the import
         # cycle with engine.multimodal_ops).
-        from .artifact_projector import TextMarkerProjector
 
         ref_by_index: Dict[int, "ArtifactRef"] = {
             ref.block_index: ref

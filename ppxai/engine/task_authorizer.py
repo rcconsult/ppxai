@@ -65,6 +65,8 @@ from .agent_spec import (
     spec_from_mapping,
 )
 from .tools.network_policy import apply_egress_ceiling, grant_has_shell
+from .tools.search_backends import resolve_web_search_backend
+from ..config.loader import load_config
 
 
 class TaskAuthorizationError(Exception):
@@ -735,7 +737,6 @@ def web_search_egress_hosts(provider_name: Optional[str] = None) -> list:
     mode it is the full superset (session parity = the fallback chain)."""
     from urllib.parse import urlparse
 
-    from .tools.search_backends import resolve_web_search_backend
 
     hosts = resolve_web_search_backend(provider_name).egress_hosts
     return sorted({urlparse(u).netloc for u in hosts if urlparse(u).netloc})
@@ -1019,7 +1020,6 @@ def _tool_capable_models_hint(provider: str) -> str:
     "generally capable here" rather than to silence.
     """
     try:
-        from ..config.loader import load_config
         from .model_facts import facts_without_an_instance
         from .providers import get_provider_class
 
