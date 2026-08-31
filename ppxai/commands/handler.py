@@ -5,57 +5,42 @@ This module provides the CommandHandler class which handles all slash commands
 in the TUI application (/help, /model, /save, /load, etc.).
 """
 
-import fnmatch
 
 import os
 import asyncio
 import re
 import warnings
-from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
-from rich.console import Console
 from prompt_toolkit import prompt as pt_prompt
 from prompt_toolkit.validation import Validator, ValidationError
 
 from ..common.consent import normalize_consent_response
-from ..config import (
-    PROVIDERS,
-    find_config_file,
+from ..config import (  # noqa: F401 — re-exported via commands/__init__.py
     get_api_key,
     get_base_url,
     get_coding_model,
     get_default_provider,
     get_provider_config,
-    get_tui_config,
     get_tui_theme,
-    reload_config,
-    set_tui_config,
 )
 from ..engine import EngineClient
 from ..engine.types import EventType
 from ..prompts import CODING_PROMPTS
 from ..rendering.rich_renderer import RichRenderer
-from ..rich.markdown_tables import render_markdown_with_tables
-from ..rich.utils import read_file_content
-from ..rich.ui import (
+from ..rich.ui import (  # noqa: F401 — re-exported via commands/__init__.py
     console,
     display_welcome,
-    display_spec_help,
     display_file_editing_help,
-    display_tool_help,
     select_model,
     select_provider,
     display_sessions,
-    display_usage,
-    display_global_usage,
-    display_tools_table,
 )
-from ..rich.themes import get_theme, list_themes, Theme, DEFAULT_THEME
-from ..rich.ui_components import render_theme_list
+from ..rich.themes import (
+    get_theme,
+    DEFAULT_THEME,
+)
 from ..common.logger import get_logger
-from ..version import __version__
 from ..constants import ConsentResponse, ConsentDecision, ShellRiskLevel
 
 # Import command modules to trigger self-registration

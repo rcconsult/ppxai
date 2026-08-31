@@ -1464,7 +1464,7 @@ the mechanical change from the meaningful one. The disposition is recorded,
 but a commit message is not a place anyone will find it again — hence this
 item.
 
-**✅ IMPLEMENTED 2026-09-01.** `3,889 -> 376`, in the order this entry
+**✅ IMPLEMENTED 2026-09-01.** `3,889 -> 349`, in the order this entry
 proposed: defects first, mechanical bulk last, ratchet throughout.
 
 | rule | | commit |
@@ -1493,13 +1493,20 @@ finding. Both were caught by reading the diff, not by the tool.
 
 **Left deliberately open, with reasons:**
 
-- **99 `F841` in tests.** In a test, `result = thing()` with `result` unread
-  is often "call it and assert it does not raise" — the call IS the
-  assertion. Deleting the binding is harmless; deleting the line is not, and
-  ruff chooses per instance. Low value against a real risk of silently
-  weakening tests. Its own item if anyone wants it.
-- **~32 `F401`/`UP035`** ruff will not auto-remove: re-exports, where the
-  "unused" import is the point.
+Counts below are measured, not estimated — **re-derive before quoting**
+(`ruff check <dir> --select <RULE> --statistics`). The first version of this
+closure understated `F401`/`UP035` by half and lumped benchmarks in with
+tests, which is how a "remaining" figure becomes untrustworthy.
+
+- **91 `F841` in `tests/`** (plus 9 in `benchmarks/`+`scripts/`). In a test,
+  `result = thing()` with `result` unread is often "call it and assert it
+  does not raise" — the call IS the assertion. Deleting the binding is
+  harmless; deleting the line is not, and ruff chooses per instance. Low
+  value against a real risk of silently weakening tests. Its own item if
+  anyone wants it.
+- **26 `F401` + 11 `UP035`** ruff will not auto-remove. All 26 now sit in an
+  `__init__.py` or carry a `# noqa` naming the re-export — the "unused"
+  import IS the interface.
 - **A handful of `E402`** marked `# noqa` with the reason — imports that must
   follow `register_provider`, `sys.path.insert`, or `importorskip`.
 
