@@ -571,3 +571,57 @@ class TestInertConfigKeysStayDocumented:
             f"inert ({why}). Update the docs that call it non-functional and "
             f"remove it from KNOWN_INERT_KEYS."
         )
+
+
+class TestEveryLessonIsDiscoverable:
+    """A lesson absent from the index cannot be found by the reader it is for.
+
+    CLAUDE.md tells every agent to "Read docs/lessons/README.md first", so the
+    README is the discovery path for the whole directory. A lesson missing
+    from it is reachable only by someone who already went looking in
+    `docs/lessons/` — the population that least needs telling.
+
+    That is the same shape as the hazards the directory documents: a file that
+    exists but cannot be found reads identically to a file that was never
+    written. Nothing enforced the convention, and two lessons had drifted out
+    of the index by 2026-08-31 (`mutation-tests-that-never-ran.md`, added that
+    day, and `sdk-validation-is-not-api-acceptance.md`, which had been
+    unlisted for longer) with the docs suite green throughout.
+    """
+
+    @staticmethod
+    def _lessons():
+        root = Path(__file__).resolve().parents[1] / "docs" / "lessons"
+        return sorted(
+            p for p in root.glob("*.md") if p.name != "README.md"
+        )
+
+    def test_the_lesson_set_is_not_empty(self):
+        """A glob that silently matches nothing passes this whole class."""
+        found = self._lessons()
+        assert len(found) >= 10, f"expected the lessons directory, found {found}"
+
+    def test_every_lesson_is_listed_in_the_readme(self):
+        root = Path(__file__).resolve().parents[1] / "docs" / "lessons"
+        index = (root / "README.md").read_text(encoding="utf-8")
+        missing = [p.name for p in self._lessons() if p.name not in index]
+        assert not missing, (
+            "lessons not listed in docs/lessons/README.md:\n  "
+            + "\n  ".join(missing)
+            + "\n\nCLAUDE.md points every agent at that README, so an "
+            "unlisted lesson is invisible to the reader it was written for. "
+            "Add a one-line entry under ## Index."
+        )
+
+    def test_the_readme_does_not_list_lessons_that_are_gone(self):
+        """The other direction: a renamed or deleted lesson leaves a dead
+        entry, and a reader following it finds nothing."""
+        root = Path(__file__).resolve().parents[1] / "docs" / "lessons"
+        index = (root / "README.md").read_text(encoding="utf-8")
+        linked = set(re.findall(r"\(([a-z0-9-]+\.md)\)", index))
+        present = {p.name for p in self._lessons()} | {"README.md"}
+        dangling = sorted(linked - present)
+        assert not dangling, (
+            f"docs/lessons/README.md links to files that do not exist: "
+            f"{dangling}"
+        )

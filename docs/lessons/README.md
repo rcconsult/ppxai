@@ -158,3 +158,16 @@ discoverable later.
   — `Path.home()` constants resolve at IMPORT time, so isolating a directory
   through a constructor does not stop a test writing the user's real state.
   Cost: the suite silently clobbered the developer's session pointer.
+
+- [sdk-validation-is-not-api-acceptance.md](sdk-validation-is-not-api-acceptance.md)
+  — a provider SDK's request model and the provider's REST API are two
+  different validators. Constructing a request the SDK accepts proves the
+  shape is well-formed locally, not that the endpoint will take it.
+- [mutation-tests-that-never-ran.md](mutation-tests-that-never-ran.md) — a
+  mutation test's failure modes all resolve to "all green", which is what a
+  covered guard also looks like. An anchor that matches twice patches the
+  wrong function; a runner that cannot start prints nothing; a trailing
+  `| tail` launders the exit code. Prove the mutation applied AND the suite
+  ran, and check WHICH test failed. Cost: two sessions read the same false
+  "not covered", and this file's own snippets were wrong until someone ran
+  them (2026-08-31).
