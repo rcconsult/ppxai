@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
+from ..common.logger import get_logger
 
 
 # =============================================================================
@@ -179,7 +180,6 @@ def initialize() -> None:
 def _warn_if_tls_insecure() -> None:
     """Log a single warning when certificate verification is disabled."""
     try:
-        from ..common.logger import get_logger
         from .tls import resolve_tls_verify
 
         logger = get_logger("config")

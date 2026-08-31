@@ -29,6 +29,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict
 import os
+from ..version import format_version_banner
 
 
 def _sanitize_for_logging(text: str) -> str:
@@ -161,7 +162,6 @@ class Logger:
         # outlive its own source — the process keeps running the OLD
         # code, but operators reading the log later see the NEW source.
         # The source_mtime field makes this gap visible.
-        from ..version import format_version_banner  # local import — version is leaf, no cycle
         self._logger.info("=" * 80)
         self._logger.info(f"{self.name.upper()} DEBUG SESSION STARTED - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self._logger.info(format_version_banner())

@@ -28,6 +28,24 @@ correct code:
 **Of the 97 pairs, 89 hoist cleanly and 8 genuinely cycle** — measured by
 actually hoisting each one and importing the module in a fresh interpreter,
 not by reading the graph. The 8 are step 3's structural work.
+
+**"Imports cleanly" is necessary but NOT sufficient.** A hoist can be
+import-safe and still change behaviour, because it moves name resolution
+from call time to import time:
+
+    # lazy: resolved per call, so patch.object(tools, "get_tool_config") is seen
+    def f():
+        from .tools import get_tool_config
+
+    # hoisted: this module binds its OWN reference at import time, and a
+    # patch on the SOURCE module no longer reaches it
+
+`config/execution.py` was reverted for exactly this — its lazy import sat
+inside a `try:` whose docstring states "a capability must never survive the
+failure of the config that governs it", and hoisting silently defeated both
+that fail-safe and the test asserting it. 18 of the 89 import a name that
+some test patches, so each batch needs its tests run, not just an import
+check.
 """
 
 import ast
@@ -57,12 +75,8 @@ BASELINE = {
     ("ppxai.commands.provider", "ppxai.engine.providers"),
     ("ppxai.commands.system", "ppxai.commands.context"),
     ("ppxai.common.consent", "ppxai.engine.tools.wrappers"),
-    ("ppxai.common.logger", "ppxai.version"),
-    ("ppxai.config", "ppxai.common.logger"),
     ("ppxai.config.execution", "ppxai.config.tools"),
     ("ppxai.config.execution", "ppxai.engine.model_facts"),
-    ("ppxai.config.facts_config", "ppxai.engine.model_facts"),
-    ("ppxai.config.loader", "ppxai.common.logger"),
     ("ppxai.config.loader", "ppxai.config.tls"),
     ("ppxai.engine.chat", "ppxai.config"),
     ("ppxai.engine.chat", "ppxai.config.defaults"),

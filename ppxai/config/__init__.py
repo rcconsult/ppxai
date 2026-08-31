@@ -145,6 +145,7 @@ from .prompts import (
     get_system_prompt,
     get_system_prompt_mode,
 )
+from ..common.logger import Logger
 
 
 # Legacy compatibility exports
@@ -224,7 +225,6 @@ def initialize():
             #    created before calling initialize()).
             import os as _os
             _os.environ.setdefault("PPXAI_DEBUG", "1")
-            from ..common.logger import Logger
             Logger.enable_all()
     except Exception:
         # Never let a logger-restore failure break startup

@@ -61,6 +61,8 @@ from ..engine.model_facts import (
 )
 from ..engine.types import ProviderCapabilities
 from .loader import _load_json_config, find_config_file
+from ..engine.model_facts import ToolMode, UNTRANSLATABLE_MODES
+from ..engine.model_facts import FactsResolver
 
 #: The one block the resolver reads. Legacy names are reported by `/doctor`,
 #: never resolved.
@@ -166,7 +168,6 @@ def is_wrong_typed(field: str, value: Any) -> bool:
     the resolver would carry it straight into a comparison that treats it
     as capable. See `UNTRANSLATABLE_MODES`.
     """
-    from ..engine.model_facts import ToolMode, UNTRANSLATABLE_MODES
 
     if field == "tool_mode":
         if value in UNTRANSLATABLE_MODES:
@@ -397,7 +398,6 @@ def complete_record_for(
     """
     from dataclasses import asdict
 
-    from ..engine.model_facts import FactsResolver
 
     # ADR 0012 refactor (a): ONE resolver, so the record `/doctor` offers to
     # paste is the record the engine will resolve. This used to fall back to a
