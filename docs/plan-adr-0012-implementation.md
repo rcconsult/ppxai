@@ -177,7 +177,7 @@ deviating fails rather than silently excusing a future regression.
 <details>
 <summary>Original W1 plan (as written before implementation)</summary>
 
-## W1 — two fact records, explicit and complete (ADR 0012 §2 Q0d + Q0e · ~3.5d)
+## W1 (original scope) — two fact records, explicit and complete (ADR 0012 §2 Q0d + Q0e · ~3.5d)
 
 **Re-scoped 2026-08-30 after three failed implementations** (see Q0e). The
 design is in [ADR 0012 §2](decisions/0012-wire-protocol-as-per-model-capability.md);
@@ -244,7 +244,39 @@ Call graphs: create `docs/provider-wire-call-graphs.md` + `graphify update .`.
 
 </details>
 
-## W2 — extract the Responses handler + make routing consume the facts (ADR 0012 steps 1–2 · closes Item 61 · ~1.5d)
+## W2 ✅ DONE (2026-08-30) — extract the Responses handler + make routing consume the facts (ADR 0012 steps 1–2)
+
+Shipped: `1bf93de7`. Suite 5,296 / 32 / 0. **Closes Item 61.**
+
+**Delivered:** `ppxai/engine/providers/wire/` with the `ProtocolHandler`
+contract and `ResponsesHandler` (six members lifted **mechanically** out of
+`openai_native.py`, then diffed against the live originals — "no behaviour
+change" is a property of the extraction, not a promise). Routing reads
+`_wire_for(model)`, one reader consumed by all four dispatch sites;
+`RESPONSES_API_PREFIXES` demoted to seed data. `get_handler()` raises on an
+unknown protocol rather than defaulting.
+
+**The three measured drifts were resolved per row on evidence**, not by
+copying one table onto the other: the two pro models in the **router's**
+favour (commit `5e1ace2f` added them after a live *"not a chat model"* 404),
+`gpt-5.3-codex` in the **profile's** favour. A **fourth** surfaced while
+fencing — `gpt-5.5-pro`, reached by neither mechanism — filed by analogy and
+then probed (2026-08-31: same 404).
+
+**Found by the post-change graph refresh, not by the suite:** the bulk
+deletion consumed each `@staticmethod` line but left four method bodies
+behind, decorator-stripped so their first parameter had silently become
+`self`. Dead and broken if called; the full suite passed with them present.
+An AST sweep for "class methods whose first arg isn't `self` and which carry
+no decorator" found all four.
+
+Bonus: ADR 0006's validator gained its **second** call site inside the moved
+converter (Item 62 (a): 1-of-3 wires → 2-of-3), and the send-path fence
+widened from `glob` to `rglob` with `ctx.` added to its banned-attribute
+pattern — a top-level-only scan under a `self`-only regex would have stopped
+guarding that path on the very commit that relocated it.
+
+## W2 (original scope) — extract the Responses handler + make routing consume the facts (ADR 0012 steps 1–2 · closes Item 61 · ~1.5d)
 
 - Leaf package `ppxai/engine/providers/wire/`: `ProtocolHandler` +
   `WireContext` + `responses.py` (the six moved members).
@@ -325,7 +357,37 @@ intact per W0 (c); **gateway-smoke 7/7, `POST /v1/oneshot`
 byte-identical** (ppxai-sre depends). **Runnable after:** Perplexity
 fully usable on the surviving wire before 09-27.
 
-## W4 — chat_completions + generate_content become handlers (ADR step 4 · closes Item 62 · ~1.5d)
+## W4 ✅ DONE (2026-08-31) — chat_completions + generate_content become handlers (ADR step 4)
+
+Shipped: `476fce89`. Suite 5,360 / 32 / 0. **Closes Item 62, both halves.**
+
+**(a)** `assert_wire_blocks_clean` runs inside each handler's converter —
+**3 of 3** wires, was 1. The fence parametrises over the handler **registry**
+rather than a hand-written list, so the fourth wire (`messages`) inherits the
+requirement; it also greps each handler's source, because Item 62 (a) was
+precisely a validator that existed and was not called.
+
+**(b)** `GeminiProvider._convert_messages` **deleted** with its three
+helpers. It returned `tuple` against a base annotated `List[Dict[str, Any]]`
+— a Liskov violation invisible to the type checker because the base's
+annotation was one wire's shape imposed on all of them. Each wire declares
+its own return type; `BaseProvider._convert_messages` survives as a
+*delegation*, not an emitter. The extracted converter was diffed
+byte-for-byte across all four role paths **before** the override was removed.
+
+One stale premise found and refreshed rather than weakened: W2's own registry
+fence used `generate_content` as its example of an *unregistered* protocol,
+which W4 then registered — it went green while asserting nothing.
+
+**Simplification report:** providers **−318** net (`openai_native` −351,
+`gemini` −168, `base` +20, `perplexity` +181 for W3's capability); `wire/`
++983; **overall +665**. Twelve methods verified absent from their original
+files. The plan's target was net-negative LoC in `providers/*.py` outside
+`wire/` — met. The overall figure is the cost of a capability plus the
+recorded measurement the handlers now carry, and is reported unflatteringly
+on purpose.
+
+## W4 (original scope) — chat_completions + generate_content become handlers (ADR step 4 · closes Item 62 · ~1.5d)
 
 `convert_messages` moves into each handler (protocol-owned return type);
 Gemini's incompatible override **deleted**; `assert_wire_blocks_clean`
