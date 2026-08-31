@@ -63,6 +63,43 @@ to `~/.ppxai/ppxai-config.json`.
   (`ppxai/server/http.py::run_server`). Read that line before assuming which
   file is live.
 
+## The test suite reads whichever file wins — including yours
+
+The same search order applies **inside pytest**, and nothing in
+`tests/conftest.py` pins it. So a test that resolves model facts reads the
+first of `PPXAI_CONFIG_FILE` / `./ppxai-config.json` / `~/.ppxai/ppxai-config.json`
+that exists — on a developer machine, routinely the developer's own config.
+
+Measured 2026-08-31: `tests/test_perplexity_two_wires.py` failed on a dev host
+because that host's `~/.ppxai/ppxai-config.json` carried a
+`facts.tool_mode = "native"` override for `perplexity/sonar`, while the test
+asserts the shipped `auto`. Nothing was wrong with the repo. The same test
+passes on CI, where no user config exists.
+
+Two consequences worth internalising:
+
+- **A red test can be your config, not the code.** Before debugging, check
+  what the suite is actually reading:
+  ```bash
+  python -c "from ppxai.config.facts_config import find_config_file; print(find_config_file())"
+  ```
+  Run it *inside* pytest if the answer looks surprising — `initialize()` may
+  not have run in your shell, so a bare invocation can report the
+  project-local file while the suite reads the user-global one.
+
+- **A green suite is not proof either.** The reverse case is worse: a config
+  the suite reads can *mask* a defect. The repo-root `ppxai-config.json` is
+  **tracked**, and it drifted for a day (a deprecated default, plus NVIDIA ids
+  that had answered HTTP 410 for six weeks) with the suite green throughout —
+  because every deprecation invariant scoped only `ppxai-config.example.json`.
+  Fixed by iterating the tracked set (`git ls-files 'ppxai-config*.json'`) in
+  `tests/test_doctor.py::TestDeprecationTableInvariants`.
+
+**Rule:** a test that reads config resolution must either pin the file it
+means (`monkeypatch.setattr(fc, "find_config_file", ...)`) or assert against
+the shipped table rather than the resolved result. Otherwise its verdict is a
+property of the host, not of the code.
+
 ## Related
 
 - `ppxai/config/loader.py` — `find_config_file()` search order + `initialize()`.
