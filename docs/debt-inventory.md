@@ -1376,15 +1376,38 @@ profiles used it.
 where every commit had to answer "is this lint mine or pre-existing?" — a
 question that only exists because nothing enforces an answer.
 
-**✅ The 10 `F821` undefined names are FIXED** (`7458a0a0`) — see below for
-what they were and why they were the urgent half. Three of the four sites
-were genuinely reachable, including two inside `except` handlers. Fenced by
-`tests/test_undefined_names_are_bound.py` (9 tests, 8 of which fail against
-the pre-fix source). Repo-wide `F821` is now **zero**.
+**✅ The defect half is CLOSED. What remains is genuine hygiene.**
 
-**The rest of this item stands.** `grep -rn ruff .github/workflows/*.yml`
-returns **nothing** — ruff is configured in the project but never runs in CI,
-which is why findings accumulate without anyone noticing.
+- **The 10 `F821` undefined names** (`7458a0a0`). Three of the four sites
+  were genuinely reachable, including two inside `except` handlers. Fenced
+  by `tests/test_undefined_names_are_bound.py`, 8 of whose tests fail
+  against the pre-fix source.
+- **The 2 `F822` undefined exports** (`2338cd6e`). `server/session_manager.py`
+  promised `get_session_manager` and `get_idle_timeout` in `__all__`; both
+  are real functions living in *other* modules, left behind by the v1.19.1
+  move. Fenced as a repo-wide AST sweep (39 modules, 322 exported names)
+  rather than a check of that one file, because the failure mode is a name
+  stranded by a move and moves happen anywhere.
+- **`invalid-syntax` 4 → 0** (`3a1c4d9c`). All four were one file, and none
+  of it was source: `benchmarks/llm-eval/src/` holds model OUTPUT captured
+  by the tool-calling eval — `test_cases.py` prompts a model to write to a
+  fictional `/src/` path and the file-write tool saves whatever comes back,
+  so `functions.py` contains `def function_{i}():` with the literal
+  placeholder and `calc.py` has a `subtract` method with no body. Committed
+  as source by a bulk "adding files to clean state" while the sibling
+  `debug/` output was correctly gitignored. Excluded, not repaired.
+
+**✅ ruff now runs in CI as a RATCHET** (`3a1c4d9c`). Not a gate: failing on
+all ~3.9k findings would fail every build forever and be switched off within
+a week. The step gates only rules at **zero** — `F821,F822,F823,F632`, every
+one a name that resolves to nothing at runtime. Verified in both directions:
+the exact command exits 0 on the tree, and a probe file with an undefined
+name in an `except` handler makes it exit 1.
+
+**Widening the ratchet is how the rest gets paid down.** As a class reaches
+zero, add it to the `--select` list in `.github/workflows/build.yml`. That
+avoids the flag day that a full-count gate would need, and it means no fixed
+class can silently regress while the backlog is worked.
 
 **Derive the counts; do not read them from here.** This entry stored a total
 three times and it was stale three times — after the F821 fixes, after the
@@ -1413,7 +1436,8 @@ shape matters more than the digits and the shape is stable:
 
 | rule | what it means | how to treat it |
 |---|---|---|
-| ~~`F821`~~ | undefined name | ✅ fixed in `7458a0a0` |
+| ~~`F821`~~ | undefined name | ✅ fixed in `7458a0a0`, now gated in CI |
+| ~~`F822`~~ | undefined export in `__all__` | ✅ fixed in `2338cd6e`, now gated in CI |
 | `F841` | assigned, never read — often a check whose result was dropped | read, then one `--unsafe-fixes` run |
 | `F811` | redefined while unused — one definition silently shadowing another | read individually |
 | `UP006`/`UP045`/`I001`/`UP035`/`F401` | typing modernisation + import hygiene | `--fix`, one commit |
