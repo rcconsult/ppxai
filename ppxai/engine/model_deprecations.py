@@ -89,7 +89,15 @@ GEMINI_DEPRECATIONS: dict[str, Deprecation] = {
             "Gemini 2.5 line sunset, EARLIEST 2026-10-16 (ai.google.dev "
             "deprecations page). 3.1 Pro delivers SWE-Bench 80.6% vs "
             "2.5-Pro's ~70%. NB the replacement is itself still PREVIEW — "
-            "there is no GA successor in the Pro tier yet."
+            "there is no GA successor in the Pro tier yet. RE-PROBED "
+            "2026-09-01 against the live ListModels API (52 models): the "
+            "only Gemini 3.x Pro ids are `gemini-3.1-pro-preview` and "
+            "`gemini-3.1-pro-preview-customtools`, both preview. The lone "
+            "GA-looking alternative, `gemini-pro-latest`, is an unpinned "
+            "ALIAS ('Latest release of Gemini Pro', no version field), so "
+            "it names no stable contract and is worse than a named preview "
+            "for a migration target. Pointing at the preview is therefore "
+            "deliberate, not stale — recheck if a GA 3.x Pro ships."
         ),
     ),
     "gemini-2.5-flash": Deprecation(

@@ -56,6 +56,34 @@ OBLIGATIONS = [
             "migration fence's RETIRED set to match."
         ),
     ),
+    (
+        date(2026, 10, 10),
+        "debt Item 54 — re-probe Gemini's Pro tier for a GA successor",
+        (
+            "Google sunsets the Gemini 2.5 line 2026-10-16 (earliest). "
+            "GEMINI_DEPRECATIONS migrates `gemini-2.5-pro` to "
+            "`gemini-3.1-pro-preview` — a PREVIEW, because a live ListModels "
+            "probe on 2026-09-01 (52 models) found NO GA 3.x Pro at all: only "
+            "`gemini-3.1-pro-preview` and `gemini-3.1-pro-preview-customtools`. "
+            "The one GA-looking id, `gemini-pro-latest`, is an unpinned ALIAS "
+            "with no version field, so it names no stable contract and is a "
+            "worse migration target than a named preview.\n"
+            "\n"
+            "That advice is correct only while it stays true: if a GA 3.x Pro "
+            "has since shipped, ppxai is steering operators onto a preview "
+            "Google can withdraw without notice.\n"
+            "\n"
+            "  uv run python scripts/probe-gemini-pro-tier.py\n"
+            "\n"
+            "A GA 3.x Pro appeared? Update `replacement` for `gemini-2.5-pro` "
+            "and `gemini-3-pro-preview` in "
+            "ppxai/engine/model_deprecations.py, and drop the preview caveat "
+            "from both reason strings.\n"
+            "Still preview-only? Move this date past the sunset, or delete the "
+            "entry — the 2.5 ids are in NO config we ship, so the only exposure "
+            "is migration ADVICE to an operator who still has them."
+        ),
+    ),
 ]
 
 
