@@ -1372,11 +1372,25 @@ profiles used it.
 
 ### Item 68 ✅ — eager package imports forcing lazy imports [architecture]
 
-**Filed 2026-09-01**, from the lazy-import cleanup. That work took internal
-function-level imports **143 → 31** and every remaining row now carries a
-reason (`tests/test_no_new_lazy_imports.py`). Of the 31, **4 are tagged
-`cycle`, and they are 2 problems, not 4** — each traces to a package
-`__init__` doing eager work, not to the modules the rows name.
+**Filed and closed 2026-09-01**, from the lazy-import cleanup.
+
+|  | fence rows | tagged `cycle` |
+|---|---|---|
+| filed | 31 | 4 |
+| **closed** | **28** | **1** |
+
+The surviving row is `config.tls → config.store` — B's `loader/tls/store`
+ring, measured irreducible (hoisting it re-closes the ring; moving the cut
+costs a row instead of saving one). Everything else is
+`patch-semantics` (25), `fallback-probe` (1) and `empty-block` (1), each with
+a reason a test re-derives from source.
+
+**The filing diagnosis was wrong in every section, and the corrections are
+the value here.** It was filed as "three eager package imports"; only one of
+the four turned out to be that. A1 was a single misplaced function out of
+twelve, B had no engine involvement at all, and C was one call site with a
+live user-facing bug behind it. Each subsection below records what was tried,
+what was measured, and what the attempt disproved.
 
 **A. A `config` ↔ `engine` mutual dependency — 3 rows.** ⚠️ **This entry's
 first diagnosis was wrong and the attempt is recorded below**, because the
