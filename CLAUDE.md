@@ -74,10 +74,14 @@ Owner rule (2026-08-30):
   "CLAUDE.md", "INSTRUCTIONS.md"]`, so THIS repo (which has AGENTS.md at
   the root) loads AGENTS.md, while a checkout or user project without one
   loads CLAUDE.md as bootstrap context; after editing whichever file is
-  first on that list here, run `BootstrapContext.from_file` on it — and
-  any doc a script under `scripts/` reads (none today; the catch-all
-  stays for tomorrow). When in doubt, grep the filename in `ppxai/`,
-  `tests/` and `scripts/` first — 10 seconds decides it.
+  first on that list here, run `BootstrapContext.from_file` on it;
+  **`docs/lessons/` — `tests/test_docs_consistency.py` asserts every lesson
+  is indexed in the README, that the README names none that are gone, and
+  that filenames are kebab-case, so ADDING or RENAMING a lesson needs that
+  file run** (editing one's prose does not) — and any doc a script under
+  `scripts/` reads (none today;
+  the catch-all stays for tomorrow). When in doubt, grep the filename in
+  `ppxai/`, `tests/` and `scripts/` first — 10 seconds decides it.
 - **Docstring/comment-only code change**: run **syntax + linter only**
   (`python -m py_compile <files>` + `ruff check <files>`); no test run —
   though ruff may still legitimately fail on line length/format. Anything
