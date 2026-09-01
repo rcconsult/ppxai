@@ -25,7 +25,7 @@ import pytest
 #: ship a fix.
 OBLIGATIONS = [
     (
-        date(2026, 9, 20),
+        date(2026, 9, 26),
         "debt Item 64 — re-probe Perplexity's pro line on the Responses wire",
         (
             "Perplexity retires the Sonar chat-completions endpoint on "
@@ -36,6 +36,11 @@ OBLIGATIONS = [
             "That hint is correct only while it stays true: if Perplexity has "
             "since shipped the pro line on Responses, ppxai is actively "
             "advising a downgrade nobody needs, and the user WILL follow it.\n"
+            "\n"
+            "PROBE 2 ran 2026-09-01 (early, at the owner's direction) and all "
+            "three ids still answered 400. This is now the LAST check, the day "
+            "before the endpoint dies: still 400 means delete this entry and "
+            "close Item 64.\n"
             "\n"
             "  uv run python scripts/probe-perplexity-capabilities.py \\\n"
             "      --api-path responses \\\n"

@@ -1226,11 +1226,32 @@ still break users.
 `400 validation failed: model "..." is not supported` on the Responses wire.
 The shipped deprecation rows are correct as written; no change needed.
 
-**⏰ PROBE 2 IS DUE 2026-09-20** — a commitment, not a suggestion. That is one
-week before the cutover: late enough for Perplexity to have shipped the pro
-line, early enough to change the rows and cut a release if they have. If
-probe 2 also returns 400, the rows stand as final and this item closes on
-2026-09-27 with the endpoint.
+**✅ PROBE 2 — 2026-09-01: STILL 400. Run early, at the owner's direction.**
+All three ids answer `400 validation failed: model "..." is not supported`
+on the Responses wire, unchanged from probe 1:
+
+    perplexity/sonar-pro            ABSENT  (table says REJECTS)  ok
+    perplexity/sonar-reasoning-pro  ABSENT  (table says REJECTS)  ok
+    sonar-pro                       ABSENT  (table says NATIVE)   see below
+
+**So the shipped rows are correct and final.** Perplexity has not moved the
+pro line to Responses, `perplexity/sonar` remains the only survivor, and
+every `sonar-pro` / `sonar-reasoning-pro` operator is correctly told to
+migrate to it — a downgrade, but the only one available.
+
+The `sonar-pro` DRIFT line is a **probe artifact, not a defect**: it has no
+`AGENT_FLEET_FACTS` row, so it falls to the global `sonar-pro*` row which
+says `wire_protocol: chat_completions` — correct, and exactly why forcing
+`--api-path responses` on it reports ABSENT. Bare `sonar-pro` works on
+chat-completions and dies with that endpoint on 2026-09-27. Asking a
+chat-completions model about the Responses wire is a question with no
+bearing on the table.
+
+**Probe 3 is NOT needed.** The 2026-09-20 obligation existed to catch a
+change before the cutover; two probes three weeks apart agree, and the
+remaining window is short. The dated obligation in
+`tests/test_dated_obligations.py` should now be retired or moved to
+2026-09-26 as a last check — see the entry's own instruction.
 
 **✅ 2026-08-31 — the date now ENFORCES ITSELF.** The obligation was recorded
 in three places (a code comment, an untracked notes file, this entry) and
