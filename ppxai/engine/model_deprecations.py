@@ -560,6 +560,16 @@ RECOMMENDED_NEW_MODELS: list[dict[str, str]] = [
         "model": "moonshotai/kimi-k3",
         "reason": "Best NIM model still live — the only Kimi id that answers 200 (2026-08-31 per-id sweep; k2.6 is listed but 404s \"not found for account\"). Replaces both the qwen recommendation and retired kimi-k2-thinking.",
     },
+    {
+        "provider": "perplexity",
+        "model": "anthropic/claude-sonnet-5",
+        "reason": "Perplexity's /v1/responses is a multi-vendor gateway, not a Sonar-only endpoint (measured 2026-09-01). When the chat-completions wire retires 2026-09-27, sonar-pro and sonar-reasoning-pro have no successor — but the agentic work moves here, on the same provider and key.",
+    },
+    {
+        "provider": "perplexity",
+        "model": "openai/gpt-5.6-terra",
+        "reason": "Same gateway. Cost-efficient flagship at $2/$12 per MTok, matching OpenAI's own rate — Perplexity passes it through rather than marking up.",
+    },
     # REMOVED 2026-09-01: deepseek-ai/deepseek-v4-pro-0813. It was recommended
     # here as a model to ADOPT while both suffixed deepseek ids failed to
     # respond at all — three attempts, 45s / 120s / 300s-with-retry, ten

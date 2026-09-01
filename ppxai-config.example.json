@@ -151,17 +151,28 @@
             "tier": ""
           },
           "__comment_unmeasured": "supports_vision / tier / max_tool_iterations are the UNMEASURED floor (Q0a) - this fleet was probed for wire, tools and the max_output_tokens requirement only. They stay at the floor until measured rather than being guessed from the vendor's own model card."
+        },
+        "openai/gpt-5.6-terra": {
+          "name": "GPT-5.6 Terra (via Perplexity Agent API)",
+          "description": "OpenAI's cost-efficient flagship reached with a Perplexity key over the Responses wire. Verified live 2026-09-01. Same id ppxai uses direct from OpenAI.",
+          "context_limit": 200000
         }
       },
       "pricing": {
         "anthropic/claude-sonnet-5": {
-          "input": 3,
-          "output": 15,
-          "__comment": "ADR 0012 W3. NOT measured against a Perplexity invoice - carried over from the Anthropic/OpenRouter list price for the same model, because OMITTING the entry is worse: an unpriced model accrues $0 silently in usage accounting. Replace with the Agent API's published rate when confirmed; the number is visible and wrong-able here rather than absent and invisible."
+          "input": 2.0,
+          "output": 10.0,
+          "__comment": "MEASURED 2026-09-01 from `usage.cost`, which Perplexity returns on every response \u2014 this replaces a $3/$15 figure carried over from the Anthropic list price, which overstated cost by 50% on output. The previous comment asked for the Agent API's real rate; this is it. Uncorroborated by a second source: no anthropic provider block exists here to check it against, unlike the terra and gemini gateway rates which match their direct-vendor entries exactly."
         },
         "perplexity/sonar": {
-          "input": 1,
-          "output": 1
+          "input": 0.25,
+          "output": 2.5,
+          "__comment": "MEASURED 2026-09-01 from `usage.cost` over three samples, converging at 1164 output tokens. Replaces a bare $1/$1 with no provenance, which was wrong in BOTH directions \u2014 input 4x too high, output 2.5x too low, so /cost mis-stated any sonar session."
+        },
+        "openai/gpt-5.6-terra": {
+          "input": 2.0,
+          "output": 12.0,
+          "__comment": "MEASURED 2026-09-01 from `usage.cost`, and matches the direct-from-OpenAI entry exactly \u2014 so Perplexity passes the vendor rate through rather than marking up."
         }
       },
       "facts": {
