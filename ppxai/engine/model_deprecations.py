@@ -68,8 +68,14 @@ GEMINI_DEPRECATIONS: dict[str, Deprecation] = {
     ),
     "gemini-2.0-flash": Deprecation(
         shutdown_date="2026-06-01",
-        replacement="gemini-3-flash-preview",
-        reason="Gemini 2.0 family end-of-life; 3.x offers better performance at similar cost.",
+        replacement="gemini-3.6-flash",
+        reason=(
+            "Gemini 2.0 family end-of-life; 3.x offers better performance at "
+            "similar cost. Replacement moved from gemini-3-flash-preview to "
+            "gemini-3.6-flash for the same reason the 2.5-flash row did: a GA "
+            "successor beats a preview one for a hint users follow. Both "
+            "verified live 2026-09-01."
+        ),
     ),
     "gemini-2.0-flash-lite": Deprecation(
         shutdown_date="2026-06-01",
@@ -114,8 +120,13 @@ GEMINI_DEPRECATIONS: dict[str, Deprecation] = {
     ),
     "gemini-2.5-flash-image": Deprecation(
         shutdown_date="2026-10-02",
-        replacement="gemini-3.1-flash-image-preview",
-        reason="2.5 image generation retired; Nano Banana 2 is the successor.",
+        replacement="gemini-3.1-flash-image",
+        reason=(
+            "2.5 image generation retired; Nano Banana 2 is the successor. "
+            "Points at the GA id, not `-preview`: both were verified live "
+            "2026-09-01 and a GA successor beats a preview one for a hint "
+            "users follow. NEAREST Gemini deadline — 2026-10-02."
+        ),
     ),
 }
 

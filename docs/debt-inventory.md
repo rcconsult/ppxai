@@ -1004,10 +1004,29 @@ it. Filed 2026-08-01 from the provider-fleet web sweep (official
 example config rather than invented. The example config itself needed no
 change — it had already moved to 3.x.
 
-**What remains:** nothing on the deadline path. `gemini-3.1-pro-preview` is
-still a PREVIEW replacement — there is no GA successor in the Pro tier — and
-`gemini-3.1-flash-lite` carries its own 2027-05-07 sunset. Both are noted in
-the rows themselves; revisit when Google ships a GA Pro.
+**2026-09-01 — two more rows moved off PREVIEW replacements**, found by
+sorting the table by date and flagging every `-preview` target rather than
+re-reading the prose. Phase B established the rule (GA beats preview for a
+hint users follow) and applied it to `gemini-2.5-flash` only; two rows still
+broke it:
+
+| row | was | now | why |
+|---|---|---|---|
+| `gemini-2.5-flash-image` | `gemini-3.1-flash-image-preview` | **`gemini-3.1-flash-image`** | the GA id exists and is live, and this is the NEAREST Gemini deadline (2026-10-02) |
+| `gemini-2.0-flash` | `gemini-3-flash-preview` | **`gemini-3.6-flash`** | the same swap the 2.5-flash row already documented |
+
+All ids verified live 2026-09-01 against the real API (`generateContent`,
+owner's key): `gemini-3.6-flash`, `gemini-3-flash-preview`,
+`gemini-3.5-flash`, `gemini-3.1-flash-image` and
+`gemini-3.1-flash-image-preview` all answer; `gemini-3.1-pro`,
+`gemini-3.6-pro`, `gemini-3.5-pro` and `gemini-3.6-flash-image` are all
+NOT FOUND.
+
+**What remains:** nothing on the deadline path. Two rows still point at
+`gemini-3.1-pro-preview`, and that is correct — **there is still no GA
+successor in the Pro tier**, re-confirmed live rather than inherited from
+the August note. `gemini-3.1-flash-lite` carries its own 2027-05-07 sunset.
+Revisit when Google ships a GA Pro.
 
 **Facts (verified on ai.google.dev 2026-08-01):**
 1. **2.5-line shutdown, earliest 2026-10-16:** `gemini-2.5-flash` →
