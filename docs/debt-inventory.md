@@ -1370,6 +1370,52 @@ and §3's assumption that `api_path="auto"` had rows behind it — zero
 profiles used it.
 ---
 
+### Item 68 — three eager package imports force every remaining lazy import [architecture]
+
+**Filed 2026-09-01**, from the lazy-import cleanup. That work took internal
+function-level imports **143 → 31** and every remaining row now carries a
+reason (`tests/test_no_new_lazy_imports.py`). Of the 31, **4 are tagged
+`cycle`, and they are 2 problems, not 4** — each traces to a package
+`__init__` doing eager work, not to the modules the rows name.
+
+**A. `engine/__init__.py` eagerly imports `EngineClient` — 3 rows.**
+Reaching *anything* under `engine.` runs the chain
+`engine/__init__ → EngineClient → CheckpointManager → config.SESSIONS_DIR`,
+back into a half-initialised `config`. So `config.execution →
+engine.model_facts` fails to hoist **even though `model_facts` is now a clean
+leaf** (verified: it has zero provider imports and zero function-level
+imports after `0cb3db5b`). A module being a leaf does not help when the
+package is not. Reproduced on three independent rows, all failing with the
+identical `SESSIONS_DIR` ImportError.
+
+**B. `config`'s loader/tls/store ring — 1 row.** `loader → tls → store →
+loader`, entirely inside `config`. `tls.py:55` is `from .store import
+get_config`; `store.py:18` is `from .loader import load_config`. Breaking it
+means changing config initialisation order.
+
+**A third, adjacent:** `rendering/__init__ → base → commands/__init__ →
+handler → rich_renderer → base`. `base.py` needs `CommandResult`/`TextResult`
+only as registry keys, and `commands/results.py` is a stdlib-only leaf that
+loads standalone — so the edge that bites is `commands/__init__` eagerly
+importing `handler`. That is a real public surface
+(`tests/test_commands.py` imports `CommandHandler` from the package), which
+is why `import ppxai.rendering` fails standalone today and has for some time.
+
+**Why this is filed rather than fixed.** Each is a deliberate architectural
+decision with a public surface behind it — not import hygiene. Fixing one by
+relocating a dependency would make a number smaller and the architecture
+worse, which is the trade the cleanup declined every time it came up. Sizing
+them is the owner's call; they may also be worth doing never.
+
+**Three tags expired during this work**, which is the reason the fence
+records *why* a row is kept rather than just keeping it: two
+`markdown_links` rows tagged `cycle` were leftovers from before that helper
+was extracted to `common/` precisely to escape the cycle, and the
+`iterm2` row was a fallback probe. Every retained row now has a reason a
+test can re-derive from source.
+
+---
+
 ### Item 67 ✅ — ruff lint backlog + CI ratchet [tooling / hygiene]
 
 **Filed 2026-08-31.** Surfaced repeatedly during the Item 64/65/66 work,
