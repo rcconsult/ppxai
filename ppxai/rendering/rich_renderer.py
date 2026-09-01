@@ -58,6 +58,7 @@ from ..commands.results import (
     ToolExecutionResult,
     TextResult,
 )
+from ..common.markdown_links import rewrite_relative_links
 
 # Rich console instance for all renderers
 console = Console()
@@ -255,7 +256,6 @@ def render_markdown(result: MarkdownResult) -> None:
     lives in `ppxai/common/markdown_links.py` and is shared with
     the Textual TUI renderer.
     """
-    from ..common.markdown_links import rewrite_relative_links
 
     if result.message:
         console.print(f"[bold]{result.message}[/bold]\n")

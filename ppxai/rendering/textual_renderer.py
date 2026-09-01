@@ -50,6 +50,7 @@ from ..engine.preview_backend import (
 from ..preview_server import PreviewServer
 from ..tui.widgets.dialog import ConsentDialog, PromptDialog
 from .base import AsyncRenderer
+from ..common.markdown_links import rewrite_relative_links
 
 
 class TextualRenderer(AsyncRenderer):
@@ -409,7 +410,6 @@ async def render_markdown(renderer: TextualRenderer, result: MarkdownResult) -> 
     # Rewrite relative links to file:// URIs based on the source
     # file's directory so terminal/widget link clicks resolve to
     # actual files instead of "Hmmm... can't reach this page" pop-ups.
-    from ..common.markdown_links import rewrite_relative_links
     content = rewrite_relative_links(result.content, result.filepath)
 
     # Show in side panel using show_file_in_panel with markdown mode

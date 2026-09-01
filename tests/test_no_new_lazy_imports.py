@@ -55,9 +55,16 @@ PPXAI = pathlib.Path(__file__).resolve().parent.parent / "ppxai"
 #: "nobody got to it" from "moving this would break something", and the
 #: obvious next action (hoist the rest) is wrong for these.
 RETAINED_ON_PURPOSE = {
-    # --- genuine import cycles (8) -------------------------------------
+    # --- genuine import cycles (5) -------------------------------------
     # Hoisting raises ImportError from a partially initialized module.
-    # Step 3 fixes these structurally, via a Protocol in a leaf module.
+    #
+    # THREE OF THESE SHARE ONE CAUSE, and it is not the module named in the
+    # row: reaching anything under `engine.` runs `engine/__init__.py`, which
+    # eagerly imports EngineClient -> CheckpointManager -> `config.SESSIONS_DIR`,
+    # back into a half-initialised `config`. So `config.execution ->
+    # engine.model_facts` fails even though model_facts is now a clean leaf.
+    # The lever is `engine/__init__.py`, not these edges — a much larger change
+    # than step 3, and deliberately not attempted here.
     ("ppxai.config.execution", "ppxai.engine.facts_resolver"): "cycle",
     ("ppxai.engine.facts_resolver", "ppxai.engine.providers"): "patch-semantics",
     ("ppxai.engine.task_authorizer", "ppxai.engine.facts_resolver"): "patch-semantics",
@@ -65,9 +72,7 @@ RETAINED_ON_PURPOSE = {
     ("ppxai.common.consent", "ppxai.engine.tools.wrappers"): "cycle",
     ("ppxai.config.execution", "ppxai.engine.model_facts"): "cycle",
     ("ppxai.config.loader", "ppxai.config.tls"): "cycle",
-    ("ppxai.rendering.rich_renderer", "ppxai.common.markdown_links"): "cycle",
     ("ppxai.rendering.rich_renderer", "ppxai.tui.renderable.iterm2"): "cycle",
-    ("ppxai.rendering.textual_renderer", "ppxai.common.markdown_links"): "cycle",
     # --- patch semantics (25) ------------------------------------------
     # Hoisting binds the name at import time, so a test patching it on the
     # source module stops reaching it. Grep the imported name in tests/ to
@@ -125,9 +130,7 @@ BASELINE = {
     ("ppxai.engine.task_backend", "ppxai.config.execution"),
     ("ppxai.engine.tools.network_policy", "ppxai.config.execution"),
     ("ppxai.engine.tools.search_backends", "ppxai.config"),
-    ("ppxai.rendering.rich_renderer", "ppxai.common.markdown_links"),
     ("ppxai.rendering.rich_renderer", "ppxai.tui.renderable.iterm2"),
-    ("ppxai.rendering.textual_renderer", "ppxai.common.markdown_links"),
     ("ppxai.server.auth", "ppxai.config.execution"),
     ("ppxai.server.http", "ppxai.config.loader"),
     ("ppxai.server.routes.agent_v1", "ppxai.config.execution"),
