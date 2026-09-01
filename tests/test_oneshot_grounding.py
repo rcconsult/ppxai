@@ -238,10 +238,10 @@ class TestEffectivePath:
             # made both grounding cases fall through to closed-book.
             return_value=_StubProvider,
         ), patch(
-            "ppxai.config.facts_config.apply_provider_overrides",
+            "ppxai.engine.facts_resolver.apply_provider_overrides",
             return_value=ProviderCapabilities(web_search=web_capable),
         ), patch(
-            "ppxai.engine.model_facts.facts_without_an_instance",
+            "ppxai.engine.facts_resolver.facts_without_an_instance",
             return_value=ModelFacts(tool_mode=tool_mode),
         ):
             return oneshot_mod._oneshot_effective_path("p", "m")
@@ -330,7 +330,7 @@ class TestTypeBasedProviders:
     """
 
     def test_an_unregistered_provider_resolves_to_openai_compat(self):
-        from ppxai.engine.model_facts import provider_class_for
+        from ppxai.engine.facts_resolver import provider_class_for
         from ppxai.engine.providers import get_provider_class
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 

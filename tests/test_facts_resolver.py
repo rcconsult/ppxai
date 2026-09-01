@@ -23,10 +23,10 @@ does not use.
 
 import pytest
 
-from ppxai.config.facts_config import complete_record_for
-from ppxai.engine.model_facts import (
+from ppxai.engine.facts_resolver import (
     FactsResolver,
     capabilities_without_an_instance,
+    complete_record_for,
     facts_without_an_instance,
     provider_class_for,
 )

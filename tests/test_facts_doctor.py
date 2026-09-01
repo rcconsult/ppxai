@@ -30,6 +30,7 @@ import pytest
 
 from ppxai.commands import doctor as doctor_mod
 from ppxai.config import facts_config as fcmod
+from ppxai.engine import facts_resolver as frmod
 
 
 @pytest.fixture
@@ -264,20 +265,20 @@ class TestDoctorSuppliesTheFix:
         from ppxai.engine.model_facts import FACT_FIELDS
 
         config_file(_provider())
-        record = fcmod.complete_record_for("p", "gpt-5.2")
+        record = frmod.complete_record_for("p", "gpt-5.2")
         assert set(record) == set(FACT_FIELDS)
 
     def test_a_provider_record_is_complete(self, config_file):
         from ppxai.engine.model_facts import PROVIDER_FACT_FIELDS
 
         config_file(_provider())
-        record = fcmod.complete_record_for("p")
+        record = frmod.complete_record_for("p")
         assert set(record) == set(PROVIDER_FACT_FIELDS)
 
     def test_the_generated_record_is_json_serialisable(self, config_file):
         """It is written into a JSON file; a tuple would crash the write."""
         config_file(_provider())
-        json.dumps(fcmod.complete_record_for("openai", "o4-mini"))
+        json.dumps(frmod.complete_record_for("openai", "o4-mini"))
 
     def test_writing_it_back_preserves_behaviour(self, config_file, tmp_path):
         """The load-bearing property: the scaffold makes the implicit
@@ -290,7 +291,7 @@ class TestDoctorSuppliesTheFix:
             api_key="sk-test", provider_id="p"
         ).get_facts_for_model("o4-mini")
 
-        record = fcmod.complete_record_for("p", "o4-mini")
+        record = frmod.complete_record_for("p", "o4-mini")
         config_file(_provider(models={"o4-mini": {"facts": record}}))
         after = OpenAINativeProvider(
             api_key="sk-test", provider_id="p"
@@ -303,7 +304,7 @@ class TestDoctorSuppliesTheFix:
         from ppxai.engine.model_facts import FACT_FIELDS
 
         config_file(_provider())
-        record = fcmod.complete_record_for("p", "brand-new-model-9")
+        record = frmod.complete_record_for("p", "brand-new-model-9")
         assert set(record) == set(FACT_FIELDS)
         assert record["tool_mode"] == "prompt_based"
 

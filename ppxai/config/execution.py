@@ -326,11 +326,11 @@ def get_effective_oneshot_path(provider: str, model: str) -> str:
     (`/doctor`) can report the effective path per configured model without
     importing server routes — fastapi is an optional dependency there.
     """
-    from ..engine.model_facts import (
-        can_drive_a_tool_loop,
+    from ..engine.facts_resolver import (
         capabilities_without_an_instance,
         facts_without_an_instance,
     )
+    from ..engine.model_facts import can_drive_a_tool_loop
 
     run_cfg = get_execution_run_config()
 

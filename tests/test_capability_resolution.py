@@ -398,20 +398,21 @@ class TestTheUnmeasuredFloorIsProviderAware:
     """
 
     def test_an_unlisted_gemini_model_keeps_its_wire(self):
-        from ppxai.engine.model_facts import facts_without_an_instance
+        from ppxai.engine.facts_resolver import facts_without_an_instance
 
         facts = facts_without_an_instance("gemini", "gemini-9-does-not-exist")
         assert facts.wire_protocol == "generate_content"
 
     def test_but_tool_mode_stays_conservative(self):
         """The wire is knowable without measuring; tool support is not."""
-        from ppxai.engine.model_facts import facts_without_an_instance
+        from ppxai.engine.facts_resolver import facts_without_an_instance
 
         facts = facts_without_an_instance("gemini", "gemini-9-does-not-exist")
         assert facts.tool_mode == "prompt_based"
 
     def test_other_providers_keep_the_global_floor(self):
-        from ppxai.engine.model_facts import UNMEASURED, facts_without_an_instance
+        from ppxai.engine.facts_resolver import facts_without_an_instance
+        from ppxai.engine.model_facts import UNMEASURED
 
         facts = facts_without_an_instance("openai", "nobody-measured-this")
         assert facts == UNMEASURED

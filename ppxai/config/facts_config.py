@@ -57,7 +57,6 @@ from ..engine.model_facts import (
     LEGACY_KEY_TRANSLATIONS,
     PROVIDER_FACT_FIELDS,
     UNTRANSLATABLE_MODES,
-    FactsResolver,
     ModelFacts,
     ToolMode,
     apply_overrides,
@@ -382,40 +381,6 @@ def wrong_typed_fields_in_config() -> dict[str, list[str]]:
     return wrong
 
 
-def complete_record_for(
-    provider: str, model: str | None = None
-) -> dict[str, Any]:
-    """The full `facts` record `/doctor` writes to fix a partial block.
-
-    Q0e puts the verbosity burden on the tool, not the operator: with two
-    records and 17 fields between them, hand-writing a complete block for
-    every model is exactly the burden that makes people write partial ones.
-    This generates it.
-
-    Every field carries the value it currently resolves to, so writing the
-    result into the config is **behaviour-preserving by construction** — it
-    makes the implicit explicit and nothing else. Pass a `model` for a
-    `ModelFacts` record; omit it for the provider's `ProviderCapabilities`.
-    """
-    from dataclasses import asdict
-
-
-    # ADR 0012 refactor (a): ONE resolver, so the record `/doctor` offers to
-    # paste is the record the engine will resolve. This used to fall back to a
-    # bare `ProviderCapabilities()` for any name `get_provider_class` did not
-    # know — which agreed with the real answer only because that default and
-    # `OpenAICompatibleProvider.default_capabilities` happen to be equal.
-    # Change either and /doctor would have started scaffolding a record the
-    # engine does not use, silently and for every openai_compat provider.
-    resolver = FactsResolver(provider)
-
-    if model is None:
-        return asdict(resolver.capabilities())
-
-    record = asdict(resolver.facts(model))
-    if isinstance(record.get("restricted_params"), tuple):
-        record["restricted_params"] = list(record["restricted_params"])
-    return record
 
 
 def migration_plan() -> list[str]:

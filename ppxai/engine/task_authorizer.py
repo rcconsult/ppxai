@@ -458,10 +458,7 @@ def _resolve_task_default_grant() -> AgentSpec:
     pre-start 400 — the same `spec_from_mapping` normalizer profiles use, so a
     bad default grant can never become an async run failure or a silent bypass.
     """
-    from ..config.execution import (
-        get_execution_task_allow_user_default,
-        get_execution_task_default_grant,
-    )
+    from ..config.execution import get_execution_task_allow_user_default, get_execution_task_default_grant
 
     if not get_execution_task_allow_user_default():
         return AgentSpec()
@@ -961,10 +958,10 @@ def _reject_tool_incapable_model(
     KNOWN-bad combination into a clear error, never to block a combination
     it merely failed to look up.
     """
+    from .facts_resolver import FactsResolver
     if not tools or not provider or not model:
         return
     try:
-        from .model_facts import FactsResolver
 
         resolver = FactsResolver(provider)
         if not resolver.is_registered:
@@ -1019,9 +1016,9 @@ def _tool_capable_models_hint(provider: str) -> str:
     the provider's own shipped rows answer instead, so the hint degrades to
     "generally capable here" rather than to silence.
     """
+    from .facts_resolver import facts_without_an_instance
+    from .providers import get_provider_class
     try:
-        from .model_facts import facts_without_an_instance
-        from .providers import get_provider_class
 
         capable = []
         cfg = load_config() or {}

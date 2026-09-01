@@ -39,7 +39,8 @@ import pytest
 
 from ppxai.config.facts_config import resolve_model_facts
 from ppxai.engine.model_deprecations import RECOMMENDED_DEFAULTS
-from ppxai.engine.model_facts import provider_class_for, shipped_facts_for_model
+from ppxai.engine.facts_resolver import provider_class_for
+from ppxai.engine.model_facts import shipped_facts_for_model
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
