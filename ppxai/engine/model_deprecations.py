@@ -560,11 +560,13 @@ RECOMMENDED_NEW_MODELS: list[dict[str, str]] = [
         "model": "moonshotai/kimi-k3",
         "reason": "Best NIM model still live — the only Kimi id that answers 200 (2026-08-31 per-id sweep; k2.6 is listed but 404s \"not found for account\"). Replaces both the qwen recommendation and retired kimi-k2-thinking.",
     },
-    {
-        "provider": "nvidia",
-        "model": "deepseek-ai/deepseek-v4-pro-0813",
-        "reason": "DeepSeek V4 frontier (1.6T MoE, multimodal, 1M context). NVIDIA moved to date-suffixed ids; the unsuffixed form now answers 410.",
-    },
+    # REMOVED 2026-09-01: deepseek-ai/deepseek-v4-pro-0813. It was recommended
+    # here as a model to ADOPT while both suffixed deepseek ids failed to
+    # respond at all — three attempts, 45s / 120s / 300s-with-retry, ten
+    # minutes of wall clock, zero output. Its reason string also claimed the
+    # suffixed form was the working one, which that measurement contradicts.
+    # Recommending an id that never answers is worse than recommending
+    # nothing: the user adopts it and their next request hangs.
 ]
 
 # Models that the advisor recommends as safe defaults by provider.

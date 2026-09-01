@@ -93,17 +93,17 @@
         },
         "anthropic/claude-sonnet-5": {
           "name": "Claude Sonnet 5 (via Perplexity)",
-          "description": "Anthropic's Sonnet 5 served on Perplexity's /v1/responses wire. Verified live 2026-09-01. This is the agentic tier: when the Sonar chat-completions endpoint retires 2026-09-27, perplexity/sonar remains for grounding/search and the tool-driven work moves here.",
+          "description": "Anthropic's Sonnet 5 served on Perplexity's /v1/responses wire. Verified live 2026-09-01. This is the agentic tier: when the Sonar chat-completions endpoint retires 2026-09-27, perplexity/sonar remains for grounding/search and the tool-driven work moves here. PRICING: $2/$10 per MTok, MEASURED from usage.cost on 2026-09-01 and UNCORROBORATED \u2014 this repo has no anthropic provider block to check it against, unlike the terra and gemini rates which match their direct-vendor entries exactly.",
           "context_limit": 200000
         },
         "openai/gpt-5.6-terra": {
           "name": "GPT-5.6 Terra (via Perplexity)",
-          "description": "OpenAI's cost-efficient flagship served on Perplexity's /v1/responses wire. Verified live 2026-09-01. Same id ppxai uses direct from OpenAI, reachable on this account too.",
+          "description": "OpenAI's cost-efficient flagship served on Perplexity's /v1/responses wire. Verified live 2026-09-01. Same id ppxai uses direct from OpenAI, reachable on this account too. PRICING: $2/$12 per MTok, measured from usage.cost 2026-09-01 and matching the direct-from-OpenAI entry exactly \u2014 so Perplexity passes the vendor rate through rather than marking up.",
           "context_limit": 200000
         },
         "google/gemini-3.1-pro-preview": {
           "name": "Gemini 3.1 Pro (via Perplexity)",
-          "description": "Google's Pro tier served on Perplexity's /v1/responses wire. Verified live 2026-09-01. Still PREVIEW upstream \u2014 there is no GA successor in the Gemini Pro tier (re-confirmed 2026-09-01).",
+          "description": "Google's Pro tier served on Perplexity's /v1/responses wire. Verified live 2026-09-01. Still PREVIEW upstream \u2014 there is no GA successor in the Gemini Pro tier (re-confirmed 2026-09-01). PRICING: $2/$12 per MTok, measured from usage.cost 2026-09-01 and matching the direct-from-Google entry exactly.",
           "context_limit": 200000
         }
       },

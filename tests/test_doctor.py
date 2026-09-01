@@ -523,6 +523,55 @@ class TestDeprecationTableInvariants:
                 f"itself in the deprecation table"
             )
 
+    def test_every_recommended_model_is_one_we_ship(self):
+        """A recommendation must name a model in the configs we ship.
+
+        `test_recommended_new_models_are_not_deprecated` asks only "is this in
+        the deprecation table". That is necessary and not sufficient: on
+        2026-09-01 `deepseek-ai/deepseek-v4-pro-0813` was recommended as a
+        model to ADOPT while it failed to answer at all — three attempts,
+        45s / 120s / 300s-with-retry, ten minutes, zero output. It was never
+        in the deprecation table, so the existing check passed.
+
+        Removing it from the shipped config is what should have surfaced it,
+        and nothing connected the two. This closes that: a recommendation the
+        configs do not carry is a hint pointing at a model the user cannot
+        select, which is the same defect as pointing at a dead one.
+        """
+        import json
+        import pathlib
+        import subprocess
+
+        root = pathlib.Path(__file__).resolve().parent.parent
+        try:
+            names = subprocess.run(
+                ["git", "ls-files", "ppxai-config*.json"],
+                cwd=root, capture_output=True, text=True, timeout=30,
+            ).stdout.split()
+        except Exception:  # noqa: BLE001 — no git (sdist, vendored tree)
+            names = []
+        names = names or ["ppxai-config.example.json", "ppxai-config.json"]
+        paths = [root / n for n in names if (root / n).exists()]
+        assert paths, "no tracked config found — this check would pass vacuously"
+
+        for path in paths:
+            cfg = json.loads(path.read_text(encoding="utf-8"))
+            shipped = {
+                (prov, mid)
+                for prov, pb in (cfg.get("providers") or {}).items()
+                for mid in ((pb or {}).get("models") or {})
+            }
+            missing = [
+                (r["provider"], r["model"])
+                for r in RECOMMENDED_NEW_MODELS
+                if (r["provider"], r["model"]) not in shipped
+            ]
+            assert not missing, (
+                f"{path.name} does not carry these recommended models, so "
+                f"/doctor advises adopting something the user cannot select: "
+                f"{missing}"
+            )
+
     def test_recommended_new_models_are_not_deprecated(self):
         for rec in RECOMMENDED_NEW_MODELS:
             info = classify_model(rec["model"])
