@@ -1474,13 +1474,40 @@ a row rather than saving one.
 importing `store` at all — a signature change (pass the block in), not an
 import move. Not attempted.
 
-**A third, adjacent:** `rendering/__init__ → base → commands/__init__ →
-handler → rich_renderer → base`. `base.py` needs `CommandResult`/`TextResult`
-only as registry keys, and `commands/results.py` is a stdlib-only leaf that
-loads standalone — so the edge that bites is `commands/__init__` eagerly
-importing `handler`. That is a real public surface
-(`tests/test_commands.py` imports `CommandHandler` from the package), which
-is why `import ppxai.rendering` fails standalone today and has for some time.
+**C. `rendering/__init__ → base → commands/__init__ → handler →
+rich_renderer → base`. ✅ IMPLEMENTED 2026-09-01.**
+
+`import ppxai.rendering` had failed standalone for some time — the only one
+of the three with a live symptom. Nothing caught it because the app never
+imports `rendering` first; any new script or tool that did, broke.
+
+*Cut at the narrowest edge*, same method as B: `handler.py:568` had ONE call
+site for `RichRenderer` (`handler.py:592`), so that import moved into
+`handle_command()`. Every package now imports standalone, and **zero tests
+needed fixing** — 1,145 passed unchanged.
+
+*Two cheaper cuts were tried first and both failed*, which is why the fix is
+where it is:
+
+| attempt | result |
+|---|---|
+| `base.py` imports `commands.results` directly | still cycles — `import ppxai.commands.results` runs `commands/__init__` first |
+| hoist `handler → rich_renderer` (the mutation) | `ImportError: cannot import name 'Renderer'` — this IS the ring |
+
+*The public surface survives*, which is what separates C from A:
+`commands/__init__` re-exports 14 names from `handler` and all 14 still
+resolve as package attributes. A's `__getattr__` could not make that
+guarantee for PyInstaller.
+
+*Now fenced.* `TestEveryPackageImportsStandalone` imports each top-level
+package in a FRESH subprocess — within one process an earlier import primes
+`sys.modules` and hides the cycle entirely. Mutation-verified: hoisting the
+import back fails exactly the `ppxai.rendering` case and nothing else.
+
+⚠️ `handler.py` now has TWO lazy imports of `rich_renderer` for two different
+reasons — `:568` cuts this ring, `:625` is the sole statement of a `try:`
+(optional inline image preview). The fence tags them together; the comment
+names both.
 
 **Why this is filed rather than fixed.** Each is a deliberate architectural
 decision with a public surface behind it — not import hygiene. Fixing one by

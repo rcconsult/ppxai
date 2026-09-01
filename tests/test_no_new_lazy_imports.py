@@ -43,6 +43,8 @@ clean tree as much as a modified one, so verify TUI modules with the suite.
 
 import ast
 import pathlib
+import subprocess
+import sys
 
 import pytest
 
@@ -108,8 +110,14 @@ RETAINED_ON_PURPOSE = {
     # symmetry for no gain.
     ("ppxai.rendering.rich_renderer", "ppxai.tui.renderable.iterm2"): "fallback-probe",
     # --- empty block (1) -----------------------------------------------
-    # Sole statement of its block: removing it leaves `try:` with no body,
-    # and an import alone in a try is deliberately conditional.
+    # TWO sites share this pair, for two different reasons, and both must
+    # stay lazy:
+    #   handler.py:625  sole statement of its `try:` — deliberately
+    #                   conditional (inline image preview, may be absent)
+    #   handler.py:568  cuts the ring `rendering/__init__ -> base ->
+    #                   commands/__init__ -> handler -> rich_renderer`.
+    #                   Hoisting it is what makes `import ppxai.rendering`
+    #                   fail standalone (Item 68 C).
     ("ppxai.commands.handler", "ppxai.rendering.rich_renderer"): "empty-block",
 }
 
@@ -300,6 +308,42 @@ class TestNoNewLazyImports:
             "so it keeps describing the tree:\n  "
             + "\n  ".join(f"{m} -> {t}" for m, t in stale)
         )
+
+
+class TestEveryPackageImportsStandalone:
+    """Each top-level package must import on its own, in a fresh interpreter.
+
+    `import ppxai.rendering` raised `ImportError: cannot import name
+    'Renderer' from partially initialized module` for some time — the ring
+    `rendering/__init__ -> base -> commands/__init__ -> handler ->
+    rich_renderer -> base`. Nothing caught it because the app never imports
+    `rendering` first; any new script or tool that did, broke.
+
+    A fresh subprocess per package is the point: within one process an
+    earlier import can prime `sys.modules` and hide the cycle entirely.
+    """
+
+    @pytest.mark.parametrize(
+        "module",
+        [
+            "ppxai",
+            "ppxai.commands",
+            "ppxai.config",
+            "ppxai.engine",
+            "ppxai.rendering",
+            "ppxai.server",
+        ],
+    )
+    def test_the_package_imports_in_a_fresh_interpreter(self, module):
+        proc = subprocess.run(
+            [sys.executable, "-c", f"import {module}"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        tail = (proc.stderr or "").strip().splitlines()
+        detail = tail[-1] if tail else "(no stderr)"
+        assert proc.returncode == 0, f"`import {module}` fails standalone: {detail}"
 
 
 class TestRetentionReasonsStayHonest:

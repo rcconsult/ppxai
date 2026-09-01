@@ -6,16 +6,17 @@ in the TUI application (/help, /model, /save, /load, etc.).
 """
 
 
-import os
 import asyncio
+import os
 import re
 import warnings
 from pathlib import Path
 
 from prompt_toolkit import prompt as pt_prompt
-from prompt_toolkit.validation import Validator, ValidationError
+from prompt_toolkit.validation import ValidationError, Validator
 
 from ..common.consent import normalize_consent_response
+from ..common.logger import get_logger
 from ..config import (  # noqa: F401 — re-exported via commands/__init__.py
     get_api_key,
     get_base_url,
@@ -24,24 +25,22 @@ from ..config import (  # noqa: F401 — re-exported via commands/__init__.py
     get_provider_config,
     get_tui_theme,
 )
+from ..constants import ConsentDecision, ConsentResponse, ShellRiskLevel
 from ..engine import EngineClient
 from ..engine.types import EventType
 from ..prompts import CODING_PROMPTS
-from ..rendering.rich_renderer import RichRenderer
+from ..rich.themes import (
+    DEFAULT_THEME,
+    get_theme,
+)
 from ..rich.ui import (  # noqa: F401 — re-exported via commands/__init__.py
     console,
-    display_welcome,
     display_file_editing_help,
+    display_sessions,
+    display_welcome,
     select_model,
     select_provider,
-    display_sessions,
 )
-from ..rich.themes import (
-    get_theme,
-    DEFAULT_THEME,
-)
-from ..common.logger import get_logger
-from ..constants import ConsentResponse, ConsentDecision, ShellRiskLevel
 
 # Import command modules to trigger self-registration
 from .context import RichCommandContext
@@ -564,6 +563,10 @@ class CommandHandler:
             - True if should exit the application
             - False/None to continue
         """
+        # Lazy by necessity: `rendering/__init__` -> `base` -> this
+        # package's __init__ -> here. One call site.
+        from ..rendering.rich_renderer import RichRenderer
+
         command_parts = user_input.split(maxsplit=1)
         command = command_parts[0].lower()
         args = command_parts[1] if len(command_parts) > 1 else ""
