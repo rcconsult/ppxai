@@ -180,6 +180,13 @@ class TestAuditConfigModels:
 # -----------------------------------------------------------------------------
 
 
+#: The configs `test_every_recommended_model_is_one_we_ship` must check. Both
+#: are tracked and both are read at runtime — `ppxai-config.json` at the repo
+#: root SHADOWS `~/.ppxai/ppxai-config.json` (config/loader.py:213-225), so a
+#: recommendation missing from either one is user-visible.
+EXPECTED_CONFIGS = {"ppxai-config.example.json", "ppxai-config.json"}
+
+
 class TestFindMissingRecommended:
     def test_gemini_provider_present_suggests_new_models(self):
         # User has gemini configured but without the new 3.1 models.
@@ -552,7 +559,16 @@ class TestDeprecationTableInvariants:
             names = []
         names = names or ["ppxai-config.example.json", "ppxai-config.json"]
         paths = [root / n for n in names if (root / n).exists()]
-        assert paths, "no tracked config found — this check would pass vacuously"
+        # Non-empty is not enough. If `git ls-files` ever returned a SUBSET —
+        # one config instead of two — this check would still pass while
+        # covering half of what it used to, and nothing would say so. Pin the
+        # exact set so a narrowing is a failure rather than a quieter pass.
+        assert {p.name for p in paths} == EXPECTED_CONFIGS, (
+            f"expected to check exactly {sorted(EXPECTED_CONFIGS)}, got "
+            f"{sorted(p.name for p in paths)} — a config was added, renamed "
+            f"or dropped from git. Update EXPECTED_CONFIGS deliberately; do "
+            f"not let the set shrink silently."
+        )
 
         for path in paths:
             cfg = json.loads(path.read_text(encoding="utf-8"))
