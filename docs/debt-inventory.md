@@ -1370,7 +1370,7 @@ and §3's assumption that `api_path="auto"` had rows behind it — zero
 profiles used it.
 ---
 
-### Item 68 — three eager package imports force every remaining lazy import [architecture]
+### Item 68 ✅ — eager package imports forcing lazy imports [architecture]
 
 **Filed 2026-09-01**, from the lazy-import cleanup. That work took internal
 function-level imports **143 → 31** and every remaining row now carries a
