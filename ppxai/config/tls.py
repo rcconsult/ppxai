@@ -52,8 +52,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Union
 
-from .store import get_config
-
 #: The resolved policy as stored on `TLSSetting`: False (off), a CA bundle
 #: path (str), or True (system store). NOTE this is the *decision*, not
 #: what to hand httpx — use `tls_verify()`, which converts a bundle path
@@ -91,6 +89,12 @@ class TLSSetting:
 
 def _ssl_config_block() -> dict[str, Any]:
     """`network.ssl` from ppxai-config.json (absent/unreadable → {})."""
+    # Lazy by necessity: `store` imports `loader`, and `loader` imports
+    # this module, so a module-scope import here closes a ring. One call
+    # site, already guarded. Tests patch `store.get_config`, not this
+    # module's attribute — the source module is the real seam.
+    from .store import get_config
+
     try:
         cfg = get_config() or {}
     except Exception:  # noqa: BLE001 — unreadable config must not break TLS

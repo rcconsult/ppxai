@@ -1437,27 +1437,42 @@ That is a design change to the config/engine boundary.
 loader`, entirely inside `config`. `tls.py:55` is `from .store import
 get_config`; `store.py:18` is `from .loader import load_config`.
 
-*Attempted 2026-09-01, then reverted — and unlike A, the fix WORKED.* Cutting
-the ring at its narrowest edge (`tls → store`: one call site, already inside
-a `try/except`) let the baselined `loader → tls` row hoist, and `import
-ppxai` stayed clean. B is genuinely distinct from A — no engine involvement
-at all, so the prior that "B is A from inside config" was wrong.
+**✅ IMPLEMENTED 2026-09-01.** The ring is cut at its narrowest edge —
+`tls → store` is one call site already inside a `try/except` — which lets the
+baselined `loader → tls` row hoist to module scope. B is genuinely distinct
+from A: no engine involvement at all, so the prior that "B is A from inside
+config" was wrong, and testing it rather than inheriting it is what showed
+that.
 
-*Two reasons it was still reverted:*
+*Four tests were fixed rather than the change abandoned* (owner's call: "if
+tests break we fix the tests"). `tests/test_tls_config.py` patched
+`monkeypatch.setattr(tlsmod, "get_config", ...)`, which needs `get_config`
+to be a module ATTRIBUTE of `tls`; a lazy import removes it. Retargeted to
+`storemod` — the source module the call-time import now resolves through,
+which is the more honest seam anyway: it patches where the name LIVES rather
+than where it happened to be re-bound.
 
-1. **It trades a row rather than removing one.** Fence stayed at 31: `loader
-   → tls` left, `tls → store` arrived.
-2. **It breaks six tests**, and the reason is the one this arc keeps finding.
-   `tests/test_tls_config.py` does `monkeypatch.setattr(tlsmod,
-   "get_config", ...)`, which needs `get_config` to be a module ATTRIBUTE of
-   `tls`. A lazy import removes the attribute:
-   `AttributeError: module 'ppxai.config.tls' has no attribute 'get_config'`.
+*What it costs, stated plainly:* the fence stays at 31. `loader → tls`
+leaves, `tls → store` arrives. The gain is not the count — it is that the
+remaining lazy import is a single guarded call site with a stated reason,
+rather than a module-scope edge closing a three-module ring.
 
-So the current arrangement is the better of the two positions, not an
-accident: `tls → store` at module scope is what makes the TLS precedence
-tests able to patch config at all. Breaking this ring properly means giving
-`tls` its config values without importing `store` — a signature change, not
-an import move.
+*The trade is not avoidable, and both alternatives were measured.* A ring of
+three needs one edge cut; the only question is which:
+
+| cut at | result |
+|---|---|
+| `tls → store` (chosen) | **31** — trades `loader → tls` for `tls → store` |
+| `tls → store` AND hoist it too | ImportError — closes the ring again |
+| `store → loader` instead | **32** — adds a row, removes none (two call sites, not one) |
+
+A prediction that the fence would drop to 30 was tested and is wrong in both
+directions: hoisting both edges re-closes the ring, and moving the cut costs
+a row rather than saving one.
+
+**Fully breaking the ring** would mean giving `tls` its config values without
+importing `store` at all — a signature change (pass the block in), not an
+import move. Not attempted.
 
 **A third, adjacent:** `rendering/__init__ → base → commands/__init__ →
 handler → rich_renderer → base`. `base.py` needs `CommandResult`/`TextResult`

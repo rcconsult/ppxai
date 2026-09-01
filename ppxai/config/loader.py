@@ -23,6 +23,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from ..common.logger import get_logger
+from .tls import resolve_tls_verify
 
 # =============================================================================
 # Path Constants
@@ -180,7 +181,6 @@ def initialize() -> None:
 def _warn_if_tls_insecure() -> None:
     """Log a single warning when certificate verification is disabled."""
     try:
-        from .tls import resolve_tls_verify
 
         logger = get_logger("config")
         setting = resolve_tls_verify()

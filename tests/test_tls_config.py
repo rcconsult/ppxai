@@ -14,6 +14,7 @@ import ssl
 
 import pytest
 
+from ppxai.config import store as storemod
 from ppxai.config import tls as tlsmod
 
 #: The real reader, captured before the autouse fixture stubs it out, so
@@ -157,7 +158,7 @@ class TestPrecedence:
         # Undo the autouse stub: these cases must exercise the REAL
         # _ssl_config_block, which is where the error is swallowed.
         monkeypatch.setattr(tlsmod, "_ssl_config_block", _REAL_SSL_BLOCK)
-        monkeypatch.setattr(tlsmod, "get_config", boom)
+        monkeypatch.setattr(storemod, "get_config", boom)
         assert tlsmod.resolve_tls_verify().verify is True
 
     def test_unreadable_config_yields_empty_block_not_an_opt_out(
@@ -176,7 +177,7 @@ class TestPrecedence:
         # Undo the autouse stub: these cases must exercise the REAL
         # _ssl_config_block, which is where the error is swallowed.
         monkeypatch.setattr(tlsmod, "_ssl_config_block", _REAL_SSL_BLOCK)
-        monkeypatch.setattr(tlsmod, "get_config", boom)
+        monkeypatch.setattr(storemod, "get_config", boom)
         assert tlsmod._ssl_config_block() == {}
 
     @pytest.mark.parametrize(
@@ -185,7 +186,7 @@ class TestPrecedence:
     def test_malformed_network_block_is_ignored(self, monkeypatch, block):
         """A hand-edited config with the wrong shape must not disable TLS."""
         monkeypatch.setattr(tlsmod, "_ssl_config_block", _REAL_SSL_BLOCK)
-        monkeypatch.setattr(tlsmod, "get_config", lambda: block)
+        monkeypatch.setattr(storemod, "get_config", lambda: block)
         assert tlsmod._ssl_config_block() == {}
         assert tlsmod.resolve_tls_verify().verify is True
 
@@ -515,7 +516,7 @@ class TestConfigFileActuallyReachesTheResolver:
         )
         monkeypatch.setattr(tlsmod, "_ssl_config_block", _REAL_SSL_BLOCK)
         monkeypatch.setattr(
-            tlsmod,
+            storemod,
             "get_config",
             lambda: {"network": {"ssl": {"verify": False}}},
         )

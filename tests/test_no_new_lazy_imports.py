@@ -69,9 +69,9 @@ RETAINED_ON_PURPOSE = {
     ("ppxai.engine.facts_resolver", "ppxai.engine.providers"): "patch-semantics",
     ("ppxai.engine.task_authorizer", "ppxai.engine.facts_resolver"): "patch-semantics",
     ("ppxai.engine.task_authorizer", "ppxai.engine.providers"): "patch-semantics",
+    ("ppxai.config.tls", "ppxai.config.store"): "cycle",
     ("ppxai.common.consent", "ppxai.engine.tools.wrappers"): "cycle",
     ("ppxai.config.execution", "ppxai.engine.model_facts"): "cycle",
-    ("ppxai.config.loader", "ppxai.config.tls"): "cycle",
     # --- patch semantics (25) ------------------------------------------
     # Hoisting binds the name at import time, so a test patching it on the
     # source module stops reaching it. Grep the imported name in tests/ to
@@ -124,10 +124,10 @@ BASELINE = {
     ("ppxai.engine.facts_resolver", "ppxai.engine.providers"),
     ("ppxai.engine.task_authorizer", "ppxai.engine.facts_resolver"),
     ("ppxai.engine.task_authorizer", "ppxai.engine.providers"),
+    ("ppxai.config.tls", "ppxai.config.store"),
     ("ppxai.common.consent", "ppxai.engine.tools.wrappers"),
     ("ppxai.config.execution", "ppxai.config.tools"),
     ("ppxai.config.execution", "ppxai.engine.model_facts"),
-    ("ppxai.config.loader", "ppxai.config.tls"),
     ("ppxai.engine.providers.base", "ppxai.config.facts_config"),
     ("ppxai.engine.providers.gemini", "ppxai.usage"),
     ("ppxai.engine.providers.openai_compat", "ppxai.usage"),
