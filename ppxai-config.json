@@ -474,20 +474,6 @@
         "strip_json_from_text": true
       },
       "models": {
-        "deepseek-ai/deepseek-v4-pro-0813": {
-          "name": "DeepSeek V4 Pro",
-          "description": "DeepSeek frontier (1.6T MoE, multimodal). 1M-token context via Compressed Sparse Attention. Replaces retired deepseek-v3.2. Added 2026-05-31 from live NIM /models; not yet benchmarked.",
-          "context_limit": 1000000,
-          "max_tokens": 8192,
-          "__comment_migrated": "2026-08-31: renamed from `deepseek-ai/deepseek-v4-pro` (410 EOL 2026-08-07 (renamed)). Successor verified by CALLING it (HTTP 200), not by reading /models."
-        },
-        "deepseek-ai/deepseek-v4-flash-0731": {
-          "name": "DeepSeek V4 Flash",
-          "description": "Fast 284B variant of DeepSeek V4. 1M-token context, lower latency than V4 Pro. Added 2026-05-31; not yet benchmarked.",
-          "context_limit": 1000000,
-          "max_tokens": 8192,
-          "__comment_migrated": "2026-08-31: renamed from `deepseek-ai/deepseek-v4-flash` (410 EOL 2026-08-07 (renamed)). Successor verified by CALLING it (HTTP 200), not by reading /models."
-        },
         "moonshotai/kimi-k3": {
           "name": "Kimi K2.6",
           "description": "Moonshot K2.6 (non-reasoning). 262K context, strong open-weight coding/agentic. Replaces retired kimi-k2-thinking. Added 2026-05-31; not yet benchmarked.",

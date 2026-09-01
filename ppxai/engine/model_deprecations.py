@@ -363,19 +363,24 @@ NVIDIA_DEPRECATIONS: dict[str, Deprecation] = {
     ),
     "deepseek-ai/deepseek-v4-pro": Deprecation(
         shutdown_date="2026-08-07",
-        replacement="deepseek-ai/deepseek-v4-pro-0813",
+        replacement="moonshotai/kimi-k3",
         reason=(
             "HTTP 410: \"has reached its end of life on 2026-08-07T09:00:00Z\". "
-            "NOT withdrawn — NVIDIA moved to date-suffixed ids. The suffixed "
-            "form answers 200 (verified 2026-08-31), so this is a rename."
+            "NVIDIA moved to date-suffixed ids and the suffixed form answered "
+            "200 on 2026-08-31 — but on 2026-09-01 BOTH suffixed deepseek ids "
+            "failed to respond at all across three attempts, the last with a "
+            "300s timeout and a retry. Listed is not the same as usable, so "
+            "the hint points at `kimi-k3`, which answers."
         ),
     ),
     "deepseek-ai/deepseek-v4-flash": Deprecation(
         shutdown_date="2026-08-07",
-        replacement="deepseek-ai/deepseek-v4-flash-0731",
+        replacement="moonshotai/kimi-k3",
         reason=(
-            "HTTP 410, same EOL timestamp as the Pro sibling. Same rename to a "
-            "date-suffixed id; the suffixed form is present on /models."
+            "HTTP 410, same EOL timestamp as the Pro sibling. Its date-suffixed "
+            "form is present on /models but did not respond on 2026-09-01 "
+            "(same measurement as the Pro row), so the hint points at "
+            "`kimi-k3` rather than at a listed-but-unreachable id."
         ),
     ),
     # Found 2026-08-31 by sweeping the OPERATOR's configured ids rather than
@@ -440,7 +445,7 @@ NVIDIA_DEPRECATIONS: dict[str, Deprecation] = {
     ),
     "qwen/qwen2.5-coder-32b-instruct": Deprecation(
         shutdown_date="2026-05-31",
-        replacement="deepseek-ai/deepseek-v4-pro-0813",
+        replacement="moonshotai/kimi-k3",
         reason="Retired from NIM catalog. Use a current coder/agentic model (DeepSeek V4 date-suffixed, or Kimi K3).",
     ),
     "moonshotai/kimi-k2-thinking": Deprecation(
@@ -450,12 +455,12 @@ NVIDIA_DEPRECATIONS: dict[str, Deprecation] = {
     ),
     "deepseek-ai/deepseek-v3.2": Deprecation(
         shutdown_date="2026-05-31",
-        replacement="deepseek-ai/deepseek-v4-pro-0813",
+        replacement="moonshotai/kimi-k3",
         reason="Retired from NIM catalog; superseded by DeepSeek V4 (Pro/Flash).",
     ),
     "mistralai/devstral-2-123b-instruct-2512": Deprecation(
         shutdown_date="2026-05-31",
-        replacement="deepseek-ai/deepseek-v4-pro-0813",
+        replacement="moonshotai/kimi-k3",
         reason="Retired from NIM catalog (absent from live /models 2026-05-31).",
     ),
 }
