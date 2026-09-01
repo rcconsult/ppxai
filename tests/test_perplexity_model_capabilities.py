@@ -43,6 +43,26 @@ def _provider():
     return PerplexityProvider(api_key="k", base_url="https://api.perplexity.ai")
 
 
+def _models_named_in_hint(detail: str) -> list[str]:
+    """The model ids a refusal offers as alternatives.
+
+    The hint is built by `task_authorizer._tool_capable_models_hint` and
+    reads " Tool-capable models here: a, b, c." — parsed rather than
+    asserted whole, because its CONTENTS depend on the operator's config
+    and only its SHAPE is ours to fix.
+    """
+    marker = "Tool-capable models here:"
+    if marker not in detail:
+        return []
+    tail = detail.split(marker, 1)[1].strip()
+    # Model ids CONTAIN periods (`google/gemini-3.1-pro-preview`), so the
+    # sentence ends at the trailing period only — splitting on the first
+    # one silently truncated that id and dropped every model after it.
+    # Caught by running this helper on the real string rather than reading it.
+    tail = tail[:-1] if tail.endswith(".") else tail
+    return [m.strip() for m in tail.split(",") if m.strip()]
+
+
 class TestTableMatchesMeasurement:
     @pytest.mark.parametrize("model,capable", sorted(MEASURED.items()))
     def test_shipped_table(self, model, capable):
@@ -261,13 +281,88 @@ class TestAdmissionGuard:
         _reject_tool_incapable_model("perplexity", "sonar", [])
 
     def test_the_message_names_the_capable_models(self):
-        """An error that does not say what to do instead is a dead end."""
+        """An error that does not say what to do instead is a dead end.
+
+        The hint names models the operator can actually SELECT — it is built
+        from the live config (`task_authorizer._capable_models_hint`), not
+        from `PERPLEXITY_NATIVE_TOOL_MODELS`. Those are different questions
+        and this test used to conflate them: it asserted the hint names every
+        MEASURED model, which held only while the measured set and the
+        shipped config happened to coincide.
+
+        They stopped coinciding on 2026-09-01, when `sonar-pro` and
+        `sonar-reasoning-pro` were retired from both shipped configs (they
+        answer 400 "not supported" on the Responses wire, the only one that
+        survives Perplexity's 2026-09-27 cutover). The measurement record is
+        still true — they WERE natively tool-capable — but naming them in a
+        hint sends the operator to a model they cannot select, which is the
+        precise failure the surrounding comment calls "worse than no hint".
+
+        So: assert the hint is non-empty, actionable, and names only
+        selectable models. `TestMeasurementAgreesWithSeedRows` above is what
+        guards the measured set; this guards the hint.
+        """
         with pytest.raises(TaskAuthorizationError) as exc:
             _reject_tool_incapable_model("perplexity", "sonar", ["read_file"])
         detail = exc.value.detail
-        for model in PERPLEXITY_NATIVE_TOOL_MODELS:
-            assert model in detail
+
+        named = _models_named_in_hint(detail)
+        assert named, (
+            "the refusal names no alternative at all — a dead end, which is "
+            f"the one thing this test exists to prevent. detail={detail!r}"
+        )
+
+        # Every named model must be one the operator can actually reach, and
+        # must genuinely be tool-capable. A hint that names a retired or
+        # prompt-based model is worse than silence.
+        p = _provider()
+        for model in named:
+            assert model not in PERPLEXITY_TOOL_REJECTING_MODELS, (
+                f"hint names {model!r}, which REJECTS a tools array live"
+            )
+            assert p.get_facts_for_model(model).tool_mode != "prompt_based", (
+                f"hint names {model!r}, whose seed row resolves prompt_based "
+                "— routing the operator to the confabulating fallback"
+            )
+
         assert "Item 43" in detail  # so the reader can find the evidence
+
+    def test_the_hint_filters_prompt_based_models(self, monkeypatch):
+        """The filter is the hint's whole job, pinned against ANY config.
+
+        The test above can only catch a broken filter when the operator's
+        config happens to contain a prompt-based model. Measured: with the
+        four gateway models this repo ships, every one resolves `auto`, so
+        deleting the `!= "prompt_based"` check in
+        `_tool_capable_models_hint` changes the hint by nothing and the
+        test above still passes. Against a config carrying `sonar` it
+        fails. A fence whose teeth depend on the developer's config is not
+        a fence.
+
+        So this one supplies its own config: one tool-capable model and one
+        prompt-based, asserting only the prompt-based id is filtered out.
+        """
+        from ppxai.engine import task_authorizer as ta
+
+        monkeypatch.setattr(
+            ta,
+            "load_config",
+            lambda: {
+                "providers": {
+                    "perplexity": {
+                        "models": {
+                            "1": {"id": "sonar-pro"},   # auto
+                            "2": {"id": "sonar"},       # prompt_based
+                        }
+                    }
+                }
+            },
+        )
+        hint = ta._tool_capable_models_hint("perplexity")
+        named = _models_named_in_hint(hint)
+        assert named == ["sonar-pro"], (
+            f"expected the prompt-based model to be filtered out, got {named}"
+        )
 
     def test_the_message_names_the_requested_tools(self):
         with pytest.raises(TaskAuthorizationError) as exc:
