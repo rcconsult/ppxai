@@ -1405,13 +1405,29 @@ providers need config. `EngineClient` was never the constraint — it was one
 symptom of it, and the failure merely moved from `SESSIONS_DIR` to
 `get_extra_body`.
 
-*Why the revert, beyond "it did not help":* **no `.spec` file lists
-`ppxai.engine.client`**. PyInstaller finds it by following the eager import.
-Hiding it behind `__getattr__` makes it invisible to static analysis — the
-silent-module-drop failure this project has already shipped once, and
-exactly what `ppxai/__init__.py`'s own docstring warns about ("no lazy
-loading is needed"). A 48-module import saving is not worth a build that
-breaks in a way tests cannot see.
+*Why the revert, beyond "it did not help":* **two of the four PyInstaller
+specs would silently lose the module.**
+
+| spec | lists `ppxai.engine.client`? |
+|---|---|
+| `ppxai.spec` | ✅ line 67 |
+| `ppxai-server.spec` | ✅ line 73 |
+| `ppxaide.spec` | ❌ |
+| `ppxai-desktop.spec` | ❌ |
+
+The two that do not list it rely on PyInstaller following the eager import to
+find it — and `ppxaide` **does** use it (`ppxai/tui/app.py:45`,
+`from ppxai.engine import EngineClient`). No spec has a `collect_submodules`
+catch-all; `ppxai-desktop.spec` names exactly one hidden import
+(`ppxai.version`). Behind `__getattr__` the analyser cannot see the import,
+so those two builds ship without the module — the silent-module-drop this
+project has already shipped once, and what `ppxai/__init__.py`'s docstring
+means by "no lazy loading is needed". A 48-module import saving is not worth
+two builds breaking where no test can see it.
+
+(⚠️ A first version of this entry claimed *no* spec listed it. Two do. The
+conclusion survives, but the corrected count is what makes the argument
+checkable — it names which builds break and the line that proves it.)
 
 **So A is bigger than it looked:** breaking it means giving `config` a way to
 answer provider questions without importing providers, not moving an import.
