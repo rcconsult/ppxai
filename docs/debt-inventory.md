@@ -1378,15 +1378,44 @@ reason (`tests/test_no_new_lazy_imports.py`). Of the 31, **4 are tagged
 `cycle`, and they are 2 problems, not 4** — each traces to a package
 `__init__` doing eager work, not to the modules the rows name.
 
-**A. `engine/__init__.py` eagerly imports `EngineClient` — 3 rows.**
-Reaching *anything* under `engine.` runs the chain
-`engine/__init__ → EngineClient → CheckpointManager → config.SESSIONS_DIR`,
-back into a half-initialised `config`. So `config.execution →
-engine.model_facts` fails to hoist **even though `model_facts` is now a clean
-leaf** (verified: it has zero provider imports and zero function-level
-imports after `0cb3db5b`). A module being a leaf does not help when the
-package is not. Reproduced on three independent rows, all failing with the
-identical `SESSIONS_DIR` ImportError.
+**A. A `config` ↔ `engine` mutual dependency — 3 rows.** ⚠️ **This entry's
+first diagnosis was wrong and the attempt is recorded below**, because the
+correction is the useful part.
+
+*First diagnosis (incomplete):* `engine/__init__.py` eagerly imports
+`EngineClient`, so reaching anything under `engine.` runs
+`engine/__init__ → EngineClient → CheckpointManager → config.SESSIONS_DIR`
+back into a half-initialised `config`.
+
+*Attempted 2026-09-01, then reverted.* Deferring `EngineClient` behind a
+PEP 562 `__getattr__` in BOTH `engine/__init__.py` and `ppxai/__init__.py`
+(line 41 is the real driver — `import ppxai` alone loaded **50** engine
+modules) cut a bare `import ppxai.engine.types` from **72 ppxai modules to
+24**, with `from ppxai import EngineClient` still working. It unblocked
+**zero** baseline rows.
+
+*The actual blocker*, found by hoisting anyway and reading the new error:
+
+    config/__init__ → execution → facts_resolver → providers → base
+                                                        → config.get_extra_body
+
+and independently on another row, `engine.tools.wrappers →
+config.get_tool_description_overrides`. `config` needs provider facts;
+providers need config. `EngineClient` was never the constraint — it was one
+symptom of it, and the failure merely moved from `SESSIONS_DIR` to
+`get_extra_body`.
+
+*Why the revert, beyond "it did not help":* **no `.spec` file lists
+`ppxai.engine.client`**. PyInstaller finds it by following the eager import.
+Hiding it behind `__getattr__` makes it invisible to static analysis — the
+silent-module-drop failure this project has already shipped once, and
+exactly what `ppxai/__init__.py`'s own docstring warns about ("no lazy
+loading is needed"). A 48-module import saving is not worth a build that
+breaks in a way tests cannot see.
+
+**So A is bigger than it looked:** breaking it means giving `config` a way to
+answer provider questions without importing providers, not moving an import.
+That is a design change to the config/engine boundary.
 
 **B. `config`'s loader/tls/store ring — 1 row.** `loader → tls → store →
 loader`, entirely inside `config`. `tls.py:55` is `from .store import
