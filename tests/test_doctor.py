@@ -788,7 +788,7 @@ class TestGroundingSection:
             lambda: {"web_search": True, "grounding": True},
         )
         monkeypatch.setattr(
-            exec_mod, "get_effective_oneshot_path",
+            doctor_mod, "get_effective_oneshot_path",
             lambda p, m: {"gem": "native", "local": "search-loop"}[p],
         )
         text = "\n".join(doctor_mod._format_grounding_section())

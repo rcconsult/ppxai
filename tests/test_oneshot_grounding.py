@@ -207,7 +207,7 @@ class TestEffectivePath:
     """The ADR 0009 section 4 gating truth table.
 
     F5: the logic lives on the config axis
-    (`config.execution.get_effective_oneshot_path`) so `/doctor` shares the
+    (`engine.facts_resolver.get_effective_oneshot_path`) so `/doctor` shares the
     exact decision the route makes.
 
     **Retargeted for ADR 0012 section 2 Q0e.** The two inputs used to come
@@ -223,12 +223,12 @@ class TestEffectivePath:
     @staticmethod
     def _path(*, grounding=False, enrichment=False, web_capable=False,
               tool_mode="prompt_based"):
-        from ppxai.config import execution as exec_mod
+        from ppxai.engine import facts_resolver as fr_mod
         from ppxai.engine.model_facts import ModelFacts
         from ppxai.engine.types import ProviderCapabilities
 
         with patch.object(
-            exec_mod, "get_execution_run_config",
+            fr_mod, "get_execution_run_config",
             return_value={"web_search": enrichment, "grounding": grounding},
         ), patch(
             "ppxai.engine.providers.get_provider_class",
@@ -362,13 +362,15 @@ class TestTypeBasedProviders:
             encoding="utf-8",
         )
         monkeypatch.setattr(fc, "find_config_file", lambda: cfg)
+        from ppxai.engine import facts_resolver as fr_mod
+
         with patch.object(
-            exec_mod,
+            fr_mod,
             "get_execution_run_config",
             return_value={"web_search": False, "grounding": True},
         ):
             assert (
-                exec_mod.get_effective_oneshot_path("myrouter", "some-model")
+                fr_mod.get_effective_oneshot_path("myrouter", "some-model")
                 == "native"
             )
 

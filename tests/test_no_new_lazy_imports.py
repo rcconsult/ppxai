@@ -67,13 +67,11 @@ RETAINED_ON_PURPOSE = {
     # engine.model_facts` fails even though model_facts is now a clean leaf.
     # The lever is `engine/__init__.py`, not these edges — a much larger change
     # than step 3, and deliberately not attempted here.
-    ("ppxai.config.execution", "ppxai.engine.facts_resolver"): "cycle",
     ("ppxai.engine.facts_resolver", "ppxai.engine.providers"): "patch-semantics",
     ("ppxai.engine.task_authorizer", "ppxai.engine.facts_resolver"): "patch-semantics",
     ("ppxai.engine.task_authorizer", "ppxai.engine.providers"): "patch-semantics",
     ("ppxai.config.tls", "ppxai.config.store"): "cycle",
     ("ppxai.common.consent", "ppxai.engine.tools.wrappers"): "cycle",
-    ("ppxai.config.execution", "ppxai.engine.model_facts"): "cycle",
     # --- patch semantics (25) ------------------------------------------
     # Hoisting binds the name at import time, so a test patching it on the
     # source module stops reaching it. Grep the imported name in tests/ to
@@ -128,14 +126,12 @@ BASELINE = {
     ("ppxai.commands.handler", "ppxai.rendering.rich_renderer"),
     ("ppxai.commands.doctor", "ppxai.config"),
     ("ppxai.commands.doctor", "ppxai.config.execution"),
-    ("ppxai.config.execution", "ppxai.engine.facts_resolver"),
     ("ppxai.engine.facts_resolver", "ppxai.engine.providers"),
     ("ppxai.engine.task_authorizer", "ppxai.engine.facts_resolver"),
     ("ppxai.engine.task_authorizer", "ppxai.engine.providers"),
     ("ppxai.config.tls", "ppxai.config.store"),
     ("ppxai.common.consent", "ppxai.engine.tools.wrappers"),
     ("ppxai.config.execution", "ppxai.config.tools"),
-    ("ppxai.config.execution", "ppxai.engine.model_facts"),
     ("ppxai.engine.providers.base", "ppxai.config.facts_config"),
     ("ppxai.engine.providers.gemini", "ppxai.usage"),
     ("ppxai.engine.providers.openai_compat", "ppxai.usage"),

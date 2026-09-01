@@ -17,6 +17,7 @@ import ...` in `model_facts` or `providers` restores the cycle.
 from dataclasses import asdict, dataclass
 from typing import Any
 
+from ..config.execution import get_execution_run_config
 from ..config.facts_config import apply_provider_overrides, resolve_model_facts
 from .model_facts import ModelFacts, can_drive_a_tool_loop, shipped_facts_for_model
 from .providers.openai_compat import OpenAICompatibleProvider
@@ -178,3 +179,54 @@ def complete_record_for(
     if isinstance(record.get("restricted_params"), tuple):
         record["restricted_params"] = list(record["restricted_params"])
     return record
+
+
+def get_effective_oneshot_path(provider: str, model: str) -> str:
+    """The ADR 0009 §4 gating truth table, resolved from config alone.
+
+    `native` (the provider's own search) beats `search-loop` (the web_search
+    tool via the run tier) — enrichment XOR native, never both; anything
+    else is `closed-book` (pure LLM, no context enrichment):
+
+        grounding on AND capabilities.web_search          → "native"
+        elif web_search on AND tool-calling capable       → "search-loop"
+        else                                              → "closed-book"
+
+    Tool-calling capable = native function calling OR an explicit
+    per-provider/model `tool_calling` config block (the prompt-based path);
+    neither signal → conservative closed-book.
+
+    Lives here, not on the oneshot route, so the commands layer (`/doctor`)
+    can report the effective path per configured model without importing
+    server routes — fastapi is an optional dependency there. It sits in
+    `facts_resolver` rather than `config.execution` because it RESOLVES
+    provider facts: eleven of that module's twelve functions read config
+    keys, this one reached into `providers`, and that single edge was what
+    forced every `config -> engine` import to be lazy (Item 68 A).
+    """
+    run_cfg = get_execution_run_config()
+
+    # Endpoint ability and model ability are two separate questions with two
+    # separate records (ADR 0012 §2 Q0e), which is what this function used
+    # to approximate with a capabilities dict plus a tool_calling fallback.
+    try:
+        caps = capabilities_without_an_instance(provider)
+    except Exception:  # noqa: BLE001 — an unknown provider is not fatal here
+        caps = None
+    if run_cfg.get("grounding") and caps is not None and caps.web_search:
+        return "native"
+
+    # NOT `tool_mode != "prompt_based"`. The question here is whether the
+    # model can drive a tool loop at ALL, and prompt-based tool calling can
+    # — see `can_drive_a_tool_loop`. Asking the send-path question instead
+    # silently dropped enrichment for every prompt-based model.
+    try:
+        tool_capable = can_drive_a_tool_loop(
+            facts_without_an_instance(provider, model)
+        )
+    except Exception:  # noqa: BLE001 — conservative when unresolvable
+        tool_capable = False
+
+    if run_cfg.get("web_search") and tool_capable:
+        return "search-loop"
+    return "closed-book"

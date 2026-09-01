@@ -1429,9 +1429,33 @@ two builds breaking where no test can see it.
 conclusion survives, but the corrected count is what makes the argument
 checkable — it names which builds break and the line that proves it.)
 
-**So A is bigger than it looked:** breaking it means giving `config` a way to
-answer provider questions without importing providers, not moving an import.
-That is a design change to the config/engine boundary.
+**A1 ✅ IMPLEMENTED 2026-09-01 — and "config needs provider facts" was the
+wrong framing.** It is not a package-level dependency. Measured:
+`config/execution.py` has **twelve** functions; eleven read config keys and
+**one** — `get_effective_oneshot_path` — resolved provider facts. That single
+function was the entire `config → providers` edge, and no config module
+called it: both callers (`commands/doctor.py`, `server/routes/oneshot.py`)
+sit above the engine layer.
+
+Moved to `engine/facts_resolver.py`, the composition module from step 3 that
+already imports both sides. `engine → config.execution` was already a live
+module-scope direction (`engine/task_authorizer.py:56`), so the destination
+was proven before the move.
+
+*Result:* fence **31 → 29**, zero rows added; `config → engine` edges 4 → 2,
+and both survivors are data-only (`model_facts`, `types`) already importing
+at module scope. Six patch sites across `test_doctor.py` and
+`test_oneshot_grounding.py` were retargeted to wherever each name is now
+bound — the same seam correction as §B.
+
+**A2 — the `EngineClient` deferral — remains open and is NOT what A1 fixed.**
+The last two `cycle` rows fail on a different chain: `engine/__init__ →
+EngineClient → CheckpointManager → config.SESSIONS_DIR`. Verified after A1 —
+`common.consent → engine.tools.wrappers` still raises `SESSIONS_DIR`. Fixing
+it needs `__getattr__` on `engine/__init__` **plus** adding
+`ppxai.engine.client` to `ppxaide.spec` and `ppxai-desktop.spec` first,
+since neither lists it and `ppxaide` uses it at `tui/app.py:45`. Its only
+other gain is import cost (72 → 24 modules). Filed, not attempted.
 
 **B. `config`'s loader/tls/store ring — 1 row.** `loader → tls → store →
 loader`, entirely inside `config`. `tls.py:55` is `from .store import

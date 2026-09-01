@@ -40,6 +40,7 @@ from ..config.facts_config import (
     wrong_typed_fields_in_config,
 )
 from ..config.tls import resolve_tls_verify
+from ..engine.facts_resolver import get_effective_oneshot_path
 from ..engine.model_deprecations import (
     RECOMMENDED_DEFAULTS,
     audit_config_models,
@@ -612,16 +613,13 @@ def _format_grounding_section() -> list[str]:
     """Oneshot grounding path per configured provider (F5, ADR 0009 §4).
 
     Offline — resolved from config alone via the SAME function the
-    /v1/oneshot route uses (`config.execution.get_effective_oneshot_path`),
+    /v1/oneshot route uses (`engine.facts_resolver.get_effective_oneshot_path`),
     so what /doctor prints is what a request will actually do:
     native (provider-side search) / search-loop (web_search tool via the
     run tier) / closed-book (pure LLM, no context enrichment).
     """
     from ..config import get_available_providers, get_default_model
-    from ..config.execution import (
-        get_effective_oneshot_path,
-        get_execution_run_config,
-    )
+    from ..config.execution import get_execution_run_config
 
     lines: list[str] = []
     lines.append("Oneshot grounding (execution.run):")

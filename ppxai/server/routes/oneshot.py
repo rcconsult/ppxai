@@ -78,8 +78,8 @@ from ...config import (
     get_execution_run_config,
     get_provider_config,
 )
-from ...config.execution import get_effective_oneshot_path
 from ...engine import task_runner as _task_runner
+from ...engine.facts_resolver import get_effective_oneshot_path
 from ...engine.providers import create_provider
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
 from ...engine.task_authorizer import TIERS as _TIERS
@@ -217,7 +217,7 @@ def _oneshot_enrichment_enabled() -> bool:
 def _oneshot_effective_path(provider_name: str, model: str) -> str:
     """The ADR 0009 §4 gating truth table, resolved per request. Thin
     delegate — the logic lives on the config axis
-    (`config.execution.get_effective_oneshot_path`) so `/doctor` reports
+    (`engine.facts_resolver.get_effective_oneshot_path`) so `/doctor` reports
     the same decision without importing server routes (F5)."""
     return get_effective_oneshot_path(provider_name, model)
 
