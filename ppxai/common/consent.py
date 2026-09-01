@@ -26,6 +26,7 @@ from ..constants import (
     ConsentResponse,
     ShellRiskLevel,
 )
+from ..engine.tools.wrappers import get_registry
 from .logger import get_logger
 
 logger = get_logger("tui")
@@ -166,7 +167,6 @@ def _strip_transparent_wrapper_prefixes(command: str) -> str:
     is never blocked by a misconfigured registry.
     """
     try:
-        from ..engine.tools.wrappers import get_registry
         return get_registry().strip_transparent_prefixes(command)
     except Exception:
         return command

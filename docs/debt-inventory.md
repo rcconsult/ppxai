@@ -1448,14 +1448,30 @@ at module scope. Six patch sites across `test_doctor.py` and
 `test_oneshot_grounding.py` were retargeted to wherever each name is now
 bound — the same seam correction as §B.
 
-**A2 — the `EngineClient` deferral — remains open and is NOT what A1 fixed.**
-The last two `cycle` rows fail on a different chain: `engine/__init__ →
-EngineClient → CheckpointManager → config.SESSIONS_DIR`. Verified after A1 —
-`common.consent → engine.tools.wrappers` still raises `SESSIONS_DIR`. Fixing
-it needs `__getattr__` on `engine/__init__` **plus** adding
-`ppxai.engine.client` to `ppxaide.spec` and `ppxai-desktop.spec` first,
-since neither lists it and `ppxaide` uses it at `tui/app.py:45`. Its only
-other gain is import cost (72 → 24 modules). Filed, not attempted.
+**A2 ✅ IMPLEMENTED 2026-09-01 — and the `EngineClient` deferral was not the
+answer.** Three options were measured:
+
+| option | result |
+|---|---|
+| point `checkpoint` at `config.loader` instead of the package | ❌ `import ppxai` still fails; the error just moves `SESSIONS_DIR` → `PROVIDERS` — the next consumer of the half-built package |
+| **stop `common/__init__` eagerly importing `consent`** | ✅ **chosen** — two lines |
+| defer `EngineClient` behind `__getattr__` | ❌ unblocks zero rows, and hides `ppxai.engine.client` from PyInstaller (see A's attempt above) |
+
+The chosen fix is **dead surface removal, not a deferral**:
+`common/__init__.py` re-exported `ConsentManager`, which made importing
+*anything* from `ppxai.common` load `consent` → `engine.tools.wrappers` →
+back into a half-built `config`. **Nothing used the package attribute** —
+every consumer (`commands/handler.py`, `engine/consent_ops.py`,
+`tui/app.py`, `tests/test_common_consent.py`) imports from
+`ppxai.common.consent` directly. Deleting the import and its `__all__` entry
+let `consent → engine.tools.wrappers` hoist.
+
+*Result:* fence **29 → 28**, zero rows added, ruff unchanged at 352.
+
+Option 1 is worth recording as the shape it is: a **symptom queue**. Fixing
+the named consumer moves the error to the next one, exactly as the original
+A diagnosis moved `SESSIONS_DIR` → `get_extra_body`. A package
+half-initialised has no single victim.
 
 **B. `config`'s loader/tls/store ring — 1 row.** `loader → tls → store →
 loader`, entirely inside `config`. `tls.py:55` is `from .store import

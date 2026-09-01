@@ -57,21 +57,19 @@ PPXAI = pathlib.Path(__file__).resolve().parent.parent / "ppxai"
 #: "nobody got to it" from "moving this would break something", and the
 #: obvious next action (hoist the rest) is wrong for these.
 RETAINED_ON_PURPOSE = {
-    # --- genuine import cycles (4) -------------------------------------
-    # Hoisting raises ImportError from a partially initialized module.
+    # --- genuine import cycle (1) --------------------------------------
+    # `loader -> tls -> store -> loader`, entirely inside `config`. A ring of
+    # three needs ONE edge lazy; this is the narrowest (one call site, already
+    # guarded). Measured: hoisting it re-closes the ring, and moving the cut
+    # to `store -> loader` costs a row instead of saving one (Item 68 B).
     #
-    # THREE OF THESE SHARE ONE CAUSE, and it is not the module named in the
-    # row: reaching anything under `engine.` runs `engine/__init__.py`, which
-    # eagerly imports EngineClient -> CheckpointManager -> `config.SESSIONS_DIR`,
-    # back into a half-initialised `config`. So `config.execution ->
-    # engine.model_facts` fails even though model_facts is now a clean leaf.
-    # The lever is `engine/__init__.py`, not these edges — a much larger change
-    # than step 3, and deliberately not attempted here.
+    # Was 8 at the start of step 3. The other seven were not what their rows
+    # named — two expired tags, one fallback probe, and four that traced to a
+    # package __init__ doing eager work rather than to the modules involved.
     ("ppxai.engine.facts_resolver", "ppxai.engine.providers"): "patch-semantics",
     ("ppxai.engine.task_authorizer", "ppxai.engine.facts_resolver"): "patch-semantics",
     ("ppxai.engine.task_authorizer", "ppxai.engine.providers"): "patch-semantics",
     ("ppxai.config.tls", "ppxai.config.store"): "cycle",
-    ("ppxai.common.consent", "ppxai.engine.tools.wrappers"): "cycle",
     # --- patch semantics (25) ------------------------------------------
     # Hoisting binds the name at import time, so a test patching it on the
     # source module stops reaching it. Grep the imported name in tests/ to
@@ -130,7 +128,6 @@ BASELINE = {
     ("ppxai.engine.task_authorizer", "ppxai.engine.facts_resolver"),
     ("ppxai.engine.task_authorizer", "ppxai.engine.providers"),
     ("ppxai.config.tls", "ppxai.config.store"),
-    ("ppxai.common.consent", "ppxai.engine.tools.wrappers"),
     ("ppxai.config.execution", "ppxai.config.tools"),
     ("ppxai.engine.providers.base", "ppxai.config.facts_config"),
     ("ppxai.engine.providers.gemini", "ppxai.usage"),
