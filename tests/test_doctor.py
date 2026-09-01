@@ -570,14 +570,21 @@ class TestDeprecationTableInvariants:
         which is unlike every other table here: the models are not withdrawn,
         the wire they are served on is.
 
-        All three point at `perplexity/sonar` because that is the only Sonar
-        model measured live on the Responses wire (2026-08-31); `sonar-pro`
-        and `sonar-reasoning-pro` 400 there in both bare and namespaced form.
-        Naming a replacement that does not exist would be a worse hint than
-        naming a lighter one that does.
+        All four point at `perplexity/sonar` because that is the only Sonar
+        model measured live on the Responses wire (2026-08-31, re-measured
+        2026-09-01); `sonar-pro` and `sonar-reasoning-pro` 400 there in both
+        bare and namespaced form. Naming a replacement that does not exist
+        would be a worse hint than naming a lighter one that does.
+
+        `sonar-deep-research` joined on 2026-09-01. It had NO row while being
+        live on chat-completions and absent from Responses — so it would have
+        stopped working on the cutover with no migration hint at all. This
+        assertion is a SET rather than a count precisely so an addition has
+        to be justified here rather than silently absorbed.
         """
         assert set(PERPLEXITY_DEPRECATIONS) == {
             "sonar",
+            "sonar-deep-research",
             "sonar-pro",
             "sonar-reasoning-pro",
         }

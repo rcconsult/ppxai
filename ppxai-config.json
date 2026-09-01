@@ -64,44 +64,6 @@
         "frequency_penalty": 0.15
       },
       "models": {
-        "sonar": {
-          "name": "Sonar",
-          "description": "Lightweight search model with real-time grounding",
-          "__comment_best_for": "Quick file operations, simple edits, list/read tasks, directory navigation",
-          "generation_params": {
-            "temperature": 0.1,
-            "top_p": 0.85,
-            "max_tokens": 2048,
-            "frequency_penalty": 0.2
-          },
-          "__comment_RETIRES": "\u26a0\ufe0f Retires 2026-09-27 with the Perplexity chat-completions endpoint. Verified 2026-08-31: NOT served on /v1/responses. Use `perplexity/sonar` after that."
-        },
-        "sonar-pro": {
-          "name": "Sonar Pro",
-          "description": "Advanced search model for complex queries",
-          "context_limit": 200000,
-          "__comment_best_for": "Complex refactoring, multi-file changes, architecture decisions, code review, debugging. Best all-around model for agentic coding tasks (73.4% benchmark).",
-          "__comment_RETIRES": "\u26a0\ufe0f Retires 2026-09-27 with the Perplexity chat-completions endpoint. Verified 2026-08-31: NOT served on /v1/responses. Use `perplexity/sonar` after that."
-        },
-        "sonar-reasoning-pro": {
-          "name": "Sonar Reasoning Pro",
-          "description": "Precision reasoning with Chain of Thought capabilities (DeepSeek-R1)",
-          "__comment_best_for": "Algorithm design, bug root cause analysis, test generation, complex logic",
-          "__comment_warning": "Poor tool calling (50% benchmark) and code editing (28.6%) - avoid for agentic tasks that require direct tool execution",
-          "generation_params": {
-            "temperature": 0.2,
-            "top_p": 0.9,
-            "max_tokens": 12288,
-            "frequency_penalty": 0.15
-          },
-          "__comment_RETIRES": "\u26a0\ufe0f Retires 2026-09-27 with the Perplexity chat-completions endpoint. Verified 2026-08-31: NOT served on /v1/responses. Use `perplexity/sonar` after that."
-        },
-        "sonar-deep-research": {
-          "name": "Sonar Deep Research",
-          "description": "Exhaustive research with comprehensive reports (Async Jobs API)",
-          "__comment_best_for": "Comprehensive documentation, multi-step research, technical writing",
-          "__comment_note": "Uses Jobs API with reasoning_effort parameter (low/medium/high), not chat completions"
-        },
         "perplexity/sonar": {
           "name": "Sonar (Responses wire)",
           "description": "Lightweight search model with real-time grounding. The ONLY Sonar id that answers on /v1/responses \u2014 verified by calling it 2026-08-31. sonar-pro and sonar-reasoning-pro return 'validation failed: model not supported' there, bare and namespaced, so they have NO successor.",
@@ -512,76 +474,6 @@
         "strip_json_from_text": true
       },
       "models": {
-        "qwen/qwen3.5-122b-a10b": {
-          "name": "Qwen3.5 122B-A10B",
-          "description": "Frontier MoE (122B total, 10B active). NVIDIA-recommended params: temp=0.2, top_p=0.9, max_tokens=4096. Tier A benchmark: 77.4% (28/36).",
-          "context_limit": 256000,
-          "max_tokens": 4096,
-          "__comment_best_for": "All-around coding, multi-step tool loops, strong instruction following. Best Tier A NVIDIA model overall.",
-          "generation_params": {
-            "temperature": 0.2,
-            "top_p": 0.9
-          },
-          "__comment_extra_body": "v1.18.3 plumbed extra_body through openai_compat. To enable Qwen3.5's reasoning mode, uncomment the block below. Roughly doubles latency \u2014 leave off unless you need extended chain-of-thought. NVIDIA's chat_template_kwargs.enable_thinking is the toggle.",
-          "__example_extra_body": {
-            "chat_template_kwargs": {
-              "enable_thinking": true
-            }
-          },
-          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-07-20. No live successor in this family; kept rather than deleted so the tuning survives."
-        },
-        "qwen/qwen3-next-80b-a3b-instruct": {
-          "name": "Qwen3-Next 80B-A3B Instruct",
-          "description": "Hybrid Gated DeltaNet + MoE (80B total, 3B active). NVIDIA-recommended params: temp=0.7, top_p=0.8, max_tokens=4096. Tier A benchmark: 68.3% (24/36).",
-          "context_limit": 262144,
-          "max_tokens": 4096,
-          "__comment_best_for": "Cheap fast tool-calling for everyday tasks. Strong tool_calling/format/error_recovery (100%); weak instruction_following (28.6%).",
-          "generation_params": {
-            "temperature": 0.7,
-            "top_p": 0.8
-          },
-          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-07-27. No live successor in this family; kept rather than deleted so the tuning survives."
-        },
-        "mistralai/mistral-large-3-675b-instruct-2512": {
-          "name": "Mistral Large 3 675B",
-          "description": "Mistral's frontier dense model. NVIDIA-recommended params: temp=0.2, top_p=0.95, max_tokens=4096. Tier A benchmark: hung at agentic_tool_loops on free tier (no score).",
-          "context_limit": 256000,
-          "max_tokens": 4096,
-          "__comment_best_for": "Reasoning/instruction-following workloads on paid tier. Free-tier hangs on long tool loops \u2014 schedule with extra timeout.",
-          "generation_params": {
-            "temperature": 0.2,
-            "top_p": 0.95
-          },
-          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-07-23. No live successor in this family; kept rather than deleted so the tuning survives."
-        },
-        "nvidia/llama-3.3-nemotron-super-49b-v1.5": {
-          "name": "Llama-3.3 Nemotron Super 49B v1.5",
-          "description": "NVIDIA's reasoning-tuned Llama. Reasoning toggle via system prompt '/think' or '/no_think'. NVIDIA-recommended params: temp=0.6, top_p=0.95. Tier A benchmark: hung at agentic_tool_loops on free tier (no score).",
-          "context_limit": 131072,
-          "max_tokens": 8192,
-          "__comment_best_for": "Reasoning workloads on paid tier. Same free-tier hang pattern as mistral-large-3.",
-          "generation_params": {
-            "temperature": 0.6,
-            "top_p": 0.95
-          },
-          "reasoning_trigger": "/think",
-          "__comment_reasoning_trigger": "v1.18.3: nemotron toggles reasoning via in-prompt '/think' (enable) or '/no_think' (disable). Engine appends this to the system message before sending.",
-          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-08-26. No live successor in this family; kept rather than deleted so the tuning survives."
-        },
-        "meta/llama-4-maverick-17b-128e-instruct": {
-          "name": "Llama-4 Maverick 17B-128E",
-          "description": "Meta's Llama-4 MoE (17B active, 128 experts). Regionally restricted \u2014 returns 'This NIM is unavailable in your location' from EU.",
-          "context_limit": 1048576,
-          "max_tokens": 4096,
-          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-07-27. No live successor in this family; kept rather than deleted so the tuning survives."
-        },
-        "qwen/qwen3.5-397b-a17b": {
-          "name": "Qwen3.5 397B-A17B",
-          "description": "Larger sibling of qwen3.5-122b-a10b. Probe failed both 2026-05-01 and 2026-05-02 (endpoint timeout >60s). Try again periodically.",
-          "context_limit": 256000,
-          "max_tokens": 4096,
-          "__comment_DEAD": "\u26a0\ufe0f 2026-08-31: DEAD on NIM \u2014 410 EOL 2026-07-27. No live successor in this family; kept rather than deleted so the tuning survives."
-        },
         "deepseek-ai/deepseek-v4-pro-0813": {
           "name": "DeepSeek V4 Pro",
           "description": "DeepSeek frontier (1.6T MoE, multimodal). 1M-token context via Compressed Sparse Attention. Replaces retired deepseek-v3.2. Added 2026-05-31 from live NIM /models; not yet benchmarked.",

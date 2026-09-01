@@ -296,6 +296,18 @@ PERPLEXITY_DEPRECATIONS: dict[str, Deprecation] = {
             "pro line lands on the new wire."
         ),
     ),
+    "sonar-deep-research": Deprecation(
+        shutdown_date="2026-09-27",
+        replacement="perplexity/sonar",
+        reason=(
+            "Same as the pro ids: live on chat-completions, ABSENT from the "
+            "Responses wire (measured 2026-09-01), so it dies with that "
+            "endpoint. It had NO row until then — a configured model would "
+            "have stopped working with no migration hint at all. There is no "
+            "deep-research successor on Responses; `perplexity/sonar` is the "
+            "only Sonar id served there."
+        ),
+    ),
     "sonar-reasoning-pro": Deprecation(
         shutdown_date="2026-09-27",
         replacement="perplexity/sonar",
