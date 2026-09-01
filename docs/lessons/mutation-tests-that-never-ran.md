@@ -2,9 +2,9 @@
 
 **TL;DR:** Mutation testing answers "would anything catch this regression?"
 and its failure modes all resolve to **all green**, which is the same thing a
-covered guard looks like. Before believing a mutation result, prove two
-things: **the mutation applied to the line you meant**, and **the suite
-actually executed**.
+covered guard looks like. Before believing a mutation result, prove three
+things: **the mutation applied to the line you meant**, **the mutated line
+actually runs in this environment**, and **the suite actually executed**.
 
 **Verify with:**
 ```bash
@@ -13,10 +13,10 @@ grep -c 'not probe.get' ppxai/commands/doctor.py     # 2 — one anchor, two sit
 Two byte-identical guards, 68 lines apart, in different functions. A
 `replace(..., 1)` or an unanchored `sed` hits the first one every time.
 
-## Three ways a mutation result lied, all on 2026-08-31
+## Four ways a mutation result lied
 
-All three were produced by people deliberately being careful. None raised an
-error.
+The first three happened on 2026-08-31, the fourth on 2026-09-01. All four
+were produced by people deliberately being careful. None raised an error.
 
 ### 1. The anchor matched twice
 
@@ -89,9 +89,62 @@ fine. `-E` switches to ERE, where `(` opens a group — the pattern is still
 for `-E` "because it is the better regex" silently turns a search for
 parenthesised code into a search for nothing.
 
+### 4. The mutated line was never reached
+
+This one is the reason the rule below grew an extra point: **rules 1 and 2
+were both satisfied and the result still lied.** The anchor was unique and
+provably patched. The suite genuinely ran and reported `1 passed`. Both
+receipts were accurate; neither was sufficient, because the mutated line does
+not execute in the environment it was run in.
+
+That distinction is the point. A rule that *fails* is a bug in the rule; two
+rules that both *pass* while the conclusion is false is a gap in the rule
+**set** — which is what justifies adding a third rather than fixing an
+existing one.
+
+The fence in `tests/test_doctor.py` asks git which configs are tracked, and
+falls back to a hard-coded pair when git is unavailable:
+
+```python
+try:
+    names = subprocess.run(["git", "ls-files", "ppxai-config*.json"], ...)
+except Exception:              # no git (sdist, vendored tree)
+    names = []
+names = names or ["ppxai-config.example.json", "ppxai-config.json"]
+```
+
+Mutating the `git ls-files` argument to narrow the set is a correct mutation
+of a real line. Run it inside a `git archive` extract and it changes nothing:
+the extract has no `.git`, so the call raises, the fallback supplies both
+names anyway, and the mutated argument is dead code.
+
+Reproduce it — both halves matter:
+
+```bash
+git archive HEAD | tar -x -C /tmp/extract
+cd /tmp/extract && git ls-files 'ppxai-config*.json' | wc -l   # 0  <- fallback runs
+cd /path/to/repo && git ls-files 'ppxai-config*.json' | wc -l  # 2  <- git branch runs
+```
+
+That one command is the receipt. `0` means any mutation to the git branch is
+unreachable and the run proves nothing; `2` means the mutated line executes
+and a pass is real information.
+
+**This is the `git archive` trap wearing a second costume.** The same extract
+had already corrupted an earlier measurement by silently skipping
+git-dependent *tests*; here it silences a git-dependent *code path inside* a
+test. The root is the same and worth stating once: **a `git archive` extract
+is a tree without a repository**, so every `git` question inside it answers
+differently — and answers *quietly*, because the code catching that exception
+was written to be tolerant.
+
+Two sessions hit this within minutes of each other, from opposite directions,
+on the same fence — which is what moved it from a mistake to a documented
+shape.
+
 ## Why this species is worth its own lesson
 
-The three failures are the same shape: **a check that cannot fail reports the
+All four failures are the same shape: **a check that cannot fail reports the
 same thing as a check that passed.** That is also the shape of
 [`clean-break-config-moves-need-a-file-scan.md`](clean-break-config-moves-need-a-file-scan.md)
 (a moved key is invisible to every accessor) and of
@@ -122,10 +175,15 @@ document tells you to verify, its own examples are the first thing to verify.
    line by index and read it back.
 2. **Prove the suite ran.** Baseline count first; a non-zero test count is
    the receipt. Never let a filter be the only thing you read.
-3. **Prove the right test failed.** "1 failed" is not enough — check it is the
+3. **Prove the mutated line runs.** A unique anchor and a live suite still
+   prove nothing if the environment routes around the line — a fallback
+   branch, a feature flag, a platform guard. Assert the *precondition* that
+   selects the mutated path (`git ls-files ... | wc -l` returning 2, not 0)
+   before you believe a pass.
+4. **Prove the right test failed.** "1 failed" is not enough — check it is the
    test that *names* the guard. A mutation caught by an unrelated test means
    the fence you were checking still has nothing under it.
-4. **Restore and re-run.** Confirm green again before drawing any conclusion,
+5. **Restore and re-run.** Confirm green again before drawing any conclusion,
    and confirm the restore by content, not by having run a `cp`.
 
 ## Related

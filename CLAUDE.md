@@ -279,9 +279,10 @@ despite filename evidence", "ADR 0006 wire validator catches in-block
 key regressions".
 
 **When you discover a cross-host engineering hazard during a session**
-— meaning the lesson is true on any machine running this repo AND a
-reader can `grep`/open-a-file to confirm it — propose adding a
-`docs/lessons/<topic>.md` file in your turn summary. Don't auto-commit;
+— meaning the lesson is true on any machine running this repo, a
+reader can `grep`/open-a-file to confirm it, AND it changes what a
+reader DOES (a different check or default, not "be aware of X") —
+propose adding a `docs/lessons/<topic>.md` file in your turn summary. Don't auto-commit;
 the user decides whether the lesson is worth the repo's permanent
 attention. Per-host preferences and ephemeral session state stay in
 per-host memory only.

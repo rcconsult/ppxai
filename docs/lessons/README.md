@@ -12,7 +12,8 @@ Windows. Authoritative cross-host knowledge belongs in the repo, where
 
 ## What belongs here
 
-A lesson belongs in `docs/lessons/` when it meets **both** criteria:
+A lesson belongs in `docs/lessons/` when it meets **all three**
+criteria:
 
 1. **Cross-host relevance.** The lesson is true on any machine running
    this repo — not specific to one host's path quirks, shell, or
@@ -21,6 +22,21 @@ A lesson belongs in `docs/lessons/` when it meets **both** criteria:
 2. **Verifiable from code.** A reader can `grep`, open a file, or run
    a one-line check to confirm it. The lesson is grounded in
    observable repo state, not in "Claude on Windows once hit X."
+
+3. **Changes what a reader DOES.** The lesson names a different action,
+   check, or default — not merely a thing to be aware of. "Keep an eye
+   out for X" fails this test; "assert the precondition that selects
+   the mutated path before believing a pass" passes it.
+
+   The third criterion is the one that rejects a *true, verified,
+   cross-host* observation. On 2026-09-01 a fifth instance of
+   pipeline-exit-code laundering was found while verifying something
+   else — real, reproducible, and already documented in
+   [mutation-tests-that-never-ran.md](mutation-tests-that-never-ran.md)
+   §2. A sixth file saying "this keeps happening" would have added a
+   frequency claim and no new action. A repeat sighting of a documented
+   shape is evidence the existing lesson is right; it earns a sentence
+   there at most, never a file of its own.
 
 Examples of cross-host + grep-verifiable lessons:
 
@@ -82,8 +98,8 @@ it's probably an ADR or design doc, not a lesson.
 
 When you discover a hazard during a session:
 
-1. **Triage:** does it meet both criteria above (cross-host +
-   grep-verifiable)?
+1. **Triage:** does it meet all three criteria above (cross-host +
+   grep-verifiable + changes what a reader does)?
 2. **If yes:** propose adding a `docs/lessons/<topic>.md` file in
    the user-facing summary of your turn. Don't auto-commit;
    the user decides whether the lesson is worth the repo's
@@ -176,10 +192,13 @@ discoverable later.
   mutation test's failure modes all resolve to "all green", which is what a
   covered guard also looks like. An anchor that matches twice patches the
   wrong function; a runner that cannot start prints nothing; a trailing
-  `| tail` launders the exit code. Prove the mutation applied AND the suite
-  ran, and check WHICH test failed. Cost: two sessions read the same false
-  "not covered", and this file's own snippets were wrong until someone ran
-  them (2026-08-31).
+  `| tail` launders the exit code; and a correct mutation on an unreachable
+  line (no `.git` -> the fallback branch runs) passes every one of those
+  checks and still proves nothing. Prove the mutation applied, that the
+  mutated line RUNS here, and that the suite ran — then check WHICH test
+  failed. Cost: two sessions read the same false "not covered", this file's
+  own snippets were wrong until someone ran them (2026-08-31), and two
+  sessions hit the reachability shape on one fence (2026-09-01).
 - [ruff-safe-fixes-are-not-semantically-safe.md](ruff-safe-fixes-are-not-semantically-safe.md)
   — ruff's safe/unsafe split is confidence about SYNTAX, not meaning. A
   *safe* `UP045` fix rewrote `Optional[callable]` to `callable | None`,
