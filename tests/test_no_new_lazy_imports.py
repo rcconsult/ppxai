@@ -55,7 +55,7 @@ PPXAI = pathlib.Path(__file__).resolve().parent.parent / "ppxai"
 #: "nobody got to it" from "moving this would break something", and the
 #: obvious next action (hoist the rest) is wrong for these.
 RETAINED_ON_PURPOSE = {
-    # --- genuine import cycles (5) -------------------------------------
+    # --- genuine import cycles (4) -------------------------------------
     # Hoisting raises ImportError from a partially initialized module.
     #
     # THREE OF THESE SHARE ONE CAUSE, and it is not the module named in the
@@ -72,7 +72,6 @@ RETAINED_ON_PURPOSE = {
     ("ppxai.common.consent", "ppxai.engine.tools.wrappers"): "cycle",
     ("ppxai.config.execution", "ppxai.engine.model_facts"): "cycle",
     ("ppxai.config.loader", "ppxai.config.tls"): "cycle",
-    ("ppxai.rendering.rich_renderer", "ppxai.tui.renderable.iterm2"): "cycle",
     # --- patch semantics (25) ------------------------------------------
     # Hoisting binds the name at import time, so a test patching it on the
     # source module stops reaching it. Grep the imported name in tests/ to
@@ -99,6 +98,15 @@ RETAINED_ON_PURPOSE = {
     ("ppxai.server.routes.oneshot", "ppxai.server.routes.agent_v1"): "patch-semantics",
     ("ppxai.server.routes.sessions", "ppxai.config.execution"): "patch-semantics",
     ("ppxai.server.routes.sessions", "ppxai.server.auth"): "patch-semantics",
+    # --- fallback probe (1) --------------------------------------------
+    # Not a cycle: `tui/renderable/iterm2.py` imports stdlib + rich only and
+    # loads standalone. It sits inside `_render_image_iterm2`, one of a family
+    # of terminal-graphics probes whose sibling `_render_image_sixel` defers a
+    # genuinely optional third-party import. In both, `except Exception:
+    # return False` IS the fallback — each probe tries a protocol and reports
+    # failure so the caller tries the next. Hoisting one breaks the family's
+    # symmetry for no gain.
+    ("ppxai.rendering.rich_renderer", "ppxai.tui.renderable.iterm2"): "fallback-probe",
     # --- empty block (1) -----------------------------------------------
     # Sole statement of its block: removing it leaves `try:` with no body,
     # and an import alone in a try is deliberately conditional.
@@ -319,12 +327,36 @@ class TestRetentionReasonsStayHonest:
         )
 
     def test_the_reasons_are_from_the_known_set(self):
-        allowed = {"cycle", "patch-semantics", "empty-block"}
+        allowed = {"cycle", "patch-semantics", "empty-block", "fallback-probe"}
         bad = {k: v for k, v in RETAINED_ON_PURPOSE.items() if v not in allowed}
         assert not bad, (
             f"unknown retention reason(s) {bad}. Add the category here "
             f"deliberately rather than inventing one at a call site."
         )
+
+    def test_the_fallback_probe_row_still_sits_in_a_guard(self):
+        """`fallback-probe` claims the import is inside a try/except that IS
+        the fallback. Re-derive it: if someone removes the guard, the reason
+        stops being true and the row should be reconsidered."""
+        rows = [k for k, v in RETAINED_ON_PURPOSE.items() if v == "fallback-probe"]
+        assert rows, "the fallback-probe category is documented but unused"
+        for module, target in rows:
+            path = PPXAI.parent / (module.replace(".", "/") + ".py")
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            guarded = False
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Try) or not node.handlers:
+                    continue
+                for imp in ast.walk(node):
+                    if isinstance(imp, ast.ImportFrom) and target.endswith(
+                        "." + (imp.module or "").rsplit(".", 1)[-1]
+                    ):
+                        guarded = True
+            assert guarded, (
+                f"{module} is marked fallback-probe, but its import of "
+                f"{target} is no longer inside a try/except — the reason no "
+                f"longer holds"
+            )
 
     def test_the_empty_block_row_really_is_a_sole_statement(self):
         """The one claim that is cheap to verify from source, so verify it —
