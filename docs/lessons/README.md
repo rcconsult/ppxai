@@ -163,6 +163,15 @@ discoverable later.
   — a provider SDK's request model and the provider's REST API are two
   different validators. Constructing a request the SDK accepts proves the
   shape is well-formed locally, not that the endpoint will take it.
+- [a-check-that-never-ran-reports-success.md](a-check-that-never-ran-reports-success.md)
+  — verification tooling fails SILENT far more often than loud, and every
+  silent failure is shaped like success. `pytest | grep` returns exit 0 with
+  six tests failing (reproduced: direct 1, piped 0); a zero-output helper
+  exits non-zero and kills an `&&` chain before the real work; `ruff --select
+  <RULE>` reports a different count than a full run; a sweep missing one
+  patching idiom declared a batch safe that then shipped 15 failures. Read
+  the COUNTS, never the exit code — "5,684 passed" cannot be forged by a
+  pipe. A false "fine" ships; a false "broken" only costs time (2026-09-01).
 - [mutation-tests-that-never-ran.md](mutation-tests-that-never-ran.md) — a
   mutation test's failure modes all resolve to "all green", which is what a
   covered guard also looks like. An anchor that matches twice patches the
