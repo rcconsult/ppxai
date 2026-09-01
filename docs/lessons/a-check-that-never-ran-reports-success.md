@@ -3,8 +3,10 @@
 **TL;DR:** Verification tooling fails silent far more often than it fails
 loud. A pipe swallows an exit code, a helper that prints nothing exits
 non-zero and kills an `&&` chain, a rule selector changes which files are
-examined. In every case the signal you get back is the same one a healthy
-run produces. Read the **counts**, not the status.
+examined. Every one is a **proxy** — exit code, byte count, output presence —
+standing in for "did the work happen" and answering a different question. The
+fix is never a better proxy: check the thing itself, and prefer a receipt only
+the real work could produce.
 
 **Verify with:**
 ```bash
@@ -45,12 +47,31 @@ cd <dir> && git status --porcelain && git log -1 && pytest tests/
 ```
 
 The output file held only the *previous* run's `git log` line — 88 bytes,
-unchanged for 13 minutes. `tail -4` on it returns that line, which is exactly
-what a healthy run looks like before pytest flushes. The tell that was
-available the whole time and went unread: **no new bytes since launch**.
+unchanged for 13 minutes, which reads exactly like a healthy run that has not
+flushed yet.
 
 Never put a status- or grep-shaped command in an `&&` chain ahead of the
 thing you actually want to run.
+
+### 2b. …and byte count is not the tell either
+
+The obvious lesson from §2 is "watch for no new bytes since launch". That is
+**wrong**, and measuring it is how we found out: a command ending in `| tail
+-N` legitimately sits at **0 bytes for its entire run**, because `tail`
+buffers until the upstream pipeline ends.
+
+```bash
+pytest tests/... -q 2>&1 | tail -3 > run.log &
+sleep 3; wc -c < run.log   # 0   — healthy, still running
+wait;    wc -c < run.log   # 263 — flushed at the end
+```
+
+So byte count has both failure directions: piped, a live run looks dead;
+unpiped, §2's file looked alive because the bytes came from the `git log`
+*before* the pipe, never from pytest at all. Byte count answers "is the
+pipeline flushing", not "is the work running". **Check the process**
+(`tasklist | grep -ci python`) — that is what settled both cases: zero
+processes when it had died, six when it was fine.
 
 ### 3. `ruff --select <RULE>` reports a different count than a full run
 
@@ -85,12 +106,21 @@ itself is what lied.
 The asymmetry that matters: a false "broken" costs an investigation, a false
 "fine" ships. Bias the reading accordingly.
 
+**This file demonstrated its own thesis.** Its first version stated rule 2 as
+"a zero-length output file is a failure signal" — which would have had a
+reader kill a healthy suite, since a piped run sits at 0 bytes throughout.
+A lesson about checks that falsely report SUCCESS shipped a rule that falsely
+reports FAILURE: same species, opposite sign, and neither of us noticed until
+someone measured a live run. §2b is the correction.
+
 ## The rule
 
 1. **Counts are the receipt, not the exit code.** `5,684 passed, 32 skipped`
    cannot be forged by a pipe; `exit 0` demonstrably can.
-2. **A zero-length or unchanged output file is a failure signal**, not a
-   pending one. Compare bytes against launch, not against nothing.
+2. **Byte count is not a liveness signal in either direction.** Under
+   `| tail` a healthy run sits at 0 bytes throughout; unpiped, stale bytes
+   from an earlier command read as progress. Check whether the process
+   exists.
 3. **Never chain a status/grep-shaped command ahead of the real work.**
 4. **A zero-hit search is a hypothesis about your query**, not a fact about
    the code — especially when acting on it is destructive.
