@@ -1435,8 +1435,29 @@ That is a design change to the config/engine boundary.
 
 **B. `config`'s loader/tls/store ring — 1 row.** `loader → tls → store →
 loader`, entirely inside `config`. `tls.py:55` is `from .store import
-get_config`; `store.py:18` is `from .loader import load_config`. Breaking it
-means changing config initialisation order.
+get_config`; `store.py:18` is `from .loader import load_config`.
+
+*Attempted 2026-09-01, then reverted — and unlike A, the fix WORKED.* Cutting
+the ring at its narrowest edge (`tls → store`: one call site, already inside
+a `try/except`) let the baselined `loader → tls` row hoist, and `import
+ppxai` stayed clean. B is genuinely distinct from A — no engine involvement
+at all, so the prior that "B is A from inside config" was wrong.
+
+*Two reasons it was still reverted:*
+
+1. **It trades a row rather than removing one.** Fence stayed at 31: `loader
+   → tls` left, `tls → store` arrived.
+2. **It breaks six tests**, and the reason is the one this arc keeps finding.
+   `tests/test_tls_config.py` does `monkeypatch.setattr(tlsmod,
+   "get_config", ...)`, which needs `get_config` to be a module ATTRIBUTE of
+   `tls`. A lazy import removes the attribute:
+   `AttributeError: module 'ppxai.config.tls' has no attribute 'get_config'`.
+
+So the current arrangement is the better of the two positions, not an
+accident: `tls → store` at module scope is what makes the TLS precedence
+tests able to patch config at all. Breaking this ring properly means giving
+`tls` its config values without importing `store` — a signature change, not
+an import move.
 
 **A third, adjacent:** `rendering/__init__ → base → commands/__init__ →
 handler → rich_renderer → base`. `base.py` needs `CommandResult`/`TextResult`
