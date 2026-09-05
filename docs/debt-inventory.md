@@ -46,8 +46,8 @@ quoting them** — this table is a map, not a source.
 
 | # | Item | Status |
 |---|---|---|
-| **64** | re-probe Perplexity's pro line on the Responses wire | ⏰ **2026-09-27** — probes 1+2 done (both still 400); one more due before the date |
-| **54** | Gemini fleet migration (2.5-line sunset) | ⏰ **2026-10-16 earliest** — the only other dated item |
+| **64** | re-probe Perplexity's pro line on the Responses wire | ⏰ **2026-09-27 — the ONLY dated item left.** Probes 1+2 done (both still 400); one more due before the date. `/doctor` cannot discharge it — see the item |
+| **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
 | **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
 | **49** | cross-tier cost accounting; `/cost` under-reports | needs ADR 0008 (still **Proposed**) |
 | **3** | k8s session-manager security tests | trigger-deferred; quick pass done, full suite postponed |
@@ -856,7 +856,7 @@ legitimately separate per-tenant vs. operator views. KV-cache = acknowledge in
 docs (+ optional vLLM `/metrics` operator read), don't try to account
 per-request. **Until decided, disclose:** `/cost` = interactive session only.
 
-### Item 54 — Gemini fleet migration: 2.5-line sunset (earliest 2026-10-16), google-genai SDK behind, Gemini-3 `thought_signature` chain rules untested [providers / gemini / SDK]
+### Item 54 — Gemini fleet migration ✅ on the deadline path — open only on a TRIGGER (a GA Pro successor) [providers / gemini / SDK]
 
 **Planned:** `v1.19.x` — deadline-driven, the only fleet item with a date on
 it. Filed 2026-08-01 from the provider-fleet web sweep (official
@@ -1126,6 +1126,18 @@ deprecation-table rows for 5.5/5.5-pro if bench confirms. Effort: (a) ~30min;
 ---
 
 ### Item 64 — ⏰ re-probe Perplexity's pro line on the Responses wire BEFORE 2026-09-27 [providers / deadline]
+
+**`/doctor` cannot discharge this item, and it is worth saying why.** `/doctor`
+compares an operator's configured ids against the SHIPPED deprecation table
+(`audit_config_models` / `classify_model`) and separately asks each provider's
+`/models` what it advertises. Both directions assume the table is true. THIS
+item is the other direction: it asks whether the table itself still matches
+reality, which only a live call on the target wire can answer. The endpoint
+listing is not enough — `sonar-pro` is *listed* and still 400s on
+`/v1/responses`, the same "listed is not the same as usable" trap recorded
+against the NVIDIA deepseek ids in [[Item 38]]. So: `/doctor` validates configs
+against the table; this item validates the table against the provider. A green
+`/doctor` says nothing about whether probe 3 is still owed.
 
 **Status 2026-09-05 — 22 days out, and a live config was found pointing at
 the dying id.** Probes 1 and 2 stand: the pro line still 400s on Responses,
