@@ -13,6 +13,53 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
 
+### Fixed — the engine no longer resolves config through the server layer
+
+`engine/task_authorizer.py` read `execution.task.*`, `get_default_model`,
+`get_execution_default_subagent` and provider validation by looking
+`ppxai.server.routes.agent_v1` up in `sys.modules` and preferring **that
+module's** bindings, falling back to the config source only when the server was
+not imported. Two consequences:
+
+- **Layering inversion.** An engine module reached into the server layer at
+  runtime, contradicting its own header ("imports only `config/*` and
+  `engine/*`"), and returned different answers for the same call depending on
+  whether the server happened to be imported. A TUI (`ppxai`, `ppxaide`) and an
+  HTTP request could therefore be admitted under different configuration.
+- **Dead imports kept alive as patch targets.** `agent_v1` imported
+  `get_default_model`, `get_execution_default_subagent` and `get_tool_config`
+  and **never called any of them** — they existed only so tests could patch
+  them and the engine would pick them up through `sys.modules`.
+
+The root cause is that `from x import f` creates a *per-module binding*, so the
+same getter existed three times over (`task_authorizer`, `task_runner`,
+`agent_v1`) and patching one left the others on real config. Every such read now
+goes through the **defining module** (`_execution_config.get_execution_task_config()`),
+which makes `ppxai.config.execution` the single patch point for all readers. The
+route's `_validate_provider_or_400` became a thin HTTP wrapper over
+`task_authorizer.validate_provider_or_error`, so provider validation has one
+implementation instead of two that could drift.
+
+No behavior change for a correctly-configured deployment; the fix removes a
+class of silent divergence between the HTTP and in-process tiers. Pinned by
+`tests/test_task_authorization_parity.py::TestOneBindingOnePatchPoint`, which
+fails if any `ppxai/engine/**` module names `ppxai.server.*` at runtime or if any
+of the four getters reappears as a module attribute.
+
+### Fixed — config errors in the `/task` backend are logged, not silent
+
+`engine/task_backend.py` swallowed `execution.collect` read failures at three
+sites with no diagnostic, so a malformed config was indistinguishable from an
+operator who had chosen the default. The broad `except` is deliberate — the
+fallback is the shipped default, and a config typo must not eat a completed
+run's result — but it is now **broad and logged** (`logger.debug(...,
+exc_info=True)`) rather than broad and silent.
+
+`InProcessTaskBackend.resume` also caught bare `Exception` around its tier gate
+and reported `str(exc)` as the refusal reason, which turned any genuine defect
+inside the gate into a polite "tier disabled" message. It now catches only
+`TaskAuthorizationError`.
+
 ### Changed — OpenAI default is now `gpt-5.6-terra` (fresh installs)
 
 > ⚠️ **Default change.** `ppxai-config.example.json` sets both
