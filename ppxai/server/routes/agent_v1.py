@@ -91,7 +91,15 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from ...common.logger import get_logger
-from ...config.execution import (get_execution_default_subagent, get_execution_task_config)  # noqa: F401 — patched/read by tests
+# Config getters are called as ATTRIBUTES of their defining module, never
+# symbol-imported. A `from ...config.execution import get_execution_task_config`
+# here would be a second binding to the one the engine reads, so patching either
+# would leave the other on real config — the trap documented at length in
+# `engine/task_authorizer.py`. `get_default_model`,
+# `get_execution_default_subagent` and `get_tool_config` used to be imported
+# here and never called: they were monkeypatch targets that the engine picked up
+# by rummaging in `sys.modules`. That path is gone, and so are they.
+from ...config import execution as _execution_config
 from ...engine import (task_authorizer as _authz, task_runner as _task_runner)
 from ...engine.agent_runs import RunMeta, resume_refusal
 from ...engine.task_authorizer import (
@@ -121,8 +129,6 @@ from .oneshot import (  # noqa: F401 — ONESHOT_SEARCH_ITERATIONS read by tests
     _validate_provider_or_400,
 )
 from pathlib import Path  # noqa: F401 — patched by tests
-from ...config import get_default_model  # noqa: F401 — patched by tests
-from ...config.tools import get_tool_config  # noqa: F401 — patched by tests
 
 logger = get_logger("server")
 
@@ -805,7 +811,7 @@ async def list_agent_runs(
     # T6: lazy retention backstop — an expired completed_pending_ack hold is
     # finalized the next time anyone lists the runs (no timer task).
     retention = float(
-    get_execution_task_config()["budgets"]["result_retention_s"]
+    _execution_config.get_execution_task_config()["budgets"]["result_retention_s"]
 )
     runs = [registry.maybe_reap_hold(m, retention) for m in registry.list_runs()]
     if caller is not None:
@@ -828,7 +834,7 @@ async def get_agent_run(run_id: str, request: Request) -> RunMetaResponse:
     _authorize_run_access(request, meta)
     # T6: single-run lazy reap (already-loaded meta — no extra disk read).
     retention = float(
-    get_execution_task_config()["budgets"]["result_retention_s"]
+    _execution_config.get_execution_task_config()["budgets"]["result_retention_s"]
 )
     meta = registry.maybe_reap_hold(meta, retention)
     return RunMetaResponse.from_meta(meta)
@@ -947,7 +953,7 @@ async def resume_agent_run(run_id: str, request: Request) -> dict:
     execution.task.enabled gate as POST /task)."""
     # Same trusted-operator gate as creating a /task run — a resume re-enters
     # the tool-calling tier.
-    if not get_execution_task_config().get("enabled", False):
+    if not _execution_config.get_execution_task_config().get("enabled", False):
         raise HTTPException(
             status_code=403,
             detail=(

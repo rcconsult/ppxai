@@ -94,7 +94,7 @@ def captured(monkeypatch):
     monkeypatch.setattr(task_runner, "EngineClient", lambda *a, **k: _FakeEngine())
     monkeypatch.setattr(task_runner, "compose_agent_system_prompt", lambda s: "sys")
     monkeypatch.setattr(
-        task_runner, "get_execution_task_config",
+        execution_cfg, "get_execution_task_config",
         lambda: {"consent": {"spawn_consent": "deny", "consent_ttl_s": 300},
                  "sandbox": {"enforcement": "off"}},
     )

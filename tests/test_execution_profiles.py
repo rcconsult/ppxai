@@ -28,6 +28,9 @@ from fastapi.testclient import TestClient
 from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 from ppxai.engine.agent_spec import AgentSpecError, spec_from_mapping
 from ppxai.engine.tools.network_policy import apply_egress_ceiling
+from ppxai.engine import task_authorizer as _authz
+from ppxai.config import execution as _exec_cfg
+from ppxai.config import tools as _tools_cfg
 
 # ---------------------------------------------------------------------------
 # Config readers
@@ -162,13 +165,13 @@ def task_client(tmp_path, monkeypatch):
     reg = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
     monkeypatch.setattr(state, "_agent_run_registry", reg)
 
-    real = agent_v1.get_execution_task_config
+    real = _exec_cfg.get_execution_task_config
     overrides = {"enabled": True}
     monkeypatch.setattr(
-        agent_v1, "get_execution_task_config", lambda: {**real(), **overrides}
+        _exec_cfg, "get_execution_task_config", lambda: {**real(), **overrides}
     )
-    monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
-    monkeypatch.setattr(agent_v1, "get_tool_config", lambda tool: {})
+    monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
+    monkeypatch.setattr(_tools_cfg, "get_tool_config", lambda tool: {})
 
     captured = {}
 
@@ -488,7 +491,7 @@ def _pin_subagent(monkeypatch, provider, model):
     from ppxai.config import execution as exec_mod
     from ppxai.server.routes import agent_v1
     sub = {"provider": provider, "model": model}
-    monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: sub)
+    monkeypatch.setattr(_exec_cfg, "get_execution_default_subagent", lambda: sub)
     monkeypatch.setattr(exec_mod, "get_execution_default_subagent", lambda: sub)
 
 

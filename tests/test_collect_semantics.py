@@ -19,6 +19,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
+from ppxai.engine import task_authorizer as _authz
+from ppxai.config import execution as _exec_cfg
 
 # ---------------------------------------------------------------------------
 # Config accessor
@@ -66,9 +68,9 @@ def v1_client(tmp_path, monkeypatch):
 
     reg = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
     monkeypatch.setattr(state, "_agent_run_registry", reg)
-    real = agent_v1.get_execution_task_config
+    real = _exec_cfg.get_execution_task_config
     monkeypatch.setattr(
-        agent_v1, "get_execution_task_config",
+        _exec_cfg, "get_execution_task_config",
         lambda: {**real(), "enabled": True},
     )
     # Pin the one-off grant rule off — these tests are about the hold.
@@ -147,7 +149,7 @@ class TestHoldResultMapping:
         from ppxai.server.routes import agent_v1
         _pin_collect(monkeypatch, mode)
         monkeypatch.setattr(
-            agent_v1, "_validate_provider_or_400", lambda name: None
+            _authz, "validate_provider_or_error", lambda name: None
         )
 
         def _stub_runner(registry, **kw):

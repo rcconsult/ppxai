@@ -36,6 +36,7 @@ import pytest
 
 from ppxai.engine import task_runner
 from ppxai.server.routes import agent_v1
+from ppxai.config import execution as _exec_cfg
 
 
 class _StopAfterCapture(Exception):
@@ -140,7 +141,7 @@ def _install_runner_stubs(monkeypatch, spawn_tool):
     monkeypatch.setattr(task_runner, "EngineClient", lambda *a, **k: _FakeEngine())
     monkeypatch.setattr(task_runner, "compose_agent_system_prompt", lambda s: "sys")
     monkeypatch.setattr(
-        task_runner, "get_execution_task_config",
+        _exec_cfg, "get_execution_task_config",
         lambda: {"consent": {"spawn_consent": "deny", "consent_ttl_s": 300}},
     )
 

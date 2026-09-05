@@ -42,22 +42,24 @@ What is NOT here
 
 Layering: imports only `config/*` and `engine/*`. It must never import
 `fastapi`, `server/`, or `commands/` — fastapi is an optional dependency at
-the commands layer, so a TUI import of this module has to stay cheap.
+the commands layer, so a TUI import of this module has to stay cheap. The rule
+covers RUNTIME too: no `sys.modules` lookup of a `ppxai.server.*` module, which
+is how an earlier version resolved config and provider validation through the
+route's bindings. That made this module answer differently depending on whether
+the server happened to be imported. See the config-reads note below.
 """
 
 from __future__ import annotations
 
 import os
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from ..config import execution as _execution_config
-from ..config import get_default_model
+from ..config import providers as _providers_config
+from ..config import tools as _tools_config
 from ..config.loader import load_config
-from ..config.providers import get_api_key, get_available_providers
-from ..config.tools import get_tool_config
 from .agent_skill import AgentSkillError, LoadedSkill, load_skill
 from .agent_spec import (
     AgentSpec,
@@ -89,25 +91,48 @@ class TaskAuthorizationError(Exception):
         super().__init__(detail)
 
 
+# --- config reads: one binding, one patch point ----------------------------
+#
+# Every `execution.*`, `tools.*` and provider-default read in this module goes
+# through the accessors below, and each resolves the getter as an ATTRIBUTE OF
+# ITS DEFINING MODULE rather than as a symbol imported into this one.
+#
+# That is not a style preference. `from ..config.execution import
+# get_execution_task_config` creates a PER-MODULE BINDING: this module,
+# `server/routes/agent_v1.py` and `engine/task_runner.py` would each hold a
+# separate reference to the same function, so patching one leaves the other two
+# reading real config. That trap is what produced the previous version of this
+# block, which resolved config through the ROUTE's binding by rummaging in
+# `sys.modules` for `ppxai.server.routes.agent_v1` — an engine module reading
+# the server layer at runtime, inverting the layering the header promises, and
+# giving the same call two different answers depending on whether the server
+# happened to be imported.
+#
+# Reading `_execution_config.get_execution_task_config()` hands every caller
+# the same object, so `ppxai.config.execution` is the ONE patch point for all
+# of them. Adding a read that bypasses these accessors is the bug: it passes
+# until someone patches config and wonders why this module ignored it.
+# `tests/test_task_authorization_parity.py` pins both halves.
+
+
 def _task_cfg() -> dict[str, Any]:
-    """Single indirection for `execution.task.*` reads in this module.
+    """`execution.task.*`, via its defining module. See the note above."""
+    return _execution_config.get_execution_task_config()
 
-    `get_execution_task_config` is imported per-module across the codebase
-    (`agent_v1`, `task_runner`, here). Patching one module's binding does not
-    affect the others — a trap that has cost real time, and one this module
-    would make worse by adding a third binding that every existing test would
-    have to learn about.
 
-    So the read resolves through the ROUTE's binding when the route module is
-    loaded, falling back to the config source. That keeps the established
-    `monkeypatch.setattr(agent_v1, "get_execution_task_config", ...)` idiom
-    authoritative for the gate that used to live there, while a pure-engine
-    caller (a TUI, an SDK embedder — no server import) still reads real
-    config. Tests with no route in play can patch `task_authorizer._task_cfg`.
-    """
-    routes = sys.modules.get("ppxai.server.routes.agent_v1")
-    getter = getattr(routes, "get_execution_task_config", None) if routes else None
-    return getter() if getter is not None else _execution_config.get_execution_task_config()
+def _default_subagent() -> dict[str, Any]:
+    """`execution.default_subagent`, via its defining module."""
+    return _execution_config.get_execution_default_subagent()
+
+
+def _default_model(provider_name: str) -> str | None:
+    """The provider's own `default_model`, via its defining module."""
+    return _providers_config.get_default_model(provider_name)
+
+
+def _tool_cfg(tool: str) -> dict[str, Any]:
+    """`tools.<tool>.*`, via its defining module."""
+    return _tools_config.get_tool_config(tool)
 
 
 @dataclass
@@ -519,8 +544,6 @@ def merge_task_fields(
     provider/model present) on these merged values — so no spec, skill, or
     profile can smuggle a grant past the checks a direct request faces.
     """
-    from ..config.execution import get_execution_default_subagent
-
     spec = resolve_named_spec(req.spec) if req.spec else AgentSpec()
     skills = load_skills(req.skills)
     profile = resolve_named_profile(req.profile) if req.profile else AgentSpec()
@@ -533,7 +556,7 @@ def merge_task_fields(
     # ceiling guards (shell-reject, egress_ceiling, kill-switches), so it is a
     # convenience layer, never a capability escalation.
     default_grant = _resolve_task_default_grant()
-    sub_defaults = get_execution_default_subagent()
+    sub_defaults = _default_subagent()
 
     # A skill scalar is the first skill (in --skill order) that sets it — so
     # composition is deterministic and skill order is meaningful for scalars.
@@ -583,7 +606,7 @@ def merge_task_fields(
         if not model and provider == sub_defaults.get("provider"):
             model = sub_defaults.get("model")
         if not model and provider:
-            model = get_default_model(provider) or None
+            model = _default_model(provider) or None
     system = (req.system if req.system is not None
               else spec.system if spec.system is not None
               else _skill_scalar("system") if _skill_scalar("system") is not None
@@ -670,7 +693,7 @@ def web_search_banned(tools: list) -> bool:
     if "web_search" not in tools:
         return False
     try:
-        return get_tool_config("web_search").get("enabled", True) is False
+        return _tool_cfg("web_search").get("enabled", True) is False
     except Exception:
         return False
 
@@ -695,7 +718,7 @@ def with_tool_egress_defaults(network: list, tools: list) -> list:
     existing = {e for e in merged if isinstance(e, str)}
     for tool in tools or []:
         try:
-            cfg = get_tool_config(tool) or {}
+            cfg = _tool_cfg(tool) or {}
         except Exception:
             continue
         if "egress" in cfg:
@@ -765,32 +788,22 @@ def validate_provider_or_error(provider_name: str) -> None:
     that only needs to validate (e.g. the `/v1/agent/task` tier, which builds
     its own provider later inside the run) doesn't instantiate and immediately
     throw away an SDK client. Keep this in sync with `_build_provider`'s guards.
-    """
-    # Same binding-indirection rationale as `_task_cfg`: this check moved down
-    # from the route, where callers (and a long tail of tests) stub it as
-    # `agent_v1._validate_provider_or_400`. Honor that stub when the route is
-    # loaded so the move doesn't silently re-enable real provider lookups in
-    # suites that deliberately bypass them.
-    routes = sys.modules.get("ppxai.server.routes.agent_v1")
-    stub = getattr(routes, "_validate_provider_or_400", None) if routes else None
-    if stub is not None:
-        try:
-            stub(provider_name)
-            return
-        except Exception as exc:  # the route's own HTTPException
-            status = getattr(exc, "status_code", None)
-            detail = getattr(exc, "detail", None)
-            if status is None or detail is None:
-                raise
-            raise TaskAuthorizationError(int(status), str(detail))
 
-    if provider_name not in get_available_providers():
+    **THE patch point for bypassing provider validation.** The route's
+    `_validate_provider_or_400` is a thin HTTP wrapper over this function, so a
+    test that stubs `task_authorizer.validate_provider_or_error` covers the
+    HTTP tier and the in-process tier at once. It used to be the other way
+    round — this function reached into `sys.modules` for the route's binding —
+    which meant an engine-only caller and an HTTP caller silently ran different
+    checks. See the config-reads note above for the same lesson.
+    """
+    if provider_name not in _providers_config.get_available_providers():
         raise TaskAuthorizationError(
             400,
             f"Unknown provider: {provider_name!r}. "
             f"Configure it in ppxai-config.json.",
         )
-    if not get_api_key(provider_name):
+    if not _providers_config.get_api_key(provider_name):
         raise TaskAuthorizationError(
             400,
             f"No API key for provider {provider_name!r}. "
@@ -880,38 +893,6 @@ def _config_grant_fields(req: TaskRequest, policy: TierPolicy) -> dict:
         "enrichment_layer": granted_by,
         "tools_layer": granted_by,
     }
-
-
-def _via_route(name: str, fallback):
-    """Resolve `name` through the ROUTE's binding when the route is loaded.
-
-    The per-module-binding trap, generalized. `get_execution_task_config`,
-    `get_default_model` and `get_execution_default_subagent` are each imported
-    by several modules; patching one module's binding does not affect the
-    others. These resolutions all moved DOWN from `agent_v1`, where the
-    established idiom is `monkeypatch.setattr(agent_v1, "<name>", ...)`, so
-    the engine has to honor that binding or silently reach real config
-    instead. A pure-engine caller (TUI, SDK — no server import) gets
-    `fallback`.
-
-    Used for every config getter this module reads. Adding a read without it
-    is the bug: it passes until someone patches the route and wonders why.
-    """
-    routes = sys.modules.get("ppxai.server.routes.agent_v1")
-    return getattr(routes, name, None) or fallback if routes else fallback
-
-
-def _default_model(provider_name: str) -> str | None:
-    """`get_default_model`, route-binding aware. See `_via_route`."""
-    return _via_route("get_default_model", get_default_model)(provider_name)
-
-
-def _default_subagent() -> dict[str, Any]:
-    """`get_execution_default_subagent`, route-binding aware. See `_via_route`."""
-    return _via_route(
-        "get_execution_default_subagent",
-        _execution_config.get_execution_default_subagent,
-    )()
 
 
 def _config_flag(dotted_key: str) -> bool:

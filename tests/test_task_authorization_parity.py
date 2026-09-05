@@ -60,6 +60,7 @@ from ppxai.engine.task_authorizer import (
     authorize_oneshot,
     authorize_task,
 )
+from ppxai.config import execution as _exec_cfg
 
 # A resolvable default_subagent, so one-off cases exercise the GRANT rules
 # rather than tripping the provider/model gate first.
@@ -142,9 +143,9 @@ def _tier_on(monkeypatch, tmp_path):
     specs = tmp_path / "specs"
     skills.mkdir(exist_ok=True)
     specs.mkdir(exist_ok=True)
-    real = agent_v1.get_execution_task_config
+    real = _exec_cfg.get_execution_task_config
     monkeypatch.setattr(
-        agent_v1, "get_execution_task_config",
+        _exec_cfg, "get_execution_task_config",
         lambda: {
             **real(),
             "enabled": True,
@@ -162,7 +163,7 @@ def _provider_ok(monkeypatch):
     """Neutralize provider validation — these cases are about policy, not keys."""
     from ppxai.server.routes import agent_v1
 
-    monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+    monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
 
 
 def _engine_refusal(kwargs):
@@ -302,7 +303,7 @@ class TestTierGateParity:
         from ppxai.server.routes import agent_v1
 
         monkeypatch.setattr(
-            agent_v1, "get_execution_task_config",
+            _exec_cfg, "get_execution_task_config",
             lambda: {"enabled": False, "sandbox": {}, "consent": {}, "budgets": {}},
         )
 
@@ -428,7 +429,7 @@ class TestTierPolicyIsData:
             for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
             if "AuthorizedTask(" in line and "-> AuthorizedTask" not in line
         ]
-        assert sites == ["engine/task_authorizer.py:1058"] or len(sites) == 1, (
+        assert sites == ["engine/task_authorizer.py:1122"] or len(sites) == 1, (
             f"AuthorizedTask is constructed at {len(sites)} sites: {sites}. "
             "Only authorize() may mint one — every other site is a gate bypass."
         )
@@ -480,7 +481,7 @@ class TestOneShotTierParity:
         veto, so it must also stop a grant that config assembled."""
         with patch.object(_authz, "_config_flag", lambda key: True), \
              patch.object(_authz, "_default_subagent", lambda: _SUB), \
-             patch.object(_authz, "get_tool_config", lambda name: {"enabled": False}):
+             patch.object(_authz, "_tool_cfg", lambda name: {"enabled": False}):
             with pytest.raises(TaskAuthorizationError) as exc:
                 authorize_oneshot("x")
         assert exc.value.status == 403
@@ -504,7 +505,7 @@ class TestOneShotTierParity:
         )
         with patch.object(_authz, "_config_flag", lambda key: True), \
              patch.object(_authz, "_default_subagent", lambda: _SUB), \
-             patch.object(_authz, "get_tool_config", lambda name: {"enabled": False}):
+             patch.object(_authz, "_tool_cfg", lambda name: {"enabled": False}):
             with pytest.raises(TaskAuthorizationError) as exc:
                 _oneshot._authorize_oneshot_search_loop("x", "gemini", "m")
         assert exc.value.status == 403
@@ -562,3 +563,113 @@ class TestOneShotTierParity:
                 authorize_oneshot("x")
         assert exc.value.status == 400
         assert "No provider for the agent run" in exc.value.detail
+
+
+class TestOneBindingOnePatchPoint:
+    """The engine must not resolve config or validation through the SERVER.
+
+    Until v1.19.1 `engine/task_authorizer.py` read `execution.task.*`,
+    `get_default_model`, `get_execution_default_subagent` and provider
+    validation by looking `ppxai.server.routes.agent_v1` up in `sys.modules`
+    and preferring ITS bindings. Two consequences, both real:
+
+    1. Layering inversion. An engine module reached into the server layer at
+       runtime, contradicting its own header, and gave the same call two
+       different answers depending on whether the server happened to be
+       imported — so a TUI and an HTTP request could be admitted under
+       different config.
+    2. Dead imports as patch targets. `agent_v1` imported three getters it
+       never called; they existed only so tests could patch them and the
+       engine would pick them up through `sys.modules`.
+
+    The fix is module-attribute access everywhere, which makes the DEFINING
+    module the one patch point. These tests pin both halves.
+    """
+
+    ENGINE = Path(__file__).resolve().parents[1] / "ppxai" / "engine"
+
+    def test_no_engine_module_reaches_into_the_server_layer(self):
+        """No engine module may NAME a `ppxai.server.*` module at runtime.
+
+        Checked over the AST rather than the raw text so the prose that
+        documents this rule (in `task_authorizer`'s header) doesn't trip it:
+        only real string CONSTANTS count, which is what any runtime lookup —
+        `sys.modules.get(...)`, `importlib.import_module(...)` — needs.
+        """
+        import ast
+
+        offenders = []
+        for path in self.ENGINE.rglob("*.py"):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if (
+                    isinstance(node, ast.Constant)
+                    and isinstance(node.value, str)
+                    and node.value.startswith("ppxai.server")
+                ):
+                    offenders.append(
+                        f"{path.relative_to(self.ENGINE)}:{node.lineno}"
+                    )
+        assert offenders == [], (
+            f"engine modules name the server layer at runtime: {offenders}. "
+            "Read config through its defining module instead — see the "
+            "config-reads note in engine/task_authorizer.py."
+        )
+
+    @pytest.mark.parametrize("getter", [
+        "get_execution_task_config",
+        "get_execution_default_subagent",
+        "get_default_model",
+        "get_tool_config",
+    ])
+    @pytest.mark.parametrize("modname", [
+        "ppxai.engine.task_authorizer",
+        "ppxai.engine.task_runner",
+        "ppxai.server.routes.agent_v1",
+    ])
+    def test_config_getters_are_not_symbol_imported(self, modname, getter):
+        """A getter present as a module attribute is a second binding.
+
+        Whichever of the two a test patches, the other keeps reading real
+        config. Call it as `_execution_config.<getter>()` instead.
+        """
+        import importlib
+
+        mod = importlib.import_module(modname)
+        assert not hasattr(mod, getter), (
+            f"{modname} holds its own binding of {getter}. Call it as an "
+            f"attribute of its defining module so there is one patch point."
+        )
+
+    def test_one_patch_reaches_every_reader(self, monkeypatch):
+        """The property the inversion was faking: patch config, and the engine,
+        the runner and the route all see it."""
+        from ppxai.config import execution as exec_mod
+        from ppxai.engine import task_runner as _runner
+        from ppxai.server.routes import agent_v1 as _route
+
+        marker = {"enabled": True, "sandbox": {"marker": "sentinel"},
+                  "consent": {}, "budgets": {}}
+        monkeypatch.setattr(exec_mod, "get_execution_task_config", lambda: marker)
+
+        assert _authz._task_cfg()["sandbox"]["marker"] == "sentinel"
+        for mod in (_runner, _route):
+            assert (
+                mod._execution_config.get_execution_task_config()["sandbox"]["marker"]
+                == "sentinel"
+            ), f"{mod.__name__} did not observe the config patch"
+
+    def test_provider_validation_has_one_implementation(self, monkeypatch):
+        """The route's `_validate_provider_or_400` is a thin HTTP wrapper over
+        the engine seam, so stubbing the engine covers both tiers."""
+        from ppxai.server.routes import oneshot as _oneshot
+
+        called = []
+        monkeypatch.setattr(
+            _authz, "validate_provider_or_error", lambda name: called.append(name)
+        )
+        _oneshot._validate_provider_or_400("whatever")
+        assert called == ["whatever"], (
+            "the route validates providers on its own instead of delegating "
+            "to task_authorizer.validate_provider_or_error"
+        )

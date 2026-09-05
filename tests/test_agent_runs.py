@@ -21,6 +21,15 @@ from ppxai.engine.agent_runs import (
     FilesystemAgentRunStore,
     RunMeta,
 )
+from ppxai.engine import task_authorizer as _authz
+from ppxai.config import execution as _exec_cfg
+from ppxai.config import providers as _providers_cfg
+
+# Captured BEFORE any fixture patches it. `_enable_task_tier` below now
+# overrides the config module itself (v1.19.1: one binding, one patch
+# point) rather than the route's private binding, so the unit tests of
+# `config.execution` in this file need the genuine accessor back.
+_REAL_TASK_CFG = _exec_cfg.get_execution_task_config
 
 
 @pytest.fixture
@@ -535,9 +544,9 @@ def _enable_task_tier(monkeypatch):
     ADR 0010 (v1.19.1): the gate moved from tools.agent.task_tier_enabled to
     execution.task.enabled, so the patch target is the execution accessor."""
     from ppxai.server.routes import agent_v1
-    real = agent_v1.get_execution_task_config
+    real = _exec_cfg.get_execution_task_config
     monkeypatch.setattr(
-        agent_v1, "get_execution_task_config",
+        _exec_cfg, "get_execution_task_config",
         lambda: {**real(), "enabled": True},
     )
 
@@ -567,7 +576,7 @@ class TestTaskTierGate:
         c, _ = client
         from ppxai.server.routes import agent_v1
         monkeypatch.setattr(
-            agent_v1, "get_execution_task_config", lambda: {"enabled": False}
+            _exec_cfg, "get_execution_task_config", lambda: {"enabled": False}
         )
         r = c.post("/v1/agent/task", json={"task": "do a thing", "tools": ["read_file"]})
         assert r.status_code == 403
@@ -579,9 +588,9 @@ class TestTaskTierGate:
         c, _ = client
         from ppxai.server.routes import agent_v1
         monkeypatch.setattr(
-            agent_v1, "get_execution_task_config", lambda: {"enabled": False}
+            _exec_cfg, "get_execution_task_config", lambda: {"enabled": False}
         )
-        monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: {})
+        monkeypatch.setattr(_exec_cfg, "get_execution_default_subagent", lambda: {})
         # /run with no provider → 400 (reached provider resolution), NOT 403:
         # the tool-free tier is never gated by the task flag.
         r = c.post("/v1/agent/run", json={"task": "ping"})
@@ -600,6 +609,22 @@ class TestExecutionTaskConfig:
     with NO dual-read, so the patch target is the execution block, and a key
     left behind under tools.agent is expected to have NO effect (asserted in
     test_legacy_tools_agent_location_is_ignored)."""
+
+    @pytest.fixture(autouse=True)
+    def _raw_execution_accessor(self, monkeypatch, _enable_task_tier):
+        """Opt out of the file-wide `_enable_task_tier` override.
+
+        These are unit tests of `config.execution` ITSELF, so they must observe
+        what the accessor really returns. Until v1.19.1 they did so by accident:
+        the tier fixture patched `agent_v1`'s own binding, which a direct
+        `exec_mod.get_execution_task_config()` call never consulted. Collapsing
+        the bindings to one patch point removed that accident, so the opt-out is
+        now explicit. Depends on `_enable_task_tier` so it is guaranteed to run
+        after it rather than relying on autouse ordering.
+        """
+        monkeypatch.setattr(
+            _exec_cfg, "get_execution_task_config", _REAL_TASK_CFG
+        )
 
     def test_spawn_consent_defaults_deny(self, monkeypatch):
         from ppxai.config import execution as exec_mod
@@ -786,7 +811,7 @@ class TestAgentRunRoutes:
         # provider is intentionally NOT consulted.)
         c, reg = client
         from ppxai.server.routes import agent_v1
-        monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: {})
+        monkeypatch.setattr(_exec_cfg, "get_execution_default_subagent", lambda: {})
         resp = c.post("/v1/agent/run", json={"task": "t"})
         assert resp.status_code == 400
         assert "provider" in resp.json()["detail"].lower()
@@ -823,7 +848,7 @@ class TestAgentRunRoutes:
         from ppxai.server.routes import agent_v1
 
         monkeypatch.setattr(
-            agent_v1, "get_execution_default_subagent",
+            _exec_cfg, "get_execution_default_subagent",
             lambda: {"provider": "cfgprov", "model": "cfgmodel"},
         )
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: self._fake_provider())
@@ -843,11 +868,11 @@ class TestAgentRunRoutes:
         from ppxai.server.routes import agent_v1
 
         monkeypatch.setattr(
-            agent_v1, "get_execution_default_subagent",
+            _exec_cfg, "get_execution_default_subagent",
             lambda: {"provider": "cfgprov", "model": "cfgmodel"},
         )
         monkeypatch.setattr(
-            agent_v1, "get_default_model",
+            _providers_cfg, "get_default_model",
             lambda name=None: "otherprov-default" if name == "otherprov" else "",
         )
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: self._fake_provider())
@@ -1036,7 +1061,7 @@ class TestAgentRunRoutes:
         # passed on a dev box with `openai` configured but 400'd in CI's clean
         # env (no openai provider/key). Stub it: this test is about provider
         # CLASS, not config validation (covered separately).
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
 
         # Make the background runner a no-op so we isolate the route's accept
         # decision (no real EngineClient needed).
@@ -1077,7 +1102,7 @@ class TestAgentRunRoutes:
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
         # /task fail-fast-validates the provider (no build) before minting the
         # run; the fake provider name here isn't configured, so stub it out too.
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
 
         # Stub EngineClient: enable_tools no-op; chat() drives one off-grant
         # execute_tool through whatever tool_manager the route installed, then
@@ -1153,7 +1178,7 @@ class TestAgentRunRoutes:
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
         # /task fail-fast-validates the provider (no build) before minting the
         # run; the fake provider name here isn't configured, so stub it out too.
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
 
         class _BaseTM:
             max_iterations = 3
@@ -1225,7 +1250,7 @@ class TestAgentRunRoutes:
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
         # /task fail-fast-validates the provider (no build) before minting the
         # run; the fake provider name here isn't configured, so stub it out too.
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
 
         class _BaseTM:
             max_iterations = 3
@@ -1299,7 +1324,7 @@ class TestAgentRunRoutes:
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
         # /task fail-fast-validates the provider (no build) before minting the
         # run; the fake provider name here isn't configured, so stub it out too.
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
 
         stub = self._budget_stub_engine(n_tool_calls=5)  # would do 5 iterations
         import ppxai.engine.client as client_mod
@@ -1339,7 +1364,7 @@ class TestAgentRunRoutes:
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
         # /task fail-fast-validates the provider (no build) before minting the
         # run; the fake provider name here isn't configured, so stub it out too.
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
         stub = self._budget_stub_engine(n_tool_calls=3)
         import ppxai.engine.client as client_mod
         monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
@@ -1377,7 +1402,7 @@ class TestAgentRunRoutes:
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
         # /task fail-fast-validates the provider (no build) before minting the
         # run; the fake provider name here isn't configured, so stub it out too.
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
 
         class _Usage:
             def __init__(self): self.total_tokens = 0
@@ -1577,12 +1602,8 @@ class TestTaskSpecFiles:
         from ppxai.engine import task_runner
         from ppxai.server.routes import agent_v1
         full = {**_real(), **cfg}
-        monkeypatch.setattr(agent_v1, "get_execution_task_config", lambda: full)
-        # Both modules hold their own binding after the v1.19.1 split:
-        # the ROUTE validates skills/spec config, the RUNNER reads the
-        # sandbox block. Patching one leaves the other on real config.
-        monkeypatch.setattr(task_runner, "get_execution_task_config", lambda: full)
-        monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: {})
+        monkeypatch.setattr(_exec_cfg, "get_execution_task_config", lambda: full)
+        monkeypatch.setattr(_exec_cfg, "get_execution_default_subagent", lambda: {})
 
     # --- rejection paths (no provider needed) --------------------------------
 
@@ -1642,7 +1663,7 @@ class TestTaskSpecFiles:
 
     def _mint(self, c, monkeypatch, body):
         from ppxai.server.routes import agent_v1
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
         r = c.post("/v1/agent/task", json=body)
         assert r.status_code == 200, r.text
         return c.get(f"/v1/agent/runs/{r.json()['run_id']}").json()
@@ -1709,12 +1730,8 @@ class TestTaskSkills:
         from ppxai.engine import task_runner
         from ppxai.server.routes import agent_v1
         full = {**_real(), **cfg}
-        monkeypatch.setattr(agent_v1, "get_execution_task_config", lambda: full)
-        # Both modules hold their own binding after the v1.19.1 split:
-        # the ROUTE validates skills/spec config, the RUNNER reads the
-        # sandbox block. Patching one leaves the other on real config.
-        monkeypatch.setattr(task_runner, "get_execution_task_config", lambda: full)
-        monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: {})
+        monkeypatch.setattr(_exec_cfg, "get_execution_task_config", lambda: full)
+        monkeypatch.setattr(_exec_cfg, "get_execution_default_subagent", lambda: {})
 
     def _skill(self, skills, name, manifest, *, references=None, scripts=None):
         root = skills / name
@@ -1734,7 +1751,7 @@ class TestTaskSkills:
 
     def _mint(self, c, monkeypatch, body):
         from ppxai.server.routes import agent_v1
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
         r = c.post("/v1/agent/task", json=body)
         assert r.status_code == 200, r.text
         return c.get(f"/v1/agent/runs/{r.json()['run_id']}").json()
@@ -2082,7 +2099,7 @@ class TestConsentParkE2E:
             def __init__(self):
                 pass
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
 
         class _BaseTM:
             max_iterations = 3
@@ -2214,15 +2231,11 @@ class TestConsentParkE2E:
         # Shrink the consent TTL. The autouse fixture's get_agent_config is
         # captured FIRST so this override composes on top of it.
         from ppxai.engine import task_runner
-        from ppxai.server.routes import agent_v1
-        real = agent_v1.get_execution_task_config
+        real = _exec_cfg.get_execution_task_config
         _ttl_override = (
             lambda: {**real(), "consent": {**real()["consent"], "consent_ttl_s": 0.2}}
         )
-        monkeypatch.setattr(agent_v1, "get_execution_task_config", _ttl_override)
-        # The runner holds its own binding since the v1.19.1 split and is the
-        # one that actually reads consent_ttl_s when parking.
-        monkeypatch.setattr(task_runner, "get_execution_task_config", _ttl_override)
+        monkeypatch.setattr(_exec_cfg, "get_execution_task_config", _ttl_override)
         rid = self._launch(c, monkeypatch)
         self._poll_status(c, rid, ("waiting",))
         done = self._poll_status(c, rid, ("completed_pending_ack", "failed"))
@@ -2379,9 +2392,9 @@ class TestAckRoute:
     def test_get_reaps_expired_hold(self, client, monkeypatch):
         c, reg = client
         from ppxai.server.routes import agent_v1
-        real = agent_v1.get_execution_task_config
+        real = _exec_cfg.get_execution_task_config
         monkeypatch.setattr(
-            agent_v1, "get_execution_task_config",
+            _exec_cfg, "get_execution_task_config",
             lambda: {**real(), "budgets": {"result_retention_s": 50.0}},
         )
         stale = self._seed_held(reg, finished_ago=100.0)
@@ -2412,7 +2425,7 @@ class TestDisconnectThenCollectE2E:
             def __init__(self):
                 pass
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
 
         class _StubEngine:
             def __init__(self):
@@ -2599,7 +2612,7 @@ class TestResumeRoute:
         m = self._seed_interrupted(reg)
         from ppxai.server.routes import agent_v1
         monkeypatch.setattr(
-            agent_v1, "get_execution_task_config",
+            _exec_cfg, "get_execution_task_config",
             lambda: {"enabled": False},
         )
         r = c.post(f"/v1/agent/runs/{m.run_id}/resume")
@@ -2636,8 +2649,7 @@ class TestResumeRoute:
 
         c, reg = ctx_client
         from ppxai.engine import task_runner
-        from ppxai.server.routes import agent_v1
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda name: None)
 
         captured = {}
 
@@ -2708,7 +2720,7 @@ class TestWorkdirAlignment:
             return _ok
 
         monkeypatch.setattr(task_runner, "build_task_runner", fake_build)
-        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda n: None)
+        monkeypatch.setattr(_authz, "validate_provider_or_error", lambda n: None)
         return captured
 
     def _body(self, **extra):
@@ -2763,9 +2775,9 @@ class TestWorkdirAlignment:
         c, reg = client
         from ppxai.server.routes import agent_v1
         captured = self._capture_build(monkeypatch)
-        real = agent_v1.get_execution_task_config  # already enabled=True
+        real = _exec_cfg.get_execution_task_config  # already enabled=True
         monkeypatch.setattr(
-            agent_v1, "get_execution_task_config",
+            _exec_cfg, "get_execution_task_config",
             lambda: {**real(), "sandbox": {"enforcement": "in_process"}},
         )
         r = c.post("/v1/agent/task", json=self._body(workdir=str(tmp_path)))

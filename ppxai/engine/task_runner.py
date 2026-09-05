@@ -35,7 +35,11 @@ import os
 import time
 from typing import Any, Protocol, Union
 
-from ..config.execution import get_execution_task_config
+# Attribute-of-defining-module, not a symbol import: the same getter is read
+# by `engine/task_authorizer.py` and `server/routes/agent_v1.py`, and a
+# per-module binding here would make `ppxai.config.execution` a patch point
+# that silently misses this module. See task_authorizer's config-reads note.
+from ..config import execution as _execution_config
 from ..config.loader import PPXAI_HOME
 from ..config.paths import get_default_working_dir
 from .agent_runs import AgentRunRegistry, FilesystemAgentRunStore
@@ -240,7 +244,7 @@ def build_task_runner(
             # shell-consent (which had no UI over HTTP and auto-denied).
             async def _spawn_consent(summary: str) -> bool:
                 ttl = float(
-                    get_execution_task_config()["consent"]["consent_ttl_s"]
+                    _execution_config.get_execution_task_config()["consent"]["consent_ttl_s"]
                 )
                 response = await registry.park_run(
                     m, kind="consent", prompt=summary, ttl_s=ttl,
@@ -252,7 +256,7 @@ def build_task_runner(
             # "deny" (default, safe) — a spawn parks for interactive consent as
             # above, denying on TTL timeout; "auto" — skip the park entirely
             # (subset rules remain the boundary).
-            spawn_consent = get_execution_task_config()["consent"]["spawn_consent"]
+            spawn_consent = _execution_config.get_execution_task_config()["consent"]["spawn_consent"]
             engine.tool_manager.register_tool(SpawnSubagentTool(
                 registry=registry,
                 parent_run_id=m.run_id,
@@ -325,7 +329,7 @@ def build_task_runner(
         # resolve there, and reads/writes are confined by FilesystemPolicy.
         fs_policy = None
         _on_path = None
-        sandbox = get_execution_task_config()["sandbox"]
+        sandbox = _execution_config.get_execution_task_config()["sandbox"]
         if sandbox.get("enforcement") == "in_process":
             jail_workdir = os.path.join(
                 os.path.expanduser(sandbox["workdir"]["root"]), m.run_id, "work"

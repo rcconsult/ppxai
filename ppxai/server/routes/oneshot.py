@@ -78,6 +78,7 @@ from ...config import (
     get_execution_run_config,
     get_provider_config,
 )
+from ...engine import task_authorizer as _authz
 from ...engine import task_runner as _task_runner
 from ...engine.facts_resolver import get_effective_oneshot_path
 from ...engine.providers import create_provider
@@ -459,26 +460,26 @@ def _apply_oneshot_grounding(provider, provider_name: str) -> None:
 
 
 def _validate_provider_or_400(provider_name: str) -> None:
-    """Cheap fail-fast: raise HTTPException(400) if `provider_name` is unknown
-    or has no API key, WITHOUT constructing the provider.
+    """`task_authorizer.validate_provider_or_error` at the trust boundary, as
+    an HTTP 400 — the same shape as `agent_v1._apply_ceiling_or_400`.
 
-    Same two checks `_build_provider` does up front, factored out so a caller
-    that only needs to validate (e.g. the `/v1/agent/task` tier, which builds
-    its own provider later inside the run) doesn't instantiate and immediately
-    throw away an SDK client. Keep this in sync with `_build_provider`'s guards.
+    Cheap fail-fast for a caller that only needs to validate (e.g. the
+    `/v1/agent/task` tier, which builds its own provider later inside the run)
+    and shouldn't instantiate an SDK client just to throw it away.
+
+    The checks live in the ENGINE, not here, so the HTTP tier and the
+    in-process TUI tier cannot drift — and so one stub of
+    `task_authorizer.validate_provider_or_error` bypasses provider lookups for
+    both. Until v1.19.1 it was inverted: the engine reached back through
+    `sys.modules` for this function. Keep in sync with `_build_provider`'s
+    guards, which repeat them before constructing.
     """
-    if provider_name not in get_available_providers():
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown provider: {provider_name!r}. "
-            f"Configure it in ppxai-config.json.",
-        )
-    if not get_api_key(provider_name):
-        raise HTTPException(
-            status_code=400,
-            detail=f"No API key for provider {provider_name!r}. "
-            f"Set it in ~/.ppxai/.env.",
-        )
+    try:
+        # Module attribute, never a symbol import: a local binding here would
+        # be a second reference that patching the engine's name would miss.
+        _authz.validate_provider_or_error(provider_name)
+    except TaskAuthorizationError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail)
 
 
 def _build_provider(provider_name: str):
