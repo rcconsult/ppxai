@@ -16,7 +16,6 @@ from ..config.loader import load_config
 from ..engine import EngineClient
 from ..engine.task_runner import default_run_registry
 from .secrets import build_chain_from_config
-import platform  # noqa: F401 — patched by tests
 
 
 @dataclass

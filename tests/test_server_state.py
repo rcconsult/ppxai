@@ -31,9 +31,26 @@ from ppxai.server.state import (
     set_preview_backend,
 )
 
+# PATCH THE MODULE THAT HOLDS THE CALL SITE, NOT THE ONE UNDER TEST.
+#
+# These tests drive `state.kill_preview_backend`, but every `os`/`platform`/
+# `asyncio` call they intercept lives in `engine/preview_backend.py`
+# (`stop_backend`, lines ~481-490) — `state.kill_preview_backend` is a
+# backward-compat wrapper that delegates to it.
+#
+# `mock.patch` setattrs on the FINAL container in the dotted path, which for
+# `<module>.os.getpgid` is the process-global `os` module — so patching
+# through ANY module that merely has `os` in scope does intercept the real
+# call. That is how these once read `patch("ppxai.server.state.os.getpgid")`
+# and worked. But the address then depended on an `import os` that no code in
+# `state.py` used, and the ruff F401 sweep in `4f13cc12` correctly removed it
+# and broke all 11 cases at patch-setup time. Addressing the module that
+# actually calls `os.getpgid` removes that dependency on somebody else's
+# import list. Do not point these back at `ppxai.server.state`.
+#
 # Windows lacks `os.getpgid` and `os.killpg` (Unix process-group APIs).
 # unittest.mock.patch() validates the target attribute exists at import
-# time, so any test that does `patch("ppxai.server.state.os.getpgid")`
+# time, so any test that does `patch("ppxai.engine.preview_backend.os.getpgid")`
 # raises AttributeError on Windows BEFORE the test body runs — not even
 # a runtime check, a patch-setup error.
 #
@@ -306,9 +323,9 @@ class TestKillPreviewBackend:
     @pytest.mark.asyncio
     async def test_unix_sends_sigterm_to_process_group(self):
         backend, proc = self._backend_with_process()
-        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
-             patch("ppxai.server.state.os.getpgid", return_value=12345) as gp, \
-             patch("ppxai.server.state.os.killpg") as kp:
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Linux"), \
+             patch("ppxai.engine.preview_backend.os.getpgid", return_value=12345) as gp, \
+             patch("ppxai.engine.preview_backend.os.killpg") as kp:
             await kill_preview_backend(backend)
         gp.assert_called_once_with(12345)
         kp.assert_called_once_with(12345, signal.SIGTERM)
@@ -317,7 +334,7 @@ class TestKillPreviewBackend:
     @pytest.mark.asyncio
     async def test_windows_calls_process_terminate(self):
         backend, proc = self._backend_with_process()
-        with patch("ppxai.server.state.platform.system", return_value="Windows"):
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Windows"):
             await kill_preview_backend(backend)
         proc.terminate.assert_called_once()
         proc.wait.assert_awaited()
@@ -327,8 +344,8 @@ class TestKillPreviewBackend:
     async def test_already_dead_process_lookup_swallowed(self):
         """getpgid raising ProcessLookupError must not surface."""
         backend, proc = self._backend_with_process()
-        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
-             patch("ppxai.server.state.os.getpgid",
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Linux"), \
+             patch("ppxai.engine.preview_backend.os.getpgid",
                    side_effect=ProcessLookupError("no such process")):
             await kill_preview_backend(backend)  # must not raise
         proc.wait.assert_awaited()
@@ -338,9 +355,9 @@ class TestKillPreviewBackend:
     async def test_killpg_oserror_swallowed(self):
         """os.killpg raising OSError (e.g. EPERM) must not surface."""
         backend, proc = self._backend_with_process()
-        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
-             patch("ppxai.server.state.os.getpgid", return_value=12345), \
-             patch("ppxai.server.state.os.killpg",
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Linux"), \
+             patch("ppxai.engine.preview_backend.os.getpgid", return_value=12345), \
+             patch("ppxai.engine.preview_backend.os.killpg",
                    side_effect=OSError("permission denied")):
             await kill_preview_backend(backend)
         proc.wait.assert_awaited()
@@ -352,9 +369,9 @@ class TestKillPreviewBackend:
         backend, proc = self._backend_with_process()
         proc.wait = AsyncMock(side_effect=asyncio.TimeoutError())
 
-        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
-             patch("ppxai.server.state.os.getpgid", return_value=12345), \
-             patch("ppxai.server.state.os.killpg"):
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Linux"), \
+             patch("ppxai.engine.preview_backend.os.getpgid", return_value=12345), \
+             patch("ppxai.engine.preview_backend.os.killpg"):
             await kill_preview_backend(backend)
 
         proc.kill.assert_called_once()
@@ -367,9 +384,9 @@ class TestKillPreviewBackend:
         proc.wait = AsyncMock(side_effect=asyncio.TimeoutError())
         proc.kill = MagicMock(side_effect=ProcessLookupError("died"))
 
-        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
-             patch("ppxai.server.state.os.getpgid", return_value=12345), \
-             patch("ppxai.server.state.os.killpg"):
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Linux"), \
+             patch("ppxai.engine.preview_backend.os.getpgid", return_value=12345), \
+             patch("ppxai.engine.preview_backend.os.killpg"):
             await kill_preview_backend(backend)
 
         proc.kill.assert_called_once()
@@ -382,9 +399,9 @@ class TestKillPreviewBackend:
         backend, proc = self._backend_with_process()
         proc.wait = AsyncMock(side_effect=ProcessLookupError("already dead"))
 
-        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
-             patch("ppxai.server.state.os.getpgid", return_value=12345), \
-             patch("ppxai.server.state.os.killpg"):
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Linux"), \
+             patch("ppxai.engine.preview_backend.os.getpgid", return_value=12345), \
+             patch("ppxai.engine.preview_backend.os.killpg"):
             await kill_preview_backend(backend)  # must not raise
 
     @_unix_only
@@ -399,10 +416,10 @@ class TestKillPreviewBackend:
             captured["timeout"] = timeout
             return await coro
 
-        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
-             patch("ppxai.server.state.os.getpgid", return_value=12345), \
-             patch("ppxai.server.state.os.killpg"), \
-             patch("ppxai.server.state.asyncio.wait_for", side_effect=wait_for_capture):
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Linux"), \
+             patch("ppxai.engine.preview_backend.os.getpgid", return_value=12345), \
+             patch("ppxai.engine.preview_backend.os.killpg"), \
+             patch("ppxai.engine.preview_backend.asyncio.wait_for", side_effect=wait_for_capture):
             await kill_preview_backend(backend)
 
         assert captured["timeout"] == 2
@@ -444,9 +461,9 @@ class TestKillPreviewBackendDrainTask:
         await asyncio.sleep(0)  # let the task actually start
         backend, proc = self._backend_with_drain(drain)
 
-        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
-             patch("ppxai.server.state.os.getpgid", return_value=12345), \
-             patch("ppxai.server.state.os.killpg"):
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Linux"), \
+             patch("ppxai.engine.preview_backend.os.getpgid", return_value=12345), \
+             patch("ppxai.engine.preview_backend.os.killpg"):
             await kill_preview_backend(backend)
 
         assert drain.cancelled() or drain.done()
@@ -462,9 +479,9 @@ class TestKillPreviewBackendDrainTask:
         await drain  # ensure done
         backend, proc = self._backend_with_drain(drain)
 
-        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
-             patch("ppxai.server.state.os.getpgid", return_value=12345), \
-             patch("ppxai.server.state.os.killpg"):
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Linux"), \
+             patch("ppxai.engine.preview_backend.os.getpgid", return_value=12345), \
+             patch("ppxai.engine.preview_backend.os.killpg"):
             await kill_preview_backend(backend)  # must not raise
 
         proc.wait.assert_awaited()
@@ -476,9 +493,9 @@ class TestKillPreviewBackendDrainTask:
         must still kill cleanly — the field is Optional with default None."""
         backend, proc = self._backend_with_drain(None)
 
-        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
-             patch("ppxai.server.state.os.getpgid", return_value=12345), \
-             patch("ppxai.server.state.os.killpg"):
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Linux"), \
+             patch("ppxai.engine.preview_backend.os.getpgid", return_value=12345), \
+             patch("ppxai.engine.preview_backend.os.killpg"):
             await kill_preview_backend(backend)
 
         proc.wait.assert_awaited()
@@ -497,9 +514,9 @@ class TestKillPreviewBackendDrainTask:
         await asyncio.sleep(0)
         backend, proc = self._backend_with_drain(drain)
 
-        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
-             patch("ppxai.server.state.os.getpgid", return_value=12345), \
-             patch("ppxai.server.state.os.killpg"):
+        with patch("ppxai.engine.preview_backend.platform.system", return_value="Linux"), \
+             patch("ppxai.engine.preview_backend.os.getpgid", return_value=12345), \
+             patch("ppxai.engine.preview_backend.os.killpg"):
             await kill_preview_backend(backend)  # must not raise
 
         proc.wait.assert_awaited()
