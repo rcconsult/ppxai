@@ -1671,12 +1671,46 @@ true:
 - It makes the suite non-hermetic in the direction Item 69 warns about, with
   the repo's own file as the shared mutable state.
 
-**Not yet isolated to a test.** The writer is identified from source and from
-the diff signature; the specific test that triggers it was not narrowed —
-`tests/test_v18_1_audited_commands.py`, the only file naming
-`set_tui_config`/`set_debug_log`, does **not** reproduce it alone. Next step
-is a tripwire (`print(PYTEST_CURRENT_TEST)` guarded on the resolved path)
-rather than another bisect.
+**Isolated 2026-09-05. The whole chain, measured end to end:**
+
+```
+tests/test_server_smoke_e2e.py::TestServerSmoke
+    ::test_post_endpoint_does_not_crash[/debug-log-body8]
+  POST /debug-log {"enabled": false}
+  -> server/routes/config.py:252  set_debug_log()
+  -> server/routes/config.py:269  set_tui_config("debug_log", enabled)
+  -> config/features.py:52        find_config_file() -> ./ppxai-config.json
+  -> config/features.py:76        json.dump(..., ensure_ascii=False)
+```
+
+The smoke suite POSTs a body to every route to prove none of them 500. One
+of those routes **persists a setting**, and under pytest the cwd is the repo
+root, so "persist" means the repo's own tracked file. Reproduces in 7
+seconds:
+
+```bash
+uv run pytest "tests/test_server_smoke_e2e.py::TestServerSmoke::test_post_endpoint_does_not_crash" -q
+git status --short ppxai-config.json    # M ppxai-config.json
+```
+
+**How it was found matters more than what was found.** Two instrumented
+tripwires ran the full suite and reported nothing, and both silences were
+false:
+
+- A guard `str(config_path).endswith("git/utils/ppxai/ppxai-config.json")`
+  could never match, because `find_config_file()` returns the **relative**
+  `Path("./ppxai-config.json")`.
+- A `builtins.open` wrapper never sees `Path.write_text()` / `Path.open()`:
+  `pathlib` reaches `io.open` through its own reference, so patching
+  `builtins.open` misses it. (`io.open is builtins.open` is True, which is
+  exactly why the patch looks like it should work.)
+
+What worked was refusing to instrument the suspect at all: a
+`pytest_runtest_teardown` hook that SHA-256s the file after every test and
+prints the first `nodeid` whose digest moves. **Writer-agnostic beats
+writer-specific** — it cannot be defeated by guessing the wrong API, the
+wrong path form, or the wrong module. Reach for it first the next time a
+file changes and nobody admits to writing it.
 
 **Planned:** `v1.19.x`, alongside [[Item 69]] — they share a fix. Options:
 point `set_tui_config` at `USER_CONFIG_FILE` unless `PPXAI_CONFIG_FILE` is
