@@ -13,6 +13,39 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
 
+### Fixed — a project-local `ppxai-config.json` is read-only
+
+Reads and writes now resolve differently, on purpose:
+
+| | resolution |
+|---|---|
+| read | `PPXAI_CONFIG_FILE` → `./ppxai-config.json` → `~/.ppxai/ppxai-config.json` |
+| **write** | `PPXAI_CONFIG_FILE` → `~/.ppxai/ppxai-config.json` |
+
+`set_tui_config` — the only whole-config writer, reached from `/debug-log`,
+`/theme` and `POST /config/debug-log` — persisted through
+`find_config_file()`, which prefers a project-local config. So toggling a
+setting from inside any checkout that ships a `ppxai-config.json` **rewrote
+that project's checked-in file**. ppxai did it to itself on every test run:
+the route smoke suite POSTs a body to every endpoint to prove none of them
+500, `/debug-log` persists, and pytest's cwd is the repo root. Nothing
+failed — the rewrite was an encoding round-trip — so it survived as long as
+anyone was willing to type `git checkout --`.
+
+Writes go through the new `loader.find_writable_config_file()`, which drops
+`./ppxai-config.json` from the search order. `PPXAI_CONFIG_FILE` stays
+writable: pointing it at a file is an explicit act by whoever set it.
+
+**One consequence, warned about rather than hidden.** Reads take the FIRST
+config found and do not merge, so under a project config a persisted setting
+applies to the running session and is shadowed on the next start.
+`set_tui_config` logs a warning naming both paths. Making that case persist
+means layering user preferences over a project config at read time — a
+feature, not a bug fix, and deliberately not in this change.
+
+Fenced by `tests/test_config_write_target.py` (7 tests), mutation-verified:
+reverting the write path to `find_config_file()` fails 4 of them.
+
 ### Fixed — the engine no longer resolves config through the server layer
 
 `engine/task_authorizer.py` read `execution.task.*`, `get_default_model`,

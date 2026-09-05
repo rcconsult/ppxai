@@ -213,6 +213,13 @@ def find_config_file() -> Path | None:
     2. ./ppxai-config.json (project-specific)
     3. ~/.ppxai/ppxai-config.json (user-specific)
 
+    **READ ONLY.** A project-local `./ppxai-config.json` is something a repo
+    ships for its readers — an example, a pinned dev setup, a file under
+    version control. Persisting a setting into it edits somebody's
+    repository as a side effect of a UI toggle. Writers must call
+    :func:`find_writable_config_file` instead; see its docstring for the
+    asymmetry and what it costs.
+
     Returns:
         Path to config file if found, None otherwise.
     """
@@ -230,6 +237,44 @@ def find_config_file() -> Path | None:
         return USER_CONFIG_FILE
 
     return None
+
+
+def find_writable_config_file() -> Path:
+    """The file a *setting* is persisted to. Never a discovered project config.
+
+    Reads and writes resolve differently on purpose, and the difference is
+    the whole point of this function:
+
+    ============ ==================================================
+    read         `PPXAI_CONFIG_FILE` -> `./ppxai-config.json` -> user
+    **write**    `PPXAI_CONFIG_FILE` -> **user**
+    ============ ==================================================
+
+    `./ppxai-config.json` is dropped from the write path. It is a file a
+    project SHIPS — checked in, shared, often an example — and a UI toggle
+    must not edit it. `PPXAI_CONFIG_FILE` stays writable because pointing it
+    at a file is an explicit act by whoever set it.
+
+    The parent directory is created, so this always returns a usable path
+    and callers never have to decide where "no config yet" writes to.
+
+    **The cost, stated so nobody rediscovers it as a bug.** When a project
+    config shadows the user config, a persisted setting lands in a file that
+    reads will not consult — `load_config` takes the FIRST hit, it does not
+    merge. The setting applies to the running session (callers update
+    `ConfigStore` in memory) and is silently shadowed on the next start.
+    `set_tui_config` logs a warning naming both paths when they diverge.
+    Making that case actually persist means layering user preferences over a
+    project config at read time, which is a real feature, not a bug fix.
+    """
+    env_config = os.getenv("PPXAI_CONFIG_FILE")
+    if env_config:
+        path = Path(env_config)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    USER_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    return USER_CONFIG_FILE
 
 
 # =============================================================================

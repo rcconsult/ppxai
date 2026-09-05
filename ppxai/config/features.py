@@ -6,7 +6,7 @@ import json
 from typing import Any
 
 from ..common.logger import get_logger
-from .loader import USER_CONFIG_FILE, find_config_file
+from .loader import find_config_file, find_writable_config_file
 from .store import ConfigStore
 
 logger = get_logger("config")
@@ -48,11 +48,30 @@ def get_debug_log_enabled() -> bool:
 
 
 def set_tui_config(key: str, value: Any) -> bool:
-    """Set a TUI configuration value and save to config file."""
-    config_path = find_config_file()
-    if config_path is None:
-        config_path = USER_CONFIG_FILE
-        config_path.parent.mkdir(parents=True, exist_ok=True)
+    """Set a TUI configuration value and save it to the USER config file.
+
+    The write target is :func:`find_writable_config_file`, never the file
+    reads resolve to. Until v1.19.1 this used `find_config_file()`, which
+    prefers a project-local `./ppxai-config.json` — so toggling `/debug-log`
+    from inside a checkout rewrote that repo's own tracked config. The ppxai
+    test suite did it to ppxai on every run (debt Item 70): a smoke test
+    POSTs a body to every route, `/debug-log` persists, and pytest's cwd is
+    the repo root.
+
+    When the two paths diverge the setting still applies to the running
+    session (the in-memory `ConfigStore` is updated below) but the project
+    config shadows it on the next start, because `load_config` takes the
+    first hit rather than merging. That is worth a warning, not silence.
+    """
+    config_path = find_writable_config_file()
+
+    active = find_config_file()
+    if active is not None and active.resolve() != config_path.resolve():
+        logger.warning(
+            f"tui.{key} saved to {config_path}, but {active.resolve()} "
+            f"shadows it on the next start (reads take the first config "
+            f"found, they do not merge)"
+        )
 
     if config_path.exists():
         try:

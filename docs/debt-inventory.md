@@ -62,7 +62,6 @@ quoting them** — this table is a map, not a source.
 | **63** | benchmark conclusions hand-typed into code, unlinked | sequenced after ADR 0012 W3 |
 | **66** | the deprecation table only knows the models WE ship | distinct from 38 |
 | **69** | a test's verdict depends on a config file OUTSIDE the repo | read side; ~1–2 h |
-| **70** | a test run REWRITES the repo's own tracked config | write side of 69 |
 | **65** | `BUILTIN_PROFILES` retired ✅ — §4b/§4c reference-data validation open | §4c is an owner's call |
 | **67** | ruff backlog — defect half ✅ closed | remainder **deliberate, no action** |
 | **23** | `SessionManager` growth drift | **flag-only, no action** (trigger: 2,500 LoC) |
@@ -1557,10 +1556,15 @@ operator dropping it into config, and `/doctor` scaffolding from it.
 
 ### Item 69 — a test's verdict depends on a config file OUTSIDE the repo [testing]
 
-**Write-side twin filed 2026-09-05 — see [[Item 70]].** Same root cause,
-opposite direction: `find_config_file()` prefers `./ppxai-config.json`, so a
-suite run from the repo root not only *reads* a config outside its control,
-it can *write* the repo's own tracked one.
+**The write half is CLOSED — [[Item 70]], fixed 2026-09-05.** Same root
+cause, opposite direction: `find_config_file()` prefers
+`./ppxai-config.json`, so a suite run from the repo root both *read* a
+config outside its control and *wrote* the repo's own tracked one. Writes
+now resolve through `find_writable_config_file()`, which never returns a
+discovered project config. **This item is the read half and stays open:**
+a test's verdict still depends on whichever config the cwd happens to
+offer, and no split fixes that — only pinning the suite's config source
+does.
 
 **Affected:** `ppxai/config/loader.py:208-232` (`find_config_file`), every
 test that reaches provider config through the real loader — measured today in
@@ -1634,90 +1638,6 @@ least exactly when it is trusted most.
 
 **Effort:** ~1-2 h for options 1 + 3 plus the audit; unknown for the per-test
 conversions if the audit finds many.
-
----
-
-### Item 70 — a test run REWRITES the repo's own tracked `ppxai-config.json` [testing]
-
-**Filed 2026-09-05.** Measured, twice, on two independent full-suite runs:
-`git status` was clean before `uv run pytest tests/ -q --ignore=tests/e2e`
-and showed `M ppxai-config.json` after. Reverted both times.
-
-**The diff is an encoding round-trip, not a value change.** Every
-`\uXXXX` escape in the tracked file comes back as raw UTF-8 —
-`\u2014` → `—`, `\u23f0` → `⏰` — with the JSON semantically identical.
-That signature names the writer: a `json.dump(..., ensure_ascii=False)` over
-the whole file.
-
-**Root cause is [[Item 69]]'s rule, pointed the other way.**
-`config/features.py:51` `set_tui_config()` resolves its target with
-`find_config_file()`, which prefers `./ppxai-config.json` over
-`~/.ppxai/ppxai-config.json`. Under pytest the cwd is the repo root, so the
-"user's config" it rewrites at `features.py:71-73` is the **repo's tracked
-example-adjacent config**. `grep -rn ensure_ascii ppxai/` shows this is the
-only whole-config writer, and `server/secrets/file.py` writes a different
-file.
-
-**Why it is worth an item and not a shrug.** The rewrite is currently
-harmless — same values, different escaping. Three ways that stops being
-true:
-
-- A dirty tree after every suite run trains everyone to ignore
-  `M ppxai-config.json`, and `git add -A` then commits it. It has not
-  happened yet only because it is caught by eye.
-- The same call path writes **values**, not just encoding. A test that sets a
-  different `tui.*` key mutates the tracked config for real, and the next
-  reader inherits it.
-- It makes the suite non-hermetic in the direction Item 69 warns about, with
-  the repo's own file as the shared mutable state.
-
-**Isolated 2026-09-05. The whole chain, measured end to end:**
-
-```
-tests/test_server_smoke_e2e.py::TestServerSmoke
-    ::test_post_endpoint_does_not_crash[/debug-log-body8]
-  POST /debug-log {"enabled": false}
-  -> server/routes/config.py:252  set_debug_log()
-  -> server/routes/config.py:269  set_tui_config("debug_log", enabled)
-  -> config/features.py:52        find_config_file() -> ./ppxai-config.json
-  -> config/features.py:76        json.dump(..., ensure_ascii=False)
-```
-
-The smoke suite POSTs a body to every route to prove none of them 500. One
-of those routes **persists a setting**, and under pytest the cwd is the repo
-root, so "persist" means the repo's own tracked file. Reproduces in 7
-seconds:
-
-```bash
-uv run pytest "tests/test_server_smoke_e2e.py::TestServerSmoke::test_post_endpoint_does_not_crash" -q
-git status --short ppxai-config.json    # M ppxai-config.json
-```
-
-**How it was found matters more than what was found.** Two instrumented
-tripwires ran the full suite and reported nothing, and both silences were
-false:
-
-- A guard `str(config_path).endswith("git/utils/ppxai/ppxai-config.json")`
-  could never match, because `find_config_file()` returns the **relative**
-  `Path("./ppxai-config.json")`.
-- A `builtins.open` wrapper never sees `Path.write_text()` / `Path.open()`:
-  `pathlib` reaches `io.open` through its own reference, so patching
-  `builtins.open` misses it. (`io.open is builtins.open` is True, which is
-  exactly why the patch looks like it should work.)
-
-What worked was refusing to instrument the suspect at all: a
-`pytest_runtest_teardown` hook that SHA-256s the file after every test and
-prints the first `nodeid` whose digest moves. **Writer-agnostic beats
-writer-specific** — it cannot be defeated by guessing the wrong API, the
-wrong path form, or the wrong module. Reach for it first the next time a
-file changes and nobody admits to writing it.
-
-**Planned:** `v1.19.x`, alongside [[Item 69]] — they share a fix. Options:
-point `set_tui_config` at `USER_CONFIG_FILE` unless `PPXAI_CONFIG_FILE` is
-set explicitly; or give the suite a session-scoped fixture that pins
-`PPXAI_CONFIG_FILE` to `tmp_path`, which closes both directions at once.
-
-**Effort:** ~1 h to isolate + fix, plus whatever Item 69's audit costs.
 
 ---
 
@@ -2351,6 +2271,7 @@ One-liners only — full bodies + evidence trails in
 [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md);
 older per-version detail in the v1.18.2/v1.18.3 snapshots.
 
+- **Item 70** — a test run rewrote the repo's own tracked `ppxai-config.json` — filed and closed 2026-09-05. `set_tui_config` persisted through `find_config_file()`, which prefers a project-local config, so `/debug-log` (POSTed by the route smoke test, with pytest's cwd at the repo root) rewrote the checked-in file on every run. Split the resolution: `find_writable_config_file()` never returns a discovered project config. Found by a writer-agnostic hash hook after two instrumented tripwires produced false negatives — the method note is in the archived body.
 - **Item 43** — Perplexity `/task` never called granted tools; the premise was overturned twice — closed 2026-08-24, ADR 0012 plan I3 (`0490ce87`). The cause was ours: a hardcoded `native_tool_calling=False` that was true when written and false by 2026-08-13, plus a `model_profiles` row pinning `prompt_based` that would have made the capability table decorative on its own.
 - **Item 68** — eager package imports forcing lazy imports — filed and closed 2026-09-01. 31 fence rows → 28, 4 `cycle`-tagged → 1; the survivor (`config.tls → config.store`) is measured irreducible. The filing diagnosis was wrong in every section and the corrections are recorded with it.
 - **Item 24** — non-vision image attach fail-loud + shell-CLI route — closed 2026-06-23, `feature/v1.19.0`

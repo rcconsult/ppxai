@@ -1436,3 +1436,115 @@ was extracted to `common/` precisely to escape the cycle, and the
 test can re-derive from source.
 
 ---
+
+### Item 70 — a test run REWRITES the repo's own tracked `ppxai-config.json` [testing]  ✅ FIXED
+
+> **✅ FIXED 2026-09-05, same day it was filed.** The owner's call settled the
+> design question the item left open: *"it's a config to be read not modded."*
+> A project-local `ppxai-config.json` is now READ-ONLY.
+>
+> `loader.find_writable_config_file()` is the write path, and it drops
+> `./ppxai-config.json` from the search order:
+>
+> | | resolution |
+> |---|---|
+> | read | `PPXAI_CONFIG_FILE` → `./ppxai-config.json` → user |
+> | **write** | `PPXAI_CONFIG_FILE` → **user** |
+>
+> `PPXAI_CONFIG_FILE` stays writable because pointing it at a file is an
+> explicit act. `set_tui_config` — the only whole-config writer — uses it,
+> and warns when the write target and the active read source diverge, because
+> reads take the FIRST config found and do not merge: a setting persisted
+> under a project config applies to the running session and is shadowed on
+> the next start. Making *that* case persist means layering user preferences
+> over a project config at read time, which is a feature, not a bug fix, and
+> is deliberately not in this change.
+>
+> Proof the symptom is gone: a full suite run leaves
+> `git status ppxai-config.json` clean, where it previously reported `M`
+> every time. Fenced by `tests/test_config_write_target.py` (7 tests),
+> mutation-verified — reverting `set_tui_config` to `find_config_file()`
+> fails 4 of them.
+
+
+**Filed 2026-09-05.** Measured, twice, on two independent full-suite runs:
+`git status` was clean before `uv run pytest tests/ -q --ignore=tests/e2e`
+and showed `M ppxai-config.json` after. Reverted both times.
+
+**The diff is an encoding round-trip, not a value change.** Every
+`\uXXXX` escape in the tracked file comes back as raw UTF-8 —
+`\u2014` → `—`, `\u23f0` → `⏰` — with the JSON semantically identical.
+That signature names the writer: a `json.dump(..., ensure_ascii=False)` over
+the whole file.
+
+**Root cause is [[Item 69]]'s rule, pointed the other way.**
+`config/features.py:51` `set_tui_config()` resolves its target with
+`find_config_file()`, which prefers `./ppxai-config.json` over
+`~/.ppxai/ppxai-config.json`. Under pytest the cwd is the repo root, so the
+"user's config" it rewrites at `features.py:71-73` is the **repo's tracked
+example-adjacent config**. `grep -rn ensure_ascii ppxai/` shows this is the
+only whole-config writer, and `server/secrets/file.py` writes a different
+file.
+
+**Why it is worth an item and not a shrug.** The rewrite is currently
+harmless — same values, different escaping. Three ways that stops being
+true:
+
+- A dirty tree after every suite run trains everyone to ignore
+  `M ppxai-config.json`, and `git add -A` then commits it. It has not
+  happened yet only because it is caught by eye.
+- The same call path writes **values**, not just encoding. A test that sets a
+  different `tui.*` key mutates the tracked config for real, and the next
+  reader inherits it.
+- It makes the suite non-hermetic in the direction Item 69 warns about, with
+  the repo's own file as the shared mutable state.
+
+**Isolated 2026-09-05. The whole chain, measured end to end:**
+
+```
+tests/test_server_smoke_e2e.py::TestServerSmoke
+    ::test_post_endpoint_does_not_crash[/debug-log-body8]
+  POST /debug-log {"enabled": false}
+  -> server/routes/config.py:252  set_debug_log()
+  -> server/routes/config.py:269  set_tui_config("debug_log", enabled)
+  -> config/features.py:52        find_config_file() -> ./ppxai-config.json
+  -> config/features.py:76        json.dump(..., ensure_ascii=False)
+```
+
+The smoke suite POSTs a body to every route to prove none of them 500. One
+of those routes **persists a setting**, and under pytest the cwd is the repo
+root, so "persist" means the repo's own tracked file. Reproduces in 7
+seconds:
+
+```bash
+uv run pytest "tests/test_server_smoke_e2e.py::TestServerSmoke::test_post_endpoint_does_not_crash" -q
+git status --short ppxai-config.json    # M ppxai-config.json
+```
+
+**How it was found matters more than what was found.** Two instrumented
+tripwires ran the full suite and reported nothing, and both silences were
+false:
+
+- A guard `str(config_path).endswith("git/utils/ppxai/ppxai-config.json")`
+  could never match, because `find_config_file()` returns the **relative**
+  `Path("./ppxai-config.json")`.
+- A `builtins.open` wrapper never sees `Path.write_text()` / `Path.open()`:
+  `pathlib` reaches `io.open` through its own reference, so patching
+  `builtins.open` misses it. (`io.open is builtins.open` is True, which is
+  exactly why the patch looks like it should work.)
+
+What worked was refusing to instrument the suspect at all: a
+`pytest_runtest_teardown` hook that SHA-256s the file after every test and
+prints the first `nodeid` whose digest moves. **Writer-agnostic beats
+writer-specific** — it cannot be defeated by guessing the wrong API, the
+wrong path form, or the wrong module. Reach for it first the next time a
+file changes and nobody admits to writing it.
+
+**Planned:** `v1.19.x`, alongside [[Item 69]] — they share a fix. Options:
+point `set_tui_config` at `USER_CONFIG_FILE` unless `PPXAI_CONFIG_FILE` is
+set explicitly; or give the suite a session-scoped fixture that pins
+`PPXAI_CONFIG_FILE` to `tmp_path`, which closes both directions at once.
+
+**Effort:** ~1 h to isolate + fix, plus whatever Item 69's audit costs.
+
+---
