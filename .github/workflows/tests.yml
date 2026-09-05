@@ -1,0 +1,96 @@
+name: Tests
+
+# WHY THIS EXISTS, SEPARATELY FROM build.yml
+#
+# build.yml runs this same suite and gates every build job on it -- but it
+# triggers ONLY on a `v*` tag. So a branch can accumulate commits with zero
+# automated verification, and the first run of the suite is the release
+# itself. That is not hypothetical: bugfix/v1.19.1 reached 73 commits and 48
+# changed production files over 11 days with no CI run, and three real
+# defects were found only once something forced a local run. One of them
+# (PtyProcess.kill, eace6fff) made a full local run impossible for four of
+# those days, so nobody noticed the other two.
+#
+# This is a NEW workflow rather than new triggers on build.yml on purpose:
+# build.yml's six build jobs -- four of them 3-OS PyInstaller matrices --
+# would fire on every push, and its release path should not be perturbed to
+# get a test gate.
+#
+# Deliberately NOT copied from build.yml's test job: the benchmark step. It
+# makes live provider calls with PERPLEXITY_API_KEY / GEMINI_API_KEY, which
+# costs real money per run and whose secrets are unavailable to pull
+# requests from forks. Benchmarking stays a release-time concern.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # A newer push supersedes an in-flight run on the same ref -- pushing three
+  # times in a minute should not queue three full suites.
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    # A hang must fail in minutes, not burn GitHub's default 360-minute cap.
+    # pytest-timeout is NOT installed, so pytest will not self-limit; the
+    # PtyProcess.kill hang parked a local run indefinitely rather than
+    # failing. The suite takes ~5 minutes locally, so 30 is generous
+    # headroom that still bounds a hang.
+    timeout-minutes: 30
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Set up Python
+      run: uv python install 3.11
+
+    - name: Install dependencies
+      run: uv sync --frozen --all-extras
+
+    # -v on purpose: with per-test output, a parked run names the test it
+    # stopped on. Under -q a hang is an anonymous row of dots.
+    - name: Run Python tests
+      run: uv run pytest tests/ -v --ignore=tests/test_custom_endpoint_integration.py --ignore=tests/e2e
+
+  e2e:
+    runs-on: ubuntu-latest
+    # Separate job, not a later step: E2E needs Node and not the Python
+    # environment, and an E2E failure should be attributable on its own
+    # rather than hidden behind a Python failure that stopped the job first.
+    timeout-minutes: 20
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: '20'
+
+    - name: Install Playwright dependencies
+      working-directory: tests/e2e
+      run: npm ci
+
+    - name: Install Playwright browsers
+      working-directory: tests/e2e
+      run: npx playwright install chromium --with-deps
+
+    # The default project drives the static file:// harness. live-app.spec.ts
+    # needs a real ppxai-server and is opt-in via `npm run test:live`, so it
+    # does not run here.
+    - name: Run E2E tests
+      working-directory: tests/e2e
+      run: npx playwright test
