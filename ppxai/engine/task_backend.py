@@ -32,7 +32,11 @@ from typing import Any
 
 from ..common.logger import get_logger
 from .agent_runs import RunMeta, resume_refusal
-from .task_authorizer import AuthorizedTask, check_tier_enabled
+from .task_authorizer import (
+    AuthorizedTask,
+    TaskAuthorizationError,
+    check_tier_enabled,
+)
 from .task_runner import build_task_runner, default_run_registry
 from .types import Message
 
@@ -55,6 +59,13 @@ def collect_holds() -> bool:
     try:
         return get_execution_collect() == "yes"
     except Exception:  # noqa: BLE001 — a config error must not block a launch
+        # Deliberately broad: the fallback is the SHIPPED DEFAULT, so any
+        # unreadable config degrades to the safe answer rather than failing a
+        # launch. Broad-and-logged, never broad-and-silent — without this line
+        # a malformed `execution.collect` is indistinguishable from an operator
+        # who actually chose "yes".
+        logger.debug("execution.collect unreadable; holding by default",
+                     exc_info=True)
         return True
 
 
@@ -306,7 +317,11 @@ class InProcessTaskBackend:
                     "ppxai-config.json to enable merging run results."
                 )
         except Exception:  # noqa: BLE001 — a config error must not eat a result
-            pass
+            # Same posture as `collect_holds`: fail OPEN here, because the
+            # alternative is discarding a completed run's output over a config
+            # typo. Logged so the typo is still findable.
+            logger.debug("execution.collect unreadable; allowing the merge",
+                         exc_info=True)
 
         if self._session_provider is None:
             return False, "no session to merge into"
@@ -378,6 +393,10 @@ class InProcessTaskBackend:
             if get_execution_collect() != "auto":
                 return False, "not in auto mode", False
         except Exception:  # noqa: BLE001
+            # `retryable=True`: an unreadable config may be a half-written
+            # file, so the next poll re-reads rather than deciding the run.
+            logger.debug("execution.collect unreadable; will retry",
+                         exc_info=True)
             return False, "collect mode unreadable", True
         if self._session_provider is None or self._session_provider() is None:
             return False, "no active session", True
@@ -408,8 +427,13 @@ class InProcessTaskBackend:
         if getattr(meta, "kind", "task") == "task":
             try:
                 check_tier_enabled()
-            except Exception as exc:
-                return False, getattr(exc, "detail", str(exc))
+            except TaskAuthorizationError as exc:
+                # Narrow on purpose. This used to catch bare `Exception` and
+                # report `str(exc)`, which turned a genuine defect inside the
+                # gate into a polite refusal message — the gate would read as
+                # "tier disabled" no matter what actually broke. Only the
+                # refusal is a refusal; anything else must surface.
+                return False, exc.detail
         refusal = resume_refusal(
             meta, in_flight=self.registry.get_run_task(run_id) is not None
         )
