@@ -648,7 +648,7 @@
     },
     "shell": {
       "timeout": 300,
-      "shell_bin": "/bin/zsh",
+      "shell_bin": "/bin/bash",
       "login_shell": true,
       "require_consent": true,
       "dangerous_commands": [
