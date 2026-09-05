@@ -29,6 +29,45 @@ are now archived under [docs/archive/](archive/) as historical snapshots).
 - **Keep entries scannable.** Lead with one short paragraph + the
   `**Planned:**` and `**Trigger to revisit:**` lines + an effort
   estimate. Long context goes in linked docs / archive snapshots.
+- **Add a row to "Open at a glance" when you file, and remove it when you
+  close.** The index below is the only view of the whole open set; an item
+  missing from it is invisible in exactly the way an untagged item is.
+- **A ✅ in a heading means the whole item is done.** If part of it landed
+  and part did not, say so in the heading — a ✅ over open work stops the
+  item from being read at all. Two items carried one wrongly (65, 67) and
+  were reported as closed for weeks.
+
+---
+
+## Open at a glance
+
+Every open item, one row. Bodies below. **Re-derive counts and dates before
+quoting them** — this table is a map, not a source.
+
+| # | Item | Status |
+|---|---|---|
+| **64** | re-probe Perplexity's pro line on the Responses wire | ⏰ **2026-09-27** — probes 1+2 done (both still 400); one more due before the date |
+| **54** | Gemini fleet migration (2.5-line sunset) | ⏰ **2026-10-16 earliest** — the only other dated item |
+| **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
+| **49** | cross-tier cost accounting; `/cost` under-reports | needs ADR 0008 (still **Proposed**) |
+| **3** | k8s session-manager security tests | trigger-deferred; quick pass done, full suite postponed |
+| **21** | `chat_with_tools` decomposition (673 LoC, fan-out 169) | v1.19.x+ |
+| **22** | `PpxaiApp` (web/app.js) decomposition (3,749 LoC) | trigger-deferred |
+| **29** | `engine.completion` imports `commands.factory` (layer inversion) | ~1–1.5 d remaining |
+| **33** | command-layer `console.print` sweep | ~0.5 d |
+| **34** | office-preview deps must be bundled; CI needs `--all-extras` | ~1 h; no `python-docx` |
+| **35** | pluggable persistence channel abstraction | ~2–3 d, wants its own ADR |
+| **38** | model-catalog watch list | recurring sweep; last one found 4 dead NVIDIA ids shipping |
+| **55** | OpenAI fleet refresh (gpt-5.6 GA + price cuts) | cost-driven, no deadline |
+| **63** | benchmark conclusions hand-typed into code, unlinked | sequenced after ADR 0012 W3 |
+| **66** | the deprecation table only knows the models WE ship | distinct from 38 |
+| **69** | a test's verdict depends on a config file OUTSIDE the repo | read side; ~1–2 h |
+| **70** | a test run REWRITES the repo's own tracked config | write side of 69 |
+| **65** | `BUILTIN_PROFILES` retired ✅ — §4b/§4c reference-data validation open | §4c is an owner's call |
+| **67** | ruff backlog — defect half ✅ closed | remainder **deliberate, no action** |
+| **23** | `SessionManager` growth drift | **flag-only, no action** (trigger: 2,500 LoC) |
+| **39** | `rtk discover` false-negatives | **no action** — documentation-only |
+| **47** | VSCode `/task` lacks the web split-pane | deliberate T8a scope |
 
 ---
 
@@ -656,166 +695,18 @@ hook-rewritten commands, OR `rtk gain` totals plateau across sessions
 
 ---
 
-### Item 43 — Perplexity `/task` never calls granted tools → ✅ **FIXED 2026-08-24** (plan I3) [providers / perplexity / agent platform]
-
-> **CLOSED.** The cause was ours, not the model's. Fixed in three parts,
-> because two of them were separately load-bearing:
->
-> 1. **Per-model capability table** — `PERPLEXITY_NATIVE_TOOL_MODELS` in
->    `providers/perplexity.py`. `sonar-pro` and `sonar-reasoning-pro`
->    resolve `native_tool_calling=True`; everything else stays False, so an
->    unmeasured model degrades rather than 400ing.
-> 2. **Model profiles** — `sonar-pro*` and `sonar-reasoning-pro*` were
->    pinned `mode="prompt_based"` in `model_profiles.py`. `chat.py:693`
->    checks the mode FIRST and short-circuits without consulting provider
->    capabilities, so **the table alone would have been decorative** —
->    measured: `profile.mode=prompt_based, caps.native=True → use_native=
->    False`. Both are now `"auto"`, which defers to the table. Same
->    "override exists but nothing reads it" shape as plan finding F1.
-> 3. **Admission guard** — `_reject_tool_incapable_model` in
->    `task_authorizer.py`. `sonar` and `sonar-deep-research` answer a tools
->    array with HTTP 400 rather than degrading, and the engine's fallback
->    for a non-capable model is the prompt-based path that produced this
->    item's confabulations. A tool-carrying run on such a model is now
->    refused before it is minted, naming the capable models. Fails OPEN on
->    any unresolved lookup — it converts a KNOWN-bad combination into a
->    clear error, it is not a security boundary.
->
-> `sonar-deep-research` **dropped from the shipped catalog** (owner
-> decision) — example config, `install.sh`, `scripts/install.ps1`,
-> `vscode-extension/src/config.ts`, and their pricing tables. Note its 400
-> is not a schema quirk: the example config's own comment records that it
-> "uses Jobs API with reasoning_effort … not chat completions", so it was
-> never reachable on the endpoint we call. Its `model_profiles.py` entry
-> stays as a behavioural fallback for anyone who configures it by hand.
->
-> Tests: `tests/test_perplexity_model_capabilities.py` (31), including an
-> end-to-end mode-resolution check that replicates `chat.py`'s logic so the
-> profile/table coupling cannot silently break again. Five mutations killed.
->
-> Framework context: `docs/plan-per-model-capabilities.md` (I1 send-path
-> wiring, I2 config layers, I3 this). Remaining: I4 roster probe, I4b the
-> new Agent-API fleet, I5 other providers.
-
----
-
-**Historical (superseded) — the diagnosis arc, kept for the evidence.**
-
-### Item 43 — original entry [providers / perplexity / agent platform] — ⚠️ **PREMISE OVERTURNED 2026-08-13**
-
-> **2026-08-13 — the diagnosis below is superseded; the fix is now a
-> one-line capability correction, not a routing gate.**
->
-> Perplexity **added native tool calling**. Verified live against
-> `api.perplexity.ai` through our own provider client:
->
-> | Model | Native `tool_calls` |
-> |---|---|
-> | `sonar` | ❌ HTTP 400 `Tool calling is not supported for this model` |
-> | **`sonar-pro`** | ✅ **emits `tool_calls`** |
-> | **`sonar-reasoning-pro`** | ✅ **emits `tool_calls`** |
-> | `sonar-deep-research` | ❌ HTTP 400 `Tool parameters must be a JSON object` |
->
-> Full round-trip confirmed on `sonar-pro`: emits
-> `read_file{"path": ...}` → accepts the `tool` result message → answers
-> from it (unguessable canary content returned verbatim, so a real loop,
-> not inference).
->
-> **So the failures below were caused by our own config.**
-> `ppxai/engine/providers/perplexity.py:63` hardcodes
-> `native_tool_calling=False` on `default_capabilities` with the comment
-> "Sonar models don't support native API tool_calls" — true when written,
-> false now. That flag forces `profile.mode=prompt_based` and every
-> symptom below follows from the prompt-based fallback, not from the API.
->
-> A same-day direct-provider re-run (5 trials × `sonar`, `sonar-pro`,
-> `sonar-reasoning-pro`) scored **0/15 tool calls** — but that measured
-> the *prompt-based path*, i.e. the consequence of the flag. The earlier
-> "1 success in 6" was the agent loop's text-extraction fallback getting
-> lucky, not the model emitting a call.
->
-> **Revised fix.** Make the capability **per-model**, not per-provider —
-> `openai_native.py:368` already implements exactly this via
-> `get_capabilities_for_model`, so it is the established shape:
-> `sonar-pro` / `sonar-reasoning-pro` → `True`; `sonar` /
-> `sonar-deep-research` → `False` **and** reject tool-capable `/task`
-> up front, since the API 400s rather than degrading.
-> Options (a)/(b)/(c) below are moot — (a) and (b) would now *block or
-> reroute working functionality*, and (c) was already low-confidence.
->
-> **Open sub-question.** `sonar-deep-research`'s 400 is a *schema-shape*
-> complaint ("Tool parameters must be a JSON object"), not a flat refusal,
-> so it may be usable with a stricter schema. Not chased.
->
-> **API-surface note.** Perplexity announced *"Sonar Chat Completions is
-> now Agent API"* (July 2026). Chat completions still works — all the
-> above ran through it — but the Agent API is the forward surface and uses
-> `function_call` / `function_call_output` rather than OpenAI-style
-> `tool_calls`. Official `perplexityai` SDK is at **0.43.3**; ppxai does
-> not use it (we go through the OpenAI SDK), so no SDK bump is implied.
-> The Agent API also fronts third-party models — see Item 38.
-
-**Historical diagnosis (2026-07-13, 8-run web-app trial) — kept for the
-symptom record; the root cause attribution is wrong, see above.**
-
-**Planned:** `v1.19.x`. Originally filed 2026-07-12 from one run
-(`run_07c2f15936d3`, "summarize docs/README.md", perplexity/sonar-pro) that
-cited `https://www.paxerp.com/...` instead of the local file. A **2026-07-13
-web-app trial (8 runs across 3 providers, same task)** confirmed and
-widened the root cause — the wire evidence lives in `~/.ppxai/runs/<id>/agent-0/`
-(`meta.json` = finalized `result`, `events.jsonl` = tool-call trace) and
-`~/.ppxai/logs/{chat,engine,validator}-debug.log`.
-
-**Root cause (wire-verified).** Perplexity config has
-`capabilities.native_tool_calling: false`, so every `/task` sonar-pro run
-resolves to `profile.mode=prompt_based, use_native=False` (chat-debug.log).
-sonar-pro **does not honor the injected prompt-based tool contract** —
-across **6 perplexity runs, zero produced a real `read_file` call**
-(no `tool_call` event in `events.jsonl`, no `Recorded tool call` in
-validator-debug.log, ~2–4s wall). The failure is **nondeterministic** —
-same task, three different wrong outcomes:
-- **Refusal** — "I do not have direct filesystem access… I cannot
-  summarize its contents" (the exact output `manager.py:457` instructs
-  against). Runs `run_315575932bc0`, `run_63374fabab34`.
-- **Confabulation** — "A child agent has been spawned, it read
-  docs/README.md…" then a *hallucinated* summary (release notes / roadmap /
-  debt-inventory — none of which are in the real file, a docs index).
-  Run `run_7984ebf09bba`.
-- **External mis-grounding (the original Item 43 symptom)** — a native
-  web search substitutes for the file, summarizing the unrelated
-  `github.com/steipete/summarize` repo (Chrome extension, cache/daemon)
-  and **citing that external URL**. Reproduced twice: `run_5ecb1da71dfb`,
-  `run_7c0fd9a357dd`.
-
-**Provider-isolation control (same task, native-tool providers).** The bug
-is specific to Perplexity's prompt-based path, not the `/task` platform:
-- `nvidia/deepseek-ai/deepseek-v4-pro` → `profile.mode=native`, real
-  `tool_call read_file` (`Recorded tool call: read_file success=True`),
-  **faithful** summary of the actual file. Direct (`run_76f07756de42`) AND
-  full subagent chain (parent `run_f07d4f8c3209` → child `run_055a6b79d51e`)
-  both correct.
-- `gemini-3.1-pro-preview` → native, real tool call — but 400s (see Item 45).
-
-**The existing guard is insufficient.** `chat.py:455–467` already suppresses
-the "Native Web Search Capability" prompt block when a `/task`
-`system_prompt_override` is active (and it *is* active — `agent_v1.py:915`
-sets `compose_agent_system_prompt`). sonar-pro web-searches anyway.
-
-**Fix direction (not yet built).** This is a model-capability limitation of
-sonar-pro under prompt-based tools, not a ppxai logic bug. Options: (a) gate
-at run creation — warn/reject a tool-capable `/task` targeting a
-`native_tool_calling:false` provider; (b) auto-route tool-capable `/task` to
-a native-tool provider (deepseek/nvidia proven; Gemini once Item 45 lands);
-(c) stronger system-prompt guard (low confidence — `manager.py:457` already
-emphatically forbids the observed refusal and was ignored). Related to
-Item 37's `oneshot_grounding` Option-A work.
-
-**Caveat.** "No tool call" is inferred from validator/event **absence** +
-duration (consistent across all 6 perplexity runs), not a captured HTTP
-response body. The native-provider tool executions ARE directly evidenced
-(both a `tool_call` event and a `Recorded tool call … success=True` line).
-
 ### Item 46 — `/task` `read_file` (and non-`spawn_subagent` tools) are consent-free AND path-unconfined by default [agent platform / security posture]
+
+**2026-09-05 — this stopped being hypothetical.** An operator config audited
+today still had the six ADR 0010 keys at `tools.agent.*`, where they are
+silently ignored, so `task_tier_enabled: true` was reading as **disabled** —
+the tool-capable tier was unreachable and the posture question was moot in
+practice. After migrating those keys the tier is live with
+`sandbox.enforcement: "off"`, which is exactly the shape this item
+describes: tools that are consent-free and path-unconfined, on a host whose
+`~/.ppxai/.env` is readable. The decision is now load-bearing rather than
+theoretical. See [[Item 70]] for how the same config-resolution rule bites
+from the other side.
 
 **Planned:** `v1.19.x` (posture decision, not a spec violation). Surfaced by
 the 2026-07-13 trial observation that the nvidia/deepseek direct run read the
@@ -1237,6 +1128,17 @@ deprecation-table rows for 5.5/5.5-pro if bench confirms. Effort: (a) ~30min;
 
 ### Item 64 — ⏰ re-probe Perplexity's pro line on the Responses wire BEFORE 2026-09-27 [providers / deadline]
 
+**Status 2026-09-05 — 22 days out, and a live config was found pointing at
+the dying id.** Probes 1 and 2 stand: the pro line still 400s on Responses,
+so the shipped `replacement` rows are still correct. What changed is the
+evidence that this matters beyond the table — an operator config audited
+today had `providers.perplexity.default_model` **and** `coding_model` set to
+`sonar-pro`, i.e. an id with no successor on the surviving wire, and
+ppxai-sre reported the same id reached through its own
+`get_provider_config()["default_model"]` fallback. Run the probe once more
+before the date; if it still 400s, nothing to change, and the deprecation
+rows do their job at the cutover.
+
 **Filed 2026-08-31.** Deadline-carrying, and the shortest item here that can
 still break users.
 
@@ -1312,7 +1214,7 @@ obligations are tracked.
 
 ---
 
-### Item 65 — ✅ IMPLEMENTED — `BUILTIN_PROFILES` retired [providers / config]
+### Item 65 — `BUILTIN_PROFILES` retired ✅ — §4b/§4c reference-data validation STILL OPEN [providers / config]
 
 **Filed 2026-08-31.** ADR 0012 refactor (b), second half. Not deadline-bound,
 but time-sensitive in a different way: an adapter with no scheduled removal
@@ -1410,215 +1312,7 @@ and §3's assumption that `api_path="auto"` had rows behind it — zero
 profiles used it.
 ---
 
-### Item 68 ✅ — eager package imports forcing lazy imports [architecture]
-
-**Filed and closed 2026-09-01**, from the lazy-import cleanup.
-
-|  | fence rows | tagged `cycle` |
-|---|---|---|
-| filed | 31 | 4 |
-| **closed** | **28** | **1** |
-
-The surviving row is `config.tls → config.store` — B's `loader/tls/store`
-ring, measured irreducible (hoisting it re-closes the ring; moving the cut
-costs a row instead of saving one). Everything else is
-`patch-semantics` (25), `fallback-probe` (1) and `empty-block` (1), each with
-a reason a test re-derives from source.
-
-**The filing diagnosis was wrong in every section, and the corrections are
-the value here.** It was filed as "three eager package imports"; only one of
-the four turned out to be that. A1 was a single misplaced function out of
-twelve, B had no engine involvement at all, and C was one call site with a
-live user-facing bug behind it. Each subsection below records what was tried,
-what was measured, and what the attempt disproved.
-
-**A. A `config` ↔ `engine` mutual dependency — 3 rows.** ⚠️ **This entry's
-first diagnosis was wrong and the attempt is recorded below**, because the
-correction is the useful part.
-
-*First diagnosis (incomplete):* `engine/__init__.py` eagerly imports
-`EngineClient`, so reaching anything under `engine.` runs
-`engine/__init__ → EngineClient → CheckpointManager → config.SESSIONS_DIR`
-back into a half-initialised `config`.
-
-*Attempted 2026-09-01, then reverted.* Deferring `EngineClient` behind a
-PEP 562 `__getattr__` in BOTH `engine/__init__.py` and `ppxai/__init__.py`
-(line 41 is the real driver — `import ppxai` alone loaded **50** engine
-modules) cut a bare `import ppxai.engine.types` from **72 ppxai modules to
-24**, with `from ppxai import EngineClient` still working. It unblocked
-**zero** baseline rows.
-
-*The actual blocker*, found by hoisting anyway and reading the new error:
-
-    config/__init__ → execution → facts_resolver → providers → base
-                                                        → config.get_extra_body
-
-and independently on another row, `engine.tools.wrappers →
-config.get_tool_description_overrides`. `config` needs provider facts;
-providers need config. `EngineClient` was never the constraint — it was one
-symptom of it, and the failure merely moved from `SESSIONS_DIR` to
-`get_extra_body`.
-
-*Why the revert, beyond "it did not help":* **two of the four PyInstaller
-specs would silently lose the module.**
-
-| spec | lists `ppxai.engine.client`? |
-|---|---|
-| `ppxai.spec` | ✅ line 67 |
-| `ppxai-server.spec` | ✅ line 73 |
-| `ppxaide.spec` | ❌ |
-| `ppxai-desktop.spec` | ❌ |
-
-The two that do not list it rely on PyInstaller following the eager import to
-find it — and `ppxaide` **does** use it (`ppxai/tui/app.py:45`,
-`from ppxai.engine import EngineClient`). No spec has a `collect_submodules`
-catch-all; `ppxai-desktop.spec` names exactly one hidden import
-(`ppxai.version`). Behind `__getattr__` the analyser cannot see the import,
-so those two builds ship without the module — the silent-module-drop this
-project has already shipped once, and what `ppxai/__init__.py`'s docstring
-means by "no lazy loading is needed". A 48-module import saving is not worth
-two builds breaking where no test can see it.
-
-(⚠️ A first version of this entry claimed *no* spec listed it. Two do. The
-conclusion survives, but the corrected count is what makes the argument
-checkable — it names which builds break and the line that proves it.)
-
-**A1 ✅ IMPLEMENTED 2026-09-01 — and "config needs provider facts" was the
-wrong framing.** It is not a package-level dependency. Measured:
-`config/execution.py` has **twelve** functions; eleven read config keys and
-**one** — `get_effective_oneshot_path` — resolved provider facts. That single
-function was the entire `config → providers` edge, and no config module
-called it: both callers (`commands/doctor.py`, `server/routes/oneshot.py`)
-sit above the engine layer.
-
-Moved to `engine/facts_resolver.py`, the composition module from step 3 that
-already imports both sides. `engine → config.execution` was already a live
-module-scope direction (`engine/task_authorizer.py:56`), so the destination
-was proven before the move.
-
-*Result:* fence **31 → 29**, zero rows added; `config → engine` edges 4 → 2,
-and both survivors are data-only (`model_facts`, `types`) already importing
-at module scope. Six patch sites across `test_doctor.py` and
-`test_oneshot_grounding.py` were retargeted to wherever each name is now
-bound — the same seam correction as §B.
-
-**A2 ✅ IMPLEMENTED 2026-09-01 — and the `EngineClient` deferral was not the
-answer.** Three options were measured:
-
-| option | result |
-|---|---|
-| point `checkpoint` at `config.loader` instead of the package | ❌ `import ppxai` still fails; the error just moves `SESSIONS_DIR` → `PROVIDERS` — the next consumer of the half-built package |
-| **stop `common/__init__` eagerly importing `consent`** | ✅ **chosen** — two lines |
-| defer `EngineClient` behind `__getattr__` | ❌ unblocks zero rows, and hides `ppxai.engine.client` from PyInstaller (see A's attempt above) |
-
-The chosen fix is **dead surface removal, not a deferral**:
-`common/__init__.py` re-exported `ConsentManager`, which made importing
-*anything* from `ppxai.common` load `consent` → `engine.tools.wrappers` →
-back into a half-built `config`. **Nothing used the package attribute** —
-every consumer (`commands/handler.py`, `engine/consent_ops.py`,
-`tui/app.py`, `tests/test_common_consent.py`) imports from
-`ppxai.common.consent` directly. Deleting the import and its `__all__` entry
-let `consent → engine.tools.wrappers` hoist.
-
-*Result:* fence **29 → 28**, zero rows added, ruff unchanged at 352.
-
-Option 1 is worth recording as the shape it is: a **symptom queue**. Fixing
-the named consumer moves the error to the next one, exactly as the original
-A diagnosis moved `SESSIONS_DIR` → `get_extra_body`. A package
-half-initialised has no single victim.
-
-**B. `config`'s loader/tls/store ring — 1 row.** `loader → tls → store →
-loader`, entirely inside `config`. `tls.py:55` is `from .store import
-get_config`; `store.py:18` is `from .loader import load_config`.
-
-**✅ IMPLEMENTED 2026-09-01.** The ring is cut at its narrowest edge —
-`tls → store` is one call site already inside a `try/except` — which lets the
-baselined `loader → tls` row hoist to module scope. B is genuinely distinct
-from A: no engine involvement at all, so the prior that "B is A from inside
-config" was wrong, and testing it rather than inheriting it is what showed
-that.
-
-*Four tests were fixed rather than the change abandoned* (owner's call: "if
-tests break we fix the tests"). `tests/test_tls_config.py` patched
-`monkeypatch.setattr(tlsmod, "get_config", ...)`, which needs `get_config`
-to be a module ATTRIBUTE of `tls`; a lazy import removes it. Retargeted to
-`storemod` — the source module the call-time import now resolves through,
-which is the more honest seam anyway: it patches where the name LIVES rather
-than where it happened to be re-bound.
-
-*What it costs, stated plainly:* the fence stays at 31. `loader → tls`
-leaves, `tls → store` arrives. The gain is not the count — it is that the
-remaining lazy import is a single guarded call site with a stated reason,
-rather than a module-scope edge closing a three-module ring.
-
-*The trade is not avoidable, and both alternatives were measured.* A ring of
-three needs one edge cut; the only question is which:
-
-| cut at | result |
-|---|---|
-| `tls → store` (chosen) | **31** — trades `loader → tls` for `tls → store` |
-| `tls → store` AND hoist it too | ImportError — closes the ring again |
-| `store → loader` instead | **32** — adds a row, removes none (two call sites, not one) |
-
-A prediction that the fence would drop to 30 was tested and is wrong in both
-directions: hoisting both edges re-closes the ring, and moving the cut costs
-a row rather than saving one.
-
-**Fully breaking the ring** would mean giving `tls` its config values without
-importing `store` at all — a signature change (pass the block in), not an
-import move. Not attempted.
-
-**C. `rendering/__init__ → base → commands/__init__ → handler →
-rich_renderer → base`. ✅ IMPLEMENTED 2026-09-01.**
-
-`import ppxai.rendering` had failed standalone for some time — the only one
-of the three with a live symptom. Nothing caught it because the app never
-imports `rendering` first; any new script or tool that did, broke.
-
-*Cut at the narrowest edge*, same method as B: `handler.py:568` had ONE call
-site for `RichRenderer` (`handler.py:592`), so that import moved into
-`handle_command()`. Every package now imports standalone, and **zero tests
-needed fixing** — 1,145 passed unchanged.
-
-*Two cheaper cuts were tried first and both failed*, which is why the fix is
-where it is:
-
-| attempt | result |
-|---|---|
-| `base.py` imports `commands.results` directly | still cycles — `import ppxai.commands.results` runs `commands/__init__` first |
-| hoist `handler → rich_renderer` (the mutation) | `ImportError: cannot import name 'Renderer'` — this IS the ring |
-
-*The public surface survives*, which is what separates C from A:
-`commands/__init__` re-exports 14 names from `handler` and all 14 still
-resolve as package attributes. A's `__getattr__` could not make that
-guarantee for PyInstaller.
-
-*Now fenced.* `TestEveryPackageImportsStandalone` imports each top-level
-package in a FRESH subprocess — within one process an earlier import primes
-`sys.modules` and hides the cycle entirely. Mutation-verified: hoisting the
-import back fails exactly the `ppxai.rendering` case and nothing else.
-
-⚠️ `handler.py` now has TWO lazy imports of `rich_renderer` for two different
-reasons — `:568` cuts this ring, `:625` is the sole statement of a `try:`
-(optional inline image preview). The fence tags them together; the comment
-names both.
-
-**Why this is filed rather than fixed.** Each is a deliberate architectural
-decision with a public surface behind it — not import hygiene. Fixing one by
-relocating a dependency would make a number smaller and the architecture
-worse, which is the trade the cleanup declined every time it came up. Sizing
-them is the owner's call; they may also be worth doing never.
-
-**Three tags expired during this work**, which is the reason the fence
-records *why* a row is kept rather than just keeping it: two
-`markdown_links` rows tagged `cycle` were leftovers from before that helper
-was extracted to `common/` precisely to escape the cycle, and the
-`iterm2` row was a fallback probe. Every retained row now has a reason a
-test can re-derive from source.
-
----
-
-### Item 67 ✅ — ruff lint backlog + CI ratchet [tooling / hygiene]
+### Item 67 — ruff lint backlog + CI ratchet: defect half ✅ CLOSED, remainder deliberate (no action) [tooling / hygiene]
 
 **Filed 2026-08-31.** Surfaced repeatedly during the Item 64/65/66 work,
 where every commit had to answer "is this lint mine or pre-existing?" — a
@@ -1863,6 +1557,11 @@ operator dropping it into config, and `/doctor` scaffolding from it.
 
 ### Item 69 — a test's verdict depends on a config file OUTSIDE the repo [testing]
 
+**Write-side twin filed 2026-09-05 — see [[Item 70]].** Same root cause,
+opposite direction: `find_config_file()` prefers `./ppxai-config.json`, so a
+suite run from the repo root not only *reads* a config outside its control,
+it can *write* the repo's own tracked one.
+
 **Affected:** `ppxai/config/loader.py:208-232` (`find_config_file`), every
 test that reaches provider config through the real loader — measured today in
 `tests/test_perplexity_model_capabilities.py`, but the mechanism is general.
@@ -1935,6 +1634,56 @@ least exactly when it is trusted most.
 
 **Effort:** ~1-2 h for options 1 + 3 plus the audit; unknown for the per-test
 conversions if the audit finds many.
+
+---
+
+### Item 70 — a test run REWRITES the repo's own tracked `ppxai-config.json` [testing]
+
+**Filed 2026-09-05.** Measured, twice, on two independent full-suite runs:
+`git status` was clean before `uv run pytest tests/ -q --ignore=tests/e2e`
+and showed `M ppxai-config.json` after. Reverted both times.
+
+**The diff is an encoding round-trip, not a value change.** Every
+`\uXXXX` escape in the tracked file comes back as raw UTF-8 —
+`\u2014` → `—`, `\u23f0` → `⏰` — with the JSON semantically identical.
+That signature names the writer: a `json.dump(..., ensure_ascii=False)` over
+the whole file.
+
+**Root cause is [[Item 69]]'s rule, pointed the other way.**
+`config/features.py:51` `set_tui_config()` resolves its target with
+`find_config_file()`, which prefers `./ppxai-config.json` over
+`~/.ppxai/ppxai-config.json`. Under pytest the cwd is the repo root, so the
+"user's config" it rewrites at `features.py:71-73` is the **repo's tracked
+example-adjacent config**. `grep -rn ensure_ascii ppxai/` shows this is the
+only whole-config writer, and `server/secrets/file.py` writes a different
+file.
+
+**Why it is worth an item and not a shrug.** The rewrite is currently
+harmless — same values, different escaping. Three ways that stops being
+true:
+
+- A dirty tree after every suite run trains everyone to ignore
+  `M ppxai-config.json`, and `git add -A` then commits it. It has not
+  happened yet only because it is caught by eye.
+- The same call path writes **values**, not just encoding. A test that sets a
+  different `tui.*` key mutates the tracked config for real, and the next
+  reader inherits it.
+- It makes the suite non-hermetic in the direction Item 69 warns about, with
+  the repo's own file as the shared mutable state.
+
+**Not yet isolated to a test.** The writer is identified from source and from
+the diff signature; the specific test that triggers it was not narrowed —
+`tests/test_v18_1_audited_commands.py`, the only file naming
+`set_tui_config`/`set_debug_log`, does **not** reproduce it alone. Next step
+is a tripwire (`print(PYTEST_CURRENT_TEST)` guarded on the resolved path)
+rather than another bisect.
+
+**Planned:** `v1.19.x`, alongside [[Item 69]] — they share a fix. Options:
+point `set_tui_config` at `USER_CONFIG_FILE` unless `PPXAI_CONFIG_FILE` is
+set explicitly; or give the suite a session-scoped fixture that pins
+`PPXAI_CONFIG_FILE` to `tmp_path`, which closes both directions at once.
+
+**Effort:** ~1 h to isolate + fix, plus whatever Item 69's audit costs.
 
 ---
 
@@ -2568,6 +2317,8 @@ One-liners only — full bodies + evidence trails in
 [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md);
 older per-version detail in the v1.18.2/v1.18.3 snapshots.
 
+- **Item 43** — Perplexity `/task` never called granted tools; the premise was overturned twice — closed 2026-08-24, ADR 0012 plan I3 (`0490ce87`). The cause was ours: a hardcoded `native_tool_calling=False` that was true when written and false by 2026-08-13, plus a `model_profiles` row pinning `prompt_based` that would have made the capability table decorative on its own.
+- **Item 68** — eager package imports forcing lazy imports — filed and closed 2026-09-01. 31 fence rows → 28, 4 `cycle`-tagged → 1; the survivor (`config.tls → config.store`) is measured irreducible. The filing diagnosis was wrong in every section and the corrections are recorded with it.
 - **Item 24** — non-vision image attach fail-loud + shell-CLI route — closed 2026-06-23, `feature/v1.19.0`
 - **Item 40** — web + VSCode bearer-token support for `/task` — closed 2026-07-11 (web live-trialed 2026-07-12)
 - **Item 41** — Gemini native tool-loop `tool_call_id` threading — closed 2026-07-12
