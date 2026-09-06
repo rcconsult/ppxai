@@ -13,6 +13,32 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
 
+### Added — `/cost` now counts every tier, not just the interactive one (ADR 0008)
+
+`usage.json`'s only writer was reachable from interactive paths, so every
+`/v1/oneshot` and `/v1/agent/task` token your provider billed you for was
+**absent from `/cost`**. The number under-reported in the "cheaper than
+reality" direction, and did so silently, precisely when background runs were
+active.
+
+A new append-only sink (`~/.ppxai/usage/usage-events.jsonl`) now receives an
+event from every token-spending path, tagged by tier, provider, model, owner
+and run. `/cost` shows the background tiers alongside the interactive total
+and reports an all-tier figure.
+
+- **No config, no migration, nothing to turn on.** The log starts empty and
+  fills as you use ppxai; pre-existing `usage.json` history is untouched and
+  still forms the base of the report.
+- **Existing `/cost` fields keep their meaning.** `estimated_cost` remains
+  the interactive number; the all-tier figures are new keys
+  (`all_tier_cost`, `by_tier`, `background_cost`), so clients reading the
+  old fields do not silently change meaning.
+- **Best-effort by contract.** A failed usage write is logged and dropped,
+  never raised — accounting must not fail a chat turn or kill a running
+  agent. Do not treat the log as an audit trail.
+- KV-cache contention on self-hosted endpoints stays **acknowledged, not
+  modelled** (ADR 0008 Gap #2, unchanged).
+
 ### Fixed — a project-local `ppxai-config.json` is read-only
 
 Reads and writes now resolve differently, on purpose:

@@ -1679,3 +1679,89 @@ least exactly when it is trusted most.
 
 **Effort:** ~1-2 h for options 1 + 3 plus the audit; unknown for the per-test
 conversions if the audit finds many.
+
+---
+
+### Item 49 — cross-tier cost + shared-resource accounting: `/cost` under-reports true provider spend; KV-cache contention unmodeled [engine / gateway / agent platform / cost] → ADR 0008
+
+**✅ CLOSED 2026-09-06 — ADR 0008 Accepted, Option A implemented.**
+
+Gap #1 is fixed. `ppxai/usage_events.py` is an append-only event log every
+token-spending path reports to, keyed by `(provider, model, tier, owner,
+run_id)`. Two taps feed it: the F4 usage block in
+`ppxai/engine/task_runner.py` (which covers `/v1/oneshot` AND
+`/v1/agent/task` in one call, since the FU unification routed both through
+`build_task_runner` — the tier tag reads `RunMeta.kind`), and
+`save_usage_to_persistent_storage` for the interactive tier. `/cost` folds
+the background tiers into its report.
+
+**The arithmetic trap, worth remembering:** chat spend now lands in BOTH
+`usage.json` and the event log, so `/cost` adds the log's *background*
+buckets and deliberately excludes its `chat` bucket. Summing both totals
+would count every interactive token twice. `usage.json` stays the base
+because it holds pre-sink history the log cannot.
+
+**Storage decision (ADR question 4):** JSONL append log, not SQLite, not
+locked `usage.json`. One `os.write()` per event to an `O_APPEND` descriptor
+makes concurrent cross-process writes interleave whole lines — the property
+a shared mutable counter lacks, and the reason this could not be fixed by
+just calling the existing writer from the other tiers. 4096-byte line
+ceiling enforced; unparseable rows are skipped AND counted, so a partial
+total is never shown as complete.
+
+**Contract limit, stated rather than buried:** the sink is best-effort
+telemetry, not an audit trail. `record_usage` swallows every failure,
+because failing a chat turn or killing a running agent over a bookkeeping
+write trades a real operation for an accounting one. Anyone needing
+guaranteed capture must change that contract first.
+
+**Gap #2 (KV-cache contention) remains open by decision, not oversight** —
+acknowledge-only, as the ADR proposed. No metric, no per-request accounting;
+the optional vLLM `/metrics` operator read is still available as a later
+addition and nothing in Option A depends on it.
+
+Tests: `tests/test_usage_events.py`, 16 — including a 16-thread concurrent
+write proving no line is corrupted, and two that assert the taps exist,
+because a sink nothing calls is the same bug with more code.
+
+
+**Planned:** `v1.19.x`+ (**needs an architecture decision, not a patch** —
+design in [decisions/0008-cross-tier-cost-and-resource-accounting.md](decisions/0008-cross-tier-cost-and-resource-accounting.md),
+Status: Proposed). Surfaced 2026-07-15 while reviewing Item 48's engine
+isolation.
+
+**Gap #1 (verified) — local cost view under-reports true spend.**
+`save_usage_to_persistent_storage` (sole writer of `usage.json`, backing
+`/cost`) is called **only from interactive paths** (`commands/handler.py:441`,
+`rich/main.py:623`, `tui/stream_handler.py:310`, `server/session_manager.py`,
+`server/streaming.py`). **Neither `oneshot.py` nor `agent_v1.py` calls it.**
+So for a user running chat + `/v1/oneshot` + `/v1/agent/task` on the **same
+provider account**: the provider bills for all three, but `/cost`/`usage.json`
+reflect **only the interactive session**. Oneshot usage is returned then
+dropped (stateless, no `EngineClient` by ADR 0004); task usage lives in the
+run's own per-run engine (ADR 0003 D1 isolation) and never aggregates.
+`/cost` silently under-reports whenever background runs are active. (Distinct
+from Item 48's `Ctx:` badge, which is *correctly* per-engine display-scoping —
+this is about the shared **money**.)
+
+**Gap #2 (verified absent) — no model of shared KV-cache contention.** On a
+self-hosted vLLM/NIM endpoint the KV cache is a finite GPU resource shared
+across all concurrent requests (client-side `EngineClient` isolation has no
+effect — the cache is server-side). The three tiers send different system
+prompts → no prefix-cache reuse, only contention → preemption/recompute raises
+cost + latency for all three incl. interactive chat. ppxai models none of it
+(no cache-occupancy metric anywhere — correct, since hosted cache is invisible,
+but the cost model should at least acknowledge it for self-hosted users).
+
+**What exists:** per-run task token budget caps an *individual* run
+(`agent_v1.py` ~L1045, `control.tokens_used = session.live_run_tokens`) — NOT
+account-wide, NOT fed into `usage.json`.
+
+**Fix direction:** owner-signoff on ADR 0008. Recommended = Option A (a
+usage-recording sink keyed by `(provider, model, tier, owner)`; `/cost` becomes
+a tier/provider-filterable query over an append log — one truth without
+un-isolating the tiers; composes with Item 35). Naive "one global counter" is
+wrong: different providers = different pricing, cross-process concurrency, and
+legitimately separate per-tenant vs. operator views. KV-cache = acknowledge in
+docs (+ optional vLLM `/metrics` operator read), don't try to account
+per-request. **Until decided, disclose:** `/cost` = interactive session only.

@@ -20,6 +20,7 @@ from typing import Any
 from ..common.logger import get_logger
 from ..constants import ConsentMode
 from ..usage import save_session_usage
+from ..usage_events import TIER_CHAT, record_usage
 from .artifact_registry import ArtifactRegistry
 from .session_store import SessionFileStore
 from .types import (
@@ -2216,6 +2217,26 @@ class SessionManager:
             message_count=len(self.messages),
             tool_calls=tool_calls,
         )
+
+        # ADR 0008 / debt Item 49: mirror the same spend into the cross-tier
+        # sink, tagged `chat`. Additive rather than a replacement — usage.json
+        # keeps its session-granularity records (message counts, tool rollups,
+        # the /cost session view), while the event log answers the question
+        # usage.json structurally cannot: what did ALL tiers cost together.
+        #
+        # One event per (provider, model) instead of one per session, because
+        # the log's whole premise is that a single scalar lies when the tiers
+        # sit on different providers with different pricing.
+        for key, stats in usage_by_model.items():
+            provider, _, model = key.partition("/")
+            record_usage(
+                provider=provider or key,
+                model=model or key,
+                tier=TIER_CHAT,
+                prompt_tokens=stats.get("prompt_tokens", 0),
+                completion_tokens=stats.get("completion_tokens", 0),
+                estimated_cost=stats.get("estimated_cost", 0.0),
+            )
 
     # =========================================================================
     # Session State File Management
