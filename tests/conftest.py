@@ -1,8 +1,12 @@
 import os
+from pathlib import Path
 
 import pytest
 from _pytest.terminal import TerminalReporter
 from dotenv import load_dotenv
+
+#: The config this repository SHIPS. The suite's verdicts are pinned to it.
+REPO_CONFIG_FILE = Path(__file__).resolve().parent.parent / "ppxai-config.json"
 
 
 def pytest_configure(config):
@@ -20,9 +24,79 @@ def pytest_configure(config):
     if os.path.exists(user_env_path):
         load_dotenv(dotenv_path=user_env_path, override=True)
 
+    # ---------------------------------------------------------------
+    # Debt Item 69: pin the config SOURCE before anything reads it.
+    #
+    # `find_config_file()` resolves PPXAI_CONFIG_FILE -> ./ppxai-config.json
+    # -> ~/.ppxai/ppxai-config.json and takes the FIRST hit. Nothing pinned
+    # it, so a test that reached provider config got whichever file the
+    # developer happened to have, and its verdict varied by machine, by cwd,
+    # and by the state of a file that is not under version control.
+    #
+    # That is not theoretical and it failed in the DANGEROUS direction. On
+    # 2026-09-01 `test_the_message_names_the_capable_models` passed in the
+    # main checkout and failed in a worktree at the same commit: the
+    # developer's ~/.ppxai config still carried sonar-pro / sonar-reasoning-pro,
+    # retired from both shipped configs in e6c366b9. The stale personal file
+    # MASKED a real regression. A machine-specific green is indistinguishable
+    # from a correct one until CI, a fresh checkout, or a user finds it.
+    #
+    # Set here rather than in a fixture because `initialize()` below reads
+    # config during collection, before any fixture runs. Respects an explicit
+    # override so a developer can still aim the suite at another config.
+    # ---------------------------------------------------------------
+    if not os.environ.get("PPXAI_CONFIG_FILE") and REPO_CONFIG_FILE.exists():
+        os.environ["PPXAI_CONFIG_FILE"] = str(REPO_CONFIG_FILE)
+
     # Initialize config system (v1.15.3: DAG-based init)
     from ppxai.config import initialize
     initialize()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _the_developers_config_is_unreachable():
+    """No test may resolve the real `~/.ppxai/ppxai-config.json`.
+
+    The pin in `pytest_configure` is necessary but not sufficient: a test
+    that clears the environment (`patch.dict(os.environ, {}, clear=True)` is
+    common here) and runs from a cwd without a project config falls straight
+    through to the user's file again. This closes that hole by redirecting
+    the constant the fallback reads.
+
+    `find_config_file()` reads `USER_CONFIG_FILE` as a module global at CALL
+    time, so patching it on its defining module reaches every caller — even
+    the modules that did `from .loader import find_config_file` and hold
+    their own binding to the function. Patching `HOME` would NOT work: the
+    constant is `PPXAI_HOME / "ppxai-config.json"` evaluated at import.
+
+    Pointed at a path that does not exist, so the fallback yields None and
+    callers take their documented defaults — deterministic, and identical on
+    every machine. Writers are covered too: `find_writable_config_file()`
+    reads the same constant, so a stray write lands in tmp instead of the
+    developer's home.
+
+    Session-scoped: this is a property of the whole run, and a per-test
+    fixture would re-patch 5,700 times for no benefit. A test that wants its
+    own user config still patches the constant itself; the inner patch wins
+    and unwinds back to this one.
+    """
+    from _pytest.monkeypatch import MonkeyPatch
+
+    mp = MonkeyPatch()
+    try:
+        from ppxai.config import loader
+
+        unreachable = (
+            Path(__file__).resolve().parent
+            / "_not-the-developers-home"
+            / "ppxai-config.json"
+        )
+        mp.setattr(loader, "USER_CONFIG_FILE", unreachable)
+    except (ImportError, AttributeError):
+        # Config package not importable in this env — nothing to protect.
+        pass
+    yield
+    mp.undo()
 
 
 @pytest.fixture(autouse=True)
@@ -167,7 +241,7 @@ def pin_server_working_dir(base_url: str, path, timeout: float = 10.0) -> bool:
 def pytest_runtest_makereport(item, call):
     outcome = yield
     report = outcome.get_result()
-    
+
     if report.when == "call":
         item.config._test_durations.append({
             "nodeid": item.nodeid,
@@ -181,16 +255,16 @@ def pytest_terminal_summary(terminalreporter: TerminalReporter, exitstatus, conf
         return
 
     terminalreporter.section("TEST TIMING SUMMARY", sep="=", blue=True)
-    
+
     total_time = sum(d["duration"] for d in durations)
     avg_time = total_time / len(durations)
-    
+
     slowest = sorted(durations, key=lambda x: x["duration"], reverse=True)
 
     terminalreporter.write_line(f"📊 Total Tests: {len(durations)}")
     terminalreporter.write_line(f"⏱️  Total Time Spent: {total_time:.4f}s")
     terminalreporter.write_line(f"📈 Average:        {avg_time:.4f}s")
-    
+
     terminalreporter.write_line("\n🏎️  Top 5 SLOWEST tests:")
     for i, d in enumerate(slowest[:5], 1):
         color = "red" if d["duration"] > 0.5 else "yellow"

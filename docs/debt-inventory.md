@@ -55,13 +55,12 @@ quoting them** — this table is a map, not a source.
 | **22** | `PpxaiApp` (web/app.js) decomposition (3,749 LoC) | trigger-deferred |
 | **29** | `engine.completion` imports `commands.factory` (layer inversion) | ~1–1.5 d remaining |
 | **33** | command-layer `console.print` sweep | ~0.5 d |
-| **34** | office-preview deps must be bundled; CI needs `--all-extras` | ~1 h; no `python-docx` |
+| **34** | add `python-docx` to the `[data]` extra (Word text fallback) | ~1 h — the CI/build half closed 2026-06-14; verified again 2026-09-06 |
 | **35** | pluggable persistence channel abstraction | ~2–3 d, wants its own ADR |
 | **38** | model-catalog watch list | recurring sweep; last one found 4 dead NVIDIA ids shipping |
 | **55** | OpenAI fleet refresh (gpt-5.6 GA + price cuts) | cost-driven, no deadline |
 | **63** | benchmark conclusions hand-typed into code, unlinked | sequenced after ADR 0012 W3 |
 | **66** | the deprecation table only knows the models WE ship | distinct from 38 |
-| **69** | a test's verdict depends on a config file OUTSIDE the repo | read side; ~1–2 h |
 | **65** | `BUILTIN_PROFILES` retired ✅ — §4b/§4c reference-data validation open | §4c is an owner's call |
 | **67** | ruff backlog — defect half ✅ closed | remainder **deliberate, no action** |
 | **23** | `SessionManager` growth drift | **flag-only, no action** (trigger: 2,500 LoC) |
@@ -356,7 +355,15 @@ non-coding command, or the v1.19.x command-context work opens the file set.
 
 ---
 
-### Item 34 — office-preview deps must be bundled in binaries; build/CI must use `--all-extras` [packaging]
+### Item 34 — office-preview deps: build/CI half ✅ CLOSED — only the `python-docx` dep remains [packaging]
+
+**Heading corrected 2026-09-06.** It described the whole original
+problem long after two thirds of it was fixed, and the index row
+inherited that — the same heading-vs-body drift that made Items 65, 67
+and 54 read as more open than they were. Re-verified today: all five
+`build.yml` PyInstaller jobs AND `tests.yml:61` run
+`uv sync --frozen --all-extras`. What is actually open is the last
+paragraph: `python-docx`.
 
 **Affected:** `.claude/skills/build-install/SKILL.md`, the release CI build
 step, `pyproject.toml [data]` extra (`pypdfium2`, `openpyxl`, `python-pptx`;
@@ -1587,91 +1594,6 @@ operator dropping it into config, and `/doctor` scaffolding from it.
 
 ---
 
-### Item 69 — a test's verdict depends on a config file OUTSIDE the repo [testing]
-
-**The write half is CLOSED — [[Item 70]], fixed 2026-09-05.** Same root
-cause, opposite direction: `find_config_file()` prefers
-`./ppxai-config.json`, so a suite run from the repo root both *read* a
-config outside its control and *wrote* the repo's own tracked one. Writes
-now resolve through `find_writable_config_file()`, which never returns a
-discovered project config. **This item is the read half and stays open:**
-a test's verdict still depends on whichever config the cwd happens to
-offer, and no split fixes that — only pinning the suite's config source
-does.
-
-**Affected:** `ppxai/config/loader.py:208-232` (`find_config_file`), every
-test that reaches provider config through the real loader — measured today in
-`tests/test_perplexity_model_capabilities.py`, but the mechanism is general.
-
-**What's wrong:** `find_config_file()` resolves, in order,
-`PPXAI_CONFIG_FILE` -> `./ppxai-config.json` (CWD-relative) ->
-`~/.ppxai/ppxai-config.json`. Nothing in `tests/conftest.py` pins it. So a
-test that reads provider config gets **whichever config the developer
-happens to have**, and its verdict varies by machine, by CWD, and by the
-state of a file that is not under version control.
-
-**How it surfaced (2026-09-01), and note the direction:**
-`test_the_message_names_the_capable_models` failed in an isolated worktree
-and passed in the main checkout, same commit, same code. The cause was not
-the worktree — it was that the developer's `~/.ppxai/ppxai-config.json`
-still carried `sonar-pro` / `sonar-reasoning-pro`, retired from both shipped
-configs in `e6c366b9`:
-
-```
-PPXAI_CONFIG_FILE=<repo>/ppxai-config.json    -> 1 failed
-PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json  -> 1 passed
-```
-
-**The stale personal config MASKED a real regression rather than causing a
-false one.** That is the dangerous direction: a machine-specific green is
-indistinguishable from a correct green, and CI or a fresh checkout finds it
-later — or a user does. Two sessions ran the same commit and got opposite
-results, which is what made it visible at all.
-
-**Second-order finding, same day:** even with the config pinned, a fence can
-lose its teeth to config *content*. Deleting the `!= "prompt_based"` filter
-in `_tool_capable_models_hint` is invisible against the four gateway models
-this repo ships (all resolve `auto`) and caught immediately against a config
-carrying `sonar`. Fixed for that one test by having it supply its own config
-(`test_the_hint_filters_prompt_based_models`), which is the pattern the rest
-should follow.
-
-**Options:**
-1. An autouse fixture pinning `PPXAI_CONFIG_FILE` to the repo config, so
-   every test sees what we SHIP. Cheapest; makes the suite deterministic but
-   still couples verdicts to a real file.
-2. Tests that care about config supply their own (monkeypatch `load_config`),
-   as the new fence does. Correct but must be applied per test.
-3. A conftest guard that FAILS if `~/.ppxai/ppxai-config.json` would be
-   reached during a test run — turns a silent machine dependency into a loud
-   one. Complements 1 or 2 rather than replacing them.
-
-Recommend 1 + 3: pin it, and make the fallback an error rather than a quiet
-substitution.
-
-**Audit done (2026-09-01).** 16 test files reach `load_config` /
-`find_config_file`; **7 isolate nothing** — no `monkeypatch` of
-`load_config`, no `PPXAI_CONFIG_FILE`:
-
-```
-tests/test_capability_resolution.py     tests/test_facts_doctor.py
-tests/test_commands.py                  tests/test_server_routes.py
-tests/test_doctor.py                    tests/test_server_state.py
-tests/test_engine_client_protocol.py
-```
-
-Each is a candidate for a machine-dependent verdict. Being on this list is
-not proof of a live defect — several may never assert on config CONTENT —
-but each needs reading, and `test_doctor.py` is notable because it is where
-the config fences added on 2026-09-01 live.
-
-**Trigger to revisit:** before any CI change that runs the suite in a fresh
-container, and before the next release — a machine-dependent green is worth
-least exactly when it is trusted most.
-
-**Effort:** ~1-2 h for options 1 + 3 plus the audit; unknown for the per-test
-conversions if the audit finds many.
-
 ---
 
 ## Recently moved out of debt scope
@@ -2304,6 +2226,7 @@ One-liners only — full bodies + evidence trails in
 [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md);
 older per-version detail in the v1.18.2/v1.18.3 snapshots.
 
+- **Item 69** — a test's verdict depended on a config file OUTSIDE the repo — closed 2026-09-06. The READ half of the same resolution rule as Item 70: nothing pinned `find_config_file()`, so any test reaching provider config read whichever file the cwd offered, and a stale personal config had already MASKED a real regression (2026-09-01, `sonar-pro` retired in `e6c366b9`). Pinned `PPXAI_CONFIG_FILE` to the shipped config in `pytest_configure` (before `initialize()`, which reads config during collection) and redirected `loader.USER_CONFIG_FILE` out of the real home, closing the cleared-environment fallthrough. `tests/test_config_source_is_pinned.py` proves it: deleting both halves fails 4 of its 6 tests.
 - **Item 70** — a test run rewrote the repo's own tracked `ppxai-config.json` — filed and closed 2026-09-05. `set_tui_config` persisted through `find_config_file()`, which prefers a project-local config, so `/debug-log` (POSTed by the route smoke test, with pytest's cwd at the repo root) rewrote the checked-in file on every run. Split the resolution: `find_writable_config_file()` never returns a discovered project config. Found by a writer-agnostic hash hook after two instrumented tripwires produced false negatives — the method note is in the archived body.
 - **Item 43** — Perplexity `/task` never called granted tools; the premise was overturned twice — closed 2026-08-24, ADR 0012 plan I3 (`0490ce87`). The cause was ours: a hardcoded `native_tool_calling=False` that was true when written and false by 2026-08-13, plus a `model_profiles` row pinning `prompt_based` that would have made the capability table decorative on its own.
 - **Item 68** — eager package imports forcing lazy imports — filed and closed 2026-09-01. 31 fence rows → 28, 4 `cycle`-tagged → 1; the survivor (`config.tls → config.store`) is measured irreducible. The filing diagnosis was wrong in every section and the corrections are recorded with it.

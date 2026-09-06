@@ -1548,3 +1548,134 @@ set explicitly; or give the suite a session-scoped fixture that pins
 **Effort:** ~1 h to isolate + fix, plus whatever Item 69's audit costs.
 
 ---
+
+---
+
+### Item 69 — a test's verdict depends on a config file OUTSIDE the repo [testing]
+
+**✅ CLOSED 2026-09-06 — options 1 + 3 implemented, as recommended.**
+
+- **Pin (option 1).** `tests/conftest.py::pytest_configure` sets
+  `PPXAI_CONFIG_FILE` to the repo's own `ppxai-config.json` before
+  `initialize()` runs. It has to be there rather than in a fixture: config is
+  read during collection, before any fixture executes. An explicit
+  `PPXAI_CONFIG_FILE` from the developer or CI still wins.
+- **Fallback closed (option 3).** A session-scoped autouse fixture redirects
+  `loader.USER_CONFIG_FILE` to a path that does not exist. The env pin alone
+  was not enough: `patch.dict(os.environ, {}, clear=True)` is common in this
+  suite, and combined with a cwd holding no project config it fell straight
+  through to the developer's file again. `find_config_file()` reads that
+  constant as a module global at CALL time, so patching it on the defining
+  module reaches every caller — including modules holding their own
+  `from .loader import ...` binding. Patching `HOME` would not work; the
+  constant is `PPXAI_HOME / "ppxai-config.json"` evaluated at import.
+  Writers are covered by the same redirect, since `find_writable_config_file`
+  reads it too.
+- **Proven, not assumed.** `tests/test_config_source_is_pinned.py` (6 tests)
+  asserts the pin is installed, that resolution lands on the shipped config,
+  that a cleared environment cannot reach the real `~/.ppxai` file in either
+  direction, and that the shipped config carries no retired Perplexity ids —
+  the concrete 2026-09-01 case. Verified by DELETING both halves of the pin:
+  4 of the 6 fail, including the cleared-environment one, which is direct
+  evidence the read-half defect was live rather than theoretical. A pin
+  without that test would be unverified state that a refactor could drop
+  silently — the same shape as a tripwire that passes while the bug is live.
+
+**Suite after: 5,747 passed, 1 skipped.** No existing test changed verdict,
+which is the expected result rather than a disappointing one: runs from the
+repo root already resolved `./ppxai-config.json` first, so this host was
+never the exposed case. What the pin removes is the exposure of every OTHER
+cwd, machine, and worktree — the configuration that actually produced the
+09-01 divergence.
+
+**Residual, deliberately not fixed here.** Option 2 (tests that care about
+config supply their own) still applies per test, and the second-order finding
+stands: a fence can lose its teeth to config *content* even when the source
+is pinned, because the four gateway models this repo ships all resolve
+`auto`. Pinning makes that failure identical on every machine instead of
+machine-specific, which is the difference between a bug you can find and one
+you cannot — but it does not make the fence stronger.
+
+
+**The write half is CLOSED — [[Item 70]], fixed 2026-09-05.** Same root
+cause, opposite direction: `find_config_file()` prefers
+`./ppxai-config.json`, so a suite run from the repo root both *read* a
+config outside its control and *wrote* the repo's own tracked one. Writes
+now resolve through `find_writable_config_file()`, which never returns a
+discovered project config. **This item is the read half and stays open:**
+a test's verdict still depends on whichever config the cwd happens to
+offer, and no split fixes that — only pinning the suite's config source
+does.
+
+**Affected:** `ppxai/config/loader.py:208-232` (`find_config_file`), every
+test that reaches provider config through the real loader — measured today in
+`tests/test_perplexity_model_capabilities.py`, but the mechanism is general.
+
+**What's wrong:** `find_config_file()` resolves, in order,
+`PPXAI_CONFIG_FILE` -> `./ppxai-config.json` (CWD-relative) ->
+`~/.ppxai/ppxai-config.json`. Nothing in `tests/conftest.py` pins it. So a
+test that reads provider config gets **whichever config the developer
+happens to have**, and its verdict varies by machine, by CWD, and by the
+state of a file that is not under version control.
+
+**How it surfaced (2026-09-01), and note the direction:**
+`test_the_message_names_the_capable_models` failed in an isolated worktree
+and passed in the main checkout, same commit, same code. The cause was not
+the worktree — it was that the developer's `~/.ppxai/ppxai-config.json`
+still carried `sonar-pro` / `sonar-reasoning-pro`, retired from both shipped
+configs in `e6c366b9`:
+
+```
+PPXAI_CONFIG_FILE=<repo>/ppxai-config.json    -> 1 failed
+PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json  -> 1 passed
+```
+
+**The stale personal config MASKED a real regression rather than causing a
+false one.** That is the dangerous direction: a machine-specific green is
+indistinguishable from a correct green, and CI or a fresh checkout finds it
+later — or a user does. Two sessions ran the same commit and got opposite
+results, which is what made it visible at all.
+
+**Second-order finding, same day:** even with the config pinned, a fence can
+lose its teeth to config *content*. Deleting the `!= "prompt_based"` filter
+in `_tool_capable_models_hint` is invisible against the four gateway models
+this repo ships (all resolve `auto`) and caught immediately against a config
+carrying `sonar`. Fixed for that one test by having it supply its own config
+(`test_the_hint_filters_prompt_based_models`), which is the pattern the rest
+should follow.
+
+**Options:**
+1. An autouse fixture pinning `PPXAI_CONFIG_FILE` to the repo config, so
+   every test sees what we SHIP. Cheapest; makes the suite deterministic but
+   still couples verdicts to a real file.
+2. Tests that care about config supply their own (monkeypatch `load_config`),
+   as the new fence does. Correct but must be applied per test.
+3. A conftest guard that FAILS if `~/.ppxai/ppxai-config.json` would be
+   reached during a test run — turns a silent machine dependency into a loud
+   one. Complements 1 or 2 rather than replacing them.
+
+Recommend 1 + 3: pin it, and make the fallback an error rather than a quiet
+substitution.
+
+**Audit done (2026-09-01).** 16 test files reach `load_config` /
+`find_config_file`; **7 isolate nothing** — no `monkeypatch` of
+`load_config`, no `PPXAI_CONFIG_FILE`:
+
+```
+tests/test_capability_resolution.py     tests/test_facts_doctor.py
+tests/test_commands.py                  tests/test_server_routes.py
+tests/test_doctor.py                    tests/test_server_state.py
+tests/test_engine_client_protocol.py
+```
+
+Each is a candidate for a machine-dependent verdict. Being on this list is
+not proof of a live defect — several may never assert on config CONTENT —
+but each needs reading, and `test_doctor.py` is notable because it is where
+the config fences added on 2026-09-01 live.
+
+**Trigger to revisit:** before any CI change that runs the suite in a fresh
+container, and before the next release — a machine-dependent green is worth
+least exactly when it is trusted most.
+
+**Effort:** ~1-2 h for options 1 + 3 plus the audit; unknown for the per-test
+conversions if the audit finds many.
