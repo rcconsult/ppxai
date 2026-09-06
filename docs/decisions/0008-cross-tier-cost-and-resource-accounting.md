@@ -1,7 +1,7 @@
 # ADR 0008 — Cross-tier cost and shared-resource accounting
 
 **Date:** 2026-07-15
-**Status:** Proposed (living draft — may be revised in place until Accepted) — not implemented (Debt Item 49: `/v1/oneshot` and `/v1/agent/task` spend absent from `usage.json`; ADR 0009 §4 accounting for enriched oneshot depends on this sink)
+**Status:** **Accepted 2026-09-06 — Option A implemented** (`ppxai/usage_events.py`, taps in `engine/task_runner.py` + `engine/session.py`, rollup in `/cost`). Debt Item 49 closed. See §Sign-off for what was decided on each open question.
 **Related:**
 - [`0004-llm-gateway-features.md`](0004-llm-gateway-features.md) — established the stateless `/v1/oneshot` tier that bypasses `EngineClient` (the origin of gap #1 below)
 - [`0003-agent-platform-architecture.md`](0003-agent-platform-architecture.md) — established the per-run `EngineClient` (D1 isolation) for `/v1/agent/task`
@@ -217,7 +217,8 @@ owner sign-off.
   point (interactive already persists — retarget it through the sink; oneshot +
   task add one call each); `/cost` reworked from field-read to log-query.
 
-**Until a decision lands (current state, must be disclosed):**
+**Superseded 2026-09-06 by the implementation — kept for the record.** The
+state below was true from 2026-07-15 until Option A landed:
 - `/cost` and `usage.json` reflect **interactive session only**.
 - Oneshot/task token spend against a shared provider budget is **invisible**
   locally — users must not treat `/cost` as their true provider bill when
@@ -228,13 +229,109 @@ owner sign-off.
 
 ---
 
-## Open questions for sign-off
+## Sign-off (2026-09-06)
 
-1. **Which option** (A recommended; B if we want cheapest-honest; C/D later)?
-2. **Scope of the sink** — tier-tagged rollup only, or also the substrate for
-   an account-wide **budget** (Option D) later? (Affects whether the sink is
-   read-only analytics or also an enforcement point.)
-3. **KV-cache** — acknowledge-only (doc), or add the optional vLLM `/metrics`
-   operator read?
-4. **Cross-process store** — reuse `usage.json` (file, needs locking) or a
-   small SQLite/append-log for the concurrency-safe sink?
+Answers to the four questions this ADR was blocked on.
+
+**1. Which option → A.** A recording seam every tier reports to, with `/cost`
+aggregating over it. B (disclose-only) was rejected because the disclosure
+already existed in this document and the under-report kept happening; a
+correct number beats a documented wrong one. C and D remain open and are not
+foreclosed — C is a reconciliation source that can be added later, and A is
+the substrate D would need anyway.
+
+**2. Scope → read-only analytics now, enforcement-capable by construction.**
+The sink records; nothing reads it to deny a request. But the event carries
+`owner` and `run_id`, so an account-wide budget (Option D) becomes a query
+against the log rather than a new store. Deliberately not built: enforcement
+needs a policy on what happens mid-run when a budget is exceeded, which is a
+separate decision with user-visible behaviour.
+
+**3. KV-cache → acknowledge-only.** No metric, no per-request accounting, as
+proposed. Gap #2 remains documented rather than modelled; the optional vLLM
+`/metrics` operator read is not implemented and stays available as a later
+addition. Nothing in Option A depends on it.
+
+**4. Cross-process store → an append-only JSONL log**
+(`~/.ppxai/usage/usage-events.jsonl`), not SQLite and not locked `usage.json`.
+
+Each event is one line written with a single `os.write()` to an `O_APPEND`
+descriptor. The kernel makes the offset-grab and the write atomic under
+`O_APPEND`, so concurrent writers across processes interleave whole lines
+rather than fragments — which is exactly the property a shared mutable
+counter lacks, and the reason gap #1 could not be fixed by "also call
+`save_usage_to_persistent_storage` from the other tiers". The line has a
+4096-byte ceiling (the POSIX `PIPE_BUF` floor) enforced in `record_usage`;
+a realistic event serialises to ~200 bytes.
+
+SQLite would also have been correct and was rejected on proportion: it
+introduces a second storage substrate to a project that persists everything
+else as JSON, for a workload that is append-mostly and read-rarely. The
+JSONL log is inspectable with `tail`, needs no migration story, and its
+failure mode — a truncated final line from a killed process — is handled by
+skipping and COUNTING unparseable rows, so a partial total is never
+presented as a complete one.
+
+### Is the log a consumer interface?
+
+**No — `/cost` is the interface; the file is an implementation detail.**
+Raised by ppxai-sre while this ADR was uncommitted, and worth answering in
+the document rather than in a message, because a path read by an out-of-tree
+consumer becomes a compatibility surface the moment it ships.
+
+Read `/cost` and its result metadata (`by_tier`, `all_tier_cost`,
+`background_cost`, `skipped_usage_events`). Those are named keys with
+declared meanings. The JSONL layout, filename and field names are free to
+change without a deprecation cycle.
+
+Two hardening changes came out of that exchange, both of which the log
+needed regardless of who reads it:
+
+- **Every line carries `v`** (`SCHEMA_VERSION`). A best-effort log needs a
+  version MORE than a strict one does: because `record_usage` swallows its
+  own failures, a reader meeting an unversioned schema change would see the
+  difference as a *gap* rather than an error — silently wrong totals instead
+  of a loud break. A line whose `v` is absent or unrecognised is counted as
+  skipped, never coerced; guessing at an unknown schema would put a wrong
+  number in front of someone budgeting with it.
+- **No input can cause a silent drop.** The 4096-byte ceiling now sheds
+  identity in stages (unbounded caller strings first, then bounded
+  truncation of provider/model/tier) so the line fits by construction. The
+  earlier version gave up and returned False on a pathological event, which
+  would have been invisible: an append-only log has no sequence number, so a
+  missing line is not detectable by any reader, and the claim "a partial
+  total is never presented as a complete one" would have been false. Money
+  is never shed; identity is.
+
+The one loss that remains genuinely uncountable is an I/O failure — a full
+disk, a permission error. That is inherent to a sink that must not raise
+into a chat turn, and it is the reason for the contract below.
+
+**What was NOT done, and is not hiding.** The log is best-effort telemetry,
+not an audit trail: `record_usage` swallows every failure, because failing a
+user's chat turn or killing a running agent over a bookkeeping write would
+trade a real operation for an accounting one. Anyone who needs guaranteed
+capture must not build on this seam without changing that contract first.
+
+### Implementation map
+
+| Piece | Location |
+|---|---|
+| Sink + query + rollup | `ppxai/usage_events.py` |
+| Background tiers (`oneshot` + `task`) | `ppxai/engine/task_runner.py`, at the F4 usage block |
+| Interactive tier (`chat`) | `ppxai/engine/session.py::save_usage_to_persistent_storage` |
+| Cross-tier rollup in `/cost` | `ppxai/commands/tools.py::_display_global_usage_report` |
+| Tests | `tests/test_usage_events.py` (16) |
+
+**One tap covers both background tiers** because the FU unification made
+every `/v1/oneshot` execute as a `kind=oneshot` registry run through
+`build_task_runner`. The tier tag reads `RunMeta.kind`, so the two stay
+distinguishable in the rollup without two call sites.
+
+**The arithmetic trap, recorded because it is easy to get wrong later.**
+Interactive spend is written to `usage.json` AND mirrored into the event
+log. `/cost` therefore adds the log's *background* tiers to `usage.json`'s
+total and deliberately excludes the log's `chat` bucket — summing both
+totals would count every interactive token twice. `usage.json` remains the
+base because it holds history from before the sink existed, which the log by
+construction does not.

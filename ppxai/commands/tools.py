@@ -11,6 +11,7 @@ v1.15.0: Migrated to type-based renderer dispatch
 from ..config import get_max_injection_size, get_model_context_limit
 from ..engine.tools.builtin import web_premium
 from ..usage import get_provider_errors, get_usage_report
+from ..usage_events import TIER_CHAT, summarize_usage
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -661,11 +662,63 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
             f"${report.get('total_cost', 0.0):.4f}"
         ])
 
+    # ADR 0008 / debt Item 49: fold in the tiers usage.json cannot see.
+    #
+    # `usage.json` is written only from interactive paths, so before this the
+    # report silently omitted every /v1/oneshot and /v1/agent/task token —
+    # under-reporting in the "cheaper than reality" direction exactly when
+    # background runs were active.
+    #
+    # The two stores OVERLAP on chat: the same interactive spend is written
+    # to usage.json AND mirrored into the event log. So the background tiers
+    # are added and the sink's `chat` bucket is deliberately NOT — summing
+    # both totals would count every interactive token twice. usage.json stays
+    # the base because it holds history from before the sink existed, which
+    # the log by construction does not.
+    tier_summary = summarize_usage(period=period)
+    background = {
+        tier: stats
+        for tier, stats in tier_summary.get("by_tier", {}).items()
+        if tier != TIER_CHAT
+    }
+    background_cost = sum(s["estimated_cost"] for s in background.values())
+    background_tokens = sum(
+        s["prompt_tokens"] + s["completion_tokens"] for s in background.values()
+    )
+
+    if background:
+        for tier, stats in sorted(background.items()):
+            rows.append([
+                f"({tier})",
+                f"{stats['events']} run(s)",
+                f"{stats['prompt_tokens']:,}",
+                f"{stats['completion_tokens']:,}",
+                f"${stats['estimated_cost']:.4f}",
+            ])
+        rows.append([
+            "TOTAL (all tiers)",
+            "",
+            "",
+            f"{report.get('total_tokens', 0) + background_tokens:,}",
+            f"${report.get('total_cost', 0.0) + background_cost:.4f}",
+        ])
+
     # Build message with stats
     message = f"Usage Report: {period_labels.get(period, period)}"
     if report.get("start_date"):
         message += f" ({report['start_date']} to {report['end_date']})"
     message += f" | {report.get('session_count', 0)} sessions | {report.get('total_tokens', 0):,} tokens ({report.get('prompt_tokens', 0):,}↓ / {report.get('completion_tokens', 0):,}↑) | ${report.get('total_cost', 0.0):.4f}"
+    if background:
+        message += (
+            f" | + background {background_tokens:,} tokens / "
+            f"${background_cost:.4f} across {', '.join(sorted(background))}"
+        )
+    if tier_summary.get("skipped_lines"):
+        # Never present a partial total as a complete one.
+        message += (
+            f" | ⚠ {tier_summary['skipped_lines']} unreadable usage event(s) "
+            "excluded"
+        )
 
     usage_table = TableResult(
         status=ResultStatus.SUCCESS,
@@ -683,6 +736,15 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
             "estimated_cost": report.get("total_cost", 0.0),
             "start_date": report.get("start_date"),
             "end_date": report.get("end_date"),
+            # Cross-tier fields (ADR 0008). `estimated_cost` above stays the
+            # interactive-only number so existing clients keep their meaning;
+            # the all-tier figure is a NEW key rather than a redefinition.
+            "by_tier": tier_summary.get("by_tier", {}),
+            "background_cost": background_cost,
+            "background_tokens": background_tokens,
+            "all_tier_cost": report.get("total_cost", 0.0) + background_cost,
+            "all_tier_tokens": report.get("total_tokens", 0) + background_tokens,
+            "skipped_usage_events": tier_summary.get("skipped_lines", 0),
         }
     )
     return _maybe_compose_with_errors(usage_table)

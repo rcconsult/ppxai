@@ -49,7 +49,6 @@ quoting them** — this table is a map, not a source.
 | **64** | re-probe Perplexity's pro line on the Responses wire | ⏰ **2026-09-27.** Probes 1+2+3 all still 400 — table confirmed correct, no code change. The 09-26 obligation deliberately STAYS as the last check before the cutover; see the item for why |
 | **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
 | **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
-| **49** | cross-tier cost accounting; `/cost` under-reports | needs ADR 0008 (still **Proposed**) |
 | **3** | k8s session-manager security tests | trigger-deferred; quick pass done, full suite postponed |
 | **21** | `chat_with_tools` decomposition (673 LoC, fan-out 169) | v1.19.x+ |
 | **22** | `PpxaiApp` (web/app.js) decomposition (3,749 LoC) | trigger-deferred |
@@ -819,49 +818,6 @@ first.
 Keep the chat-line rendering as the no-panel fallback either way. Verb/status
 parity sentinel (`tests/test_vscode_task_controller.py`) is unaffected — this
 is presentation, not protocol.
-
-### Item 49 — cross-tier cost + shared-resource accounting: `/cost` under-reports true provider spend; KV-cache contention unmodeled [engine / gateway / agent platform / cost] → ADR 0008
-
-**Planned:** `v1.19.x`+ (**needs an architecture decision, not a patch** —
-design in [decisions/0008-cross-tier-cost-and-resource-accounting.md](decisions/0008-cross-tier-cost-and-resource-accounting.md),
-Status: Proposed). Surfaced 2026-07-15 while reviewing Item 48's engine
-isolation.
-
-**Gap #1 (verified) — local cost view under-reports true spend.**
-`save_usage_to_persistent_storage` (sole writer of `usage.json`, backing
-`/cost`) is called **only from interactive paths** (`commands/handler.py:441`,
-`rich/main.py:623`, `tui/stream_handler.py:310`, `server/session_manager.py`,
-`server/streaming.py`). **Neither `oneshot.py` nor `agent_v1.py` calls it.**
-So for a user running chat + `/v1/oneshot` + `/v1/agent/task` on the **same
-provider account**: the provider bills for all three, but `/cost`/`usage.json`
-reflect **only the interactive session**. Oneshot usage is returned then
-dropped (stateless, no `EngineClient` by ADR 0004); task usage lives in the
-run's own per-run engine (ADR 0003 D1 isolation) and never aggregates.
-`/cost` silently under-reports whenever background runs are active. (Distinct
-from Item 48's `Ctx:` badge, which is *correctly* per-engine display-scoping —
-this is about the shared **money**.)
-
-**Gap #2 (verified absent) — no model of shared KV-cache contention.** On a
-self-hosted vLLM/NIM endpoint the KV cache is a finite GPU resource shared
-across all concurrent requests (client-side `EngineClient` isolation has no
-effect — the cache is server-side). The three tiers send different system
-prompts → no prefix-cache reuse, only contention → preemption/recompute raises
-cost + latency for all three incl. interactive chat. ppxai models none of it
-(no cache-occupancy metric anywhere — correct, since hosted cache is invisible,
-but the cost model should at least acknowledge it for self-hosted users).
-
-**What exists:** per-run task token budget caps an *individual* run
-(`agent_v1.py` ~L1045, `control.tokens_used = session.live_run_tokens`) — NOT
-account-wide, NOT fed into `usage.json`.
-
-**Fix direction:** owner-signoff on ADR 0008. Recommended = Option A (a
-usage-recording sink keyed by `(provider, model, tier, owner)`; `/cost` becomes
-a tier/provider-filterable query over an append log — one truth without
-un-isolating the tiers; composes with Item 35). Naive "one global counter" is
-wrong: different providers = different pricing, cross-process concurrency, and
-legitimately separate per-tenant vs. operator views. KV-cache = acknowledge in
-docs (+ optional vLLM `/metrics` operator read), don't try to account
-per-request. **Until decided, disclose:** `/cost` = interactive session only.
 
 ### Item 54 — Gemini fleet migration ✅ on the deadline path — open only on a TRIGGER (a GA Pro successor) [providers / gemini / SDK]
 
@@ -2227,6 +2183,7 @@ One-liners only — full bodies + evidence trails in
 older per-version detail in the v1.18.2/v1.18.3 snapshots.
 
 - **Item 69** — a test's verdict depended on a config file OUTSIDE the repo — closed 2026-09-06. The READ half of the same resolution rule as Item 70: nothing pinned `find_config_file()`, so any test reaching provider config read whichever file the cwd offered, and a stale personal config had already MASKED a real regression (2026-09-01, `sonar-pro` retired in `e6c366b9`). Pinned `PPXAI_CONFIG_FILE` to the shipped config in `pytest_configure` (before `initialize()`, which reads config during collection) and redirected `loader.USER_CONFIG_FILE` out of the real home, closing the cleared-environment fallthrough. `tests/test_config_source_is_pinned.py` proves it: deleting both halves fails 4 of its 6 tests.
+- **Item 49** — `/cost` under-reported true provider spend across tiers — closed 2026-09-06, **ADR 0008 Accepted, Option A implemented**. `usage.json`'s sole writer was reachable only from interactive paths, so every `/v1/oneshot` and `/v1/agent/task` token the provider billed for was absent from the local number users budget with. New append-only sink `ppxai/usage_events.py`; one tap at the run-registry boundary covers both background tiers (they share `build_task_runner` since the FU unification, and tier reads `RunMeta.kind`), one at the interactive path. `/cost` adds the log's background tiers to `usage.json` and excludes its `chat` bucket — chat is written to both, so summing totals would double-count it. Gap #2 (KV-cache) stays acknowledge-only as proposed.
 - **Item 70** — a test run rewrote the repo's own tracked `ppxai-config.json` — filed and closed 2026-09-05. `set_tui_config` persisted through `find_config_file()`, which prefers a project-local config, so `/debug-log` (POSTed by the route smoke test, with pytest's cwd at the repo root) rewrote the checked-in file on every run. Split the resolution: `find_writable_config_file()` never returns a discovered project config. Found by a writer-agnostic hash hook after two instrumented tripwires produced false negatives — the method note is in the archived body.
 - **Item 43** — Perplexity `/task` never called granted tools; the premise was overturned twice — closed 2026-08-24, ADR 0012 plan I3 (`0490ce87`). The cause was ours: a hardcoded `native_tool_calling=False` that was true when written and false by 2026-08-13, plus a `model_profiles` row pinning `prompt_based` that would have made the capability table decorative on its own.
 - **Item 68** — eager package imports forcing lazy imports — filed and closed 2026-09-01. 31 fence rows → 28, 4 `cycle`-tagged → 1; the survivor (`config.tls → config.store`) is measured irreducible. The filing diagnosis was wrong in every section and the corrections are recorded with it.

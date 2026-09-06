@@ -42,6 +42,7 @@ from typing import Any, Protocol, Union
 from ..config import execution as _execution_config
 from ..config.loader import PPXAI_HOME
 from ..config.paths import get_default_working_dir
+from ..usage_events import TIER_TASK, record_usage
 from .agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 from .agent_scoped_tools import ScopedToolManager
 from .client import EngineClient
@@ -446,7 +447,7 @@ def build_task_runner(
 
         # F4: persist the run's OWN usage on its audit trail. This engine is
         # run-local (D1), so session.usage is per-run attribution by
-        # construction — the seam ADR 0008's cross-tier sink will read.
+        # construction — the seam ADR 0008's cross-tier sink reads below.
         try:
             u = engine.session.usage
             ws = (u.tool_calls or {}).get("web_search")
@@ -463,6 +464,28 @@ def build_task_runner(
                         "backend": ws.provider,
                     } if ws else None,
                 },
+            )
+
+            # ADR 0008 / debt Item 49: the SAME numbers, into the cross-tier
+            # sink. The audit event above is per-run and lives on the run's
+            # own trail, which is why `/cost` never saw it — nothing
+            # aggregates run trails. One tap here covers BOTH background
+            # tiers, because the FU unification made /v1/oneshot execute as a
+            # kind=oneshot registry run through this same builder.
+            #
+            # `kind` maps 1:1 onto the sink's tier, and getattr guards it
+            # because RunMetaLike declares only run_id + owner — a substitute
+            # meta that satisfies the Protocol need not carry the rest, and
+            # losing accounting is a better failure than crashing a run.
+            record_usage(
+                provider=getattr(m, "provider", None) or "unknown",
+                model=getattr(m, "model", None) or "unknown",
+                tier=getattr(m, "kind", None) or TIER_TASK,
+                prompt_tokens=u.prompt_tokens,
+                completion_tokens=u.completion_tokens,
+                estimated_cost=u.estimated_cost,
+                owner=getattr(m, "owner", None),
+                run_id=m.run_id,
             )
         except Exception:  # noqa: BLE001 — usage audit must never fail a run
             pass
