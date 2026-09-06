@@ -60,7 +60,7 @@ class TestCreateSSLContext:
         outcome (root count grows) instead of the call shape also stops
         the test from re-breaking on the next refactor.
         """
-        from tests.test_tls_config import _SYNTHETIC_CA_PEM
+        from tests.test_tls_config import _SYNTHETIC_CA_PEM, CAPATH_SKIP_REASON
 
         with tempfile.NamedTemporaryFile(
             suffix=".pem", delete=False, mode="w", encoding="utf-8"
@@ -96,6 +96,18 @@ class TestCreateSSLContext:
                 f"custom CA was not added: {additive} roots vs baseline "
                 f"{baseline}"
             )
+
+            # The second half only has a truth value where the OS default
+            # store enumerates. `baseline == 0` IS that test, and it is the
+            # right one to use here because it was measured inside the same
+            # cleared-env block as `additive` — see the rationale block at
+            # the top of tests/test_tls_config.py for the mechanism (a
+            # capath store is read lazily, so it counts 0 while verifying
+            # normally, and an additive context is then indistinguishable
+            # from a replacing one without a real handshake).
+            if baseline == 0:
+                pytest.skip(CAPATH_SKIP_REASON)
+
             assert additive > replaced, (
                 f"custom CA replaced the trust store ({additive} roots vs "
                 f"{replaced} for cafile-only) — a roaming laptop would lose "
