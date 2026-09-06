@@ -46,7 +46,7 @@ quoting them** — this table is a map, not a source.
 
 | # | Item | Status |
 |---|---|---|
-| **64** | re-probe Perplexity's pro line on the Responses wire | ⏰ **2026-09-27 — the ONLY dated item left.** Probes 1+2 done (both still 400); one more due before the date. `/doctor` cannot discharge it — see the item |
+| **64** | re-probe Perplexity's pro line on the Responses wire | ⏰ **2026-09-27.** Probes 1+2+3 all still 400 — table confirmed correct, no code change. The 09-26 obligation deliberately STAYS as the last check before the cutover; see the item for why |
 | **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
 | **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
 | **49** | cross-tier cost accounting; `/cost` under-reports | needs ADR 0008 (still **Proposed**) |
@@ -1179,11 +1179,32 @@ chat-completions and dies with that endpoint on 2026-09-27. Asking a
 chat-completions model about the Responses wire is a question with no
 bearing on the table.
 
-**Probe 3 is NOT needed.** The 2026-09-20 obligation existed to catch a
-change before the cutover; two probes three weeks apart agree, and the
-remaining window is short. The dated obligation in
-`tests/test_dated_obligations.py` should now be retired or moved to
-2026-09-26 as a last check — see the entry's own instruction.
+**✅ PROBE 3 — 2026-09-06: STILL 400.** Run at the owner's direction, 20
+days before the obligation's date. All three ids answer
+`400 validation failed: model "..." is not supported` on the Responses wire,
+byte-identical to probes 1 and 2:
+
+    perplexity/sonar-pro            ABSENT  (table says REJECTS)  ok
+    perplexity/sonar-reasoning-pro  ABSENT  (table says REJECTS)  ok
+    sonar-pro                       ABSENT  (table says NATIVE)   DRIFT
+
+The `sonar-pro` DRIFT row is the same probe artifact documented under probe
+2 — a chat-completions model asked about the Responses wire — not a table
+defect. **No code change: the shipped `replacement` rows remain correct.**
+
+**The 2026-09-26 obligation STAYS.** Three probes agree, so the temptation is
+to delete the entry and close this item now. That would be wrong, and the
+reason is worth stating because it will come up again: probe 3 ran on
+**09-06**, and the obligation exists to catch a change **before the 09-27
+cutover**. Deleting it now converts a check dated one day before the cutover
+into one taken 21 days before it, and hands back the whole window in which
+Perplexity could still ship the pro line on Responses. The cost of keeping
+it is ~2 minutes on 09-26; the cost of dropping it is shipping a migration
+hint that steers every pro operator onto a lighter model they did not need,
+which the user WILL follow. Asymmetric, so keep the alarm.
+
+**This item closes on 2026-09-26**, when the last probe runs, or when the
+endpoint dies — whichever the owner reaches first.
 
 **✅ 2026-08-31 — the date now ENFORCES ITSELF.** The obligation was recorded
 in three places (a code comment, an untracked notes file, this entry) and

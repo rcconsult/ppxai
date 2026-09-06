@@ -11,11 +11,79 @@ the defect.
 from __future__ import annotations
 
 import ssl
+from pathlib import Path
 
 import pytest
 
 from ppxai.config import store as storemod
 from ppxai.config import tls as tlsmod
+
+# ---------------------------------------------------------------------------
+# Why some root-count assertions below are platform-gated
+#
+# `SSLContext.get_ca_certs()` enumerates the certificates the store has
+# actually LOADED. That is not the same as the certificates it trusts.
+# OpenSSL supports two default-store shapes and they behave differently
+# under that instrument:
+#
+#   cafile  (macOS/Homebrew, `/usr/local/etc/openssl@3/cert.pem`)
+#           loaded eagerly by `set_default_verify_paths()`.
+#           get_ca_certs() -> 203 on the dev host. Countable.
+#
+#   capath  (Debian/Ubuntu, `/etc/ssl/certs`, a hashed directory)
+#           read LAZILY, one lookup per verification.
+#           get_ca_certs() -> 0 even though verification works. Not countable.
+#
+# Measured on the ubuntu-latest runner (uv-installed CPython 3.11.16,
+# OpenSSL 3.5.8), where `cafile` is None and only the capath exists:
+#
+#     create_default_context()   0 enumerable roots, handshake to a public
+#     tls_ssl_context()          0 enumerable roots, endpoint OK for BOTH
+#
+# So a zero count there is a property of the measuring instrument, not of
+# the trust store, and three tests that read it as "the store is empty"
+# failed on Linux while passing on macOS.
+#
+# The consequence for THIS file is narrow but real. The additive guarantee
+# has two halves:
+#
+#   "the CA was added"            provable everywhere — an explicitly loaded
+#                                 cafile IS enumerable, so the delta shows up
+#   "the system roots stayed"     provable only where the default store
+#                                 enumerates
+#
+# On a capath host the second half is genuinely UNDECIDABLE offline: a
+# correct additive context and a broken `create_default_context(cafile=X)`
+# one both enumerate exactly 1 root, and nothing in the `ssl` API exposes a
+# context's configured verify paths. Distinguishing them needs a real
+# handshake against a certificate signed by a system root — a network fact,
+# which does not belong in a hermetic suite.
+#
+# So those assertions skip there, loudly, rather than being weakened into
+# something that passes everywhere and proves nothing. A skip says "not
+# measured here"; a relaxed assertion would say "measured and fine", which
+# would be false. The half that IS decidable everywhere still runs on both
+# platforms, and the guarantee stays pinned on the developer/release host.
+# ---------------------------------------------------------------------------
+
+def default_store_enumerates() -> bool:
+    """True where the OS default store can be counted with get_ca_certs().
+
+    Probes behaviour rather than guessing from `sys.platform`: a Linux host
+    configured with a cafile enumerates fine, and a macOS Python built
+    against a capath would not.
+    """
+    return len(ssl.create_default_context().get_ca_certs()) > 0
+
+
+#: Reason text shared with tests/test_web_tools_ssl.py, which pins the same
+#: guarantee through the web-tools entry point.
+CAPATH_SKIP_REASON = (
+    "the OS default store is capath-based (lazily loaded), so get_ca_certs() "
+    "reports 0 and cannot distinguish an additive context from a replacing "
+    "one; the 'CA was added' half of this guarantee is still asserted above, "
+    "and the 'system roots stayed' half is covered on cafile hosts"
+)
 
 #: The real reader, captured before the autouse fixture stubs it out, so
 #: the fail-safe cases below can restore and exercise it.
@@ -322,10 +390,20 @@ class TestCustomCAIsAdditive:
         loaded = len(tlsmod.tls_ssl_context().get_ca_certs())
         replaced = len(ssl.create_default_context(cafile=str(ca)).get_ca_certs())
 
+        # Half one: the CA really was added. Decidable on every platform,
+        # because an explicitly loaded cafile is enumerable even where the
+        # OS default store is not.
         assert loaded == baseline + 1, (
             f"custom CA was not added: {loaded} roots vs baseline "
             f"{baseline}. Expected exactly one more."
         )
+
+        # Half two: the system roots survived. See the module header — on a
+        # capath host both the additive and the replacing context enumerate
+        # exactly 1, so this comparison has no truth value there.
+        if not default_store_enumerates():
+            pytest.skip(CAPATH_SKIP_REASON)
+
         assert loaded > replaced, (
             f"custom CA replaced the trust store ({loaded} vs {replaced} "
             "for cafile-only)"
@@ -369,12 +447,30 @@ class TestCustomCAIsAdditive:
         """Pins the mechanism the case above depends on."""
         import certifi
 
-        ctx_roots = len(tlsmod.tls_ssl_context().get_ca_certs())
         certifi_roots = certifi.contents().count("BEGIN CERTIFICATE")
-        assert ctx_roots > 0
-        # Not asserting a strict inequality (a CI image may carry a minimal
-        # OS store); asserting only that we go through create_default_context,
-        # which consults the OS store, rather than certifi alone.
+
+        # The claim is that we consult the OS store rather than certifi
+        # alone. How to see that depends on the store's shape (module
+        # header): a cafile store is loaded eagerly and counts; a capath
+        # store is read per-verification and counts 0 while working.
+        paths = ssl.get_default_verify_paths()
+        if default_store_enumerates():
+            assert len(tlsmod.tls_ssl_context().get_ca_certs()) > 0
+        else:
+            capath = paths.capath or paths.openssl_capath
+            assert capath and Path(capath).is_dir(), (
+                f"the default store enumerates 0 roots AND has no readable "
+                f"capath ({capath!r}) — this interpreter trusts nothing, "
+                f"which is a real defect rather than a counting artifact. "
+                f"Verify with a handshake before assuming otherwise."
+            )
+            assert any(Path(capath).iterdir()), (
+                f"{capath} is an EMPTY trust directory — same conclusion"
+            )
+
+        # Not asserting a strict inequality against certifi (a CI image may
+        # carry a minimal OS store); asserting only that we go through
+        # create_default_context, which consults the OS store.
         assert tlsmod.tls_ssl_context().verify_mode == ssl.CERT_REQUIRED
         assert certifi_roots > 0
 
