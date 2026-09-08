@@ -53,7 +53,6 @@ quoting them** — this table is a map, not a source.
 | **21** | `chat_with_tools` decomposition (673 LoC, fan-out 169) | v1.19.x+ |
 | **22** | `PpxaiApp` (web/app.js) decomposition (3,749 LoC) | trigger-deferred |
 | **29** | `engine.completion` imports `commands.factory` (layer inversion) | ~1–1.5 d remaining |
-| **33** | command-layer `console.print` sweep | ~0.5 d |
 | **34** | add `python-docx` to the `[data]` extra (Word text fallback) | ~1 h — the CI/build half closed 2026-06-14; verified again 2026-09-06 |
 | **35** | pluggable persistence channel abstraction | ~2–3 d, wants its own ADR |
 | **38** | model-catalog watch list | recurring sweep; last one found 4 dead NVIDIA ids shipping |
@@ -319,38 +318,6 @@ capability of the same shape).
 **Effort (remaining, v1.19.x):** ~1–1.5 d — two Protocols, the service
 package, composition-root wiring at 3 entry points, AppState roster field +
 4-mirror DTO update, cross-client completion tests.
-
----
-
-### Item 33 — command-layer `console.print` sweep (agent/utility/handler) [envelope-pattern hygiene]
-
-**Affected files:** `commands/agent.py` (~43 `console.print`),
-`commands/utility.py` (~39), `commands/handler.py` (~29).
-
-**What's wrong:** these handlers write user-facing text directly to the Rich
-console instead of returning typed results / side-effects, so anything they
-print is invisible to web/VSCode (server-side stdout). The cross-client
-gap on the coding commands was the acute case — fixed as Item 30 (closed).
-
-**Why deferred (verify-before-fixing):** the bulk of these are genuinely
-**interactive TUI-only flows** (`input()`-driven rollback / confirm prompts
-in `/agent`, `/undo`) that cannot run under `ServerCommandContext` anyway, so
-they are *not* a cross-client bug. The remainder must be audited
-case-by-case: only the ones on a cross-client command path (reachable via
-`POST /command/{name}` and emitting information not already in the returned
-result) need routing through `content`/`message`/side-effects. Bulk
-conversion is UI-purity refactor, not bug-class.
-
-**Planned:** v1.19.x — audit each site; fix only the cross-client-reachable
-ones; leave interactive TUI prompts as-is. Pairs naturally with ADR 0002
-(CommandContext) work if the contexts gain a "can prompt interactively" flag.
-
-**Branch when ready:** v1.19.x.
-
-**Trigger to revisit:** a web/VSCode user reports missing output from a
-non-coding command, or the v1.19.x command-context work opens the file set.
-
-**Effort:** ~0.5 d audit + targeted fixes (most sites confirmed TUI-only).
 
 ---
 
@@ -2183,6 +2150,7 @@ One-liners only — full bodies + evidence trails in
 older per-version detail in the v1.18.2/v1.18.3 snapshots.
 
 - **Item 69** — a test's verdict depended on a config file OUTSIDE the repo — closed 2026-09-06. The READ half of the same resolution rule as Item 70: nothing pinned `find_config_file()`, so any test reaching provider config read whichever file the cwd offered, and a stale personal config had already MASKED a real regression (2026-09-01, `sonar-pro` retired in `e6c366b9`). Pinned `PPXAI_CONFIG_FILE` to the shipped config in `pytest_configure` (before `initialize()`, which reads config during collection) and redirected `loader.USER_CONFIG_FILE` out of the real home, closing the cleared-environment fallthrough. `tests/test_config_source_is_pinned.py` proves it: deleting both halves fails 4 of its 6 tests.
+- **Item 33** — command-layer `console.print` sweep — closed 2026-09-09. The audit is the result: of 111 sites, **39 were dead code** (`_show_active_hints` / `_show_bootstrap_hierarchy`, orphaned by `f7ebd004` in v1.15.0 when `/context` moved to typed results — removed), 65 are TUI-only by construction, and the rest restate what the result already carries. **One** carried information a non-Rich caller could not learn — the no-checkpoint warning, a safety property — now in `message` + `metadata`. The audit also found a REAL BUG the sweep framing would have missed: `POST /command/auto` answered **500**, not bad output, because `handle_agent` called a bare `asyncio.run()` from inside the server's running event loop. Guarded with the `is_event_loop_running()` + threadpool pattern already in `commands/coding.py`.
 - **Item 49** — `/cost` under-reported true provider spend across tiers — closed 2026-09-06, **ADR 0008 Accepted, Option A implemented**. `usage.json`'s sole writer was reachable only from interactive paths, so every `/v1/oneshot` and `/v1/agent/task` token the provider billed for was absent from the local number users budget with. New append-only sink `ppxai/usage_events.py`; one tap at the run-registry boundary covers both background tiers (they share `build_task_runner` since the FU unification, and tier reads `RunMeta.kind`), one at the interactive path. `/cost` adds the log's background tiers to `usage.json` and excludes its `chat` bucket — chat is written to both, so summing totals would double-count it. Gap #2 (KV-cache) stays acknowledge-only as proposed.
 - **Item 70** — a test run rewrote the repo's own tracked `ppxai-config.json` — filed and closed 2026-09-05. `set_tui_config` persisted through `find_config_file()`, which prefers a project-local config, so `/debug-log` (POSTed by the route smoke test, with pytest's cwd at the repo root) rewrote the checked-in file on every run. Split the resolution: `find_writable_config_file()` never returns a discovered project config. Found by a writer-agnostic hash hook after two instrumented tripwires produced false negatives — the method note is in the archived body.
 - **Item 43** — Perplexity `/task` never called granted tools; the premise was overturned twice — closed 2026-08-24, ADR 0012 plan I3 (`0490ce87`). The cause was ours: a hardcoded `native_tool_calling=False` that was true when written and false by 2026-08-13, plus a `model_profiles` row pinning `prompt_based` that would have made the capability table decorative on its own.

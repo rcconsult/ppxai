@@ -9,9 +9,11 @@ v1.15.0: Migrated to type-based renderer dispatch
 
 import asyncio
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 
 from prompt_toolkit import prompt as pt_prompt
 
+from ..common.async_compat import is_event_loop_running
 from ..common.logger import get_logger
 from ..config.defaults import DEFAULT_AGENT_MAX_ITERATIONS, DEFAULT_AGENT_MIN_TASK_WORDS
 from ..rich.event_handler import TUIEventHandler
@@ -673,14 +675,27 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
     checkpoint_id = context.engine_client.create_checkpoint(task[:100])
     checkpoint_backend = None
 
+    # Debt Item 33: this warning is the ONE thing `/auto` printed that a
+    # web/VSCode caller could never learn. Everything else this handler
+    # prints is either restated in the returned result (the iteration
+    # banners are already prefixed into `content`; the completion and
+    # max-iteration notices are the returned `message` plus its status) or
+    # is Rich-only chrome ("Press Ctrl-C"). This one is a SAFETY property —
+    # the run has no checkpoint, so /undo cannot revert it — and it existed
+    # nowhere but stdout.
+    checkpoint_warning: str | None = None
+
     if checkpoint_id:
         status = context.engine_client.get_checkpoint_status()
         checkpoint_backend = status.get("backend")
     else:
         status = context.engine_client.get_checkpoint_status()
         if not status.get("enabled"):
-            console.print("[yellow]⚠️  Running without checkpoints (no git repo)[/yellow]")
-            console.print("[dim]Changes cannot be undone with /undo[/dim]\n")
+            checkpoint_warning = (
+                "Running without checkpoints (no git repo) — changes from "
+                "this task cannot be undone with /undo"
+            )
+            console.print(f"[yellow]⚠️  {checkpoint_warning}[/yellow]\n")
 
     async def run_agent_loop():
         """Run autonomous agent loop."""
@@ -740,13 +755,34 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
         return "\n\n".join(accumulated_output), "Max iterations reached", False
 
     try:
-        full_output, summary, success = asyncio.run(run_agent_loop())
+        # `POST /command/auto` dispatches this handler from inside the
+        # server's running event loop (server/routes/commands.py calls
+        # spec.handler directly from an async route, and nothing gates which
+        # commands are dispatchable). A bare asyncio.run() there raises
+        # "cannot be called from a running event loop" — so /auto answered
+        # 500 for web and VSCode rather than merely printing to the wrong
+        # place. Same shape the Textual TUI hits.
+        #
+        # Guard copied deliberately from commands/coding.py:109-118 rather
+        # than invented: a second event loop in a worker thread, which is
+        # also what makes the blocking prompt_toolkit paths safe.
+        if is_event_loop_running():
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                full_output, summary, success = executor.submit(
+                    lambda: asyncio.run(run_agent_loop())
+                ).result()
+        else:
+            full_output, summary, success = asyncio.run(run_agent_loop())
+
+        if checkpoint_warning:
+            summary = f"{summary} (⚠️ {checkpoint_warning})"
 
         return AIResponseResult(
             status=ResultStatus.SUCCESS if success else ResultStatus.WARNING,
             message=summary,
             content=full_output,
-            code_blocks=[]  # Agent loop doesn't extract code blocks
+            code_blocks=[],  # Agent loop doesn't extract code blocks
+            metadata={"checkpoint_warning": checkpoint_warning} if checkpoint_warning else {},
         )
 
     except KeyboardInterrupt:

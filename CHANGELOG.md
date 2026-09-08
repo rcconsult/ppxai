@@ -13,6 +13,21 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
 
+### Fixed — `/auto` returned 500 over `POST /command/auto`
+
+`/auto` ran its agent loop with a bare `asyncio.run()`. The server's command
+route is an `async def` that calls the handler directly from the running
+event loop, so the call raised `RuntimeError: asyncio.run() cannot be called
+from a running event loop` — web and VSCode got a **500**, not degraded
+output. The Rich TUI was unaffected (no loop running), which is why it
+survived this long. Guarded with the same `is_event_loop_running()` +
+threadpool pattern the coding commands already used.
+
+`/auto` also now reports **"running without checkpoints"** in its result
+rather than only on the server's stdout. Without a git repo the run creates
+no checkpoint and `/undo` cannot revert it; previously only the Rich TUI was
+told.
+
 ### Added — `/cost` now counts every tier, not just the interactive one (ADR 0008)
 
 `usage.json`'s only writer was reachable from interactive paths, so every

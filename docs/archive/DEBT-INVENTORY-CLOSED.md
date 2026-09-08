@@ -1765,3 +1765,84 @@ wrong: different providers = different pricing, cross-process concurrency, and
 legitimately separate per-tenant vs. operator views. KV-cache = acknowledge in
 docs (+ optional vLLM `/metrics` operator read), don't try to account
 per-request. **Until decided, disclose:** `/cost` = interactive session only.
+
+---
+
+### Item 33 — command-layer `console.print` sweep (agent/utility/handler) [envelope-pattern hygiene]
+
+**✅ CLOSED 2026-09-09 — audited all 111 sites; the sweep was mostly a
+non-issue and hid a real bug.**
+
+The item said "verify before fixing" and that was right. Breakdown:
+
+| Cluster | Sites | Verdict |
+|---|---|---|
+| `utility.py::_show_active_hints` | 20 | **DEAD** — removed |
+| `utility.py::_show_bootstrap_hierarchy` | 19 | **DEAD** — removed |
+| `agent.py::_handle_agent_interrupt` | 30 | TUI-only — blocks on `pt_prompt`, cannot run under `ServerCommandContext` |
+| `agent.py::handle_agent` | 7 | 1 fixed, rest redundant or Rich-only chrome |
+| `agent.py::run_agent_loop` | 6 | redundant — banners are prefixed into `content`; completion/max-iteration notices ARE the returned `message` + status |
+| `handler.py` (6 functions) | 29 | TUI-only — the module registers ZERO commands and is reached only from `rich/main.py:488` |
+
+**39 sites were dead code.** Orphaned by `f7ebd004` (v1.15.0), which moved
+`/context hints` and `/context show` onto typed results. They sat in the tree
+for four minor versions being counted as outstanding debt — a third of this
+item's size was work that had already been done and never re-measured.
+
+**One print carried real information:** "running without checkpoints (no git
+repo) — changes cannot be undone with `/undo`". That is a safety property of
+the run, it lived only on stdout, and a web/VSCode caller had no way to learn
+it. Now in the result's `message` and `metadata`.
+
+**The bug the framing would have missed.**
+`server/routes/commands.py::execute_command` is an `async def` route that
+looks up ANY registered command and calls `spec.handler(...)` directly —
+nothing gates dispatch. `handle_agent` ran its loop with a bare
+`asyncio.run()`, which raises `RuntimeError: asyncio.run() cannot be called
+from a running event loop`. So `POST /command/auto` answered **500** for web
+and VSCode. Item 33's trigger was "a web/VSCode user reports missing output";
+the actual state was a crash. Fixed with the `is_event_loop_running()` +
+`ThreadPoolExecutor` guard already present in `commands/coding.py:109-118` —
+copied deliberately rather than invented, since the Textual TUI hits the same
+shape.
+
+Tests: `tests/test_auto_command_cross_client.py` (6). One pins the mechanism
+by forcing `is_event_loop_running()` False and asserting the original
+`RuntimeError`, so a refactor that drops the guard fails there rather than in
+production.
+
+**Not done, by design:** the remaining 71 `console.print` sites stay. They
+are interactive TUI flows or restatements of the returned result, and
+converting them would be UI-purity refactor rather than bug-class work —
+which is exactly what the item said when it deferred them.
+
+
+**Affected files:** `commands/agent.py` (~43 `console.print`),
+`commands/utility.py` (~39), `commands/handler.py` (~29).
+
+**What's wrong:** these handlers write user-facing text directly to the Rich
+console instead of returning typed results / side-effects, so anything they
+print is invisible to web/VSCode (server-side stdout). The cross-client
+gap on the coding commands was the acute case — fixed as Item 30 (closed).
+
+**Why deferred (verify-before-fixing):** the bulk of these are genuinely
+**interactive TUI-only flows** (`input()`-driven rollback / confirm prompts
+in `/agent`, `/undo`) that cannot run under `ServerCommandContext` anyway, so
+they are *not* a cross-client bug. The remainder must be audited
+case-by-case: only the ones on a cross-client command path (reachable via
+`POST /command/{name}` and emitting information not already in the returned
+result) need routing through `content`/`message`/side-effects. Bulk
+conversion is UI-purity refactor, not bug-class.
+
+**Planned:** v1.19.x — audit each site; fix only the cross-client-reachable
+ones; leave interactive TUI prompts as-is. Pairs naturally with ADR 0002
+(CommandContext) work if the contexts gain a "can prompt interactively" flag.
+
+**Branch when ready:** v1.19.x.
+
+**Trigger to revisit:** a web/VSCode user reports missing output from a
+non-coding command, or the v1.19.x command-context work opens the file set.
+
+**Effort:** ~0.5 d audit + targeted fixes (most sites confirmed TUI-only).
+
+---

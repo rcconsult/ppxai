@@ -11,7 +11,6 @@ v1.15.0: Migrated to type-based renderer dispatch
 import os
 import time
 from pathlib import Path
-from typing import Any
 
 from ..common.logger import Logger, get_logger
 from ..config import find_config_file, reload_config, set_tui_config
@@ -33,125 +32,6 @@ from .results import (
 # Directories to skip in file listings and tree views
 IGNORE_DIRS = {'.git', '__pycache__', 'node_modules', '.venv', 'venv',
                '.pytest_cache', '.mypy_cache', 'dist', 'build', '.tox', '.eggs'}
-
-def _show_active_hints(handler: Any, console) -> None:
-    """Display active bootstrap hints for current provider/model (v1.14.0)."""
-    hints_info = handler.engine_client.get_active_hints()
-
-    if not hints_info["loaded"]:
-        console.print("\n[yellow]No bootstrap context loaded.[/yellow]")
-        cwd = handler.engine_client.get_working_dir() or "unknown"
-        console.print(f"[dim]Working directory: {cwd}[/dim]")
-        console.print("[dim]Create AGENTS.md or CLAUDE.md in your project directory,[/dim]")
-        console.print("[dim]or use /cd <path> to navigate to a directory with one.[/dim]\n")
-        return
-
-    console.print("\n[bold cyan]━━━ Active Bootstrap Hints ━━━[/bold cyan]")
-
-    # Source file
-    console.print(f"  [cyan]Source:[/cyan] {hints_info['source']}")
-
-    # Current provider/model
-    console.print(f"  [cyan]Provider:[/cyan] {hints_info['provider']}")
-    console.print(f"  [cyan]Model:[/cyan] {hints_info['model']}")
-
-    # Provider hints
-    provider_hints = hints_info["provider_hints"]
-    if provider_hints:
-        console.print(f"\n[cyan]Provider Hints:[/cyan] ({len(provider_hints)} active)")
-        if hints_info["inherited_local"]:
-            console.print("  [dim](includes inherited 'local' hints)[/dim]")
-        for source, hint in provider_hints:
-            # Truncate long hints for display
-            display_hint = hint[:80] + "..." if len(hint) > 80 else hint
-            console.print(f"  [green]•[/green] [{source}] {display_hint}")
-    else:
-        console.print("\n[cyan]Provider Hints:[/cyan] [dim]none active[/dim]")
-        available = hints_info["all_provider_keys"]
-        if available:
-            console.print(f"  [dim]Available: {', '.join(available)}[/dim]")
-
-    # Model hints
-    model_hints = hints_info["model_hints"]
-    if model_hints:
-        patterns = hints_info["matched_patterns"]
-        console.print(f"\n[cyan]Model Hints:[/cyan] ({len(model_hints)} active)")
-        console.print(f"  [dim]Matched patterns: {', '.join(patterns)}[/dim]")
-        for pattern, hint in model_hints:
-            display_hint = hint[:80] + "..." if len(hint) > 80 else hint
-            console.print(f"  [green]•[/green] [{pattern}] {display_hint}")
-    else:
-        console.print("\n[cyan]Model Hints:[/cyan] [dim]none active[/dim]")
-        available = hints_info["all_model_patterns"]
-        if available:
-            console.print(f"  [dim]Available patterns: {', '.join(available)}[/dim]")
-
-    # Summary
-    total_hints = len(provider_hints) + len(model_hints)
-    console.print(f"\n[dim]Total active hints: {total_hints}[/dim]")
-    console.print("[dim]Use /context to see full context usage[/dim]\n")
-
-
-def _show_bootstrap_hierarchy(handler: Any, console) -> None:
-    """Display bootstrap context hierarchy with scope information (v1.14.2)."""
-    status = handler.engine_client.get_bootstrap_status()
-
-    if not status["loaded"]:
-        console.print("\n[yellow]No bootstrap context loaded.[/yellow]")
-        cwd = handler.engine_client.get_working_dir() or "unknown"
-        console.print(f"[dim]Working directory: {cwd}[/dim]")
-        console.print("\n[dim]Scope search order:[/dim]")
-        console.print("  [dim]1. ~/.ppxai/AGENTS.md (global)[/dim]")
-        console.print("  [dim]2. {git_root}/AGENTS.md (project)[/dim]")
-        console.print("  [dim]3. {cwd}/AGENTS.md (subdir)[/dim]")
-        console.print("\n[dim]Create AGENTS.md or CLAUDE.md in any of these locations.[/dim]\n")
-        return
-
-    console.print("\n[bold cyan]━━━ Bootstrap Context ━━━[/bold cyan]")
-
-    # Show sources with scope labels
-    sources = status.get("sources", [])
-    total_size = status.get("total_size", 0)
-
-    console.print(f"\n[cyan]Sources:[/cyan] ({len(sources)} file{'s' if len(sources) != 1 else ''})")
-
-    for i, src in enumerate(sources, 1):
-        path = src["path"]
-        scope = src["scope"]
-        size_kb = src["size"] / 1024
-
-        # Color-code by scope
-        scope_color = {
-            "global": "blue",
-            "project": "green",
-            "subdir": "yellow",
-        }.get(scope, "white")
-
-        console.print(f"  {i}. {path}")
-        console.print(f"     [{scope_color}][{scope}][/{scope_color}] {size_kb:.1f} KB")
-
-    # Total size
-    total_kb = total_size / 1024
-    estimated_tokens = status.get("char_count", 0) // 4  # Rough estimate
-    console.print(f"\n[cyan]Total:[/cyan] {total_kb:.1f} KB (~{estimated_tokens:,} tokens)")
-
-    # Show hints summary
-    if status.get("has_hints"):
-        provider_hints = status.get("provider_hints", [])
-        model_hints = status.get("model_hints", [])
-        console.print("\n[cyan]Hints Defined:[/cyan]")
-        if provider_hints:
-            console.print(f"  Provider: {', '.join(provider_hints)}")
-        if model_hints:
-            console.print(f"  Model: {', '.join(model_hints)}")
-    else:
-        console.print("\n[cyan]Hints:[/cyan] [dim]none defined[/dim]")
-
-    # Tips
-    console.print("\n[dim]Tips:[/dim]")
-    console.print("  [dim]- /context hints - See active hints for current provider/model[/dim]")
-    console.print("  [dim]- /context reload - Refresh from disk[/dim]\n")
-
 
 def handle_cd(context: CommandContext, args: str) -> CommandResult:
     """Handle /cd command - change working directory.
