@@ -872,11 +872,26 @@ class ToolUsage:
 
 @dataclass
 class UsageStats:
-    """Token usage and cost statistics."""
+    """Token usage and cost statistics.
+
+    `prompt_tokens` / `completion_tokens` are the two classes every provider
+    ppxai speaks today reports. The two cache fields exist because a
+    prompt-caching provider bills input in THREE classes, not one, and
+    collapsing them into `prompt_tokens` makes the cost wrong in the
+    expensive direction: a cache read is billed at a fraction of the input
+    rate, so counting it as ordinary input over-reports. They default to 0,
+    so a provider that does not cache produces byte-identical numbers to
+    before.
+    """
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
     estimated_cost: float = 0.0
+    #: Tokens WRITTEN to the provider's prompt cache this turn (billed above
+    #: the input rate — the write is the investment the reads pay back).
+    cache_creation_input_tokens: int = 0
+    #: Tokens SERVED FROM the cache this turn (billed well below input).
+    cache_read_input_tokens: int = 0
     tool_calls: dict[str, 'ToolUsage'] = field(default_factory=dict)
 
 

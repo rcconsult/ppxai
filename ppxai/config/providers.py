@@ -83,8 +83,40 @@ def get_model_pricing(provider: str = None) -> dict:
     return get_provider_config(provider).get("pricing", {})
 
 
-def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str, provider: str = None) -> float:
-    """Calculate estimated cost in USD for token usage."""
+#: Cache-token price multipliers, relative to a model's own `input` rate,
+#: used when a pricing row states no explicit `cache_write` / `cache_read`.
+#: These are the published Anthropic ratios (5-minute cache write, cache
+#: read); a provider that prices caching differently states the rates in its
+#: own pricing block rather than inheriting these.
+DEFAULT_CACHE_WRITE_MULTIPLIER = 1.25
+DEFAULT_CACHE_READ_MULTIPLIER = 0.1
+
+
+def calculate_cost(
+    prompt_tokens: int,
+    completion_tokens: int,
+    model: str,
+    provider: str = None,
+    cache_write_tokens: int = 0,
+    cache_read_tokens: int = 0,
+) -> float:
+    """Calculate estimated cost in USD for token usage.
+
+    Input is billed in up to THREE classes, not one. Until v1.19.1 this
+    function knew only `input` and `output`, which is correct for every
+    provider ppxai spoke at the time and wrong for a prompt-caching one: a
+    cache read costs a fraction of the input rate, so charging it as
+    ordinary input over-reports — the opposite direction from debt Item 49's
+    under-report, and in the same number users budget with.
+
+    The two cache arguments default to 0, so every existing caller and every
+    non-caching provider produces exactly the number it produced before.
+
+    Rates come from the model's pricing row when it states `cache_write` /
+    `cache_read`, and otherwise from the multipliers above applied to its
+    `input` rate — an estimate, and better than silently pricing a cache
+    read at 10x its true cost.
+    """
     pricing = get_model_pricing(provider)
     model_pricing = pricing.get(model, {})
 
@@ -93,11 +125,19 @@ def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str, provi
 
     input_price = model_pricing.get("input", 0.0)
     output_price = model_pricing.get("output", 0.0)
+    cache_write_price = model_pricing.get(
+        "cache_write", input_price * DEFAULT_CACHE_WRITE_MULTIPLIER
+    )
+    cache_read_price = model_pricing.get(
+        "cache_read", input_price * DEFAULT_CACHE_READ_MULTIPLIER
+    )
 
     input_cost = (prompt_tokens / 1_000_000) * input_price
     output_cost = (completion_tokens / 1_000_000) * output_price
+    cache_write_cost = (cache_write_tokens / 1_000_000) * cache_write_price
+    cache_read_cost = (cache_read_tokens / 1_000_000) * cache_read_price
 
-    return input_cost + output_cost
+    return input_cost + output_cost + cache_write_cost + cache_read_cost
 
 
 def get_api_key(provider: str = None) -> str:
