@@ -65,12 +65,31 @@ class TestEveryRegisteredHandlerValidates:
         src = inspect.getsource(type(get_handler(name)))
         assert "assert_wire_blocks_clean(" in src, name
 
-    def test_all_three_live_wires_are_registered(self):
+    def test_every_live_wire_is_registered(self):
+        """Four wires as of `feat/anthropic-provider`.
+
+        `messages` was a `WireProtocol` Literal member with no handler for
+        three releases — declared and unreachable, the same shape as the
+        `api_path` field debt Item 61 recorded. Registering it closes that.
+        """
         assert sorted(HANDLERS) == [
             "chat_completions",
             "generate_content",
+            "messages",
             "responses",
         ]
+
+    def test_every_declared_protocol_has_a_handler(self):
+        """The stronger form: nothing may sit in the Literal unreachable.
+
+        Pins the property rather than the count, so the next wire cannot be
+        declared and left unregistered the way `messages` was.
+        """
+        from typing import get_args
+
+        from ppxai.engine.model_facts import WireProtocol
+
+        assert sorted(get_args(WireProtocol)) == sorted(HANDLERS)
 
 
 class TestConversionIsProtocolOwned:

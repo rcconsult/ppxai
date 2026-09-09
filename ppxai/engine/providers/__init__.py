@@ -46,6 +46,8 @@ def list_registered_providers() -> list[str]:
 
 # Import and register built-in providers
 # These imports trigger the registration via decorators or explicit calls
+from .anthropic import AnthropicProvider  # noqa: E402 — must follow register_provider
+from .anthropic import is_available as anthropic_available  # noqa: E402
 from .gemini import GeminiProvider  # noqa: E402 — must follow register_provider
 
 # Try to import native Gemini provider (optional dependency)
@@ -63,6 +65,15 @@ register_provider("perplexity", PerplexityProvider)
 register_provider("local", OpenAICompatibleProvider)
 register_provider("custom", OpenAICompatibleProvider)
 
+# Anthropic has NO OpenAI-compatible fallback, unlike Gemini: this
+# provider speaks the `messages` wire and nothing else, so registering
+# OpenAICompatibleProvider under "anthropic" would route Claude to a wire
+# this account does not serve — a plausible answer instead of an error.
+# Leaving it unregistered makes create_provider() return None, which the
+# caller already handles as "provider unavailable".
+if anthropic_available():
+    register_provider("anthropic", AnthropicProvider)
+
 # Use native Gemini provider if google-genai package is installed
 if gemini_available():
     register_provider("gemini", GeminiProvider)
@@ -76,6 +87,7 @@ __all__ = [
     "OpenAINativeProvider",
     "PerplexityProvider",
     "GeminiProvider",
+    "AnthropicProvider",
     "register_provider",
     "get_provider_class",
     "create_provider",

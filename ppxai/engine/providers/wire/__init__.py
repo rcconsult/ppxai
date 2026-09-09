@@ -22,6 +22,7 @@ from typing import Dict
 
 from .chat_completions import ChatCompletionsHandler
 from .generate_content import GenerateContentHandler
+from .messages import MessagesHandler
 from .protocol import ProtocolHandler
 from .responses import ResponsesHandler
 
@@ -31,6 +32,7 @@ HANDLERS: dict[str, ProtocolHandler] = {
     ChatCompletionsHandler.name: ChatCompletionsHandler(),
     GenerateContentHandler.name: GenerateContentHandler(),
     ResponsesHandler.name: ResponsesHandler(),
+    MessagesHandler.name: MessagesHandler(),
 }
 
 
@@ -54,6 +56,7 @@ def get_handler(name: str) -> ProtocolHandler:
 
 __all__ = [
     "ProtocolHandler",
+    "MessagesHandler",
     "ChatCompletionsHandler",
     "GenerateContentHandler",
     "ResponsesHandler",

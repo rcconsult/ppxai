@@ -217,6 +217,50 @@
         "__comment_native_tool_calling": "Gemini supports native function calling"
       }
     },
+    "anthropic": {
+      "name": "Anthropic",
+      "base_url": "https://api.anthropic.com",
+      "__comment_wire": "base_url is required by config validation and recorded for reference, but AnthropicProvider builds its own SDK client and speaks the `messages` wire — it does not read this value.",
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "default_model": "claude-opus-5",
+      "coding_model": "claude-opus-5",
+      "system_prompt": "You are a helpful AI coding assistant. Be concise and direct. When using tools, report results briefly.",
+      "options": {
+        "__comment_effort": "low | medium | high | xhigh | max. Omit to use the model's own default (high). Effort is the first quality-trading cost lever; sweep it against benchmarks/llm-eval before changing the default.",
+        "enable_thinking": true,
+        "enable_prompt_caching": true
+      },
+      "models": {
+        "claude-opus-5": {
+          "name": "Claude Opus 5",
+          "description": "Frontier reasoning and long-horizon agentic work"
+        },
+        "claude-sonnet-5": {
+          "name": "Claude Sonnet 5",
+          "description": "High-volume production workloads"
+        },
+        "claude-haiku-4-5": {
+          "name": "Claude Haiku 4.5",
+          "description": "Fast, high-volume, checkable outputs"
+        }
+      },
+      "pricing": {
+        "__comment": "USD per 1M tokens. Sourced from the Anthropic pricing table cached 2026-06-24; VERIFY against current published pricing before relying on /cost. cache_write / cache_read are omitted deliberately: calculate_cost falls back to 1.25x / 0.1x of the input rate, the published ratios.",
+        "claude-opus-5": {
+          "input": 5.0,
+          "output": 25.0
+        },
+        "claude-sonnet-5": {
+          "input": 2.0,
+          "output": 10.0
+        },
+        "claude-haiku-4-5": {
+          "input": 1.0,
+          "output": 5.0
+        }
+      },
+      "__comment_capabilities": "No `capabilities` block: ADR 0012 retired it. Account-level facts live on AnthropicProvider.default_capabilities; per-model facts go in a `facts` block under the model."
+    },
     "openai": {
       "name": "OpenAI",
       "base_url": "https://api.openai.com/v1",

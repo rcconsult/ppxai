@@ -894,6 +894,12 @@ when there's evidence of wrapper-side failures in real use.
 
 ### v1.19.x - Anthropic Provider (planned)
 
+> **UNPARKED 2026-09-09 — Phase 1 shipped on `feat/anthropic-provider`.**
+> Agent-platform Stage 2 landed in v1.19.0, which was the stated
+> precondition. Phases 2 (OAuth) and the doc row's README work are covered;
+> Phase 2 remains deliberately unimplemented — see the TOS caveats below.
+>
+> *Original note, kept for the record:*
 > **SEQUENCING (2026-06-15): DEFERRED — do AFTER agent-platform Stage 2.**
 > Not being worked this iteration. The `feature/v1.19.0` iteration focuses
 > on the Agent platform Stage 2 track below (the ppxai-sre-blocking work);
@@ -910,7 +916,7 @@ option in the routing layer is one of the listed motivations.
 
 | Phase | Description | Effort |
 |---|---|---|
-| **Phase 1: API key (mainline)** | New `ppxai/engine/providers/anthropic.py` using the official `anthropic` Python SDK. Same shape as `openai_native.py` / `gemini.py`. `ModelProfile` entries for `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`. Auth via `ANTHROPIC_API_KEY`. Ships behind a `[anthropic]` extra in `pyproject.toml` so users opt into the dependency. | ~2-3 days |
+| **Phase 1: API key (mainline)** ✅ **DONE 2026-09-09** — `ppxai/engine/providers/anthropic.py` + the `messages` wire handler, `[anthropic]` extra, config block, `docs/ANTHROPIC-PROVIDER.md`. Model rows are the CURRENT lineup (`claude-opus-5` / `claude-sonnet-5` / `claude-haiku-4-5`), not the ids this row named in June — those were already a generation stale when Phase 1 started. | New `ppxai/engine/providers/anthropic.py` using the official `anthropic` Python SDK. Same shape as `openai_native.py` / `gemini.py`. `ModelProfile` entries for `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`. Auth via `ANTHROPIC_API_KEY`. Ships behind a `[anthropic]` extra in `pyproject.toml` so users opt into the dependency. | ~2-3 days |
 | **Phase 2: TOS-aware OAuth fallback (opt-in)** | When `ANTHROPIC_API_KEY` is unset AND `ANTHROPIC_AUTH_TOKEN` is set (or detectable from `~/.claude/.credentials.json`), allow auth-token path. **Must:** (1) emit runtime WARNING the first time the fallback is invoked stating that reusing Claude Code credentials from non-Claude-Code clients may violate Anthropic TOS; (2) NOT auto-read `~/.claude/.credentials.json` without explicit `providers.anthropic.allow_claude_code_oauth: true` config flag; (3) implement token-refresh awareness — re-read credentials per request when opted in, fail loudly with "run `claude /login` and retry" on 401. | ~1 day |
 | **Documentation** | New `docs/ANTHROPIC-PROVIDER.md` covering API-key setup (mainline, recommended), opt-in OAuth-reuse with the full TOS warning quoted verbatim, troubleshooting expired tokens. README provider table gets an Anthropic row. | ~half day |
 

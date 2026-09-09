@@ -20,7 +20,7 @@
 
 | Problem | ppxai Solution |
 |---------|----------------|
-| Locked to one AI vendor | Switch between Perplexity, Gemini, OpenAI, OpenRouter, Ollama anytime |
+| Locked to one AI vendor | Switch between Perplexity, Claude, Gemini, OpenAI, OpenRouter, Ollama anytime |
 | Expensive API costs | Use local models, free tiers, or cheapest provider that works |
 | Closed-source tools | Fully OSS—inspect, modify, self-host |
 | Terminal OR IDE | Same experience everywhere—TUI, Desktop App, VSCode extension |
@@ -438,6 +438,7 @@ ppxai/
 │   │   ├── providers/          # AI provider implementations
 │   │   │   ├── base.py         # BaseProvider abstract class
 │   │   │   ├── perplexity.py   # Perplexity AI (native search)
+│   │   │   ├── anthropic.py    # AnthropicProvider (Claude, `messages` wire)
 │   │   │   ├── gemini.py       # GeminiProvider (native Google Search Grounding)
 │   │   │   ├── openai_compat.py# OpenAI-compatible fallback (OpenRouter, local)
 │   │   │   └── openai_native.py# OpenAI dedicated (GPT-5.x, Codex, o-series)

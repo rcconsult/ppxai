@@ -13,6 +13,41 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
 
+### Added — Anthropic provider (Claude), opt-in via the `[anthropic]` extra
+
+Claude is now a first-class provider, not an OpenAI-compatible endpoint.
+`/explain`, `/test`, `/docs`, `/auto`, `/task` and `/v1/oneshot` all work
+against it with the same UX as the other providers.
+
+```bash
+uv sync --extra anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+This is the fourth **wire**, not a dialect: `ModelFacts.wire_protocol` has
+reserved `"messages"` since ADR 0012 and now has a handler. The provider owns
+the account (key, models, prices, error classification); the handler owns the
+format. Going through the OpenAI-compatible shim instead would have cost
+adaptive thinking, `effort`, prompt caching, and structured refusals.
+
+- **Thinking is configured, never prompted.** `budget_tokens` is a 400 on
+  every model this targets; ppxai sends adaptive thinking with
+  `display: "summarized"` so the reasoning pane isn't blank.
+- **Sampling params are dropped, not forwarded** — `temperature`/`top_p`/
+  `top_k` are rejected on this wire, and a config written for another
+  provider must not make every Claude request fail.
+- **Cache-aware costs.** Input is billed in three classes; `/cost` prices
+  them separately rather than charging cache reads at the full input rate.
+- **Refusals are a 200.** Surfaced as an `ERROR` event and a `refusal` key on
+  `/v1/oneshot`, never as an empty completion.
+- **No OAuth credential reuse** (ROADMAP Phase 2, deliberately unimplemented)
+  and **no server-side refusal fallbacks** — both change what the operator is
+  billed for or agrees to, so neither is ppxai's default to make. See
+  [docs/ANTHROPIC-PROVIDER.md](docs/ANTHROPIC-PROVIDER.md).
+
+Shipped prices are a snapshot and say so in the config; verify before
+trusting `/cost`.
+
 ### Fixed — `/auto` returned 500 over `POST /command/auto`
 
 `/auto` ran its agent loop with a bare `asyncio.run()`. The server's command

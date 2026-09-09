@@ -81,6 +81,12 @@ gemini = [
     "google-genai>=1.0.0,<3.0.0",
 ]
 
+# Native Anthropic provider (v1.19.x, ROADMAP "Anthropic Provider" Phase 1)
+# Optional so users opt into the dependency, matching the gemini extra.
+anthropic = [
+    "anthropic>=0.40.0",
+]
+
 # Data processing support (v1.13.8 yaml/hcl, v1.17.4 multimodal file upload)
 # Groups two related but distinct capabilities under one extras name so
 # `pip install 'ppxai[data]'` gives users everything needed for file-based

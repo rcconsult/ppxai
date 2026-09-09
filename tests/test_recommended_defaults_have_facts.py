@@ -128,18 +128,23 @@ class TestRecommendedDefaultsAreMeasured:
         )
 
 
-class TestTheUnreachableRecommendationIsDeliberate:
-    """`anthropic` is recommended but unimplemented — pin that, don't hide it.
+class TestEveryRecommendationIsReachable:
+    """The exclusion is gone because the thing it excused shipped.
 
-    Excluding it above is a judgement, so it should fail loudly if the
-    situation changes rather than staying quietly excluded forever. When the
-    provider lands, this test fails and the exclusion above stops applying.
+    This class used to pin `anthropic` as the one recommended-but-
+    unimplemented provider, on the reasoning that a judgement call should
+    fail loudly rather than stay quietly excluded. It did exactly that when
+    the provider landed on `feat/anthropic-provider`, and its own failure
+    message named the fix ("if anthropic shipped, drop this exclusion").
+
+    Kept as the stronger invariant rather than deleted: recommending a
+    provider nobody can construct is the defect, whoever it is next time.
     """
 
-    def test_anthropic_is_still_the_only_unreachable_recommendation(self):
+    def test_no_recommended_provider_is_unreachable(self):
         unreachable = sorted(set(RECOMMENDED_DEFAULTS) - _shipped_providers())
-        assert unreachable == ["anthropic"], (
-            f"the set of recommended-but-unreachable providers changed to "
-            f"{unreachable}. If a provider was added, it now needs shipped "
-            f"facts rows; if anthropic shipped, drop this exclusion."
+        assert unreachable == [], (
+            f"these providers are recommended but cannot be constructed: "
+            f"{unreachable}. Either ship the provider or stop recommending it "
+            f"— a recommendation nobody can act on is worse than no default."
         )
