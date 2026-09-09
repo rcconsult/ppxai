@@ -483,7 +483,14 @@ def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol = No
         # Fall back to legacy standalone functions (no working directory support)
         manager.register_function(
             name="search_files",
-            description="Search for files matching a glob pattern in a directory",
+            description=(
+                "Search for files matching a glob pattern in a directory. "
+                "Searches RECURSIVELY below the directory. Returns file paths "
+                "only, newline-separated — not file contents. "
+                "At most 50 paths are returned; when more match, a "
+                "'... (N more files)' line is appended, so a 50-path result "
+                "does not mean 50 matches exist."
+            ),
             parameters={
                 "type": "object",
                 "properties": {
@@ -497,7 +504,14 @@ def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol = No
 
         manager.register_function(
             name="read_file",
-            description="Read the contents of a text file",
+            description=(
+                "Read the contents of a text file, decoded as UTF-8 "
+                "(a byte-order mark is tolerated and stripped). "
+                "Reads at most `max_lines` lines (default 500) and appends a "
+                "'... (truncated to N lines)' marker when it stops early — a "
+                "result at the limit is not necessarily the whole file. "
+                "Text only; it does not decode binary files."
+            ),
             parameters={
                 "type": "object",
                 "properties": {
@@ -511,7 +525,13 @@ def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol = No
 
         manager.register_function(
             name="list_directory",
-            description="List files and directories in a path. Supports simple and long format (like 'ls -la')",
+            description=(
+                "List files and directories in a path. Supports simple and "
+                "long format (like 'ls -la'). Lists ONE level — it does not "
+                "recurse. At most 100 entries are returned, with a "
+                "'... (N more items)' line appended when the directory holds "
+                "more, so a 100-entry result is a floor, not a count."
+            ),
             parameters={
                 "type": "object",
                 "properties": {

@@ -109,7 +109,7 @@ def register_tools(manager: ToolManagerProtocol):
             "properties": {
                 "timezone": {
                     "type": "string",
-                    "description": "IANA timezone name. IMPORTANT: If user asks for 'local time' or doesn't specify a timezone, call this tool WITHOUT passing timezone parameter to auto-detect the system's local timezone. Examples: 'Europe/Zurich', 'America/New_York', 'Asia/Tokyo', 'UTC'"
+                    "description": "IANA timezone name, e.g. 'Europe/Zurich', 'America/New_York', 'Asia/Tokyo', 'UTC'. Omit this parameter to use the system's local timezone; omitting it is the correct choice when the user asks for 'local time' or names no timezone."
                 }
             },
             "required": []
