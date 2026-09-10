@@ -273,13 +273,25 @@ OPENAI_DEPRECATIONS: dict[str, Deprecation] = {
 # would 400 — a wrong migration hint is worse than an honest dead end, since
 # the user would follow it and get a broken config.
 #
-# ⏰ RE-PROBE BEFORE 2026-09-27 — tracked as debt Item 64, not just here: a
-# comment is only read by someone already editing this table, who is the
-# person least in need of the reminder. If Perplexity ships the pro line on
-# Responses, update `replacement` below (and see Item 64 for the rest of the
-# migration: example config, pricing row, the migration fence's RETIRED set).
+# ✅ RE-PROBING IS DONE — debt Item 64 closed 2026-09-10. Four probes across
+# ten days (2026-08-31, 09-01, 09-06, 09-10) each returned byte-identical
+# `400 validation failed: model "..." is not supported` for all three pro
+# ids on the Responses wire. Perplexity never moved the pro line, so the
+# `replacement` rows below are correct as written and were never changed.
 #
-#   uv run python scripts/probe-perplexity-capabilities.py #       --api-path responses --model "perplexity/sonar-pro"
+# The item closed 17 days before the cutover at the owner's direction, which
+# means the final stretch is unobserved on purpose. The exposure is bounded:
+# if Perplexity ships the pro line late, this table advises a downgrade that
+# is no longer necessary — suboptimal advice, not a broken config — and the
+# rows still correctly migrate anyone off a dying id.
+#
+# If that turns out to matter, the probe is unchanged and takes two minutes;
+# updating `replacement` then also means the example config, the pricing row,
+# and the migration fence's RETIRED set (the archived Item 64 body lists them):
+#
+#   uv run python scripts/probe-perplexity-capabilities.py \
+#       --api-path responses --model "perplexity/sonar-pro" \
+#       --model "perplexity/sonar-reasoning-pro" --model "sonar-pro"
 
 PERPLEXITY_DEPRECATIONS: dict[str, Deprecation] = {
     "sonar": Deprecation(

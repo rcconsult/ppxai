@@ -25,42 +25,6 @@ import pytest
 #: ship a fix.
 OBLIGATIONS = [
     (
-        date(2026, 9, 26),
-        "debt Item 64 — re-probe Perplexity's pro line on the Responses wire",
-        (
-            "Perplexity retires the Sonar chat-completions endpoint on "
-            "2026-09-27. PERPLEXITY_DEPRECATIONS currently migrates every "
-            "sonar-pro / sonar-reasoning-pro operator to `perplexity/sonar` "
-            "— the LIGHTER model — because on 2026-08-31 the pro ids answered "
-            "400 'not supported' on the Responses wire, bare and namespaced.\n"
-            "That hint is correct only while it stays true: if Perplexity has "
-            "since shipped the pro line on Responses, ppxai is actively "
-            "advising a downgrade nobody needs, and the user WILL follow it.\n"
-            "\n"
-            "PROBES 2 and 3 ran 2026-09-01 and 2026-09-06, both early at the "
-            "owner's direction, and all three ids still answered 400 each "
-            "time. This entry SURVIVED probe 3 on purpose: an early probe "
-            "cannot discharge a deadline, because the whole point is to catch "
-            "a change that lands in the window BEFORE the cutover, and probe "
-            "3 left 21 days of that window unobserved. This is the LAST "
-            "check, the day before the endpoint dies: still 400 means delete "
-            "this entry and close Item 64.\n"
-            "\n"
-            "  uv run python scripts/probe-perplexity-capabilities.py \\\n"
-            "      --api-path responses \\\n"
-            "      --model perplexity/sonar-pro \\\n"
-            "      --model perplexity/sonar-reasoning-pro \\\n"
-            "      --model sonar-pro\n"
-            "\n"
-            "Still 400? Update the date below to 2026-09-26 for a last check, "
-            "or drop this entry and let Item 64 close with the endpoint.\n"
-            "Any of them answers? Fix `replacement` in "
-            "ppxai/engine/model_deprecations.py, re-add the ids to "
-            "ppxai-config.example.json with a pricing row, and trim the "
-            "migration fence's RETIRED set to match."
-        ),
-    ),
-    (
         date(2026, 10, 10),
         "debt Item 54 — re-probe Gemini's Pro tier for a GA successor",
         (

@@ -48,7 +48,6 @@ quoting them** — this table is a map, not a source.
 |---|---|---|
 | **71** | the Anthropic provider has never made a live API call | ⚠️ **shipped unproven** — 3 named assumptions; needs a key, ~30 min |
 | **72** | the additive-CA TLS guarantee is pinned only on cafile hosts | coverage ceiling; Linux CI cannot decide it offline |
-| **64** | re-probe Perplexity's pro line on the Responses wire | ⏰ **2026-09-27.** Probes 1+2+3 all still 400 — table confirmed correct, no code change. The 09-26 obligation deliberately STAYS as the last check before the cutover; see the item for why |
 | **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
 | **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
 | **3** | k8s session-manager security tests | trigger-deferred; quick pass done, full suite postponed |
@@ -1154,127 +1153,6 @@ deprecation-table rows for 5.5/5.5-pro if bench confirms. Effort: (a) ~30min;
 
 ---
 
-### Item 64 — ⏰ re-probe Perplexity's pro line on the Responses wire BEFORE 2026-09-27 [providers / deadline]
-
-**`/doctor` cannot discharge this item, and it is worth saying why.** `/doctor`
-compares an operator's configured ids against the SHIPPED deprecation table
-(`audit_config_models` / `classify_model`) and separately asks each provider's
-`/models` what it advertises. Both directions assume the table is true. THIS
-item is the other direction: it asks whether the table itself still matches
-reality, which only a live call on the target wire can answer. The endpoint
-listing is not enough — `sonar-pro` is *listed* and still 400s on
-`/v1/responses`, the same "listed is not the same as usable" trap recorded
-against the NVIDIA deepseek ids in [[Item 38]]. So: `/doctor` validates configs
-against the table; this item validates the table against the provider. A green
-`/doctor` says nothing about whether probe 3 is still owed.
-
-**Status 2026-09-05 — 22 days out, and a live config was found pointing at
-the dying id.** Probes 1 and 2 stand: the pro line still 400s on Responses,
-so the shipped `replacement` rows are still correct. What changed is the
-evidence that this matters beyond the table — an operator config audited
-today had `providers.perplexity.default_model` **and** `coding_model` set to
-`sonar-pro`, i.e. an id with no successor on the surviving wire, and
-ppxai-sre reported the same id reached through its own
-`get_provider_config()["default_model"]` fallback. Run the probe once more
-before the date; if it still 400s, nothing to change, and the deprecation
-rows do their job at the cutover.
-
-**Filed 2026-08-31.** Deadline-carrying, and the shortest item here that can
-still break users.
-
-**Probe 1 of 2 — 2026-08-31: STILL 400.** `perplexity/sonar-pro`,
-`perplexity/sonar-reasoning-pro` and bare `sonar-pro` all answer
-`400 validation failed: model "..." is not supported` on the Responses wire.
-The shipped deprecation rows are correct as written; no change needed.
-
-**✅ PROBE 2 — 2026-09-01: STILL 400. Run early, at the owner's direction.**
-All three ids answer `400 validation failed: model "..." is not supported`
-on the Responses wire, unchanged from probe 1:
-
-    perplexity/sonar-pro            ABSENT  (table says REJECTS)  ok
-    perplexity/sonar-reasoning-pro  ABSENT  (table says REJECTS)  ok
-    sonar-pro                       ABSENT  (table says NATIVE)   see below
-
-**So the shipped rows are correct and final.** Perplexity has not moved the
-pro line to Responses, `perplexity/sonar` remains the only survivor, and
-every `sonar-pro` / `sonar-reasoning-pro` operator is correctly told to
-migrate to it — a downgrade, but the only one available.
-
-The `sonar-pro` DRIFT line is a **probe artifact, not a defect**: it has no
-`AGENT_FLEET_FACTS` row, so it falls to the global `sonar-pro*` row which
-says `wire_protocol: chat_completions` — correct, and exactly why forcing
-`--api-path responses` on it reports ABSENT. Bare `sonar-pro` works on
-chat-completions and dies with that endpoint on 2026-09-27. Asking a
-chat-completions model about the Responses wire is a question with no
-bearing on the table.
-
-**✅ PROBE 3 — 2026-09-06: STILL 400.** Run at the owner's direction, 20
-days before the obligation's date. All three ids answer
-`400 validation failed: model "..." is not supported` on the Responses wire,
-byte-identical to probes 1 and 2:
-
-    perplexity/sonar-pro            ABSENT  (table says REJECTS)  ok
-    perplexity/sonar-reasoning-pro  ABSENT  (table says REJECTS)  ok
-    sonar-pro                       ABSENT  (table says NATIVE)   DRIFT
-
-The `sonar-pro` DRIFT row is the same probe artifact documented under probe
-2 — a chat-completions model asked about the Responses wire — not a table
-defect. **No code change: the shipped `replacement` rows remain correct.**
-
-**The 2026-09-26 obligation STAYS.** Three probes agree, so the temptation is
-to delete the entry and close this item now. That would be wrong, and the
-reason is worth stating because it will come up again: probe 3 ran on
-**09-06**, and the obligation exists to catch a change **before the 09-27
-cutover**. Deleting it now converts a check dated one day before the cutover
-into one taken 21 days before it, and hands back the whole window in which
-Perplexity could still ship the pro line on Responses. The cost of keeping
-it is ~2 minutes on 09-26; the cost of dropping it is shipping a migration
-hint that steers every pro operator onto a lighter model they did not need,
-which the user WILL follow. Asymmetric, so keep the alarm.
-
-**This item closes on 2026-09-26**, when the last probe runs, or when the
-endpoint dies — whichever the owner reaches first.
-
-**✅ 2026-08-31 — the date now ENFORCES ITSELF.** The obligation was recorded
-in three places (a code comment, an untracked notes file, this entry) and
-none of them fires: all three are read by someone who has already decided to
-look. `tests/test_dated_obligations.py` now fails the suite on 2026-09-20 and
-prints the probe command plus both branches of what to do with the result.
-Verified by moving the date into the past — the failure text carries the full
-instruction. That converts "someone must remember" into "the suite will not
-go green until this is done", which is the only form of a dated commitment
-that survives a busy month.
-
-`PERPLEXITY_DEPRECATIONS` tells every `sonar-pro` / `sonar-reasoning-pro`
-operator to migrate to **`perplexity/sonar`** — the *lighter* model — because
-that is the only Sonar id measured live on the Responses wire on 2026-08-31.
-Both pro ids answered `400 validation failed: model "..." is not supported`
-there, in bare and namespaced form (probe + a plain SDK call, no framing).
-
-That hint is correct only while it stays true. If Perplexity ships the pro
-line on Responses before the cutover, ppxai will be actively advising a
-downgrade nobody needs — a wrong migration hint the user *will* follow.
-
-**Action, ~2 minutes:**
-
-```bash
-uv run python scripts/probe-perplexity-capabilities.py --api-path responses   --model "perplexity/sonar-pro" --model "perplexity/sonar-reasoning-pro"   --model "sonar-pro"
-```
-
-If any answers, update `replacement` in
-[`ppxai/engine/model_deprecations.py`](../ppxai/engine/model_deprecations.py)
-and re-add the entries to `ppxai-config.example.json` (with a pricing row and
-the migration fence's `RETIRED` set trimmed to match).
-
-**Why this is an inventory item and not just a code comment.** It was one: a
-`Re-probe before the date` line in `model_deprecations.py` and a line in an
-untracked audit-notes file. Neither is a commitment anyone will find — the
-comment is only read by someone already editing that table, which is the
-person who least needs telling. A dated obligation belongs where dated
-obligations are tracked.
-
----
-
 ### Item 65 — `BUILTIN_PROFILES` retired ✅ — §4b/§4c reference-data validation STILL OPEN [providers / config]
 
 **Filed 2026-08-31.** ADR 0012 refactor (b), second half. Not deadline-bound,
@@ -2272,6 +2150,7 @@ older per-version detail in the v1.18.2/v1.18.3 snapshots.
 
 - **Item 69** — a test's verdict depended on a config file OUTSIDE the repo — closed 2026-09-06. The READ half of the same resolution rule as Item 70: nothing pinned `find_config_file()`, so any test reaching provider config read whichever file the cwd offered, and a stale personal config had already MASKED a real regression (2026-09-01, `sonar-pro` retired in `e6c366b9`). Pinned `PPXAI_CONFIG_FILE` to the shipped config in `pytest_configure` (before `initialize()`, which reads config during collection) and redirected `loader.USER_CONFIG_FILE` out of the real home, closing the cleared-environment fallthrough. `tests/test_config_source_is_pinned.py` proves it: deleting both halves fails 4 of its 6 tests.
 - **Item 33** — command-layer `console.print` sweep — closed 2026-09-09. The audit is the result: of 111 sites, **39 were dead code** (`_show_active_hints` / `_show_bootstrap_hierarchy`, orphaned by `f7ebd004` in v1.15.0 when `/context` moved to typed results — removed), 65 are TUI-only by construction, and the rest restate what the result already carries. **One** carried information a non-Rich caller could not learn — the no-checkpoint warning, a safety property — now in `message` + `metadata`. The audit also found a REAL BUG the sweep framing would have missed: `POST /command/auto` answered **500**, not bad output, because `handle_agent` called a bare `asyncio.run()` from inside the server's running event loop. Guarded with the `is_event_loop_running()` + threadpool pattern already in `commands/coding.py`.
+- **Item 64** — re-probe Perplexity's pro line on the Responses wire — closed 2026-09-10 at the owner's direction, 17 days before the 2026-09-27 cutover. **FOUR probes** (08-31, 09-01, 09-06, 09-10) all returned byte-identical `400 validation failed: model "..." is not supported` for all three ids, so the shipped `PERPLEXITY_DEPRECATIONS` rows are correct as written and no code changed. The dated obligation in `tests/test_dated_obligations.py` is deleted, which is the part worth knowing: **the last 17 days before the cutover are now unobserved by design.** See the archived body for what that costs.
 - **Item 49** — `/cost` under-reported true provider spend across tiers — closed 2026-09-06, **ADR 0008 Accepted, Option A implemented**. `usage.json`'s sole writer was reachable only from interactive paths, so every `/v1/oneshot` and `/v1/agent/task` token the provider billed for was absent from the local number users budget with. New append-only sink `ppxai/usage_events.py`; one tap at the run-registry boundary covers both background tiers (they share `build_task_runner` since the FU unification, and tier reads `RunMeta.kind`), one at the interactive path. `/cost` adds the log's background tiers to `usage.json` and excludes its `chat` bucket — chat is written to both, so summing totals would double-count it. Gap #2 (KV-cache) stays acknowledge-only as proposed.
 - **Item 70** — a test run rewrote the repo's own tracked `ppxai-config.json` — filed and closed 2026-09-05. `set_tui_config` persisted through `find_config_file()`, which prefers a project-local config, so `/debug-log` (POSTed by the route smoke test, with pytest's cwd at the repo root) rewrote the checked-in file on every run. Split the resolution: `find_writable_config_file()` never returns a discovered project config. Found by a writer-agnostic hash hook after two instrumented tripwires produced false negatives — the method note is in the archived body.
 - **Item 43** — Perplexity `/task` never called granted tools; the premise was overturned twice — closed 2026-08-24, ADR 0012 plan I3 (`0490ce87`). The cause was ours: a hardcoded `native_tool_calling=False` that was true when written and false by 2026-08-13, plus a `model_profiles` row pinning `prompt_based` that would have made the capability table decorative on its own.
