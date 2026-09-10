@@ -13,11 +13,33 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
 
-### Added — Anthropic provider (Claude), opt-in via the `[anthropic]` extra
+### Added — Anthropic provider (Claude), opt-in via the `[anthropic]` extra — ⚠️ UNTESTED AGAINST THE LIVE API
 
-Claude is now a first-class provider, not an OpenAI-compatible endpoint.
-`/explain`, `/test`, `/docs`, `/auto`, `/task` and `/v1/oneshot` all work
-against it with the same UX as the other providers.
+> ⚠️ **This provider has never made a real API call.** Every test shapes a
+> request or reads a response object; the Anthropic SDK is never invoked, and
+> no `ANTHROPIC_API_KEY` was present on the machine it was written on. It is
+> verified against a reading of the SDK surface and the published docs, not
+> against Anthropic's observed behaviour.
+>
+> Treat it as **unproven, not broken**: it is inert unless you install the
+> `[anthropic]` extra AND configure the provider, so it cannot affect an
+> existing install. But if you are the first to point it at a real key,
+> expect to find bugs, and please report them.
+>
+> The three places most likely to be wrong, in order:
+> 1. **Stream event shapes** — the handler matches `content_block_delta` with
+>    `text_delta` / `thinking_delta` deltas. If the SDK emits different type
+>    names, text and reasoning stream as nothing.
+> 2. **Cache token reporting** — top-level `cache_control` is assumed to
+>    produce `cache_creation_input_tokens` / `cache_read_input_tokens` in
+>    `usage`. If it does not, `/cost` under-reports the cached portion.
+> 3. **Structured outputs** — `response_format` is placed inside
+>    `output_config.format` on `oneshot`. If the API wants it elsewhere,
+>    schema-pinned oneshot calls 400.
+
+Claude is a first-class provider, not an OpenAI-compatible endpoint.
+`/explain`, `/test`, `/docs`, `/auto`, `/task` and `/v1/oneshot` are all
+wired to it with the same UX as the other providers.
 
 ```bash
 uv sync --extra anthropic

@@ -1,5 +1,20 @@
 # Anthropic provider (Claude)
 
+> ## ⚠️ Status: UNTESTED against the live API
+>
+> This provider has **never made a real API call.** Its tests shape requests
+> and read response objects; the Anthropic SDK is never invoked, and no
+> `ANTHROPIC_API_KEY` existed on the machine it was written on. It is
+> verified against the SDK surface and the published docs, not against
+> observed behaviour.
+>
+> **Unproven, not broken.** It is inert unless you install the `[anthropic]`
+> extra and configure the provider, so it cannot affect an existing install.
+> If you are the first to point it at a real key, expect bugs — and the three
+> most likely are named under [Limits of Phase 1](#limits-of-phase-1).
+>
+> Remove this banner once a live smoke test passes.
+
 Native support for Claude over Anthropic's Messages API. Optional — install
 the extra to enable it:
 
@@ -129,9 +144,24 @@ responsibility for that path.
 
 ## Limits of Phase 1
 
-Implemented: streaming chat, `oneshot`, native tool calling, vision, prompt
-caching, adaptive thinking, effort, refusal handling, throttle
-classification, cache-aware usage.
+**Where a live call is most likely to disagree with this code**, in order —
+these are the assumptions a smoke test would settle first:
+
+1. **Stream event shapes.** `wire`-side streaming matches
+   `content_block_delta` with `text_delta` / `thinking_delta` deltas. Wrong
+   type names mean text and reasoning stream as nothing — a silent empty
+   response, not an error.
+2. **Cache token reporting.** Top-level `cache_control` is assumed to yield
+   `cache_creation_input_tokens` / `cache_read_input_tokens` in `usage`. If
+   it does not, `/cost` under-reports the cached portion and the whole
+   cache-aware pricing path is decorative.
+3. **Structured outputs placement.** `response_format` goes inside
+   `output_config.format` on `oneshot`. If the API expects it elsewhere,
+   schema-pinned oneshot calls return 400.
+
+Implemented (subject to the above): streaming chat, `oneshot`, native tool
+calling, vision, prompt caching, adaptive thinking, effort, refusal handling,
+throttle classification, cache-aware usage.
 
 Not implemented: server-side tools (`web_search`, `web_fetch`, code
 execution), the Batches API, the Files API, extended context beta headers,
