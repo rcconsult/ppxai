@@ -1,0 +1,1748 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.1/handoff-seam-watcher/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Handoff — standing seam-watcher role for the ppxai-sre session - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#handoff-standing-seam-watcher-role-for-the-ppxai-sre-session" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Handoff — standing seam-watcher role for the ppxai-sre session
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-exists-read-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this exists (read once)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-protocol-agreed-2026-08-08" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The protocol (agreed 2026-08-08)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The protocol (agreed 2026-08-08)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#producer-side-gate-this-repo-before-any-seam-touching-commit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Producer-side gate (this repo, before any seam-touching commit)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-seam" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The seam
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-steering-prompt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The steering prompt
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-captured-baseline-where-it-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The captured baseline — where it is
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The captured baseline — where it is">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-99-does-not-cover-the-spawn-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What 9/9 does NOT cover — the spawn path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finding-fixed-the-gemini-path-dropped-response_format-entirely" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finding (FIXED): the Gemini path dropped response_format entirely
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-at-time-of-writing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open at time of writing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="handoff-standing-seam-watcher-role-for-the-ppxai-sre-session">Handoff — standing seam-watcher role for the ppxai-sre session<a class="headerlink" href="#handoff-standing-seam-watcher-role-for-the-ppxai-sre-session" title="Permanent link">&para;</a></h1>
+<p><strong>Written:</strong> 2026-08-08, from the Windows host, at <code>bbba6fbc</code> on
+<code>bugfix/v1.19.1</code> (tree clean).
+<strong>For:</strong> the parallel Claude Code session working
+<code>C:\git\utils\ppxai-sre</code> (on <code>master</code>), and for whoever runs the next
+ppxai session on this host.</p>
+<p>This file is the <strong>coordination protocol</strong> between the two sessions plus
+the <strong>steering prompt</strong> to paste into the consumer side. It is not about
+any one change; it stays valid until the seam itself changes.</p>
+<hr />
+<h2 id="why-this-exists-read-once">Why this exists (read once)<a class="headerlink" href="#why-this-exists-read-once" title="Permanent link">&para;</a></h2>
+<p>Two Claude Code sessions run concurrently on this Windows host: one on
+this repo (producer), one on <code>ppxai-sre</code> (consumer). <strong>They cannot talk
+to each other.</strong> Claude Code's cross-session messaging is unavailable on
+native Windows — delivery rides a per-session Unix domain socket, so the
+feature is macOS/Linux only (including WSL 2). Verified on this host at
+v2.1.226 by three independent negatives: no <code>ListAgents</code> tool, no
+<code>CLAUDE_CODE_MESSAGING_SOCKET</code> export, no <code>~/.claude/teams/</code>.</p>
+<p>Do not promise, plan around, or re-investigate direct session-to-session
+messaging here. The relay is the human, and the medium is this file plus
+<code>docs/handoff-&lt;topic&gt;.md</code> notes.</p>
+<p>Agent teams (<code>CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1</code>) are <em>not</em>
+OS-gated and would work — but a team only ever <strong>spawns</strong> teammates and
+can never adopt an already-running session, so it does not solve this.</p>
+<h2 id="the-protocol-agreed-2026-08-08">The protocol (agreed 2026-08-08)<a class="headerlink" href="#the-protocol-agreed-2026-08-08" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Relay lives in this repo only.</strong> Producer-side findings go in
+   <code>docs/handoff-&lt;topic&gt;.md</code> here. Neither session writes into the
+   other's tree, even where working directories permit it — two sessions
+   writing one tree with no coordination is exactly the hazard being
+   avoided.</li>
+<li><strong>Stop before committing</strong> when a seam check trips. Do not
+   proceed-and-log. Write the note, hand the human a summary, wait for
+   the consumer verdict relayed back.</li>
+<li><strong>The loop closes through the human, or not at all.</strong> Silence from the
+   other session is not an all-clear.</li>
+</ol>
+<h3 id="producer-side-gate-this-repo-before-any-seam-touching-commit">Producer-side gate (this repo, before any seam-touching commit)<a class="headerlink" href="#producer-side-gate-this-repo-before-any-seam-touching-commit" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/v1/oneshot</code> wire shape</td>
+<td><code>scripts/gateway-smoke.py</code> (needs a running <code>ppxai-server</code>; take a green baseline <em>before</em> changing code — a lone green run after the fact proves little)</td>
+</tr>
+<tr>
+<td>Stale config keys</td>
+<td><code>/doctor</code> → <code>Config shape (ADR 0010, v1.19.1)</code> section, which scans the config <strong>file</strong> because nothing at runtime reads the old paths</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-seam">The seam<a class="headerlink" href="#the-seam" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Status</th>
+<th>Consumer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /v1/oneshot</code> req/resp + bearer auth</td>
+<td><strong>frozen, byte-identical since v1.18.4</strong></td>
+<td><code>agents/outlook-monitor/*.md</code></td>
+</tr>
+<tr>
+<td><code>/v1/agent/*</code> C1–C4 fields</td>
+<td>LOAD-BEARING, agreed in writing</td>
+<td><code>libs/core/</code></td>
+</tr>
+<tr>
+<td><code>NETWORK_POLICY_DENIED</code>/<code>_ALLOWED</code>, <code>AGENT_RUN_START{run_id,parent_run_id}</code>, <code>AGENT_BEAT</code></td>
+<td>committed wire shapes</td>
+<td><code>AuditLogger</code>, <code>policy.py</code>; <code>heartbeat.py</code> <strong>emits</strong> these (<code>:99</code>, <code>:133</code> via <code>events.py:56</code>) rather than parsing our stream — the contract is "the enum member and its data shape keep existing", not "we consume your feed"</td>
+</tr>
+<tr>
+<td><code>~/.ppxai/runs/&lt;run_id&gt;/agent-&lt;n&gt;/</code> + <code>state.json</code>/<code>meta.json</code></td>
+<td>namespace shape — <strong>frozen as a planned dependency, NOT a live reader</strong></td>
+<td><em>nothing in ppxai-sre reads it today.</em> Corrected 2026-08-08 by the consumer session: <code>libs/core/src/ppxai_sre_core/agent.py::AgentRegistry</code> is a 25-line <code>dict[str, type[SREAgent]]</code> class registry (<code>register</code>/<code>get</code>/<code>list_agents</code>/<code>create</code>) that never touches the filesystem; the only fs hit in <code>libs/core/src/</code> is <code>config.py:9</code>, a docstring naming <code>~/.ppxai/sre-config.yaml</code>. Keep the freeze, but don't price a change as if it had a live consumer</td>
+</tr>
+<tr>
+<td><code>execution.*</code> / <code>tools.agent.*</code> keys</td>
+<td>clean break, no dual-read → <strong>fails silently</strong></td>
+<td>k8s ConfigMap (this repo's verified clear; ppxai-sre unverified)</td>
+</tr>
+</tbody>
+</table>
+<p>Authoritative consumer-side contract:
+<code>../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code> (C1–C4 + A1–A3) and
+ADR 0003 §6–§12 in this repo.</p>
+<h2 id="the-steering-prompt">The steering prompt<a class="headerlink" href="#the-steering-prompt" title="Permanent link">&para;</a></h2>
+<p>Paste verbatim into the ppxai-sre session:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>STANDING ROLE — ppxai seam watcher (for this ppxai-sre session)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>A parallel Claude Code session is working the ppxai producer repo at
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>C:\git\utils\ppxai (branch bugfix/v1.19.1, unreleased). You are the
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>consumer side. Our two sessions CANNOT message each other — Claude Code
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>cross-session messaging is unavailable on native Windows — so the human
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>relays between us. Do not wait for or expect direct contact.
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>BOUNDARY: do not write to C:\git\utils\ppxai. Read it freely. All your
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>output lands in ppxai-sre or in your reply to the human. The ppxai session
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>is under the mirror-image rule and will not write here.
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>WHEN THE HUMAN HANDS YOU A HANDOFF NOTE
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>They'll point you at C:\git\utils\ppxai\docs\handoff-&lt;topic&gt;.md. For each
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>one, answer exactly one question: does this break ppxai-sre? Check, in
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>this order, and cite file:line for anything you find:
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>  1. agents/outlook-monitor/{AGENT,TOOLS,RUNBOOKS,README}.md
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>     — consumes POST /v1/oneshot. That wire shape (request, response,
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>       bearer auth) has been byte-identical since ppxai v1.18.4. Any
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>       change to it is a hard break, not a migration.
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>  2. libs/core/
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>     — agent.py::AgentRegistry reads ~/.ppxai/runs/&lt;run_id&gt;/agent-&lt;n&gt;/
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>       plus state.json / meta.json (namespace shape is load-bearing)
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>     — heartbeat.py consumes EventType.AGENT_BEAT
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>     — policy.py wraps the per-run network-policy primitive
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>     — AuditLogger consumes NETWORK_POLICY_DENIED / _ALLOWED and
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>       AGENT_RUN_START{run_id, parent_run_id}
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>  3. Any chart, ConfigMap, or Helm values under mcp-servers/, scripts/,
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>     or deploy paths that set ppxai config keys.
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>  4. docs/PPXAI-INTEGRATION-V1.19.md — C1–C4 are marked LOAD-BEARING and
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>     were agreed in writing. If a handoff contradicts one, say so
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>     explicitly; that's a broken agreement, not a preference.
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>Report back to the human as: VERDICT (breaks / does not break / unclear),
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>then the evidence, then the migration needed if any. If a claim in the
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>handoff note is wrong, say that plainly — the last one contained a
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>warning that turned out to be broader than reality, and catching it
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>avoided a bad ConfigMap edit. Verify, don't assume: run the grep, open
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>the file. Don't reason from import surface or filenames.
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>FIRST TASK, do this now — it is already outstanding
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>ADR 0010 moved six ppxai config keys off tools.agent.* with NO dual-read.
+</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>There is no grace period and no warning: a key left at an old location is
+</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>silently ignored and the setting reverts to its default. The ppxai session
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>verified its own repo but could never verify this one.
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>
+</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>  grep -rn "task_tier_enabled\|spawn_consent\|consent_ttl_s\|result_retention_s\|default_subagent" C:\git\utils\ppxai-sre
+</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>
+</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>Empty result = ppxai-sre needs nothing; report that. Any hit = report the
+</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>file:line and migrate per the table in
+</span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>C:\git\utils\ppxai\docs\handoff-adr0010-k8s.md before any v1.19.1 server
+</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>rolls. Also note: GET /agent/config changed shape in that commit (six tier
+</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>keys dropped). It's an internal endpoint, not /v1/*, but if anything here
+</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>scrapes it, flag it.
+</span></code></pre></div>
+<p>Two properties of that prompt are deliberate and should survive edits:</p>
+<ul>
+<li><strong>It is told to push back.</strong> <code>docs/archive/handoff-adr0010-k8s.md</code> exists
+  because the first verbal warning was wrong and broader than reality. A
+  watcher that only ever confirms is worth nothing.</li>
+<li><strong>Its first task is concrete work, not a posture.</strong> The ADR 0010 grep
+  has been open since 2026-08-06, is one command, and doubles as a live
+  test of whether the relay loop functions — before anything depends on
+  it mid-change.</li>
+</ul>
+<h2 id="the-captured-baseline-where-it-is">The captured baseline — where it is<a class="headerlink" href="#the-captured-baseline-where-it-is" title="Permanent link">&para;</a></h2>
+<p><strong>Taken 2026-08-08. It is NOT in this repo</strong>, which is why a reviewer looking
+for <code>*.normalized.json</code> under version control correctly found nothing and
+reasonably concluded it had never been captured. It had. An artifact nobody
+can locate is functionally missing, so its location is recorded here:</p>
+<p><strong>Captures are named by commit, never by role.</strong> A fixed path like
+<code>…\ppxai-seam-baseline</code> cannot hold both sides of a before/after comparison:
+the second capture destroys the first, and a diff whose inputs no longer exist
+is a <em>reported result</em>, not evidence. That path was silently overwritten four
+times in one session — each overwrite an improvement, each destroying its
+predecessor — before the pattern was named.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>C:\tmp\ppxai-seam-&lt;shortsha&gt;\      # MANIFEST.txt  ← read this FIRST
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>                                   # 9 *.normalized.json   (the diff target)
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>                                   #   *.raw.json          (forensics)
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>                                   #   *.contentkeys.json  (provider signal)
+</span></code></pre></div>
+<p><code>--record</code> now <strong>refuses</strong> to write into a directory that already holds a
+<code>MANIFEST.txt</code>, printing the commit-named path it should have used.
+<code>--force-record</code> overrides, for when discarding really is the intent.</p>
+<p>Standing captures for the <code>build_task_runner</code> extraction — both sides kept,
+so the byte-identical claim can be re-checked by anyone:</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Commit</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>C:\tmp\ppxai-seam-bb55f5ed\</code></td>
+<td><code>bb55f5ed</code> (clean)</td>
+<td><strong>pre</strong>-extraction</td>
+</tr>
+<tr>
+<td><code>C:\tmp\ppxai-seam-eeb82076\</code></td>
+<td><code>eeb82076</code> (clean)</td>
+<td><strong>post</strong>-extraction</td>
+</tr>
+</tbody>
+</table>
+<p><code>9 identical, 0 differing</code>. The pre side was reconstructed after the fact by
+<code>git checkout bb55f5ed</code> → capture → return, which running from source makes
+cheap: the tree <em>is</em> the code, so any past commit's wire behaviour is one
+checkout away. That recoverability is a property worth knowing — but it is
+not a licence to overwrite, since it only works while the commit is reachable
+and the environment still resolves.</p>
+<h3 id="what-99-does-not-cover-the-spawn-path">What 9/9 does NOT cover — the spawn path<a class="headerlink" href="#what-99-does-not-cover-the-spawn-path" title="Permanent link">&para;</a></h3>
+<p><strong>Do not quote "9/9 byte-identical" as covering child runs.</strong> The diff
+evidences the <em>recorded</em> surfaces, and the seven steps are <code>/status</code>, the
+token mint, <code>GET /v1/agent/runs</code>, both <code>/v1/oneshot</code> variants, and the
+<code>agent/run</code> + <code>agent/task</code> lifecycles. <strong>None of them constructs a child
+run</strong> — verified by grep: <code>spawn_subagent</code>, <code>allow_spawn</code>, <code>respond</code> and
+<code>consent</code> appear in <code>scripts/gateway-smoke.py</code> only inside a comment about
+normalization keys (<code>:158</code>).</p>
+<p>That gap sits exactly where the extraction changed meaning.
+<code>runner_builder=build_task_runner</code> in <code>engine/task_runner.py</code> is the line
+whose <em>name resolution</em> moved, and no captured endpoint reaches it. So the
+evidence is asymmetric and worth stating plainly:</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/v1/oneshot</code>, <code>/v1/agent/*</code> lifecycles</td>
+<td><strong>wire-level</strong>, standing artifacts on both sides</td>
+</tr>
+<tr>
+<td>child-run construction / consent park</td>
+<td><strong>unit-level</strong> (<code>tests/test_runner_builder_patch_point.py</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>The unit tests are not weak — they include an anti-vacuous guard and a
+positive assertion that the <code>agent_v1</code> alias is inert — but they are a
+different class of evidence from a byte diff.</p>
+<p><strong>If a spawn step is ever added to the smoke, it is the highest-value
+addition remaining</strong>, because child-run construction is where ppxai-sre
+plans to sit. It needs more machinery than the other steps: <code>allow_spawn</code>,
+a grant containing <code>spawn_subagent</code>, consent config, and a <code>respond</code>
+round-trip to clear the park.</p>
+<p><strong><code>MANIFEST.txt</code> is written automatically by <code>--record</code></strong>, not by hand — it
+carries the capture time, the commit and clean/dirty state, the branch, which
+server answered (spawned binary + build time, or a <code>--base-url</code> target), the
+provider/model that actually replied, and the per-step results. It shouts
+<code>NOT A USABLE BASELINE</code> if any step failed.</p>
+<p>This exists because the alternative was demonstrated: seven capture
+directories accumulated in <code>C:\tmp</code> during one session, all with identical
+file names, and the only way to tell them apart was mtime and content
+diffing. That is inference, not documentation — the same failure as an
+artifact nobody can find, wearing a different costume. <strong>Only this one
+directory is authoritative; scratch captures should be deleted, not left
+beside it.</strong></p>
+<p>Outside the repo on purpose — it is machine state, not source, and the raw
+bodies carry per-host run ids and a minted bearer. <code>C:\tmp</code> survives across
+sessions.</p>
+<p>Authoritative values live in <code>MANIFEST.txt</code>; the table below is orientation
+only and will go stale — trust the file.</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The recipe is two steps: commit, then capture.</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>status<span class="w"> </span>--porcelain<span class="w"> </span>--<span class="w"> </span>ppxai<span class="w">      </span><span class="c1"># must be empty</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/gateway-smoke.py<span class="w"> </span>--record<span class="w"> </span>C:<span class="se">\t</span>mp<span class="se">\p</span>pxai-seam-baseline
+</span></code></pre></div>
+<p>| Captured with | <code>uv run python scripts/gateway-smoke.py --record &lt;dir&gt;</code> |
+| Result | 7 passed, 0 failed, 0 skipped |
+| Reproducibility | <strong>9/9 normalized files byte-identical</strong> across two independent captures |
+| Server under test | <strong>ran from source</strong> — the working tree itself |</p>
+<p><strong>Why <code>uv run</code>, and why no build.</strong> Under <code>uv run</code> the script can import
+<code>ppxai</code>, so when the resolved binary is stale it spawns
+<code>python -m ppxai.server.http</code> from the checkout instead. The tree <em>is</em> the
+code, so the capture's provenance is simply the commit the manifest records
+— there is no build artefact whose currency has to be argued. Under a bare
+<code>python</code> the import fails (the venv holds fastapi/dotenv), the script falls
+back to the frozen binary as designed, and the manifest says so.</p>
+<p><strong>The manifest validates this; it does not merely describe it.</strong> A capture
+whose server predates the last commit touching <code>ppxai/</code> is stamped
+<code>*** WEAK PROVENANCE ***</code> naming that commit, and so is one taken with
+<code>ppxai/</code> dirty. Absence of the banner is the check having run, not the check
+being absent.</p>
+<p><strong>Do not capture via <code>--base-url</code>.</strong> The script cannot identify a server it
+did not start and says so in place of provenance. This artifact is the
+trusted "before" side of the extraction diff, so a byte-identical claim
+inherits whatever provenance it rests on.</p>
+<p><strong>Superseded recipes, for anyone reading older notes.</strong> Earlier baselines
+argued currency by reasoning about which commits had touched <code>ppxai/server</code>
+and <code>ppxai/engine</code> since a build; a later one used commit → build → capture
+so the binary's mtime provably followed a clean HEAD. Both were sound. Both
+are now unnecessary: running from source removes the artefact being reasoned
+about. The installed <code>~/.ppxai/bin/ppxai-server.exe</code> (2026-08-06 14:51) is
+in any case unusable — it predates the Gemini <code>response_format</code> fix, and the
+default invocation used to spawn it silently.</p>
+<p><strong>The baseline has already moved once, silently.</strong> Before manifests existed,
+the documented path was overwritten by a later, better capture (8 files → 9,
+after the structured step landed). Coverage improved, but a reader who had
+seen the earlier one had no way to know. That is what <code>MANIFEST.txt</code> is for.</p>
+<p><strong>Trap worth knowing:</strong> without <code>--base-url</code>, <code>gateway-smoke.py</code> spawns the
+<strong>installed binary</strong>, not the repo tree. A baseline is therefore of whatever
+is installed — check its mtime against the last <code>ppxai/server</code> /
+<code>ppxai/engine</code> commit before trusting it, exactly as above.</p>
+<p>After <code>build_task_runner</code> moves, capture again to a fresh dir and compare:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">for</span><span class="w"> </span>f<span class="w"> </span><span class="k">in</span><span class="w"> </span>/c/tmp/ppxai-seam-baseline/*.normalized.json<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>cmp<span class="w"> </span>-s<span class="w"> </span><span class="s2">"</span><span class="nv">$f</span><span class="s2">"</span><span class="w"> </span><span class="s2">"/c/tmp/ppxai-seam-after/</span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">"</span><span class="nv">$f</span><span class="s2">"</span><span class="k">)</span><span class="s2">"</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"DIFFERS: </span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">"</span><span class="nv">$f</span><span class="s2">"</span><span class="k">)</span><span class="s2">"</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">done</span>
+</span></code></pre></div>
+<p>Expect zero output. Anything listed is a seam change and stops the commit.
+Compare only <code>*.normalized.json</code> — <code>*.raw.json</code> and <code>*.contentkeys.json</code> are
+expected to vary (see below).</p>
+<h3 id="finding-fixed-the-gemini-path-dropped-response_format-entirely">Finding (FIXED): the Gemini path dropped <code>response_format</code> entirely<a class="headerlink" href="#finding-fixed-the-gemini-path-dropped-response_format-entirely" title="Permanent link">&para;</a></h3>
+<p>Added on consumer request, because the plain call only evidences the envelope
+and ppxai-sre's Pattern A classifier depends on the schema-enforced path. The
+step found a real defect on its first run.</p>
+<p><strong>What was wrong.</strong> <code>ppxai/engine/providers/gemini.py::oneshot</code> accepted
+<code>response_format</code> to satisfy the <code>BaseProvider</code> contract and then never read
+it — its own docstring said so ("response_format is not forwarded … out of
+scope for this stateless path"). Gemini uses <code>generate_content</code>, which has no
+such parameter, and nothing mapped it onto the equivalent knobs. So the
+schema <strong>never reached Google at all</strong>.</p>
+<p>An earlier revision of this note said "enforcement is the provider's and this
+provider does not do it". That was wrong, and wrong in a way that would have
+sent you looking at the wrong layer — Google never saw the schema. The
+measurement that produced it also had a confound: the probe prompt said
+"reply with JSON only", so the JSON came from the prompt, and the varying key
+sets were ordinary unconstrained generation.</p>
+<p>Gemini was the <strong>only</strong> provider affected. <code>openai_compat.py:591</code>,
+<code>openai_native.py</code> and <code>perplexity.py</code> all forward <code>response_format</code> verbatim
+into <code>request_kwargs</code>; only the non-OpenAI path needed a mapping and lacked
+one. It was also the config default on this host, which is why the baseline
+caught it.</p>
+<p><strong>The fix (v1.19.1).</strong> <code>response_format_to_gemini()</code> maps the OpenAI shape
+onto <code>response_mime_type</code> / <code>response_schema</code>:</p>
+<ul>
+<li><code>{"type":"json_object"}</code> → JSON mime type, model picks the shape.</li>
+<li><code>{"type":"json_schema", …}</code> → JSON mime type + the schema, run through the
+  existing tool-schema sanitizer and then stripped of <code>additionalProperties</code>.
+  The strip is load-bearing and the mechanism is worth knowing: the
+  google-genai SDK's <code>Schema</code> model <strong>accepts</strong> that key — so nothing fails
+  client-side — while the REST API answers <code>400 INVALID_ARGUMENT — Unknown
+  name "additional_properties" at 'generation_config.response_schema'</code>. It is
+  in virtually every OpenAI-generated schema. <strong>Passing SDK validation is not
+  evidence the API will accept a payload</strong>, and only a live call surfaces the
+  gap: this one was found by a 502 after unit tests were green.</li>
+<li>Structured output and Google Search grounding <strong>coexist</strong>. An earlier
+  revision of this note claimed a schema suppressed grounding; that was
+  generalized from the function-declaration conflict without being tested,
+  and is wrong. Verified live 2026-08-09: <code>google_search</code> +
+  <code>response_mime_type</code> + <code>response_schema</code> is accepted.</li>
+</ul>
+<p>Live-verified end to end, not just unit-tested: against
+<code>gemini-3.1-pro-preview</code> the smoke now reports <code>schema=enforced</code>, and the
+recorded key set went from the model's invention
+<code>[category, intent, urgency]</code> to exactly the pinned
+<code>[confidence, intent, reasoning, suggested_action]</code>.</p>
+<p><strong>No seam change.</strong> A capture from the patched tree matches the installed
+baseline on all <code>/v1/*</code> artifacts byte for byte. The single differing file is
+<code>01-GET-status</code>, on <code>model</code>/<code>provider</code> — session selection, not contract
+(one server had <code>custom</code>/Qwen selected, the other <code>perplexity</code>/sonar-pro).</p>
+<p>Recording notes that outlive the fix:</p>
+<ul>
+<li>The smoke step <strong>reports</strong> conformance rather than asserting it: the
+  gateway owes you that response_format reaches the model and the envelope
+  holds, not that a given provider honours it.</li>
+<li>The key set lives in <code>*.contentkeys.json</code>, outside the diff target — it is
+  provider behaviour, not seam contract.</li>
+<li><code>content</code> is volatile in the normalized artifact: model output is never a
+  wire contract, only its type is.</li>
+</ul>
+<h2 id="open-at-time-of-writing">Open at time of writing<a class="headerlink" href="#open-at-time-of-writing" title="Permanent link">&para;</a></h2>
+<ul>
+<li>The ADR 0010 grep above has <strong>never been run</strong> against ppxai-sre.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

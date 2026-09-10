@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>/v1/agent/task lifecycle</title>
+<style>
+  :root{
+    --bg:#EDF0F5; --panel:#FBFCFE; --ink:#1A2431; --ink-2:#4E5A6B;
+    --line:#D3DAE4;
+    --indigo:#3B4FBF; --indigo-ink:#26317E; --indigo-fill:#E7EAFB;
+    --amber:#B4770F; --amber-ink:#7A5210; --amber-fill:#FAEFD3;
+    --green:#2E9A57; --green-ink:#1C5C37; --green-fill:#E1F2E7;
+    --rust:#BC463B; --rust-ink:#7C2A22; --rust-fill:#F7E3E1;
+    --neutral-fill:#E9EDF3; --neutral-border:#A7B2C1;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    line-height:1.55; margin:0; padding:32px 20px 72px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px; margin:0 auto}
+
+  header{margin-bottom:22px}
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--indigo); margin:0 0 8px;
+  }
+  h1{
+    font-size:clamp(26px,4vw,38px); line-height:1.08; margin:0 0 10px;
+    letter-spacing:-.01em; text-wrap:balance; font-weight:680;
+  }
+  h1 code{font-family:var(--mono); font-size:.72em; background:var(--indigo-fill);
+    color:var(--indigo-ink); padding:.08em .3em; border-radius:6px; font-weight:600}
+  .lede{max-width:66ch; color:var(--ink-2); font-size:16px; margin:0}
+  .lede b{color:var(--ink); font-weight:600}
+
+  .legend{
+    display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center;
+    margin:20px 0 6px; padding:12px 16px; background:var(--panel);
+    border:1px solid var(--line); border-radius:12px;
+    font-size:13px; color:var(--ink-2);
+  }
+  .legend .grp{display:flex; align-items:center; gap:8px}
+  .legend .sep{width:1px; height:20px; background:var(--line)}
+  .swatch{width:26px; height:16px; border-radius:4px; border:2px solid var(--ink-2); flex:none}
+  .swatch.built{background:var(--indigo-fill); border-color:var(--indigo)}
+  .swatch.planned{background:repeating-linear-gradient(135deg,var(--panel) 0 4px,#E3E7EE 4px 7px);
+    border-style:dashed; border-color:var(--neutral-border)}
+  .dot{width:12px;height:12px;border-radius:50%;flex:none;border:1px solid rgba(0,0,0,.12)}
+  .dot.n{background:var(--neutral-fill)} .dot.a{background:var(--indigo)}
+  .dot.w{background:var(--amber)} .dot.o{background:var(--green)} .dot.f{background:var(--rust)}
+
+  .diagram-scroll{
+    margin:14px 0 6px; overflow-x:auto; background:var(--panel);
+    border:1px solid var(--line); border-radius:16px; padding:10px;
+    box-shadow:0 1px 2px rgba(20,30,50,.04), 0 12px 34px -22px rgba(20,30,50,.28);
+  }
+  svg.diagram{display:block; width:100%; min-width:760px; height:auto}
+
+  /* SVG node + edge styling */
+  .node{stroke-width:2}
+  .planned-node{stroke-dasharray:6 5}
+  .cat-neutral{fill:var(--neutral-fill); stroke:var(--neutral-border)}
+  .cat-active{fill:var(--indigo-fill); stroke:var(--indigo)}
+  .cat-wait{fill:var(--amber-fill); stroke:var(--amber)}
+  .cat-ok{fill:var(--green-fill); stroke:var(--green)}
+  .cat-fail{fill:var(--rust-fill); stroke:var(--rust)}
+  .st-name{font-family:var(--mono); font-weight:700; font-size:15px; fill:var(--ink)}
+  .st-sub{font-family:var(--sans); font-size:10.5px; fill:var(--ink-2); letter-spacing:.02em}
+  .tag{font-family:var(--mono); font-size:8.5px; letter-spacing:.1em; fill:var(--neutral-border); text-transform:uppercase}
+  .box-title{font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:.06em; fill:var(--rust-ink); text-transform:uppercase}
+  .box-note{font-family:var(--sans); font-size:10.5px; fill:var(--ink-2)}
+  .cluster{fill:rgba(188,70,59,.045); stroke:var(--rust); stroke-opacity:.4; stroke-width:1.4; stroke-dasharray:2 4}
+  .edge{fill:none; stroke-width:2.2}
+  .edge.dash{stroke-dasharray:7 5; stroke-width:2}
+  .e-indigo{stroke:var(--indigo)} .e-green{stroke:var(--green)}
+  .e-amber{stroke:var(--amber)} .e-rust{stroke:var(--rust)} .e-grey{stroke:#8A95A5}
+  .elabel{font-family:var(--mono); font-size:11px; fill:var(--ink-2);
+    stroke:var(--panel); stroke-width:4px; paint-order:stroke; stroke-linejoin:round}
+  .elabel.a{fill:var(--amber-ink)} .elabel.g{fill:var(--green-ink)}
+  .elabel.i{fill:var(--indigo-ink)} .elabel.r{fill:var(--rust-ink)}
+  .esub{font-family:var(--sans); font-size:9.5px; fill:var(--ink-2);
+    stroke:var(--panel); stroke-width:3.5px; paint-order:stroke}
+
+  .cards{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:26px 0 8px}
+  @media(max-width:680px){.cards{grid-template-columns:1fr}}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px 20px 18px; position:relative; overflow:hidden}
+  .card::before{content:""; position:absolute; inset:0 auto 0 0; width:4px}
+  .card.respond::before{background:var(--amber)}
+  .card.ack::before{background:var(--green)}
+  .card .k{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; margin:0 0 6px}
+  .card.respond .k{color:var(--amber-ink)} .card.ack .k{color:var(--green-ink)}
+  .card h3{font-family:var(--mono); font-size:15px; margin:0 0 10px; font-weight:700; word-break:break-all}
+  .card p{margin:0 0 10px; font-size:14px; color:var(--ink-2)}
+  .card p b{color:var(--ink); font-weight:600}
+  .card .foot{font-size:12.5px; font-weight:600; color:var(--ink); margin:0; padding-top:4px}
+
+  table{width:100%; border-collapse:collapse; margin:22px 0 0; font-size:13.5px}
+  .tbl-scroll{overflow-x:auto}
+  caption{text-align:left; font-family:var(--mono); font-size:12px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--ink-2); padding:0 0 10px}
+  th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top}
+  thead th{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-2); font-weight:600}
+  td code{font-family:var(--mono); font-weight:600}
+  tbody tr td:first-child code{color:var(--ink)}
+  .pill{display:inline-block; font-family:var(--mono); font-size:11px; font-weight:600;
+    padding:2px 8px; border-radius:20px; white-space:nowrap}
+  .pill.built{background:var(--indigo-fill); color:var(--indigo-ink)}
+  .pill.plan{background:#EEF1F6; color:var(--ink-2); border:1px dashed var(--neutral-border)}
+
+  footer{margin-top:30px; padding-top:16px; border-top:1px solid var(--line);
+    font-size:12.5px; color:var(--ink-2)}
+  footer code{font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">ppxai agent platform · ADR&nbsp;0003 §8</p>
+    <h1>Lifecycle of a <code>/v1/agent/task</code> run</h1>
+    <p class="lede">A tool-capable run executes in the <b>background, decoupled from any UI</b>. That decoupling is the whole design — and it forces two special mechanisms: <b><code>/respond</code></b> to feed a decision to a run that's <b>paused mid-flight</b>, and <b><code>/ack</code></b> to collect the result of a run that has <b>already finished and exited</b>.</p>
+  </header>
+
+  <div class="legend" role="note" aria-label="Legend">
+    <div class="grp"><span class="swatch built"></span> Shipped in v1.19.0</div>
+    <div class="grp"><span class="swatch planned"></span> Designed (§8) — not built</div>
+    <div class="sep" aria-hidden="true"></div>
+    <div class="grp"><span class="dot n"></span> pending</div>
+    <div class="grp"><span class="dot a"></span> active</div>
+    <div class="grp"><span class="dot w"></span> parked</div>
+    <div class="grp"><span class="dot o"></span> success</div>
+    <div class="grp"><span class="dot f"></span> abnormal</div>
+  </div>
+
+  <div class="diagram-scroll">
+    <svg class="diagram" viewBox="0 0 1000 720" role="img"
+         aria-label="State diagram of a /v1/agent/task run: pending to running; running parks in waiting and resumes via respond; running finishes to completed_pending_ack then finalized via ack; running can exit abnormally to failed, zombie, budget_exceeded, cancelled, or interrupted, with interrupted conditionally resuming.">
+      <defs>
+        <marker id="ah-indigo" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3B4FBF"/></marker>
+        <marker id="ah-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2E9A57"/></marker>
+        <marker id="ah-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B4770F"/></marker>
+        <marker id="ah-rust" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#BC463B"/></marker>
+        <marker id="ah-grey" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8A95A5"/></marker>
+      </defs>
+
+      <!-- ===== EDGES (drawn first, under nodes) ===== -->
+      <!-- pending -> running -->
+      <path class="edge e-indigo" d="M500,98 L500,220" marker-end="url(#ah-indigo)"/>
+      <text class="elabel i" x="512" y="163">run_in_background</text>
+
+      <!-- running -> waiting (out) -->
+      <path class="edge dash e-amber" d="M412,240 L286,240" marker-end="url(#ah-amber)"/>
+      <text class="elabel a" x="349" y="223" text-anchor="middle">AGENT_WAITING</text>
+      <text class="esub" x="349" y="235" text-anchor="middle">out-of-envelope · mid-run decision</text>
+      <!-- waiting -> running (back) -->
+      <path class="edge dash e-amber" d="M286,264 L412,264" marker-end="url(#ah-amber)"/>
+      <text class="elabel a" x="349" y="284" text-anchor="middle">POST /respond {token}</text>
+
+      <!-- running -> completed_pending_ack -->
+      <path class="edge dash e-green" d="M500,280 L500,448" marker-end="url(#ah-green)"/>
+      <text class="elabel g" x="512" y="352">done → process exits</text>
+      <text class="esub" x="512" y="366">emits AGENT_RESULT_READY</text>
+
+      <!-- completed_pending_ack -> finalized -->
+      <path class="edge dash e-green" d="M500,508 L500,598" marker-end="url(#ah-green)"/>
+      <text class="elabel g" x="512" y="556">POST /ack · or TTL</text>
+
+      <!-- running -> failure cluster -->
+      <path class="edge e-rust" d="M588,250 L671,250" marker-end="url(#ah-rust)"/>
+      <text class="elabel r" x="629" y="240" text-anchor="middle">error · cancel · kill</text>
+
+      <!-- interrupted -> running (conditional resume) -->
+      <path class="edge dash e-grey" d="M699,478 C 636,468 616,332 560,282" marker-end="url(#ah-grey)"/>
+      <text class="esub" x="648" y="420" text-anchor="middle">conditional resume</text>
+
+      <!-- ===== FAILURE CLUSTER ===== -->
+      <rect class="cluster" x="675" y="150" width="290" height="470" rx="14"/>
+      <text class="box-title" x="695" y="178">Terminal · abnormal</text>
+      <text class="box-note" x="695" y="196">exit → sandbox torn down; artifacts kept until GC</text>
+
+      <g><rect class="node cat-fail" x="699" y="214" width="242" height="48" rx="9"/>
+        <text class="st-name" x="820" y="236" text-anchor="middle">failed</text>
+        <text class="st-sub" x="820" y="251" text-anchor="middle">provider / engine error</text></g>
+
+      <g><rect class="node cat-fail planned-node" x="699" y="274" width="242" height="48" rx="9"/>
+        <text class="st-name" x="820" y="296" text-anchor="middle">zombie</text>
+        <text class="st-sub" x="820" y="311" text-anchor="middle">tool-loop circuit-breaker</text>
+        <text class="tag" x="931" y="289" text-anchor="end">planned</text></g>
+
+      <g><rect class="node cat-fail planned-node" x="699" y="334" width="242" height="48" rx="9"/>
+        <text class="st-name" x="820" y="356" text-anchor="middle">budget_exceeded</text>
+        <text class="st-sub" x="820" y="371" text-anchor="middle">iterations · tokens · time cap</text>
+        <text class="tag" x="931" y="349" text-anchor="end">planned</text></g>
+
+      <g><rect class="node cat-fail" x="699" y="394" width="242" height="48" rx="9"/>
+        <text class="st-name" x="820" y="416" text-anchor="middle">cancelled</text>
+        <text class="st-sub" x="820" y="431" text-anchor="middle">explicit · parent cascade</text></g>
+
+      <g><rect class="node cat-fail" x="699" y="454" width="242" height="48" rx="9"/>
+        <text class="st-name" x="820" y="476" text-anchor="middle">interrupted</text>
+        <text class="st-sub" x="820" y="491" text-anchor="middle">engine restart · task killed</text></g>
+
+      <!-- ===== SPINE + BRANCH NODES ===== -->
+      <!-- pending -->
+      <g><rect class="node cat-neutral" x="412" y="42" width="176" height="56" rx="11"/>
+        <text class="st-name" x="500" y="66" text-anchor="middle">pending</text>
+        <text class="st-sub" x="500" y="82" text-anchor="middle">minted · not yet started</text></g>
+
+      <!-- waiting -->
+      <g><rect class="node cat-wait" x="70" y="216" width="212" height="68" rx="11"/>
+        <text class="st-name" x="176" y="242" text-anchor="middle">waiting</text>
+        <text class="st-sub" x="176" y="258" text-anchor="middle">{ consent | input }</text>
+        <text class="st-sub" x="176" y="272" text-anchor="middle">parked · alive · resume-token+TTL</text></g>
+
+      <!-- running (hub) -->
+      <g><rect class="node cat-active" x="412" y="222" width="176" height="56" rx="11"/>
+        <text class="st-name" x="500" y="246" text-anchor="middle">running</text>
+        <text class="st-sub" x="500" y="262" text-anchor="middle">executing · scoped tool loop</text></g>
+
+      <!-- completed_pending_ack -->
+      <g><rect class="node cat-ok" x="384" y="450" width="232" height="58" rx="11"/>
+        <text class="st-name" x="500" y="474" text-anchor="middle">completed_pending_ack</text>
+        <text class="st-sub" x="500" y="490" text-anchor="middle">result held · process dead</text></g>
+
+      <!-- finalized -->
+      <g><rect class="node cat-ok" x="412" y="600" width="176" height="56" rx="11"/>
+        <text class="st-name" x="500" y="624" text-anchor="middle">finalized</text>
+        <text class="st-sub" x="500" y="640" text-anchor="middle">acked · GC-eligible</text></g>
+    </svg>
+  </div>
+  <p style="font-size:12.5px;color:var(--ink-2);margin:4px 2px 0">
+    The happy path runs the two-phase <code style="font-family:var(--mono)">completed_pending_ack → finalized</code> hold, shipped in v1.19.0 (T6), making result delivery <b>at-least-once</b> — a disconnected UI can still collect the result via <code>/ack</code>.
+  </p>
+
+  <div class="cards">
+    <div class="card respond">
+      <p class="k">Mid-run · process alive</p>
+      <h3>POST /v1/agent/runs/{id}/respond</h3>
+      <p>A background run can't pop a dialog. When it needs a human — a <b>consent gate</b> for an action outside its granted envelope, or a <b>branching decision</b> — it enters <b>waiting</b>, emits <code>AGENT_WAITING</code> tagged with the run_id, and idles on a resume token + TTL. The process stays alive.</p>
+      <p>A run killed while parked drops its stale consent card on the client; <code>/task resume</code> rebuilds the runner from the persisted run meta rather than replaying the dead card.</p>
+      <p class="foot">→ <code>/respond</code> hands back the answer and the run <b>continues</b>.</p>
+    </div>
+    <div class="card ack">
+      <p class="k">End-of-run · process dead</p>
+      <h3>POST /v1/agent/runs/{id}/ack</h3>
+      <p>On success the agent writes results, emits <code>AGENT_RESULT_READY</code>, and <b>exits</b> — freeing tokens/CPU and tearing down the sandbox. The run holds in <b>completed_pending_ack</b> so a disconnected UI can still collect the result. A retention TTL is the backstop.</p>
+      <p class="foot">→ <code>/ack</code> confirms collection → <b>finalized</b> → GC-eligible.</p>
+    </div>
+  </div>
+
+  <div class="tbl-scroll">
+    <table>
+      <caption>State reference</caption>
+      <thead><tr><th>State</th><th>Phase</th><th>Enters when</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><code>pending</code></td><td>pre-run</td><td>Run record minted; not yet scheduled.</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>running</code></td><td>active</td><td>Background task executing through the scoped tool loop.</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>waiting{consent|input}</code></td><td>parked · alive</td><td>Hits an out-of-envelope action or a mid-run decision; parks on a resume token.</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>completed_pending_ack</code></td><td>done · dead</td><td>Agent self-declared done, wrote results, exited; awaiting collection.</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>finalized</code></td><td>terminal</td><td>Result acked (or retention TTL fired) → GC-eligible.</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>failed</code></td><td>terminal · abnormal</td><td>Provider or engine error killed the run.</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>cancelled</code></td><td>terminal · abnormal</td><td>Explicit cancel, or cascade from a cancelled parent.</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>interrupted</code></td><td>terminal · abnormal</td><td>Engine restart / kill dropped the live task; records + checkpoint persist. Resume is <b>conditional</b> (open-decision&nbsp;#5).</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>zombie</code></td><td>terminal · abnormal</td><td>Tool-loop circuit-breaker trips. Event <code>AGENT_ZOMBIE</code> exists; a distinct status is designed.</td><td><span class="pill plan">planned</span></td></tr>
+        <tr><td><code>budget_exceeded</code></td><td>terminal · abnormal</td><td>Iteration / token / time cap hit. Today this folds into <code>interrupted</code>.</td><td><span class="pill plan">planned</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    Sources: lifecycle design — <code>docs/decisions/0003-agent-platform-architecture.md §8</code> (two-phase termination, <code>/respond</code> · <code>/ack</code>). Built statuses — <code>ppxai/engine/agent_runs.py</code> (<code>_TERMINAL_STATUSES = {completed, completed_pending_ack, finalized, failed, cancelled, interrupted}</code>). <code>/respond</code>, <code>/ack</code>, <code>waiting</code>, and <code>completed_pending_ack</code>/<code>finalized</code> shipped in v1.19.0 (T5–T7); <code>zombie</code> and <code>budget_exceeded</code> remain unimplemented as distinct statuses (folded into other statuses today).
+  </footer>
+</div>
+</body>
+</html>

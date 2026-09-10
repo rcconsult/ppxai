@@ -1,0 +1,2207 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.1/decisions/0009-task-execution-profiles/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>ADR 0009 — Task execution profiles (config-driven grants + web_search as first-class enrichment) - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-0009-task-execution-profiles-config-driven-grants-web_search-as-first-class-enrichment" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR 0009 — Task execution profiles (config-driven grants + web_search as first-class enrichment)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#problem-1-the-config-driven-surface-exists-for-web_search-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem 1 — the config-driven surface exists for web_search only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#problem-2-no-reusable-named-grant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem 2 — no reusable, named grant
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#problem-3-web_search-is-not-just-a-tool-it-is-context-enrichment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem 3 — web_search is not "just a tool"; it is context enrichment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#problem-4-preferred-is-a-hard-pin-not-an-ordering-and-two-resolvers-disagree-about-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem 4 — preferred is a hard pin, not an ordering, and two resolvers disagree about it
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-named-profiles-in-config-reusing-agentspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Named profiles in config, reusing AgentSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-per-tool-egress-baselines-generalize-task_default_allow-toolstoolegress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Per-tool egress baselines (generalize task_default_allow → tools.&lt;tool&gt;.egress)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-enrichment-true-opt-in-explicit-never-a-silent-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. enrichment: true — opt-in, explicit, never a silent default
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-v1oneshot-enrichment-model-triggered-search-via-a-scoped-slice-of-the-task-tier-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. /v1/oneshot enrichment — model-triggered search via a scoped slice of the task-tier loop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-grant-resolution-order-where-enrichment-derives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Grant resolution order — where enrichment derives
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-config-placement-this-adrs-keys-must-not-extend-the-patchwork" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Config placement — this ADR's keys must not extend the patchwork
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#options-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options considered
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-not-just-keep-spec-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why not just keep --spec files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#triggers-to-revisit-decide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers to revisit / decide
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consumer-alignment-ppxai-sre-verified-2026-07-23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consumer alignment — ppxai-sre (verified 2026-07-23)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sign-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sign-off
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sign-off">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#settled-2026-08-01" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settled (2026-08-01)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#open" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="adr-0009-task-execution-profiles-config-driven-grants-web_search-as-first-class-enrichment">ADR 0009 — Task execution profiles (config-driven grants + web_search as first-class enrichment)<a class="headerlink" href="#adr-0009-task-execution-profiles-config-driven-grants-web_search-as-first-class-enrichment" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-07-23
+<strong>Revised:</strong> 2026-08-01 — field evidence from the Windows <code>/task</code> trials; Q2/Q4 settled; new Q5 (<code>preferred</code> pin-vs-ordering) and Q6 (one-shot preflight query origin).
+<strong>Revised:</strong> 2026-08-01 (review pass) — Q1/Q3/Q5/Q6 written in; added §5 (grant resolution order — where <code>enrichment</code> derives), the <code>preferred</code>/<code>strict</code> scoped tuple, <code>oneshot_enrichment</code> as a key distinct from <code>oneshot_grounding</code>, and the static-vs-call-time scope of grant-time validation.
+<strong>Revised:</strong> 2026-08-01 (design pass) — §4 oneshot enrichment changed from server-side preflight to <strong>model-triggered search reusing the task-tier tool loop</strong> (<code>chat_with_tools</code> + <code>ScopedToolManager</code>, <code>{web_search}</code>-only grant, bounded iterations); Q6's query-origin cluster dissolved by it. §6 added: target config shape (operator-review outcome — config must stop growing as per-code-path patchwork).
+<strong>Accepted:</strong> 2026-08-01 — all six sign-off questions settled (see §"Sign-off"); implementation may proceed.
+<strong>Status:</strong> Accepted — steps ① + ② + ③ <strong>implemented v1.19.1</strong> (2026-08-02: ① oneshot search loop as the F1–F5 facade over the run tier, live-verified full config matrix; ② per-tool <code>tools.&lt;tool&gt;.egress</code> baselines + https-only <code>get_weather</code> scheme-poison removal, Item 52 retired, live-verified. 2026-08-03: ③ <code>execution.profiles</code> + <code>--profile</code>/<code>--enrichment</code> on <code>/task</code> web+VSCode, <code>enrichment</code> in <code>_SPEC_FIELDS</code> (tri-state), Q1 replace-not-union merge with the skills-union exception, §5 derivation + both contradiction 400s, <code>execution.egress_ceiling</code> intersection at every allowlist-assembly site with the Q3 half-enriched fail-fast). 2026-08-03: ④ shared backend resolver — <code>engine/tools/search_backends.py</code> leaf, top-imported by both <code>web_premium</code> (chain = resolver candidates, ordering semantics, strict-only pin) and <code>network_policy</code> (egress = resolver hosts; provider context threaded via <code>NetworkPolicy(provider_name)</code> → <code>tool_targets</code>); Q5 scoped tuple + keyless fail-safe + dead-key warning; <code>/doctor</code> tuple report + 3 checks; Q3 refined to all-of over the effective set; the <code>web_premium.py</code> function-local import retired. <strong>ALL FOUR STEPS COMPLETE.</strong>
+<strong>Related:</strong>
+- <a href="../0003-agent-platform-architecture/"><code>0003-agent-platform-architecture.md</code></a> — the <code>/v1/agent/task</code> tier + per-run <code>ScopedToolManager</code> grant enforcement this builds on
+- <a href="../0004-llm-gateway-features/"><code>0004-llm-gateway-features.md</code></a> — the stateless <code>/v1/oneshot</code> tier that shares the "context-blind local LLM" problem
+- <code>ppxai/engine/agent_spec.py::AgentSpec</code> — the existing per-run profile primitive (<code>{task, system, tools, provider, model, budget, network, read_paths}</code>), loaded from <code>sandbox.specs_dir</code>, merged <code>request &gt; spec &gt; default</code>
+- <code>ppxai/server/routes/agent_v1.py::_with_task_default_allow</code> (L758-768) — the ONLY config-driven egress-baseline mechanism today; wired for <code>web_search</code> only
+- <code>ppxai/engine/tools/network_policy.py</code> — the AC-2 egress superset; <code>get_weather</code> targets are a hardcoded literal (Item 52)
+- <code>ppxai/engine/tools/builtin/web_premium.py::get_premium_search_provider</code> (L34) — the <strong>provider-aware</strong> backend resolver used at call time
+- <code>ppxai/engine/tools/network_policy.py::pinned_web_search_backend</code> (L213) — the <strong>global-only</strong> resolver the egress set is narrowed by; the disagreement between the two is Problem 4
+- Debt inventory: <strong>Item 52</strong> (get_weather config-parity gap — subsumed by this ADR) and <strong>Item 53</strong> (this ADR's tracking entry)
+- <code>../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code> — primary Stage-2 consumer; §"Consumer alignment" below verifies this ADR respects its ownership boundaries (SRE owns dynamic tier policy A2; ppxai owns the primitives)</p>
+<hr />
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>A <code>/task</code> (and <code>/v1/oneshot</code>) run is only as capable as the tools it is granted
+<strong>and</strong> the egress those tools are allowed. Today that grant is assembled
+per-run from three sources — the request flags, an optional <code>--spec</code> file, and
+the <code>default_subagent</code> — and enforced by the per-run <code>ScopedToolManager</code>. Two
+problems make this painful in practice:</p>
+<h3 id="problem-1-the-config-driven-surface-exists-for-web_search-only">Problem 1 — the config-driven surface exists for <code>web_search</code> only<a class="headerlink" href="#problem-1-the-config-driven-surface-exists-for-web_search-only" title="Permanent link">&para;</a></h3>
+<p>Commit <code>27ea00d9</code> established the intended pattern: <strong>operator config knobs,
+read by the engine, honored by the <code>/task</code> tier across the board.</strong> <code>web_search</code>
+received the full set — <code>tools.web_search.{preferred, enabled, task_default_allow}</code>
+— where <code>task_default_allow</code> is a config-driven baseline egress allowlist merged
+into every run by <code>_with_task_default_allow</code>. <strong>No other tool got this.</strong>
+<code>get_weather</code> was left on a hardcoded egress literal with a known-broken
+<code>http://wttr.in</code> entry that makes it <em>unallowlistable</em> on sealed local <code>/task</code>
+(Item 52). So expanding the coder JSON schema fixed <code>web_search</code> everywhere but
+covered nothing else. The mechanism is right; its reach is one tool wide.</p>
+<h3 id="problem-2-no-reusable-named-grant">Problem 2 — no reusable, named grant<a class="headerlink" href="#problem-2-no-reusable-named-grant" title="Permanent link">&para;</a></h3>
+<p><code>AgentSpec</code> is a genuine "task profile" primitive, but it is a <strong>file</strong> passed
+per run (<code>--spec &lt;name&gt;</code> under <code>sandbox.specs_dir</code>). There is no
+<code>ppxai-config.json</code>-native, <strong>named</strong>, reusable profile a run selects by name —
+so operators hand-wire the same <code>{tools, network}</code> for every research task, every
+coding task, etc. The primitive is built; the ergonomic, config-first surface is
+missing.</p>
+<h3 id="problem-3-web_search-is-not-just-a-tool-it-is-context-enrichment">Problem 3 — <code>web_search</code> is not "just a tool"; it is context enrichment<a class="headerlink" href="#problem-3-web_search-is-not-just-a-tool-it-is-context-enrichment" title="Permanent link">&para;</a></h3>
+<p>This is the load-bearing observation. A <strong>local / self-hosted LLM</strong> (vLLM Qwen,
+DGX) has no built-in web grounding and a fixed training cutoff. For it, <code>/task</code>
+and <code>/v1/oneshot</code> are <strong>closed-book</strong> unless <code>web_search</code> is granted AND its
+egress allowed. Absent that, every local-LLM task silently degrades to reasoning
+over only the prompt — no fact-checking, no current information, no source
+enrichment. Contrast hosted providers (Perplexity Sonar, Gemini grounding) whose
+search is <strong>native</strong> and for whom <code>web_search</code> is redundant. So <code>web_search</code> is
+the <strong>enrichment capability</strong> for the local-LLM case, which is exactly why it
+earned the config surface <code>get_weather</code> never got — and why a profile system
+should treat "enable enrichment" as a first-class, opt-in profile property, not
+a tool an operator must remember to hand-grant every time.</p>
+<h3 id="problem-4-preferred-is-a-hard-pin-not-an-ordering-and-two-resolvers-disagree-about-it">Problem 4 — <code>preferred</code> is a hard pin, not an ordering, and two resolvers disagree about it<a class="headerlink" href="#problem-4-preferred-is-a-hard-pin-not-an-ordering-and-two-resolvers-disagree-about-it" title="Permanent link">&para;</a></h3>
+<p><code>tools.web_search.preferred</code> reads like "try this backend first, then fall back."
+It is implemented as <strong>use only this backend, never fall back</strong>: when a pin is
+active, <code>web_search_premium</code> forbids cross-backend fallback and returns an error
+instead (<code>web_premium.py</code> L270-278, L304-309). So setting <code>preferred</code> to any
+concrete backend kills the perplexity→gemini→DDG chain <strong>in the live interactive
+session too</strong>, not merely under a sandbox. The session-parity baseline this ADR
+treats as the reference behavior therefore holds only while <code>preferred</code> is
+<code>"auto"</code> — the default. That name/behavior mismatch is the user-facing half of
+the problem.</p>
+<p>The mechanical half: the two resolvers do not agree on what the pin is.
+<code>get_premium_search_provider(provider_name)</code> (<code>web_premium.py</code> L34) resolves
+<strong>provider-aware</strong> — per-provider override, then global, then auto-detect.
+<code>pinned_web_search_backend()</code> (<code>network_policy.py</code> L213) takes <strong>no provider
+argument</strong> and reads only the global key. A per-provider override therefore
+selects one backend while the egress set is narrowed to a different one
+(<code>network_policy.py</code> L322-325).</p>
+<p>That divergence is security-relevant, not merely cosmetic, because
+<code>NetworkPolicy.authorize</code> pre-checks the <strong>static</strong> target set from
+<code>tool_targets()</code> and never inspects the URL actually requested
+(<code>network_policy.py</code> L430-435). Under a divergent pin, both directions are live
+depending on the run's <code>allow_outbound</code>:</p>
+<ul>
+<li>the run allowlists the <strong>pinned</strong> host, <code>authorize</code> passes, and the request
+  goes to the <strong>other</strong> backend's host — the run's egress allowlist is bypassed,
+  which is precisely the confused-deputy case the superset rule exists to
+  prevent; or</li>
+<li>the run allowlists the host actually needed but not the pinned one, and a
+  legitimate call takes a false <code>network_policy_denied</code>.</li>
+</ul>
+<p>Neither fires today: global <code>preferred</code> is <code>"auto"</code> → no pin → full superset.
+A per-provider override is already present in real configs
+(<code>providers.openai.web_search.preferred</code>), so a single global-config change arms
+it. There is a fail-safe precedent to build on: a backend pinned <em>without its
+API key</em> is already treated as no pin at all — "never narrow egress on a config
+that can't take effect" (<code>network_policy.py</code> L179-187). A pin contradicted by a
+per-provider override is the same class of dead config.</p>
+<p><strong>Sign-off Q5 settles the pin's semantics, and the divergence fix follows from
+it:</strong> <code>preferred</code> becomes an <strong>ordering</strong>, with narrowing available only via an
+explicit <code>strict: true</code>. The alternative — making <code>pinned_web_search_backend()
+provider-aware while *preserving* hard-pin semantics — would have made the two
+resolvers agree, but by ratifying the "only, never fall back" reading that is the
+opposite of the session parity Problems 1-3 ask for. Under the settled ordering
+semantics the divergence largely dissolves by construction: with no</code>strict`
+flag there is no narrowing to disagree about, and the shared resolver (see
+"Requires", below) is what keeps the two call sites in agreement when there is.</p>
+<hr />
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>Introduce <strong>task execution profiles</strong>: named, config-driven, reusable grants
+that reuse the <code>AgentSpec</code> shape, with per-tool egress baselines and a
+first-class <code>web_search</code> enrichment property.</p>
+<h3 id="1-named-profiles-in-config-reusing-agentspec">1. Named profiles in config, reusing <code>AgentSpec</code><a class="headerlink" href="#1-named-profiles-in-config-reusing-agentspec" title="Permanent link">&para;</a></h3>
+<p>Key locations below are the <strong>ADR 0010 final names</strong> (<code>execution.*</code>,
+<code>tools.&lt;tool&gt;.egress</code>) — both ADRs were accepted 2026-08-01, so new keys land
+in their final home on day one; legacy names (<code>tools.agent.*</code>,
+<code>task_default_allow</code>) appear only when describing today's code or the dual-read
+migration.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>"execution": { "profiles": {
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  "research": {
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    "tools": ["web_search", "fetch_url", "read_file"],
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    "enrichment": true,            // auto-grant web_search + the SEARCH egress
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                                   // baseline (backend superset) — derived per
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                                   // §5, NOT listed in "network" below
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    "network": { "allow_outbound": ["api.open-meteo.com", "wttr.in"] },
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>                                   // ADDITIONAL egress beyond enrichment's:
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                                   // here, hosts for get_weather-style calls
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    "budget": { "iterations": 20 }
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>  },
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>  "coding": {
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    "tools": ["read_file", "search_files", "apply_patch", "write_file"],
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    "enrichment": false            // closed-book by intent; no egress widening
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>  }
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>}}
+</span></code></pre></div>
+<p>A run selects one by name — <code>--profile research</code> (client) / <code>"profile": "..."</code>
+(wire) — resolved through the <strong>same <code>spec_from_mapping</code> normalizer</strong> the
+<code>--spec</code> path already uses. Precedence extends the existing chain:
+<strong>request &gt; spec &gt; profile &gt; <code>default_subagent</code> &gt; built-in default</strong>. Zero new
+schema shape — a profile <em>is</em> an <code>AgentSpec</code> mapping in a config location.</p>
+<h3 id="2-per-tool-egress-baselines-generalize-task_default_allow-toolstoolegress">2. Per-tool egress baselines (generalize <code>task_default_allow</code> → <code>tools.&lt;tool&gt;.egress</code>)<a class="headerlink" href="#2-per-tool-egress-baselines-generalize-task_default_allow-toolstoolegress" title="Permanent link">&para;</a></h3>
+<p>The egress baseline becomes per-tool, not <code>web_search</code>-only, under the ADR 0010
+final name <strong><code>tools.&lt;tool&gt;.egress</code></strong> (today's <code>tools.web_search.
+task_default_allow</code> is the legacy spelling, honored during the dual-read
+window). <code>_with_task_default_allow</code> reads the union across the run's granted
+tools. This <strong>subsumes Item 52</strong>: <code>get_weather</code>'s key-free hosts (Open-Meteo,
+https wttr.in) become <code>tools.get_weather.egress</code> (or a profile's <code>network</code>),
+read by the engine — one config-driven mechanism, working across local <code>/task</code>,
+coder, and future tiers, exactly as <code>web_search</code> already does. (The contained
+<code>http://wttr.in</code> scheme-poison removal still lands as part of the fix — an
+always-denied scheme must never gate a tool.)</p>
+<h3 id="3-enrichment-true-opt-in-explicit-never-a-silent-default">3. <code>enrichment: true</code> — opt-in, explicit, never a silent default<a class="headerlink" href="#3-enrichment-true-opt-in-explicit-never-a-silent-default" title="Permanent link">&para;</a></h3>
+<p>A profile with <code>enrichment: true</code> auto-grants <code>web_search</code> <strong>and</strong> merges its
+egress baseline, so the context-blind-local-LLM case is solved <em>by construction</em>
+for that profile. Crucially it is <strong>per-profile and opt-in</strong>: a locked-down
+tenant profile sets <code>enrichment: false</code> and gets no egress widening. This keeps
+the AC-2 confused-deputy protection intact — enrichment is a deliberate
+declaration, not a global on-switch. Opt-in is at the <strong>profile</strong> level, so a
+config-designated default profile still spares the operator from re-declaring it
+per run; that is the ergonomic ask, and it does not require a global switch.</p>
+<p><strong>Scope is <code>web_search</code> only — explicitly NOT <code>fetch_url</code>.</strong> <code>web_search</code>'s
+egress is a fixed, known host set (Perplexity / Gemini / DuckDuckGo); the model
+chooses the <em>query</em>, never the <em>target</em>. <code>fetch_url</code> takes an
+attacker-influencable arbitrary host and would forfeit that property, along with
+the safety argument for §4 below. Enrichment also carries <strong>no provider
+routing</strong>: it does not steer a run toward a search-native provider. Provider and
+model are already independently selectable per run (<code>--provider</code> / <code>--model</code>) and
+by config (<code>execution.default_subagent.{provider,model}</code>), and conflating the
+two would make an egress grant silently change which model answers.</p>
+<p><strong>The enrichment egress baseline is the full backend superset, not one backend
+— unless <code>strict: true</code>.</strong> Session parity <em>is</em> the fallback chain, so the honest
+egress set for an enriched run is every host the chain can reach — the same
+superset <code>tool_targets()</code> returns in <code>"auto"</code> mode. Narrowing it to a single
+backend does not harden the run; it disables the chain (Problem 4).</p>
+<p>The one sanctioned narrowing is Q5's <code>strict: true</code>, and it composes rather than
+conflicts: <strong><code>strict: true</code> narrows the enrichment baseline to the pinned
+backend's hosts, and enrichment remains satisfied so long as that backend is
+usable.</strong> An operator setting <code>strict</code> has already accepted "this backend or
+nothing"; enrichment does not override that choice, it inherits it. Two
+consequences must be documented rather than discovered: the run loses the
+fallback chain, so a single backend outage returns it to closed-book; and the
+existing "a backend pinned without its API key is no pin at all" fail-safe
+(<code>network_policy.py</code> L179-187) is what keeps a dead <code>strict</code> pin from silently
+starving enrichment. <code>/doctor</code> should warn on <code>strict: true</code> + <code>enrichment:
+true</code> for exactly that reason. <code>strict</code> is therefore <strong>compatible</strong> with
+enrichment — it is not a grant-time error.</p>
+<h3 id="4-v1oneshot-enrichment-model-triggered-search-via-a-scoped-slice-of-the-task-tier-loop">4. <code>/v1/oneshot</code> enrichment — model-triggered search via a scoped slice of the task-tier loop<a class="headerlink" href="#4-v1oneshot-enrichment-model-triggered-search-via-a-scoped-slice-of-the-task-tier-loop" title="Permanent link">&para;</a></h3>
+<p>Oneshot is where the closed-book problem bites hardest: a custom or local model
+with a fixed cutoff, no tools and no grounding produces confidently wrong
+answers, which makes the tier near-useless as a sub-agent for fact-dependent
+work.</p>
+<p><strong>One-shot enrichment is model-triggered search: <code>web_search</code> — and ONLY
+<code>web_search</code> — is exposed to the model through the SAME bounded tool loop the
+<code>/task</code> tier already runs, with a low iteration cap.</strong> The model decides, per
+prompt and mid-inference, whether it lacks the information to answer — exactly
+the semantics of Perplexity Sonar and Gemini grounding, where the provider's
+LLM triggers search when the request needs it. A prompt that doesn't need facts
+takes a single round-trip with zero tool calls, indistinguishable from today; a
+prompt that semantically asks for more than the model knows triggers a
+model-formulated search, then the answer.</p>
+<p>An earlier draft of this section specified a <strong>server-side preflight</strong> (search
+before the model call, inject results into the prompt). Rejected on review: the
+server cannot know whether a given prompt needs search — only the model can —
+so a preflight is structurally either always-search (paying latency, cost and
+disclosure on prompts that never needed it) or a server-side heuristic guessing
+at the model's knowledge gaps. It also spawned its own question cluster (query
+origin, verbatim-prompt disclosure guards, always-vs-conditional) that the
+model-triggered design dissolves: <strong>the model writes its own search query</strong>, so
+no caller <code>query</code> field, no verbatim-prompt fallback, no disclosure of anything
+but the model-chosen query, and no search-trigger heuristic. The request schema
+needs nothing added; the response gains one optional field (see "Wire
+contract" below).</p>
+<p><strong>Structural reuse, not new machinery.</strong> The <code>/task</code> tier already executes runs
+via <code>chat_with_tools</code> through a per-run <code>ScopedToolManager</code> (<code>agent_v1.py</code>
+L787) — a bounded tool loop with grant enforcement (AC-1), egress enforcement
+(AC-2, <code>NetworkPolicy</code>), and budgets, running server-side outside any
+interactive session (<code>agent_runs.py</code> is the construction precedent). Enriched
+oneshot is that same loop with a grant of exactly <code>{web_search}</code>, egress = the
+§3 enrichment baseline, and a small iteration cap — a scoped slice of existing
+gears, not a second tool-execution path. When the first oneshot implementation
+shipped (ADR 0004), this machinery did not exist; now that it does, reusing it
+is the structural choice, and the search calls run under the same
+<code>NetworkPolicy.authorize</code> and emit the same audit events as every other tool
+call.</p>
+<p>This does mean ADR 0004's "no tool loop in oneshot" purity is <strong>explicitly
+revised</strong> rather than preserved. What is preserved is the property that
+mattered underneath it: <strong>the perimeter.</strong> Only <code>web_search</code> is callable — a
+tool whose egress is a fixed, known host set where the model chooses the
+<em>query</em>, never the <em>target</em> (§3) — no filesystem, no shell, no
+attacker-influencable destination. The tier stays stateless (no run registry
+entry, no durable state); "oneshot" means one request/one response, not
+one model call.</p>
+<p><strong>Its config key is <code>execution.oneshot.enrichment</code>, default off — a new key,
+deliberately NOT a reuse of the grounding switch.</strong> (ADR 0010 final name; the
+native-search switch shipped as <code>tools.web_search.oneshot_grounding</code>,
+<code>oneshot.py</code> L130-146, and migrates to <code>execution.oneshot.grounding</code> in the
+same window.) The grounding key turns on the <strong>provider's own</strong> native search;
+this one exposes the <strong><code>web_search</code> fallback chain to the model</strong>. Different
+mechanism, cost, and egress profile — an operator reading one key name must not
+have to guess which they enabled, which is why both live side by side under
+<code>execution.oneshot.*</code> rather than on the tool block.</p>
+<blockquote>
+<p><strong>Amendment (2026-08-02, owner-approved — ADR 0011):</strong> two details of this
+section are superseded by the command-taxonomy streamline
+(<a href="../0011-command-taxonomy-streamline/">0011</a>), decided before any of it was
+implemented (no migration):
+1. <strong>Key location:</strong> the pair lives under <strong><code>execution.run.*</code></strong>
+   (<code>execution.run.web_search</code>, <code>execution.run.grounding</code>) — the surface is
+   now the <code>/run</code> command family, and the key literally enables/disables
+   <code>web_search</code> for <code>kind=oneshot</code> runs (UX <code>/run</code> + API <code>/v1/oneshot</code>
+   facade share one brain). The side-by-side principle above is unchanged.
+2. <strong>"No run registry entry":</strong> enriched oneshot executes as a real
+   registry run (<code>kind=oneshot</code>) — the facade over unmodified task gears
+   (<a href="../../archive/plan-adr0009-step1-oneshot-enrichment/">plan</a>). "Stateless" keeps
+   its ADR 0004 meaning (no <em>session</em> side-effects); the run record is the
+   audit + debug surface, and the sync HTTP response is unchanged.</p>
+</blockquote>
+<p><strong>Gating — decided per request on EFFECTIVE native grounding, not provider
+capability alone.</strong> A provider "takes the native path" only when native
+grounding is actually on (<code>oneshot_grounding: true</code> AND the provider is
+search-capable) — capability with the switch off is not grounding, and today's
+code deliberately disables Gemini chat-grounding in that case (<code>oneshot.py</code>
+L261-268, the default-OFF guarantee). The full truth table:</p>
+<table>
+<thead>
+<tr>
+<th><code>oneshot_grounding</code></th>
+<th><code>oneshot_enrichment</code></th>
+<th>native-capable</th>
+<th>tool-calling</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>on</td>
+<td>any</td>
+<td>yes</td>
+<td>any</td>
+<td><strong>native grounding</strong> (loop never runs — never both)</td>
+</tr>
+<tr>
+<td>on</td>
+<td>off</td>
+<td>no</td>
+<td>any</td>
+<td>closed-book (grounding key can't help a non-native provider)</td>
+</tr>
+<tr>
+<td>off</td>
+<td>on</td>
+<td>any</td>
+<td>yes</td>
+<td><strong>search loop</strong> — including a native-capable provider whose operator left native off: enrichment is an explicit opt-in and does not silently re-enable the path the operator declined</td>
+</tr>
+<tr>
+<td>off</td>
+<td>on</td>
+<td>any</td>
+<td>no</td>
+<td>closed-book, <strong>reported</strong> (see below)</td>
+</tr>
+<tr>
+<td>off</td>
+<td>off</td>
+<td>any</td>
+<td>any</td>
+<td>closed-book — today's behavior, byte-identical</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Tool-calling capable</strong> means the model can emit tool calls (local vLLM with
+  hermes/harmony parsers qualifies — the primary closed-book case this exists
+  for). A model that qualifies for no row's search path stays closed-book
+  <em>honestly</em> — that is a model limitation, not a harness gap, and silently
+  degrading to a server-guessed preflight would reintroduce everything this
+  design rejected. <code>/doctor</code> reports the effective grounding path per
+  configured model, since "which grounding am I getting" must not require
+  reading code.</li>
+</ul>
+<p><strong>Wire contract — request unchanged; response gains ONE optional field.</strong>
+<code>OneshotResponse</code> today is <code>{content, finish_reason, model, provider, usage}</code>
+(<code>oneshot.py</code> L117-122) — there is no metadata channel, no event stream, and no
+run-registry entry on this tier, so "surface it in events" is not implementable
+here and a log-only sink would make grounded and ungrounded answers
+indistinguishable to the caller. The contract is therefore an <strong>optional
+<code>grounding</code> response field</strong>, additive and semver-minor, absent whenever
+enrichment is off (existing consumers see byte-identical responses):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>"grounding": {                    // present only on enriched requests
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  "searched": true,               // false = model chose not to search
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  "queries": ["..."],             // model-formulated queries actually sent
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  "backend": "perplexity",        // chain backend that answered
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  "search_cost": 0.005            // premium-search cost, USD (0 for DDG)
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>}
+</span></code></pre></div>
+<p><strong>Accounting.</strong> The loop's extra model round-trips are real prompt/completion
+tokens and land in the existing <code>usage</code> field — no schema change there.
+Premium-search cost is computed by the existing <code>calculate_tool_cost</code>, but it
+must be <strong>returned with the individual search invocation (or attached to the
+request context), NOT read via <code>get_last_tool_usage()</code></strong> — that accessor is a
+process-global with reset-on-read semantics (<code>web_premium.py</code> L22, L384-396:
+<code>_last_tool_usage = None</code> after extraction), which under two concurrent
+enriched requests silently attributes one request's search cost to the other.
+Fine for the single-session interactive path it was built for; disqualifying as
+a per-request accounting contract. The per-invocation usage feeds
+<code>grounding.search_cost</code> and the cross-tier accounting ADR 0008 defines, so
+enriched-oneshot spend is not invisible to <code>/cost</code>. Search-backend errors do
+not fail the request: the loop surfaces the tool error to the model, which
+answers with what it has — <code>searched: true</code> with the failure noted in the
+audit sink.</p>
+<p><strong>Audit sink — decided, because this tier has no run registry and no event
+stream to inherit.</strong> The enriched-oneshot loop runs in an <strong>ephemeral,
+in-memory context</strong> (built per request, discarded after — the tier stays
+stateless; no <code>~/.ppxai/runs/</code> entry, no SSE channel). Its audit trail is
+therefore two-channel: <strong>caller-facing</strong>, the <code>grounding</code> response field (the
+authoritative record of what was searched); <strong>operator-facing</strong>, the tool-call
+and <code>NETWORK_POLICY_ALLOWED/DENIED</code> decisions written to the standard server
+log (debug-log honoring <code>tui.debug_log</code> semantics), tagged with the request's
+correlation id. No new event type, no registry coupling — an operator who
+needs durable per-run audit uses the <code>/task</code> tier, which exists for exactly
+that.</p>
+<p><strong>Other observable changes warranting a consumer heads-up:</strong> latency and search
+cost when (and only when) the model searches; <strong>prompt contents</strong> (retrieved
+text enters the context the model answers from); <strong>disclosure</strong> limited to the
+model-formulated query leaving to the search backend.</p>
+<p><strong>What "safe" means here, precisely.</strong> Host- and filesystem-safe, <strong>not</strong>
+injection-proof. A prompt injection cannot modify the host, touch a file, or
+steer egress to an attacker-chosen destination — the only callable capability
+has a fixed target set. It can still (a) influence the answer text, since
+retrieved content enters the context, and (b) influence what the model puts in
+its search query. Both are inherent to grounding of any kind, including the
+native path already shipped, and both argue for default-off rather than against
+the capability.</p>
+<h3 id="5-grant-resolution-order-where-enrichment-derives">5. Grant resolution order — where <code>enrichment</code> derives<a class="headerlink" href="#5-grant-resolution-order-where-enrichment-derives" title="Permanent link">&para;</a></h3>
+<p><code>enrichment</code> is a <strong>derived</strong> grant: it adds <code>web_search</code> and its egress rather
+than being written out by the operator. The draft never said <em>when</em> in
+resolution that derivation happens, and two settled answers contradict each
+other until it does — Q1 guarantees a narrower layer can remove a tool, while §3
+auto-grants one. The resolution order is therefore normative:</p>
+<ol>
+<li><strong>Resolve every declared field through the precedence chain</strong> (request &gt; spec<blockquote>
+<p>profile &gt; <code>default_subagent</code> &gt; built-in default), with list-valued fields
+   replacing per Q1. <code>enrichment</code> resolves here too, as an ordinary <strong>scalar</strong>
+   field — exactly like <code>provider</code> and <code>model</code>.</p>
+</blockquote>
+</li>
+<li><strong>Then derive, once, from the resolved values.</strong> If effective <code>enrichment</code> is
+   true, add <code>web_search</code> and its egress baseline (superset, or the pinned
+   backend's hosts under <code>strict</code>) to the effective grant.</li>
+<li><strong>Then apply the Q3 ceiling intersection</strong>, and fail fast per Q3 if it leaves
+   an enriched run without a usable backend.</li>
+</ol>
+<p><strong>When "grant time" is, precisely — two validation stages, matching the task
+lifecycle as built.</strong> The route today starts the run and validates the grant
+inside the background execution (<code>agent_v1.py</code> L1094 — deliberately, per
+Item 50: tool <em>existence</em> is only checkable once a live engine has registered
+its tools). So "fail fast" splits:</p>
+<ul>
+<li><strong>Pre-start (HTTP 4xx, no run created):</strong> everything resolvable from config
+  and the request alone — unknown profile name, the §5 contradiction cases, the
+  Q3 ceiling-vs-enrichment check. These need no tool registry, so deferring
+  them to an async run failure would be gratuitous.</li>
+<li><strong>Pre-execution (run created, fails before any model call):</strong> checks that
+  need the live registry — tool existence (Item 50) stays where it is. This is
+  "fail before execution", not an HTTP error, and the run's failure event names
+  the cause.</li>
+</ul>
+<p>Derivation after resolution, never per layer. Two rules follow, and they are the
+answer to "does a narrower <code>tools</code> list re-add <code>web_search</code>?":</p>
+<ul>
+<li><strong>To narrow enrichment, set <code>enrichment: false</code></strong> — that is the field designed
+  for it. A spec composing over an enriched profile disables the derived grant
+  by saying so, which keeps Q1's "a narrower layer can remove a tool" property
+  intact <em>through the field that expresses it</em>, not by omission.</li>
+<li><strong>Omission is not denial, but contradiction is an error.</strong> If a layer at or
+  more specific than the one declaring <code>enrichment: true</code> states an explicit
+  <code>tools</code> list that omits <code>web_search</code>, the two fields disagree about the same
+  run. <strong>Fail fast at grant time</strong>, naming both layers — do not silently pick a
+  winner. This is the Q3 rule applied to a second unsatisfiable configuration:
+  an operator who wrote both meant one of them, and guessing reproduces the
+  silent-closed-book failure in a new place.</li>
+</ul>
+<h3 id="6-config-placement-this-adrs-keys-must-not-extend-the-patchwork">6. Config placement — this ADR's keys must not extend the patchwork<a class="headerlink" href="#6-config-placement-this-adrs-keys-must-not-extend-the-patchwork" title="Permanent link">&para;</a></h3>
+<p>The config has grown organically, key-by-key, tracking code execution paths:
+each new tier taught <code>tools.web_search</code> a new switch (<code>task_default_allow</code>,
+<code>oneshot_grounding</code> — and this ADR's enrichment switch would have been the
+third, had ADR 0010 not landed first), and the whole execution tier
+lives under <code>tools.agent.*</code> because it historically grew out of the
+<code>spawn_subagent</code> tool. Operator-visible result: three keys on one tool block
+that answer three different questions ("which backend?", "what egress on
+/task?", "may oneshot ground?"), and an "agent" that is not a tool configured
+as one. The full reorganization is <strong>ADR 0010</strong> (config-shape review) —
+<strong>accepted the same day as this ADR</strong>, so this ADR's new keys land directly in
+their 0010-final homes on day one, with no second migration:</p>
+<ul>
+<li><strong>Tool-intrinsic keys on the tool block:</strong> <code>tools.web_search.preferred</code> +
+  <code>strict</code> (the Q5 scoped tuple — how the tool picks backends, regardless of
+  tier), backend model choices, and per-tool <strong><code>tools.&lt;tool&gt;.egress</code></strong> (§2 —
+  the hosts a <em>tool</em> needs are a property of the tool; today's
+  <code>task_default_allow</code> is the legacy spelling, honored only through 0010's
+  one-release dual-read window).</li>
+<li><strong>Execution-tier keys under <code>execution.*</code>, not on tools:</strong>
+  <code>execution.profiles</code> (§1), <code>execution.egress_ceiling</code> (Q3),
+  <code>execution.default_subagent</code>, and the oneshot switches
+  <code>execution.oneshot.{grounding, enrichment}</code> (§4) — tier behaviors ("may this
+  tier expose search to the model"), not search-tool properties. The shipped
+  <code>tools.web_search.oneshot_grounding</code> migrates alongside via dual-read.</li>
+<li><strong>Override axes follow the Q5 rule everywhere:</strong> where a key is overridable
+  per provider/model, the override is a <strong>scoped tuple</strong> (scope chosen once,
+  related fields read together), never independent per-field fallback.</li>
+</ul>
+<h3 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Option A — profiles reusing <code>AgentSpec</code> + per-tool egress + <code>enrichment</code>
+  (recommended).</strong> One normalizer, one precedence chain, subsumes Item 52. Con:
+  new config surface + a precedence rule to document/test.</li>
+<li><strong>Option B — fix <code>get_weather</code> only (Item 52 spot-fix), no profiles.</strong>
+  Cheapest; leaves Problem 2/3 unsolved and the config surface one-tool-wide.</li>
+<li>**Option C — profiles WITHOUT <code>enrichment</code>; operators hand-list <code>web_search</code></li>
+<li>egress per profile.** Simpler schema; but re-buries the enrichment decision
+  in boilerplate every operator must get right, which is the ergonomic problem
+  we set out to fix.</li>
+</ul>
+<hr />
+<h2 id="why-not-just-keep-spec-files">Why not just keep <code>--spec</code> files<a class="headerlink" href="#why-not-just-keep-spec-files" title="Permanent link">&para;</a></h2>
+<p><code>--spec</code> is per-run and path-based; it answers "shape THIS run," not "define a
+REUSABLE research grant once." Profiles are the named, config-native layer over
+the same primitive — specs stay for one-off/authored runs, profiles for the
+standing set an operator curates. They compose (request &gt; spec &gt; profile), not
+compete.</p>
+<hr />
+<h2 id="triggers-to-revisit-decide">Triggers to revisit / decide<a class="headerlink" href="#triggers-to-revisit-decide" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A local-LLM <code>/task</code> or <code>/v1/oneshot</code> returns a stale/closed-book answer because
+  <code>web_search</code> wasn't granted (the enrichment gap made concrete).</li>
+<li>Item 52: weather unusable on sealed local <code>/task</code> (the config-parity gap).</li>
+<li>Operators hand-wiring the same <code>{tools, network}</code> across many runs (the
+  reusable-grant gap).</li>
+<li>A tenant needs a locked-down, no-egress task profile (the opt-in-enrichment
+  requirement).</li>
+<li><strong>FIRED (Windows <code>/task</code> trials, 2026-07):</strong> a local-LLM <code>/task</code> run, denied
+  search, <strong>produced a <code>execute_shell_command</code> + <code>curl</code> request for network
+  access</strong>. It failed closed as designed (<code>SHELL_TOOL_NAMES</code> is refused at grant
+  time and again whenever an egress policy is active). The behavior is the
+  finding: an under-granted local model does not degrade quietly, it reaches for
+  the boundary under prompt pressure. <strong>This is evidence of capability starvation,
+  NOT an argument for granting shell.</strong> The correct response is legitimate
+  <code>web_search</code> enrichment plus continued, unambiguous denial of shell — widening
+  the grant to shell would trade a correctness problem for a containment
+  failure. (Recorded from the operator's report; whether the model emitted a
+  refused tool call or only proposed <code>curl</code> in text is not established from the
+  trial transcript, and the evidence does not depend on which.)</li>
+</ul>
+<hr />
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p><strong>Implementation requirements (Option A, accepted):</strong>
+- Enables: named reusable grants; one config-driven egress mechanism for ALL
+  tools (retires Item 52's weather-specific path); enrichment solved by
+  construction for local LLMs; per-profile security posture.
+- Requires: the <code>execution.profiles</code> config block + <code>--profile</code> selector;
+  per-tool <code>tools.&lt;tool&gt;.egress</code> (legacy <code>task_default_allow</code> via dual-read)
+  read in <code>_with_task_default_allow</code>; precedence rules
+  (request &gt; spec &gt; profile &gt; default) documented + sentinel-tested; the
+  <code>http://wttr.in</code> scheme-poison removal.
+- Requires (from Problem 4 / Q5): a single shared backend resolver (leaf module,
+  imported at top level by both <code>web_premium</code> and <code>network_policy</code>) returning a
+  <strong>structured result</strong>: the <strong>scope the answer came from</strong> (which provider
+  block, or global — the field that makes the Q5 tuple auditable), the <strong>ordered
+  backend candidates</strong>, the <strong>effective strictness</strong>, and the <strong>effective egress
+  host set</strong>. Both consumers read one answer instead of each inspecting global
+  config and environment independently — which is what lets a reviewer or a
+  <code>/doctor</code> check see <em>why</em> a backend was chosen, and is the structural reason
+  the global-vs-provider divergence cannot quietly return. This also retires the
+  undocumented function-local import at <code>web_premium.py</code> L277.
+- Requires: provider/tier context threaded into egress resolution —
+  <code>tool_targets()</code>, <code>NetworkPolicy.authorize()</code> and <code>ScopedToolManager.__init__</code>
+  all gain it (verified: the manager has no provider today,
+  <code>agent_scoped_tools.py</code> L69-77; the constructing route does, <code>agent_v1.py</code>
+  L349-374 / L1088-1092).
+- Requires: tests for the currently-missing case that exposes the bug — <strong>global
+  preference plus a conflicting per-provider override</strong>, asserting the enumerated
+  egress set and the host actually contacted agree. Extends
+  <code>tests/test_web_search_task_config.py</code>.
+- Requires (from Q1): <strong>replace-not-union</strong> semantics for <code>tools</code> and
+  <code>network.allow_outbound</code> in <code>spec_from_mapping</code>'s layer merge, with a sentinel
+  test asserting a narrower layer can actually <em>remove</em> a tool and a host —
+  the property that silently inverts if anyone "fixes" the merge to union later.
+- Requires (<strong>blocker</strong>, from §3/§5): <strong><code>enrichment</code> must be added to the
+  <code>AgentSpec</code> shape.</strong> It is not there today — <code>_SPEC_FIELDS</code> is a frozenset of
+  exactly <code>{task, system, tools, provider, model, budget, network, read_paths}</code>
+  (<code>agent_spec.py</code> L38-39), and <code>spec_from_mapping</code> <strong>drops unknown keys with a
+  warning</strong> (<code>agent_spec.py</code> L110-112). So a profile written per §1 today
+  resolves to a grant with no <code>web_search</code> and an <code>ignored unknown spec keys:
+  ['enrichment']</code> line buried in <code>spec.warnings</code> — the silent closed-book failure
+  of Problem 3, arriving through the very feature meant to fix it. The field must
+  land in <code>_SPEC_FIELDS</code>, in normalization (scalar, tri-state:
+  true / false / absent-means-inherit), and in the §5 resolution order.
+- Requires (from §5): the derivation step implemented <strong>after</strong> precedence
+  resolution, not per layer, plus grant-time errors for the two contradiction
+  cases — an explicit <code>tools</code> list omitting <code>web_search</code> under effective
+  <code>enrichment: true</code>, and Q3's ceiling leaving an enriched run backend-less.
+- Requires (from Q3): a <code>execution.egress_ceiling</code> config key; intersection
+  applied where the run's effective allowlist is assembled; unset = no cap; and a
+  <strong>grant-time hard failure</strong> when the intersection leaves an <code>enrichment: true</code>
+  profile without the backend superset, with an error naming the stripped hosts.
+- Requires (from Q5): a <code>tools.web_search.strict</code> key resolved as a <strong>scoped
+  tuple with <code>preferred</code></strong> (scope selected once, both fields read from it;
+  defaults <code>"auto"</code> / <code>false</code>), never by independent per-field fallback; a
+  precedence-matrix test over provider / global / mixed / neither; <code>/doctor</code>
+  checks for (a) a concrete <code>preferred</code> without <code>strict</code> — the upgrade behavior
+  change, (b) a per-provider <code>strict</code> with no per-provider <code>preferred</code> — a dead
+  key, and (c) <code>strict: true</code> together with <code>enrichment: true</code> — legal, but it
+  costs the fallback chain; and a release-note callout for the
+  egress-widens-on-upgrade change.
+- Requires (from §4/Q6): the enriched-oneshot execution path — reuse
+  <code>chat_with_tools</code> + a <code>ScopedToolManager</code> granting exactly <code>{web_search}</code>
+  (construction pattern per <code>agent_runs.py</code>), small iteration cap, egress = the
+  §3 enrichment baseline, enforced by the same <code>NetworkPolicy</code>; <strong>request
+  unchanged, response gains the optional <code>grounding</code> field</strong> (§4 "Wire
+  contract") carrying searched/queries/backend/search_cost; loop tokens land in
+  the existing <code>usage</code>; search cost feeds ADR 0008 accounting. Gated per the §4
+  truth table on <strong>effective</strong> native grounding (not capability) AND per-model
+  tool-calling; a single request never takes both grounding paths. A <code>/doctor</code>
+  line reports the effective grounding path per configured model; sentinel
+  tests cover every truth-table row.</p>
+<p><strong>Current pre-implementation state (what ships today, until the above lands):</strong>
+- <code>web_search</code> is the only tool with config-driven egress; <code>get_weather</code> is
+  unallowlistable on sealed local <code>/task</code> (Item 52 held pending this design).
+- No named reusable profiles; grants are hand-assembled per run.
+- Local-LLM tasks are silently closed-book unless the operator remembers to
+  grant + allow <code>web_search</code>.</p>
+<hr />
+<h2 id="consumer-alignment-ppxai-sre-verified-2026-07-23">Consumer alignment — ppxai-sre (verified 2026-07-23)<a class="headerlink" href="#consumer-alignment-ppxai-sre-verified-2026-07-23" title="Permanent link">&para;</a></h2>
+<p>Checked against <code>../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code> (§"What stays in
+this repo", caveats C1–C5, asks A1–A3). ppxai-sre is the primary Stage-2
+consumer, so this ADR must not contradict its ownership boundaries.</p>
+<p><strong>Aligned — profiles are a config convenience OVER the primitive, and SRE
+doesn't consume them.</strong> ppxai-sre drives runs through the <strong>wire</strong> (<code>POST
+/v1/agent/run</code> + tools, C4) with an explicit per-run grant it computes itself;
+it does not select ppxai config profiles. A profile is resolved to the same
+<code>AgentSpec</code>/<code>tools</code>/<code>network</code> a request already carries, so the wire surface SRE
+depends on is <strong>unchanged</strong> — profiles add a naming/default layer local operators
+opt into, and the <code>request &gt; spec &gt; profile &gt; default</code> precedence keeps an
+explicit wire grant authoritative (request wins). Nothing here alters
+<code>/v1/agent/run</code>, its <code>tools</code> field, or the run namespace.</p>
+<p><strong>The one tension — do NOT let profiles become a policy/tier engine.</strong> SRE's
+philosophy is explicit and load-bearing: the <strong>3-tier classification
+(Autonomous / Notify-and-Act / Require-Approval) is SRE-shaped, "not
+generalizable"</strong> (§5.2), and A2 asks for a <strong>registered policy callable</strong> that
+decides tiering <em>dynamically at call time</em> — "ppxai's dialog only fires when the
+callable returns 'ask user.'" ppxai provides the <strong>primitives</strong> (per-tool consent
+contract, Phase-5 network-policy, egress allowlist); SRE owns the <strong>policy</strong>.</p>
+<p>Therefore this ADR's scope is deliberately bounded:
+- Profiles are <strong>static grant + egress composition</strong> (which tools, which egress
+  baseline), NOT dynamic per-call authorization. <code>enrichment: true</code> is a
+  <em>grant-time</em> default (adds <code>web_search</code> + its egress to the run's allowlist),
+  not a <em>call-time</em> decision — it never pre-empts or replaces the consent
+  contract / A2 policy callable.
+- The <code>enrichment</code> opt-in and the deployment egress ceiling
+  (<code>execution.egress_ceiling</code>, Q3) must compose UNDER a deployment policy hook,
+  not above it: a profile may not widen egress beyond what an SRE-registered
+  policy (A2) or the ceiling permits. Profiles propose a grant; policy disposes.
+  The ceiling is config-only and intersective, so it cannot be raised by a run —
+  which is what makes "propose, don't dispose" mechanical rather than a
+  convention.
+- <strong>The Q3/§5 grant-time fail-fast is scoped to STATIC configuration, and does
+  not claim call-time authority.</strong> It validates the resolved grant against
+  config the server can see before the run starts — the ceiling, the profile,
+  the spec. It cannot pre-validate an A2 policy callable, which decides <em>per
+  call</em> and may legitimately deny a backend the grant allowed. So the guarantee
+  is precisely: <strong>a run never starts half-enriched because of static
+  configuration.</strong> A run may still lose enrichment mid-flight to a policy denial,
+  and that is correct — policy retains final say, and a grant-time check that
+  tried to pre-empt it would be the call-time policy engine this ADR promises not
+  to become. The two mechanisms are ordered, not competing: static validation
+  first, dynamic policy always after. A mid-run policy denial of an enriched
+  run's only backend should surface as the existing
+  <code>NETWORK_POLICY_DENIED</code> event (C1) — no new contract — so the operator can tell
+  a policy denial from a misconfiguration.
+- Per-tool <code>tools.&lt;tool&gt;.egress</code> emits the SAME <code>NETWORK_POLICY_ALLOWED/DENIED</code>
+  events (C1) already committed — profiles change what's in the allowlist, not
+  how enforcement or audit is surfaced. No new event type, no internal tap.</p>
+<p><strong>Net:</strong> ADR 0009 is a local-operator ergonomics + config-parity layer on the
+grant side. It stays clear of the run wire shape (C3/C4), the audit event
+contract (C1/A1), and the dynamic tier-classification hook (A2) that ppxai-sre
+owns. If any future revision moves profiles toward <em>call-time</em> policy, that is a
+conflict with A2 and must be re-litigated with the SRE boundary in view.</p>
+<h2 id="sign-off">Sign-off<a class="headerlink" href="#sign-off" title="Permanent link">&para;</a></h2>
+<h3 id="settled-2026-08-01">Settled (2026-08-01)<a class="headerlink" href="#settled-2026-08-01" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Precedence</strong> — <strong>the draft order stands: <code>request &gt; spec &gt; profile &gt;
+   default_subagent &gt; built-in default</code>.</strong> A <code>--spec</code> file is authored for one
+   run; a profile is a standing, curated grant — so the spec is the more specific
+   layer and correctly outranks the profile.</li>
+</ol>
+<p><strong>Merge semantics for list-valued fields (the part the draft left unstated):
+   <code>tools</code> and <code>network.allow_outbound</code> REPLACE, they do not union.</strong> A more
+   specific layer that supplies the field supplies all of it. If lists unioned, a
+   grant could only ever grow and <strong>narrowing would be inexpressible</strong> — a spec
+   could never take a tool or a host away from the profile it composes over. That
+   is the wrong default for a security surface. (Layers that omit a field inherit
+   it unchanged; replacement applies only where a layer states the field.)
+2. <strong><code>enrichment</code> scope</strong> — <code>web_search</code> <strong>only</strong>; not <code>fetch_url</code> (arbitrary
+   host forfeits the fixed-target property §3/§4 rest on), and <strong>no</strong> implied
+   provider preference: provider/model are already selectable per run and by
+   config, and coupling them to an egress grant would let a tool grant silently
+   change which model answers.
+3. <strong>Egress trust / ceiling</strong> — <strong><code>execution.egress_ceiling</code>, config-only,
+   intersective.</strong>
+   - <strong>Config-only, never per-run</strong> — a run that could state its own ceiling
+     could raise it, which is not a ceiling.
+   - <strong>Effective allowlist = intersection</strong> of the resolved profile/spec/request
+     egress union with the ceiling.
+   - <strong>Unset = no cap</strong>, for back-compat with every deployment that has no
+     ceiling today.</p>
+<p><strong>The sharp edge — what happens when the intersection strips a host an
+   <code>enrichment: true</code> profile needs: fail fast at grant time with an explicit
+   error</strong> — pre-start, HTTP 4xx, no run created; this check is
+   config-resolvable, unlike the registry-dependent checks §5's two-stage
+   validation keeps pre-execution. Do not start the run half-enriched. A degraded-but-running enriched
+   profile reproduces precisely the closed-book failure this ADR exists to fix
+   (Problem 3), except now silent and harder to diagnose — the operator declared
+   enrichment, the run reports success, and the answer is unknowingly
+   ungrounded. An unsatisfiable enrichment grant is a <strong>configuration error</strong>,
+   and it should read as one. This also discharges the §3 floor-vs-ceiling note:
+   the floor is not quietly lowered to fit the ceiling; the conflict surfaces.
+4. <strong><code>/v1/oneshot</code></strong> — <strong>yes</strong>, enrichment extends to oneshot: <code>web_search</code> only,
+   model-triggered through a scoped slice of the task-tier tool loop (revised
+   from the earlier preflight draft — see §4), its own config key, default off.
+   See §4 for the perimeter argument and the observable-behavior cost.
+5. <strong><code>preferred</code> — pin or ordering?</strong> — <strong>(b): ordering, plus explicit
+   strictness.</strong> <code>preferred</code> becomes first-choice-then-fall-back;
+   <code>tools.web_search.strict: true</code> preserves today's narrowing for operators who
+   want it. Chosen over a separate <code>backend_lock</code> key because a second key naming
+   a second backend can contradict <code>preferred</code> and would need a third precedence
+   rule; a boolean modifier cannot.</p>
+<p><strong><code>preferred</code> and <code>strict</code> resolve together, as one scoped tuple — never as
+   two independently-inherited fields.</strong> Resolution selects a <em>scope</em> first, then
+   reads both fields from it:</p>
+<ul>
+<li>if the provider block states <code>preferred</code>, the scope is <strong>that provider
+     block</strong> — <code>strict</code> is read from it too, defaulting to <code>false</code> when absent;</li>
+<li>otherwise the scope is the <strong>global</strong> <code>tools.web_search</code> block, and both
+     fields are read from there;</li>
+<li>defaults when neither states them: <code>preferred: "auto"</code>, <code>strict: false</code>.</li>
+</ul>
+<p>The failure this forecloses: a per-provider <code>preferred</code> inheriting a global
+   <code>strict: true</code> it was never meant to be locked by — Problem 4 reproduced one
+   layer up, with the same divergence between what the resolver picks and what
+   egress is narrowed to. Independent per-field fallback is what creates it, so
+   the tuple is the fix, not a convention. <strong>A per-provider <code>strict</code> without a
+   per-provider <code>preferred</code> is a dead key</strong> — it is out of scope by construction,
+   and <code>/doctor</code> should flag it rather than let it look effective.</p>
+<p>Requires a <strong>precedence-matrix test</strong> over provider-level / global-level /
+   mixed / neither, asserting the selected backend, the strictness actually
+   applied, and the enumerated egress set all come from the same scope.</p>
+<p>Rejected: <strong>(a) ordering with no strictness at all</strong> — same divergence fix,
+   but operators lose the ability to narrow <code>web_search</code> egress to one backend
+   entirely. <strong>(c) keep the hard pin, make it provider-aware</strong> — minimal change
+   and it does fix the AC-2 divergence, but it ratifies <code>preferred</code> meaning
+   "only", leaving the session-parity semantics broken, which is the complaint
+   that prompted this revision.</p>
+<p><strong>Migration note:</strong> a deployment that today sets <code>preferred</code> to a concrete
+   backend gets hard-pin narrowing as a side effect. Under (b) that behavior now
+   requires adding <code>strict: true</code>; without it, <strong>egress widens to the superset on
+   upgrade</strong>. This is a behavior change for existing configs and needs a
+   release-note callout and a <code>/doctor</code> check.
+6. <strong>One-shot enrichment — who decides to search, and where does the query come
+   from?</strong> — <strong>the model, in both cases</strong> (§4, revised from the preflight
+   design).</p>
+<p>The question as originally posed — caller <code>query</code> field vs. verbatim prompt
+   vs. extraction call — belonged to the rejected preflight, where the server
+   had to guess. Under model-triggered search the model decides <em>whether</em> to
+   search per prompt (native-grounding parity: search-free prompts stay a
+   single round-trip) and <em>formulates its own query</em> — the same as every
+   interactive-session search today. That dissolves the sub-questions rather
+   than answering them: no wire addition, no verbatim-prompt disclosure (only
+   the model-chosen query leaves the host), no length-cap/redaction machinery,
+   no always-vs-conditional heuristic to own.</p>
+<p>What replaces them is one implementation-owned obligation:
+   - <strong>Observability:</strong> the optional <code>grounding</code> response field (§4 "Wire
+     contract") — searched-or-not, the model's queries, backend, and search
+     cost — so a caller can tell a grounded answer from an ungrounded one.
+     Additive/semver-minor; absent when enrichment is off. Documented in
+     <code>docs/api-gateway.md</code>.
+   - The <strong>iteration cap</strong> for the search loop is an implementation constant
+     (small; it bounds cost, not capability — one or two searches answer a
+     fact-dependent prompt).</p>
+<h3 id="open">Open<a class="headerlink" href="#open" title="Permanent link">&para;</a></h3>
+<p>None — all six settled 2026-08-01. Implementation may proceed.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

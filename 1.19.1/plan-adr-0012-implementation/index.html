@@ -1,0 +1,2078 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.1/plan-adr-0012-implementation/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Plan: ADR 0012 implementation — protocol handlers, under the Sonar deadline - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#plan-adr-0012-implementation-protocol-handlers-under-the-sonar-deadline" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Plan: ADR 0012 implementation — protocol handlers, under the Sonar deadline
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-the-stated-goal-not-a-side-effect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why (the stated goal, not a side effect)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#working-rules-owner-directives-binding-for-every-iteration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working rules (owner directives, binding for every iteration)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-clock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The clock
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#w0-file-the-deadline-probe-the-unknowns-05d-done-2026-08-30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W0 — file the deadline + probe the unknowns (~0.5d) — ✅ DONE 2026-08-30
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#w1-done-2026-08-30-two-fact-records-explicit-and-complete-adr-0012-2-q0d-q0e" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W1 ✅ DONE (2026-08-30) — two fact records, explicit and complete (ADR 0012 §2 Q0d + Q0e)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#w2-done-2026-08-30-extract-the-responses-handler-make-routing-consume-the-facts-adr-0012-steps-12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W2 ✅ DONE (2026-08-30) — extract the Responses handler + make routing consume the facts (ADR 0012 steps 1–2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#w2-original-scope-extract-the-responses-handler-make-routing-consume-the-facts-adr-0012-steps-12-closes-item-61-15d" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W2 (original scope) — extract the Responses handler + make routing consume the facts (ADR 0012 steps 1–2 · closes Item 61 · ~1.5d)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#w3-done-2026-08-31-perplexity-speaks-responses-i4b-deadline-09-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W3 ✅ DONE (2026-08-31) — Perplexity speaks Responses (I4b · DEADLINE 09-20)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#w3-original-scope-perplexity-speaks-responses-i4b-deadline-09-20-2d-live-trial" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W3 (original scope) — Perplexity speaks Responses (I4b · DEADLINE 09-20 · ~2d + live trial)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#w4-done-2026-08-31-chat_completions-generate_content-become-handlers-adr-step-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W4 ✅ DONE (2026-08-31) — chat_completions + generate_content become handlers (ADR step 4)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#w4-original-scope-chat_completions-generate_content-become-handlers-adr-step-4-closes-item-62-15d" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W4 (original scope) — chat_completions + generate_content become handlers (ADR step 4 · closes Item 62 · ~1.5d)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#w5-done-2026-08-31-closeout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W5 ✅ DONE (2026-08-31) — closeout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-arc-2026-08-31-the-three-owner-items-and-what-they-left-behind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Post-arc (2026-08-31) — the three owner items, and what they left behind
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-change-inventory-every-touchpoint-mapped-to-its-iteration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration change inventory (every touchpoint, mapped to its iteration)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-questions-for-the-owner-raise-before-code-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open questions for the owner (raise-before-code list)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risk-register" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk register
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sequencing-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sequencing summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="plan-adr-0012-implementation-protocol-handlers-under-the-sonar-deadline">Plan: ADR 0012 implementation — protocol handlers, under the Sonar deadline<a class="headerlink" href="#plan-adr-0012-implementation-protocol-handlers-under-the-sonar-deadline" title="Permanent link">&para;</a></h1>
+<p><strong>Status: DRAFT — awaiting owner review. Nothing below is started.</strong>
+<strong>Owner decisions 2026-08-30:</strong> (1) capabilities + profiles <strong>unify first</strong>
+(W1); wire protocol lives in the unified model-facts system, not in a third
+parallel resolver. (2) That design is <strong>folded into ADR 0012 in place</strong> —
+no separate ADR 0013. 0012 is <code>Proposed</code>, and the README's Proposed-records
+rule makes in-place revision the way a design converges; the unification IS
+0012's core question converging, not a second decision. <strong>ADR 0012 §2 now
+carries the full design (<code>ModelFacts</code>, Q0a–Q0c) and is what you sign off.</strong>
+<strong>Drives:</strong> <a href="../decisions/0012-wire-protocol-as-per-model-capability/">ADR 0012</a>
+(Proposed) · closes debt <strong>Item 61</strong> (W2) and <strong>Item 62</strong> (W4) · absorbs
+<strong>I4b</strong> from <a href="../plan-per-model-capabilities/">plan-per-model-capabilities.md</a>
+as W3.</p>
+<h2 id="why-the-stated-goal-not-a-side-effect">Why (the stated goal, not a side effect)<a class="headerlink" href="#why-the-stated-goal-not-a-side-effect" title="Permanent link">&para;</a></h2>
+<p>Per-provider/per-model capability resolution exists to <strong>simplify the code
+and raise reuse</strong> — one protocol implementation serving every provider that
+speaks it, routing as data, no per-provider special cases. Every iteration
+below must move those metrics, measured at its gate:</p>
+<ul>
+<li><strong>Reuse:</strong> the Responses handler ends up consumed by 2 providers (W3);
+  <code>convert_messages</code> exists once per protocol, not once per provider (W4).</li>
+<li><strong>Simplification:</strong> <code>openai_native.py</code> shrinks by the ~350 extracted
+  lines; Gemini's incompatible <code>_convert_messages</code> override is deleted;
+  <code>RESPONSES_API_PREFIXES</code> routing branch ×3 collapses to one resolver.
+  Target: <strong>net-negative LoC in <code>providers/*.py</code> outside the new <code>wire/</code>
+  package</strong>, reported per iteration.</li>
+<li><strong>No new carve-outs:</strong> if an iteration wants a helper, wrapper, or
+  special case to get green, that is a design smell — stop and raise the
+  question instead (see Working rules).</li>
+</ul>
+<h2 id="working-rules-owner-directives-binding-for-every-iteration">Working rules (owner directives, binding for every iteration)<a class="headerlink" href="#working-rules-owner-directives-binding-for-every-iteration" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Iterative, like the I1–I4 arc:</strong> each iteration ends <strong>testable and
+   runnable</strong> — full suite green, app launches, live trial where the
+   iteration touched a wire. No iteration leaves a half-moved seam.</li>
+<li><strong>Call graphs per iteration:</strong> run <code>graphify update .</code> and refresh
+   <strong><code>docs/provider-wire-call-graphs.md</code></strong> (new, created in W1) showing the
+   provider→handler→SDK call paths before/after that iteration — the
+   <a href="../agent-platform-call-graphs/">agent-platform-call-graphs.md</a>
+   precedent, scoped to the wire layer.</li>
+<li><strong>Structural changes only.</strong> No patchwork, no spaghetti, no
+   helper/surface carving to route around a design problem. When the clean
+   shape is uncertain, <strong>stop and put the question to the owner</strong> with
+   options — confirm/reject/adjust before code. Known questions are listed
+   in "Open questions" below; new ones get raised the moment they appear.</li>
+<li><strong>Nothing left failing or unfinished.</strong> Anything that breaks outside
+   this plan's edits gets root-caused and fixed (or explicitly
+   owner-deferred with a debt entry), never dismissed as pre-existing —
+   [CLAUDE.md "Verify, don't assume"] and the no-preexisting-dismissal
+   rule apply. Zero new technical debt is the default; any debt taken is
+   filed in the inventory the same day.</li>
+<li><strong>Owner gates every iteration</strong> ("go W1", …), per the standing rule.</li>
+</ol>
+<h2 id="the-clock">The clock<a class="headerlink" href="#the-clock" title="Permanent link">&para;</a></h2>
+<p><strong>Perplexity retires the Sonar chat-completions endpoint 2026-09-27</strong>
+(web-verified 2026-08-30: Perplexity forum "Sonar is moving to the Agent
+API" + changelog; endpoint labelled <em>legacy</em>). It is the only wire
+<code>PerplexityProvider</code> speaks. Forum precedent (Gemini 2.5-flash died
+<em>early</em> for some users) → <strong>target W3 complete by 2026-09-20.</strong></p>
+<hr />
+<h2 id="w0-file-the-deadline-probe-the-unknowns-05d-done-2026-08-30">W0 — file the deadline + probe the unknowns (~0.5d) — ✅ DONE 2026-08-30<a class="headerlink" href="#w0-file-the-deadline-probe-the-unknowns-05d-done-2026-08-30" title="Permanent link">&para;</a></h2>
+<p>Shipped: <code>07deb278</code> (filing) + <code>f440dbc3</code> (probe). Suite 5188 passed /
+32 skipped / 0 failed. Probe gained <code>--api-path responses</code> (drift check on
+the other wire) and <code>--survey-responses</code> (this battery); +12 offline tests.</p>
+<p><strong>Measured live — five findings, four of which widen W3:</strong></p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Question</th>
+<th><strong>Measured answer</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>(a)</td>
+<td>bare vs namespaced IDs</td>
+<td>⚠️ <strong>bare IDs DO NOT EXIST on the Responses wire.</strong> <code>sonar</code>, <code>sonar-pro</code>, <code>sonar-reasoning-pro</code> → 400 <code>validation failed: model "..." is not supported</code>; only <code>perplexity/sonar</code> answers</td>
+</tr>
+<tr>
+<td>(b)</td>
+<td>native tools</td>
+<td>✅ <code>perplexity/sonar</code> + <code>anthropic/claude-sonnet-5</code> both accepted the array <strong>and emitted a real <code>function_call</code></strong></td>
+</tr>
+<tr>
+<td>(c)</td>
+<td>citations</td>
+<td>⚠️ <strong>mechanism changes.</strong> Search is an explicit <strong>tool</strong> here, not implicit: a plain request runs no search and returns no citations. With <code>tools=[{"type":"web_search"}]</code> they arrive as a <strong><code>search_results</code> output item</strong> (15 results: id/snippet/date/url) while the text block's <code>annotations</code> stay <strong>empty</strong></td>
+</tr>
+<tr>
+<td>(d)</td>
+<td>streaming</td>
+<td>✅ works via stock SDK (19–24 events)</td>
+</tr>
+<tr>
+<td>(e)</td>
+<td><code>max_output_tokens</code></td>
+<td>required for <code>anthropic/*</code>, <strong>not</strong> for <code>perplexity/sonar</code> → <strong>per-model table data</strong>, as ADR 0012 assumed</td>
+</tr>
+<tr>
+<td>(f)</td>
+<td>base URL</td>
+<td><code>https://api.perplexity.ai/v1</code> serves Responses; the bare host 404s. <code>constants.py:271</code> holds the bare host today</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Consequence for W3 (scope grew):</strong> the 09-27 retirement is <strong>not a
+transport swap — it renames every user-facing Perplexity model ID</strong>, so W3
+must ship <code>/doctor</code> deprecation rows and update example config, install
+scripts, vscode config and the four pricing tables. And the citation change
+is <strong>behavioural</strong>, not a parse-site move: <code>web_premium.py</code> must request
+the <code>web_search</code> tool explicitly and read <code>search_results</code> items.</p>
+<p><strong>Also verified (auditor session, no action needed):</strong> slash-bearing model
+IDs are safe on provider <code>perplexity</code> — every production provider-key split
+is <code>split("/")[0]</code> / <code>split("/", 1)</code> (<code>usage.py:243</code>, <code>session.py:1326</code>,
+<code>tools.py:569</code>/<code>647</code>, <code>search_backends.py:148</code>).</p>
+<h2 id="w1-done-2026-08-30-two-fact-records-explicit-and-complete-adr-0012-2-q0d-q0e">W1 ✅ DONE (2026-08-30) — two fact records, explicit and complete (ADR 0012 §2 Q0d + Q0e)<a class="headerlink" href="#w1-done-2026-08-30-two-fact-records-explicit-and-complete-adr-0012-2-q0d-q0e" title="Permanent link">&para;</a></h2>
+<p><strong>Delivered:</strong> two disjoint records (<code>ProviderCapabilities</code> retargeted in
+place, <code>ModelFacts</code> new), one resolver each, both old accessors <strong>deleted</strong>
+(<code>get_capabilities_for_model</code>, <code>chat.get_effective_profile</code>) along with
+<code>config/capabilities.py</code>, <code>get_tool_calling_config()</code>,
+<code>shipped_capabilities_for_model()</code> and the AGENTS.md <code>tool_calling</code> parser.
+Verified against a refreshed graph: all five resolve to <strong>zero nodes</strong>.
+<code>/doctor</code> ships with four scans plus record scaffolding; the example config
+ships migrated; call graphs in
+<a href="../provider-wire-call-graphs/"><code>provider-wire-call-graphs.md</code></a>.</p>
+<p><strong>Five defects found and fixed on the way</strong>, all of them shapes this ADR
+exists to remove — four were caught by review rather than by the tests.</p>
+<p>⚠️ <strong>None was reachable in shipped default behaviour.</strong> An earlier draft of
+this section called three of them "live", which was wrong; the reachability
+below is measured, and the correction is kept visible because overstating a
+finding is its own defect. Two are latent behind an opt-in flag, two are
+latent until W2, one is advice-only. They were worth fixing — a gate that
+silently downgrades the moment someone enables a feature is a bad failure
+mode — but none of them was degrading anyone's deployment.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Defect</th>
+<th>Reachable when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>supports_vision</code> dropped by any override</td>
+<td><strong>never</strong> — see below</td>
+</tr>
+<tr>
+<td>2</td>
+<td>prompt-based models denied the search loop</td>
+<td><code>execution.run.web_search</code> <strong>on</strong> (default off)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>type-based providers denied native grounding</td>
+<td><code>execution.run.grounding</code> <strong>on</strong> (default off)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>unmeasured floor claims the wrong wire</td>
+<td><strong>W2</strong>, once routing reads it</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>/doctor</code> names a dead migration target</td>
+<td>advice only; no runtime effect</td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>
+<p><strong><code>supports_vision</code> was dropped by ANY config override.</strong>
+   <code>get_effective_profile</code> rebuilt <code>ModelProfile</code> field-by-field and omitted
+   the field, so its return value said <code>False</code> for a vision model whenever a
+   config layer existed. <strong>It never reached a vision decision</strong>: that
+   function had exactly one caller (<code>chat.py:660</code>), which used only the
+   tool-loop fields, while every real reader — <code>file_preprocessing</code>,
+   <code>provider_ops</code>' <code>model_supports_vision</code> state, the <code>/attach</code> warning —
+   calls <code>model_profiles.supports_vision()</code> directly, which stayed correct.
+   Measured on HEAD: <code>get_effective_profile(...).supports_vision</code> is <code>False</code>
+   for <code>gemini-2.5-pro</code> under an unrelated <code>max_tokens</code> override while
+   <code>supports_vision("gemini-2.5-pro")</code> is <code>True</code>. A latent trap for the next
+   caller, not a shipped regression. Impossible now on a frozen record.</p>
+</li>
+<li>
+<p><strong><code>/v1/oneshot</code> enrichment.</strong> <code>tool_mode != "prompt_based"</code> is the
+   SEND-PATH question ("attach a native tools array?"), not the gate's
+   question ("can this model drive a tool loop at all?"). Asking the wrong
+   one dropped every prompt-based model to closed-book. Reachable only with
+   <code>execution.run.web_search</code> on, which defaults <strong>off</strong>. Now
+   <code>can_drive_a_tool_loop()</code>, a named predicate distinct from the send-path
+   test.</p>
+</li>
+<li>
+<p><strong><code>/v1/oneshot</code> grounding.</strong> <code>get_provider_class()</code> returns <code>None</code> for
+   every openai_compat-TYPE provider (openrouter, nvidia, a vLLM box), so
+   the gate raised and silently concluded "no endpoint record". That is most
+   of a typical fleet — but again only with <code>execution.run.grounding</code> on,
+   default <strong>off</strong>. Now <code>provider_class_for()</code>, resolving the way
+   <code>provider_ops</code> does.</p>
+</li>
+</ol>
+<p>Scope for 2 and 3: <code>get_effective_oneshot_path()</code> has exactly two callers
+   — <code>POST /v1/oneshot</code> and <code>/doctor</code>'s report line. Grep confirms zero
+   callers under <code>ppxai/engine/</code>, so <code>/task</code>, <code>/auto</code>, the chat tool loop and
+   the premium <code>web_search</code> tool never touch it.</p>
+<ol>
+<li>
+<p><strong>The unmeasured floor claimed <code>chat_completions</code> for every provider</strong>,
+   including one that cannot speak it. Harmless while nothing routes on
+   <code>wire_protocol</code> — and a real wire bug the moment W2 does, which is why it
+   was fixed now rather than discovered there. Now a provider-owned complete
+   floor (<code>unmeasured_facts</code>).</p>
+</li>
+<li>
+<p><strong><code>migration_plan()</code> pointed operators at <code>providers.&lt;p&gt;.facts.tool_mode</code></strong>,
+   a location the resolver ignores and the misplaced scan then flags — advice
+   that leaves the operator demoted and warned. No runtime effect; the cost
+   is a wasted migration. Now pushed down per model, fenced by a property
+   test.</p>
+</li>
+</ol>
+<p><strong>Migration fence:</strong> every field of all 45 records in the example config
+resolves as it did pre-ADR, with exactly <strong>two declared deviations</strong>
+(Q0d) — asserted, plus a self-check that a declared deviation which stops
+deviating fails rather than silently excusing a future regression.</p>
+<details>
+<summary>Original W1 plan (as written before implementation)</summary>
+
+## W1 (original scope) — two fact records, explicit and complete (ADR 0012 §2 Q0d + Q0e · ~3.5d)
+
+**Re-scoped 2026-08-30 after three failed implementations** (see Q0e). The
+design is in [ADR 0012 §2](decisions/0012-wire-protocol-as-per-model-capability.md);
+this iteration implements it.
+
+**The shape:**
+- `ProviderCapabilities` **retargeted in place** (Q0g) — endpoint fields
+  only, `native_tool_calling` removed — and `ModelFacts` (model: `wire_protocol`,
+  `tool_mode`, fallbacks, limits, vision, reasoning, `restricted_params`,
+  `tier`) — **disjoint field sets**, so no field can be stated twice and
+  there is nothing to arbitrate.
+- **No defaults, no inheritance, no shortcuts.** A record is complete and
+  explicit, or absent. Fleet-wide conveniences do not survive; `/doctor`
+  writes them per model.
+- Resolution: shipped table row → operator config row. Two lookups, no
+  cross-level merge, no heuristics.
+- Shipped tables become explicit `{model_or_glob: <complete record>}` tables
+  consulted via `match_table` (exact before glob, Q0b). `BUILTIN_PROFILES`'
+  65 rows and both capability tables are the seed data.
+- Both old accessors (`get_capabilities_for_model`, `chat.py::_merge_profile`)
+  are **deleted**, not wrapped — the collapse the earlier drafts kept
+  deferring.
+
+**`/doctor` is a deliverable of this iteration, not a follow-up:** report
+partial records with the resolved value for each blank, rewrite them
+complete, report legacy keys (Q0c), and **scaffold a new provider or model
+definition** so an operator never hand-writes a full record.
+
+**Fences:**
+- `sonar` cannot resolve tool-capable from ANY provider-level config — the
+  Item 43 regression, asserted end-to-end through `authorize_task()`.
+- A model in neither table resolves conservatively (Q0a).
+- Exact id beats an earlier generic glob (Q0b).
+- Operator config overrides a shipped row, per record type.
+- `/doctor` round-trips a partial config to a complete one **without
+  changing behaviour** — the field-config case, not a synthetic fixture.
+- **Behaviour byte-identical** across all 35 example-config models
+  (harness already built and passing).
+- Full suite (5188/32/0 baseline).
+
+**Declared behaviour changes** (measured, migration notes required):
+provider-level `tool_calling` currently beats a matching code glob;
+under Q0e it does not. **54 field flips** — 20 in the shipped example
+config across 10 models, 34 in the owner's config across 17 — over the
+five `ToolCallingProfile` fields. (Two earlier counts, 34 and 47,
+disagreed because each scanned a different field subset; the number is
+now produced by a stated method: for every configured model whose
+provider states a `tool_calling` key, compare that key against
+`get_profile(model).tool_calling`.) Nearly all are
+`fallback_on_empty`/`strip_json_from_text` `true → false` on local-model
+providers; one is a `mode` flip (`vllm-gpt-oss openai/gpt-oss-120b`,
+`native → prompt_based`) and is the round-trip fixture.
+
+⚠️ **This makes the byte-identical fence conditional**, and the plan must
+say so: the 35-model harness compares against the **post-`/doctor`**
+example config, which ships rewritten in this iteration. Comparing against
+the un-migrated file would fail by design — those 20 flips are the declared
+change, not a regression.
+
+- Retire the AGENTS.md `tool_calling` parser (Q0f — zero users measured);
+  `model_hints` is untouched. `/doctor` reports any section it finds.
+
+Call graphs: create `docs/provider-wire-call-graphs.md` + `graphify update .`.
+
+</details>
+
+<h2 id="w2-done-2026-08-30-extract-the-responses-handler-make-routing-consume-the-facts-adr-0012-steps-12">W2 ✅ DONE (2026-08-30) — extract the Responses handler + make routing consume the facts (ADR 0012 steps 1–2)<a class="headerlink" href="#w2-done-2026-08-30-extract-the-responses-handler-make-routing-consume-the-facts-adr-0012-steps-12" title="Permanent link">&para;</a></h2>
+<p>Shipped: <code>1bf93de7</code>. Suite 5,296 / 32 / 0. <strong>Closes Item 61.</strong></p>
+<p><strong>Delivered:</strong> <code>ppxai/engine/providers/wire/</code> with the <code>ProtocolHandler</code>
+contract and <code>ResponsesHandler</code> (six members lifted <strong>mechanically</strong> out of
+<code>openai_native.py</code>, then diffed against the live originals — "no behaviour
+change" is a property of the extraction, not a promise). Routing reads
+<code>_wire_for(model)</code>, one reader consumed by all four dispatch sites;
+<code>RESPONSES_API_PREFIXES</code> demoted to seed data. <code>get_handler()</code> raises on an
+unknown protocol rather than defaulting.</p>
+<p><strong>The three measured drifts were resolved per row on evidence</strong>, not by
+copying one table onto the other: the two pro models in the <strong>router's</strong>
+favour (commit <code>5e1ace2f</code> added them after a live <em>"not a chat model"</em> 404),
+<code>gpt-5.3-codex</code> in the <strong>profile's</strong> favour. A <strong>fourth</strong> surfaced while
+fencing — <code>gpt-5.5-pro</code>, reached by neither mechanism — filed by analogy and
+then probed (2026-08-31: same 404).</p>
+<p><strong>Found by the post-change graph refresh, not by the suite:</strong> the bulk
+deletion consumed each <code>@staticmethod</code> line but left four method bodies
+behind, decorator-stripped so their first parameter had silently become
+<code>self</code>. Dead and broken if called; the full suite passed with them present.
+An AST sweep for "class methods whose first arg isn't <code>self</code> and which carry
+no decorator" found all four.</p>
+<p>Bonus: ADR 0006's validator gained its <strong>second</strong> call site inside the moved
+converter (Item 62 (a): 1-of-3 wires → 2-of-3), and the send-path fence
+widened from <code>glob</code> to <code>rglob</code> with <code>ctx.</code> added to its banned-attribute
+pattern — a top-level-only scan under a <code>self</code>-only regex would have stopped
+guarding that path on the very commit that relocated it.</p>
+<h2 id="w2-original-scope-extract-the-responses-handler-make-routing-consume-the-facts-adr-0012-steps-12-closes-item-61-15d">W2 (original scope) — extract the Responses handler + make routing consume the facts (ADR 0012 steps 1–2 · closes Item 61 · ~1.5d)<a class="headerlink" href="#w2-original-scope-extract-the-responses-handler-make-routing-consume-the-facts-adr-0012-steps-12-closes-item-61-15d" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Leaf package <code>ppxai/engine/providers/wire/</code>: <code>ProtocolHandler</code> +
+  <code>WireContext</code> + <code>responses.py</code> (the six moved members).</li>
+<li><code>openai_native</code> delegates, and routing reads
+  <code>facts.wire_protocol</code> from W1's resolver — <code>RESPONSES_API_PREFIXES</code>
+  becomes seed data; the 3 drift rows each decided from measurement.</li>
+<li>ADR 0006 <code>assert_wire_blocks_clean</code> added to the Responses converter
+  (Item 62 fix (a)).</li>
+<li><strong>Probe de-duplication:</strong> <code>scripts/probe-perplexity-capabilities.py</code>
+  currently carries its own <code>to_responses_tool</code> copy of
+  <code>_convert_tools_for_responses</code>. Once <code>wire/responses.py</code> exists the probe
+  imports the real converter — otherwise it stops testing the shape the
+  provider actually sends (raised by the auditor session, W0 review).</li>
+<li>Call graphs + graphify refresh.</li>
+</ul>
+<p><strong>Fences:</strong> request-kwargs spy byte-identical for unchanged models;
+declared-vs-routed across all 65 profiles; operator <code>wire_protocol</code>
+override provably changes the outgoing request. <strong>Runnable after:</strong> OpenAI
+routes from data; only deliberately-fixed drift rows differ (named in the
+commit message).</p>
+<h2 id="w3-done-2026-08-31-perplexity-speaks-responses-i4b-deadline-09-20">W3 ✅ DONE (2026-08-31) — Perplexity speaks Responses (I4b · DEADLINE 09-20)<a class="headerlink" href="#w3-done-2026-08-31-perplexity-speaks-responses-i4b-deadline-09-20" title="Permanent link">&para;</a></h2>
+<p>Shipped in two commits. <strong>Part 1</strong> <code>a0d924ea</code> — provider + fleet rows + the
+live canary. <strong>Part 2</strong> — the scope the auditor's plan-vs-commit check found
+missing from part 1, all of it deadline-carrying or gate-carrying:</p>
+<ul>
+<li><strong><code>web_premium.py</code> migrated</strong> onto the same wire resolution as the
+  provider. It had built its OWN <code>AsyncOpenAI</code> hardcoded to
+  <code>/chat/completions</code>, so the 09-27 retirement would have broken web_search
+  <strong>independently of the provider</strong> — one fix leaving a second path dead,
+  which is the root-cause rule's whole point. It now reads
+  <code>ModelFacts.wire_protocol</code> from the provider's table: configure
+  <code>perplexity/sonar</code> and the tool follows onto the surviving wire with no
+  code change. The citation migration is <strong>behavioural</strong> (W0 (c)): on the
+  Responses wire search is an explicit tool and results arrive as a
+  <code>search_results</code> item while <code>annotations</code> stay empty.</li>
+<li><strong><code>tools.web_search.order</code></strong> — the chain is config DATA consumed by the
+  one resolver, folded into <code>preferred</code> rather than placed beside it. The
+  non-strict egress set is now <strong>derived from the resolved order</strong> instead
+  of the static <code>ALL_HOSTS</code>, closing the way a new key could re-create
+  Item 59's chain-vs-allowlist divergence.</li>
+<li><strong>Gateway-smoke hard gate: 7/7</strong>, and <code>POST /v1/oneshot</code> proven
+  <strong>byte-identical</strong> by before/after capture (<code>--record</code> on a stashed
+  baseline, all 9 normalized exchanges <code>IDENTICAL</code>) — evidenced, not
+  asserted, because pass/fail alone cannot evidence byte-identity.</li>
+<li><strong>Configured set + I3</strong>: <code>anthropic/claude-sonnet-5</code> added to the example
+  config with a pricing row; egress allowlist <strong>verified</strong> host-level, not
+  assumed.</li>
+</ul>
+<p><strong>Not done, deliberately, and needing the owner's call:</strong> the <code>sonar</code> →
+<code>perplexity/sonar</code> <strong>user-facing ID rename</strong> (W0 (a)) and the <code>base_url</code>
+<code>/v1</code> suffix in the shipped install scripts + VSCode bootstrap config. Those
+change what every fresh install gets and what existing users' configs must
+say; they are a product decision with a <code>/doctor</code> deprecation story, not a
+mechanical checklist tick. The code supports both IDs today, so nothing is
+blocked — but the rename must land before 09-27.</p>
+<h2 id="w3-original-scope-perplexity-speaks-responses-i4b-deadline-09-20-2d-live-trial">W3 (original scope) — Perplexity speaks Responses (I4b · <strong>DEADLINE 09-20</strong> · ~2d + live trial)<a class="headerlink" href="#w3-original-scope-perplexity-speaks-responses-i4b-deadline-09-20-2d-live-trial" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Responses handler registered on <code>PerplexityProvider</code>; routing table
+  from W0 data. Agent-fleet rows (<code>anthropic/*</code> +
+  <code>requires_max_output_tokens</code> per W0 (e)). Configured set = owner's pick
+  (suggestion: 3 Sonar + <code>anthropic/claude-sonnet-5</code>).</li>
+<li><strong>web_search backend migration</strong>: <code>web_premium.py</code>'s own Perplexity
+  client moves onto the same wire resolution as the provider (no second
+  patched client — structural rule 3).</li>
+<li>Capability table + <code>task_authorizer</code> guard cover the Responses path;
+  probe script guards both wires; I3 checklist for any newly configured
+  model (example config, install scripts, vscode config, 4 pricing
+  tables); <code>/doctor</code> rows if W0 (a) forces renames.</li>
+<li>Call graphs + graphify refresh — this is the graph that shows <strong>one
+  handler, two providers</strong>.</li>
+</ul>
+<p><strong>Fences:</strong> live canary <code>anthropic/claude-sonnet-5</code> via
+<code>/task --tools read_file</code>; Sonar smoke over the new wire; citations
+intact per W0 (c); <strong>gateway-smoke 7/7, <code>POST /v1/oneshot</code>
+byte-identical</strong> (ppxai-sre depends). <strong>Runnable after:</strong> Perplexity
+fully usable on the surviving wire before 09-27.</p>
+<h2 id="w4-done-2026-08-31-chat_completions-generate_content-become-handlers-adr-step-4">W4 ✅ DONE (2026-08-31) — chat_completions + generate_content become handlers (ADR step 4)<a class="headerlink" href="#w4-done-2026-08-31-chat_completions-generate_content-become-handlers-adr-step-4" title="Permanent link">&para;</a></h2>
+<p>Shipped: <code>476fce89</code>. Suite 5,360 / 32 / 0. <strong>Closes Item 62, both halves.</strong></p>
+<p><strong>(a)</strong> <code>assert_wire_blocks_clean</code> runs inside each handler's converter —
+<strong>3 of 3</strong> wires, was 1. The fence parametrises over the handler <strong>registry</strong>
+rather than a hand-written list, so the fourth wire (<code>messages</code>) inherits the
+requirement; it also greps each handler's source, because Item 62 (a) was
+precisely a validator that existed and was not called.</p>
+<p><strong>(b)</strong> <code>GeminiProvider._convert_messages</code> <strong>deleted</strong> with its three
+helpers. It returned <code>tuple</code> against a base annotated <code>List[Dict[str, Any]]</code>
+— a Liskov violation invisible to the type checker because the base's
+annotation was one wire's shape imposed on all of them. Each wire declares
+its own return type; <code>BaseProvider._convert_messages</code> survives as a
+<em>delegation</em>, not an emitter. The extracted converter was diffed
+byte-for-byte across all four role paths <strong>before</strong> the override was removed.</p>
+<p>One stale premise found and refreshed rather than weakened: W2's own registry
+fence used <code>generate_content</code> as its example of an <em>unregistered</em> protocol,
+which W4 then registered — it went green while asserting nothing.</p>
+<p><strong>Simplification report:</strong> providers <strong>−318</strong> net (<code>openai_native</code> −351,
+<code>gemini</code> −168, <code>base</code> +20, <code>perplexity</code> +181 for W3's capability); <code>wire/</code>
++983; <strong>overall +665</strong>. Twelve methods verified absent from their original
+files. The plan's target was net-negative LoC in <code>providers/*.py</code> outside
+<code>wire/</code> — met. The overall figure is the cost of a capability plus the
+recorded measurement the handlers now carry, and is reported unflatteringly
+on purpose.</p>
+<h2 id="w4-original-scope-chat_completions-generate_content-become-handlers-adr-step-4-closes-item-62-15d">W4 (original scope) — chat_completions + generate_content become handlers (ADR step 4 · closes Item 62 · ~1.5d)<a class="headerlink" href="#w4-original-scope-chat_completions-generate_content-become-handlers-adr-step-4-closes-item-62-15d" title="Permanent link">&para;</a></h2>
+<p><code>convert_messages</code> moves into each handler (protocol-owned return type);
+Gemini's incompatible override <strong>deleted</strong>; <code>assert_wire_blocks_clean</code>
+travels with every converter. Call graphs + graphify refresh — the
+end-state graph: 4 providers, 3 handlers, zero bespoke wire paths.</p>
+<p><strong>Fences:</strong> validator asserted per handler on fixture messages; full
+suite; client-parity harness untouched. <strong>Simplification report:</strong> final
+LoC delta + deleted-override list.</p>
+<h2 id="w5-done-2026-08-31-closeout">W5 ✅ DONE (2026-08-31) — closeout<a class="headerlink" href="#w5-done-2026-08-31-closeout" title="Permanent link">&para;</a></h2>
+<ul>
+<li>ADR 0012 → <strong>Implemented</strong> (all four migration steps); decisions README row
+  updated; the "open records" line no longer lists 0012.</li>
+<li><strong>Items 61 + 62 archived</strong> to the closed one-liner list, with their full
+  text moved to <code>docs/archive/DEBT-INVENTORY-CLOSED.md</code> — the measurements in
+  them (the drift table, the validator's single call site, the Liskov
+  violation) are the evidence the ADR's decisions rest on, so a one-line
+  summary could not carry them. Open set 22 → 20.</li>
+<li><strong>release-notes-v1.19.1-DRAFT</strong>: ADR 0012 had <strong>no</strong> user-facing section at
+  all — a config clean break with no migration text. Added the breaking
+  <code>capabilities</code>/<code>tool_calling</code> → <code>facts</code> move, the two-wire Perplexity
+  fleet, and <code>tools.web_search.order</code>; every claim re-verified against the
+  code before writing (field lists, <code>ToolMode</code> values, <code>native_tool_calling</code>
+  absent).</li>
+<li><strong>Fleet Atlas dated successor</strong>: <code>2026-08-31-fleet-atlas.html</code>. The 08-30
+  edition had been <strong>edited in place across W2/W3/W4</strong>, which made a dated
+  research artifact stop being what its name claims. Restored to its
+  as-written state from <code>be63fe6a</code> and given a superseded banner pointing at
+  the successor; the current state lives in the new file.</li>
+<li><strong>Two lessons proposed</strong> (owner approves promotion, per
+  <code>docs/lessons/README.md</code>): <code>resolver-vs-direct-path-checks.md</code> and
+  <code>tests-whose-premise-expires.md</code>. Both meet the cross-host +
+  grep-verifiable bar. A third candidate (graph-refresh-as-verification) was
+  <strong>not</strong> promoted — it is a working habit, not an observable repo fact.</li>
+</ul>
+<h2 id="post-arc-2026-08-31-the-three-owner-items-and-what-they-left-behind">Post-arc (2026-08-31) — the three owner items, and what they left behind<a class="headerlink" href="#post-arc-2026-08-31-the-three-owner-items-and-what-they-left-behind" title="Permanent link">&para;</a></h2>
+<p>All three shipped:</p>
+<ul>
+<li><strong>ID rename</strong> <code>066dc22b</code>. Not the rename this plan expected: probing the
+  namespaced forms first showed W0 (a) does <strong>not</strong> generalise — the
+  Responses wire serves only <code>perplexity/sonar</code>, and <code>sonar-pro</code> (the
+  shipped default) plus <code>sonar-reasoning-pro</code> 400 there in both forms. A
+  blanket rename would have shipped a config that fails every request. The
+  defaults moved to <code>perplexity/sonar</code> on the owner's call; the pro models
+  keep their ids and their chat wire with <code>/doctor</code> deprecation rows.
+  <strong>This plan's "add the <code>/v1</code> base_url suffix" item is now WRONG</strong> — W3's
+  two-client design derives the Responses root per wire, and pinning <code>/v1</code>
+  would break the chat wire the pro models still need. Verified both ways.</li>
+<li><strong><code>FactsResolver</code></strong> <code>b328c356</code> — one fallback rule where there had been
+  five spellings, two of which bypassed <code>provider_class_for</code> entirely.</li>
+<li><strong><code>ModelFacts</code> as source</strong> <code>d1fe2912</code> — refactor (b), <strong>first half</strong>.</li>
+</ul>
+<p><strong>Two follow-ups are now tracked as debt items rather than as comments:</strong></p>
+<ul>
+<li><strong><a href="../debt-inventory/">Item 64</a></strong> ⏰ — re-probe the Perplexity pro line on
+  the Responses wire <strong>before 2026-09-27</strong>. The shipped deprecation rows
+  advise a downgrade to the lighter <code>perplexity/sonar</code>; that hint is correct
+  only while it stays true.</li>
+<li><strong><a href="../debt-inventory/">Item 65</a></strong> — re-author <code>BUILTIN_PROFILES</code> as native
+  <code>ModelFacts</code> and retire the seed vocabulary. Deferred deliberately (a data
+  migration should not share a diff with a behaviour change), fenced so the
+  migration stays checkable.</li>
+</ul>
+<hr />
+<h2 id="configuration-change-inventory-every-touchpoint-mapped-to-its-iteration">Configuration change inventory (every touchpoint, mapped to its iteration)<a class="headerlink" href="#configuration-change-inventory-every-touchpoint-mapped-to-its-iteration" title="Permanent link">&para;</a></h2>
+<p>Audited 2026-08-30 by grep, not assumption. "User-side" = existing
+<code>~/.ppxai/ppxai-config.json</code> files in the field, reached only via <code>/doctor</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Touchpoint</th>
+<th>What changes</th>
+<th>Iteration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>providers.&lt;p&gt;.capabilities.*</code> + <code>models.&lt;m&gt;.capabilities.*</code> vs the profile override keys</td>
+<td><strong>merge into one key family</strong> — clean break + <code>/doctor</code> config-shape scan shipped WITH it (Q0b)</td>
+<td>W1</td>
+</tr>
+<tr>
+<td>new <code>wire_protocol</code> key in the unified facts config surface</td>
+<td>operator per-model/per-provider protocol override becomes possible (and provably load-bearing)</td>
+<td>W1 declare · W2 consume</td>
+</tr>
+<tr>
+<td><code>ppxai-config.example.json</code> perplexity block</td>
+<td>Agent-fleet model additions; <strong><code>sonar</code>→<code>perplexity/sonar</code> ID renames are CONFIRMED required (W0 (a))</strong>; <strong><code>base_url</code> gains the <code>/v1</code> suffix — measured, not conditional</strong> (<code>constants.py:271</code> holds the bare host, which 404s on Responses)</td>
+<td>W3</td>
+</tr>
+<tr>
+<td><strong><code>tools.web_search.perplexity_model</code> default <code>"sonar"</code> + <code>web_premium.py:177</code> hardcoded client</strong></td>
+<td>⚠️ NOT previously in plan: the web_search tool runs its <strong>own second Perplexity client</strong> over chat-completions — dies 09-27 independently of the provider. Backend must route through the same wire resolution (root-cause rule: one shared path, not a second patched client)</td>
+<td><strong>W3 scope added</strong></td>
+</tr>
+<tr>
+<td><code>CODING_MODEL = "sonar-pro"</code> (<code>config/__init__.py:154</code>) + <code>RECOMMENDED_DEFAULTS["perplexity"]</code> (<code>model_deprecations.py:374</code>)</td>
+<td>follow any ID rename</td>
+<td>W3</td>
+</tr>
+<tr>
+<td>install.sh · scripts/install.ps1 · vscode-extension/src/config.ts · 4 pricing tables</td>
+<td>I3 checklist for every newly configured model</td>
+<td>W3</td>
+</tr>
+<tr>
+<td><code>/doctor</code> deprecation rows</td>
+<td>user-side migration for renamed IDs + retired wire</td>
+<td>W3</td>
+</tr>
+<tr>
+<td>egress allowlists (<code>search_backends.py</code>, <code>network_policy.py</code>)</td>
+<td>host-level (<code>api.perplexity.ai</code>) — expected unchanged; <strong>verified in W3, not assumed</strong></td>
+<td>W3 fence</td>
+</tr>
+<tr>
+<td><code>execution.run.grounding</code> / oneshot enrichment docs</td>
+<td>wording references the provider-native search path; behaviour covered by the byte-identical oneshot fence</td>
+<td>W5</td>
+</tr>
+</tbody>
+</table>
+<h2 id="open-questions-for-the-owner-raise-before-code-list">Open questions for the owner (raise-before-code list)<a class="headerlink" href="#open-questions-for-the-owner-raise-before-code-list" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Question</th>
+<th>Default if confirmed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Q0a</td>
+<td>Boolean-vs-mode: does <code>tool_calling.mode</code> subsume <code>native_tool_calling</code>, with the boolean derived, or the reverse? (decided in ADR 0013)</td>
+<td>mode wins; boolean becomes derived</td>
+</tr>
+<tr>
+<td>Q0b</td>
+<td>Config surface after unification: clean break on the two override key families (ADR-0010 style, with <code>/doctor</code> scan), or dual-read window?</td>
+<td>clean break + scan, matching 0010 precedent</td>
+</tr>
+<tr>
+<td>Q1</td>
+<td><code>WireContext</code> shape: plain dataclass carrying client + hooks, or does the handler receive the provider behind a narrow Protocol?</td>
+<td>dataclass — keeps handlers ignorant of providers</td>
+</tr>
+<tr>
+<td>Q2</td>
+<td>Post-cutover, does <code>PerplexityProvider</code> keep a chat_completions path at all? <strong>W0 (a) measured the opposite of this question's premise: the bare IDs are NOT served on Responses</strong>, so the two wires serve <em>disjoint</em> model IDs until 09-27</td>
+<td>Responses-only after cutover (dead wire code is debt), with the ID rename carried by <code>/doctor</code> rows — but this is now an owner call, not a default</td>
+</tr>
+<tr>
+<td>Q3</td>
+<td>W3 configured set</td>
+<td>3 Sonar + <code>anthropic/claude-sonnet-5</code></td>
+</tr>
+<tr>
+<td>Q4</td>
+<td>Drift rows in W2: if <code>gpt-5-pro</code>/<code>gpt-5.2-pro</code> prove chat-incapable, fix profile to <code>responses</code>; if <code>gpt-5.3-codex</code> serves chat fine, which side wins?</td>
+<td>measurement wins; tie → official docs</td>
+</tr>
+<tr>
+<td>Q5</td>
+<td>Does <code>PROMPT_BASED_MODEL_PREFIXES</code> fold in during W4 (finishing I5 early) or stay a separate iteration?</td>
+<td>separate — W4 stays single-purpose</td>
+</tr>
+</tbody>
+</table>
+<h2 id="risk-register">Risk register<a class="headerlink" href="#risk-register" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Detected by</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>~~Bare Sonar IDs absent on Responses~~ → <strong>CONFIRMED W0 (a)</strong>: user-facing ID rename is now certain</td>
+<td>measured</td>
+<td><code>/doctor</code> deprecation rows + config/install/vscode/pricing updates — <strong>in W3 scope</strong>, no longer a risk</td>
+</tr>
+<tr>
+<td>~~Citations differ~~ → <strong>CONFIRMED W0 (c)</strong>: search is an explicit tool; citations are <code>search_results</code> items, <code>annotations</code> empty</td>
+<td>measured</td>
+<td><code>web_premium.py</code> requests <code>web_search</code> and reads <code>search_results</code>; handler-owned parsing, fenced with a fixture</td>
+</tr>
+<tr>
+<td>Endpoint dies <strong>early</strong> (Gemini precedent)</td>
+<td>—</td>
+<td>W3 target 09-20</td>
+</tr>
+<tr>
+<td>Wrong drift-row resolution in W2</td>
+<td>per-row probe</td>
+<td>decide from measurement, never copy</td>
+</tr>
+<tr>
+<td><code>/v1/oneshot</code> contract drift</td>
+<td>W3 gateway-smoke</td>
+<td>byte-identical fence is a hard gate</td>
+</tr>
+<tr>
+<td>Fallout outside the diff</td>
+<td>full suite each iteration</td>
+<td>root-cause rule (Working rule 4) — no "pre-existing" dismissals</td>
+</tr>
+</tbody>
+</table>
+<h2 id="sequencing-summary">Sequencing summary<a class="headerlink" href="#sequencing-summary" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code>W0 ✅ DONE → W1 ✅ DONE
+  → W2 (extract handler + routing from facts, ~1.5d)
+  → W3 (Perplexity Responses, ~2d, DONE BY 09-20)
+  → W4 (remaining handlers) → W5 (closeout)
+</code></pre></div>
+<p>~7 working days to deadline safety (W0–W3) against ~14 available before
+09-20 — buffer holds. Owner gate + green suite + call-graph refresh after
+every iteration.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

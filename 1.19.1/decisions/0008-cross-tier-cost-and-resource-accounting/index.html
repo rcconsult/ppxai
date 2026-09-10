@@ -1,0 +1,1729 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.1/decisions/0008-cross-tier-cost-and-resource-accounting/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>ADR 0008 — Cross-tier cost and shared-resource accounting - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-0008-cross-tier-cost-and-shared-resource-accounting" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR 0008 — Cross-tier cost and shared-resource accounting
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gap-1-local-cost-view-under-reports-true-provider-spend-verified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap #1 — local cost view under-reports true provider spend (verified)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-2-no-model-of-shared-kv-cache-contention-verified-absent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap #2 — no model of shared KV-cache contention (verified absent)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-does-exist-so-the-adr-is-grounded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What DOES exist (so the ADR is grounded)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision-proposed-not-yet-chosen-options-for-owner-sign-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision (PROPOSED — not yet chosen; options for owner sign-off)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision (PROPOSED — not yet chosen; options for owner sign-off)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-unifying-idea-a-usage-sink-keyed-by-provider-model-tier-owner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The unifying idea: a usage sink, keyed by (provider, model, tier, owner)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#options-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options considered
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-not-just-sum-a-global-counter-the-naive-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why not just "sum a global counter" (the naive fix)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#triggers-to-revisit-decide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers to revisit / decide
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sign-off-2026-09-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sign-off (2026-09-06)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sign-off (2026-09-06)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#is-the-log-a-consumer-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Is the log a consumer interface?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation map
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="adr-0008-cross-tier-cost-and-shared-resource-accounting">ADR 0008 — Cross-tier cost and shared-resource accounting<a class="headerlink" href="#adr-0008-cross-tier-cost-and-shared-resource-accounting" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-07-15
+<strong>Status:</strong> <strong>Accepted 2026-09-06 — Option A implemented</strong> (<code>ppxai/usage_events.py</code>, taps in <code>engine/task_runner.py</code> + <code>engine/session.py</code>, rollup in <code>/cost</code>). Debt Item 49 closed. See §Sign-off for what was decided on each open question.
+<strong>Related:</strong>
+- <a href="../0004-llm-gateway-features/"><code>0004-llm-gateway-features.md</code></a> — established the stateless <code>/v1/oneshot</code> tier that bypasses <code>EngineClient</code> (the origin of gap #1 below)
+- <a href="../0003-agent-platform-architecture/"><code>0003-agent-platform-architecture.md</code></a> — established the per-run <code>EngineClient</code> (D1 isolation) for <code>/v1/agent/task</code>
+- <code>ppxai/engine/session.py::save_usage_to_persistent_storage</code> — the only writer of <code>usage.json</code>
+- <code>ppxai/usage.py</code> — usage persistence + <code>/cost</code> rollup
+- <code>ppxai/server/routes/oneshot.py</code> — stateless, no <code>EngineClient</code>, usage returned then dropped
+- <code>ppxai/server/routes/agent_v1.py</code> — per-run engine; per-run token budget (<code>control.tokens_used = engine.session.live_run_tokens</code>, ~L1045) but no global rollup
+- Debt inventory: <strong>Item 49</strong> (this ADR's tracking entry)</p>
+<hr />
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>ppxai now spends provider tokens through <strong>three independent tiers</strong> that can
+run <strong>concurrently for one user against one provider account</strong>:</p>
+<ol>
+<li><strong>Interactive session</strong> — Rich/Textual/Web/VSCode <code>/chat</code>, one long-lived
+   <code>EngineClient</code> per session.</li>
+<li><strong><code>/v1/oneshot</code></strong> — stateless <em>to the caller</em>; ~~builds the provider
+   directly, <strong>no <code>EngineClient</code></strong>~~.</li>
+<li><strong><code>/v1/agent/task</code></strong> — a <strong>per-run <code>EngineClient</code></strong> (ADR 0003 D1 isolation);
+   one throwaway engine + session per run.</li>
+</ol>
+<blockquote>
+<p><strong>Premise update (2026-08-15, v1.19.1 — this ADR is a living draft).</strong>
+Tier 2's description above is <strong>no longer true</strong>. The FU unification made
+<em>every</em> <code>/v1/oneshot</code> — plain and enriched alike — execute as a
+<code>kind=oneshot</code> registry run through <code>build_task_runner</code>, and the direct
+non-registry path was <strong>deleted</strong>. That runner constructs a per-run
+<code>EngineClient</code> (<code>ppxai/engine/task_runner.py:218</code>), so tiers 2 and 3 now
+share one execution path and one client shape; the wire contract of
+<code>/v1/oneshot</code> is unchanged.</p>
+<p>This <strong>simplifies the decision rather than complicating it</strong>: the sink
+only has to reach two shapes — the long-lived interactive <code>EngineClient</code>
+and the per-run one — not three, and a single hook at the run-registry
+boundary covers both background tiers at once. Whoever picks up this ADR
+should re-read the options below with that in mind; some of the
+complexity they weigh against each other was tier-2-specific and has
+evaporated.</p>
+</blockquote>
+<p>Each tier's client-side isolation was a correct decision for its own purpose
+(oneshot statelessness; task blast-radius containment). But that isolation
+created an <strong>accounting blind spot</strong> that only becomes visible when the tiers
+run together — which is exactly the ppxai-sre integration shape (an interactive
+operator + background outlook-monitor task + oneshot gateway calls, all on the
+same key).</p>
+<h3 id="gap-1-local-cost-view-under-reports-true-provider-spend-verified">Gap #1 — local cost view under-reports true provider spend (verified)<a class="headerlink" href="#gap-1-local-cost-view-under-reports-true-provider-spend-verified" title="Permanent link">&para;</a></h3>
+<p><code>save_usage_to_persistent_storage</code> (the sole writer of <code>usage.json</code>, which
+backs the <code>/cost</code> command and time-based analytics) is called <strong>only from
+interactive paths</strong>: <code>commands/handler.py:441</code>, <code>rich/main.py:623</code>,
+<code>tui/stream_handler.py:310</code>, <code>server/session_manager.py</code> (the <code>/chat</code>
+session), <code>server/streaming.py</code>. <strong>Neither <code>oneshot.py</code> nor <code>agent_v1.py</code>
+calls it.</strong></p>
+<p>Consequence, for a user running chat + oneshot + task on the <strong>same provider</strong>:</p>
+<ul>
+<li>The provider <strong>bills for all three</strong> (same API key / same account).</li>
+<li>ppxai's <code>/cost</code> and <code>usage.json</code> reflect <strong>only the interactive session</strong>.</li>
+<li>Oneshot usage is returned in the HTTP response, then <strong>dropped</strong>.</li>
+<li>Task usage lives in the run's own session + run record, and is <strong>never</strong>
+  aggregated into <code>usage.json</code>.</li>
+</ul>
+<p>So the local cost counter <strong>silently under-reports</strong> whenever background
+oneshot/task runs are active. If the tiers use <em>different</em> providers the
+under-report is less misleading (separate bills anyway) but still incomplete.
+This is a correctness gap in a number users trust for budgeting.</p>
+<p><strong>Not the same as display-scoping.</strong> The <code>Ctx:</code> status badge (v1.19.1 Item 48)
+is <em>correctly</em> per-engine — each tier's badge shows its own session. That is a
+UI-scoping property and is working as intended. This ADR is about the
+<strong>money</strong>, which is a shared physical resource the per-engine model does not
+represent.</p>
+<h3 id="gap-2-no-model-of-shared-kv-cache-contention-verified-absent">Gap #2 — no model of shared KV-cache contention (verified absent)<a class="headerlink" href="#gap-2-no-model-of-shared-kv-cache-contention-verified-absent" title="Permanent link">&para;</a></h3>
+<p>Token <em>cost</em> is not the only shared resource. On a <strong>self-hosted inference
+endpoint</strong> (vLLM / NIM), the <strong>KV cache is a finite GPU resource</strong> shared
+across all concurrent requests, regardless of how many <code>EngineClient</code>
+instances the client spins up (isolation is client-side; the cache is
+server-side):</p>
+<ul>
+<li>Chat + oneshot + task each send their <strong>own</strong> prompt → they <strong>contend</strong> for
+  the same KV-cache blocks. Under pressure vLLM preempts/recomputes, raising
+  effective token cost + latency for <strong>all three, including interactive chat</strong>.</li>
+<li>Prefix-cache <strong>reuse</strong> only helps requests that share a prefix. The three
+  tiers use <strong>different system prompts</strong> (chat = config prompt; oneshot =
+  provider default; task = <code>compose_agent_system_prompt</code>), so they get <strong>no
+  cross-tier cache benefit</strong> — they only compete.</li>
+</ul>
+<p>ppxai models <strong>none</strong> of this — there is no KV-cache occupancy/eviction metric
+anywhere in the codebase, because the cache is the provider's internal state.
+This is not a bug (we can't see hosted-provider cache), but it is an
+<strong>operational reality the cost model should at least acknowledge</strong> so a user on
+a self-hosted endpoint understands that concurrent tiers degrade each other.</p>
+<h3 id="what-does-exist-so-the-adr-is-grounded">What DOES exist (so the ADR is grounded)<a class="headerlink" href="#what-does-exist-so-the-adr-is-grounded" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Per-run token budget</strong> (<code>agent_v1.py</code> ~L1045): a task run can cap its own
+  token spend (<code>control.tokens_used = engine.session.live_run_tokens</code>,
+  checked per tool iteration). This is <strong>per-run capping</strong>, torn down with the
+  run — NOT a session-wide or account-wide budget, and it does not feed
+  <code>usage.json</code>.</li>
+<li><strong><code>usage.json</code> rollup</strong> (<code>usage.py</code>): time-based analytics for the
+  interactive session only.</li>
+</ul>
+<hr />
+<h2 id="decision-proposed-not-yet-chosen-options-for-owner-sign-off">Decision (PROPOSED — not yet chosen; options for owner sign-off)<a class="headerlink" href="#decision-proposed-not-yet-chosen-options-for-owner-sign-off" title="Permanent link">&para;</a></h2>
+<p>The problem is genuinely non-trivial because a "single global counter" naively
+sums tiers that may (a) be different providers with different pricing, (b) run
+concurrently across process boundaries (server tiers vs. in-TUI session), and
+(c) have legitimately separate accounting needs (a per-task bill for a tenant
+vs. the operator's own chat). So this ADR frames options rather than forcing
+one.</p>
+<h3 id="the-unifying-idea-a-usage-sink-keyed-by-provider-model-tier-owner">The unifying idea: a usage sink, keyed by (provider, model, tier, owner)<a class="headerlink" href="#the-unifying-idea-a-usage-sink-keyed-by-provider-model-tier-owner" title="Permanent link">&para;</a></h3>
+<p>Introduce <strong>one usage-recording seam</strong> that every token-spending path reports
+to — an append-only event, not a mutable counter — carrying:
+<code>{provider, model, tier ∈ {chat, oneshot, task}, owner/run_id, prompt_tokens,
+completion_tokens, estimated_cost, ts}</code>. <code>usage.json</code> / <code>/cost</code> become a
+<strong>query</strong> over that log, filterable by tier and provider, instead of a field
+mutated only on the interactive path.</p>
+<p>This keeps the tiers' runtime isolation (no shared <code>EngineClient</code>) while giving
+accounting a <strong>single source of truth</strong> it currently lacks. It also composes
+with Item 35 (pluggable persistence channel) — the sink is one such channel.</p>
+<h3 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h3>
+<ul>
+<li>
+<p><strong>Option A — Recording seam + tier-tagged rollup (recommended direction).</strong>
+  Every tier calls a small <code>record_usage(event)</code> sink; <code>/cost</code> aggregates and
+  can break down by tier/provider. Oneshot/task opt in with one call at their
+  terminal point. Pro: one truth, honest totals, per-tier visibility, and a
+  natural home for a future <em>account-wide</em> budget. Con: touches all three
+  tiers; needs a concurrency-safe append (cross-process for the server tiers).</p>
+</li>
+<li>
+<p><strong>Option B — Leave tiers isolated; <code>/cost</code> explicitly scoped "interactive
+  only".</strong> Cheapest: just document that <code>/cost</code> excludes oneshot/task and
+  surface each run's cost in its own run record / oneshot response. Pro: no
+  new plumbing; honest by disclosure. Con: no aggregate view of true spend
+  against a shared budget — the user still has to sum three places by hand.</p>
+</li>
+<li>
+<p><strong>Option C — Provider-side reconciliation.</strong> Pull authoritative spend from
+  the provider's billing API instead of counting locally. Pro: ground truth,
+  immune to our miscounts. Con: not all providers expose it; async/delayed;
+  doesn't help self-hosted vLLM (no bill).</p>
+</li>
+<li>
+<p><strong>Option D — Full account-wide budget enforcement</strong> (cap total spend across
+  all tiers, not just per-run). Pro: real cost control for the shared-budget
+  case. Con: requires a shared, concurrency-safe budget store across the
+  in-TUI session and the server process — a distributed-counter problem; large.</p>
+</li>
+</ul>
+<p><strong>KV-cache (Gap #2)</strong> is <em>not</em> solved by any cost option. The proposed
+position is <strong>acknowledge, don't model</strong>: document the contention for
+self-hosted endpoints, and — if we want a signal — surface vLLM's own
+<code>/metrics</code> (cache-usage, preemptions) as an <em>optional operator dashboard read</em>,
+never as something ppxai tries to account per-request.</p>
+<hr />
+<h2 id="why-not-just-sum-a-global-counter-the-naive-fix">Why not just "sum a global counter" (the naive fix)<a class="headerlink" href="#why-not-just-sum-a-global-counter-the-naive-fix" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Different providers → different pricing.</strong> A single scalar total is
+  meaningless when chat is on Perplexity and the task is on NVIDIA. The sink
+  must key by (provider, model) or the number lies.</li>
+<li><strong>Cross-process concurrency.</strong> The interactive session runs in the TUI
+  process; oneshot/task run in the server process (possibly many workers). A
+  naive shared counter is a race; the append-only log + query sidesteps it.</li>
+<li><strong>Legitimately separate views.</strong> A tenant's per-task bill and the operator's
+  own chat spend are different questions. Tier-tagging answers both from one
+  log; a merged scalar answers neither cleanly.</li>
+</ul>
+<hr />
+<h2 id="triggers-to-revisit-decide">Triggers to revisit / decide<a class="headerlink" href="#triggers-to-revisit-decide" title="Permanent link">&para;</a></h2>
+<p><strong>SDK consumers raise the stakes (noted 2026-08-15).</strong> ppxai-sre embeds
+ppxai to implement its own agents and drives <code>/v1/oneshot</code>. An embedder
+that runs agents on a shared provider account has no way to attribute or
+cap spend while this ADR is unimplemented — the blind spot is not just a
+<code>/cost</code> under-report in the TUI (debt Item 49), it is a missing API for
+anyone building on the platform. That does not by itself decide the
+options below, but it means the consumer of this decision is now external,
+not only the interactive user.</p>
+<p>The consumer has confirmed (2026-08-15) that the collapsed tier shape is
+also the one it would consume most cleanly: a <strong>single tap at the
+run-registry boundary</strong> covers both background tiers, which is the shape
+its own <code>AuditLogger</code> already expects. That is evidence for the
+registry-boundary option below, not a decision — the options still need
+owner sign-off.</p>
+<ul>
+<li>ppxai-sre runs interactive + background task on <strong>one</strong> provider budget and
+  needs a true total (the concrete driver — likely forces Option A soon).</li>
+<li>A user reports <code>/cost</code> "wrong" while background runs are active.</li>
+<li>Self-hosted vLLM users hit KV-cache preemption and ask why interactive
+  latency spikes when a task runs (forces the Gap #2 documentation at least).</li>
+<li>Any per-tenant billing requirement (forces tier+owner tagging → Option A).</li>
+</ul>
+<hr />
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p><strong>If Option A is chosen (recommended):</strong>
+- Enables: honest aggregate cost, per-tier/provider breakdown, a home for a
+  future account-wide budget, and alignment with Item 35's persistence channel.
+- Requires: a concurrency-safe append sink reachable from both the TUI process
+  and the server workers; one <code>record_usage</code> call added at each tier's terminal
+  point (interactive already persists — retarget it through the sink; oneshot +
+  task add one call each); <code>/cost</code> reworked from field-read to log-query.</p>
+<p><strong>Superseded 2026-09-06 by the implementation — kept for the record.</strong> The
+state below was true from 2026-07-15 until Option A landed:
+- <code>/cost</code> and <code>usage.json</code> reflect <strong>interactive session only</strong>.
+- Oneshot/task token spend against a shared provider budget is <strong>invisible</strong>
+  locally — users must not treat <code>/cost</code> as their true provider bill when
+  background runs are active.
+- Per-run task token budgets cap <strong>individual runs</strong>, not aggregate spend.
+- KV-cache contention on self-hosted endpoints is <strong>unmodeled</strong>; concurrent
+  tiers degrade each other's cost/latency with no local signal.</p>
+<hr />
+<h2 id="sign-off-2026-09-06">Sign-off (2026-09-06)<a class="headerlink" href="#sign-off-2026-09-06" title="Permanent link">&para;</a></h2>
+<p>Answers to the four questions this ADR was blocked on.</p>
+<p><strong>1. Which option → A.</strong> A recording seam every tier reports to, with <code>/cost</code>
+aggregating over it. B (disclose-only) was rejected because the disclosure
+already existed in this document and the under-report kept happening; a
+correct number beats a documented wrong one. C and D remain open and are not
+foreclosed — C is a reconciliation source that can be added later, and A is
+the substrate D would need anyway.</p>
+<p><strong>2. Scope → read-only analytics now, enforcement-capable by construction.</strong>
+The sink records; nothing reads it to deny a request. But the event carries
+<code>owner</code> and <code>run_id</code>, so an account-wide budget (Option D) becomes a query
+against the log rather than a new store. Deliberately not built: enforcement
+needs a policy on what happens mid-run when a budget is exceeded, which is a
+separate decision with user-visible behaviour.</p>
+<p><strong>3. KV-cache → acknowledge-only.</strong> No metric, no per-request accounting, as
+proposed. Gap #2 remains documented rather than modelled; the optional vLLM
+<code>/metrics</code> operator read is not implemented and stays available as a later
+addition. Nothing in Option A depends on it.</p>
+<p><strong>4. Cross-process store → an append-only JSONL log</strong>
+(<code>~/.ppxai/usage/usage-events.jsonl</code>), not SQLite and not locked <code>usage.json</code>.</p>
+<p>Each event is one line written with a single <code>os.write()</code> to an <code>O_APPEND</code>
+descriptor. The kernel makes the offset-grab and the write atomic under
+<code>O_APPEND</code>, so concurrent writers across processes interleave whole lines
+rather than fragments — which is exactly the property a shared mutable
+counter lacks, and the reason gap #1 could not be fixed by "also call
+<code>save_usage_to_persistent_storage</code> from the other tiers". The line has a
+4096-byte ceiling (the POSIX <code>PIPE_BUF</code> floor) enforced in <code>record_usage</code>;
+a realistic event serialises to ~200 bytes.</p>
+<p>SQLite would also have been correct and was rejected on proportion: it
+introduces a second storage substrate to a project that persists everything
+else as JSON, for a workload that is append-mostly and read-rarely. The
+JSONL log is inspectable with <code>tail</code>, needs no migration story, and its
+failure mode — a truncated final line from a killed process — is handled by
+skipping and COUNTING unparseable rows, so a partial total is never
+presented as a complete one.</p>
+<h3 id="is-the-log-a-consumer-interface">Is the log a consumer interface?<a class="headerlink" href="#is-the-log-a-consumer-interface" title="Permanent link">&para;</a></h3>
+<p><strong>No — <code>/cost</code> is the interface; the file is an implementation detail.</strong>
+Raised by ppxai-sre while this ADR was uncommitted, and worth answering in
+the document rather than in a message, because a path read by an out-of-tree
+consumer becomes a compatibility surface the moment it ships.</p>
+<p>Read <code>/cost</code> and its result metadata (<code>by_tier</code>, <code>all_tier_cost</code>,
+<code>background_cost</code>, <code>skipped_usage_events</code>). Those are named keys with
+declared meanings. The JSONL layout, filename and field names are free to
+change without a deprecation cycle.</p>
+<p>Two hardening changes came out of that exchange, both of which the log
+needed regardless of who reads it:</p>
+<ul>
+<li><strong>Every line carries <code>v</code></strong> (<code>SCHEMA_VERSION</code>). A best-effort log needs a
+  version MORE than a strict one does: because <code>record_usage</code> swallows its
+  own failures, a reader meeting an unversioned schema change would see the
+  difference as a <em>gap</em> rather than an error — silently wrong totals instead
+  of a loud break. A line whose <code>v</code> is absent or unrecognised is counted as
+  skipped, never coerced; guessing at an unknown schema would put a wrong
+  number in front of someone budgeting with it.</li>
+<li><strong>No input can cause a silent drop.</strong> The 4096-byte ceiling now sheds
+  identity in stages (unbounded caller strings first, then bounded
+  truncation of provider/model/tier) so the line fits by construction. The
+  earlier version gave up and returned False on a pathological event, which
+  would have been invisible: an append-only log has no sequence number, so a
+  missing line is not detectable by any reader, and the claim "a partial
+  total is never presented as a complete one" would have been false. Money
+  is never shed; identity is.</li>
+</ul>
+<p>The one loss that remains genuinely uncountable is an I/O failure — a full
+disk, a permission error. That is inherent to a sink that must not raise
+into a chat turn, and it is the reason for the contract below.</p>
+<p><strong>What was NOT done, and is not hiding.</strong> The log is best-effort telemetry,
+not an audit trail: <code>record_usage</code> swallows every failure, because failing a
+user's chat turn or killing a running agent over a bookkeeping write would
+trade a real operation for an accounting one. Anyone who needs guaranteed
+capture must not build on this seam without changing that contract first.</p>
+<h3 id="implementation-map">Implementation map<a class="headerlink" href="#implementation-map" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sink + query + rollup</td>
+<td><code>ppxai/usage_events.py</code></td>
+</tr>
+<tr>
+<td>Background tiers (<code>oneshot</code> + <code>task</code>)</td>
+<td><code>ppxai/engine/task_runner.py</code>, at the F4 usage block</td>
+</tr>
+<tr>
+<td>Interactive tier (<code>chat</code>)</td>
+<td><code>ppxai/engine/session.py::save_usage_to_persistent_storage</code></td>
+</tr>
+<tr>
+<td>Cross-tier rollup in <code>/cost</code></td>
+<td><code>ppxai/commands/tools.py::_display_global_usage_report</code></td>
+</tr>
+<tr>
+<td>Tests</td>
+<td><code>tests/test_usage_events.py</code> (16)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>One tap covers both background tiers</strong> because the FU unification made
+every <code>/v1/oneshot</code> execute as a <code>kind=oneshot</code> registry run through
+<code>build_task_runner</code>. The tier tag reads <code>RunMeta.kind</code>, so the two stay
+distinguishable in the rollup without two call sites.</p>
+<p><strong>The arithmetic trap, recorded because it is easy to get wrong later.</strong>
+Interactive spend is written to <code>usage.json</code> AND mirrored into the event
+log. <code>/cost</code> therefore adds the log's <em>background</em> tiers to <code>usage.json</code>'s
+total and deliberately excludes the log's <code>chat</code> bucket — summing both
+totals would count every interactive token twice. <code>usage.json</code> remains the
+base because it holds history from before the sink existed, which the log by
+construction does not.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
