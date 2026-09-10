@@ -10,7 +10,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Release state:** **v1.19.0 is released** (2026-07-12) — agent platform Stage 2 as a PREVIEW surface. v1.18.8 (2026-06-14) and v1.18.7 (2026-06-13) precede it. The `POST /v1/oneshot` gateway shape (bearer auth) that ppxai-sre's outlook-monitor agent consumes stays **byte-identical** across all of these, including the unreleased work below. See [docs/release-notes-v1.19.0.md](docs/release-notes-v1.19.0.md).
 
-**Active branch:** `bugfix/v1.19.1` (**not yet released**). Opened for tool-loop transcript integrity; it now also carries three implemented ADRs (0009, 0010, 0011). See [CHANGELOG.md](CHANGELOG.md) `[1.19.1]` for the full list and [docs/release-notes-v1.19.1-DRAFT.md](docs/release-notes-v1.19.1-DRAFT.md) for the migration detail.
+**Active branch:** `bugfix/v1.19.1` (**not yet released**). Opened for tool-loop transcript integrity; it now also carries four implemented ADRs (0008, 0009, 0010, 0011) plus ADR 0012 and an opt-in Anthropic provider. See [CHANGELOG.md](CHANGELOG.md) `[1.19.1]` for the full list and [docs/release-notes-v1.19.1.md](docs/release-notes-v1.19.1.md) for the migration detail.
 
 ⚠️ **The command surface was renamed with NO aliases** (ADR 0011). If you see `/agent`, `/agentrun`, `/agentruns`, `/tools agent`, or `/task run` in older docs or comments, they are **gone**:
 

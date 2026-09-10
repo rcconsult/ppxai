@@ -100,7 +100,11 @@ SPECIFICATIONS.md, RELATED-PROJECTS.md, CODE_OF_CONDUCT.md.
 
 ## PHASE 2 — ✅ DONE — release paperwork (blocked any release)
 
-1. **`docs/release-notes-v1.19.1-DRAFT.md` is ~40 commits stale** (last touched `573b76ff`,
+1. ~~**`docs/release-notes-v1.19.1-DRAFT.md` is ~40 commits stale**~~ —
+   **DONE 2026-09-10.** The draft was 101 commits stale by the time it was
+   finalized. Written out as `docs/release-notes-v1.19.1.md` and the draft
+   deleted; `scripts/validate-release.py v1.19.1` no longer errors on it.
+   Original finding: **`docs/release-notes-v1.19.1-DRAFT.md` was stale** (last touched `573b76ff`,
    2026-08-06). Missing: security/admission-boundary unification (`135abf48`), the entire
    `network.ssl.*` + outbound-TLS-resolver feature and its review fixes (`f9dff325`,
    `ccdd0f3f`, `7c82c95e`), Gemini `response_format`/grounding fixes (`f72c10c7`,

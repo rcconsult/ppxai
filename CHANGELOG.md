@@ -777,7 +777,7 @@ of asserting it.
 
 ### Removed / Renamed (BREAKING — ADR 0011)
 
-Old names are **removed**, not aliased. Full rationale in [ADR 0011](docs/decisions/0011-command-taxonomy-streamline.md); migration table in `docs/release-notes-v1.19.1-DRAFT.md`.
+Old names are **removed**, not aliased. Full rationale in [ADR 0011](docs/decisions/0011-command-taxonomy-streamline.md); migration table in [docs/release-notes-v1.19.1.md](docs/release-notes-v1.19.1.md).
 
 | Removed | Use instead |
 |---|---|

@@ -1,13 +1,69 @@
-# ppxai v1.19.1 — release notes (DRAFT — accumulating until release)
+# Release Notes — v1.19.1
 
-> Working draft per the F/U sequencing plan: each U-stage lands its breaking
-> changes here as it commits. Finalized (and renamed to
-> `release-notes-v1.19.1.md`) by the `/release` flow.
->
-> **Maintainer note:** this file is what ships. Backfilled through
-> `b7c6b527` (2026-08-15); if commits land after that, extend it before
-> running `/release` — `CHANGELOG.md` `[1.19.1]` is the authoritative
-> source to backfill from.
+A bug-fix release that grew four accepted ADRs and a new provider. The
+headline is **transcript integrity** — the defect that opened the branch:
+malformed assistant turns (orphan `tool_calls`, empty-content assistants)
+were eating user prompts and 400-ing strict providers. Everything else
+accumulated around it.
+
+**Read the breaking-changes sections before upgrading.** There are four, and
+three of them are silent: a stale config key is ignored rather than
+rejected, so settings revert to defaults with no error. `/doctor` prints the
+exact old→new mapping for anything still stale — run it first.
+
+## v1 gateway compatibility (ppxai-sre and other consumers)
+
+**`POST /v1/oneshot` and `/v1/agent/*` are unchanged.** Same paths, same
+request and response shapes, byte-identical since v1.18.4. Every breaking
+change below is a slash command or a config key — none of them is on the
+wire.
+
+One internal change worth knowing if you embed ppxai as a library rather
+than calling the API: `engine/model_profiles.py` was deleted (Item 65) and
+`facts_without_an_instance(provider, model)` replaces `get_profile(model)`.
+The provider argument is load-bearing, not cosmetic — passing `""` resolves
+against the global table and silently returns wrong facts, including
+`prompt_based` on a wire that refuses tools.
+
+## Highlights
+
+- **`/cost` counts every tier.** It used to report interactive chat only,
+  silently omitting every `/v1/oneshot` and `/v1/agent/task` token your
+  provider billed you for (ADR 0008).
+- **A project-local `ppxai-config.json` is now read-only.** Toggling a UI
+  setting no longer edits a repository you happen to be standing in.
+- **Claude is a provider** — opt-in, and **untested against the live API**;
+  see Known limitations.
+- **`/task` and `/run` in every client**, including both TUIs (T8b).
+- **TLS settings in config**, not just environment variables.
+- 5,823 tests, up from ~4,800 when the branch opened.
+
+---
+
+## ⚠ Breaking change — a project-local `ppxai-config.json` is READ-ONLY
+
+Reads and writes now resolve differently, on purpose:
+
+| | resolution order |
+|---|---|
+| **read** | `PPXAI_CONFIG_FILE` → `./ppxai-config.json` → `~/.ppxai/ppxai-config.json` |
+| **write** | `PPXAI_CONFIG_FILE` → `~/.ppxai/ppxai-config.json` |
+
+`./ppxai-config.json` is dropped from the **write** path. It is a file a
+project *ships* — checked in, shared, often an example — and persisting a UI
+toggle into it edits somebody's repository as a side effect.
+
+This was not hypothetical. ppxai's own test suite rewrote ppxai's own
+tracked config on every run: a smoke test POSTs to every route, `/debug-log`
+persists a setting, and pytest's working directory is the repo root. Nothing
+failed, because the rewrite was an encoding round-trip — so it survived for
+as long as anyone was willing to type `git checkout --`.
+
+**What changes for you:** if you relied on `/debug-log on` writing to a
+project config, it now writes to `~/.ppxai/ppxai-config.json`. When the two
+paths diverge ppxai logs a warning naming both, because reads take the first
+file found and do not merge — the setting applies to the running session and
+the project config shadows it on the next start.
 
 ## ⚠ Breaking changes (ADR 0011 — command taxonomy, hard rename, NO aliases)
 
@@ -549,3 +605,133 @@ is part of the grant that config decides.
   whitelist silently dropped it).
 - Run audit: `tool_call` events carry a truncated args snapshot; a
   `run_usage` event records per-run tokens + tool cost + backend.
+
+
+---
+
+## New — `/cost` counts every tier (ADR 0008)
+
+`usage.json`'s only writer was reachable from interactive paths, so every
+`/v1/oneshot` and `/v1/agent/task` token your provider billed you for was
+**absent from `/cost`**. The number under-reported in the "cheaper than
+reality" direction, silently, exactly when background runs were active.
+
+A new append-only sink (`~/.ppxai/usage/usage-events.jsonl`) receives an
+event from every token-spending path, tagged by tier, provider, model, owner
+and run. `/cost` now shows the background tiers alongside the interactive
+total and reports an all-tier figure.
+
+- **Nothing to turn on**, no migration. The log starts empty and fills as
+  you use ppxai; existing `usage.json` history is untouched and still forms
+  the base of the report.
+- **Existing `/cost` fields keep their meaning.** `estimated_cost` is still
+  the interactive number; the all-tier figures are *new* keys
+  (`all_tier_cost`, `by_tier`, `background_cost`), so anything reading the
+  old fields does not silently change meaning.
+- **Best-effort by contract.** A failed usage write is logged and dropped,
+  never raised — accounting must not fail a chat turn or kill a running
+  agent. Do not treat the log as an audit trail.
+- KV-cache contention on self-hosted endpoints stays **acknowledged, not
+  modelled**.
+
+Cost is also now priced by **token class**: cached input is billed
+differently from fresh input, and charging a cache read at the full input
+rate over-reports by up to 10x on the cached portion. `UsageStats` carries
+the cache counts and `calculate_cost` prices them separately. Providers that
+do not cache are unaffected — the new arguments default to zero and produce
+exactly the numbers they produced before.
+
+## New — Anthropic provider (Claude), opt-in
+
+```bash
+uv sync --extra anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Claude as a first-class provider rather than an OpenAI-compatible endpoint —
+the fourth **wire**, not a dialect. `ModelFacts.wire_protocol` has reserved
+`"messages"` since ADR 0012; it now has a handler. Going through the
+OpenAI-compatible shim instead would have cost adaptive thinking, `effort`,
+prompt caching, and structured refusals.
+
+**See Known limitations before using it.**
+
+## Fixed — `/auto` returned 500 over `POST /command/auto`
+
+`/auto` ran its agent loop with a bare `asyncio.run()`. The server's command
+route is an `async def` that calls the handler directly from the running
+event loop, so the call raised `RuntimeError: asyncio.run() cannot be called
+from a running event loop` — web and VSCode got a **500**, not degraded
+output. The Rich TUI was unaffected (no loop running), which is why it
+survived this long.
+
+`/auto` also now reports **"running without checkpoints"** in its result
+rather than only on the server's stdout. Without a git repo the run creates
+no checkpoint and `/undo` cannot revert it; previously only the Rich TUI was
+told.
+
+## Fixed — model catalog corrections
+
+Several shipped model ids were dead or pointed at the wrong successor. These
+are user-visible because `/doctor` recommends from these tables:
+
+- **Four dead NVIDIA ids were shipping** and a fifth was recommended despite
+  never answering — three attempts, ten minutes of wall clock, zero output.
+  Recommending an id that never answers is worse than recommending nothing:
+  the user adopts it and their next request hangs.
+- **Gemini 2.5 retired** ahead of its 2026-10-16 sunset; two deprecation
+  rows pointed at *preview* successors and were corrected.
+- **Perplexity's pro line** has no successor on the surviving wire —
+  `sonar-pro` and `sonar-reasoning-pro` 400 on Responses, verified by three
+  live probes three weeks apart. Every affected operator is migrated to
+  `perplexity/sonar`, a downgrade and the only one available.
+- **Two guessed prices corrected** with measured ones.
+
+## Known limitations
+
+**The Anthropic provider has never made a live API call.** Its tests shape
+requests and read response objects; the SDK is never invoked. It is verified
+against a reading of the SDK surface and the published docs, not against
+Anthropic's observed behaviour.
+
+Treat it as **unproven, not broken** — it is inert unless you install the
+`[anthropic]` extra *and* configure the provider, so it cannot affect an
+existing install. If you are the first to point it at a real key, expect
+bugs. The three most likely, in order of how quietly they fail:
+
+1. **Stream event shapes** — wrong delta type names mean text and reasoning
+   stream as *nothing*: a silent empty response, not an error.
+2. **Cache token reporting** — if `cache_control` does not yield the cache
+   counts in `usage`, `/cost` under-reports the cached portion.
+3. **Structured outputs placement** — wrong slot means schema-pinned
+   `oneshot` calls 400.
+
+Its shipped prices are a dated snapshot and say so in the config.
+
+**Also unchanged from v1.19.0:** `/task` container tier (T9) is still
+deferred; VSCode `/task` has no split-pane (deliberate T8a scope); the
+KV-cache contention model is acknowledged, not implemented.
+
+## Tests
+
+**5,823 passed, 1 skipped** on macOS/Unix with `uv sync --all-extras`
+(2026-09-10). The count is environment-dependent: a base venv without the
+`[data]` extra skips the office and upload suites. On Windows expect extra
+platform skips (PTY, symlinks, POSIX signal semantics).
+
+Playwright specs under `tests/e2e/` are not in that count.
+
+## Upgrade notes
+
+1. **Run `/doctor` first.** It prints the exact old→new mapping for every
+   stale config key, and stale keys are ignored silently rather than
+   rejected — that is the whole hazard.
+2. **Re-learn three commands:** `/agent` → `/auto`, `/agentrun` → `/run`,
+   `/task run "x"` → `/task "x"`. No aliases.
+3. **Move six config keys** from `tools.agent.*` to `execution.*` (ADR
+   0010). Anything left behind reverts to its default.
+4. **If you toggled settings from inside a checkout**, they now persist to
+   `~/.ppxai/ppxai-config.json`. Check that file if a setting seems to have
+   moved.
+5. **`/cost` numbers will go up** — not because you are spending more, but
+   because it finally counts what you were already being billed for.
