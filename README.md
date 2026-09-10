@@ -20,7 +20,7 @@
 
 | Problem | ppxai Solution |
 |---------|----------------|
-| Locked to one AI vendor | Switch between Perplexity, Claude, Gemini, OpenAI, OpenRouter, Ollama anytime |
+| Locked to one AI vendor | Switch between Perplexity, Gemini, OpenAI, OpenRouter, Ollama anytime (Claude too — opt-in, and [untested against the live API](docs/ANTHROPIC-PROVIDER.md)) |
 | Expensive API costs | Use local models, free tiers, or cheapest provider that works |
 | Closed-source tools | Fully OSS—inspect, modify, self-host |
 | Terminal OR IDE | Same experience everywhere—TUI, Desktop App, VSCode extension |

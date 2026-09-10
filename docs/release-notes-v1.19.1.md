@@ -32,8 +32,9 @@ against the global table and silently returns wrong facts, including
   provider billed you for (ADR 0008).
 - **A project-local `ppxai-config.json` is now read-only.** Toggling a UI
   setting no longer edits a repository you happen to be standing in.
-- **Claude is a provider** — opt-in, and **untested against the live API**;
-  see Known limitations.
+- **Claude is a provider** — opt-in, and ⚠️ **UNTESTED against the live
+  API**: it has never made a real API call. See
+  [Known limitations](#known-limitations) before using it.
 - **`/task` and `/run` in every client**, including both TUIs (T8b).
 - **TLS settings in config**, not just environment variables.
 - 5,823 tests, up from ~4,800 when the branch opened.
@@ -641,7 +642,14 @@ the cache counts and `calculate_cost` prices them separately. Providers that
 do not cache are unaffected — the new arguments default to zero and produce
 exactly the numbers they produced before.
 
-## New — Anthropic provider (Claude), opt-in
+## New — Anthropic provider (Claude), opt-in — ⚠️ UNTESTED AGAINST THE LIVE API
+
+> ⚠️ **This provider has never made a real API call.** It is verified against
+> a reading of the SDK surface and the published docs, not against
+> Anthropic's observed behaviour. **Unproven, not broken** — it is inert
+> unless you install the extra *and* configure the provider, so it cannot
+> affect an existing install. Full detail and the three most likely failures
+> under [Known limitations](#known-limitations).
 
 ```bash
 uv sync --extra anthropic
