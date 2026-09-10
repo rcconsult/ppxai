@@ -595,7 +595,12 @@ RECOMMENDED_DEFAULTS: dict[str, str] = {
     "openai": "gpt-5.6-terra",        # 2026-08-31: parity with gpt-5.5 at 40% price
     "perplexity": "perplexity/sonar",  # ADR 0012: only Sonar on the surviving wire
     "nvidia": "moonshotai/kimi-k3",  # 2026-08-31: the qwen line hit EOL (410)
-    "anthropic": "claude-sonnet-4-6",
+    # 2026-09-10: was claude-sonnet-4-6, a previous-generation id this repo
+    # neither ships nor prices. Harmless while no Anthropic provider existed;
+    # the moment one shipped, /doctor began recommending an unpriced model,
+    # which reports $0.00 in /cost rather than erroring. Item 66's shape,
+    # live rather than theoretical.
+    "anthropic": "claude-opus-5",
 }
 
 

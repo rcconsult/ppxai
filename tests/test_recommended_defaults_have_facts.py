@@ -38,8 +38,8 @@ from pathlib import Path
 import pytest
 
 from ppxai.config.facts_config import resolve_model_facts
-from ppxai.engine.model_deprecations import RECOMMENDED_DEFAULTS
 from ppxai.engine.facts_resolver import provider_class_for
+from ppxai.engine.model_deprecations import RECOMMENDED_DEFAULTS
 from ppxai.engine.model_facts import shipped_facts_for_model
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -125,6 +125,66 @@ class TestRecommendedDefaultsAreMeasured:
         assert facts.max_tokens > 0, (
             f"{provider} recommends {model!r} with max_tokens=0 — the signature "
             f"of a missing row rather than a deliberate value."
+        )
+
+
+def _shipped_model_ids(provider: str) -> set[str]:
+    """Model ids the provider's config actually carries.
+
+    The loader re-keys `models` by index and moves the id into an `id`
+    field, so reading the dict's KEYS gives '1', '2', '3' — a trap that cost
+    a false finding while auditing this.
+    """
+    from ppxai.config.providers import get_provider_config
+
+    models = (get_provider_config(provider) or {}).get("models", {}) or {}
+    return {v.get("id") for v in models.values() if isinstance(v, dict) and v.get("id")}
+
+
+class TestEveryRecommendationIsShippedAndPriced:
+    """Reachability was not enough, and this is the gap that proved it.
+
+    `RECOMMENDED_DEFAULTS` drives two user-facing things: /doctor's "your
+    default is deprecated, switch to this" advice, and the suggested default
+    for a fresh config. Both hand the user a model id to adopt.
+
+    On 2026-09-10 the anthropic entry named `claude-sonnet-4-6` — a
+    previous-generation id this repo neither ships nor prices — while the
+    provider's own default was `claude-opus-5`. It had been wrong for months
+    and cost nothing, because no Anthropic provider existed to reach it.
+    Shipping the provider made it live: /doctor would steer an operator onto
+    a model with NO pricing row, and an unpriced model reports $0.00 in
+    /cost rather than erroring.
+
+    The reachability fence below stayed green throughout — the provider was
+    registered and the id matched a `claude-*` facts glob, so every check it
+    made passed. A recommendation can be resolvable and still be advice
+    nobody should take, which is why these two assertions exist separately.
+    """
+
+    @pytest.mark.parametrize("provider,model", _reachable_recommendations())
+    def test_the_recommended_model_is_one_we_ship(self, provider, model):
+        shipped = _shipped_model_ids(provider)
+        if not shipped:
+            pytest.skip(f"{provider} ships no explicit model list")
+        assert model in shipped, (
+            f"{provider} recommends {model!r}, which is not in its shipped "
+            f"models {sorted(shipped)}. /doctor tells operators to adopt this "
+            f"id; recommending one the config does not carry sends them to a "
+            f"model ppxai has never resolved."
+        )
+
+    @pytest.mark.parametrize("provider,model", _reachable_recommendations())
+    def test_the_recommended_model_has_a_price(self, provider, model):
+        from ppxai.config.providers import get_model_pricing
+
+        pricing = get_model_pricing(provider)
+        if not pricing:
+            pytest.skip(f"{provider} config carries no pricing block")
+        assert model in pricing, (
+            f"{provider} recommends {model!r} with no pricing row. An unpriced "
+            f"model does not error — calculate_cost returns 0.0 — so /cost "
+            f"silently reports $0.00 for every request the operator makes."
         )
 
 

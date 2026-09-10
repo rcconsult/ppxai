@@ -46,6 +46,8 @@ quoting them** — this table is a map, not a source.
 
 | # | Item | Status |
 |---|---|---|
+| **71** | the Anthropic provider has never made a live API call | ⚠️ **shipped unproven** — 3 named assumptions; needs a key, ~30 min |
+| **72** | the additive-CA TLS guarantee is pinned only on cafile hosts | coverage ceiling; Linux CI cannot decide it offline |
 | **64** | re-probe Perplexity's pro line on the Responses wire | ⏰ **2026-09-27.** Probes 1+2+3 all still 400 — table confirmed correct, no code change. The 09-26 obligation deliberately STAYS as the last check before the cutover; see the item for why |
 | **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
 | **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
@@ -58,7 +60,7 @@ quoting them** — this table is a map, not a source.
 | **38** | model-catalog watch list | recurring sweep; last one found 4 dead NVIDIA ids shipping |
 | **55** | OpenAI fleet refresh (gpt-5.6 GA + price cuts) | cost-driven, no deadline |
 | **63** | benchmark conclusions hand-typed into code, unlinked | sequenced after ADR 0012 W3 |
-| **66** | the deprecation table only knows the models WE ship | distinct from 38 |
+| **66** | the deprecation table only knows the models WE ship | **went live 2026-09-10** — shipping the Anthropic provider made a stale `RECOMMENDED_DEFAULTS` row reachable; fixed + fenced, but the class stands |
 | **65** | `BUILTIN_PROFILES` retired ✅ — §4b/§4c reference-data validation open | §4c is an owner's call |
 | **67** | ruff backlog — defect half ✅ closed | remainder **deliberate, no action** |
 | **23** | `SessionManager` growth drift | **flag-only, no action** (trigger: 2,500 LoC) |
@@ -68,6 +70,103 @@ quoting them** — this table is a map, not a source.
 ---
 
 ## Open
+
+### Item 71 — the Anthropic provider has never made a live API call [providers / anthropic]
+
+**Filed 2026-09-10, the day the provider merged to `bugfix/v1.19.1`.**
+
+**What's wrong:** `ppxai/engine/providers/anthropic.py` (482 LoC) and
+`wire/messages.py` (219 LoC) are verified against a reading of the Anthropic
+SDK surface and the published docs — never against the API's observed
+behaviour. All 24 tests shape a request or read a response object; the SDK
+is never invoked, and no `ANTHROPIC_API_KEY` existed on the machine it was
+written on.
+
+**Why it is filed rather than just documented:** the CHANGELOG and
+`docs/ANTHROPIC-PROVIDER.md` both carry a banner, which tells a *user*. This
+entry tells *release planning* — a doc banner is invisible to the question
+"what is unfinished on this branch", and v1.19.1 would otherwise ship a
+provider whose status lives only in prose.
+
+**Blast radius is bounded, and that is why it shipped:** the provider is
+inert unless an operator installs the `[anthropic]` extra AND configures the
+provider. It cannot affect an existing install.
+
+**The three assumptions a smoke test settles**, in order of how quietly they
+fail:
+
+1. **Stream event shapes.** The handler matches `content_block_delta` with
+   `text_delta` / `thinking_delta` deltas. Wrong type names mean text and
+   reasoning stream as **nothing** — a silent empty response, not an error.
+2. **Cache token reporting.** Top-level `cache_control` is assumed to yield
+   `cache_creation_input_tokens` / `cache_read_input_tokens` in `usage`. If
+   it does not, `/cost` under-reports the cached portion and the cache-aware
+   pricing added in `3ff903f2` is decorative.
+3. **Structured outputs placement.** `response_format` sits inside
+   `output_config.format` on `oneshot`. Wrong slot means schema-pinned
+   oneshot calls 400.
+
+**Also unverified:** the shipped prices are a dated snapshot (Anthropic's
+published table, cached 2026-06-24) carried with a `__comment` saying so.
+
+**Planned:** before v1.19.1 releases, OR before anyone is told the provider
+works — whichever comes first.
+
+**Effort:** ~30 min with a key — one `/v1/oneshot`, one streaming turn with
+a tool call, one repeat request to confirm cache reads appear.
+
+**Trigger to revisit:** the first bug report against this provider; or any
+release that would put it in front of users.
+
+---
+
+### Item 72 — the additive-CA TLS guarantee is pinned only on cafile hosts [testing / tls]
+
+**Filed 2026-09-10.** Surfaced while fixing the Linux-only trust-store
+failures (`34c07e99`), and deliberately not hidden by that fix.
+
+**What's wrong:** `network.ssl.*` exists to guarantee a custom CA **adds
+to** the system trust store rather than replacing it — the roaming-laptop
+failure the module was built to prevent. That guarantee has two halves:
+
+- *"the CA was added"* — decidable everywhere, still asserted on both
+  platforms.
+- *"the system roots stayed"* — decidable **only where the OS default store
+  enumerates.**
+
+On a capath host (Debian/Ubuntu, `/etc/ssl/certs`) OpenSSL reads the store
+lazily, so `get_ca_certs()` returns 0 while verification works perfectly. A
+correct additive context and a broken `create_default_context(cafile=X)` one
+both enumerate exactly 1 root, and nothing in the `ssl` API exposes a
+context's configured verify paths. The two are **indistinguishable offline**.
+
+So the second half now skips on Linux CI and is pinned only on cafile hosts
+— the macOS dev machine and the release build.
+
+**Why this is a ceiling, not a bug:** telling them apart needs a real
+handshake against a certificate signed by a system root, which is a network
+fact and does not belong in a hermetic suite. The skip is loud and names the
+mechanism rather than quietly relaxing the assertion.
+
+**What still protects it:** a truly certless interpreter fails loudly —
+`test_os_trust_store_is_reachable_without_any_ssl_env` asserts the capath
+exists and is non-empty on stores that do not enumerate, and says so in
+those words.
+
+**Options:** (1) accept the ceiling and rely on the cafile hosts — current
+state; (2) an opt-in network-marked test that does the handshake, run
+outside the hermetic suite; (3) a Linux CI job that installs a cafile-based
+store so the existing assertion becomes decidable there.
+
+**Planned:** no version target — a decision, not a defect.
+
+**Trigger to revisit:** any change to `ppxai/config/tls.py`'s additive
+behaviour, or a report of a custom CA replacing the trust store in the
+field.
+
+**Effort:** ~1–2 h for option 2 or 3.
+
+---
 
 ### Item 3 — k8s session-manager security tests [originally Critique #8 in v1.18.2]
 
@@ -1419,6 +1518,28 @@ moving code that must not move — the same disposition as the 25
 patch-semantics rows in the lazy-import fence.
 
 ### Item 66 — the deprecation table only knows the models WE ship [providers / doctor]
+
+**2026-09-10 — this stopped being theoretical, and the way it surfaced is
+the point.** `RECOMMENDED_DEFAULTS["anthropic"]` named `claude-sonnet-4-6`:
+a previous-generation id this repo neither ships nor prices. It had been
+wrong for months at zero cost, because no Anthropic provider existed to
+reach it. Shipping the provider (`2306a7f7`) made it live — `/doctor` would
+have steered an operator onto a model with **no pricing row**, and an
+unpriced model does not error: `calculate_cost` returns 0.0, so `/cost`
+reports $0.00 for every request.
+
+Fixed to `claude-opus-5`, and fenced:
+`tests/test_recommended_defaults_have_facts.py` now asserts every
+recommendation is **shipped** and **priced** by its provider's config, not
+merely resolvable. The pre-existing reachability fence stayed green
+throughout — the provider was registered and the id matched a `claude-*`
+facts glob, so every check it made passed. A recommendation can be
+resolvable and still be advice nobody should take.
+
+**The class is not closed by that fix.** The table still only knows the
+models ppxai ships, so a model an operator configures that we have never
+heard of gets no deprecation advice at all.
+
 
 **Filed 2026-08-31.** Found by sweeping the **operator's** configured ids
 instead of the example config's — a distinct defect from Item 38, which swept
