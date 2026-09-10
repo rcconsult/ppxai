@@ -769,16 +769,65 @@ def _format_web_search_backend_section() -> list[str]:
 # silently ignored and its setting reverts to the default. That silence is
 # exactly what this check exists to break: /doctor is the operator's discovery
 # path for the rename.
+#
+# Each row also carries WHAT REVERTING COSTS, because "moved, now ignored" is
+# only half the message. An operator who configured a key deliberately needs
+# to know what they lost, and one of these losses is a security control:
+# `tools.agent.sandbox` held the filesystem seal, and its default is
+# `enforcement: "off"`, which makes the whole `read_paths.deny` list inert.
+# Someone careful enough to have written a jail gets it silently removed by
+# the upgrade — the exact operator this warning exists for.
+#
+# `severity` is "security" for a loss that widens what a run can reach, and
+# "behaviour" for one that only changes what it does. The renderer sorts
+# security first, because a flat list buries the row that matters under five
+# that do not.
 ADR_0010_KEY_MOVES: list[tuple] = [
-    (("tools", "agent", "task_tier_enabled"), "execution.task.enabled"),
-    (("tools", "agent", "sandbox"), "execution.task.sandbox"),
-    (("tools", "agent", "spawn_consent"), "execution.task.consent.spawn_consent"),
-    (("tools", "agent", "consent_ttl_s"), "execution.task.consent.consent_ttl_s"),
+    (
+        ("tools", "agent", "sandbox"),
+        "execution.task.sandbox",
+        "the filesystem seal reverts to enforcement:\"off\" — the read_paths.deny "
+        "list (.env, .ssh, secrets, …) stops being applied entirely, so a "
+        "/task run granted read_file can read ANY file this process can "
+        "reach, including ~/.ppxai/.env",
+        "security",
+    ),
+    (
+        ("tools", "agent", "task_tier_enabled"),
+        "execution.task.enabled",
+        "the tool-capable tier reverts to DISABLED — /task runs that need "
+        "tools stop working (fail-safe, but silent)",
+        "behaviour",
+    ),
+    (
+        ("tools", "agent", "spawn_consent"),
+        "execution.task.consent.spawn_consent",
+        "reverts to \"deny\" — API-driven spawns park awaiting consent "
+        "instead of proceeding (fail-safe, but a background run that used to "
+        "complete now waits and then denies on TTL)",
+        "behaviour",
+    ),
+    (
+        ("tools", "agent", "consent_ttl_s"),
+        "execution.task.consent.consent_ttl_s",
+        "reverts to 300s — a longer window you configured is gone, so parks "
+        "expire sooner than you expect",
+        "behaviour",
+    ),
     (
         ("tools", "agent", "result_retention_s"),
         "execution.task.budgets.result_retention_s",
+        "reverts to the default retention — collected run results may be "
+        "reaped earlier than you configured",
+        "behaviour",
     ),
-    (("tools", "agent", "default_subagent"), "execution.default_subagent"),
+    (
+        ("tools", "agent", "default_subagent"),
+        "execution.default_subagent",
+        "reverts to the default sub-agent model — spawned children run on a "
+        "different model than you chose",
+        "behaviour",
+    ),
 ]
 
 
@@ -802,21 +851,34 @@ def _format_config_migration_section(config_data: dict[str, Any]) -> list[str]:
     """
     lines: list[str] = ["Config shape (ADR 0010, v1.19.1):"]
     stale = [
-        (".".join(path), new)
-        for path, new in ADR_0010_KEY_MOVES
+        (".".join(path), new, cost, severity)
+        for path, new, cost, severity in ADR_0010_KEY_MOVES
         if _lookup_path(config_data, path) is not None
     ]
     if not stale:
         lines.append("   ✓ no keys at pre-v1.19.1 locations")
         return lines
 
+    # Security losses first — a flat list buries the one row that widens
+    # what a run can reach under five that only change what it does.
+    stale.sort(key=lambda row: 0 if row[3] == "security" else 1)
+
+    security_count = sum(1 for row in stale if row[3] == "security")
     lines.append(
         f"   ⚠ {len(stale)} key(s) at their OLD location — BREAKING change in "
         "v1.19.1, no dual-read. These are being IGNORED and have reverted to "
-        "their defaults. Move them:"
+        "their defaults:"
     )
-    for old, new in stale:
-        lines.append(f"      {old}  ->  {new}")
+    if security_count:
+        lines.append(
+            f"   🔴 {security_count} of them is a SECURITY control. Read the "
+            f"cost line before deciding this is cosmetic."
+        )
+
+    for old, new, cost, severity in stale:
+        marker = "🔴" if severity == "security" else "  "
+        lines.append(f"      {marker} {old}  ->  {new}")
+        lines.append(f"         cost while stale: {cost}")
     return lines
 
 

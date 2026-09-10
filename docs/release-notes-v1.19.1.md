@@ -738,8 +738,37 @@ Playwright specs under `tests/e2e/` are not in that count.
    `/task run "x"` → `/task "x"`. No aliases.
 3. **Move six config keys** from `tools.agent.*` to `execution.*` (ADR
    0010). Anything left behind reverts to its default.
-4. **If you toggled settings from inside a checkout**, they now persist to
+
+4. **🔴 If you configured `tools.agent.sandbox`, read this before upgrading.**
+   That key held the `/task` filesystem seal. It moved to
+   `execution.task.sandbox`, and — like the other five — a copy left at the
+   old path is **silently ignored**. What makes this one different is what
+   the default is:
+
+   ```jsonc
+   "execution": { "task": { "sandbox": { "enforcement": "off", ... } } }
+   ```
+
+   `enforcement: "off"` does not weaken the seal, it **removes it**. The
+   whole `read_paths.deny` list — `.env`, `.git`, `.ssh`, `secrets` — stops
+   being applied, because the seal is gated on
+   `enforcement == "in_process"` as a unit. A `/task` run granted
+   `read_file` can then read any file the ppxai process can reach,
+   **including `~/.ppxai/.env`** — every provider API key on the box — with
+   no consent prompt and nothing in the run's audit trail recording that
+   the jail was dropped.
+
+   So the operator who was careful enough to configure a jail is precisely
+   the one this upgrade silently un-jails. `/doctor` now reports this row
+   with its cost rather than only its new path; run it, and move the key
+   before enabling `execution.task.enabled`.
+
+   **You are not exposed if** you never set `tools.agent.sandbox`, or if
+   `execution.task.enabled` is `false` — its default, and the shipped
+   example's value. The tool-capable tier has to be deliberately switched
+   on for any of this to be reachable.
+5. **If you toggled settings from inside a checkout**, they now persist to
    `~/.ppxai/ppxai-config.json`. Check that file if a setting seems to have
    moved.
-5. **`/cost` numbers will go up** — not because you are spending more, but
+6. **`/cost` numbers will go up** — not because you are spending more, but
    because it finally counts what you were already being billed for.

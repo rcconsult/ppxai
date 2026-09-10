@@ -786,6 +786,29 @@ hook-rewritten commands, OR `rtk gain` totals plateau across sessions
 
 ### Item 46 — `/task` `read_file` (and non-`spawn_subagent` tools) are consent-free AND path-unconfined by default [agent platform / security posture]
 
+**2026-09-10 — the UPGRADE-REGRESSION half is mitigated; the posture
+decision is untouched.** Releasing v1.19.1 turns this from a standing
+posture question into an active regression for one specific operator: ADR
+0010 moved `tools.agent.sandbox` with no dual-read, so someone who had
+configured `enforcement: "in_process"` — a working jail — gets it silently
+ignored on upgrade and reverted to `"off"`, which makes the whole
+`read_paths.deny` list inert (the seal is gated on
+`enforcement == "in_process"` as a unit, `task_runner.py:334`). The operator
+careful enough to build a jail is the one the upgrade removes it from.
+
+`/doctor` now reports that row with **what reverting costs** — naming
+`~/.ppxai/.env` explicitly — sorts security losses above behaviour changes,
+and the release notes carry it as its own upgrade step rather than one line
+in a six-key table. Fenced by `tests/test_doctor_stale_key_cost.py`,
+including a test pinning that `sandbox` is the only security-class move, so
+a second one cannot ride in as an ordinary row.
+
+**This does not answer the item.** The default posture — tool-capable runs
+being consent-free and path-unconfined when the tier is enabled — is still
+an owner decision, and the three fix directions below still stand. What
+changed is that an operator who already made the opposite decision no longer
+loses it silently.
+
 **2026-09-05 — this stopped being hypothetical.** An operator config audited
 today still had the six ADR 0010 keys at `tools.agent.*`, where they are
 silently ignored, so `task_tier_enabled: true` was reading as **disabled** —
