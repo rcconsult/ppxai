@@ -46,7 +46,7 @@ quoting them** — this table is a map, not a source.
 
 | # | Item | Status |
 |---|---|---|
-| **71** | the Anthropic provider has never made a live API call | ⚠️ **shipped unproven** — 3 named assumptions; needs a key, ~30 min |
+| **71** | the Anthropic provider has never made a live API call | **accepted + documented, NO ACTION** — marked untested on all five surfaces; ships as a known limitation. Not a release blocker |
 | **72** | the additive-CA TLS guarantee is pinned only on cafile hosts | coverage ceiling; Linux CI cannot decide it offline |
 | **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
 | **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
@@ -70,7 +70,26 @@ quoting them** — this table is a map, not a source.
 
 ## Open
 
-### Item 71 — the Anthropic provider has never made a live API call [providers / anthropic]
+### Item 71 — the Anthropic provider has never made a live API call — ACCEPTED, documented, no action [providers / anthropic]
+
+**Disposition (owner, 2026-09-10): marked untested and shipped.** This is
+not an open task and not a release blocker. The resolution chosen was
+*disclosure*, not verification — the provider is opt-in, inert without
+both the `[anthropic]` extra and a config block, and every surface that
+announces it says so:
+
+| Surface | Marking |
+|---|---|
+| `CHANGELOG.md` | heading + blockquote |
+| `docs/release-notes-v1.19.1.md` | heading, blockquote, highlights bullet, Known limitations |
+| `docs/ANTHROPIC-PROVIDER.md` | status banner at the top |
+| `ROADMAP.md` | ⚠️ CODE COMPLETE, UNVERIFIED (was ✅ DONE) |
+| `README.md` | qualified in the vendor table |
+
+The entry stays open so the state is visible to release planning rather
+than only in prose, and so the first bug report has somewhere to land.
+It does not need a decision. The detail below is reference material for
+whoever eventually runs a live call — not a to-do list.
 
 **Filed 2026-09-10, the day the provider merged to `bugfix/v1.19.1`.**
 
@@ -108,8 +127,8 @@ fail:
 **Also unverified:** the shipped prices are a dated snapshot (Anthropic's
 published table, cached 2026-06-24) carried with a `__comment` saying so.
 
-**Planned:** before v1.19.1 releases, OR before anyone is told the provider
-works — whichever comes first.
+**Planned:** nothing. Closed as a decision rather than a task — the
+limitation is disclosed and the provider ships with it.
 
 **Effort:** ~30 min with a key — one `/v1/oneshot`, one streaming turn with
 a tool call, one repeat request to confirm cache reads appear.
