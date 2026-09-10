@@ -5,7 +5,7 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.19.1] - unreleased
+## [1.19.1] - 2026-09-10
 
 Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — stop malformed assistant turns (orphan `assistant.tool_calls` and empty-content assistants) from eating user prompts and from reaching strict providers. Surfaced by a live VSCode tools-enabled trial (2026-07-12) whose chats 400'd repeatedly and whose prompts then silently vanished. The branch then grew two accepted ADRs: **ADR 0011** (command taxonomy — `/auto` · `/run` · `/task`) and **ADR 0009** (task execution profiles + oneshot enrichment).
 
