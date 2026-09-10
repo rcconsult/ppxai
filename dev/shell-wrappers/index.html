@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1146,6 +1146,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#scope-the-ai-agents-shell-tool-only-not-the-interactive-terminal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope: the AI agent's shell tool ONLY — not the interactive terminal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#why-bother" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1303,6 +1314,28 @@ wrapper that fits one of the two generic patterns (probe / always)
 requires zero ppxai code changes.</p>
 <p>The first wrapper that ships with ppxai is <strong>rtk</strong> (Rust Token Killer,
 https://github.com/rtk-ai/rtk) — see <a href="#rtk-the-first-concrete-wrapper">§rtk</a> below.</p>
+<h2 id="scope-the-ai-agents-shell-tool-only-not-the-interactive-terminal">Scope: the AI agent's shell tool ONLY — not the interactive terminal<a class="headerlink" href="#scope-the-ai-agents-shell-tool-only-not-the-interactive-terminal" title="Permanent link">&para;</a></h2>
+<p><strong>Wrappers apply only to commands the AI runs through the <code>execute_shell_command</code>
+tool.</strong> They do <strong>not</strong> touch the interactive browser terminal (the xterm PTY at
+<code>/ws/terminal</code>), and this is deliberate:</p>
+<ul>
+<li><strong>The agent shell tool</strong> (<code>ppxai/engine/tools/builtin/shell.py</code>) is the <em>single</em>
+  call site for <code>find_first_rewrite</code>. When the model asks to run <code>git status</code>,
+  the engine rewrites it to <code>rtk git status</code> before spawning, and only the
+  compact output enters the conversation — which is where the token savings live.</li>
+<li><strong>The interactive terminal</strong> (<code>ppxai/server/routes/terminal.py</code>) spawns a raw
+  PTY shell (bash). What <em>you</em> type there runs unmodified. <code>rtk gain</code> will show
+  0 for interactively-typed commands, because they never pass through the
+  wrapper framework.</li>
+</ul>
+<p>So "I typed <code>pip list</code> in the terminal and nothing was wrapped / <code>rtk gain</code> didn't
+move" is <strong>expected, not a bug.</strong> rtk optimizes the <em>AI's</em> token budget, not a
+human's terminal output — a person generally wants the real, full output of their
+own commands, not the model-oriented compact form. If the AI runs <code>pip list</code> via
+its shell tool, <em>that</em> invocation IS wrapped and counted.</p>
+<p>(If you ever want interactive-terminal commands wrapped too, that would be a new
+opt-in config toggle — it is intentionally NOT the default. Ask before assuming
+the terminal is "broken" because it doesn't wrap.)</p>
 <h2 id="why-bother">Why bother<a class="headerlink" href="#why-bother" title="Permanent link">&para;</a></h2>
 <p>Agent loops that shell out a lot — running <code>git status</code>, checking CI,
 searching files, listing directories — consume LLM context proportional
@@ -1320,18 +1353,18 @@ rewrite, transparent to the user, opt-out via config.</p>
 <li><strong>Always</strong> — no dry-run; user opted in, so wrap every command (e.g. <code>time</code>, <code>nice</code>, perf profilers).</li>
 <li>Write a JSON entry in your <code>~/.ppxai/ppxai-config.json</code>:
    <div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">&quot;wrappers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">"wrappers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="p">{</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">          </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;myperf&quot;</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">          </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;probe&quot;</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">          </span><span class="nt">&quot;binary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;myperf&quot;</span><span class="p">,</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">          </span><span class="nt">&quot;probe_args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;dry-run&quot;</span><span class="p">],</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">          </span><span class="nt">&quot;no_rewrite_marker&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;skip:&quot;</span><span class="p">,</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">          </span><span class="nt">&quot;transparent_for_safety&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">          </span><span class="nt">&quot;prompt_block_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MYPERF.md&quot;</span><span class="p">,</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">          </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auto&quot;</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">          </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"myperf"</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">          </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"probe"</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">          </span><span class="nt">"binary"</span><span class="p">:</span><span class="w"> </span><span class="s2">"myperf"</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">          </span><span class="nt">"probe_args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"dry-run"</span><span class="p">],</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">          </span><span class="nt">"no_rewrite_marker"</span><span class="p">:</span><span class="w"> </span><span class="s2">"skip:"</span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">          </span><span class="nt">"transparent_for_safety"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">          </span><span class="nt">"prompt_block_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MYPERF.md"</span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">          </span><span class="nt">"enabled"</span><span class="p">:</span><span class="w"> </span><span class="s2">"auto"</span>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">        </span><span class="p">}</span>
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">      </span><span class="p">]</span>
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="p">}</span>
@@ -1377,7 +1410,7 @@ rewrite, transparent to the user, opt-out via config.</p>
 <td><code>enabled</code></td>
 <td>no</td>
 <td><code>"auto"</code> | <code>"always"</code> | <code>"never"</code> (default <code>"auto"</code>)</td>
-<td><code>auto</code> = wrap iff binary is on PATH; <code>always</code> = error if missing; <code>never</code> = disabled.</td>
+<td><code>auto</code> = wrap iff binary is on PATH; <code>always</code> = wrap unconditionally, <strong>without checking PATH</strong>; <code>never</code> = disabled.</td>
 </tr>
 <tr>
 <td><code>transparent_for_safety</code></td>
@@ -1461,7 +1494,7 @@ rewrite, transparent to the user, opt-out via config.</p>
 <li><strong>First-match-wins.</strong> The first wrapper whose <code>maybe_rewrite()</code> returns a non-None form wraps the command; subsequent wrappers don't see the wrapped form. (No pipelining today; if pipelined wrapping is ever wanted, a <code>chain: bool</code> field can be added.)</li>
 <li>A wrapper with <code>enabled: never</code> is skipped entirely — neither engine-side rewrite nor prompt-hint injection.</li>
 <li><code>enabled: auto</code> skips the wrapper when its binary isn't on PATH (silent no-op).</li>
-<li><code>enabled: always</code> raises a clear error if the binary is missing — useful for cluster deployments that mandate a wrapper.</li>
+<li><code>enabled: always</code> wraps <strong>unconditionally, without consulting PATH</strong> — <code>is_active()</code> returns <code>True</code> and never calls <code>shutil.which</code> (<code>engine/tools/wrappers/base.py</code>, pinned by <code>test_is_active_always_ignores_binary</code>). Use it for a cluster deployment that mandates a wrapper and guarantees the binary. ⚠️ It does <strong>not</strong> raise if the binary is missing: the command is rewritten to a name the shell can't resolve and fails at execution time with that shell's error, not a wrapper-framework one. Use <code>auto</code> if you want a missing binary to degrade to the raw command.</li>
 </ul>
 <h2 id="safety-classification-interaction">Safety classification interaction<a class="headerlink" href="#safety-classification-interaction" title="Permanent link">&para;</a></h2>
 <p>The shell tool requests user consent on the <strong>raw</strong> command, before any
@@ -1480,14 +1513,14 @@ want consent on the wrapped form) is left alone.</p>
 and compresses common dev-tool outputs (<code>git</code>, <code>ls</code>, <code>grep</code>, <code>pytest</code>,
 <code>docker</code>, <code>kubectl</code>, etc.). It ships in ppxai's defaults as:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rtk&quot;</span><span class="p">,</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;probe&quot;</span><span class="p">,</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">&quot;binary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rtk&quot;</span><span class="p">,</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">&quot;probe_args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;hook&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;check&quot;</span><span class="p">],</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">&quot;no_rewrite_marker&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;No rewrite for:&quot;</span><span class="p">,</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">&quot;transparent_for_safety&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">&quot;prompt_block_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RTK.md&quot;</span><span class="p">,</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auto&quot;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rtk"</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"probe"</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">"binary"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rtk"</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">"probe_args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hook"</span><span class="p">,</span><span class="w"> </span><span class="s2">"check"</span><span class="p">],</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">"no_rewrite_marker"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No rewrite for:"</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">"transparent_for_safety"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">"prompt_block_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RTK.md"</span><span class="p">,</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">"enabled"</span><span class="p">:</span><span class="w"> </span><span class="s2">"auto"</span>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>When rtk is on PATH:
@@ -1505,13 +1538,13 @@ per-process).</p>
 <h3 id="rtk-specific-config-overriding-the-default">rtk-specific config (overriding the default)<a class="headerlink" href="#rtk-specific-config-overriding-the-default" title="Permanent link">&para;</a></h3>
 <p>Common patterns, all going under <code>tools.shell.wrappers</code> keyed by <code>name: "rtk"</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// Disable rtk wrapping entirely</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rtk&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;never&quot;</span><span class="p">}</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="p">{</span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rtk"</span><span class="p">,</span><span class="w"> </span><span class="nt">"enabled"</span><span class="p">:</span><span class="w"> </span><span class="s2">"never"</span><span class="p">}</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1">// Wrap silently but skip the prompt-hint block (saves ~1KB on the system prompt)</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rtk&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;prompt_block_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">}</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">{</span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rtk"</span><span class="p">,</span><span class="w"> </span><span class="nt">"prompt_block_path"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">}</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1">// Require rtk — fail loudly if missing (cluster deployment)</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rtk&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;always&quot;</span><span class="p">}</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">{</span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rtk"</span><span class="p">,</span><span class="w"> </span><span class="nt">"enabled"</span><span class="p">:</span><span class="w"> </span><span class="s2">"always"</span><span class="p">}</span>
 </span></code></pre></div>
 <p>The legacy <code>tools.shell.use_rtk</code> (string) and <code>use_rtk_prompt_hint</code>
 (bool) fields are recognized as a back-compat shim and translated
@@ -1519,9 +1552,20 @@ internally into the rtk default's <code>enabled</code> and <code>prompt_block_pa
 fields. Plan to migrate to the wrappers form before v1.20.x.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p><strong>Wrapping isn't happening.</strong> Check:
+0. <strong>Are you in the interactive terminal instead of the AI agent?</strong> Wrappers
+   only apply to the AI's <code>execute_shell_command</code> tool — commands you type in the
+   browser terminal (the xterm PTY) run raw by design and never move <code>rtk gain</code>.
+   See <a href="#scope-the-ai-agents-shell-tool-only--not-the-interactive-terminal">§Scope</a>.
+   Confirm by having the <em>AI</em> run a shell command and checking <code>rtk gain</code> again.
 1. <code>&lt;binary&gt; --version</code> works in the same shell that started ppxai.
 2. The wrapper entry's <code>enabled</code> is not <code>"never"</code>.
-3. ppxai was restarted after the wrapper became installed (detection cache is per-process).</p>
+3. ppxai was restarted after the wrapper became installed (detection cache is per-process).
+4. <strong>The wrapper loggers are DEBUG-level.</strong> Even with debug-log on, the
+   <code>ppxai.engine.tools.wrappers.*</code> loggers can sit at WARNING, so the
+   "Wrapper applied" / "Wrapper rtk:" DEBUG lines never appear in the log —
+   absence of those lines is NOT proof wrapping didn't happen. The ground truth
+   is rtk's own history: <code>rtk gain</code> and <code>~/.local/share/rtk/history.db</code> record
+   every command rtk actually rewrote and ran.</p>
 <p><strong>Specific command fails when wrapped.</strong> This is a wrapper-upstream issue;
 file at the wrapper's repo. Workarounds: (a) set <code>enabled: "never"</code> on
 the wrapper to disable; (b) once Phase 4 graceful fallback ships,
@@ -1613,7 +1657,7 @@ by a wide margin but YMMV.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

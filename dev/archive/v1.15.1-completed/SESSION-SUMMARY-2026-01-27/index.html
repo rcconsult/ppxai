@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1562,7 +1562,7 @@
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                                → Hard to debug
 </span></code></pre></div>
 <h3 id="after-decoupled">After (Decoupled)<a class="headerlink" href="#after-decoupled" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>EngineClient → EventBus.emit(&quot;stream_chunk&quot;) → _on_stream_chunk()
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>EngineClient → EventBus.emit("stream_chunk") → _on_stream_chunk()
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>                                              → _on_log_chunk()
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>                                              → _update_status()
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>                                              → [any new handler]
@@ -1610,14 +1610,14 @@
 <hr />
 <h2 id="production-evidence">Production Evidence<a class="headerlink" href="#production-evidence" title="Permanent link">&para;</a></h2>
 <p><strong>Log Analysis from ~/.ppxai/logs/tui-debug.log (Jan 27 23:43-23:45):</strong></p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>[EventBus] Emit &#39;engine:stream_start&#39;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>[EventBus] Emit 'engine:stream_start'
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>[Event] Stream started
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>[EventBus] Emit &#39;engine:tool_call&#39;: list_directory
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>[EventBus] Emit 'engine:tool_call': list_directory
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>[Event] Tool call: list_directory with 1 args
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>[Event] Added tool call message
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>[EventBus] Emit &#39;engine:tool_result&#39;: 2003 chars
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>[EventBus] Emit 'engine:tool_result': 2003 chars
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>[Event] Tool result from list_directory
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>[EventBus] Emit &#39;engine:stream_end&#39;: 4506 chars
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>[EventBus] Emit 'engine:stream_end': 4506 chars
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>[Event] Added assistant message: 4506 chars
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>Auto-saved session at 44 messages ✅
 </span></code></pre></div>
@@ -1822,7 +1822,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

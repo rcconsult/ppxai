@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -754,10 +754,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#agent-task-execute-agent-task" class="md-nav__link">
+  <a href="#auto-task-execute-agent-task" class="md-nav__link">
     <span class="md-ellipsis">
       
-        /agent &lt;task&gt; - Execute Agent Task
+        /auto &lt;task&gt; - Execute Agent Task
       
     </span>
   </a>
@@ -1059,10 +1059,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#custom-checkpoint-messages" class="md-nav__link">
+  <a href="#checkpoint-commit-message-format" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Custom Checkpoint Messages
+        Checkpoint Commit Message Format
       
     </span>
   </a>
@@ -1798,10 +1798,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#agent-task-execute-agent-task" class="md-nav__link">
+  <a href="#auto-task-execute-agent-task" class="md-nav__link">
     <span class="md-ellipsis">
       
-        /agent &lt;task&gt; - Execute Agent Task
+        /auto &lt;task&gt; - Execute Agent Task
       
     </span>
   </a>
@@ -2103,10 +2103,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#custom-checkpoint-messages" class="md-nav__link">
+  <a href="#checkpoint-commit-message-format" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Custom Checkpoint Messages
+        Checkpoint Commit Message Format
       
     </span>
   </a>
@@ -2197,7 +2197,7 @@
 <ol>
 <li>
 <p><strong>Enable agent mode</strong> (checkpoints enabled automatically):
-   <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>/agent refactor the authentication module to use JWT
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>/auto refactor the authentication module to use JWT
 </span></code></pre></div></p>
 </li>
 <li>
@@ -2221,7 +2221,7 @@
 <p><strong>Before Agent Task:</strong>
    <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Automatically runs:</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>git<span class="w"> </span>add<span class="w"> </span>-A
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;ppxai checkpoint: refactor auth module&quot;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"ppxai checkpoint: refactor auth module"</span>
 </span></code></pre></div></p>
 </li>
 <li>
@@ -2262,20 +2262,23 @@
 - ⚠️ Requires disk space for snapshots
 - ⚠️ Not atomic (individual file restores)
 - ⚠️ Old checkpoints must be manually cleaned</p>
-<p><strong>Note:</strong> File backend checkpoints are automatically cleaned up, keeping the last 10 by default.</p>
+<p><strong>Note:</strong> File backend checkpoints are <strong>not</strong> automatically cleaned up — they accumulate indefinitely until you act. <code>cleanup_old_checkpoints(keep_last=10)</code> (<code>ppxai/checkpoint.py</code>) exists in code but is only reachable through the explicit <code>/checkpoint clear</code> command, and that command calls it with <code>keep_last=0</code> — i.e. <code>/checkpoint clear</code> deletes <strong>all</strong> file-based checkpoint snapshots, not "keep the last 10". See <a href="#checkpoint-clear"><code>/checkpoint clear</code></a> below.</p>
 <hr />
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <h3 id="backend-selection">Backend Selection<a class="headerlink" href="#backend-selection" title="Permanent link">&para;</a></h3>
-<p>Edit <code>ppxai-config.json</code> to customize checkpoint behavior:</p>
+<p>Edit <code>ppxai-config.json</code> (nested under <code>tools.agent</code>) to customize checkpoint
+backend selection:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">&quot;agent&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">&quot;checkpoint_backend&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">&quot;checkpoint_message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ppxai checkpoint: {task}&quot;</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">}</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">"agent"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">"checkpoint_backend"</span><span class="p">:</span><span class="w"> </span><span class="s2">"auto"</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">}</span>
 </span></code></pre></div>
+<p><strong>Note:</strong> <code>ppxai-config.json</code> also ships a <code>checkpoint_message</code> key under
+<code>tools.agent</code>, but it has <strong>zero effect</strong> — nothing in <code>ppxai/</code> reads it. The
+commit message format is hardcoded; see <a href="#git-backend-preferred">How It Works → Git Backend</a>.</p>
 <p><strong>Backend Options:</strong></p>
 <table>
 <thead>
@@ -2303,21 +2306,22 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Examples:</strong></p>
+<p><strong>Examples</strong> (nested under <code>tools.agent</code> — these are abbreviated for
+brevity, not a valid top-level snippet):</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// Force git-only (fail if no git)</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="p">{</span><span class="nt">&quot;checkpoint_backend&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;git&quot;</span><span class="p">}</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="p">{</span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"agent"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"checkpoint_backend"</span><span class="p">:</span><span class="w"> </span><span class="s2">"git"</span><span class="p">}}}</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1">// Always use file snapshots</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">{</span><span class="nt">&quot;checkpoint_backend&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">}</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">{</span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"agent"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"checkpoint_backend"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">}}}</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1">// Disable checkpoints</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="p">{</span><span class="nt">&quot;checkpoint_backend&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">}</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="p">{</span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"agent"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"checkpoint_backend"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">}}}</span>
 </span></code></pre></div>
 <hr />
 <h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
-<h3 id="agent-task-execute-agent-task"><code>/agent &lt;task&gt;</code> - Execute Agent Task<a class="headerlink" href="#agent-task-execute-agent-task" title="Permanent link">&para;</a></h3>
+<h3 id="auto-task-execute-agent-task"><code>/auto &lt;task&gt;</code> - Execute Agent Task<a class="headerlink" href="#auto-task-execute-agent-task" title="Permanent link">&para;</a></h3>
 <p>Runs an autonomous agent loop with automatic checkpointing:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>/agent refactor the auth module to use JWT tokens
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>/auto refactor the auth module to use JWT tokens
 </span></code></pre></div>
 <p><strong>What happens:</strong>
 1. Checkpoint created automatically (git commit or file snapshot)
@@ -2456,13 +2460,17 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 </span></code></pre></div></p>
 <hr />
 <h4 id="checkpoint-clear"><code>/checkpoint clear</code><a class="headerlink" href="#checkpoint-clear" title="Permanent link">&para;</a></h4>
-<p>Clear old file-based checkpoint snapshots:</p>
+<p>Delete <strong>all</strong> file-based checkpoint snapshots (not a "keep recent N" prune —
+it calls <code>cleanup_old_checkpoints(keep_last=0)</code>, which removes every
+snapshot):</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>/checkpoint clear
 </span></code></pre></div>
 <p><strong>Output:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>🗑️  Cleared 8 old checkpoint snapshots
 </span></code></pre></div></p>
-<p><strong>Note:</strong> This only affects file-based checkpoints. Git checkpoints are managed by git history.</p>
+<p><strong>Note:</strong> This only affects file-based checkpoints and deletes them all —
+there is no partial/automatic cleanup. Git checkpoints are managed by git
+history and are unaffected.</p>
 <hr />
 <h4 id="checkpoint-info-id"><code>/checkpoint info &lt;id&gt;</code><a class="headerlink" href="#checkpoint-info-id" title="Permanent link">&para;</a></h4>
 <p>Show details about a specific checkpoint:</p>
@@ -2494,7 +2502,7 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 </span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: git]
 </span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
 </span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a># Run agent task
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>You: /agent add user registration endpoint
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>You: /auto add user registration endpoint
 </span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>
 </span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>🔒 Agent Mode enabled with Git checkpoints
 </span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>   • Changes will be auto-committed before each task
@@ -2505,7 +2513,7 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 </span><span id="__span-26-13"><a id="__codelineno-26-13" name="__codelineno-26-13" href="#__codelineno-26-13"></a>🤖 Starting autonomous agent...
 </span><span id="__span-26-14"><a id="__codelineno-26-14" name="__codelineno-26-14" href="#__codelineno-26-14"></a>[Agent executes task, creates files, edits code...]
 </span><span id="__span-26-15"><a id="__codelineno-26-15" name="__codelineno-26-15" href="#__codelineno-26-15"></a>
-</span><span id="__span-26-16"><a id="__codelineno-26-16" name="__codelineno-26-16" href="#__codelineno-26-16"></a># Realize there&#39;s an issue
+</span><span id="__span-26-16"><a id="__codelineno-26-16" name="__codelineno-26-16" href="#__codelineno-26-16"></a># Realize there's an issue
 </span><span id="__span-26-17"><a id="__codelineno-26-17" name="__codelineno-26-17" href="#__codelineno-26-17"></a>You: /undo
 </span><span id="__span-26-18"><a id="__codelineno-26-18" name="__codelineno-26-18" href="#__codelineno-26-18"></a>
 </span><span id="__span-26-19"><a id="__codelineno-26-19" name="__codelineno-26-19" href="#__codelineno-26-19"></a>⚠️  Undo Last Agent Task
@@ -2518,7 +2526,7 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 </span><span id="__span-26-26"><a id="__codelineno-26-26" name="__codelineno-26-26" href="#__codelineno-26-26"></a>
 </span><span id="__span-26-27"><a id="__codelineno-26-27" name="__codelineno-26-27" href="#__codelineno-26-27"></a># All changes undone! Git history shows:
 </span><span id="__span-26-28"><a id="__codelineno-26-28" name="__codelineno-26-28" href="#__codelineno-26-28"></a># - abc123de: ppxai checkpoint: add user registration endpoint
-</span><span id="__span-26-29"><a id="__codelineno-26-29" name="__codelineno-26-29" href="#__codelineno-26-29"></a># - f3a7b2c1: Revert &quot;ppxai checkpoint: add user registration endpoint&quot;
+</span><span id="__span-26-29"><a id="__codelineno-26-29" name="__codelineno-26-29" href="#__codelineno-26-29"></a># - f3a7b2c1: Revert "ppxai checkpoint: add user registration endpoint"
 </span></code></pre></div>
 <hr />
 <h3 id="example-2-non-git-project">Example 2: Non-Git Project<a class="headerlink" href="#example-2-non-git-project" title="Permanent link">&para;</a></h3>
@@ -2526,7 +2534,7 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 </span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: file]
 </span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
 </span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a># Run agent task
-</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>You: /agent refactor config.py to use environment variables
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>You: /auto refactor config.py to use environment variables
 </span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>
 </span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>⚠️  Agent Mode enabled with File checkpoints
 </span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>   • Snapshots will be saved to ~/.ppxai/checkpoints
@@ -2551,7 +2559,7 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 </span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: OFF]
 </span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
 </span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a># Warning shown when running agent
-</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>You: /agent update dependencies
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>You: /auto update dependencies
 </span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>
 </span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>⚠️  Agent Mode enabled WITHOUT checkpoints
 </span><span id="__span-28-8"><a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>   • Changes CANNOT be undone
@@ -2567,7 +2575,7 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 <hr />
 <h3 id="example-4-interrupt-handling-ctrl-c">Example 4: Interrupt Handling (Ctrl-C)<a class="headerlink" href="#example-4-interrupt-handling-ctrl-c" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a># Agent task in progress
-</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>You: /agent refactor authentication module
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>You: /auto refactor authentication module
 </span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>
 </span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>✓ Checkpoint created: d4b8f2a1 (refactor authentication module)
 </span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>
@@ -2611,7 +2619,7 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 </span><span id="__span-29-43"><a id="__codelineno-29-43" name="__codelineno-29-43" href="#__codelineno-29-43"></a>Removing untracked files...
 </span><span id="__span-29-44"><a id="__codelineno-29-44" name="__codelineno-29-44" href="#__codelineno-29-44"></a>✓ All changes removed
 </span><span id="__span-29-45"><a id="__codelineno-29-45" name="__codelineno-29-45" href="#__codelineno-29-45"></a>
-</span><span id="__span-29-46"><a id="__codelineno-29-46" name="__codelineno-29-46" href="#__codelineno-29-46"></a># All clean! Back to state before /agent command
+</span><span id="__span-29-46"><a id="__codelineno-29-46" name="__codelineno-29-46" href="#__codelineno-29-46"></a># All clean! Back to state before /auto command
 </span></code></pre></div>
 <p><strong>File Backend (Non-Git):</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a># Same interrupt scenario, but with file backend
@@ -2688,13 +2696,15 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 <li>Regular chat doesn't create checkpoints</li>
 <li>File editing tools don't auto-checkpoint (yet)</li>
 <li>
-<p>Use <code>/agent</code> for checkpoint protection</p>
+<p>Use <code>/auto</code> for checkpoint protection</p>
 </li>
 <li>
 <p><strong>Disk space (file backend)</strong></p>
 </li>
-<li>Old snapshots consume disk space</li>
-<li>Auto-cleanup keeps last 10 by default</li>
+<li>Old snapshots consume disk space and accumulate indefinitely — there is
+     <strong>no</strong> automatic cleanup</li>
+<li><code>/checkpoint clear</code> deletes <strong>all</strong> file-based snapshots (not a
+     keep-last-10 prune)</li>
 <li>Manual cleanup: <code>rm -rf ~/.ppxai/checkpoints/*</code></li>
 </ol>
 <hr />
@@ -2710,14 +2720,14 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 </span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="nb">cd</span><span class="w"> </span>/path/to/project
 </span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>git<span class="w"> </span>init
 </span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>git<span class="w"> </span>add<span class="w"> </span>.
-</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Initial commit&quot;</span>
+</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"Initial commit"</span>
 </span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>
 </span><span id="__span-31-7"><a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a><span class="c1"># Option 2: Enable file backend</span>
-</span><span id="__span-31-8"><a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a><span class="c1"># Edit ppxai-config.json:</span>
-</span><span id="__span-31-9"><a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a><span class="o">{</span><span class="s2">&quot;checkpoint_backend&quot;</span>:<span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="o">}</span>
+</span><span id="__span-31-8"><a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a><span class="c1"># Edit ppxai-config.json (nested under tools.agent):</span>
+</span><span id="__span-31-9"><a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a><span class="o">{</span><span class="s2">"tools"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"agent"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"checkpoint_backend"</span>:<span class="w"> </span><span class="s2">"file"</span><span class="o">}}}</span>
 </span><span id="__span-31-10"><a id="__codelineno-31-10" name="__codelineno-31-10" href="#__codelineno-31-10"></a>
 </span><span id="__span-31-11"><a id="__codelineno-31-11" name="__codelineno-31-11" href="#__codelineno-31-11"></a><span class="c1"># Option 3: Use auto-detection</span>
-</span><span id="__span-31-12"><a id="__codelineno-31-12" name="__codelineno-31-12" href="#__codelineno-31-12"></a><span class="o">{</span><span class="s2">&quot;checkpoint_backend&quot;</span>:<span class="w"> </span><span class="s2">&quot;auto&quot;</span><span class="o">}</span>
+</span><span id="__span-31-12"><a id="__codelineno-31-12" name="__codelineno-31-12" href="#__codelineno-31-12"></a><span class="o">{</span><span class="s2">"tools"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"agent"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"checkpoint_backend"</span>:<span class="w"> </span><span class="s2">"auto"</span><span class="o">}}}</span>
 </span></code></pre></div></p>
 <hr />
 <h3 id="undo-does-nothing">"/undo does nothing"<a class="headerlink" href="#undo-does-nothing" title="Permanent link">&para;</a></h3>
@@ -2761,7 +2771,7 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 <h3 id="manual-checkpoint-inspection">Manual Checkpoint Inspection<a class="headerlink" href="#manual-checkpoint-inspection" title="Permanent link">&para;</a></h3>
 <p><strong>Git Backend:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># List checkpoint commits</span>
-</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>git<span class="w"> </span>log<span class="w"> </span>--grep<span class="o">=</span><span class="s2">&quot;ppxai checkpoint:&quot;</span>
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>git<span class="w"> </span>log<span class="w"> </span>--grep<span class="o">=</span><span class="s2">"ppxai checkpoint:"</span>
 </span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>
 </span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="c1"># View specific checkpoint</span>
 </span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>git<span class="w"> </span>show<span class="w"> </span>&lt;commit-hash&gt;
@@ -2793,31 +2803,18 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 </span><span id="__span-36-9"><a id="__codelineno-36-9" name="__codelineno-36-9" href="#__codelineno-36-9"></a>git<span class="w"> </span>revert<span class="w"> </span>HEAD<span class="w"> </span>--no-edit
 </span><span id="__span-36-10"><a id="__codelineno-36-10" name="__codelineno-36-10" href="#__codelineno-36-10"></a>
 </span><span id="__span-36-11"><a id="__codelineno-36-11" name="__codelineno-36-11" href="#__codelineno-36-11"></a><span class="c1"># Squash checkpoint commits before merge</span>
-</span><span id="__span-36-12"><a id="__codelineno-36-12" name="__codelineno-36-12" href="#__codelineno-36-12"></a>git<span class="w"> </span>rebase<span class="w"> </span>-i<span class="w"> </span>HEAD~5<span class="w">  </span><span class="c1"># Mark checkpoint commits as &#39;fixup&#39;</span>
+</span><span id="__span-36-12"><a id="__codelineno-36-12" name="__codelineno-36-12" href="#__codelineno-36-12"></a>git<span class="w"> </span>rebase<span class="w"> </span>-i<span class="w"> </span>HEAD~5<span class="w">  </span><span class="c1"># Mark checkpoint commits as 'fixup'</span>
 </span></code></pre></div>
 <hr />
-<h3 id="custom-checkpoint-messages">Custom Checkpoint Messages<a class="headerlink" href="#custom-checkpoint-messages" title="Permanent link">&para;</a></h3>
-<p>Edit <code>ppxai-config.json</code> to customize commit messages:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="p">{</span>
-</span><span id="__span-37-2"><a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-37-3"><a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a><span class="w">    </span><span class="nt">&quot;agent&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-37-4"><a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a><span class="w">      </span><span class="nt">&quot;checkpoint_message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;[AGENT] {task}&quot;</span>
-</span><span id="__span-37-5"><a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-37-6"><a id="__codelineno-37-6" name="__codelineno-37-6" href="#__codelineno-37-6"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-37-7"><a id="__codelineno-37-7" name="__codelineno-37-7" href="#__codelineno-37-7"></a><span class="p">}</span>
+<h3 id="checkpoint-commit-message-format">Checkpoint Commit Message Format<a class="headerlink" href="#checkpoint-commit-message-format" title="Permanent link">&para;</a></h3>
+<p>The git checkpoint commit message is <strong>not customizable</strong> — it is hardcoded
+in <code>ppxai/checkpoint.py</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="n">commit_message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"ppxai checkpoint: </span><span class="si">{</span><span class="n">description</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">[</span><span class="si">{</span><span class="n">timestamp</span><span class="si">}</span><span class="s2">]"</span>
 </span></code></pre></div>
-<p><strong>Variables:</strong>
-- <code>{task}</code> - First 100 characters of agent task description</p>
-<p><strong>Examples:</strong>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="c1">// Prefix with project name</span>
-</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a><span class="p">{</span><span class="nt">&quot;checkpoint_message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;[MyApp] Agent checkpoint: {task}&quot;</span><span class="p">}</span>
-</span><span id="__span-38-3"><a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a>
-</span><span id="__span-38-4"><a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a><span class="c1">// Include timestamp</span>
-</span><span id="__span-38-5"><a id="__codelineno-38-5" name="__codelineno-38-5" href="#__codelineno-38-5"></a><span class="p">{</span><span class="nt">&quot;checkpoint_message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;🤖 {task} [automated]&quot;</span><span class="p">}</span>
-</span><span id="__span-38-6"><a id="__codelineno-38-6" name="__codelineno-38-6" href="#__codelineno-38-6"></a>
-</span><span id="__span-38-7"><a id="__codelineno-38-7" name="__codelineno-38-7" href="#__codelineno-38-7"></a><span class="c1">// Conventional commits style</span>
-</span><span id="__span-38-8"><a id="__codelineno-38-8" name="__codelineno-38-8" href="#__codelineno-38-8"></a><span class="p">{</span><span class="nt">&quot;checkpoint_message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chore(agent): {task}&quot;</span><span class="p">}</span>
-</span></code></pre></div></p>
+<p><code>ppxai-config.json</code> ships a <code>tools.agent.checkpoint_message</code> key
+(<code>"ppxai checkpoint: {task}"</code> by default), but it has <strong>zero effect</strong> —
+nothing in <code>ppxai/</code> reads it. Setting it to any other value does not change
+the commit message that gets created.</p>
 <hr />
 <h2 id="vscode-extension-differences">VSCode Extension Differences<a class="headerlink" href="#vscode-extension-differences" title="Permanent link">&para;</a></h2>
 <p>The checkpoint system works identically in VSCode extension:</p>
@@ -2833,17 +2830,19 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 <hr />
 <h2 id="faq">FAQ<a class="headerlink" href="#faq" title="Permanent link">&para;</a></h2>
 <p><strong>Q: Do checkpoints work with file editing tools?</strong>
-A: Currently, checkpoints are only created for <code>/agent</code> tasks. File editing tools (apply_patch, etc.) require manual consent but don't auto-checkpoint. This may change in future versions.</p>
+A: Currently, checkpoints are only created for <code>/auto</code> tasks. File editing tools (apply_patch, etc.) require manual consent but don't auto-checkpoint. This may change in future versions.</p>
 <p><strong>Q: Can I undo multiple tasks?</strong>
 A: No, <code>/undo</code> only reverts the last checkpoint. Use git commands directly for multiple undos:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>git<span class="w"> </span>log<span class="w"> </span>--grep<span class="o">=</span><span class="s2">&quot;ppxai checkpoint:&quot;</span><span class="w">  </span><span class="c1"># Find checkpoints</span>
-</span><span id="__span-39-2"><a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a>git<span class="w"> </span>revert<span class="w"> </span>&lt;commit1&gt;<span class="w"> </span>&lt;commit2&gt;<span class="w"> </span>&lt;commit3&gt;<span class="w">  </span><span class="c1"># Revert multiple</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>git<span class="w"> </span>log<span class="w"> </span>--grep<span class="o">=</span><span class="s2">"ppxai checkpoint:"</span><span class="w">  </span><span class="c1"># Find checkpoints</span>
+</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>git<span class="w"> </span>revert<span class="w"> </span>&lt;commit1&gt;<span class="w"> </span>&lt;commit2&gt;<span class="w"> </span>&lt;commit3&gt;<span class="w">  </span><span class="c1"># Revert multiple</span>
 </span></code></pre></div></p>
 <p><strong>Q: What happens if I push checkpoint commits?</strong>
 A: Checkpoint commits are normal git commits. They can be pushed, merged, and shared like any commit. Team members will see them in git history.</p>
 <p><strong>Q: How do I clean up old file backend snapshots?</strong>
-A: ppxai auto-cleans, keeping the last 10 checkpoints. Manual cleanup:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>rm<span class="w"> </span>-rf<span class="w"> </span>~/.ppxai/checkpoints/*
+A: ppxai does <strong>not</strong> auto-clean — file-based checkpoints accumulate
+indefinitely until you act. Run <code>/checkpoint clear</code> (deletes <strong>all</strong>
+file-based snapshots, not just old ones), or manually:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>rm<span class="w"> </span>-rf<span class="w"> </span>~/.ppxai/checkpoints/*
 </span></code></pre></div></p>
 <p><strong>Q: Can I use checkpoints with remote git repos?</strong>
 A: Yes! Checkpoint commits are local until you push. They work with <code>git pull</code>, <code>git push</code>, and <code>git merge</code> normally.</p>
@@ -2956,7 +2955,7 @@ A: Use <code>/checkpoint list</code> to see the last 10 checkpoints, or <code>/c
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

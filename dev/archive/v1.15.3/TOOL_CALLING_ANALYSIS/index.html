@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1558,13 +1558,13 @@
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Status: IGNORED ⚠️
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>- API accepts `tools` parameter (no error)
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>- Response contains NO tool_calls
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>- Model explains it &quot;cannot read files&quot; instead of calling tools
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>- Model explains it "cannot read files" instead of calling tools
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>- Behavior: Treats request as regular chat
 </span></code></pre></div></p>
 <p><strong>sonar-reasoning-pro:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Status: IGNORED ⚠️
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>- Same as sonar-pro
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>- Explicitly states: &quot;I cannot directly access or read files&quot;
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>- Explicitly states: "I cannot directly access or read files"
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>- No tool calls in response
 </span></code></pre></div></p>
 <p><strong>Conclusion:</strong> Perplexity Sonar models do <strong>NOT</strong> support native function calling.</p>
@@ -1600,19 +1600,19 @@
 <li>
 <p><strong>Prompt Injection</strong> (line 159 in engine_runner.py):
    <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">tool_prompt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_tool_prompt</span><span class="p">(</span><span class="n">tools</span><span class="p">)</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">last_message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">tool_prompt</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">User request: </span><span class="si">{</span><span class="n">last_message</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">last_message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">tool_prompt</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">User request: </span><span class="si">{</span><span class="n">last_message</span><span class="si">}</span><span class="s2">"</span>
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>JSON Parsing from Text</strong> (line 204):
-   <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;tool_calls&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;content&quot;</span><span class="p">]:</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">extracted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_tool_calls_from_content</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;content&quot;</span><span class="p">],</span> <span class="n">tools</span><span class="p">)</span>
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="p">[</span><span class="s2">"tool_calls"</span><span class="p">]</span> <span class="ow">and</span> <span class="n">result</span><span class="p">[</span><span class="s2">"content"</span><span class="p">]:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">extracted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_tool_calls_from_content</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">"content"</span><span class="p">],</span> <span class="n">tools</span><span class="p">)</span>
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Pattern Matching</strong> (lines 261-278):
-   <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Pattern 1: {&quot;tool&quot;: &quot;name&quot;, &quot;arguments&quot;: {...}}</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">pattern1</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;\{\s*&quot;tool&quot;\s*:\s*&quot;([^&quot;]+)&quot;\s*,\s*&quot;arguments&quot;\s*:\s*(\{[^}]+\})\s*\}&#39;</span>
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Pattern 1: {"tool": "name", "arguments": {...}}</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">pattern1</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">'\{\s*"tool"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}'</span>
 </span></code></pre></div></p>
 </li>
 </ol>
@@ -1671,7 +1671,7 @@
 <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">tools</span><span class="p">:</span> <span class="n">Ignored</span> <span class="o">-</span> <span class="n">Perplexity</span> <span class="n">uses</span> <span class="n">native</span> <span class="n">search</span><span class="p">,</span> <span class="ow">not</span> <span class="n">tools</span>
 </span></code></pre></div></p>
 <p><strong>Update to:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">tools</span><span class="p">:</span> <span class="n">Converted</span> <span class="n">to</span> <span class="n">prompt</span><span class="o">-</span><span class="n">based</span> <span class="n">tool</span> <span class="n">calling</span> <span class="p">(</span><span class="n">Sonar</span> <span class="n">models</span> <span class="n">don</span><span class="s1">&#39;t support</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">tools</span><span class="p">:</span> <span class="n">Converted</span> <span class="n">to</span> <span class="n">prompt</span><span class="o">-</span><span class="n">based</span> <span class="n">tool</span> <span class="n">calling</span> <span class="p">(</span><span class="n">Sonar</span> <span class="n">models</span> <span class="n">don</span><span class="s1">'t support</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>       <span class="n">native</span> <span class="n">function</span> <span class="n">calling</span> <span class="n">API</span><span class="p">)</span><span class="o">.</span> <span class="n">Tool</span> <span class="n">definitions</span> <span class="n">are</span> <span class="n">injected</span> <span class="n">into</span> <span class="n">the</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>       <span class="n">system</span> <span class="n">prompt</span> <span class="ow">and</span> <span class="n">responses</span> <span class="n">are</span> <span class="n">parsed</span> <span class="k">for</span> <span class="n">JSON</span> <span class="n">tool</span> <span class="n">call</span> <span class="nb">format</span><span class="o">.</span>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
@@ -1695,12 +1695,12 @@
 <p>Skip tests appropriately:
 <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_async</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">categories</span><span class="p">):</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">provider_config</span> <span class="o">=</span> <span class="n">get_provider_config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">provider</span><span class="p">)</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">capabilities</span> <span class="o">=</span> <span class="n">provider_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;capabilities&quot;</span><span class="p">,</span> <span class="p">{})</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">capabilities</span> <span class="o">=</span> <span class="n">provider_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"capabilities"</span><span class="p">,</span> <span class="p">{})</span>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
 </span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="k">for</span> <span class="n">test</span> <span class="ow">in</span> <span class="n">tests</span><span class="p">:</span>
 </span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>        <span class="c1"># Skip native-only tests if provider uses prompt-based</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>        <span class="k">if</span> <span class="n">test</span><span class="o">.</span><span class="n">requires_native_tools</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">capabilities</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;native_tool_calling&quot;</span><span class="p">):</span>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[SKIP] </span><span class="si">{</span><span class="n">test</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (requires native tool calling)&quot;</span><span class="p">)</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>        <span class="k">if</span> <span class="n">test</span><span class="o">.</span><span class="n">requires_native_tools</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">capabilities</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"native_tool_calling"</span><span class="p">):</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[SKIP] </span><span class="si">{</span><span class="n">test</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (requires native tool calling)"</span><span class="p">)</span>
 </span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>            <span class="k">continue</span>
 </span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>
 </span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>        <span class="c1"># Run test...</span>
@@ -1757,12 +1757,12 @@
 <div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># ppxai/engine/client.py</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">_detect_tool_calling_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Detect if response used native or prompt-based tools.&quot;&quot;&quot;</span>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="s1">&#39;tool_calls&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">response</span><span class="o">.</span><span class="n">tool_calls</span><span class="p">:</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>        <span class="k">return</span> <span class="s2">&quot;native&quot;</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="sd">"""Detect if response used native or prompt-based tools."""</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="s1">'tool_calls'</span><span class="p">)</span> <span class="ow">and</span> <span class="n">response</span><span class="o">.</span><span class="n">tool_calls</span><span class="p">:</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>        <span class="k">return</span> <span class="s2">"native"</span>
 </span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tool_calls_in_text</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">):</span>
-</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>        <span class="k">return</span> <span class="s2">&quot;prompt_based&quot;</span>
-</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>    <span class="k">return</span> <span class="s2">&quot;none&quot;</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>        <span class="k">return</span> <span class="s2">"prompt_based"</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>    <span class="k">return</span> <span class="s2">"none"</span>
 </span></code></pre></div>
 <p>Log this in debug mode for visibility.</p>
 <hr />
@@ -1793,12 +1793,12 @@
 <h3 id="perplexity-direct-api-response">Perplexity Direct API Response<a class="headerlink" href="#perplexity-direct-api-response" title="Permanent link">&para;</a></h3>
 <p><strong>Without tools:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>finish_reason: stop
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>content: &quot;To read the `/src/config.json` file in Node.js, use the built-in...&quot;
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>content: "To read the `/src/config.json` file in Node.js, use the built-in..."
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>tool_calls: None
 </span></code></pre></div></p>
 <p><strong>With tools:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>finish_reason: stop
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>content: &quot;To read the JSON file at `/src/config.json` in Node.js, use...&quot;
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>content: "To read the JSON file at `/src/config.json` in Node.js, use..."
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>tool_calls: None
 </span></code></pre></div></p>
 <p><strong>Conclusion:</strong> Tools parameter has NO EFFECT on Sonar models.</p>
@@ -1806,8 +1806,8 @@
 <h3 id="ppxai-engine-response">ppxai Engine Response<a class="headerlink" href="#ppxai-engine-response" title="Permanent link">&para;</a></h3>
 <p><strong>Perplexity via Engine:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>TOOL_CALL events:
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>- {&#39;tool&#39;: &#39;read_file&#39;, &#39;arguments&#39;: {&#39;filepath&#39;: &#39;/src/config.json&#39;}}
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>- {&#39;tool&#39;: &#39;list_directory&#39;, &#39;arguments&#39;: {&#39;path&#39;: &#39;/src&#39;, &#39;format&#39;: &#39;long&#39;}}
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>- {'tool': 'read_file', 'arguments': {'filepath': '/src/config.json'}}
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>- {'tool': 'list_directory', 'arguments': {'path': '/src', 'format': 'long'}}
 </span></code></pre></div></p>
 <p><strong>Conclusion:</strong> Engine successfully extracts tool calls from text via pattern matching.</p>
 <hr />
@@ -1910,7 +1910,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1460,14 +1460,14 @@
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">weather</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">citations</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">streaming</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">native_tool_calling</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># ← ADD: Sonar models don&#39;t support native API</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">native_tool_calling</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># ← ADD: Sonar models don't support native API</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
 </span></code></pre></div>
 <p><strong>File:</strong> <code>ppxai/config/loader.py</code> (DEFAULT_CAPABILITIES)</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Add new capability</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">DEFAULT_CAPABILITIES</span> <span class="o">=</span> <span class="p">{</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="o">...</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s2">&quot;native_tool_calling&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># Default to False, enable per-provider</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s2">"native_tool_calling"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># Default to False, enable per-provider</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="o">...</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -1483,7 +1483,7 @@
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>       <span class="n">Instead</span><span class="p">,</span> <span class="n">tool</span> <span class="n">definitions</span> <span class="n">are</span> <span class="n">injected</span> <span class="n">into</span> <span class="n">the</span> <span class="n">system</span> <span class="n">prompt</span> <span class="ow">and</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>       <span class="n">responses</span> <span class="n">are</span> <span class="n">parsed</span> <span class="k">for</span> <span class="n">JSON</span> <span class="n">tool</span> <span class="n">call</span> <span class="nb">format</span><span class="o">.</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>       <span class="n">Note</span><span class="p">:</span> <span class="n">Perplexity</span><span class="s1">&#39;s Agentic Research API supports native tools for</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>       <span class="n">Note</span><span class="p">:</span> <span class="n">Perplexity</span><span class="s1">'s Agentic Research API supports native tools for</span>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>       <span class="n">third</span><span class="o">-</span><span class="n">party</span> <span class="n">models</span> <span class="p">(</span><span class="n">openai</span><span class="o">/</span><span class="n">gpt</span><span class="o">-*</span><span class="p">,</span> <span class="n">etc</span><span class="o">.</span><span class="p">)</span> <span class="n">but</span> <span class="n">NOT</span> <span class="k">for</span> <span class="n">Sonar</span> <span class="n">models</span><span class="o">.</span>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>       <span class="n">See</span><span class="p">:</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">docs</span><span class="o">.</span><span class="n">perplexity</span><span class="o">.</span><span class="n">ai</span><span class="o">/</span><span class="n">docs</span><span class="o">/</span><span class="n">agentic</span><span class="o">-</span><span class="n">research</span><span class="o">/</span><span class="n">tools</span>
@@ -1525,12 +1525,12 @@
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="c1"># Check provider capabilities</span>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_provider_config</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">provider_config</span> <span class="o">=</span> <span class="n">get_provider_config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">provider</span><span class="p">)</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="n">has_native_tools</span> <span class="o">=</span> <span class="n">provider_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;capabilities&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;native_tool_calling&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="n">has_native_tools</span> <span class="o">=</span> <span class="n">provider_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"capabilities"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"native_tool_calling"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
 </span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="c1"># Filter tests if needed</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">has_native_tools</span> <span class="ow">and</span> <span class="n">categories</span> <span class="ow">and</span> <span class="s2">&quot;tool_calling&quot;</span> <span class="ow">in</span> <span class="n">categories</span><span class="p">:</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">NOTE: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">provider</span><span class="si">}</span><span class="s2"> uses prompt-based tool calling (not native API)&quot;</span><span class="p">)</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;      Benchmark tests validate JSON format compliance and parsing reliability</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">has_native_tools</span> <span class="ow">and</span> <span class="n">categories</span> <span class="ow">and</span> <span class="s2">"tool_calling"</span> <span class="ow">in</span> <span class="n">categories</span><span class="p">:</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">NOTE: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">provider</span><span class="si">}</span><span class="s2"> uses prompt-based tool calling (not native API)"</span><span class="p">)</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"      Benchmark tests validate JSON format compliance and parsing reliability</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
 </span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">test</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tests</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
 </span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>        <span class="o">...</span>
@@ -1538,10 +1538,10 @@
 <p><strong>Update test results metadata:</strong></p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Line ~446</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="s2">&quot;runner&quot;</span><span class="p">:</span> <span class="s2">&quot;engine&quot;</span><span class="p">,</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="s2">&quot;timeout&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="s2">&quot;retries&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">retries</span><span class="p">,</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="s2">&quot;tool_calling_method&quot;</span><span class="p">:</span> <span class="s2">&quot;native&quot;</span> <span class="k">if</span> <span class="n">has_native_tools</span> <span class="k">else</span> <span class="s2">&quot;prompt_based&quot;</span><span class="p">,</span>  <span class="c1"># ← ADD</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="s2">"runner"</span><span class="p">:</span> <span class="s2">"engine"</span><span class="p">,</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="s2">"timeout"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="s2">"retries"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">retries</span><span class="p">,</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="s2">"tool_calling_method"</span><span class="p">:</span> <span class="s2">"native"</span> <span class="k">if</span> <span class="n">has_native_tools</span> <span class="k">else</span> <span class="s2">"prompt_based"</span><span class="p">,</span>  <span class="c1"># ← ADD</span>
 </span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">},</span>
 </span></code></pre></div>
 <hr />
@@ -1553,7 +1553,7 @@
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>ppxai supports two methods of tool calling:
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="k">1.</span> <span class="gs">**Native Tool Calling**</span> - Uses provider&#39;s native function calling API
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="k">1.</span> <span class="gs">**Native Tool Calling**</span> - Uses provider's native function calling API
 </span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="k">2.</span> <span class="gs">**Prompt-Based Tool Calling**</span> - Injects tools into prompt, parses JSON responses
 </span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
 </span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="gu">## Provider Support Matrix</span>
@@ -1574,10 +1574,10 @@
 </span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>
 </span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>```json
 </span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>{
-</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>  &quot;choices&quot;: [{
-</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>    &quot;message&quot;: {
-</span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>      &quot;tool_calls&quot;: [{
-</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>        &quot;function&quot;: {&quot;name&quot;: &quot;read_file&quot;, &quot;arguments&quot;: &quot;{\&quot;path\&quot;: \&quot;/test.txt\&quot;}&quot;}
+</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>  "choices": [{
+</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>    "message": {
+</span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>      "tool_calls": [{
+</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>        "function": {"name": "read_file", "arguments": "{\"path\": \"/test.txt\"}"}
 </span><span id="__span-8-32"><a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>      }]
 </span><span id="__span-8-33"><a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>    }
 </span><span id="__span-8-34"><a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>  }]
@@ -1588,7 +1588,7 @@
 <li>
 <p>Inject tool definitions into system prompt:
    <div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>You have access to the following tools. To use a tool, output:
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>{&quot;tool&quot;: &quot;tool_name&quot;, &quot;arguments&quot;: {...}}
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>{"tool": "tool_name", "arguments": {...}}
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>Available tools:
 </span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>- read_file: Read contents of a file...
@@ -1596,7 +1596,7 @@
 </li>
 <li>
 <p>Model responds with JSON in text:
-   <div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>{&quot;tool&quot;: &quot;read_file&quot;, &quot;arguments&quot;: {&quot;path&quot;: &quot;/test.txt&quot;}}
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>{"tool": "read_file", "arguments": {"path": "/test.txt"}}
 </span></code></pre></div></p>
 </li>
 <li>
@@ -1607,10 +1607,10 @@
 <h3 id="perplexity">Perplexity<a class="headerlink" href="#perplexity" title="Permanent link">&para;</a></h3>
 <p>Sonar models do NOT support native function calling. Use prompt-based:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">{</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nt">&quot;perplexity&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">      </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">        </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nt">"perplexity"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">      </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">        </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 </span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">      </span><span class="p">}</span>
 </span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span><span class="p">}</span>
@@ -1619,13 +1619,13 @@
 <h3 id="gemini">Gemini<a class="headerlink" href="#gemini" title="Permanent link">&para;</a></h3>
 <p>Supports native function calling (enabled by default):</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p">{</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nt">&quot;gemini&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">      </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">        </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">      </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">        </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 </span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">      </span><span class="p">},</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">      </span><span class="nt">&quot;generation_params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">        </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="w">  </span><span class="c1">// Use low temp for deterministic tool calls</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">      </span><span class="nt">"generation_params"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">        </span><span class="nt">"temperature"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="w">  </span><span class="c1">// Use low temp for deterministic tool calls</span>
 </span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">      </span><span class="p">}</span>
 </span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">  </span><span class="p">}</span>
@@ -1661,25 +1661,25 @@
 </span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>**Add to Perplexity section:**
 </span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>
 </span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>```json
-</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>&quot;perplexity&quot;: {
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>"perplexity": {
 </span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>  ...
-</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>  &quot;capabilities&quot;: {
-</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>    &quot;native_tool_calling&quot;: false,
-</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>    &quot;__comment_native_tool_calling&quot;: &quot;Sonar models use prompt-based tool calling, not native API&quot;
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>  "capabilities": {
+</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>    "native_tool_calling": false,
+</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>    "__comment_native_tool_calling": "Sonar models use prompt-based tool calling, not native API"
 </span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>  },
 </span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a>  ...
 </span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a>}
 </span></code></pre></div></p>
 <p><strong>Add to Gemini section:</strong></p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">&quot;gemini&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="err">...</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nt">&quot;__comment_native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Gemini 2.5+ models support native function calling&quot;</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nt">"__comment_native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Gemini 2.5+ models support native function calling"</span>
 </span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">  </span><span class="nt">&quot;generation_params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">    </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
-</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">    </span><span class="nt">&quot;__comment_temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Use 0.0 for deterministic tool calls, 0.3 for creative tasks&quot;</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">  </span><span class="nt">"generation_params"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">    </span><span class="nt">"temperature"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">    </span><span class="nt">"__comment_temperature"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Use 0.0 for deterministic tool calls, 0.3 for creative tasks"</span>
 </span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">  </span><span class="p">},</span>
 </span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">  </span><span class="err">...</span>
 </span><span id="__span-14-12"><a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="p">}</span>
@@ -1688,12 +1688,12 @@
 <h2 id="testing-plan">Testing Plan<a class="headerlink" href="#testing-plan" title="Permanent link">&para;</a></h2>
 <p>After implementing changes:</p>
 <h3 id="1-verify-capability-flags">1. Verify Capability Flags<a class="headerlink" href="#1-verify-capability-flags" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="s2">from ppxai.config import initialize, get_provider_config</span>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="s2">initialize()</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="s2">print(&#39;Perplexity native_tool_calling:&#39;, get_provider_config(&#39;perplexity&#39;).get(&#39;capabilities&#39;, {}).get(&#39;native_tool_calling&#39;))</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="s2">print(&#39;Gemini native_tool_calling:&#39;, get_provider_config(&#39;gemini&#39;).get(&#39;capabilities&#39;, {}).get(&#39;native_tool_calling&#39;))</span>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="s2">&quot;</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="s2">print('Perplexity native_tool_calling:', get_provider_config('perplexity').get('capabilities', {}).get('native_tool_calling'))</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="s2">print('Gemini native_tool_calling:', get_provider_config('gemini').get('capabilities', {}).get('native_tool_calling'))</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="s2">"</span>
 </span></code></pre></div>
 <p>Expected output:
 <div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>Perplexity native_tool_calling: False
@@ -1857,7 +1857,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1627,10 +1627,10 @@ serves four very different consumers:</p>
 bookkeeping inside provider wire-format blocks</strong>. The image producer at
 <code>file_preprocessing.py:264-272</code> emits:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;image_url&quot;</span><span class="p">,</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>                        <span class="c1"># ← ppxai bookkeeping</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="s2">&quot;image_url&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;data:...&quot;</span><span class="p">},</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">&quot;file_id&quot;</span><span class="p">:</span> <span class="s2">&quot;sha256:...&quot;</span><span class="p">,</span>             <span class="c1"># ← ppxai bookkeeping</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"image_url"</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>                        <span class="c1"># ← ppxai bookkeeping</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="s2">"image_url"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"url"</span><span class="p">:</span> <span class="s2">"data:..."</span><span class="p">},</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">"file_id"</span><span class="p">:</span> <span class="s2">"sha256:..."</span><span class="p">,</span>             <span class="c1"># ← ppxai bookkeeping</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>The OpenAI Chat Completions spec only allows <code>{"type", "image_url"}</code> at
@@ -1651,7 +1651,7 @@ cover this case.</p>
 <p>Three concurrent pressures surfaced the entanglement on 2026-05-14:</p>
 <ol>
 <li><strong>A user attached a screenshot to gpt-5.5 on the corporate
-   <code>codeai.trad.int</code> OpenAI-compat endpoint.</strong> The endpoint's strict
+   <code>codeai.internal</code> OpenAI-compat endpoint.</strong> The endpoint's strict
    validator returned <code>"Invalid chat format. Unexpected keys in a
    message content image dict."</code> The attachment was silently
    dropped — the model never saw it.</li>
@@ -1749,7 +1749,7 @@ boundaries between them:</p>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>┌─────────────────────────────────────────────────────────────────┐
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>│  WIRE (provider-spec, lossy on internal metadata)               │
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│                                                                  │
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>│  [{&quot;type&quot;:&quot;image_url&quot;,&quot;image_url&quot;:{&quot;url&quot;:...}}, {&quot;type&quot;:&quot;text&quot;...}]
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>│  [{"type":"image_url","image_url":{"url":...}}, {"type":"text"...}]
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>│                                                                  │
 </span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>│  No name, no file_id, no internal types.                        │
 </span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>└─────────────────────────────────────────────────────────────────┘
@@ -1769,10 +1769,10 @@ boundaries between them:</p>
 <p><strong>Add a sibling field to <code>Message</code>:</strong></p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nd">@dataclass</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">AttachmentRef</span><span class="p">:</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Per-attachment metadata living alongside Message.content.&quot;&quot;&quot;</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="sd">"""Per-attachment metadata living alongside Message.content."""</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">block_index</span><span class="p">:</span> <span class="nb">int</span>        <span class="c1"># which content block this annotates</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>               <span class="c1"># canonical filename</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">file_id</span><span class="p">:</span> <span class="nb">str</span>            <span class="c1"># SessionFileStore identifier (&quot;&quot; if not persisted)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">file_id</span><span class="p">:</span> <span class="nb">str</span>            <span class="c1"># SessionFileStore identifier ("" if not persisted)</span>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">media_type</span><span class="p">:</span> <span class="nb">str</span>         <span class="c1"># canonical MIME</span>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nd">@dataclass</span>
@@ -1789,8 +1789,8 @@ preserves ordering across content+metadata without forcing ppxai
 metadata into the spec block.</p>
 <p><strong>Image producer simplifies to:</strong></p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">block</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;image_url&quot;</span><span class="p">,</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="s2">&quot;image_url&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;data:</span><span class="si">{</span><span class="n">canonical_mt</span><span class="si">}</span><span class="s2">;base64,</span><span class="si">{</span><span class="n">b64</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"image_url"</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="s2">"image_url"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"url"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"data:</span><span class="si">{</span><span class="n">canonical_mt</span><span class="si">}</span><span class="s2">;base64,</span><span class="si">{</span><span class="n">b64</span><span class="si">}</span><span class="s2">"</span><span class="p">},</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">ref</span> <span class="o">=</span> <span class="n">AttachmentRef</span><span class="p">(</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">block_index</span><span class="o">=...</span><span class="p">,</span>        <span class="c1"># caller fills in when assembling the message</span>
@@ -1897,15 +1897,15 @@ as regression baselines.</p>
 </ul>
 <p>Sentinel test (will live forever):</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_image_url_blocks_are_spec_clean</span><span class="p">():</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;No image_url block emitted by ppxai contains non-spec keys.&quot;&quot;&quot;</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">msg</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="p">[{</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;image_url&quot;</span><span class="p">,</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        <span class="s2">&quot;image_url&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;data:image/png;base64,iVBORw0...&quot;</span><span class="p">},</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="p">}],</span> <span class="n">attachments</span><span class="o">=</span><span class="p">[</span><span class="n">AttachmentRef</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;img.png&quot;</span><span class="p">,</span> <span class="s2">&quot;sha256:x&quot;</span><span class="p">,</span> <span class="s2">&quot;image/png&quot;</span><span class="p">)])</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="sd">"""No image_url block emitted by ppxai contains non-spec keys."""</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">msg</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">"user"</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="p">[{</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"image_url"</span><span class="p">,</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        <span class="s2">"image_url"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"url"</span><span class="p">:</span> <span class="s2">"data:image/png;base64,iVBORw0..."</span><span class="p">},</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="p">}],</span> <span class="n">attachments</span><span class="o">=</span><span class="p">[</span><span class="n">AttachmentRef</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">"img.png"</span><span class="p">,</span> <span class="s2">"sha256:x"</span><span class="p">,</span> <span class="s2">"image/png"</span><span class="p">)])</span>
 </span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">api</span> <span class="o">=</span> <span class="n">OpenAICompatibleProvider</span><span class="p">(</span><span class="o">...</span><span class="p">)</span><span class="o">.</span><span class="n">_convert_messages</span><span class="p">([</span><span class="n">msg</span><span class="p">])</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">block</span> <span class="o">=</span> <span class="n">api</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;content&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;image_url&quot;</span><span class="p">}</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">block</span><span class="p">[</span><span class="s2">&quot;image_url&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">issubset</span><span class="p">({</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="s2">&quot;detail&quot;</span><span class="p">})</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">block</span> <span class="o">=</span> <span class="n">api</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"content"</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">,</span> <span class="s2">"image_url"</span><span class="p">}</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">block</span><span class="p">[</span><span class="s2">"image_url"</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">issubset</span><span class="p">({</span><span class="s2">"url"</span><span class="p">,</span> <span class="s2">"detail"</span><span class="p">})</span>
 </span></code></pre></div>
 <h3 id="phase-4-backward-compat-session-loader">Phase 4 — Backward-compat session loader<a class="headerlink" href="#phase-4-backward-compat-session-loader" title="Permanent link">&para;</a></h3>
 <p>When loading a session file written by pre-v1.18.6 (v1), the
@@ -2102,7 +2102,7 @@ before moving to the next.</p>
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>        └──► Step 5 (legacy loader)
 </span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
 </span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>Step 6 (wire validator) ──► independent; can land first as a
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>                              &quot;guard against the bug we&#39;re about to fix&quot;
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>                              "guard against the bug we're about to fix"
 </span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>                              sentinel. Tests pass today because the
 </span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>                              strip happens at write time before the
 </span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>                              validator runs.
@@ -2229,9 +2229,9 @@ The schema we ship in v1.18.6 IS the schema v1.19.x agents inherit.</p>
 </ol>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Sub-agent code is direct, no producer pipeline indirection:</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">sub_engine</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">content</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">task</span><span class="p">},</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>             <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;image_url&quot;</span><span class="p">,</span> <span class="s2">&quot;image_url&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">data_uri</span><span class="p">}}],</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="n">attachment_refs</span><span class="o">=</span><span class="p">[</span><span class="n">AttachmentRef</span><span class="p">(</span><span class="n">block_index</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;x.png&quot;</span><span class="p">,</span> <span class="n">file_id</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">media_type</span><span class="o">=</span><span class="s2">&quot;image/png&quot;</span><span class="p">)],</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">content</span><span class="o">=</span><span class="p">[{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"text"</span><span class="p">,</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">task</span><span class="p">},</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>             <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"image_url"</span><span class="p">,</span> <span class="s2">"image_url"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"url"</span><span class="p">:</span> <span class="n">data_uri</span><span class="p">}}],</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="n">attachment_refs</span><span class="o">=</span><span class="p">[</span><span class="n">AttachmentRef</span><span class="p">(</span><span class="n">block_index</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"x.png"</span><span class="p">,</span> <span class="n">file_id</span><span class="o">=</span><span class="s2">"..."</span><span class="p">,</span> <span class="n">media_type</span><span class="o">=</span><span class="s2">"image/png"</span><span class="p">)],</span>
 </span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="p">)</span>
 </span></code></pre></div>
 <p><strong>Without v2 (wire-strip alternative), sub-agent code must either
@@ -2521,7 +2521,7 @@ no stopgap, no shortcut taken as the permanent answer (see Status).</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

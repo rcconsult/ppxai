@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1432,7 +1432,7 @@
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="nd">@property</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">overall_score</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Score with anti-pattern penalties.&quot;&quot;&quot;</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">        </span><span class="sd">"""Score with anti-pattern penalties."""</span>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tool_correctness</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">tool_success</span><span class="p">):</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>            <span class="k">return</span> <span class="mf">0.0</span>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        <span class="n">penalty</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">anti_patterns</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.15</span>  <span class="c1"># 15% per pattern</span>
@@ -1440,7 +1440,7 @@
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
 </span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="nd">@property</span>
 </span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">passed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Pass threshold: 70%&quot;&quot;&quot;</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">        </span><span class="sd">"""Pass threshold: 70%"""</span>
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">overall_score</span> <span class="o">&gt;=</span> <span class="mf">0.7</span>
 </span></code></pre></div>
 <h3 id="anti-pattern-detection">Anti-Pattern Detection<a class="headerlink" href="#anti-pattern-detection" title="Permanent link">&para;</a></h3>
@@ -1534,33 +1534,33 @@
 <h2 id="example-perplexity-sonar-pro">Example: Perplexity sonar-pro<a class="headerlink" href="#example-perplexity-sonar-pro" title="Permanent link">&para;</a></h2>
 <h3 id="before-quality-validation-binary-scoring">Before Quality Validation (Binary Scoring)<a class="headerlink" href="#before-quality-validation-binary-scoring" title="Permanent link">&para;</a></h3>
 <p><div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;patch_indentation&quot;</span><span class="p">,</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;passed&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">&quot;patch_length&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">225</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"patch_indentation"</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">"passed"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">"details"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">"patch_length"</span><span class="p">:</span><span class="w"> </span><span class="mi">225</span>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">}</span>
 </span></code></pre></div>
 <strong>Result:</strong> PASS (100%)</p>
 <h3 id="after-quality-validation">After Quality Validation<a class="headerlink" href="#after-quality-validation" title="Permanent link">&para;</a></h3>
 <p><div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;patch_indentation&quot;</span><span class="p">,</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;passed&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">&quot;patch_length&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">225</span><span class="p">,</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nt">&quot;tool_correctness&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">&quot;tool_success&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">&quot;response_quality&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nt">&quot;anti_patterns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="s2">&quot;tool_json_in_content&quot;</span><span class="p">,</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="s2">&quot;hallucinated_tools&quot;</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"patch_indentation"</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">"passed"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">"details"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">"patch_length"</span><span class="p">:</span><span class="w"> </span><span class="mi">225</span><span class="p">,</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nt">"tool_correctness"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">"tool_success"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">"response_quality"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nt">"anti_patterns"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="s2">"tool_json_in_content"</span><span class="p">,</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="s2">"hallucinated_tools"</span>
 </span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="p">],</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="nt">&quot;quality_notes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">      </span><span class="s2">&quot;Model output tool JSON in response text while also making tool calls&quot;</span><span class="p">,</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">      </span><span class="s2">&quot;Model mentioned tools in content that weren&#39;t actually called&quot;</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="nt">"quality_notes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">      </span><span class="s2">"Model output tool JSON in response text while also making tool calls"</span><span class="p">,</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">      </span><span class="s2">"Model mentioned tools in content that weren't actually called"</span>
 </span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">    </span><span class="p">],</span>
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span><span class="nt">&quot;overall_score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span>
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">    </span><span class="nt">&quot;passed&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span><span class="nt">"overall_score"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">    </span><span class="nt">"passed"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 </span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -1611,20 +1611,20 @@
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="c1"># Validate response quality</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">quality</span> <span class="o">=</span> <span class="n">validate_response_quality</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="n">expected_tool</span><span class="o">=</span><span class="s2">&quot;apply_patch&quot;</span><span class="p">)</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">quality</span> <span class="o">=</span> <span class="n">validate_response_quality</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="n">expected_tool</span><span class="o">=</span><span class="s2">"apply_patch"</span><span class="p">)</span>
 </span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">tool_calls</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tool_calls&quot;</span><span class="p">,</span> <span class="p">[])</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">tool_calls</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tool_calls"</span><span class="p">,</span> <span class="p">[])</span>
 </span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">tool_calls</span><span class="p">:</span>
 </span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        <span class="n">quality</span><span class="o">.</span><span class="n">tool_success</span> <span class="o">=</span> <span class="kc">False</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;No tool call&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">quality</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()}</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"No tool call"</span><span class="p">,</span> <span class="o">**</span><span class="n">quality</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()}</span>
 </span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>
 </span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="c1"># Existing validation logic...</span>
 </span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    <span class="k">if</span> <span class="n">validation_fails</span><span class="p">:</span>
 </span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>        <span class="n">quality</span><span class="o">.</span><span class="n">tool_success</span> <span class="o">=</span> <span class="kc">False</span>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">quality</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()}</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"..."</span><span class="p">,</span> <span class="o">**</span><span class="n">quality</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()}</span>
 </span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>
 </span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>    <span class="c1"># Return quality-based pass/fail</span>
-</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>    <span class="k">return</span> <span class="n">quality</span><span class="o">.</span><span class="n">passed</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;patch_length&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">patch</span><span class="p">),</span> <span class="o">**</span><span class="n">quality</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()}</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>    <span class="k">return</span> <span class="n">quality</span><span class="o">.</span><span class="n">passed</span><span class="p">,</span> <span class="p">{</span><span class="s2">"patch_length"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">patch</span><span class="p">),</span> <span class="o">**</span><span class="n">quality</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()}</span>
 </span></code></pre></div>
 <h3 id="key-changes">Key Changes<a class="headerlink" href="#key-changes" title="Permanent link">&para;</a></h3>
 <ol>
@@ -1743,7 +1743,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

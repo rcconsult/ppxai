@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1168,6 +1168,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-test-suite-reads-whichever-file-wins-including-yours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The test suite reads whichever file wins — including yours
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#related" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1205,8 +1216,8 @@ that variable, so editing the obvious project config silently has <strong>no
 effect</strong> on a running server — it reads whatever <code>PPXAI_CONFIG_FILE</code> points
 at instead.</p>
 <p><strong>Verify with:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>grep<span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;PPXAI_CONFIG_FILE&quot;</span><span class="w"> </span>ppxai/config/loader.py<span class="w">    </span><span class="c1"># priority-1 in the search order</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;PPXAI_CONFIG_FILE&quot;</span><span class="w"> </span>.env<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w">         </span><span class="c1"># your local .env may pin it</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>grep<span class="w"> </span>-n<span class="w"> </span><span class="s2">"PPXAI_CONFIG_FILE"</span><span class="w"> </span>ppxai/config/loader.py<span class="w">    </span><span class="c1"># priority-1 in the search order</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">"PPXAI_CONFIG_FILE"</span><span class="w"> </span>.env<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w">         </span><span class="c1"># your local .env may pin it</span>
 </span></code></pre></div>
 Or ask the running server (v1.19.0+ prints it at startup):
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Config: &lt;the authoritative path&gt;
@@ -1242,7 +1253,7 @@ to <code>~/.ppxai/ppxai-config.json</code>.</p>
   read). If it's set in your environment, it came from your shell or a
   <code>.env</code> file, not from ppxai.</li>
 <li>To find the authoritative file from a shell:
-  <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from ppxai.config.loader import initialize, find_config_file; initialize(); print(find_config_file())&quot;</span>
+  <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"from ppxai.config.loader import initialize, find_config_file; initialize(); print(find_config_file())"</span>
 </span></code></pre></div>
   Note: call <code>initialize()</code> first — it loads <code>.env</code>, which is what sets the
   override. Calling <code>find_config_file()</code> <em>without</em> <code>initialize()</code> can return
@@ -1251,6 +1262,41 @@ to <code>~/.ppxai/ppxai-config.json</code>.</p>
   (<code>ppxai/server/http.py::run_server</code>). Read that line before assuming which
   file is live.</li>
 </ul>
+<h2 id="the-test-suite-reads-whichever-file-wins-including-yours">The test suite reads whichever file wins — including yours<a class="headerlink" href="#the-test-suite-reads-whichever-file-wins-including-yours" title="Permanent link">&para;</a></h2>
+<p>The same search order applies <strong>inside pytest</strong>, and nothing in
+<code>tests/conftest.py</code> pins it. So a test that resolves model facts reads the
+first of <code>PPXAI_CONFIG_FILE</code> / <code>./ppxai-config.json</code> / <code>~/.ppxai/ppxai-config.json</code>
+that exists — on a developer machine, routinely the developer's own config.</p>
+<p>Measured 2026-08-31: <code>tests/test_perplexity_two_wires.py</code> failed on a dev host
+because that host's <code>~/.ppxai/ppxai-config.json</code> carried a
+<code>facts.tool_mode = "native"</code> override for <code>perplexity/sonar</code>, while the test
+asserts the shipped <code>auto</code>. Nothing was wrong with the repo. The same test
+passes on CI, where no user config exists.</p>
+<p>Two consequences worth internalising:</p>
+<ul>
+<li>
+<p><strong>A red test can be your config, not the code.</strong> Before debugging, check
+  what the suite is actually reading:
+  <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"from ppxai.config.facts_config import find_config_file; print(find_config_file())"</span>
+</span></code></pre></div>
+  Run it <em>inside</em> pytest if the answer looks surprising — <code>initialize()</code> may
+  not have run in your shell, so a bare invocation can report the
+  project-local file while the suite reads the user-global one.</p>
+</li>
+<li>
+<p><strong>A green suite is not proof either.</strong> The reverse case is worse: a config
+  the suite reads can <em>mask</em> a defect. The repo-root <code>ppxai-config.json</code> is
+  <strong>tracked</strong>, and it drifted for a day (a deprecated default, plus NVIDIA ids
+  that had answered HTTP 410 for six weeks) with the suite green throughout —
+  because every deprecation invariant scoped only <code>ppxai-config.example.json</code>.
+  Fixed by iterating the tracked set (<code>git ls-files 'ppxai-config*.json'</code>) in
+  <code>tests/test_doctor.py::TestDeprecationTableInvariants</code>.</p>
+</li>
+</ul>
+<p><strong>Rule:</strong> a test that reads config resolution must either pin the file it
+means (<code>monkeypatch.setattr(fc, "find_config_file", ...)</code>) or assert against
+the shipped table rather than the resolved result. Otherwise its verdict is a
+property of the host, not of the code.</p>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>ppxai/config/loader.py</code> — <code>find_config_file()</code> search order + <code>initialize()</code>.</li>
@@ -1331,7 +1377,7 @@ to <code>~/.ppxai/ppxai-config.json</code>.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -3498,7 +3498,7 @@
 </span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="c1"># macOS: Full installation with app, config, and auto-start server</span>
 </span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>--with-macos-app<span class="w"> </span>--with-config<span class="w"> </span>--with-launchagent
 </span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="c1"># Install only the server (for VSCode users who don&#39;t need TUI)</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="c1"># Install only the server (for VSCode users who don't need TUI)</span>
 </span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>--server-only
 </span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>
 </span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="c1"># Install only TUI (no server or desktop)</span>
@@ -3517,7 +3517,7 @@
 </span></code></pre></div>
 <p>Or download and run manually:</p>
 <div class="language-powershell highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c"># Download the installer</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">Invoke-WebRequest</span> <span class="n">-Uri</span> <span class="s2">&quot;https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1&quot;</span> <span class="n">-OutFile</span> <span class="s2">&quot;install.ps1&quot;</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">Invoke-WebRequest</span> <span class="n">-Uri</span> <span class="s2">"https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1"</span> <span class="n">-OutFile</span> <span class="s2">"install.ps1"</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c"># Run it (may require: Set-ExecutionPolicy RemoteSigned -Scope CurrentUser)</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">.\</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span>
@@ -3537,26 +3537,26 @@
 <h4 id="linux-macos_1">Linux / macOS<a class="headerlink" href="#linux-macos_1" title="Permanent link">&para;</a></h4>
 <p>If <code>~/.local/bin</code> is not in your PATH, add it:</p>
 <p><strong>Bash (~/.bashrc or ~/.bash_profile):</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;export PATH=&quot;$HOME/.local/bin:$PATH&quot;&#39;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'export PATH="$HOME/.local/bin:$PATH"'</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">source</span><span class="w"> </span>~/.bashrc
 </span></code></pre></div></p>
 <p><strong>Zsh (~/.zshrc):</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;export PATH=&quot;$HOME/.local/bin:$PATH&quot;&#39;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.zshrc
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'export PATH="$HOME/.local/bin:$PATH"'</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.zshrc
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">source</span><span class="w"> </span>~/.zshrc
 </span></code></pre></div></p>
 <p><strong>Fish (~/.config/fish/config.fish):</strong>
-<div class="language-fish highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">echo</span> <span class="s1">&#39;set -gx PATH $HOME/.local/bin $PATH&#39;</span> <span class="o">&gt;&gt;</span> ~/.config/fish/config.fish
+<div class="language-fish highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">echo</span> <span class="s1">'set -gx PATH $HOME/.local/bin $PATH'</span> <span class="o">&gt;&gt;</span> ~/.config/fish/config.fish
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">source</span> ~/.config/fish/config.fish
 </span></code></pre></div></p>
 <h4 id="windows_1">Windows<a class="headerlink" href="#windows_1" title="Permanent link">&para;</a></h4>
 <p>The installer automatically adds <code>~\.ppxai\bin</code> to your user PATH. Restart your terminal to apply.</p>
 <p>Or update PATH manually in PowerShell:
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">$env:PATH</span> <span class="p">=</span> <span class="no">[Environment]</span><span class="p">::</span><span class="n">GetEnvironmentVariable</span><span class="p">(</span><span class="s2">&quot;PATH&quot;</span><span class="p">,</span> <span class="s2">&quot;User&quot;</span><span class="p">)</span>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">$env:PATH</span> <span class="p">=</span> <span class="no">[Environment]</span><span class="p">::</span><span class="n">GetEnvironmentVariable</span><span class="p">(</span><span class="s2">"PATH"</span><span class="p">,</span> <span class="s2">"User"</span><span class="p">)</span>
 </span></code></pre></div></p>
 <h3 id="2-set-up-api-key">2. Set Up API Key<a class="headerlink" href="#2-set-up-api-key" title="Permanent link">&para;</a></h3>
 <h4 id="linux-macos_2">Linux / macOS<a class="headerlink" href="#linux-macos_2" title="Permanent link">&para;</a></h4>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.ppxai
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;PERPLEXITY_API_KEY=your-key-here&#39;</span><span class="w"> </span>&gt;<span class="w"> </span>~/.ppxai/.env
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'PERPLEXITY_API_KEY=your-key-here'</span><span class="w"> </span>&gt;<span class="w"> </span>~/.ppxai/.env
 </span></code></pre></div>
 <h4 id="windows_2">Windows<a class="headerlink" href="#windows_2" title="Permanent link">&para;</a></h4>
 <div class="language-powershell highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c"># The installer creates a template .env file</span>
@@ -3590,7 +3590,7 @@
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
 </span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="c1"># Configure Ctrl+Enter keybind</span>
 </span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.config/ghostty
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>cat<span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.config/ghostty/config<span class="w"> </span><span class="s">&lt;&lt; &#39;EOF&#39;</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>cat<span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.config/ghostty/config<span class="w"> </span><span class="s">&lt;&lt; 'EOF'</span>
 </span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="s"># Enable Ctrl+Enter for ppxaide (sends CSI u sequence)</span>
 </span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="s">keybind = ctrl+enter=text:\x1b[13;5u</span>
 </span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="s">EOF</span>
@@ -3882,13 +3882,13 @@
 <h3 id="provider-configuration">Provider Configuration<a class="headerlink" href="#provider-configuration" title="Permanent link">&para;</a></h3>
 <p>For advanced provider configuration, create <code>~/.ppxai/ppxai-config.json</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="p">{</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">  </span><span class="nt">&quot;default_provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;perplexity&quot;</span><span class="p">,</span>
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">    </span><span class="nt">&quot;custom-vllm&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Local vLLM&quot;</span><span class="p">,</span>
-</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="w">      </span><span class="nt">&quot;base_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://localhost:8000/v1&quot;</span><span class="p">,</span>
-</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="w">      </span><span class="nt">&quot;api_key_env&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;VLLM_API_KEY&quot;</span><span class="p">,</span>
-</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a><span class="w">      </span><span class="nt">&quot;default_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;meta-llama/Llama-3.1-70B-Instruct&quot;</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">  </span><span class="nt">"default_provider"</span><span class="p">:</span><span class="w"> </span><span class="s2">"perplexity"</span><span class="p">,</span>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">    </span><span class="nt">"custom-vllm"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Local vLLM"</span><span class="p">,</span>
+</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://localhost:8000/v1"</span><span class="p">,</span>
+</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="w">      </span><span class="nt">"api_key_env"</span><span class="p">:</span><span class="w"> </span><span class="s2">"VLLM_API_KEY"</span><span class="p">,</span>
+</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"meta-llama/Llama-3.1-70B-Instruct"</span>
 </span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-26-11"><a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a><span class="p">}</span>
@@ -3960,12 +3960,12 @@
 <h3 id="terminal-specific-configuration">Terminal-Specific Configuration<a class="headerlink" href="#terminal-specific-configuration" title="Permanent link">&para;</a></h3>
 <h4 id="wezterm-setup">WezTerm Setup<a class="headerlink" href="#wezterm-setup" title="Permanent link">&para;</a></h4>
 <p>WezTerm requires <code>TERM_PROGRAM</code> to be set for auto-detection. Add to <code>~/.wezterm.lua</code> (or <code>%USERPROFILE%\.wezterm.lua</code> on Windows):</p>
-<div class="language-lua highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="kd">local</span><span class="w"> </span><span class="nv">wezterm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">require</span><span class="w"> </span><span class="s1">&#39;wezterm&#39;</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="kd">local</span><span class="w"> </span><span class="nv">wezterm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">require</span><span class="w"> </span><span class="s1">'wezterm'</span>
 </span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="kd">local</span><span class="w"> </span><span class="nv">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span>
 </span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>
 </span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="c1">-- Required for ppxai terminal detection</span>
 </span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="nv">config</span><span class="p">.</span><span class="py">set_environment_variables</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="w">  </span><span class="nv">TERM_PROGRAM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;WezTerm&#39;</span><span class="p">,</span>
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="w">  </span><span class="nv">TERM_PROGRAM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'WezTerm'</span><span class="p">,</span>
 </span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="p">}</span>
 </span><span id="__span-29-8"><a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a>
 </span><span id="__span-29-9"><a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a><span class="kr">return</span><span class="w"> </span><span class="nv">config</span>
@@ -3975,10 +3975,10 @@
 <p>Windows Terminal auto-detection works out of the box via the <code>WT_SESSION</code> environment variable. No configuration needed.</p>
 <p><strong>Optional:</strong> To explicitly set the image protocol, add to your Windows Terminal <code>settings.json</code> (Ctrl+Shift+, in Windows Terminal):</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="p">{</span>
-</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="w">  </span><span class="nt">&quot;profiles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="w">    </span><span class="nt">&quot;defaults&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="w">      </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="w">        </span><span class="nt">&quot;PPXAI_IMAGE_PROTOCOL&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sixel&quot;</span>
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="w">  </span><span class="nt">"profiles"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="w">    </span><span class="nt">"defaults"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="w">      </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="w">        </span><span class="nt">"PPXAI_IMAGE_PROTOCOL"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sixel"</span>
 </span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a><span class="w">      </span><span class="p">}</span>
 </span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-30-8"><a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a><span class="w">  </span><span class="p">}</span>
@@ -3986,13 +3986,13 @@
 </span></code></pre></div>
 <p>Or for a specific profile only:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="p">{</span>
-</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="w">  </span><span class="nt">&quot;profiles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="w">    </span><span class="nt">&quot;list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="w">  </span><span class="nt">"profiles"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="w">    </span><span class="nt">"list"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 </span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a><span class="w">      </span><span class="p">{</span>
-</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PowerShell&quot;</span><span class="p">,</span>
-</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a><span class="w">        </span><span class="nt">&quot;guid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;{your-profile-guid}&quot;</span><span class="p">,</span>
-</span><span id="__span-31-7"><a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a><span class="w">        </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-31-8"><a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a><span class="w">          </span><span class="nt">&quot;PPXAI_IMAGE_PROTOCOL&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sixel&quot;</span>
+</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="w">        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"PowerShell"</span><span class="p">,</span>
+</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a><span class="w">        </span><span class="nt">"guid"</span><span class="p">:</span><span class="w"> </span><span class="s2">"{your-profile-guid}"</span><span class="p">,</span>
+</span><span id="__span-31-7"><a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a><span class="w">        </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-31-8"><a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a><span class="w">          </span><span class="nt">"PPXAI_IMAGE_PROTOCOL"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sixel"</span>
 </span><span id="__span-31-9"><a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a><span class="w">        </span><span class="p">}</span>
 </span><span id="__span-31-10"><a id="__codelineno-31-10" name="__codelineno-31-10" href="#__codelineno-31-10"></a><span class="w">      </span><span class="p">}</span>
 </span><span id="__span-31-11"><a id="__codelineno-31-11" name="__codelineno-31-11" href="#__codelineno-31-11"></a><span class="w">    </span><span class="p">]</span>
@@ -4048,17 +4048,17 @@
 <ol>
 <li>Right-click Desktop → New → Shortcut</li>
 <li>Set target to:
-   <div class="language-text highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>wt.exe -d &quot;%USERPROFILE%\.ppxai&quot; -- &quot;%USERPROFILE%\.ppxai\bin\ppxai.exe&quot;
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>wt.exe -d "%USERPROFILE%\.ppxai" -- "%USERPROFILE%\.ppxai\bin\ppxai.exe"
 </span></code></pre></div></li>
 <li>Or for a specific starting directory:
-   <div class="language-text highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>wt.exe -d &quot;C:\Projects\MyProject&quot; -- &quot;%USERPROFILE%\.ppxai\bin\ppxai.exe&quot;
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>wt.exe -d "C:\Projects\MyProject" -- "%USERPROFILE%\.ppxai\bin\ppxai.exe"
 </span></code></pre></div></li>
 </ol>
 <p><strong>For WezTerm:</strong></p>
 <ol>
 <li>Right-click Desktop → New → Shortcut</li>
 <li>Set target to:
-   <div class="language-text highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>wezterm.exe start --cwd &quot;%USERPROFILE%\.ppxai&quot; -- &quot;%USERPROFILE%\.ppxai\bin\ppxai.exe&quot;
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>wezterm.exe start --cwd "%USERPROFILE%\.ppxai" -- "%USERPROFILE%\.ppxai\bin\ppxai.exe"
 </span></code></pre></div></li>
 </ol>
 <p><strong>Shortcut Properties:</strong>
@@ -4067,7 +4067,7 @@
 - <strong>Icon:</strong> Optionally set to <code>ppxai.exe</code> for the ppxai icon</p>
 <h4 id="ppxaide-textual-tui-shortcuts">ppxaide (Textual TUI) Shortcuts<a class="headerlink" href="#ppxaide-textual-tui-shortcuts" title="Permanent link">&para;</a></h4>
 <p>Replace <code>ppxai.exe</code> with <code>ppxaide.exe</code> in the above examples:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>wt.exe -d &quot;%USERPROFILE%\.ppxai&quot; -- &quot;%USERPROFILE%\.ppxai\bin\ppxaide.exe&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>wt.exe -d "%USERPROFILE%\.ppxai" -- "%USERPROFILE%\.ppxai\bin\ppxaide.exe"
 </span></code></pre></div>
 <h3 id="macos-terminal-configuration">macOS Terminal Configuration<a class="headerlink" href="#macos-terminal-configuration" title="Permanent link">&para;</a></h3>
 <p>macOS users have several terminal options with different image protocol capabilities.</p>
@@ -4142,12 +4142,12 @@
 </ol>
 <h4 id="wezterm-setup-macos">WezTerm Setup (macOS)<a class="headerlink" href="#wezterm-setup-macos" title="Permanent link">&para;</a></h4>
 <p>WezTerm requires <code>TERM_PROGRAM</code> to be set for auto-detection. Add to <code>~/.wezterm.lua</code>:</p>
-<div class="language-lua highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a><span class="kd">local</span><span class="w"> </span><span class="nv">wezterm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">require</span><span class="w"> </span><span class="s1">&#39;wezterm&#39;</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a><span class="kd">local</span><span class="w"> </span><span class="nv">wezterm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">require</span><span class="w"> </span><span class="s1">'wezterm'</span>
 </span><span id="__span-39-2"><a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a><span class="kd">local</span><span class="w"> </span><span class="nv">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span>
 </span><span id="__span-39-3"><a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a>
 </span><span id="__span-39-4"><a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a><span class="c1">-- Required for ppxai terminal detection</span>
 </span><span id="__span-39-5"><a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a><span class="nv">config</span><span class="p">.</span><span class="py">set_environment_variables</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-39-6"><a id="__codelineno-39-6" name="__codelineno-39-6" href="#__codelineno-39-6"></a><span class="w">  </span><span class="nv">TERM_PROGRAM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;WezTerm&#39;</span><span class="p">,</span>
+</span><span id="__span-39-6"><a id="__codelineno-39-6" name="__codelineno-39-6" href="#__codelineno-39-6"></a><span class="w">  </span><span class="nv">TERM_PROGRAM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'WezTerm'</span><span class="p">,</span>
 </span><span id="__span-39-7"><a id="__codelineno-39-7" name="__codelineno-39-7" href="#__codelineno-39-7"></a><span class="p">}</span>
 </span><span id="__span-39-8"><a id="__codelineno-39-8" name="__codelineno-39-8" href="#__codelineno-39-8"></a>
 </span><span id="__span-39-9"><a id="__codelineno-39-9" name="__codelineno-39-9" href="#__codelineno-39-9"></a><span class="kr">return</span><span class="w"> </span><span class="nv">config</span>
@@ -4176,11 +4176,11 @@
 <li>Replace the script with:</li>
 </ol>
 <div class="language-applescript highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="k">on</span> <span class="nb">run</span> <span class="p">{</span><span class="nv">input</span><span class="p">,</span> <span class="nv">parameters</span><span class="p">}</span>
-</span><span id="__span-41-2"><a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>    <span class="k">tell</span> <span class="nb">application</span> <span class="s2">&quot;iTerm&quot;</span>
+</span><span id="__span-41-2"><a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>    <span class="k">tell</span> <span class="nb">application</span> <span class="s2">"iTerm"</span>
 </span><span id="__span-41-3"><a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a>        <span class="nb">activate</span>
 </span><span id="__span-41-4"><a id="__codelineno-41-4" name="__codelineno-41-4" href="#__codelineno-41-4"></a>        <span class="nv">create</span> <span class="na">window</span> <span class="nv">with</span> <span class="nv">default</span> <span class="nv">profile</span>
 </span><span id="__span-41-5"><a id="__codelineno-41-5" name="__codelineno-41-5" href="#__codelineno-41-5"></a>        <span class="k">tell</span> <span class="nv">current</span> <span class="nv">session</span> <span class="k">of</span> <span class="nv">current</span> <span class="na">window</span>
-</span><span id="__span-41-6"><a id="__codelineno-41-6" name="__codelineno-41-6" href="#__codelineno-41-6"></a>            <span class="nb">write</span> <span class="nb">text</span> <span class="s2">&quot;ppxai&quot;</span>
+</span><span id="__span-41-6"><a id="__codelineno-41-6" name="__codelineno-41-6" href="#__codelineno-41-6"></a>            <span class="nb">write</span> <span class="nb">text</span> <span class="s2">"ppxai"</span>
 </span><span id="__span-41-7"><a id="__codelineno-41-7" name="__codelineno-41-7" href="#__codelineno-41-7"></a>        <span class="k">end</span> <span class="k">tell</span>
 </span><span id="__span-41-8"><a id="__codelineno-41-8" name="__codelineno-41-8" href="#__codelineno-41-8"></a>    <span class="k">end</span> <span class="k">tell</span>
 </span><span id="__span-41-9"><a id="__codelineno-41-9" name="__codelineno-41-9" href="#__codelineno-41-9"></a>    <span class="no">return</span> <span class="nv">input</span>
@@ -4192,7 +4192,7 @@
 </ol>
 <p><strong>For WezTerm:</strong></p>
 <div class="language-applescript highlight"><pre><span></span><code><span id="__span-42-1"><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="k">on</span> <span class="nb">run</span> <span class="p">{</span><span class="nv">input</span><span class="p">,</span> <span class="nv">parameters</span><span class="p">}</span>
-</span><span id="__span-42-2"><a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a>    <span class="nb">do shell script</span> <span class="s2">&quot;/Applications/WezTerm.app/Contents/MacOS/wezterm start --always-new-process -- ~/.local/bin/ppxai&quot;</span>
+</span><span id="__span-42-2"><a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a>    <span class="nb">do shell script</span> <span class="s2">"/Applications/WezTerm.app/Contents/MacOS/wezterm start --always-new-process -- ~/.local/bin/ppxai"</span>
 </span><span id="__span-42-3"><a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a>    <span class="no">return</span> <span class="nv">input</span>
 </span><span id="__span-42-4"><a id="__codelineno-42-4" name="__codelineno-42-4" href="#__codelineno-42-4"></a><span class="k">end</span> <span class="nb">run</span>
 </span></code></pre></div>
@@ -4206,7 +4206,7 @@
 <li>Add <strong>Hotkey</strong> trigger (e.g., ⌥⌘P)</li>
 <li>Add <strong>Run Script</strong> action:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-43-1"><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>osascript<span class="w"> </span>-e<span class="w"> </span><span class="s1">&#39;tell application &quot;iTerm&quot; to create window with default profile command &quot;ppxai&quot;&#39;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-43-1"><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>osascript<span class="w"> </span>-e<span class="w"> </span><span class="s1">'tell application "iTerm" to create window with default profile command "ppxai"'</span>
 </span></code></pre></div>
 <ol>
 <li>Connect trigger to action</li>
@@ -4222,7 +4222,7 @@
 </span><span id="__span-44-7"><a id="__codelineno-44-7" name="__codelineno-44-7" href="#__codelineno-44-7"></a><span class="c1"># @raycast.packageName ppxai</span>
 </span><span id="__span-44-8"><a id="__codelineno-44-8" name="__codelineno-44-8" href="#__codelineno-44-8"></a>
 </span><span id="__span-44-9"><a id="__codelineno-44-9" name="__codelineno-44-9" href="#__codelineno-44-9"></a><span class="c1"># Launch ppxai in iTerm2</span>
-</span><span id="__span-44-10"><a id="__codelineno-44-10" name="__codelineno-44-10" href="#__codelineno-44-10"></a>osascript<span class="w"> </span>-e<span class="w"> </span><span class="s1">&#39;tell application &quot;iTerm&quot; to create window with default profile command &quot;ppxai&quot;&#39;</span>
+</span><span id="__span-44-10"><a id="__codelineno-44-10" name="__codelineno-44-10" href="#__codelineno-44-10"></a>osascript<span class="w"> </span>-e<span class="w"> </span><span class="s1">'tell application "iTerm" to create window with default profile command "ppxai"'</span>
 </span></code></pre></div>
 <p>Make it executable:
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-45-1"><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>chmod<span class="w"> </span>+x<span class="w"> </span>~/.config/raycast/scripts/ppxai.sh
@@ -4336,7 +4336,7 @@ Use <code>.wezterm.lua</code> config (see WezTerm Setup section above).</p>
 <h3 id="command-not-found-ppxai">"command not found: ppxai"<a class="headerlink" href="#command-not-found-ppxai" title="Permanent link">&para;</a></h3>
 <p><strong>Linux/macOS:</strong> Add <code>~/.local/bin</code> to your PATH (see Post-Installation Setup above).</p>
 <p><strong>Windows:</strong> Restart your terminal after installation, or run:
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-52-1"><a id="__codelineno-52-1" name="__codelineno-52-1" href="#__codelineno-52-1"></a><span class="nv">$env:PATH</span> <span class="p">=</span> <span class="no">[Environment]</span><span class="p">::</span><span class="n">GetEnvironmentVariable</span><span class="p">(</span><span class="s2">&quot;PATH&quot;</span><span class="p">,</span> <span class="s2">&quot;User&quot;</span><span class="p">)</span>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-52-1"><a id="__codelineno-52-1" name="__codelineno-52-1" href="#__codelineno-52-1"></a><span class="nv">$env:PATH</span> <span class="p">=</span> <span class="no">[Environment]</span><span class="p">::</span><span class="n">GetEnvironmentVariable</span><span class="p">(</span><span class="s2">"PATH"</span><span class="p">,</span> <span class="s2">"User"</span><span class="p">)</span>
 </span></code></pre></div></p>
 <h3 id="could-not-connect-to-ppxai-server">"Could not connect to ppxai-server"<a class="headerlink" href="#could-not-connect-to-ppxai-server" title="Permanent link">&para;</a></h3>
 <p>Make sure the server is running:
@@ -4346,7 +4346,7 @@ Use <code>.wezterm.lua</code> config (see WezTerm Setup section above).</p>
 <h3 id="no-api-key-configured">"No API key configured"<a class="headerlink" href="#no-api-key-configured" title="Permanent link">&para;</a></h3>
 <p>Add your API key to <code>~/.ppxai/.env</code>:</p>
 <p><strong>Linux/macOS:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-54-1"><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;PERPLEXITY_API_KEY=your-key-here&#39;</span><span class="w"> </span>&gt;<span class="w"> </span>~/.ppxai/.env
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-54-1"><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'PERPLEXITY_API_KEY=your-key-here'</span><span class="w"> </span>&gt;<span class="w"> </span>~/.ppxai/.env
 </span></code></pre></div></p>
 <p><strong>Windows:</strong>
 <div class="language-powershell highlight"><pre><span></span><code><span id="__span-55-1"><a id="__codelineno-55-1" name="__codelineno-55-1" href="#__codelineno-55-1"></a><span class="n">notepad</span> <span class="nv">$env:USERPROFILE</span><span class="p">\.</span><span class="n">ppxai</span><span class="p">\.</span><span class="n">env</span>
@@ -4358,7 +4358,7 @@ Use <code>.wezterm.lua</code> config (see WezTerm Setup section above).</p>
 </span></code></pre></div></p>
 <p><strong>Windows:</strong>
 <div class="language-powershell highlight"><pre><span></span><code><span id="__span-57-1"><a id="__codelineno-57-1" name="__codelineno-57-1" href="#__codelineno-57-1"></a><span class="c"># Find and kill existing server</span>
-</span><span id="__span-57-2"><a id="__codelineno-57-2" name="__codelineno-57-2" href="#__codelineno-57-2"></a><span class="nb">Get-Process</span> <span class="p">|</span> <span class="nb">Where-Object</span> <span class="p">{</span><span class="nv">$_</span><span class="p">.</span><span class="n">ProcessName</span> <span class="o">-like</span> <span class="s2">&quot;*ppxai-server*&quot;</span><span class="p">}</span> <span class="p">|</span> <span class="nb">Stop-Process</span>
+</span><span id="__span-57-2"><a id="__codelineno-57-2" name="__codelineno-57-2" href="#__codelineno-57-2"></a><span class="nb">Get-Process</span> <span class="p">|</span> <span class="nb">Where-Object</span> <span class="p">{</span><span class="nv">$_</span><span class="p">.</span><span class="n">ProcessName</span> <span class="o">-like</span> <span class="s2">"*ppxai-server*"</span><span class="p">}</span> <span class="p">|</span> <span class="nb">Stop-Process</span>
 </span><span id="__span-57-3"><a id="__codelineno-57-3" name="__codelineno-57-3" href="#__codelineno-57-3"></a><span class="n">ppxai-server</span>
 </span></code></pre></div></p>
 <h3 id="windows-first-run-is-slow">Windows: First Run is Slow<a class="headerlink" href="#windows-first-run-is-slow" title="Permanent link">&para;</a></h3>
@@ -4370,48 +4370,68 @@ Use <code>.wezterm.lua</code> config (see WezTerm Setup section above).</p>
 <p>Or to use a specific certificate file:
 <div class="language-text highlight"><pre><span></span><code><span id="__span-59-1"><a id="__codelineno-59-1" name="__codelineno-59-1" href="#__codelineno-59-1"></a>SSL_CERT_FILE=/path/to/corporate-ca-bundle.pem
 </span></code></pre></div></p>
-<p><strong>v1.15.4+:</strong> Web tools (<code>get_weather</code>, <code>fetch_url</code>, <code>web_search</code>) automatically use these settings. The <code>get_weather</code> tool also falls back to HTTP when HTTPS fails.</p>
-<p>You can also configure per-tool timeouts in <code>ppxai-config.json</code>:
+<p><strong>Or set it persistently in <code>ppxai-config.json</code></strong> (v1.19.1+) so it survives
+without a <code>.env</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-60-1"><a id="__codelineno-60-1" name="__codelineno-60-1" href="#__codelineno-60-1"></a><span class="p">{</span>
-</span><span id="__span-60-2"><a id="__codelineno-60-2" name="__codelineno-60-2" href="#__codelineno-60-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-60-3"><a id="__codelineno-60-3" name="__codelineno-60-3" href="#__codelineno-60-3"></a><span class="w">    </span><span class="nt">&quot;get_weather&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-60-4"><a id="__codelineno-60-4" name="__codelineno-60-4" href="#__codelineno-60-4"></a><span class="w">    </span><span class="nt">&quot;fetch_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="w"> </span><span class="p">}</span>
-</span><span id="__span-60-5"><a id="__codelineno-60-5" name="__codelineno-60-5" href="#__codelineno-60-5"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-60-6"><a id="__codelineno-60-6" name="__codelineno-60-6" href="#__codelineno-60-6"></a><span class="p">}</span>
+</span><span id="__span-60-2"><a id="__codelineno-60-2" name="__codelineno-60-2" href="#__codelineno-60-2"></a><span class="w">  </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-60-3"><a id="__codelineno-60-3" name="__codelineno-60-3" href="#__codelineno-60-3"></a><span class="w">    </span><span class="nt">"ssl"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-60-4"><a id="__codelineno-60-4" name="__codelineno-60-4" href="#__codelineno-60-4"></a><span class="w">      </span><span class="nt">"verify"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-60-5"><a id="__codelineno-60-5" name="__codelineno-60-5" href="#__codelineno-60-5"></a><span class="w">      </span><span class="nt">"cert_file"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/path/to/corporate-ca-bundle.pem"</span>
+</span><span id="__span-60-6"><a id="__codelineno-60-6" name="__codelineno-60-6" href="#__codelineno-60-6"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-60-7"><a id="__codelineno-60-7" name="__codelineno-60-7" href="#__codelineno-60-7"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-60-8"><a id="__codelineno-60-8" name="__codelineno-60-8" href="#__codelineno-60-8"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Precedence is <code>SSL_VERIFY</code> → <code>SSL_CERT_FILE</code> → <code>network.ssl.verify</code> →
+<code>network.ssl.cert_file</code> → system trust store — <strong>environment always wins</strong>,
+in both directions (<code>SSL_VERIFY=true</code> re-enables verification over a config
+<code>verify: false</code>). A custom CA is <strong>added to</strong> the system trust store, not
+substituted for it, so internal hosts and the public internet both verify
+on a laptop that moves between networks. A <code>cert_file</code> that doesn't exist
+falls back to the system store rather than failing every request. Run
+<code>/doctor</code> to see the resolved policy and its reason; disabled verification
+is reported there and warned about at startup.</p>
+<p><strong>v1.15.4+:</strong> Web tools (<code>get_weather</code>, <code>fetch_url</code>, <code>web_search</code>) automatically use these settings. <code>get_weather</code> is <strong>HTTPS-only as of v1.19.1</strong> (ADR 0009 §2 / debt Item 52) — the old plain-HTTP fallback put an always-denied scheme into its egress superset, which made the tool un-allowlistable under a per-run network policy. Reliability fallback is a second backend (Open-Meteo), not a scheme downgrade.</p>
+<p>You can also configure per-tool timeouts in <code>ppxai-config.json</code>:
+<div class="language-json highlight"><pre><span></span><code><span id="__span-61-1"><a id="__codelineno-61-1" name="__codelineno-61-1" href="#__codelineno-61-1"></a><span class="p">{</span>
+</span><span id="__span-61-2"><a id="__codelineno-61-2" name="__codelineno-61-2" href="#__codelineno-61-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-61-3"><a id="__codelineno-61-3" name="__codelineno-61-3" href="#__codelineno-61-3"></a><span class="w">    </span><span class="nt">"get_weather"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"timeout"</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-61-4"><a id="__codelineno-61-4" name="__codelineno-61-4" href="#__codelineno-61-4"></a><span class="w">    </span><span class="nt">"fetch_url"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"timeout"</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-61-5"><a id="__codelineno-61-5" name="__codelineno-61-5" href="#__codelineno-61-5"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-61-6"><a id="__codelineno-61-6" name="__codelineno-61-6" href="#__codelineno-61-6"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <h3 id="windows-executionpolicy-error">Windows: ExecutionPolicy Error<a class="headerlink" href="#windows-executionpolicy-error" title="Permanent link">&para;</a></h3>
 <p>If PowerShell blocks the install script:
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-61-1"><a id="__codelineno-61-1" name="__codelineno-61-1" href="#__codelineno-61-1"></a><span class="nb">Set-ExecutionPolicy</span> <span class="n">RemoteSigned</span> <span class="n">-Scope</span> <span class="n">CurrentUser</span>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-62-1"><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a><span class="nb">Set-ExecutionPolicy</span> <span class="n">RemoteSigned</span> <span class="n">-Scope</span> <span class="n">CurrentUser</span>
 </span></code></pre></div></p>
 <h3 id="terminal-shows-unknown-and-images-none">Terminal Shows "unknown" and Images "none"<a class="headerlink" href="#terminal-shows-unknown-and-images-none" title="Permanent link">&para;</a></h3>
 <p>This means ppxai is running in a terminal that doesn't support image protocols (likely the legacy Windows console).</p>
 <p><strong>Solution:</strong> Launch ppxai via Windows Terminal or WezTerm:
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-62-1"><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a><span class="c"># Windows Terminal</span>
-</span><span id="__span-62-2"><a id="__codelineno-62-2" name="__codelineno-62-2" href="#__codelineno-62-2"></a><span class="n">wt</span><span class="p">.</span><span class="n">exe</span> <span class="p">--</span> <span class="n">ppxai</span>
-</span><span id="__span-62-3"><a id="__codelineno-62-3" name="__codelineno-62-3" href="#__codelineno-62-3"></a>
-</span><span id="__span-62-4"><a id="__codelineno-62-4" name="__codelineno-62-4" href="#__codelineno-62-4"></a><span class="c"># WezTerm</span>
-</span><span id="__span-62-5"><a id="__codelineno-62-5" name="__codelineno-62-5" href="#__codelineno-62-5"></a><span class="n">wezterm</span><span class="p">.</span><span class="n">exe</span> <span class="nb">start </span><span class="p">--</span> <span class="n">ppxai</span>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-63-1"><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a><span class="c"># Windows Terminal</span>
+</span><span id="__span-63-2"><a id="__codelineno-63-2" name="__codelineno-63-2" href="#__codelineno-63-2"></a><span class="n">wt</span><span class="p">.</span><span class="n">exe</span> <span class="p">--</span> <span class="n">ppxai</span>
+</span><span id="__span-63-3"><a id="__codelineno-63-3" name="__codelineno-63-3" href="#__codelineno-63-3"></a>
+</span><span id="__span-63-4"><a id="__codelineno-63-4" name="__codelineno-63-4" href="#__codelineno-63-4"></a><span class="c"># WezTerm</span>
+</span><span id="__span-63-5"><a id="__codelineno-63-5" name="__codelineno-63-5" href="#__codelineno-63-5"></a><span class="n">wezterm</span><span class="p">.</span><span class="n">exe</span> <span class="nb">start </span><span class="p">--</span> <span class="n">ppxai</span>
 </span></code></pre></div></p>
 <p>See <a href="#terminal-image-display-v1152">Terminal Image Display</a> for shortcut configuration.</p>
 <h3 id="wezterm-not-detected-shows-unknown">WezTerm Not Detected (Shows "unknown")<a class="headerlink" href="#wezterm-not-detected-shows-unknown" title="Permanent link">&para;</a></h3>
 <p>WezTerm doesn't set <code>TERM_PROGRAM</code> by default. Add to <code>~/.wezterm.lua</code>:</p>
-<div class="language-lua highlight"><pre><span></span><code><span id="__span-63-1"><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a><span class="nv">config</span><span class="p">.</span><span class="py">set_environment_variables</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-63-2"><a id="__codelineno-63-2" name="__codelineno-63-2" href="#__codelineno-63-2"></a><span class="w">  </span><span class="nv">TERM_PROGRAM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;WezTerm&#39;</span><span class="p">,</span>
-</span><span id="__span-63-3"><a id="__codelineno-63-3" name="__codelineno-63-3" href="#__codelineno-63-3"></a><span class="p">}</span>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-64-1"><a id="__codelineno-64-1" name="__codelineno-64-1" href="#__codelineno-64-1"></a><span class="nv">config</span><span class="p">.</span><span class="py">set_environment_variables</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-64-2"><a id="__codelineno-64-2" name="__codelineno-64-2" href="#__codelineno-64-2"></a><span class="w">  </span><span class="nv">TERM_PROGRAM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'WezTerm'</span><span class="p">,</span>
+</span><span id="__span-64-3"><a id="__codelineno-64-3" name="__codelineno-64-3" href="#__codelineno-64-3"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>Restart WezTerm after making this change.</p>
 <h3 id="images-dont-render-in-windows-terminal">Images Don't Render in Windows Terminal<a class="headerlink" href="#images-dont-render-in-windows-terminal" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Ensure Sixel is enabled in Windows Terminal settings (<code>settings.json</code>):
-   <div class="language-json highlight"><pre><span></span><code><span id="__span-64-1"><a id="__codelineno-64-1" name="__codelineno-64-1" href="#__codelineno-64-1"></a><span class="p">{</span>
-</span><span id="__span-64-2"><a id="__codelineno-64-2" name="__codelineno-64-2" href="#__codelineno-64-2"></a><span class="w">  </span><span class="nt">&quot;profiles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-64-3"><a id="__codelineno-64-3" name="__codelineno-64-3" href="#__codelineno-64-3"></a><span class="w">    </span><span class="nt">&quot;defaults&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-64-4"><a id="__codelineno-64-4" name="__codelineno-64-4" href="#__codelineno-64-4"></a><span class="w">      </span><span class="nt">&quot;experimental&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-64-5"><a id="__codelineno-64-5" name="__codelineno-64-5" href="#__codelineno-64-5"></a><span class="w">        </span><span class="nt">&quot;enableImages&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-64-6"><a id="__codelineno-64-6" name="__codelineno-64-6" href="#__codelineno-64-6"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-64-7"><a id="__codelineno-64-7" name="__codelineno-64-7" href="#__codelineno-64-7"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-64-8"><a id="__codelineno-64-8" name="__codelineno-64-8" href="#__codelineno-64-8"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-64-9"><a id="__codelineno-64-9" name="__codelineno-64-9" href="#__codelineno-64-9"></a><span class="p">}</span>
+   <div class="language-json highlight"><pre><span></span><code><span id="__span-65-1"><a id="__codelineno-65-1" name="__codelineno-65-1" href="#__codelineno-65-1"></a><span class="p">{</span>
+</span><span id="__span-65-2"><a id="__codelineno-65-2" name="__codelineno-65-2" href="#__codelineno-65-2"></a><span class="w">  </span><span class="nt">"profiles"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-65-3"><a id="__codelineno-65-3" name="__codelineno-65-3" href="#__codelineno-65-3"></a><span class="w">    </span><span class="nt">"defaults"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-65-4"><a id="__codelineno-65-4" name="__codelineno-65-4" href="#__codelineno-65-4"></a><span class="w">      </span><span class="nt">"experimental"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-65-5"><a id="__codelineno-65-5" name="__codelineno-65-5" href="#__codelineno-65-5"></a><span class="w">        </span><span class="nt">"enableImages"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-65-6"><a id="__codelineno-65-6" name="__codelineno-65-6" href="#__codelineno-65-6"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-65-7"><a id="__codelineno-65-7" name="__codelineno-65-7" href="#__codelineno-65-7"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-65-8"><a id="__codelineno-65-8" name="__codelineno-65-8" href="#__codelineno-65-8"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-65-9"><a id="__codelineno-65-9" name="__codelineno-65-9" href="#__codelineno-65-9"></a><span class="p">}</span>
 </span></code></pre></div></li>
 <li>Check <code>/status</code> shows <code>Images: sixel</code></li>
 <li>Windows Terminal Preview may have better image support than stable</li>
@@ -4421,10 +4441,10 @@ Use <code>.wezterm.lua</code> config (see WezTerm Setup section above).</p>
 <li>Check <code>TERM_PROGRAM</code> is set (run <code>/terminal</code> to verify)</li>
 <li>Ensure you're using a recent WezTerm version (iTerm2 protocol support)</li>
 <li>Try forcing the protocol in <code>.wezterm.lua</code>:
-   <div class="language-lua highlight"><pre><span></span><code><span id="__span-65-1"><a id="__codelineno-65-1" name="__codelineno-65-1" href="#__codelineno-65-1"></a><span class="nv">config</span><span class="p">.</span><span class="py">set_environment_variables</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-65-2"><a id="__codelineno-65-2" name="__codelineno-65-2" href="#__codelineno-65-2"></a><span class="w">  </span><span class="nv">TERM_PROGRAM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;WezTerm&#39;</span><span class="p">,</span>
-</span><span id="__span-65-3"><a id="__codelineno-65-3" name="__codelineno-65-3" href="#__codelineno-65-3"></a><span class="w">  </span><span class="nv">PPXAI_IMAGE_PROTOCOL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;iterm2&#39;</span><span class="p">,</span>
-</span><span id="__span-65-4"><a id="__codelineno-65-4" name="__codelineno-65-4" href="#__codelineno-65-4"></a><span class="p">}</span>
+   <div class="language-lua highlight"><pre><span></span><code><span id="__span-66-1"><a id="__codelineno-66-1" name="__codelineno-66-1" href="#__codelineno-66-1"></a><span class="nv">config</span><span class="p">.</span><span class="py">set_environment_variables</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-66-2"><a id="__codelineno-66-2" name="__codelineno-66-2" href="#__codelineno-66-2"></a><span class="w">  </span><span class="nv">TERM_PROGRAM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'WezTerm'</span><span class="p">,</span>
+</span><span id="__span-66-3"><a id="__codelineno-66-3" name="__codelineno-66-3" href="#__codelineno-66-3"></a><span class="w">  </span><span class="nv">PPXAI_IMAGE_PROTOCOL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'iterm2'</span><span class="p">,</span>
+</span><span id="__span-66-4"><a id="__codelineno-66-4" name="__codelineno-66-4" href="#__codelineno-66-4"></a><span class="p">}</span>
 </span></code></pre></div></li>
 </ol>
 <h2 id="platform-specific-notes">Platform-Specific Notes<a class="headerlink" href="#platform-specific-notes" title="Permanent link">&para;</a></h2>
@@ -4440,14 +4460,14 @@ Use <code>.wezterm.lua</code> config (see WezTerm Setup section above).</p>
 - Uses <code>pyperclip</code> which detects available clipboard backends automatically</p>
 <p><strong>Linux (Headless/SSH):</strong>
 - Requires <code>xclip</code> or <code>xsel</code> for clipboard operations:
-  <div class="language-bash highlight"><pre><span></span><code><span id="__span-66-1"><a id="__codelineno-66-1" name="__codelineno-66-1" href="#__codelineno-66-1"></a><span class="c1"># Ubuntu/Debian</span>
-</span><span id="__span-66-2"><a id="__codelineno-66-2" name="__codelineno-66-2" href="#__codelineno-66-2"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>xclip
-</span><span id="__span-66-3"><a id="__codelineno-66-3" name="__codelineno-66-3" href="#__codelineno-66-3"></a>
-</span><span id="__span-66-4"><a id="__codelineno-66-4" name="__codelineno-66-4" href="#__codelineno-66-4"></a><span class="c1"># Fedora/RHEL</span>
-</span><span id="__span-66-5"><a id="__codelineno-66-5" name="__codelineno-66-5" href="#__codelineno-66-5"></a>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>xclip
-</span><span id="__span-66-6"><a id="__codelineno-66-6" name="__codelineno-66-6" href="#__codelineno-66-6"></a>
-</span><span id="__span-66-7"><a id="__codelineno-66-7" name="__codelineno-66-7" href="#__codelineno-66-7"></a><span class="c1"># Arch</span>
-</span><span id="__span-66-8"><a id="__codelineno-66-8" name="__codelineno-66-8" href="#__codelineno-66-8"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>xclip
+  <div class="language-bash highlight"><pre><span></span><code><span id="__span-67-1"><a id="__codelineno-67-1" name="__codelineno-67-1" href="#__codelineno-67-1"></a><span class="c1"># Ubuntu/Debian</span>
+</span><span id="__span-67-2"><a id="__codelineno-67-2" name="__codelineno-67-2" href="#__codelineno-67-2"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>xclip
+</span><span id="__span-67-3"><a id="__codelineno-67-3" name="__codelineno-67-3" href="#__codelineno-67-3"></a>
+</span><span id="__span-67-4"><a id="__codelineno-67-4" name="__codelineno-67-4" href="#__codelineno-67-4"></a><span class="c1"># Fedora/RHEL</span>
+</span><span id="__span-67-5"><a id="__codelineno-67-5" name="__codelineno-67-5" href="#__codelineno-67-5"></a>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>xclip
+</span><span id="__span-67-6"><a id="__codelineno-67-6" name="__codelineno-67-6" href="#__codelineno-67-6"></a>
+</span><span id="__span-67-7"><a id="__codelineno-67-7" name="__codelineno-67-7" href="#__codelineno-67-7"></a><span class="c1"># Arch</span>
+</span><span id="__span-67-8"><a id="__codelineno-67-8" name="__codelineno-67-8" href="#__codelineno-67-8"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>xclip
 </span></code></pre></div>
 - Without these tools, clipboard operations will gracefully fail (copy returns false, paste returns None)
 - This is expected behavior - clipboard requires X11 or Wayland display server</p>
@@ -4486,48 +4506,48 @@ Use <code>.wezterm.lua</code> config (see WezTerm Setup section above).</p>
 <hr />
 <h2 id="updating">Updating<a class="headerlink" href="#updating" title="Permanent link">&para;</a></h2>
 <h3 id="linux-macos_3">Linux / macOS<a class="headerlink" href="#linux-macos_3" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-67-1"><a id="__codelineno-67-1" name="__codelineno-67-1" href="#__codelineno-67-1"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-68-1"><a id="__codelineno-68-1" name="__codelineno-68-1" href="#__codelineno-68-1"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
 </span></code></pre></div>
 <h3 id="windows_4">Windows<a class="headerlink" href="#windows_4" title="Permanent link">&para;</a></h3>
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-68-1"><a id="__codelineno-68-1" name="__codelineno-68-1" href="#__codelineno-68-1"></a><span class="p">.\</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Force</span>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-69-1"><a id="__codelineno-69-1" name="__codelineno-69-1" href="#__codelineno-69-1"></a><span class="p">.\</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Force</span>
 </span></code></pre></div>
 <p>This will download and replace the binaries with the latest version.</p>
 <h2 id="uninstalling">Uninstalling<a class="headerlink" href="#uninstalling" title="Permanent link">&para;</a></h2>
 <h3 id="linux-macos-automated">Linux / macOS (Automated)<a class="headerlink" href="#linux-macos-automated" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-69-1"><a id="__codelineno-69-1" name="__codelineno-69-1" href="#__codelineno-69-1"></a><span class="c1"># Uninstall ppxai (preserves config files)</span>
-</span><span id="__span-69-2"><a id="__codelineno-69-2" name="__codelineno-69-2" href="#__codelineno-69-2"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>--uninstall
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-70-1"><a id="__codelineno-70-1" name="__codelineno-70-1" href="#__codelineno-70-1"></a><span class="c1"># Uninstall ppxai (preserves config files)</span>
+</span><span id="__span-70-2"><a id="__codelineno-70-2" name="__codelineno-70-2" href="#__codelineno-70-2"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>--uninstall
 </span></code></pre></div>
 <h3 id="linux-macos-manual">Linux / macOS (Manual)<a class="headerlink" href="#linux-macos-manual" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-70-1"><a id="__codelineno-70-1" name="__codelineno-70-1" href="#__codelineno-70-1"></a><span class="c1"># Remove binaries</span>
-</span><span id="__span-70-2"><a id="__codelineno-70-2" name="__codelineno-70-2" href="#__codelineno-70-2"></a>rm<span class="w"> </span>~/.local/bin/ppxai
-</span><span id="__span-70-3"><a id="__codelineno-70-3" name="__codelineno-70-3" href="#__codelineno-70-3"></a>rm<span class="w"> </span>~/.local/bin/ppxaide
-</span><span id="__span-70-4"><a id="__codelineno-70-4" name="__codelineno-70-4" href="#__codelineno-70-4"></a>rm<span class="w"> </span>~/.local/bin/ppxai-server
-</span><span id="__span-70-5"><a id="__codelineno-70-5" name="__codelineno-70-5" href="#__codelineno-70-5"></a>rm<span class="w"> </span>~/.local/bin/ppxai-desktop
-</span><span id="__span-70-6"><a id="__codelineno-70-6" name="__codelineno-70-6" href="#__codelineno-70-6"></a>rm<span class="w"> </span>~/.local/bin/ppxai-*.vsix
-</span><span id="__span-70-7"><a id="__codelineno-70-7" name="__codelineno-70-7" href="#__codelineno-70-7"></a>
-</span><span id="__span-70-8"><a id="__codelineno-70-8" name="__codelineno-70-8" href="#__codelineno-70-8"></a><span class="c1"># Remove Linux desktop integration (if installed)</span>
-</span><span id="__span-70-9"><a id="__codelineno-70-9" name="__codelineno-70-9" href="#__codelineno-70-9"></a>rm<span class="w"> </span>~/.local/share/applications/ppxai.desktop
-</span><span id="__span-70-10"><a id="__codelineno-70-10" name="__codelineno-70-10" href="#__codelineno-70-10"></a>rm<span class="w"> </span>~/.local/share/icons/hicolor/128x128/apps/ppxai.png
-</span><span id="__span-70-11"><a id="__codelineno-70-11" name="__codelineno-70-11" href="#__codelineno-70-11"></a>
-</span><span id="__span-70-12"><a id="__codelineno-70-12" name="__codelineno-70-12" href="#__codelineno-70-12"></a><span class="c1"># Remove macOS app (if installed)</span>
-</span><span id="__span-70-13"><a id="__codelineno-70-13" name="__codelineno-70-13" href="#__codelineno-70-13"></a>rm<span class="w"> </span>-rf<span class="w"> </span>/Applications/ppxai.app
-</span><span id="__span-70-14"><a id="__codelineno-70-14" name="__codelineno-70-14" href="#__codelineno-70-14"></a>
-</span><span id="__span-70-15"><a id="__codelineno-70-15" name="__codelineno-70-15" href="#__codelineno-70-15"></a><span class="c1"># Remove macOS LaunchAgent (if installed)</span>
-</span><span id="__span-70-16"><a id="__codelineno-70-16" name="__codelineno-70-16" href="#__codelineno-70-16"></a>launchctl<span class="w"> </span>unload<span class="w"> </span>~/Library/LaunchAgents/com.ppxai.server.plist<span class="w"> </span><span class="m">2</span>&gt;/dev/null
-</span><span id="__span-70-17"><a id="__codelineno-70-17" name="__codelineno-70-17" href="#__codelineno-70-17"></a>rm<span class="w"> </span>~/Library/LaunchAgents/com.ppxai.server.plist
-</span><span id="__span-70-18"><a id="__codelineno-70-18" name="__codelineno-70-18" href="#__codelineno-70-18"></a>
-</span><span id="__span-70-19"><a id="__codelineno-70-19" name="__codelineno-70-19" href="#__codelineno-70-19"></a><span class="c1"># Remove configuration (optional)</span>
-</span><span id="__span-70-20"><a id="__codelineno-70-20" name="__codelineno-70-20" href="#__codelineno-70-20"></a>rm<span class="w"> </span>-rf<span class="w"> </span>~/.ppxai
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-71-1"><a id="__codelineno-71-1" name="__codelineno-71-1" href="#__codelineno-71-1"></a><span class="c1"># Remove binaries</span>
+</span><span id="__span-71-2"><a id="__codelineno-71-2" name="__codelineno-71-2" href="#__codelineno-71-2"></a>rm<span class="w"> </span>~/.local/bin/ppxai
+</span><span id="__span-71-3"><a id="__codelineno-71-3" name="__codelineno-71-3" href="#__codelineno-71-3"></a>rm<span class="w"> </span>~/.local/bin/ppxaide
+</span><span id="__span-71-4"><a id="__codelineno-71-4" name="__codelineno-71-4" href="#__codelineno-71-4"></a>rm<span class="w"> </span>~/.local/bin/ppxai-server
+</span><span id="__span-71-5"><a id="__codelineno-71-5" name="__codelineno-71-5" href="#__codelineno-71-5"></a>rm<span class="w"> </span>~/.local/bin/ppxai-desktop
+</span><span id="__span-71-6"><a id="__codelineno-71-6" name="__codelineno-71-6" href="#__codelineno-71-6"></a>rm<span class="w"> </span>~/.local/bin/ppxai-*.vsix
+</span><span id="__span-71-7"><a id="__codelineno-71-7" name="__codelineno-71-7" href="#__codelineno-71-7"></a>
+</span><span id="__span-71-8"><a id="__codelineno-71-8" name="__codelineno-71-8" href="#__codelineno-71-8"></a><span class="c1"># Remove Linux desktop integration (if installed)</span>
+</span><span id="__span-71-9"><a id="__codelineno-71-9" name="__codelineno-71-9" href="#__codelineno-71-9"></a>rm<span class="w"> </span>~/.local/share/applications/ppxai.desktop
+</span><span id="__span-71-10"><a id="__codelineno-71-10" name="__codelineno-71-10" href="#__codelineno-71-10"></a>rm<span class="w"> </span>~/.local/share/icons/hicolor/128x128/apps/ppxai.png
+</span><span id="__span-71-11"><a id="__codelineno-71-11" name="__codelineno-71-11" href="#__codelineno-71-11"></a>
+</span><span id="__span-71-12"><a id="__codelineno-71-12" name="__codelineno-71-12" href="#__codelineno-71-12"></a><span class="c1"># Remove macOS app (if installed)</span>
+</span><span id="__span-71-13"><a id="__codelineno-71-13" name="__codelineno-71-13" href="#__codelineno-71-13"></a>rm<span class="w"> </span>-rf<span class="w"> </span>/Applications/ppxai.app
+</span><span id="__span-71-14"><a id="__codelineno-71-14" name="__codelineno-71-14" href="#__codelineno-71-14"></a>
+</span><span id="__span-71-15"><a id="__codelineno-71-15" name="__codelineno-71-15" href="#__codelineno-71-15"></a><span class="c1"># Remove macOS LaunchAgent (if installed)</span>
+</span><span id="__span-71-16"><a id="__codelineno-71-16" name="__codelineno-71-16" href="#__codelineno-71-16"></a>launchctl<span class="w"> </span>unload<span class="w"> </span>~/Library/LaunchAgents/com.ppxai.server.plist<span class="w"> </span><span class="m">2</span>&gt;/dev/null
+</span><span id="__span-71-17"><a id="__codelineno-71-17" name="__codelineno-71-17" href="#__codelineno-71-17"></a>rm<span class="w"> </span>~/Library/LaunchAgents/com.ppxai.server.plist
+</span><span id="__span-71-18"><a id="__codelineno-71-18" name="__codelineno-71-18" href="#__codelineno-71-18"></a>
+</span><span id="__span-71-19"><a id="__codelineno-71-19" name="__codelineno-71-19" href="#__codelineno-71-19"></a><span class="c1"># Remove configuration (optional)</span>
+</span><span id="__span-71-20"><a id="__codelineno-71-20" name="__codelineno-71-20" href="#__codelineno-71-20"></a>rm<span class="w"> </span>-rf<span class="w"> </span>~/.ppxai
 </span></code></pre></div>
 <h3 id="windows_5">Windows<a class="headerlink" href="#windows_5" title="Permanent link">&para;</a></h3>
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-71-1"><a id="__codelineno-71-1" name="__codelineno-71-1" href="#__codelineno-71-1"></a><span class="c"># Run uninstaller</span>
-</span><span id="__span-71-2"><a id="__codelineno-71-2" name="__codelineno-71-2" href="#__codelineno-71-2"></a><span class="p">.\</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Uninstall</span>
-</span><span id="__span-71-3"><a id="__codelineno-71-3" name="__codelineno-71-3" href="#__codelineno-71-3"></a>
-</span><span id="__span-71-4"><a id="__codelineno-71-4" name="__codelineno-71-4" href="#__codelineno-71-4"></a><span class="c"># Or manually remove</span>
-</span><span id="__span-71-5"><a id="__codelineno-71-5" name="__codelineno-71-5" href="#__codelineno-71-5"></a><span class="nb">Remove-Item</span> <span class="n">-Recurse</span> <span class="nv">$env:USERPROFILE</span><span class="p">\.</span><span class="n">ppxai</span>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-72-1"><a id="__codelineno-72-1" name="__codelineno-72-1" href="#__codelineno-72-1"></a><span class="c"># Run uninstaller</span>
+</span><span id="__span-72-2"><a id="__codelineno-72-2" name="__codelineno-72-2" href="#__codelineno-72-2"></a><span class="p">.\</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Uninstall</span>
+</span><span id="__span-72-3"><a id="__codelineno-72-3" name="__codelineno-72-3" href="#__codelineno-72-3"></a>
+</span><span id="__span-72-4"><a id="__codelineno-72-4" name="__codelineno-72-4" href="#__codelineno-72-4"></a><span class="c"># Or manually remove</span>
+</span><span id="__span-72-5"><a id="__codelineno-72-5" name="__codelineno-72-5" href="#__codelineno-72-5"></a><span class="nb">Remove-Item</span> <span class="n">-Recurse</span> <span class="nv">$env:USERPROFILE</span><span class="p">\.</span><span class="n">ppxai</span>
 </span></code></pre></div>
 <h3 id="vscode-extension">VSCode Extension<a class="headerlink" href="#vscode-extension" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-72-1"><a id="__codelineno-72-1" name="__codelineno-72-1" href="#__codelineno-72-1"></a>code<span class="w"> </span>--uninstall-extension<span class="w"> </span>ppxai.ppxai
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-73-1"><a id="__codelineno-73-1" name="__codelineno-73-1" href="#__codelineno-73-1"></a>code<span class="w"> </span>--uninstall-extension<span class="w"> </span>ppxai.ppxai
 </span></code></pre></div>
 
 
@@ -4603,7 +4623,7 @@ Use <code>.wezterm.lua</code> config (see WezTerm Setup section above).</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

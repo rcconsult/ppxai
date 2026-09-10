@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2067,7 +2067,7 @@
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>@/path/to/file.py
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>@./relative/file.js
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>@~/home/directory/file.txt
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>@&quot;path with spaces.md&quot;
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>@"path with spaces.md"
 </span></code></pre></div></p>
 <p><strong>Examples:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Review the implementation in @src/utils.py
@@ -2125,7 +2125,7 @@ Context is automatically injected when:
 <div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>@tree
 </span></code></pre></div></p>
 <p><strong>Examples:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Here&#39;s the project structure: @tree
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Here's the project structure: @tree
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>Based on @tree, suggest where to add the new module
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
@@ -2156,7 +2156,7 @@ Context is automatically injected when:
 <p><strong>Ignored Patterns:</strong>
 - <code>.git</code>, <code>__pycache__</code>, <code>node_modules</code>, <code>.venv</code>, <code>venv</code>
 - <code>.pytest_cache</code>, <code>.mypy_cache</code>, <code>dist</code>, <code>build</code>
-- Hidden files (except <code>.gitignore</code>, <code>.env.example</code>, <code>.dockerignore</code>)</p>
+- Hidden files (except <code>.gitignore</code>, <code>.env.example</code>, <code>.env</code>, <code>.dockerignore</code>)</p>
 <p><strong>Configuration:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Adjust max depth programmatically</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">injector</span><span class="o">.</span><span class="n">inject_tree_context</span><span class="p">(</span><span class="n">max_depth</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
@@ -2178,7 +2178,7 @@ Context is automatically injected when:
 - Auto-detects language (Python, JSON, SQL, etc.)
 - Shows as code block with appropriate syntax highlighting</p>
 <p><strong>Limits:</strong>
-- Maximum 50KB of clipboard content (truncated if larger)
+- Maximum 100KB of clipboard content (truncated if larger) - same limit as <code>@file</code>, <code>@url</code>, and <code>@tree</code>
 - Text only - binary clipboard data not supported
 - UI shows "(truncated)" indicator when content was cut</p>
 <p><strong>Requirements:</strong>
@@ -2211,9 +2211,10 @@ Context is automatically injected when:
 - 30 second timeout for slow responses
 - Requires network access</p>
 <p><strong>Error Handling:</strong>
-- 404 errors: Shows "URL not found" message
-- Timeout: Shows "Request timed out" message
-- SSL errors: Shows certificate error details</p>
+- Fetch failures (404, timeout, SSL, connection errors, etc.) all return the
+  same shape: <code>Error fetching URL: {exception text}</code>, using httpx's own
+  exception message — there is no distinct "URL not found" or "Request timed
+  out" wording.</p>
 <h2 id="combined-usage">Combined Usage<a class="headerlink" href="#combined-usage" title="Permanent link">&para;</a></h2>
 <p>You can use multiple context providers in the same message:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>Review @git changes, check @tree structure, and update @src/README.md accordingly
@@ -2265,18 +2266,18 @@ Context is automatically injected when:
 </span><span id="__span-17-15"><a id="__codelineno-17-15" name="__codelineno-17-15" href="#__codelineno-17-15"></a>from ppxai.engine.context import ContextInjector
 </span><span id="__span-17-16"><a id="__codelineno-17-16" name="__codelineno-17-16" href="#__codelineno-17-16"></a>
 </span><span id="__span-17-17"><a id="__codelineno-17-17" name="__codelineno-17-17" href="#__codelineno-17-17"></a># Create injector
-</span><span id="__span-17-18"><a id="__codelineno-17-18" name="__codelineno-17-18" href="#__codelineno-17-18"></a>injector = ContextInjector(working_dir=&quot;/path/to/project&quot;)
+</span><span id="__span-17-18"><a id="__codelineno-17-18" name="__codelineno-17-18" href="#__codelineno-17-18"></a>injector = ContextInjector(working_dir="/path/to/project")
 </span><span id="__span-17-19"><a id="__codelineno-17-19" name="__codelineno-17-19" href="#__codelineno-17-19"></a>
 </span><span id="__span-17-20"><a id="__codelineno-17-20" name="__codelineno-17-20" href="#__codelineno-17-20"></a># Inject contexts
 </span><span id="__span-17-21"><a id="__codelineno-17-21" name="__codelineno-17-21" href="#__codelineno-17-21"></a>enhanced_message, contexts = injector.inject_context(message)
 </span><span id="__span-17-22"><a id="__codelineno-17-22" name="__codelineno-17-22" href="#__codelineno-17-22"></a>
 </span><span id="__span-17-23"><a id="__codelineno-17-23" name="__codelineno-17-23" href="#__codelineno-17-23"></a># Access injected contexts
 </span><span id="__span-17-24"><a id="__codelineno-17-24" name="__codelineno-17-24" href="#__codelineno-17-24"></a>for ctx in contexts:
-</span><span id="__span-17-25"><a id="__codelineno-17-25" name="__codelineno-17-25" href="#__codelineno-17-25"></a>    print(f&quot;Source: {ctx.source}&quot;)
-</span><span id="__span-17-26"><a id="__codelineno-17-26" name="__codelineno-17-26" href="#__codelineno-17-26"></a>    print(f&quot;Language: {ctx.language}&quot;)
-</span><span id="__span-17-27"><a id="__codelineno-17-27" name="__codelineno-17-27" href="#__codelineno-17-27"></a>    print(f&quot;Content: {ctx.content}&quot;)
-</span><span id="__span-17-28"><a id="__codelineno-17-28" name="__codelineno-17-28" href="#__codelineno-17-28"></a>    print(f&quot;Truncated: {ctx.truncated}&quot;)
-</span><span id="__span-17-29"><a id="__codelineno-17-29" name="__codelineno-17-29" href="#__codelineno-17-29"></a>    print(f&quot;Size: {ctx.size} bytes&quot;)
+</span><span id="__span-17-25"><a id="__codelineno-17-25" name="__codelineno-17-25" href="#__codelineno-17-25"></a>    print(f"Source: {ctx.source}")
+</span><span id="__span-17-26"><a id="__codelineno-17-26" name="__codelineno-17-26" href="#__codelineno-17-26"></a>    print(f"Language: {ctx.language}")
+</span><span id="__span-17-27"><a id="__codelineno-17-27" name="__codelineno-17-27" href="#__codelineno-17-27"></a>    print(f"Content: {ctx.content}")
+</span><span id="__span-17-28"><a id="__codelineno-17-28" name="__codelineno-17-28" href="#__codelineno-17-28"></a>    print(f"Truncated: {ctx.truncated}")
+</span><span id="__span-17-29"><a id="__codelineno-17-29" name="__codelineno-17-29" href="#__codelineno-17-29"></a>    print(f"Size: {ctx.size} bytes")
 </span></code></pre></div></p>
 <h3 id="tui-integration">TUI Integration<a class="headerlink" href="#tui-integration" title="Permanent link">&para;</a></h3>
 <p>Context injection is automatic in the TUI. Just type your message with <code>@</code> references:</p>
@@ -2370,31 +2371,32 @@ Context is automatically injected when:
 <h2 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h2>
 <h3 id="contextinjector-class">ContextInjector Class<a class="headerlink" href="#contextinjector-class" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ContextInjector</span><span class="p">:</span>
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Detects and injects file/URL content into messages.&quot;&quot;&quot;</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">    </span><span class="sd">"""Detects and injects file/URL content into messages."""</span>
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>
 </span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize with base directory for relative paths.&quot;&quot;&quot;</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">        </span><span class="sd">"""Initialize with base directory for relative paths."""</span>
 </span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>
 </span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">inject_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">InjectedContext</span><span class="p">]]:</span>
-</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Process message and inject contexts.&quot;&quot;&quot;</span>
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="w">        </span><span class="sd">"""Process message and inject contexts."""</span>
 </span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>
 </span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">inject_git_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">InjectedContext</span><span class="p">]:</span>
-</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Inject git diff as context.&quot;&quot;&quot;</span>
+</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a><span class="w">        </span><span class="sd">"""Inject git diff as context."""</span>
 </span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>
 </span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">inject_tree_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">max_depth</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">InjectedContext</span><span class="p">]:</span>
-</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Inject directory tree as context.&quot;&quot;&quot;</span>
+</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a><span class="w">        </span><span class="sd">"""Inject directory tree as context."""</span>
 </span><span id="__span-23-15"><a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a>
 </span><span id="__span-23-16"><a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">read_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">InjectedContext</span><span class="p">]:</span>
-</span><span id="__span-23-17"><a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Read a file and return its content.&quot;&quot;&quot;</span>
+</span><span id="__span-23-17"><a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a><span class="w">        </span><span class="sd">"""Read a file and return its content."""</span>
 </span></code></pre></div>
 <h3 id="injectedcontext-dataclass">InjectedContext Dataclass<a class="headerlink" href="#injectedcontext-dataclass" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="nd">@dataclass</span>
 </span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">InjectedContext</span><span class="p">:</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span>          <span class="c1"># &quot;@git&quot;, &quot;@tree&quot;, or file path</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span>          <span class="c1"># "@git", "@tree", or file path</span>
 </span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>    <span class="n">content</span><span class="p">:</span> <span class="nb">str</span>         <span class="c1"># Actual content</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span>        <span class="c1"># Language for syntax highlighting (&quot;diff&quot;, &quot;text&quot;, &quot;python&quot;, etc.)</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span>        <span class="c1"># Language for syntax highlighting ("diff", "text", "python", etc.)</span>
 </span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>    <span class="n">truncated</span><span class="p">:</span> <span class="nb">bool</span>      <span class="c1"># Whether content was truncated</span>
 </span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>    <span class="n">size</span><span class="p">:</span> <span class="nb">int</span>            <span class="c1"># Original size in bytes</span>
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>    <span class="nb">hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>       <span class="c1"># Content hash, used for dedup</span>
 </span></code></pre></div>
 <h2 id="related-documentation">Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h2>
 <ul>
@@ -2487,7 +2489,7 @@ Context is automatically injected when:
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

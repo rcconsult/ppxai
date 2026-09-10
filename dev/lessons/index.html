@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1230,7 +1230,8 @@ NOT sync. A lesson written on macOS isn't visible to a session on
 Windows. Authoritative cross-host knowledge belongs in the repo, where
 <code>git pull</code> is the sync mechanism.</p>
 <h2 id="what-belongs-here">What belongs here<a class="headerlink" href="#what-belongs-here" title="Permanent link">&para;</a></h2>
-<p>A lesson belongs in <code>docs/lessons/</code> when it meets <strong>both</strong> criteria:</p>
+<p>A lesson belongs in <code>docs/lessons/</code> when it meets <strong>all three</strong>
+criteria:</p>
 <ol>
 <li>
 <p><strong>Cross-host relevance.</strong> The lesson is true on any machine running
@@ -1242,7 +1243,22 @@ Windows. Authoritative cross-host knowledge belongs in the repo, where
    a one-line check to confirm it. The lesson is grounded in
    observable repo state, not in "Claude on Windows once hit X."</p>
 </li>
+<li>
+<p><strong>Changes what a reader DOES.</strong> The lesson names a different action,
+   check, or default — not merely a thing to be aware of. "Keep an eye
+   out for X" fails this test; "assert the precondition that selects
+   the mutated path before believing a pass" passes it.</p>
+</li>
 </ol>
+<p>The third criterion is the one that rejects a <em>true, verified,
+   cross-host</em> observation. On 2026-09-01 a fifth instance of
+   pipeline-exit-code laundering was found while verifying something
+   else — real, reproducible, and already documented in
+   <a href="mutation-tests-that-never-ran/">mutation-tests-that-never-ran.md</a>
+   §2. A sixth file saying "this keeps happening" would have added a
+   frequency claim and no new action. A repeat sighting of a documented
+   shape is evidence the existing lesson is right; it earns a sentence
+   there at most, never a file of its own.</p>
 <p>Examples of cross-host + grep-verifiable lessons:</p>
 <ul>
 <li>"ppxai imports <code>mcp</code> nowhere — the <code>[mcp]</code> optional extra is intent,
@@ -1278,10 +1294,10 @@ hazards) with noise (per-developer prefs) and hurt both.</p>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gu">## Why this trips people up</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>What looks like evidence-of-X that actually isn&#39;t, or the surprising
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>behavior that doesn&#39;t match the obvious mental model. The trap.
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>What looks like evidence-of-X that actually isn't, or the surprising
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>behavior that doesn't match the obvious mental model. The trap.
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="gu">## What&#39;s actually true</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="gu">## What's actually true</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>The fact, grounded in repo state. Include file path + line numbers
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>where they help the reader confirm.
@@ -1295,8 +1311,8 @@ it's probably an ADR or design doc, not a lesson.</p>
 <h2 id="promotion-workflow-for-ai-agents">Promotion workflow (for AI agents)<a class="headerlink" href="#promotion-workflow-for-ai-agents" title="Permanent link">&para;</a></h2>
 <p>When you discover a hazard during a session:</p>
 <ol>
-<li><strong>Triage:</strong> does it meet both criteria above (cross-host +
-   grep-verifiable)?</li>
+<li><strong>Triage:</strong> does it meet all three criteria above (cross-host +
+   grep-verifiable + changes what a reader does)?</li>
 <li><strong>If yes:</strong> propose adding a <code>docs/lessons/&lt;topic&gt;.md</code> file in
    the user-facing summary of your turn. Don't auto-commit;
    the user decides whether the lesson is worth the repo's
@@ -1326,6 +1342,89 @@ discoverable later.</p>
   ppxai-server binds a FIXED port (54320); a stale server makes a freshly
   spawned binary die silently, so acceptance tests the OLD process — free
   the port first (<code>gateway-smoke.py</code> now guards this)</li>
+<li><a href="perplexity-alternation-retired-orphan-toolcalls-is-real/">perplexity-alternation-retired-orphan-toolcalls-is-real.md</a> —
+  Perplexity Sonar relaxed the old "messages must alternate" rule (verified
+  live); the recurring tools-chat 400 is the provider-agnostic orphan
+  <code>assistant.tool_calls</code> case — check the actual wire error before adding
+  another alternation patch</li>
+<li><a href="stale-tests-outlive-deleted-behavior/">stale-tests-outlive-deleted-behavior.md</a> —
+  removing a behavior leaves its tests behind; they fail as assumed-
+  environmental noise or keep passing against a renamed surface while
+  guarding nothing. Invert, retarget, or delete — and mutation-test the fence</li>
+<li><a href="qwen-27b-vl-empirically-supported/">qwen-27b-vl-empirically-supported.md</a> —
+  Qwen3.5/3.6-27B-FP8 empirically accept <code>image_url</code> content via vLLM;
+  ppxai's <code>model_profiles.py</code> lacked <code>supports_vision=True</code> entries for them
+  (fixed 2026-06-08, <code>model_profiles.py:481-505</code>)</li>
+<li><a href="web-assets-served-from-ppxai-home/">web-assets-served-from-ppxai-home.md</a> —
+  clients serve the web UI from <code>~/.ppxai/web</code>, not the repo source tree;
+  editing <code>web/</code> in-repo has no effect on a running server without
+  <code>PPXAI_WEB_DIR</code> pointed at the checkout</li>
+<li><a href="absence-is-invisible-in-listings/">absence-is-invisible-in-listings.md</a> —
+  a <code>/models</code> sweep cannot detect your own dead ids: a retired model vanishes
+  from the listing, so it looks like an id you never noticed. Call each
+  configured id; a 410 carries the EOL date. Four models shipped broken for
+  six weeks this way. Also: a <code>replacement</code> is a liveness claim, so re-verify
+  replacements whenever a provider is swept.</li>
+<li><a href="resolver-vs-direct-path-checks/">resolver-vs-direct-path-checks.md</a> —
+  calling a parser with a path you chose proves the file parses, not that it
+  is the file the app loads. <code>find_bootstrap_file()</code> picks <code>AGENTS.md</code> here,
+  not <code>CLAUDE.md</code>. When the question is "which one?", call the picker.</li>
+<li><a href="tests-whose-premise-expires/">tests-whose-premise-expires.md</a> — a test
+  asserting something is <em>absent</em> silently stops testing when the roadmap
+  makes it present. Assert absence with a name nothing will ever claim.</li>
+<li>
+<p><a href="clean-break-config-moves-need-a-file-scan/">clean-break-config-moves-need-a-file-scan.md</a> —
+  a config key moved with NO dual-read is invisible to every accessor, so a
+  stale key silently reverts to its default; only a check that reads the
+  config FILE can detect it (<code>/doctor</code>'s ADR 0010 section) — ship that scan
+  with the move, not as cleanup</p>
+</li>
+<li>
+<p><a href="parity-harness-must-know-every-client/">parity-harness-must-know-every-client.md</a>
+  — a multi-client parity harness that knows N-1 clients is a blind spot. Adding
+  a client is a change to the harness FIRST. Cost: three shipped-missing
+  capabilities that no test caught (2026-08-09).</p>
+</li>
+<li>
+<p><a href="module-level-home-paths-leak-into-user-state/">module-level-home-paths-leak-into-user-state.md</a>
+  — <code>Path.home()</code> constants resolve at IMPORT time, so isolating a directory
+  through a constructor does not stop a test writing the user's real state.
+  Cost: the suite silently clobbered the developer's session pointer.</p>
+</li>
+<li>
+<p><a href="sdk-validation-is-not-api-acceptance/">sdk-validation-is-not-api-acceptance.md</a>
+  — a provider SDK's request model and the provider's REST API are two
+  different validators. Constructing a request the SDK accepts proves the
+  shape is well-formed locally, not that the endpoint will take it.</p>
+</li>
+<li><a href="a-check-that-never-ran-reports-success/">a-check-that-never-ran-reports-success.md</a>
+  — verification tooling fails SILENT far more often than loud, and every
+  silent failure is shaped like success. <code>pytest | grep</code> returns exit 0 with
+  six tests failing (reproduced: direct 1, piped 0); a zero-output helper
+  exits non-zero and kills an <code>&amp;&amp;</code> chain before the real work; <code>ruff --select
+  &lt;RULE&gt;</code> reports a different count than a full run; a sweep missing one
+  patching idiom declared a batch safe that then shipped 15 failures. Read
+  the COUNTS, never the exit code — "5,684 passed" cannot be forged by a
+  pipe. A false "fine" ships; a false "broken" only costs time (2026-09-01).</li>
+<li><a href="mutation-tests-that-never-ran/">mutation-tests-that-never-ran.md</a> — a
+  mutation test's failure modes all resolve to "all green", which is what a
+  covered guard also looks like. An anchor that matches twice patches the
+  wrong function; a runner that cannot start prints nothing; a trailing
+  <code>| tail</code> launders the exit code; and a correct mutation on an unreachable
+  line (no <code>.git</code> -&gt; the fallback branch runs) passes every one of those
+  checks and still proves nothing. Prove the mutation applied, that the
+  mutated line RUNS here, and that the suite ran — then check WHICH test
+  failed. Cost: two sessions read the same false "not covered", this file's
+  own snippets were wrong until someone ran them (2026-08-31), and two
+  sessions hit the reachability shape on one fence (2026-09-01).</li>
+<li><a href="ruff-safe-fixes-are-not-semantically-safe/">ruff-safe-fixes-are-not-semantically-safe.md</a>
+  — ruff's safe/unsafe split is confidence about SYNTAX, not meaning. A
+  <em>safe</em> <code>UP045</code> fix rewrote <code>Optional[callable]</code> to <code>callable | None</code>,
+  which raises <code>TypeError</code> at import and would have stopped the product
+  starting; an <em>unsafe</em> <code>F841</code> fix leaves the right-hand side as a bare
+  statement — dead code that still executes. A 384-file bulk <code>--fix</code> also
+  regressed <code>F811</code> and <code>E402</code> from zero, caught by the CI ratchet rather
+  than by a green suite (2026-09-01).</li>
 </ul>
 
 
@@ -1401,7 +1500,7 @@ discoverable later.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

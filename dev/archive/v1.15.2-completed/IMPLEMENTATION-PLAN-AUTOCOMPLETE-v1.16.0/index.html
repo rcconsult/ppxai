@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1651,12 +1651,12 @@
 <h3 id="phase-1-dependency-setup-30-minutes">Phase 1: Dependency Setup (30 minutes)<a class="headerlink" href="#phase-1-dependency-setup-30-minutes" title="Permanent link">&para;</a></h3>
 <p><strong>1.1 Add dependency to pyproject.toml</strong></p>
 <div class="language-toml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># pyproject.toml [project.dependencies]</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">textual-autocomplete</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;^4.0.6&quot;</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">textual-autocomplete</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"^4.0.6"</span>
 </span></code></pre></div>
 <p><strong>1.2 Install and verify</strong></p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>add<span class="w"> </span>textual-autocomplete
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>sync
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from textual_autocomplete import AutoComplete; print(&#39;OK&#39;)&quot;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"from textual_autocomplete import AutoComplete; print('OK')"</span>
 </span></code></pre></div>
 <p><strong>1.3 Update requirements files</strong> (if any)</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>pip<span class="w"> </span>compile<span class="w"> </span>pyproject.toml<span class="w"> </span>-o<span class="w"> </span>requirements.txt
@@ -1669,12 +1669,12 @@
 <h3 id="phase-2-create-adapter-layer-1-2-hours">Phase 2: Create Adapter Layer (1-2 hours)<a class="headerlink" href="#phase-2-create-adapter-layer-1-2-hours" title="Permanent link">&para;</a></h3>
 <p><strong>2.1 Create new adapter module</strong></p>
 <p>Create <code>ppxai/tui/autocomplete_adapter.py</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="sd">&quot;&quot;&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="sd">"""</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="sd">Adapter layer between TextualCompleter and textual-autocomplete library.</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="sd">This module bridges our existing completion logic with the textual-autocomplete</span>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="sd">dropdown system, converting our completion tuples to DropdownItem objects.</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="sd">"""</span>
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">textual_autocomplete</span><span class="w"> </span><span class="kn">import</span> <span class="n">DropdownItem</span>
@@ -1682,13 +1682,13 @@
 </span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
 </span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
 </span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="k">class</span><span class="w"> </span><span class="nc">CompletionAdapter</span><span class="p">:</span>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Adapter that converts TextualCompleter output to DropdownItem format.&quot;&quot;&quot;</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="sd">"""Adapter that converts TextualCompleter output to DropdownItem format."""</span>
 </span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
 </span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">completer</span><span class="p">:</span> <span class="n">TextualCompleter</span><span class="p">):</span>
 </span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">completer</span> <span class="o">=</span> <span class="n">completer</span>
 </span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>
 </span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_dropdown_items</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">DropdownItem</span><span class="p">]:</span>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">        </span><span class="sd">"""</span>
 </span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="sd">        Get dropdown items for autocomplete.</span>
 </span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>
 </span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="sd">        Args:</span>
@@ -1696,7 +1696,7 @@
 </span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>
 </span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="sd">        Returns:</span>
 </span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="sd">            List of DropdownItem objects for textual-autocomplete</span>
-</span><span id="__span-5-28"><a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="__span-5-28"><a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="sd">        """</span>
 </span><span id="__span-5-29"><a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a>        <span class="c1"># Get completions from existing logic</span>
 </span><span id="__span-5-30"><a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a>        <span class="n">completions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">completer</span><span class="o">.</span><span class="n">get_completions</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
 </span><span id="__span-5-31"><a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a>
@@ -1715,7 +1715,7 @@
 <p><strong>2.2 Update TextualCompleter to support sorting</strong></p>
 <p>Modify <code>ppxai/tui/completer.py</code>:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_completions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sort</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get completion suggestions for the given text.</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="sd">"""Get completion suggestions for the given text.</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="sd">    Args:</span>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="sd">        text: Current input text</span>
@@ -1723,7 +1723,7 @@
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="sd">    Returns:</span>
 </span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="sd">        List of (completion, description) tuples</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="sd">    """</span>
 </span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="c1"># ... existing logic ...</span>
 </span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>
 </span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="c1"># NEW: Alphabetically sort results if requested</span>
@@ -1748,7 +1748,7 @@
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
 </span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">InputBox</span><span class="p">(</span><span class="n">Widget</span><span class="p">):</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Chat input box with autocomplete support.&quot;&quot;&quot;</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="sd">"""Chat input box with autocomplete support."""</span>
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
 </span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">compose</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ComposeResult</span><span class="p">:</span>
 </span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>        <span class="c1"># Create completer and adapter</span>
@@ -1760,24 +1760,24 @@
 </span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
 </span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>        <span class="c1"># Wrap Input with AutoComplete</span>
 </span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_input</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span>
-</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>            <span class="n">placeholder</span><span class="o">=</span><span class="s2">&quot;Type / for commands, @ for files, or your message...&quot;</span><span class="p">,</span>
-</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>            <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;chat-input&quot;</span><span class="p">,</span>
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>            <span class="n">placeholder</span><span class="o">=</span><span class="s2">"Type / for commands, @ for files, or your message..."</span><span class="p">,</span>
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>            <span class="nb">id</span><span class="o">=</span><span class="s2">"chat-input"</span><span class="p">,</span>
 </span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>        <span class="p">)</span>
 </span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>
 </span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>        <span class="k">yield</span> <span class="n">AutoComplete</span><span class="p">(</span>
 </span><span id="__span-7-25"><a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_input</span><span class="p">,</span>
 </span><span id="__span-7-26"><a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>            <span class="n">Dropdown</span><span class="p">(</span>
 </span><span id="__span-7-27"><a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>                <span class="n">items</span><span class="o">=</span><span class="n">adapter</span><span class="o">.</span><span class="n">get_dropdown_items</span><span class="p">,</span>  <span class="c1"># Callback function</span>
-</span><span id="__span-7-28"><a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a>                <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;autocomplete-dropdown&quot;</span>
+</span><span id="__span-7-28"><a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a>                <span class="nb">id</span><span class="o">=</span><span class="s2">"autocomplete-dropdown"</span>
 </span><span id="__span-7-29"><a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a>            <span class="p">),</span>
 </span><span id="__span-7-30"><a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a>        <span class="p">)</span>
 </span><span id="__span-7-31"><a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a>
 </span><span id="__span-7-32"><a id="__codelineno-7-32" name="__codelineno-7-32" href="#__codelineno-7-32"></a>        <span class="c1"># OLD CODE (keep commented for reference during migration)</span>
-</span><span id="__span-7-33"><a id="__codelineno-7-33" name="__codelineno-7-33" href="#__codelineno-7-33"></a>        <span class="c1"># yield Input(placeholder=&quot;...&quot;, id=&quot;chat-input&quot;)</span>
+</span><span id="__span-7-33"><a id="__codelineno-7-33" name="__codelineno-7-33" href="#__codelineno-7-33"></a>        <span class="c1"># yield Input(placeholder="...", id="chat-input")</span>
 </span><span id="__span-7-34"><a id="__codelineno-7-34" name="__codelineno-7-34" href="#__codelineno-7-34"></a>
 </span><span id="__span-7-35"><a id="__codelineno-7-35" name="__codelineno-7-35" href="#__codelineno-7-35"></a>    <span class="c1"># REMOVE THIS (handled by AutoComplete library):</span>
 </span><span id="__span-7-36"><a id="__codelineno-7-36" name="__codelineno-7-36" href="#__codelineno-7-36"></a>    <span class="c1"># def on_key(self, event: events.Key) -&gt; None:</span>
-</span><span id="__span-7-37"><a id="__codelineno-7-37" name="__codelineno-7-37" href="#__codelineno-7-37"></a>    <span class="c1">#     if event.key == &quot;tab&quot;:</span>
+</span><span id="__span-7-37"><a id="__codelineno-7-37" name="__codelineno-7-37" href="#__codelineno-7-37"></a>    <span class="c1">#     if event.key == "tab":</span>
 </span><span id="__span-7-38"><a id="__codelineno-7-38" name="__codelineno-7-38" href="#__codelineno-7-38"></a>    <span class="c1">#         self._show_completions()  # OLD, DISABLED</span>
 </span></code></pre></div>
 <p><strong>3.2 Remove old Tab key handler</strong></p>
@@ -1821,7 +1821,7 @@
 </span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>        <span class="n">max_items</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>              <span class="c1"># Show up to 100 items (removed old limit)</span>
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>        <span class="n">fuzzy_search</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>          <span class="c1"># Enable fuzzy matching</span>
 </span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>        <span class="n">case_sensitive</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>       <span class="c1"># Case-insensitive matching</span>
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>        <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;autocomplete-dropdown&quot;</span><span class="p">,</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>        <span class="nb">id</span><span class="o">=</span><span class="s2">"autocomplete-dropdown"</span><span class="p">,</span>
 </span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>    <span class="p">),</span>
 </span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="p">)</span>
 </span></code></pre></div>
@@ -1839,23 +1839,23 @@ Option B: Use PathAutoComplete for @file completions (better UX, more work)</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">textual_autocomplete</span><span class="w"> </span><span class="kn">import</span> <span class="n">PathAutoComplete</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">FileCompletionAdapter</span><span class="p">:</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Adapter for file path completions using PathAutoComplete.&quot;&quot;&quot;</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="sd">"""Adapter for file path completions using PathAutoComplete."""</span>
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
 </span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">engine_client</span><span class="p">):</span>
 </span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">engine_client</span> <span class="o">=</span> <span class="n">engine_client</span>
 </span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
 </span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_file_dropdown</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Get file completions using PathAutoComplete.&quot;&quot;&quot;</span>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">        </span><span class="sd">"""Get file completions using PathAutoComplete."""</span>
 </span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>        <span class="c1"># Extract @file query</span>
-</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>        <span class="n">at_pos</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s1">&#39;@&#39;</span><span class="p">)</span>
-</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>        <span class="k">if</span> <span class="n">at_pos</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">text</span><span class="p">[</span><span class="n">at_pos</span><span class="p">:</span><span class="n">at_pos</span><span class="o">+</span><span class="mi">5</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;@file&#39;</span><span class="p">:</span>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>        <span class="n">at_pos</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s1">'@'</span><span class="p">)</span>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>        <span class="k">if</span> <span class="n">at_pos</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">text</span><span class="p">[</span><span class="n">at_pos</span><span class="p">:</span><span class="n">at_pos</span><span class="o">+</span><span class="mi">5</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'@file'</span><span class="p">:</span>
 </span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>            <span class="n">query</span> <span class="o">=</span> <span class="n">text</span><span class="p">[</span><span class="n">at_pos</span><span class="o">+</span><span class="mi">5</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 </span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>            <span class="n">root</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine_client</span><span class="o">.</span><span class="n">get_working_dir</span><span class="p">()</span>
 </span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>
 </span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>            <span class="c1"># Use PathAutoComplete</span>
 </span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>            <span class="n">path_ac</span> <span class="o">=</span> <span class="n">PathAutoComplete</span><span class="p">(</span>
 </span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>                <span class="n">root</span><span class="o">=</span><span class="n">root</span><span class="p">,</span>
-</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>                <span class="n">ignore_patterns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;.git&quot;</span><span class="p">,</span> <span class="s2">&quot;node_modules&quot;</span><span class="p">,</span> <span class="s2">&quot;__pycache__&quot;</span><span class="p">]</span>
+</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>                <span class="n">ignore_patterns</span><span class="o">=</span><span class="p">[</span><span class="s2">".git"</span><span class="p">,</span> <span class="s2">"node_modules"</span><span class="p">,</span> <span class="s2">"__pycache__"</span><span class="p">]</span>
 </span><span id="__span-11-21"><a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>            <span class="p">)</span>
 </span><span id="__span-11-22"><a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>            <span class="k">return</span> <span class="n">path_ac</span><span class="o">.</span><span class="n">get_items</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
 </span><span id="__span-11-23"><a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>
@@ -1877,24 +1877,24 @@ Option B: Use PathAutoComplete for @file completions (better UX, more work)</p>
 </span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>
 </span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
 </span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_adapter_converts_slash_commands</span><span class="p">():</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Test adapter converts slash command completions.&quot;&quot;&quot;</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="sd">"""Test adapter converts slash command completions."""</span>
 </span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>    <span class="n">completer</span> <span class="o">=</span> <span class="n">TextualCompleter</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
 </span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>    <span class="n">adapter</span> <span class="o">=</span> <span class="n">CompletionAdapter</span><span class="p">(</span><span class="n">completer</span><span class="p">)</span>
 </span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="n">items</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">get_dropdown_items</span><span class="p">(</span><span class="s2">&quot;/sh&quot;</span><span class="p">)</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="n">items</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">get_dropdown_items</span><span class="p">(</span><span class="s2">"/sh"</span><span class="p">)</span>
 </span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>
 </span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">items</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
 </span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">DropdownItem</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">)</span>
-</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>    <span class="k">assert</span> <span class="nb">any</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">main</span> <span class="o">==</span> <span class="s2">&quot;/show&quot;</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">)</span>
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>    <span class="k">assert</span> <span class="nb">any</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">main</span> <span class="o">==</span> <span class="s2">"/show"</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">)</span>
 </span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>
 </span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>
 </span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_adapter_converts_file_completions</span><span class="p">():</span>
-</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Test adapter converts @file completions.&quot;&quot;&quot;</span>
+</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="w">    </span><span class="sd">"""Test adapter converts @file completions."""</span>
 </span><span id="__span-12-21"><a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>    <span class="c1"># ... test @file logic ...</span>
 </span><span id="__span-12-22"><a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>
 </span><span id="__span-12-23"><a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>
 </span><span id="__span-12-24"><a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_adapter_sorts_alphabetically</span><span class="p">():</span>
-</span><span id="__span-12-25"><a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Test adapter sorts results.&quot;&quot;&quot;</span>
+</span><span id="__span-12-25"><a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a><span class="w">    </span><span class="sd">"""Test adapter sorts results."""</span>
 </span><span id="__span-12-26"><a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a>    <span class="c1"># ... test sorting ...</span>
 </span></code></pre></div>
 <p><strong>6.2 Integration Tests</strong></p>
@@ -1904,28 +1904,28 @@ Option B: Use PathAutoComplete for @file completions (better UX, more work)</p>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
 </span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_autocomplete_slash_command</span><span class="p">():</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Test autocomplete appears when typing /.&quot;&quot;&quot;</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">    </span><span class="sd">"""Test autocomplete appears when typing /."""</span>
 </span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    <span class="n">app</span> <span class="o">=</span> <span class="n">PPXAIDEApp</span><span class="p">()</span>
 </span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">app</span><span class="o">.</span><span class="n">run_test</span><span class="p">()</span> <span class="k">as</span> <span class="n">pilot</span><span class="p">:</span>
-</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>        <span class="c1"># Type &quot;/&quot;</span>
-</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>        <span class="k">await</span> <span class="n">pilot</span><span class="o">.</span><span class="n">press</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>        <span class="c1"># Type "/"</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>        <span class="k">await</span> <span class="n">pilot</span><span class="o">.</span><span class="n">press</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
 </span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>
 </span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>        <span class="c1"># Check dropdown appears</span>
-</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>        <span class="n">dropdown</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="s2">&quot;#autocomplete-dropdown&quot;</span><span class="p">)</span>
+</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>        <span class="n">dropdown</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="s2">"#autocomplete-dropdown"</span><span class="p">)</span>
 </span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>        <span class="k">assert</span> <span class="n">dropdown</span><span class="o">.</span><span class="n">display</span>
 </span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>
 </span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a>        <span class="c1"># Check items are present</span>
-</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a>        <span class="n">items</span> <span class="o">=</span> <span class="n">dropdown</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">&quot;.autocomplete-item&quot;</span><span class="p">)</span>
+</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a>        <span class="n">items</span> <span class="o">=</span> <span class="n">dropdown</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">".autocomplete-item"</span><span class="p">)</span>
 </span><span id="__span-13-18"><a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a>        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">items</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
 </span><span id="__span-13-19"><a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a>
 </span><span id="__span-13-20"><a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a>
 </span><span id="__span-13-21"><a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_autocomplete_file_completion</span><span class="p">():</span>
-</span><span id="__span-13-22"><a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Test autocomplete for @file.&quot;&quot;&quot;</span>
+</span><span id="__span-13-22"><a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a><span class="w">    </span><span class="sd">"""Test autocomplete for @file."""</span>
 </span><span id="__span-13-23"><a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a>    <span class="c1"># ... test @file ...</span>
 </span><span id="__span-13-24"><a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a>
 </span><span id="__span-13-25"><a id="__codelineno-13-25" name="__codelineno-13-25" href="#__codelineno-13-25"></a>
 </span><span id="__span-13-26"><a id="__codelineno-13-26" name="__codelineno-13-26" href="#__codelineno-13-26"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_autocomplete_escape_dismisses</span><span class="p">():</span>
-</span><span id="__span-13-27"><a id="__codelineno-13-27" name="__codelineno-13-27" href="#__codelineno-13-27"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Test Escape key dismisses dropdown.&quot;&quot;&quot;</span>
+</span><span id="__span-13-27"><a id="__codelineno-13-27" name="__codelineno-13-27" href="#__codelineno-13-27"></a><span class="w">    </span><span class="sd">"""Test Escape key dismisses dropdown."""</span>
 </span><span id="__span-13-28"><a id="__codelineno-13-28" name="__codelineno-13-28" href="#__codelineno-13-28"></a>    <span class="c1"># ... test Escape key ...</span>
 </span></code></pre></div>
 <p><strong>6.3 Manual Testing Checklist</strong></p>
@@ -2020,7 +2020,7 @@ Option B: Use PathAutoComplete for @file completions (better UX, more work)</p>
 </span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">  </span><span class="k">-</span><span class="w"> </span>Multi-column layout for better UX
 </span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>
 </span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="gu">### Changed</span>
-</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="k">-</span><span class="w"> </span><span class="gs">**Dependencies:**</span> Added <span class="sb">`textual-autocomplete = &quot;^4.0.6&quot;`</span>
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="k">-</span><span class="w"> </span><span class="gs">**Dependencies:**</span> Added <span class="sb">`textual-autocomplete = "^4.0.6"`</span>
 </span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>
 </span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="gu">### Removed</span>
 </span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="k">-</span><span class="w"> </span><span class="gs">**Internal:**</span> Removed custom <span class="sb">`CompletionPopup`</span> widget (replaced by library)
@@ -2057,7 +2057,7 @@ Option B: Use PathAutoComplete for @file completions (better UX, more work)</p>
 </span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>    <span class="n">USE_AUTOCOMPLETE</span> <span class="o">=</span> <span class="kc">True</span>
 </span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
 </span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>    <span class="n">USE_AUTOCOMPLETE</span> <span class="o">=</span> <span class="kc">False</span>
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;textual-autocomplete not installed, autocomplete disabled&quot;</span><span class="p">)</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"textual-autocomplete not installed, autocomplete disabled"</span><span class="p">)</span>
 </span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>
 </span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="k">if</span> <span class="n">USE_AUTOCOMPLETE</span><span class="p">:</span>
 </span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>    <span class="k">yield</span> <span class="n">AutoComplete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_input</span><span class="p">,</span> <span class="n">Dropdown</span><span class="p">(</span><span class="o">...</span><span class="p">))</span>
@@ -2068,7 +2068,7 @@ Option B: Use PathAutoComplete for @file completions (better UX, more work)</p>
 <h3 id="feature-flag-optional">Feature Flag (Optional)<a class="headerlink" href="#feature-flag-optional" title="Permanent link">&para;</a></h3>
 <p>For extra safety during rollout:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># In ppxai/config.py</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">ENABLE_AUTOCOMPLETE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;PPXAI_ENABLE_AUTOCOMPLETE&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;true&quot;</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">ENABLE_AUTOCOMPLETE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">"PPXAI_ENABLE_AUTOCOMPLETE"</span><span class="p">,</span> <span class="s2">"true"</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"true"</span>
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
 </span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># In InputBox.compose()</span>
 </span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="k">if</span> <span class="n">USE_AUTOCOMPLETE</span> <span class="ow">and</span> <span class="n">ENABLE_AUTOCOMPLETE</span><span class="p">:</span>
@@ -2085,7 +2085,7 @@ Option B: Use PathAutoComplete for @file completions (better UX, more work)</p>
 </span></code></pre></div></p>
 <p><strong>Option 2: Hotfix release (v1.16.1)</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Set default to disabled</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="n">ENABLE_AUTOCOMPLETE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;PPXAI_ENABLE_AUTOCOMPLETE&quot;</span><span class="p">,</span> <span class="s2">&quot;false&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;true&quot;</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="n">ENABLE_AUTOCOMPLETE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">"PPXAI_ENABLE_AUTOCOMPLETE"</span><span class="p">,</span> <span class="s2">"false"</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"true"</span>
 </span></code></pre></div></p>
 <p><strong>Option 3: Revert to v1.15.0</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>git<span class="w"> </span>revert<span class="w"> </span>&lt;commit-hash&gt;
@@ -2412,7 +2412,7 @@ Option B: Use PathAutoComplete for @file completions (better UX, more work)</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1362,11 +1362,11 @@ determinism (Phases A–D) + <code>validate_agent_task</code> safety gate +
 <p>Pre-v1.18.1, the same slash command was implemented twice — once in the Python <code>CommandFactory</code> (Rich + Textual TUIs) and once in the JS dispatcher / VSCode extension. Most commands didn't actually go through <code>POST /command/&lt;name&gt;</code>; they hit bespoke REST endpoints (<code>/sessions</code>, <code>/checkpoint/list</code>, <code>/working-dir</code>, <code>/files/read</code>, ...) and the JS/TS clients duplicated the formatting logic. The factory and the JS/TS lists drifted — at v1.18.0, nine of ten builtin command modules were missing from the PyInstaller specs and nobody noticed for six releases because only <code>/usage</code> actually exercised the factory path.</p>
 <p>v1.18.1's invariant: <strong>every command flows through the factory's <code>POST /command/&lt;name&gt;</code></strong>, and the wire envelope is:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">&quot;...CommandResult.to_dict()...&quot;</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;side_effects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;open_editor&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;filepath&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/x&quot;</span><span class="w"> </span><span class="p">}],</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">&quot;events&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;state_sync&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;data&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;working_dir&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/x&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}],</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">"ok"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">"result"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"...CommandResult.to_dict()..."</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">"side_effects"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open_editor"</span><span class="p">,</span><span class="w"> </span><span class="nt">"filepath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/x"</span><span class="w"> </span><span class="p">}],</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">"events"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"state_sync"</span><span class="p">,</span><span class="w"> </span><span class="nt">"data"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"working_dir"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/x"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}],</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><code>result</code> is the rendered payload (TableResult, MarkdownResult, FileViewResult, etc.). <code>side_effects</code> are orthogonal UI directives. <code>events</code> are SSE-shaped state mutations drained from the engine queue (Phase B).</p>
@@ -1685,7 +1685,7 @@ determinism (Phases A–D) + <code>validate_agent_task</code> safety gate +
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

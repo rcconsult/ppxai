@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -698,10 +698,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-file-editing-tools" class="md-nav__link">
+  <a href="#5-file-editing-tools" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4 File Editing Tools
+        5 File Editing Tools
       
     </span>
   </a>
@@ -969,8 +969,30 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#5-write_file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. write_file
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#syntax-validation-on-write-r13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Syntax validation on write (R13)
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1869,10 +1891,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-file-editing-tools" class="md-nav__link">
+  <a href="#5-file-editing-tools" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4 File Editing Tools
+        5 File Editing Tools
       
     </span>
   </a>
@@ -2140,8 +2162,30 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#5-write_file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. write_file
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#syntax-validation-on-write-r13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Syntax validation on write (R13)
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2514,7 +2558,7 @@
 - ✅ Delete lines or line ranges
 - ✅ Make multiple edits in a single conversation</p>
 <p><strong>All with your explicit consent before any changes.</strong></p>
-<h3 id="4-file-editing-tools">4 File Editing Tools<a class="headerlink" href="#4-file-editing-tools" title="Permanent link">&para;</a></h3>
+<h3 id="5-file-editing-tools">5 File Editing Tools<a class="headerlink" href="#5-file-editing-tools" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -2543,6 +2587,11 @@
 <td><code>delete_lines</code></td>
 <td>Remove line ranges</td>
 <td>Cleanup, removing code</td>
+</tr>
+<tr>
+<td><code>write_file</code></td>
+<td>Write full file content (creates if missing)</td>
+<td>New files, whole-file rewrites (v1.18.7+)</td>
 </tr>
 </tbody>
 </table>
@@ -2609,7 +2658,7 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/tools<span class="w"> </span><span class="nb">enable</span>
 </span></code></pre></div></p>
 <blockquote>
-<p><strong>Tip:</strong> Use Tab for autocomplete: <code>/tools &lt;tab&gt;</code> shows all subcommands, <code>/tools help &lt;tab&gt;</code> shows tool names.</p>
+<p><strong>Tip:</strong> Use Tab for autocomplete: <code>/tools &lt;tab&gt;</code> shows all subcommands. <code>/tools list</code> shows every tool with its description (there is no per-tool <code>/tools help &lt;name&gt;</code>).</p>
 </blockquote>
 <p><strong>VSCode:</strong>
 Enable tools in settings or via the tools toggle button in chat panel.</p>
@@ -2617,12 +2666,12 @@ Enable tools in settings or via the tools toggle button in chat panel.</p>
 <p><strong>TUI:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/tools<span class="w"> </span>status
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Get help for a specific editing tool</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>/tools<span class="w"> </span><span class="nb">help</span><span class="w"> </span>apply_patch
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># List every tool, with descriptions</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>/tools<span class="w"> </span>list
 </span></code></pre></div></p>
 <p>Output:
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>✓ Tools enabled (12 tools available)
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>✓ File editing tools enabled (4 editing tools)
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>✓ File editing tools enabled (5 editing tools)
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Consent mode: ask
 </span></code></pre></div></p>
 <p><strong>VSCode:</strong>
@@ -2634,9 +2683,9 @@ Click the tools badge to see status.</p>
 <h3 id="example-1-simple-bug-fix">Example 1: Simple Bug Fix<a class="headerlink" href="#example-1-simple-bug-fix" title="Permanent link">&para;</a></h3>
 <p><strong>User:</strong> "Fix the typo in config.py - 'databse' should be 'database'"</p>
 <p><strong>Chat Flow:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>You: Fix the typo in config.py - &#39;databse&#39; should be &#39;database&#39;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>You: Fix the typo in config.py - 'databse' should be 'database'
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>AI: I&#39;ll fix that typo for you.
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>AI: I'll fix that typo for you.
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>[Consent Prompt]
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>⚠️  File Edit Request
@@ -2645,7 +2694,7 @@ Click the tools badge to see status.</p>
 </span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
 </span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>AI: ✓ Successfully replaced block in config.py at line 15 (+0 lines)
 </span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>Done! Changed &#39;databse&#39; to &#39;database&#39; in config.py.
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>Done! Changed 'databse' to 'database' in config.py.
 </span></code></pre></div></p>
 <p><strong>What happened:</strong>
 1. AI read config.py
@@ -2658,7 +2707,7 @@ Click the tools badge to see status.</p>
 <p><strong>Chat Flow:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>You: Add a helper function to utils.py that converts timestamps to ISO format
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>AI: I&#39;ll add a timestamp conversion function to utils.py.
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>AI: I'll add a timestamp conversion function to utils.py.
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>[Consent Prompt - First Edit]
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>⚠️  File Edit Request
@@ -2681,7 +2730,7 @@ Click the tools badge to see status.</p>
 <p><strong>Chat Flow:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>You: Apply this code review feedback: Remove debug print statements from authentication.py
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>AI: I&#39;ll clean up the debug print statements.
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>AI: I'll clean up the debug print statements.
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>[Reading authentication.py]
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
@@ -2708,7 +2757,7 @@ Click the tools badge to see status.</p>
 <p><strong>Chat Flow:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>You: Refactor the database connection logic - move it from main.py into a new db_connection.py module
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>AI: I&#39;ll refactor the database connection into a separate module.
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>AI: I'll refactor the database connection into a separate module.
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>Step 1: Create db_connection.py with the connection logic
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>Step 2: Update main.py to import from the new module
@@ -2737,14 +2786,14 @@ Click the tools badge to see status.</p>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>+++ b/api.py
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>@@ -10,7 +10,7 @@
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a> def get_user(user_id: int):
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>-    return database.query(f&quot;SELECT * FROM users WHERE id={user_id}&quot;)
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>+    return database.query(&quot;SELECT * FROM users WHERE id=?&quot;, (user_id,))
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>-    return database.query(f"SELECT * FROM users WHERE id={user_id}")
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>+    return database.query("SELECT * FROM users WHERE id=?", (user_id,))
 </span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>```
 </span></code></pre></div></p>
 <p><strong>Chat Flow:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>You: Apply this patch from the PR review: [diff content]
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>AI: I&#39;ll apply the security fix to prevent SQL injection.
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>AI: I'll apply the security fix to prevent SQL injection.
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
 </span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>[Consent Prompt]
 </span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>⚠️  File Edit Request
@@ -2775,8 +2824,8 @@ Click the tools badge to see status.</p>
 - "Use this patch from the code review"</p>
 <p><strong>Tool Parameters:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">apply_patch</span><span class="p">(</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">file_path</span><span class="o">=</span><span class="s2">&quot;/path/to/file.py&quot;</span><span class="p">,</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">unified_diff</span><span class="o">=</span><span class="s2">&quot;@@ -10,3 +10,3 @@</span><span class="se">\n</span><span class="s2"> context</span><span class="se">\n</span><span class="s2">-old line</span><span class="se">\n</span><span class="s2">+new line</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">file_path</span><span class="o">=</span><span class="s2">"/path/to/file.py"</span><span class="p">,</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">unified_diff</span><span class="o">=</span><span class="s2">"@@ -10,3 +10,3 @@</span><span class="se">\n</span><span class="s2"> context</span><span class="se">\n</span><span class="s2">-old line</span><span class="se">\n</span><span class="s2">+new line</span><span class="se">\n</span><span class="s2">"</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="p">)</span>
 </span></code></pre></div></p>
 <hr />
@@ -2793,9 +2842,9 @@ Click the tools badge to see status.</p>
 - "Fix the typo 'recieve' to 'receive'"</p>
 <p><strong>Tool Parameters:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">replace_block</span><span class="p">(</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">file_path</span><span class="o">=</span><span class="s2">&quot;/path/to/file.py&quot;</span><span class="p">,</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">search</span><span class="o">=</span><span class="s2">&quot;old_function_name()&quot;</span><span class="p">,</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">replace</span><span class="o">=</span><span class="s2">&quot;new_function_name()&quot;</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">file_path</span><span class="o">=</span><span class="s2">"/path/to/file.py"</span><span class="p">,</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">search</span><span class="o">=</span><span class="s2">"old_function_name()"</span><span class="p">,</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">replace</span><span class="o">=</span><span class="s2">"new_function_name()"</span>
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="p">)</span>
 </span></code></pre></div></p>
 <p><strong>Important:</strong> Search text must appear exactly once in the file.</p>
@@ -2813,9 +2862,9 @@ Click the tools badge to see status.</p>
 - "Add this docstring to the function"</p>
 <p><strong>Tool Parameters:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">insert_text</span><span class="p">(</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="n">file_path</span><span class="o">=</span><span class="s2">&quot;/path/to/file.py&quot;</span><span class="p">,</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="n">file_path</span><span class="o">=</span><span class="s2">"/path/to/file.py"</span><span class="p">,</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">line_number</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>  <span class="c1"># 1-indexed</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">text</span><span class="o">=</span><span class="s2">&quot;new code here</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">text</span><span class="o">=</span><span class="s2">"new code here</span><span class="se">\n</span><span class="s2">"</span>
 </span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="p">)</span>
 </span></code></pre></div></p>
 <hr />
@@ -2832,12 +2881,79 @@ Click the tools badge to see status.</p>
 - "Clean up the commented-out code"</p>
 <p><strong>Tool Parameters:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">delete_lines</span><span class="p">(</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">file_path</span><span class="o">=</span><span class="s2">&quot;/path/to/file.py&quot;</span><span class="p">,</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">file_path</span><span class="o">=</span><span class="s2">"/path/to/file.py"</span><span class="p">,</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">start_line</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>  <span class="c1"># 1-indexed, inclusive</span>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    <span class="n">end_line</span><span class="o">=</span><span class="mi">15</span>     <span class="c1"># 1-indexed, inclusive</span>
 </span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="p">)</span>
 </span></code></pre></div></p>
 <hr />
+<h3 id="5-write_file">5. write_file<a class="headerlink" href="#5-write_file" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose:</strong> Write full content to a file, creating it if it doesn't exist (v1.18.7+)</p>
+<p><strong>Use Cases:</strong>
+- Creating new files
+- Whole-file rewrites where a patch/replace isn't a good fit
+- Overwriting generated or scaffold files</p>
+<p><strong>Example Prompts:</strong>
+- "Create a new config.py with these defaults"
+- "Rewrite utils.py to use the new logging API throughout"</p>
+<p><strong>Tool Parameters:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">write_file</span><span class="p">(</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="n">file_path</span><span class="o">=</span><span class="s2">"/path/to/file.py"</span><span class="p">,</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">content</span><span class="o">=</span><span class="s2">"full file contents here</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span>  <span class="c1"># default: true. Set false to error instead of overwriting an existing file.</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="p">)</span>
+</span></code></pre></div></p>
+<p><strong>Important:</strong> Same consent flow as the other four tools — you'll get a File Edit Request prompt before anything is written. Unlike <code>replace_block</code>/<code>insert_text</code>/<code>delete_lines</code>, it replaces the <strong>entire</strong> file content, so review the consent prompt's file path carefully on existing files.</p>
+<hr />
+<h2 id="syntax-validation-on-write-r13">Syntax validation on write (R13)<a class="headerlink" href="#syntax-validation-on-write-r13" title="Permanent link">&para;</a></h2>
+<p><strong>All five editing tools</strong> — <code>apply_patch</code>, <code>replace_block</code>, <code>insert_text</code>,
+<code>delete_lines</code> and <code>write_file</code> — run a syntax check on the <em>resulting</em>
+content <strong>before</strong> committing it. If the edit would leave the file
+unparseable, the write is <strong>abandoned, the file is left in its pre-edit
+state, and the tool returns an error instead of reporting success</strong>
+(<code>ppxai/engine/tools/builtin/syntax_validator.py</code>).</p>
+<p>This exists because the failure it prevents is silent: an edit that drops a
+closing brace or dedents a block still "succeeds" at the byte level, and the
+model happily continues against a file that no longer parses.</p>
+<p>Validated by extension:</p>
+<table>
+<thead>
+<tr>
+<th>Language</th>
+<th>Extensions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python</td>
+<td><code>.py</code></td>
+</tr>
+<tr>
+<td>JSON</td>
+<td><code>.json</code></td>
+</tr>
+<tr>
+<td>YAML</td>
+<td><code>.yaml</code>, <code>.yml</code></td>
+</tr>
+<tr>
+<td>TOML</td>
+<td><code>.toml</code></td>
+</tr>
+<tr>
+<td>JavaScript</td>
+<td><code>.js</code>, <code>.mjs</code>, <code>.cjs</code>, <code>.jsx</code></td>
+</tr>
+<tr>
+<td>TypeScript</td>
+<td><code>.ts</code>, <code>.tsx</code></td>
+</tr>
+</tbody>
+</table>
+<p>Any other extension is written through unchecked — the validator is a
+safety net for the formats it knows, not a gate on every file. An error
+names the failing line, so the usual recovery is to re-read the region and
+retry with corrected context rather than to force the write.</p>
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
 <h3 id="dos">✅ Do's<a class="headerlink" href="#dos" title="Permanent link">&para;</a></h3>
 <ol>
@@ -2858,29 +2974,29 @@ Click the tools badge to see status.</p>
 </ol>
 <h3 id="pro-tips">💡 Pro Tips<a class="headerlink" href="#pro-tips" title="Permanent link">&para;</a></h3>
 <p><strong>For Refactoring:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>You: Refactor the authentication module - extract password hashing
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>     into utils/crypto.py
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>[Approve with &quot;always&quot; on first prompt]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>You: Refactor the authentication module - extract password hashing
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>     into utils/crypto.py
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>[Approve with "always" on first prompt]
 </span></code></pre></div></p>
 <p><strong>For Code Reviews:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>You: Apply all the suggestions from code_review.md
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>AI will read the review, identify files, and apply changes systematically.
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>You: Apply all the suggestions from code_review.md
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>AI will read the review, identify files, and apply changes systematically.
 </span></code></pre></div></p>
 <p><strong>For Bug Fixes:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>You: @bug_report.txt @user_service.py
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>     Fix the race condition described in the bug report
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>[AI analyzes both files and applies the fix]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>You: @bug_report.txt @user_service.py
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>     Fix the race condition described in the bug report
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>[AI analyzes both files and applies the fix]
 </span></code></pre></div></p>
 <p><strong>For New Features:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>You: Implement user profile editing:
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>     1. Add PUT /users/:id endpoint to api.py
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>     2. Add update_user() to database.py
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>     3. Update user model with last_modified field
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>[AI will edit all 3 files with consent]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>You: Implement user profile editing:
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>     1. Add PUT /users/:id endpoint to api.py
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>     2. Add update_user() to database.py
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>     3. Update user model with last_modified field
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>[AI will edit all 3 files with consent]
 </span></code></pre></div></p>
 <hr />
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
@@ -2930,32 +3046,32 @@ Click the tools badge to see status.</p>
 <hr />
 <h2 id="advanced-patterns">Advanced Patterns<a class="headerlink" href="#advanced-patterns" title="Permanent link">&para;</a></h2>
 <h3 id="pattern-1-iterative-development">Pattern 1: Iterative Development<a class="headerlink" href="#pattern-1-iterative-development" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>Session 1: Initial implementation
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>You: Create a basic REST API with GET /users
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>[Approve edits]
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>Session 2: Add features
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>You: Add POST /users endpoint with validation
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>[Edits auto-approved - same file]
-</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>
-</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>Session 3: Refinement
-</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>You: Add pagination to GET /users
-</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>[Edits auto-approved - same file]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>Session 1: Initial implementation
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>You: Create a basic REST API with GET /users
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>[Approve edits]
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>Session 2: Add features
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>You: Add POST /users endpoint with validation
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>[Edits auto-approved - same file]
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>Session 3: Refinement
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>You: Add pagination to GET /users
+</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a>[Edits auto-approved - same file]
 </span></code></pre></div>
 <h3 id="pattern-2-code-migration">Pattern 2: Code Migration<a class="headerlink" href="#pattern-2-code-migration" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>You: Migrate from requests library to httpx:
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>     1. Update requirements.txt
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>     2. Change all imports in services/
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>     3. Update async HTTP calls to use httpx syntax
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>[Approve with &quot;always&quot;]
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>[AI systematically updates all files]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>You: Migrate from requests library to httpx:
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>     1. Update requirements.txt
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>     2. Change all imports in services/
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>     3. Update async HTTP calls to use httpx syntax
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>[Approve with "always"]
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>[AI systematically updates all files]
 </span></code></pre></div>
 <h3 id="pattern-3-test-driven-development">Pattern 3: Test-Driven Development<a class="headerlink" href="#pattern-3-test-driven-development" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>You: I have failing tests in test_auth.py.
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>     Fix the authentication logic in auth.py to make them pass.
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>[AI reads both files, identifies issues, applies fixes]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>You: I have failing tests in test_auth.py.
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>     Fix the authentication logic in auth.py to make them pass.
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>[AI reads both files, identifies issues, applies fixes]
 </span></code></pre></div>
 <hr />
 <h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
@@ -2978,29 +3094,29 @@ Click the tools badge to see status.</p>
 <hr />
 <h2 id="examples-by-use-case">Examples by Use Case<a class="headerlink" href="#examples-by-use-case" title="Permanent link">&para;</a></h2>
 <h3 id="bug-fixing">Bug Fixing<a class="headerlink" href="#bug-fixing" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>&quot;Fix the off-by-one error in pagination logic&quot;
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>&quot;Handle the edge case when user_id is None&quot;
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>&quot;Add null check before accessing user.email&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>"Fix the off-by-one error in pagination logic"
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>"Handle the edge case when user_id is None"
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>"Add null check before accessing user.email"
 </span></code></pre></div>
 <h3 id="refactoring">Refactoring<a class="headerlink" href="#refactoring" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>&quot;Extract the email validation into a separate function&quot;
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>&quot;Rename userId to user_id throughout the file&quot;
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>&quot;Move constants to the top of the file&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>"Extract the email validation into a separate function"
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>"Rename userId to user_id throughout the file"
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>"Move constants to the top of the file"
 </span></code></pre></div>
 <h3 id="adding-features">Adding Features<a class="headerlink" href="#adding-features" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>&quot;Add a rate limiting decorator to the API endpoints&quot;
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>&quot;Implement user avatar upload functionality&quot;
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>&quot;Add logging to all database operations&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>"Add a rate limiting decorator to the API endpoints"
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>"Implement user avatar upload functionality"
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>"Add logging to all database operations"
 </span></code></pre></div>
 <h3 id="code-cleanup">Code Cleanup<a class="headerlink" href="#code-cleanup" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>&quot;Remove all unused imports&quot;
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>&quot;Delete commented-out code&quot;
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>&quot;Fix all formatting issues to match PEP 8&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>"Remove all unused imports"
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>"Delete commented-out code"
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>"Fix all formatting issues to match PEP 8"
 </span></code></pre></div>
 <h3 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>&quot;Add unit tests for the password hashing function&quot;
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>&quot;Generate integration tests for the user API&quot;
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>&quot;Add edge case tests for date parsing&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>"Add unit tests for the password hashing function"
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>"Generate integration tests for the user API"
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>"Add edge case tests for date parsing"
 </span></code></pre></div>
 <hr />
 <h2 id="faq">FAQ<a class="headerlink" href="#faq" title="Permanent link">&para;</a></h2>
@@ -3109,7 +3225,7 @@ A: Editing tools work with text files. Binary files will cause errors (and rollb
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

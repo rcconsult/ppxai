@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1157,10 +1157,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#t2-the-seal-read_paths-enforcement-toolsagentsandbox-in_process-done" class="md-nav__link">
+  <a href="#t2-the-seal-read_paths-enforcement-executiontasksandbox-in_process-done" class="md-nav__link">
     <span class="md-ellipsis">
       
-        T2 — the seal: read_paths enforcement + tools.agent.sandbox (in_process) — ✅ DONE
+        T2 — the seal: read_paths enforcement + execution.task.sandbox (in_process) — ✅ DONE
       
     </span>
   </a>
@@ -1246,10 +1246,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#t8b-tui-port-parked" class="md-nav__link">
+  <a href="#t8b-tui-port-done-unparked-2026-08-08-closed-2026-08-11" class="md-nav__link">
     <span class="md-ellipsis">
       
-        T8b — TUI port — ⏸️ PARKED
+        T8b — TUI port — ✅ DONE (unparked 2026-08-08, closed 2026-08-11)
       
     </span>
   </a>
@@ -1309,7 +1309,7 @@
 <a href="../agent-task-lifecycle.html">agent-task-lifecycle.html</a>; architecture:
 <a href="../decisions/0003-agent-platform-architecture/">decisions/0003-agent-platform-architecture.md</a>
 §8–§9). Same contract as the Stage-2 increment plan
-(<a href="../plan-v1.19.0-sequencing/">plan-v1.19.0-sequencing.md</a>):</p>
+(<a href="../archive/plan-v1.19.0-sequencing/">plan-v1.19.0-sequencing.md</a>):</p>
 <blockquote>
 <p><strong>Build contract.</strong> Each increment is a <strong>vertical slice</strong> that brings
 exactly the server + client bits needed to <strong>live-trial it end-to-end</strong>,
@@ -1320,17 +1320,17 @@ next one starts.</p>
 </blockquote>
 <p><strong>Where we start.</strong> The tool-capable tier already exists server-side:
 <code>POST /v1/agent/task</code>, <code>GET /runs</code>, <code>GET /runs/{id}</code>, <code>GET /runs/{id}/events</code>
-(SSE), <code>POST /runs/{id}/cancel</code>, owner-scoped authz, <code>task_tier_enabled</code>
+(SSE), <code>POST /runs/{id}/cancel</code>, owner-scoped authz, <code>execution.task.enabled</code>
 default-off gate, no-shell rejection. There is <strong>no <code>/task</code> client command in
 any client</strong> — <code>/agentrun</code> (tool-free) is the only agent slash command shipped.
 So T1 is mostly client work over existing endpoints; new server machinery
 arrives only where the lifecycle needs it (T5–T7) and where the filesystem
 seal needs it (T2).</p>
 <p><strong>Trial prerequisites (every increment).</strong>
-- Enable the tier: <code>tools.agent.task_tier_enabled: true</code> in <code>~/.ppxai/ppxai-config.json</code>.
+- Enable the tier: <code>execution.task.enabled: true</code> in <code>~/.ppxai/ppxai-config.json</code>.
 - Run the web client against <strong>live source</strong>: <code>PPXAI_WEB_DIR=$PWD/ppxai/web uv run ppxai-server</code> (edits to <code>ppxai/web/</code> don't reach <code>~/.ppxai/web</code> otherwise — see <code>docs/lessons/web-assets-served-from-ppxai-home.md</code>).
 - Trial with <strong>auth disabled</strong> (default — no <code>server.secrets</code> file store, <code>PPXAI_API_TOKEN</code> unset): <code>/task</code> is loopback-reachable without a bearer (<code>auth.py::check_request</code> → <code>if not is_auth_enabled(): return None</code>). A token-carrying web client for the auth-enabled case is a follow-up, not a blocker.
-- Set a default subagent so a bare <code>--tools</code> launch has a provider/model: <code>tools.agent.default_subagent: {provider, model}</code>.</p>
+- Set a default subagent so a bare <code>--tools</code> launch has a provider/model: <code>execution.default_subagent: {provider, model}</code>.</p>
 <hr />
 <h2 id="t1-launch-observe-run-ls-show-watch-cancel-done">T1 — launch + observe: <code>run · ls · show · watch · cancel</code> — ✅ DONE<a class="headerlink" href="#t1-launch-observe-run-ls-show-watch-cancel-done" title="Permanent link">&para;</a></h2>
 <p><strong>Shipped:</strong> <code>0ff4370b</code> (+ <code>42543961</code> log-noise fix, <code>22d7757f</code> call graph),
@@ -1365,17 +1365,20 @@ dispatcher routing test (<code>/task run|ls|cancel</code> → controller); a Nod
 behavioral test mirroring <code>test_agent_run_controller_behavior.py</code>.</p>
 <p><strong>Deliberately NOT yet:</strong> spec/skill files, read-scope, <code>respond</code>/<code>ack</code>/<code>resume</code>.</p>
 <hr />
-<h2 id="t2-the-seal-read_paths-enforcement-toolsagentsandbox-in_process-done">T2 — the seal: <code>read_paths</code> enforcement + <code>tools.agent.sandbox</code> (in_process) — ✅ DONE<a class="headerlink" href="#t2-the-seal-read_paths-enforcement-toolsagentsandbox-in_process-done" title="Permanent link">&para;</a></h2>
+<h2 id="t2-the-seal-read_paths-enforcement-executiontasksandbox-in_process-done">T2 — the seal: <code>read_paths</code> enforcement + <code>execution.task.sandbox</code> (in_process) — ✅ DONE<a class="headerlink" href="#t2-the-seal-read_paths-enforcement-executiontasksandbox-in_process-done" title="Permanent link">&para;</a></h2>
 <p><strong>Shipped:</strong> <code>89b18ac0</code> (+ <code>9bd8c790</code> call graph). <code>engine/tools/filesystem_policy.py</code>
-(<code>FilesystemPolicy</code>), <code>config/tools.py</code> sandbox parsing (default <code>enforcement:"off"</code>
-→ non-breaking), the <code>ScopedToolManager</code> path chokepoint (<code>path_denied</code>), and the
+(<code>FilesystemPolicy</code>), <code>config/tools.py</code> sandbox parsing (as built; now
+<code>config/execution.py</code>, default <code>enforcement:"off"</code> → non-breaking), the
+<code>ScopedToolManager</code> path chokepoint (<code>path_denied</code>), and the
 per-run workdir in <code>build_task_runner</code>. Live-trialed: allowed read → ok, <code>/etc/hosts</code>
 → denied; 24 unit tests. <code>container</code> sub-block schema defined but inert (T9).</p>
 <p><strong>Capability:</strong> a run can read/write <strong>only</strong> inside configured locations; an
 attempt to read outside the allowlist is denied with a <code>path_denied</code> event.
 Brought early so every later increment is trialed confined.</p>
 <p><strong>Build (server):</strong>
-- Parse <code>tools.agent.sandbox</code> in <code>config/tools.py</code> (<code>get_agent_config</code>):
+- Parse <code>tools.agent.sandbox</code> in <code>config/tools.py</code> (<code>get_agent_config</code>) as
+  built (v1.19.1, ADR 0010: moved to <code>execution.task.sandbox</code>, read via
+  <code>config/execution.py::get_execution_task_config</code>):
   <code>workdir{root,writable,cleanup}</code>, <code>read_paths{allow,deny,follow_symlinks}</code>,
   <code>skills_dir</code>, <code>specs_dir</code>, <code>allow_skill_scripts</code>, <code>enforcement:"in_process"</code>.
   (Ship the <code>container</code> sub-block <strong>schema</strong> but leave it inert.)
@@ -1402,9 +1405,10 @@ vs relative/workdir write); config-parse defaults; a run-level test asserting
 <h2 id="t3-spec-files-spec-system-file-batch-done-spec-system-file-batch-deferred-to-t3b">T3 — spec files: <code>--spec</code> · <code>--system-file</code> · <code>--batch</code> — ✅ DONE (<code>--spec</code>); <code>--system-file</code>/<code>--batch</code> deferred to T3.b<a class="headerlink" href="#t3-spec-files-spec-system-file-batch-done-spec-system-file-batch-deferred-to-t3b" title="Permanent link">&para;</a></h2>
 <p><strong>Shipped:</strong> <code>engine/agent_spec.py</code> (loader: md front-matter / json / yaml /
 jsonl-batch → <code>AgentSpec</code>, size-bounded, clear errors); <code>/v1/agent/task</code> gains a
-<code>spec</code> NAME field resolved under <code>sandbox.specs_dir</code> (name-only, path-escape +
-containment guarded, 400 on any problem) with <strong>precedence request &gt; spec &gt;
-default_subagent</strong> and the ceiling clamp run on the MERGED grant (shell-in-spec
+<code>spec</code> NAME field resolved under <code>execution.task.sandbox.specs_dir</code> (name-only,
+path-escape + containment guarded, 400 on any problem) with <strong>precedence
+request &gt; spec &gt; default_subagent</strong> (<code>execution.default_subagent</code>) and the
+ceiling clamp run on the MERGED grant (shell-in-spec
 → 400; empty merged grant → 400; no-spec-no-tools still → 422 via a
 <code>model_validator</code>, preserving the invariant). Web client <code>--spec &lt;name&gt;</code>
 (task-controller flag + pane reflects the server-merged meta). Tests:
@@ -1423,11 +1427,13 @@ body), <code>.json</code>/<code>.yaml</code>, or <code>.jsonl</code> (batch fan-
   agent-spec schema (task, system, tools, provider, model, budget, network,
   read_paths). Reuse <code>bootstrap.py::_parse_yaml_front_matter</code> for front-matter;
   body → <code>system</code>.
-- Client: <code>--spec &lt;path&gt;</code> (local: server reads under <code>specs_dir</code> by <strong>name</strong>;
-  remote/web: client reads + <strong>inlines</strong> into the request), <code>--system-file</code>
-  (prose → <code>system</code>), <code>--batch &lt;file.jsonl&gt;</code> (one run per line).
-- Precedence: CLI flags &gt; <code>--spec</code> &gt; server <code>default_subagent</code>; clamped by the
-  operator ceiling (allowed grant · no-shell · <code>task_tier_enabled</code>).</p>
+- Client: <code>--spec &lt;path&gt;</code> (local: server reads under
+  <code>execution.task.sandbox.specs_dir</code> by <strong>name</strong>; remote/web: client reads +
+  <strong>inlines</strong> into the request), <code>--system-file</code> (prose → <code>system</code>),
+  <code>--batch &lt;file.jsonl&gt;</code> (one run per line).
+- Precedence: CLI flags &gt; <code>--spec</code> &gt; server <code>default_subagent</code>
+  (<code>execution.default_subagent</code>); clamped by the operator ceiling (allowed
+  grant · no-shell · <code>execution.task.enabled</code>).</p>
 <p><strong>Trial:</strong> author <code>specs/triage.md</code> (front-matter grant+budget, body =
 instructions); <code>/task run --spec triage "the CI job is red"</code>; confirm the
 pane shows the grant/budget from the file. <code>--batch three.jsonl</code> mints 3 runs.</p>
@@ -1500,7 +1506,8 @@ not-parked / token mismatch / already answered / parked-before-restart);
 <code>RunMeta.waiting</code> + the meta projection carry {kind, prompt, token, since,
 expires_at, ttl_s}. The <strong>existing</strong> spawn-consent seam (previously auto-denied
 over HTTP) now parks in <code>waiting{consent}</code> under <code>spawn_consent:"deny"</code>;
-<code>"auto"</code> still skips the park. TTL: <code>tools.agent.consent_ttl_s</code> (default 300 s).
+<code>"auto"</code> still skips the park. TTL: <code>execution.task.consent.consent_ttl_s</code>
+(default 300 s).
 <strong>Client (landed):</strong> consent card (prompt + Approve/Deny + optional note field,
 built with safe DOM methods — the prompt embeds model-derived text) in
 <code>TaskRunView</code>, raised by the SSE <code>agent_waiting</code> / meta <code>waiting</code>, cleared on
@@ -1515,10 +1522,11 @@ restart in flight; its checkpoint does (T7 <code>/resume</code> is the consumer)
 retires debt (r) as a standalone item.</p>
 <p><strong>Trial (concrete recipe):</strong></p>
 <ol>
-<li>Config (<code>~/.ppxai/ppxai-config.json</code> → <code>tools.agent</code>): <code>task_tier_enabled:
-   true</code>, a working <code>default_subagent</code> {provider, model}, and <code>spawn_consent</code>
-   left at its default <code>"deny"</code> (that IS the park mode now). Optionally
-   <code>consent_ttl_s</code> (default 300) — set it low (e.g. 30) to trial the timeout.</li>
+<li>Config (<code>~/.ppxai/ppxai-config.json</code> → <code>execution.task</code>): <code>enabled:
+   true</code>, a working <code>execution.default_subagent</code> {provider, model}, and
+   <code>consent.spawn_consent</code> left at its default <code>"deny"</code> (that IS the park
+   mode now). Optionally <code>consent.consent_ttl_s</code> (default 300) — set it low
+   (e.g. 30) to trial the timeout.</li>
 <li>Serve the checkout (an installed <code>~/.ppxai/web</code> bundle won't have the
    consent card): <code>PPXAI_WEB_DIR=$PWD/ppxai/web uv run ppxai-server</code>, then
    open the web UI. (Config/env shadowing gotchas: see the T1 "trialing from
@@ -1574,7 +1582,7 @@ the run has exited (control/sandbox torn down, out of the AppState badge set)
 but the record + result persist. <code>POST /runs/{id}/ack</code> (owner-scoped 403,
 404/409) → <code>AgentRunRegistry.ack_run</code> → <strong><code>finalized</code></strong> + <code>agent_run_finalized</code>
 (idempotent: re-acking a finalized run is 200, no duplicate event). Retention
-backstop: <code>tools.agent.result_retention_s</code> (default 3600 s, 0 disables) via
+backstop: <code>execution.task.budgets.result_retention_s</code> (default 3600 s, 0 disables) via
 <code>maybe_reap_hold</code> — a <strong>lazy reaper on the GET read paths</strong> (no timer task; an
 expired hold finalizes with <code>via:"retention"</code> the next time anyone looks).
 Finalizing never deletes data — it marks the run GC-eligible; <code>acked_at</code> on
@@ -1604,7 +1612,7 @@ uv run ppxai-server</code>).</p>
 <li><code>/task ack &lt;id&gt;</code> (or Collect) → <code>✅ collected</code>; <code>GET /runs/&lt;id&gt;</code> shows
    <code>status:"finalized"</code>, <code>acked_at</code> set, result still present; a second ack
    is a no-op 200.</li>
-<li>Retention: set <code>tools.agent.result_retention_s</code> low (e.g. 30), run
+<li>Retention: set <code>execution.task.budgets.result_retention_s</code> low (e.g. 30), run
    another task, wait past the TTL, then <code>/task ls</code> — the run shows
    finalized (reaped on read, <code>agent_run_finalized {via:"retention"}</code> on its
    event log).</li>
@@ -1637,7 +1645,7 @@ receipt in the user's hands — revisit if the friction annoys).</p>
 <strong>conditionally</strong> resumed; <code>/task resume &lt;id&gt;</code> (or the button) continues it, or
 refuses with a reason if the checkpoint is inconclusive (open-decision #5).</p>
 <p><strong>Build (landed, server):</strong> <code>POST /runs/{id}/resume</code> (owner-scoped 403; same
-<code>task_tier_enabled</code> 403 gate as POST /task — resume re-enters the tool tier;
+<code>execution.task.enabled</code> 403 gate as POST /task — resume re-enters the tool tier;
 404/409). The decision matrix is <code>resume_refusal()</code> (pure meta rules): only
 <code>interrupted</code>/<code>cancelled</code> + <code>resumable</code> + <strong>top-level /task</strong> (<code>hold_result</code>)
 runs with no recorded <code>result</code> and complete rebuild inputs; everything else is
@@ -1730,7 +1738,7 @@ independently-trialable halves:</p>
 <li><strong>T8a — VSCode (✅ DONE):</strong> the extension already speaks
   HTTP to ppxai-server (<code>httpClient.ts</code>), so the port is a faithful mirror
   of the web client over the identical <code>/v1/agent/*</code> surface.</li>
-<li><strong>T8b — Rich/Textual TUI (⏸️ PARKED, 2026-07-07 — resume here):</strong> the TUIs
+<li><strong>T8b — Rich/Textual TUI (✅ DONE — unparked 2026-08-08, option (1) chosen; see §T8b below):</strong> the TUIs
   are <strong>in-process</strong> — they have NO channel to a ppxai-server. Porting <code>/task</code>
   there forces the transport decision that is debt Item 37(t)'s SDK question:
   <strong>(1)</strong> embed the registry + an embeddable <code>build_task_runner</code> in-process
@@ -1795,13 +1803,63 @@ paths; TaskBackend methods exist on httpClient), <strong>status-parity</strong>
 (task-before-factory, controller construction, QuickPick → <code>{approved}</code>),
 consent-token discipline (park token rides every respond; one QuickPick per
 park). Plus <code>npm run compile</code> (tsc + esbuild) green.</p>
-<h3 id="t8b-tui-port-parked">T8b — TUI port — ⏸️ PARKED<a class="headerlink" href="#t8b-tui-port-parked" title="Permanent link">&para;</a></h3>
-<p>Parked 2026-07-07 pending the transport decision above (option 1 recommended —
-it retires debt (t) and gives ppxai-sre the embeddable runner). Scope when
-resumed: Rich + Textual command handlers (<code>/task</code> family), a run view per TUI
-idiom, consent prompt via each TUI's consent affordance, the same parity
-sentinels. Until then the <code>/task</code> family ships in <strong>web + VSCode</strong>; the TUIs
-keep their in-process <code>/agent</code> loop.</p>
+<h3 id="t8b-tui-port-done-unparked-2026-08-08-closed-2026-08-11">T8b — TUI port — ✅ DONE (unparked 2026-08-08, closed 2026-08-11)<a class="headerlink" href="#t8b-tui-port-done-unparked-2026-08-08-closed-2026-08-11" title="Permanent link">&para;</a></h3>
+<p><strong>Transport decided: EMBED</strong> (option 1). <code>build_task_runner</code> was extracted to
+<code>ppxai/engine/task_runner.py</code> (<code>eeb82076</code>), retiring debt (t) and giving
+ppxai-sre the embeddable runner as the plan predicted.</p>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Embeddable runner</td>
+<td>✅ <code>eeb82076</code> — seam verified 9/9 byte-identical</td>
+</tr>
+<tr>
+<td>In-process backend</td>
+<td>✅ <code>d2886958</code> — <code>engine/task_backend.py</code>, full lifecycle with no server</td>
+</tr>
+<tr>
+<td>U2 grammar, shared with the web client</td>
+<td>✅ <code>1615b9d1</code> — <code>engine/task_grammar.py</code> + parity sentinels</td>
+</tr>
+<tr>
+<td><code>/task</code> + <code>/run</code> command handlers</td>
+<td>✅ <code>f3b42a63</code> — registered in <code>CommandFactory</code></td>
+</tr>
+<tr>
+<td>Run view per TUI idiom</td>
+<td>✅ <code>6ddc1dc0</code> — <code>TableResult</code> already routed to the side panel; what it needed was a focus opt-out so a run list does not steal the cursor</td>
+</tr>
+<tr>
+<td>Consent affordance (T5 park)</td>
+<td>✅ <code>2e32b02a</code> — <code>RunConsentScreen</code> + a single watcher, one prompt per park token, Escape defers rather than denies</td>
+</tr>
+<tr>
+<td>T8a-style parity sentinels vs the web verb set</td>
+<td>✅ <code>defc13cc</code> — every grammar verb is handled; chain is web JS ↔ engine grammar ↔ TUI handler</td>
+</tr>
+<tr>
+<td>Third-client defect sweep (RED→GREEN)</td>
+<td>✅ <code>f3cf3d53</code> (one failing sentinel per defect) → <code>394bdf1f</code> (U4 merge, lifecycle wiring, discoverability) — the last T8b gaps</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Availability is gated per VERB on a capability, not per client.</strong> Launch and
+resume need a live event loop; <code>ls</code>/<code>get</code>/<code>cancel</code>/<code>collect</code>/<code>respond</code> are
+synchronous registry operations. So Textual has the full set today, and Rich
+has everything except launch/resume — with a message naming the reason rather
+than the command being absent. Rich's remaining half is its blocking prompt
+(<code>main.py:477</code>) plus five <code>asyncio.run()</code> call sites; that is a main-loop
+decision, not a <code>/task</code> decision, and it is still open.</p>
+<p>Two things found while unparking, both fixed: the engine-level egress-ceiling
+gap (<code>82ae0bcb</code> — the ceiling was route-only, so an embedded run escaped it),
+and the completion gating that hid <code>/task</code> from the TUIs, which was correct
+before the embed and wrong after.</p>
 <hr />
 <h2 id="t9-future-tier-d-container-enforcement">T9 — (future, tier-d) container enforcement<a class="headerlink" href="#t9-future-tier-d-container-enforcement" title="Permanent link">&para;</a></h2>
 <p>Deferred with the OS-isolation tier. Flip <code>sandbox.enforcement:"container"</code>:
@@ -1902,7 +1960,7 @@ live-trial-verified before the next begins.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

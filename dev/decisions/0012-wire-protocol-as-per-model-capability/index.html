@@ -1,0 +1,2765 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/decisions/0012-wire-protocol-as-per-model-capability/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>ADR 0012 — Per-model facts: one resolution system, wire protocol included - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-0012-per-model-facts-one-resolution-system-wire-protocol-included" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR 0012 — Per-model facts: one resolution system, wire protocol included
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-providerprotocol-axes-are-already-crossed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The provider/protocol axes are already crossed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#baseprovider_convert_messages-is-one-protocols-emitter-in-the-shared-base" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BaseProvider._convert_messages is one protocol's emitter in the shared base
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-fourth-protocol-anthropics-messages-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The fourth protocol: Anthropic's Messages API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-declared-table-and-the-actual-router-disagree-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The declared table and the actual router disagree — measured
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-protocol-handler-is-already-free-standing-only-lexically-trapped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The protocol handler is already free-standing — only lexically trapped
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-protocolhandler-a-protocol-in-a-leaf-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. ProtocolHandler — a Protocol in a leaf module
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-one-per-model-fact-system-protocol-is-a-field-in-it-not-a-third-resolver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. One per-model fact system — protocol is a field in it, not a third resolver
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. One per-model fact system — protocol is a field in it, not a third resolver">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-exists-today-two-systems-surveyed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What exists today — two systems, surveyed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q0e-two-record-types-disjoint-fields-no-defaults-anywhere-supersedes-the-five-rung-ladder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q0e — TWO record types, disjoint fields, no defaults anywhere (supersedes the five-rung ladder)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q0f-the-agentsmd-tool_calling-layer-retires-benchmark-tuning-gets-a-defined-home" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q0f — the AGENTS.md tool_calling layer retires; benchmark tuning gets a defined home
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q0h-benchmarks-write-a-tuning-artifact-the-code-table-stops-being-hand-typed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q0h — benchmarks write a tuning artifact; the code table stops being hand-typed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q0g-the-provider-record-is-providercapabilities-retargeted-in-place" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q0g — the provider record is ProviderCapabilities, retargeted in place
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q0a-native_tool_calling-vs-tool_mode-mode-wins-boolean-deleted-default-stays-conservative" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q0a — native_tool_calling vs tool_mode: mode wins, boolean deleted, default stays CONSERVATIVE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q0b-glob-vs-exact-key-globs-win-one-matcher-exact-ids-matched-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q0b — glob vs exact key: globs win, one matcher, exact ids matched first
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q0d-records-are-complete-at-every-level-doctor-enforces-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q0d — records are COMPLETE at every level; /doctor enforces it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q0c-config-migration-clean-break-with-the-file-scan-shipped-alongside" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q0c — config migration: clean break, with the file scan shipped alongside
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-api_path-is-finally-consumed-as-modelfactswire_protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. api_path is finally consumed — as ModelFacts.wire_protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-registration-time-is-the-wiring-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Registration time is the wiring point
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-perplexitys-agent-fleet-is-then-table-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Perplexity's Agent fleet is then table data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-messages-is-designed-for-not-built" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Messages is designed for, not built
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-the-same-model-over-two-wires-stays-two-catalog-entries-decided" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. The same model over two wires stays two catalog entries — DECIDED
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-and-not-the-alternatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this and not the alternatives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-proper-solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future / proper solution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#triggers-to-revisit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers to revisit
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="adr-0012-per-model-facts-one-resolution-system-wire-protocol-included">ADR 0012 — Per-model facts: one resolution system, wire protocol included<a class="headerlink" href="#adr-0012-per-model-facts-one-resolution-system-wire-protocol-included" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-08-30 (revised 2026-08-30 — scope widened from "add a protocol
+resolver" to "unify the two per-model fact systems, protocol among them",
+after the owner asked why protocol was absent from the capability table;
+revised in place per the README's Proposed-records rule; status corrected
+2026-08-30 from "no code written" to Accepted-in-part after §2 merged as
+<code>6b0f2214</code> — the header had drifted from shipped reality, which is the exact
+defect class this record exists to remove)
+<strong>Status:</strong> ✅ <strong>Implemented</strong> — all four migration steps merged on
+<code>bugfix/v1.19.1</code>: the unified fact system (step 0 / W1, <code>6b0f2214</code>), the
+<code>ProtocolHandler</code> contract + Responses handler + <code>wire_protocol</code> routing
+(steps 1–2 / W2, <code>1bf93de7</code>), Perplexity over the Responses wire (step 3 /
+W3, <code>a0d924ea</code> + <code>b15dd1aa</code>), and all three wires as handlers (step 4 / W4).
+<strong>Debt Items 61 and 62 are both closed.</strong> §6 (Messages) remains designed but
+unbuilt, by construction — it ships with <code>feat/anthropic-provider</code> on that
+work's own schedule, and this record exists so it lands as a handler rather
+than a fifth bespoke provider.</p>
+<p>One user-facing item is deliberately <strong>not</strong> shipped and needs an owner
+decision before 2026-09-27: the <code>sonar</code> → <code>perplexity/sonar</code> ID rename and
+the <code>/v1</code> base-url suffix in the shipped install scripts and VSCode
+bootstrap config. The code supports both IDs today, so nothing is blocked.
+Supersedes the <code>api_path</code> routing sketch in
+<a href="../../plan-per-model-capabilities/"><code>../plan-per-model-capabilities.md</code></a> §I4b,
+which assumed the slot merely needed filling in.
+<strong>Related:</strong>
+- <a href="../../plan-per-model-capabilities/"><code>../plan-per-model-capabilities.md</code></a> — the arc this lands in; I1–I4 shipped, I4b is the first consumer of this ADR
+- <a href="../../patterns/protocol-dependency-inversion/"><code>../patterns/protocol-dependency-inversion.md</code></a> — the <code>Protocol</code>-in-leaf-module pattern this uses
+- <a href="../0010-config-shape-review/"><code>0010-config-shape-review.md</code></a> — the config axes an operator-declared protocol would land on
+- <a href="../../debt-inventory/">debt Item 38</a> — Perplexity's Agent-API fleet, the fleet that surfaced this
+- debt Item 43 (closed) — its four-layer lesson is the direct precedent for the drift measured below</p>
+<hr />
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The per-model capability arc (I1–I4) established one principle repeatedly: a
+capability is <strong>data resolved per model</strong>, not a constant per provider, and
+every layer that consults it must consult the <em>same</em> resolution. I1 fixed four
+send paths that read a static attribute instead of the hook. I2 built the
+precedence ladder. I3 found that a capability decision crosses four layers and
+is inert until the lowest one is fixed.</p>
+<p><strong>Wire protocol is the same kind of fact, and it is currently the same kind of
+bug.</strong></p>
+<h3 id="the-providerprotocol-axes-are-already-crossed">The provider/protocol axes are already crossed<a class="headerlink" href="#the-providerprotocol-axes-are-already-crossed" title="Permanent link">&para;</a></h3>
+<p>Four providers speak three protocols. The mapping is not one-to-one and has not
+been for some time:</p>
+<table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>Spoken by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/chat/completions</code></td>
+<td><code>perplexity</code>, <code>openai_compat</code>, <code>openai_native</code></td>
+</tr>
+<tr>
+<td><code>/responses</code></td>
+<td><code>openai_native</code></td>
+</tr>
+<tr>
+<td><code>generate_content</code></td>
+<td><code>gemini</code></td>
+</tr>
+<tr>
+<td><code>/v1/messages</code></td>
+<td><strong>nobody yet — see §"The fourth protocol"</strong></td>
+</tr>
+</tbody>
+</table>
+<p><code>OpenAINativeProvider</code> <strong>already dispatches per model between two protocols</strong>,
+at three separate sites — <code>chat()</code>
+(<a href="../../ppxai/engine/providers/openai_native.py#L186"><code>openai_native.py:186</code></a>),
+<code>chat_sync()</code> (<a href="../../ppxai/engine/providers/openai_native.py#L209"><code>:209</code></a>) and
+<code>oneshot()</code> (<a href="../../ppxai/engine/providers/openai_native.py#L261"><code>:261</code></a>), each
+independently re-asking <code>_is_responses_api_model(model)</code>. One provider, two
+protocols, chosen per model: the multi-protocol provider is not a hypothetical
+we are proposing, it is the shipped state. What is missing is that it is
+expressed as a hardcoded branch repeated three times rather than as resolved
+data.</p>
+<h3 id="baseprovider_convert_messages-is-one-protocols-emitter-in-the-shared-base"><code>BaseProvider._convert_messages</code> is one protocol's emitter in the shared base<a class="headerlink" href="#baseprovider_convert_messages-is-one-protocols-emitter-in-the-shared-base" title="Permanent link">&para;</a></h3>
+<p><a href="../../ppxai/engine/providers/base.py#L346"><code>base.py:346</code></a> returns
+<code>{role, content, tool_calls, tool_call_id}</code> — that is the <strong>chat-completions
+wire shape specifically</strong>, not a neutral base-class utility. Every other
+protocol already has to route around it:</p>
+<table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>How it converts messages</th>
+<th>Return type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chat_completions</code></td>
+<td><code>BaseProvider._convert_messages</code></td>
+<td><code>List[Dict]</code></td>
+</tr>
+<tr>
+<td><code>responses</code></td>
+<td><code>_convert_messages_for_responses</code> (separate method)</td>
+<td><code>tuple</code></td>
+</tr>
+<tr>
+<td><code>generate_content</code></td>
+<td><strong>overrides</strong> <code>_convert_messages</code></td>
+<td><code>tuple</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>GeminiProvider._convert_messages</code>
+(<a href="../../ppxai/engine/providers/gemini.py#L655"><code>gemini.py:655</code></a>) overrides the
+base method <strong>with an incompatible return type</strong> — <code>(contents,
+system_instruction)</code> instead of <code>List[Dict[str, Any]]</code>. That is a Liskov
+violation living in shipped code, and it exists because the base class
+asserts a shape only one protocol uses.</p>
+<p>There is a second, sharper consequence. ADR 0006's wire validator
+<code>assert_wire_blocks_clean</code> is called in <strong>exactly one place</strong>
+(<a href="../../ppxai/engine/providers/base.py#L384"><code>base.py:384</code></a>) — inside the
+chat-completions emitter. <code>flatten_uploaded_file_blocks</code> is called by all
+three paths, but the <em>validator</em> is not: the Responses and <code>generate_content</code>
+paths emit to the wire without it. So ADR 0006's "spec-clean by construction"
+guarantee is, in practice, <strong>chat-completions-only</strong>. Message conversion
+belongs to the protocol, and so does the validator that checks its output.</p>
+<h3 id="the-fourth-protocol-anthropics-messages-api">The fourth protocol: Anthropic's Messages API<a class="headerlink" href="#the-fourth-protocol-anthropics-messages-api" title="Permanent link">&para;</a></h3>
+<p>There is <strong>no Anthropic provider today</strong> — no <code>anthropic</code> dependency in
+<code>pyproject.toml</code>; the only production references are an image-size cap
+(<a href="../../ppxai/engine/image_validation.py#L68"><code>image_validation.py:68</code></a>) and a
+deprecation-table row. But <code>/v1/messages</code> is arriving from two directions at
+once, and a design that ignores it would bake in an assumption we already
+know to be wrong:</p>
+<ol>
+<li><strong>The reserved provider.</strong> <code>feat/anthropic-provider</code> is reserved on the
+   roadmap, deferred until after agent-platform Stage 2 — which has now
+   shipped (v1.19.0).</li>
+<li><strong><code>anthropic/*</code> through Perplexity.</strong> §5 below routes
+   <code>anthropic/claude-sonnet-5</code> over Perplexity's <em>Responses</em> endpoint, and
+   names it as the live-trial canary.</li>
+</ol>
+<p>Those two together are the strongest argument for this ADR's whole premise:
+<strong>the same model is reachable over two different wires.</strong>
+<code>anthropic/claude-sonnet-5</code> (Perplexity, Responses) and <code>claude-sonnet-5</code>
+(native, Messages) stay <strong>two catalog entries on two providers</strong> — §7 decides
+that, and for billing/credential reasons that have nothing to do with protocol.
+What per-model capability buys is not merging them; it is that <strong>neither entry
+has to be special-cased to reach its wire</strong>. One <code>perplexity</code> provider serves
+Sonar over chat-completions <em>and</em> the Agent fleet over Responses from one
+identity, and the Anthropic provider speaks Messages, all through the same
+resolution. Under a provider-property model, the first of those is impossible
+without a second Perplexity entry that exists purely to hold a different
+endpoint.</p>
+<p>Messages differs from both existing shapes in ways that bear directly on the
+handler contract:</p>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>chat_completions</th>
+<th>responses</th>
+<th><strong>messages</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Client</td>
+<td>OpenAI SDK</td>
+<td>OpenAI SDK</td>
+<td><strong><code>anthropic</code> SDK</strong> (not OpenAI-shaped)</td>
+</tr>
+<tr>
+<td>System prompt</td>
+<td>a <code>system</code> role message</td>
+<td><code>instructions</code> param</td>
+<td><strong>top-level <code>system</code> param</strong></td>
+</tr>
+<tr>
+<td>Tool call out</td>
+<td><code>tool_calls</code></td>
+<td><code>function_call</code> item</td>
+<td><strong><code>tool_use</code> content block</strong></td>
+</tr>
+<tr>
+<td>Tool result in</td>
+<td><code>tool</code>-role message</td>
+<td><code>function_call_output</code></td>
+<td><strong><code>tool_result</code> block in a <em>user</em> message</strong></td>
+</tr>
+<tr>
+<td><code>max_tokens</code></td>
+<td>optional</td>
+<td>optional</td>
+<td><strong>required</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Two Messages-specific hazards worth recording now, because both are the kind
+of thing discovered late and expensively:</p>
+<ul>
+<li><strong>Parallel tool results must be returned in a <em>single</em> user message.</strong>
+  Splitting them across several user messages is accepted by the API but
+  degrades the model's parallel tool use. The engine's native pairing branch
+  records one tool-role message <em>per</em> result, so the handler must batch them —
+  a genuine conversion, not a rename.</li>
+<li><strong><code>thinking</code> blocks must be echoed back unchanged</strong> on the same model
+  across a tool round-trip. This is the same class of bug as debt Item 45
+  (Gemini <code>thought_signature</code> round-trip), which was a real shipped defect.</li>
+</ul>
+<p>Encouragingly, the hardest part is already solved once: Gemini's converter
+already hoists system messages out of the turn list into a separate
+<code>system_instruction</code>, which is exactly Messages' shape. Its docstring also
+records the inverse hazard — Gemini's wire has <strong>no</strong> tool-call id, so pairing
+is by function <em>name</em>, resolved from the preceding assistant turn. Messages
+<em>does</em> carry <code>tool_use_id</code>, so it escapes that trap and falls into the
+batching one instead. Different protocols, different failure modes; both are
+conversion concerns, which is the argument for keeping conversion inside the
+handler.</p>
+<h3 id="the-declared-table-and-the-actual-router-disagree-measured">The declared table and the actual router disagree — measured<a class="headerlink" href="#the-declared-table-and-the-actual-router-disagree-measured" title="Permanent link">&para;</a></h3>
+<p><code>ToolCallingProfile</code> carries an <code>api_path</code> field
+(<code>model_profiles.py:43</code>, deleted by Item 65) documented
+as <em>"OpenAI API endpoint routing"</em>, with values <code>chat</code> / <code>responses</code> / <code>auto</code>.
+It is set on three built-in profiles, merged through the full config precedence
+ladder (<a href="../../ppxai/engine/chat.py#L206"><code>chat.py:206</code></a>), exposed to operator
+override (<a href="../../ppxai/config/providers.py#L385"><code>config/providers.py:385</code></a>),
+and displayed by <code>/provider</code>
+(<a href="../../ppxai/commands/provider.py#L349"><code>commands/provider.py:349</code></a>).</p>
+<p><strong>Nothing routes on it.</strong> Actual routing is <code>_is_responses_api_model()</code>, a
+hardcoded prefix tuple
+(<a href="../../ppxai/engine/providers/openai_native.py#L45"><code>openai_native.py:45</code></a>):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">RESPONSES_API_PREFIXES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"gpt-5.1-codex"</span><span class="p">,</span> <span class="s2">"codex"</span><span class="p">,</span> <span class="s2">"gpt-5.2-pro"</span><span class="p">,</span> <span class="s2">"gpt-5-pro"</span><span class="p">,</span> <span class="s2">"gpt-6-pro"</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Running the declared profile against the real predicate (2026-08-30, project
+venv) gives three live disagreements, <strong>in both directions</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th><code>profile.api_path</code></th>
+<th>actual router</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gpt-5.3-codex</code></td>
+<td><code>responses</code></td>
+<td><code>chat</code></td>
+<td>⚠️ drift</td>
+</tr>
+<tr>
+<td><code>gpt-5.1-codex</code></td>
+<td><code>responses</code></td>
+<td><code>responses</code></td>
+<td>ok</td>
+</tr>
+<tr>
+<td><code>gpt-5.1-codex-mini</code></td>
+<td><code>responses</code></td>
+<td><code>responses</code></td>
+<td>ok</td>
+</tr>
+<tr>
+<td><code>gpt-5.2-pro</code></td>
+<td><code>chat</code></td>
+<td><code>responses</code></td>
+<td>⚠️ drift</td>
+</tr>
+<tr>
+<td><code>gpt-5-pro</code></td>
+<td><code>chat</code></td>
+<td><code>responses</code></td>
+<td>⚠️ drift</td>
+</tr>
+<tr>
+<td><code>gpt-4o</code></td>
+<td><code>chat</code></td>
+<td><code>chat</code></td>
+<td>ok</td>
+</tr>
+</tbody>
+</table>
+<p><code>gpt-5.3-codex</code> is declared Responses-only and sent to Chat Completions,
+because <code>"gpt-5.3-codex"</code> does not <em>start with</em> any tuple entry (<code>"codex"</code> is a
+prefix, not a substring). The two mechanisms agree on <code>gpt-5.1-codex*</code> by
+coincidence, not by construction.</p>
+<p>A sweep of all 65 built-in profile globs finds two that drift on their own
+glob (<code>gpt-5.3-codex*</code>, <code>gpt-5-pro*</code>). <code>gpt-5.2-pro</code> drifts as a <em>model</em> but
+has no glob of its own — it falls through to a generic profile that declares
+<code>chat</code> while the prefix tuple routes it to <code>responses</code>. That is the same
+defect seen from the other side: the routing tuple names models the profile
+table never describes, so neither source can be checked against the other.</p>
+<p>Two consequences follow, and the second is the serious one:</p>
+<ol>
+<li>The profile table is decorative for routing — it can be edited with no
+   effect, which is how it drifted.</li>
+<li><strong>An operator's <code>api_path</code> override is silently inert.</strong> It passes
+   validation, merges through the ladder, and displays in <code>/provider</code> as
+   though it took effect. This is exactly the failure mode ADR 0010's
+   config-shape file scan exists to prevent, and the shape of Item 43: every
+   upper layer resolves a confident answer while the wire never sees it.</li>
+</ol>
+<h3 id="the-protocol-handler-is-already-free-standing-only-lexically-trapped">The protocol handler is already free-standing — only lexically trapped<a class="headerlink" href="#the-protocol-handler-is-already-free-standing-only-lexically-trapped" title="Permanent link">&para;</a></h3>
+<p>The plan's I4b assumed "no new protocol code" because <code>_chat_responses_api</code>
+already exists. That is true of the <em>behaviour</em> but not of the <em>reachability</em>:
+all five Responses helpers are private members of <code>OpenAINativeProvider</code>, so no
+other provider can use them without inheriting from it.</p>
+<p>Measuring the coupling (every <code>self.*</code> in
+<a href="../../ppxai/engine/providers/openai_native.py#L609-L960"><code>openai_native.py:609-960</code></a>)
+shows the block is nearly pure already:</p>
+<ul>
+<li><code>_convert_messages_for_responses</code>, <code>_convert_tools_for_responses</code>,
+  <code>_parse_responses_usage</code> are <strong>already <code>@staticmethod</code></strong> — zero instance
+  coupling.</li>
+<li><code>_get_max_tokens</code>, <code>_get_extra_body</code>, <code>_format_error</code>, <code>_classify_throttle</code>,
+  <code>_log_error_traceback</code>, <code>get_capabilities_for_model</code> are <strong>already
+  <code>BaseProvider</code> API</strong> — available to any provider.</li>
+<li>Only <code>enable_web_search</code> and <code>_build_tool_hint</code> are genuinely
+  OpenAI-native-specific, and both are inputs to the request, not behaviour.</li>
+<li><code>self.client</code> is the one real dependency: an OpenAI-SDK client, which the
+  Perplexity provider also has (measured at I2 — the stock SDK's <code>.responses</code>
+  client drives Perplexity's Agent API unchanged).</li>
+</ul>
+<p>So the extraction is shallow: move a nearly-pure block and pass two values in.
+This ADR exists because the <em>move</em> is a refactor of shipped wire code — the
+highest-consequence code in the repo — and that deserves a recorded decision,
+not an incidental step inside a provider-routing iteration.</p>
+<hr />
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p><strong>Wire protocol becomes a named handler, resolved per model through the same
+ladder as every other capability, and composed into a provider at registration
+time.</strong></p>
+<h3 id="1-protocolhandler-a-protocol-in-a-leaf-module">1. <code>ProtocolHandler</code> — a <code>Protocol</code> in a leaf module<a class="headerlink" href="#1-protocolhandler-a-protocol-in-a-leaf-module" title="Permanent link">&para;</a></h3>
+<p>Following
+<a href="../../patterns/protocol-dependency-inversion/"><code>../patterns/protocol-dependency-inversion.md</code></a>
+(structural <code>Protocol</code>, no <code>TYPE_CHECKING</code>, defined where it is depended on):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ProtocolHandler</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>   <span class="c1"># "chat_completions" | "responses" | "generate_content" | "messages"</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">convert_messages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messages</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Message</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">chat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">messages</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">tools</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="n">Event</span><span class="p">]:</span> <span class="o">...</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">oneshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">messages</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">max_tokens</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
+<p><strong><code>convert_messages</code> belongs to the handler, not to <code>BaseProvider</code>.</strong> This is
+the direct consequence of the shared-emitter finding above: message conversion
+<em>is</em> protocol-specific, every protocol already routes around the base method,
+and Gemini overrides it with an incompatible return type to do so. Its return
+type is deliberately <code>Any</code> — each protocol's wire shape is its own
+(<code>List[Dict]</code>, <code>(contents, system_instruction)</code>, <code>(system, messages)</code>), and
+pretending otherwise is what produced the Liskov violation. <strong>ADR 0006's
+<code>assert_wire_blocks_clean</code> moves with it</strong>, so the validator finally covers all
+protocols instead of chat-completions alone.</p>
+<p><strong><code>ctx</code> is deliberately not "an OpenAI SDK client."</strong> It is whatever the handler
+needs from its host, and the client type is the handler's business:</p>
+<table>
+<thead>
+<tr>
+<th>Handler</th>
+<th>client in <code>ctx</code></th>
+<th>other host inputs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chat_completions</code></td>
+<td>OpenAI SDK</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>responses</code></td>
+<td>OpenAI SDK</td>
+<td><code>enable_web_search</code>, tool-hint builder</td>
+</tr>
+<tr>
+<td><code>generate_content</code></td>
+<td>google-genai</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>messages</code></td>
+<td><code>anthropic</code> SDK</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Specifying <code>ctx</code> this way now costs nothing and is the one part that would be
+expensive to relax later: three handlers written against "the OpenAI client"
+would each need reworking when Messages arrives. The handler never reaches back
+into a concrete provider class; that is what makes one handler usable by
+several providers, and what keeps a non-OpenAI-shaped wire from being a special
+case.</p>
+<h3 id="2-one-per-model-fact-system-protocol-is-a-field-in-it-not-a-third-resolver">2. One per-model fact system — protocol is a field in it, not a third resolver<a class="headerlink" href="#2-one-per-model-fact-system-protocol-is-a-field-in-it-not-a-third-resolver" title="Permanent link">&para;</a></h3>
+<p><strong>This section was rewritten.</strong> It first proposed
+<code>shipped_protocol_for_model()</code> / <code>get_protocol_for_model()</code> — an accessor pair
+<em>mirroring</em> <code>get_capabilities_for_model()</code>. The owner's question ("why is wire
+protocol not in the capability table?") exposed the flaw: mirroring would make
+<strong>three</strong> parallel per-model resolution systems, when the ADR's stated purpose
+is to simplify and increase reuse. Duplicating a ladder to hold one more field
+is the carve-out this ADR exists to remove.</p>
+<h4 id="what-exists-today-two-systems-surveyed">What exists today — two systems, surveyed<a class="headerlink" href="#what-exists-today-two-systems-surveyed" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><code>ProviderCapabilities</code></th>
+<th><code>ModelProfile</code> / <code>ToolCallingProfile</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fields</td>
+<td><code>web_search</code>, <code>web_fetch</code>, <code>weather</code>, <code>citations</code>, <code>streaming</code>, <code>native_tool_calling</code></td>
+<td><code>tool_calling.{mode, fallback_on_empty, fallback_on_failure, strip_json_from_text, parallel_tool_calls, api_path}</code>, <code>max_tokens</code>, <code>max_tool_iterations</code>, <code>supports_reasoning</code>, <code>supports_vision</code>, <code>restricted_params</code>, <code>tier</code></td>
+</tr>
+<tr>
+<td>Keyed by</td>
+<td>exact model id</td>
+<td><strong>glob</strong> (65 patterns, first match wins)</td>
+</tr>
+<tr>
+<td>Code table</td>
+<td><code>shipped_capabilities_for_model()</code> — 2 providers override</td>
+<td><code>BUILTIN_PROFILES</code> dict</td>
+</tr>
+<tr>
+<td>Config keys</td>
+<td><code>providers.&lt;p&gt;.capabilities</code>, <code>providers.&lt;p&gt;.models.&lt;m&gt;.capabilities</code></td>
+<td><code>providers.&lt;p&gt;.tool_calling</code>, <code>providers.&lt;p&gt;.models.&lt;m&gt;.tool_calling</code></td>
+</tr>
+<tr>
+<td>Config reader</td>
+<td><code>config/capabilities.py</code> (reads the <strong>raw file</strong> — <code>_convert_models_format</code> drops per-model blocks)</td>
+<td><code>config/providers.py::get_tool_calling_config</code> (same raw-file workaround)</td>
+</tr>
+<tr>
+<td>Merge site</td>
+<td><code>BaseProvider.get_capabilities_for_model()</code></td>
+<td><code>chat.py::_merge_profile</code></td>
+</tr>
+<tr>
+<td>Extra layer</td>
+<td>—</td>
+<td><strong>AGENTS.md bootstrap overrides</strong> (<code>_get_bootstrap_tool_calling</code>)</td>
+</tr>
+<tr>
+<td>Precedence</td>
+<td>model-config → model-code → provider-config → provider-code</td>
+<td>built-in profile → AGENTS.md → config</td>
+</tr>
+</tbody>
+</table>
+<p>They already answer the <em>same question twice</em>: <code>native_tool_calling</code> (bool)
+and <code>tool_calling.mode</code> (<code>native</code>/<code>prompt_based</code>/<code>auto</code>). <strong>I3's Layer-2 bug
+lived exactly in that seam</strong> — <code>chat.py:693</code> checks <code>mode</code> first and
+short-circuits, so a capability resolving <code>native=True</code> never reached the
+wire. Two systems, two precedence orders, one question.</p>
+<h4 id="the-decision">The decision<a class="headerlink" href="#the-decision" title="Permanent link">&para;</a></h4>
+<p><strong>One <code>ModelFacts</code> record, one resolver, one precedence ladder.</strong> Protocol
+joins it as a field; it gets no machinery of its own.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ModelFacts</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="c1"># wire</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">wire_protocol</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"chat_completions"</span>   <span class="c1"># was ToolCallingProfile.api_path</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="c1"># tool calling</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">tool_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"native"</span>                 <span class="c1"># native | prompt_based | auto</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">fallback_on_empty</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="o">...</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="c1"># provider-native abilities</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">web_search</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="o">...</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="c1"># limits / behaviour</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="n">max_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="n">supports_vision</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="o">...</span>
+</span></code></pre></div>
+<p><code>BaseProvider</code> keeps the I2 split, now over facts rather than capabilities:
+<code>shipped_facts_for_model()</code> (subclass-overridable) and
+<code>get_facts_for_model()</code> (final; applies config). <strong>The two old accessors and
+both old merge sites are deleted, not wrapped</strong> — an accessor that internally
+called both ladders would pass every behavioural test while leaving the code
+worse, which is the failure mode this section exists to prevent.</p>
+<blockquote>
+<p>⚠️ <strong>The five-rung ladder below is SUPERSEDED by Q0e.</strong> It is kept because
+the reasoning that replaced it only makes sense against it: three
+implementations failed trying to arbitrate between its rungs, and the third
+reopened debt Item 43. With disjoint provider/model field sets there is
+nothing to arbitrate, and this ladder collapses to two independent lookups.</p>
+</blockquote>
+<p>Resolution order, generalising I2's <strong>specificity before authorship</strong> and
+absorbing the profile path's extra layer:</p>
+<ol>
+<li>config <code>providers.&lt;p&gt;.models.&lt;m&gt;.*</code> (per model)</li>
+<li><strong>AGENTS.md bootstrap</strong> (per model, benchmark-locked)</li>
+<li>code per-model table / glob (per model)</li>
+<li>config <code>providers.&lt;p&gt;.*</code> (per provider)</li>
+<li>code provider default</li>
+</ol>
+<p>⚠️ <strong>Rung 4 is a deliberate behaviour CHANGE, not a move.</strong> Today
+<code>get_tool_calling_config</code> (<a href="../../ppxai/config/providers.py#L377"><code>providers.py:377</code></a>)
+flattens provider-level <strong>and</strong> model-level config into a <em>single</em> layer that
+<code>chat.py:187</code> applies <strong>above</strong> AGENTS.md — so an operator's <em>provider-level</em>
+<code>tool_calling</code> currently beats a benchmark-locked AGENTS.md setting. Splitting
+the two config levels onto rungs 1 and 4 puts AGENTS.md above provider-level
+config.</p>
+<p>That is the correct end state — a per-model benchmark result should outrank a
+provider-wide operator default, which is the same specificity-before-authorship
+rule I2 established — but it <strong>must be declared and fenced, not slipped in</strong>.
+W1 ships a real-config cross-pair test (provider-level config × AGENTS.md ×
+per-model glob), because this is precisely the class of ordering bug that 22
+green unit tests missed in I2.</p>
+<p><strong>Measured (2026-08-30): the reorder changes nothing observable today.</strong>
+Provider-level <code>tool_calling</code> blocks do exist (example config: <code>nvidia</code>,
+<code>local-vllm</code>, <code>vllm-gpt-oss</code>, <code>qwen36-agent</code>, <code>lmstudio</code>; a real user config:
+7 providers), but <strong>no AGENTS.md carries a <code>tool_calling</code> section</strong> — zero
+hits across this repo, ppxai-sre and a third checkout. The two layers being
+reordered never currently meet. The migration note still ships, because the
+docs and example config teach <em>both</em> mechanisms and a future AGENTS.md would
+land straight into the changed order.</p>
+<p>I2's guard carries over unchanged: a test bans subclasses from overriding the
+public accessor, since one that did would silently drop the config layers —
+the shape that broke I1.</p>
+<h4 id="q0e-two-record-types-disjoint-fields-no-defaults-anywhere-supersedes-the-five-rung-ladder">Q0e — TWO record types, disjoint fields, no defaults anywhere (supersedes the five-rung ladder)<a class="headerlink" href="#q0e-two-record-types-disjoint-fields-no-defaults-anywhere-supersedes-the-five-rung-ladder" title="Permanent link">&para;</a></h4>
+<p><strong>Owner decision 2026-08-30, after three failed implementations.</strong> The
+ladder above was wrong at the root, and the failures were the evidence:</p>
+<ul>
+<li>drop-if-default (rung 5 overwrote rung 4 for every capability field),</li>
+<li>a "profile-owned" exemption list (inverted precedence for a row that
+  deliberately stated a default value),</li>
+<li>a value-comparison heuristic (<strong>resolved <code>sonar</code> to <code>native</code> — reopening
+  debt Item 43 on the very model that produced it</strong>, because a provider-wide
+  statement outranked a measured per-model fact).</li>
+</ul>
+<p>Each heuristic patched the previous one's failure. That is the patchwork
+pattern this project bans, and the third one should not have been written.</p>
+<p><strong>The root cause was not the arbitration rules — it was needing them at
+all.</strong> Provider and model were modelled as two <em>levels of the same fields</em>,
+so every field could be stated twice and something had to decide who wins.
+The measurement says the domain does not work that way (example config, all
+10 providers):</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>stated per provider</th>
+<th>stated per model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>web_search</code>, <code>web_fetch</code>, <code>weather</code>, <code>citations</code></td>
+<td>10</td>
+<td><strong>0</strong></td>
+</tr>
+<tr>
+<td><code>native_tool_calling</code> / <code>mode</code></td>
+<td>10 / 5</td>
+<td><strong>0</strong></td>
+</tr>
+<tr>
+<td><code>fallback_on_empty</code>, <code>strip_json_from_text</code></td>
+<td>4</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>Endpoint abilities are <strong>never</strong> stated per model, because they are facts
+about the <em>service</em>: Perplexity has built-in search, the OpenAI API does
+not, and no model changes that. The collisions were an artefact of the
+schema, not of the domain.</p>
+<p><strong>Decision — two records with DISJOINT fields:</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ProviderFacts</span><span class="p">:</span>      <span class="c1"># what the ENDPOINT does</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">web_search</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">web_fetch</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">weather</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">citations</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">streaming</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="k">class</span><span class="w"> </span><span class="nc">ModelFacts</span><span class="p">:</span>         <span class="c1"># what THIS MODEL does</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="n">wire_protocol</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="n">tool_mode</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="n">fallback_on_empty</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="n">fallback_on_failure</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="n">strip_json_from_text</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>    <span class="n">parallel_tool_calls</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    <span class="n">max_tokens</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>    <span class="n">max_tool_iterations</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>    <span class="n">supports_reasoning</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>    <span class="n">supports_vision</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>    <span class="n">restricted_params</span><span class="p">:</span> <span class="nb">tuple</span>
+</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="n">tier</span><span class="p">:</span> <span class="nb">str</span>
+</span></code></pre></div>
+<p>No field appears in both. A provider block cannot state a model fact and a
+model block cannot state a provider fact, so <strong>there is nothing to
+arbitrate</strong> — the five-rung ladder collapses to two independent lookups.
+<code>tool_mode</code> being a model fact is what makes the <code>sonar</code> regression
+structurally impossible: no provider-wide setting can reach it.</p>
+<p><strong>No inheritance, no shortcuts</strong> (owner: <em>"we stop providing shortcuts for
+this round"</em>). Stated precisely, because "no defaults anywhere" would
+contradict Q0a:</p>
+<ul>
+<li><strong>No inheritance between records or levels.</strong> A provider record never
+  supplies a model field, and a model record never supplies a provider
+  field. There is no partial record that something else completes.</li>
+<li><strong>Exactly one fallback exists</strong>, owned by this ADR: the conservative
+  <code>ModelFacts</code> used when no table names a model at all (Q0a —
+  <code>tool_mode="prompt_based"</code>). It is a floor for the unmeasured, not a
+  layer anything inherits from, and <strong><code>/doctor</code> reports every model that
+  lands on it</strong> so "unmeasured" is visible rather than silent.</li>
+</ul>
+<p>Combined with Q0d this means:</p>
+<ul>
+<li>The resolver never guesses, because there is never a partial record to
+  interpret.</li>
+<li><strong>Code rows may rely on dataclass defaults; config rows may not.</strong> A code
+  row is a complete record <em>by construction</em> — the dataclass guarantees
+  every field has a value, and the row is reviewed in a diff alongside the
+  type. A config file has no such guarantee and no reviewer, which is the
+  asymmetry Q0d exists for. (Measured: a representative row states 5 of 7
+  fields explicitly and inherits 2 — rewriting 65 rows to restate defaults
+  would add noise without adding information.)</li>
+<li>Resolution is: shipped table row (complete) → operator config row
+  (complete). Two rungs, one per record type, no cross-level merging.</li>
+<li>Fleet-wide conveniences (<code>fallback_on_empty</code> et al. set once per vLLM box)
+  are <strong>not</strong> carried over. They become per-model statements, written by
+  <code>/doctor</code>.</li>
+</ul>
+<p><strong>The floor is provider-owned where the global one would be wrong.</strong>
+Found in review before W2 made <code>wire_protocol</code> load-bearing. <code>UNMEASURED</code>
+says <code>wire_protocol="chat_completions"</code> — safe for every provider that
+speaks it, and simply WRONG for Gemini, which has no such wire: an unlisted
+Gemini model would be routed to a handler the provider does not have. That
+is a wire bug, not a degraded answer, and the conservative-default argument
+does not reach it, because a protocol is a fact about the <em>endpoint</em>, not
+something a model can be conservative about.</p>
+<p>So <code>BaseProvider.unmeasured_facts</code> lets a provider supply a <strong>complete
+alternative record</strong>, chosen whole (<code>GeminiProvider</code> sets
+<code>wire_protocol="generate_content"</code>). This does not reintroduce the
+provider-code-default rung: nothing is merged field-by-field, one whole
+record is selected, so "nothing to arbitrate" still holds. <code>tool_mode</code>
+stays <code>prompt_based</code> in that record — the wire is knowable without
+measuring, tool support is not. It is also where a provider-wide fleet fact
+(Perplexity's <code>requires_max_output_tokens</code>) would sit if one is needed.</p>
+<p><strong>Migration order matters and is part of the decision.</strong> <code>/doctor</code> must
+push legacy <em>provider-level</em> statements down into each configured model's
+row <strong>before</strong> filling remaining blanks from the shipped table. The reverse
+order silently destroys operator intent: in the shipped example config
+<code>vllm-gpt-oss</code> sets <code>tool_calling.mode: native</code> at provider level while the
+shipped glob <code>openai/gpt-oss*</code> says <code>prompt_based</code>, so "fill blanks from the
+resolved value" would overwrite the operator's explicit <code>native</code>. That exact
+case is the round-trip fixture.</p>
+<p><strong><code>/doctor</code> carries the entire burden this creates</strong>, which is why it was
+worth the investment: it reports partial records (Q0d), fills blanks with
+resolved values, and <strong>scaffolds new provider and new model definitions</strong> so
+an operator adding a box or a model gets a complete record generated rather
+than hand-writing 12 fields. The verbosity is real and accepted; the tool,
+not the human, produces it.</p>
+<h4 id="q0f-the-agentsmd-tool_calling-layer-retires-benchmark-tuning-gets-a-defined-home">Q0f — the AGENTS.md <code>tool_calling</code> layer retires; benchmark tuning gets a defined home<a class="headerlink" href="#q0f-the-agentsmd-tool_calling-layer-retires-benchmark-tuning-gets-a-defined-home" title="Permanent link">&para;</a></h4>
+<p><strong>Owner decision 2026-08-30:</strong> retire it, <em>"but we need another way to
+supply these tuning instructions we got after benchmarks."</em></p>
+<p>What is actually being retired is small: <code>bootstrap.py:315</code> parses a
+<code>tool_calling</code> section from AGENTS.md, and <strong>no AGENTS.md in any checkout
+contains one</strong> (measured across this repo, ppxai-sre and a third checkout).
+It is a parser with no users, and under Q0e it would have to become a third
+<code>ModelFacts</code> lookup for zero current benefit.</p>
+<p><strong>Benchmark tuning is not lost, because it does not live there.</strong> Two
+distinct things were conflated:</p>
+<table>
+<thead>
+<tr>
+<th>Kind of tuning</th>
+<th>Where it lives</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Behaviour</em> — tool mode, fallbacks, limits, tier</td>
+<td><code>BUILTIN_PROFILES</code> → the shipped <code>ModelFacts</code> table</td>
+<td>unchanged by this ADR; already benchmark-derived</td>
+</tr>
+<tr>
+<td><em>Prompt guidance</em> — "call tools directly", "don't echo tool JSON"</td>
+<td>AGENTS.md <code>model_hints</code> (~100 lines, actively used, additive per glob)</td>
+<td><strong>untouched</strong> — not a <code>ModelFacts</code> concern</td>
+</tr>
+</tbody>
+</table>
+<p>So a benchmark run produces: prompt findings → <code>model_hints</code> (unchanged
+path), and behavioural findings → a row in the shipped table, which is
+where <code>o4-mini</code>'s and <code>gpt-4.1-mini</code>'s benchmark results already live.</p>
+<p><strong>The gap this leaves, and how it closes.</strong> Today an operator who benchmarks
+a model on <em>their own</em> fleet has no path except editing our code table.
+<code>/doctor</code>'s scaffolding (Q0e) is that path: it emits a complete per-model
+record they drop into config, which outranks the shipped row. Project-level
+pinning without touching config is the one capability genuinely lost —
+recorded here as the trigger to revisit, not silently dropped.</p>
+<p><code>/doctor</code> reports any AGENTS.md <code>tool_calling</code> section it finds, naming the
+config record that replaces it.</p>
+<h4 id="q0h-benchmarks-write-a-tuning-artifact-the-code-table-stops-being-hand-typed">Q0h — benchmarks write a tuning artifact; the code table stops being hand-typed<a class="headerlink" href="#q0h-benchmarks-write-a-tuning-artifact-the-code-table-stops-being-hand-typed" title="Permanent link">&para;</a></h4>
+<p><strong>Owner decision 2026-08-30.</strong> Q0f established that behavioural benchmark
+findings belong in the shipped table. This closes the loop on <em>how they get
+there</em>, because today they do not get there — they are <strong>retyped by hand</strong>.</p>
+<p>The evidence is in the file this ADR is already fixing:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">#   o4-mini: 10.9% native → 62.5% prompt-based (native returns empty responses)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1">#   gpt-4.1-mini: 60.9% native → 71.9% prompt-based (hybrid tool_json_in_content)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">PROMPT_BASED_MODEL_PREFIXES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"o4-mini"</span><span class="p">,</span> <span class="s2">"gpt-4.1-mini"</span><span class="p">)</span>
+</span></code></pre></div>
+<p>A measured conclusion, living as a comment above a hardcoded tuple. Nothing
+links it to the run that produced it, nothing rechecks it, and nothing fails
+if it goes stale — <strong>the same shape as debt Item 61</strong>, which is the defect
+this ADR exists to remove. <code>BenchmarkResult</code> captures <code>overall_score</code>,
+<code>category_scores</code> and <code>test_results</code>; it has no field for <em>what the numbers
+mean</em>.</p>
+<p><strong>Decision: a separate tuning artifact</strong>, appended by the benchmark run and
+referenced by run id — measurement stays pure, recommendation is its own
+file:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>benchmarks/tuning/&lt;provider&gt;_&lt;model&gt;.json
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>{
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  "run_id": "...", "timestamp": "...",
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  "recommended_facts": { "tool_mode": "prompt_based", ... },
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  "rationale": {
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    "tool_mode": "10.9% native -&gt; 62.5% prompt_based (native returns empty)"
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  }
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>}
+</span></code></pre></div>
+<p>Why separate rather than a field on <code>BenchmarkResult</code>: a score is a
+<em>measurement</em> and a recommendation is an <em>interpretation</em> of it, and the two
+have different lifetimes — a re-run replaces the measurement, while a
+recommendation may be reviewed, rejected, or superseded by a later
+judgement. Keeping them in one record would make it impossible to say "this
+number stands, that conclusion was revised."</p>
+<p><code>recommended_facts</code> uses the <strong><code>ModelFacts</code> shape</strong>, so one format serves
+three consumers: a maintainer promoting it into the shipped table, an
+operator dropping it into config, and <code>/doctor</code> scaffolding from it. The
+rationale travels with the fields it justifies rather than sitting above an
+unrelated tuple.</p>
+<p><strong>Scope:</strong> the artifact format and the benchmark writing it are <strong>not W1
+work</strong> — W1 defines the <code>ModelFacts</code> shape they depend on. Sequenced after
+the deadline path (W2–W3) and tracked as its own item, so this does not
+grow the iteration that the 2026-09-27 retirement is waiting on.</p>
+<h4 id="q0g-the-provider-record-is-providercapabilities-retargeted-in-place">Q0g — the provider record is <code>ProviderCapabilities</code>, retargeted in place<a class="headerlink" href="#q0g-the-provider-record-is-providercapabilities-retargeted-in-place" title="Permanent link">&para;</a></h4>
+<p><strong>Owner decision 2026-08-30.</strong> No new <code>ProviderFacts</code> type: drop
+<code>native_tool_calling</code> from the existing <code>ProviderCapabilities</code> (it becomes a
+<code>ModelFacts</code> concern) and use that as the provider record. <code>ModelFacts</code> is
+new because nothing equivalent existed; the provider record already exists
+in 12 production files, and introducing a parallel type would recreate the
+"two records for one question" smell this ADR removes — at the type level
+this time.</p>
+<p>Migration is confined to call sites reading the removed field, which W1
+must touch anyway.</p>
+<p><strong>Deferred, explicitly:</strong> whether some fleet-level convenience returns as an
+inheritance mechanism. Reviewable later, once the explicit form is in place
+and its cost is measured rather than predicted.</p>
+<h4 id="q0a-native_tool_calling-vs-tool_mode-mode-wins-boolean-deleted-default-stays-conservative">Q0a — <code>native_tool_calling</code> vs <code>tool_mode</code>: mode wins, boolean <strong>deleted</strong>, default stays CONSERVATIVE<a class="headerlink" href="#q0a-native_tool_calling-vs-tool_mode-mode-wins-boolean-deleted-default-stays-conservative" title="Permanent link">&para;</a></h4>
+<p><code>tool_mode</code> strictly subsumes the boolean (<code>native</code>/<code>auto</code> ⇒ true,
+<code>prompt_based</code> ⇒ false) and carries a distinction the boolean cannot express.
+The boolean is <strong>removed from the record</strong>, not kept as a derived property:
+a readable alias is how the seam bug survives. Call sites reading
+<code>caps.native_tool_calling</code> migrate to <code>facts.tool_mode != "prompt_based"</code>.</p>
+<p>⚠️ <strong>The two systems disagree on their SAFE DEFAULT, and a naive merge
+inverts it.</strong> <code>ProviderCapabilities.native_tool_calling</code> defaults <strong>False</strong>
+(<a href="../../ppxai/engine/types.py#L891"><code>types.py:891</code></a>; <code>loader.py:51</code> says
+"Default to prompt-based"; the Perplexity probe encodes the same rule —
+<em>unmeasured ⇒ assumed not capable</em>). <code>ToolCallingProfile.mode</code> defaults
+<strong><code>"native"</code></strong> (<code>model_profiles.py:38</code>, deleted by Item 65).
+Merging on the profile's default would flip <strong>every model absent from both
+code tables</strong> from not-tool-capable to tool-capable — silently, and through
+gated consumers: <code>task_authorizer.py:982-989</code> (task-tier eligibility),
+<code>execution.py:338</code> (oneshot enrichment), and the I1 send paths.</p>
+<p><strong>Decision: <code>ModelFacts.tool_mode</code> defaults to <code>"prompt_based"</code></strong> — the
+capability system's conservative default wins, because an unmeasured model
+that degrades is recoverable while one that 400s a user's request is not
+(the Item 43 lesson, and exactly why <code>PerplexityProvider</code> sets
+<code>native_tool_calling=False</code> as its provider default). A model that today
+resolves <code>mode="native"</code> only via <code>ToolCallingProfile</code>'s <em>default</em> — rather
+than via an explicit glob — is a model nobody measured; W1 must enumerate
+those and give each an explicit row, not inherit them by default flip.</p>
+<p><strong>Fence:</strong> the seam test must include a model listed in <strong>neither</strong> table and
+assert it resolves not-tool-capable, plus an end-to-end assertion through
+<code>authorize_task()</code> (the I3 lesson: testing the helper is not testing the call
+site).</p>
+<p><strong>Measured demotion risk (2026-08-30, example config + a real user config,
+90 configured models): 14 models resolve their mode via the profile default
+alone, and the conservative default demotes effectively none of them</strong> —
+13 are held native by a provider-level <code>capabilities.native_tool_calling:
+true</code> (which the translation above preserves), and the 14th
+(<code>meta-llama/Llama-3-70b</code> on example <code>local-vllm</code>) is already configured
+<code>prompt_based</code>, so the new default agrees with it. <strong>One exception needs an
+explicit row:</strong> <code>gpt-5.1</code> on <code>openai</code> is native by the shipped code table
+but matches no glob (<code>gpt-5.1-codex*</code> exists; bare <code>gpt-5.1</code> does not).
+Applying the real ladders to all 90 found <strong>no model where built-in profile
+and resolved capability disagree in a way the unification must arbitrate.</strong></p>
+<h4 id="q0b-glob-vs-exact-key-globs-win-one-matcher-exact-ids-matched-first">Q0b — glob vs exact key: globs win, one matcher, <strong>exact ids matched first</strong><a class="headerlink" href="#q0b-glob-vs-exact-key-globs-win-one-matcher-exact-ids-matched-first" title="Permanent link">&para;</a></h4>
+<p>Capabilities key on exact ids, profiles on globs; globs strictly generalise
+(an exact id is a glob without wildcards), and 65 patterns already depend on
+them. One matcher for the merged table.</p>
+<p>⚠️ <strong>"Most-specific-first" is today a COMMENT, not a computed rule.</strong>
+<code>model_profiles.py:82</code> (deleted by Item 65) says <em>"First
+match wins — order matters (specific before generic)"</em> — specificity is
+maintained by hand, by insertion order. Merging the exact-id tables
+(<code>PERPLEXITY_NATIVE_TOOL_MODELS</code>, the openai prompt-based prefixes) into a
+65-entry glob dict by insertion order would make correctness depend on where a
+row happens to sit.</p>
+<p><strong>Decision: matching is two-pass — every exact (wildcard-free) id is tried
+before any wildcard glob</strong>, and only then insertion order applies among globs.
+A test enforces both passes, including the case that motivates it: an exact id
+that also matches an earlier generic glob must resolve to the exact row.</p>
+<h4 id="q0d-records-are-complete-at-every-level-doctor-enforces-it">Q0d — records are COMPLETE at every level; <code>/doctor</code> enforces it<a class="headerlink" href="#q0d-records-are-complete-at-every-level-doctor-enforces-it" title="Permanent link">&para;</a></h4>
+<p><strong>Owner decision 2026-08-30.</strong> Every <code>facts</code> block — in code and in config —
+states <strong>all</strong> <code>ModelFacts</code> fields. A partial block is a defect <code>/doctor</code>
+reports and rewrites, filling each unstated field with the value it
+currently resolves to.</p>
+<p>This came out of a live defect in the first implementation. The shipped
+tables are full records, so "deliberately <code>false</code>" and "nobody filled this
+in" are indistinguishable; the resolver tried to bridge that with a
+drop-if-default heuristic, which (a) let rung 5 overwrite rung 4 for every
+capability field and (b) inverted precedence for a row that deliberately
+stated a default value. Both were symptoms of one thing: <strong>a merge that has
+to guess what a partial record meant.</strong></p>
+<p>The sparse-row alternative was considered and rejected by the owner:
+partial rows push the guessing onto every reader, and with dozens of models
+an operator cannot tell whether an absent field is an intention or an
+oversight. <em>"Having incomplete records always risks being missed, or default
+guesses might fail, and adds burden to the user."</em></p>
+<p>Consequences, accepted deliberately:</p>
+<ul>
+<li><strong>The resolver stops guessing.</strong> With complete records at every rung, a
+  merge is a straight field-wise overwrite — no drop-if-default, no
+  "profile-owned" exemption list, no ambiguity about capability fields.</li>
+<li><strong>Config becomes verbose</strong>, and that is the point: a config diff shows an
+  operator exactly what their deployment does, rather than what it
+  inherits.</li>
+<li><strong>Adding a field to <code>ModelFacts</code> makes every existing config block
+  incomplete.</strong> <code>/doctor</code> is the migration path, and this is the same
+  mechanism as Q0c's legacy-key rewrite — one scan, two findings
+  (legacy keys, incomplete records), one rewrite.</li>
+<li><code>/doctor</code> must therefore be able to <strong>render the resolved record</strong>, which
+  it can: every rung is available to it.</li>
+</ul>
+<p><strong>Two declared semantic changes</strong>, both found by review of the migrated
+example config and both recorded here so they are decisions rather than
+accidents the fixture happens to encode:</p>
+<ol>
+<li>
+<p><strong>An unstated endpoint field takes the CLASS default, not <code>false</code>.</strong>
+   Before this ADR, <code>provider_ops</code> built the deployed record with
+   <code>ProviderCapabilities.from_dict(config["capabilities"])</code>, so a config
+   <code>capabilities</code> block <strong>replaced</strong> the class record wholesale and any
+   field it omitted fell to the dataclass default rather than the
+   provider's own. The shipped example states no <code>citations</code> for
+   Perplexity, so the deployed record said <code>citations: false</code> even though
+   <code>PerplexityProvider</code> declares <code>True</code>. Under Q0e the rule is uniform for
+   both records — <strong>shipped row, then stated overrides</strong> — so an unstated
+   field now keeps the class value. Behaviour-neutral for today's two
+   readers (<code>chat.py:312</code> and <code>:397</code> test <code>citations or web_search</code>, and
+   <code>web_search</code> is true), but not in general, which is why it is declared.</p>
+</li>
+<li>
+<p><strong><code>supports_vision</code> survives an override.</strong> <code>get_effective_profile</code>
+   rebuilt <code>ModelProfile</code> field by field whenever any override layer was
+   present and omitted <code>supports_vision</code>, so its return value reported
+   <code>False</code> for a vision model under an unrelated override. <strong>Latent, not
+   live</strong> — that function's one caller read only the tool-loop fields, and
+   every vision reader calls <code>model_profiles.supports_vision</code> directly, so
+   no image decision ever saw the wrong value. A <code>replace()</code> on a frozen
+   record cannot lose a field. The migration still writes the glob's value
+   for the three affected models rather than freezing <code>false</code> into explicit
+   config rows, where it would outrank the corrected seed and become a
+   permanent statement that those models have no vision.</p>
+</li>
+</ol>
+<p>Both are fenced in <code>tests/test_adr0012_migration_fence.py</code>; any OTHER
+difference from pre-ADR behaviour is a regression, not a decision.</p>
+<h4 id="q0c-config-migration-clean-break-with-the-file-scan-shipped-alongside">Q0c — config migration: clean break, with the file scan shipped alongside<a class="headerlink" href="#q0c-config-migration-clean-break-with-the-file-scan-shipped-alongside" title="Permanent link">&para;</a></h4>
+<p>Two key families merge into one. Following <strong>ADR 0010</strong>'s precedent and the
+lesson it produced (<code>docs/lessons/clean-break-config-moves-need-a-file-scan.md</code>):
+no dual-read, and <strong><code>/doctor</code> gains the config-shape scan in the same
+commit</strong> — a moved key with no dual-read is invisible to every accessor, so
+only a check that reads the config <em>file</em> can report it. Both old families
+already have raw-file readers, so the scan has a working precedent to copy.</p>
+<p><strong>Clean-break inventory (grep-verified 2026-08-30) — the scan is necessary
+but not sufficient.</strong> ADR 0010's trap was flagging a key in <code>/doctor</code> while
+the docs still taught it. Every one of these moves in the same change:</p>
+<p><em>Production readers outside <code>config/capabilities.py</code>:</em>
+<code>config/execution.py:338</code> (oneshot enrichment gate) ·
+<code>config/loader.py:51</code> (the <code>False</code> default itself) ·
+<code>engine/chat.py:696,698</code> (the native-vs-prompt branch) ·
+<code>engine/task_authorizer.py:982,986,989</code> (task-tier eligibility, incl. a raw
+<code>config_model_overrides[...]</code> read).</p>
+<p><em>User docs that teach the key and would otherwise contradict the scan:</em>
+<code>docs/tool-calling.md</code> · <code>docs/vllm-notes.md</code> ·
+<code>docs/vllm-tool-calling-guide.md</code> · <code>docs/dgx-spark-setup.md</code>.</p>
+<p>⚠️ <strong>The break is NOT drop-and-scan — the key must be TRANSLATED.</strong>
+Measured across the example config and a real user config (90 configured
+models): several providers carry <code>capabilities.native_tool_calling: true</code>
+and <strong>no <code>tool_calling</code> block at all</strong> — <code>openrouter</code> and <code>ollama</code> in the
+shipped example config are exactly this shape (verified: <code>tool_calling</code>
+absent, capabilities key <code>true</code>). For them that key is the <em>only</em> thing
+holding native tool calling on.</p>
+<p>So Q0c's migration must map <code>capabilities.native_tool_calling: true</code> →
+<code>tool_mode: native</code> (and <code>false</code> → <code>prompt_based</code>), in <code>/doctor</code>'s rewrite
+and in the example config, in the same change. A pure drop — even with a
+scan that <em>reports</em> the stale key — silently demotes every <code>openai_compat</code>
+deployment in the field that copied the example config. <strong>The migration
+cost of this ADR lives in field configs, not in code tables.</strong></p>
+<h3 id="3-api_path-is-finally-consumed-as-modelfactswire_protocol">3. <code>api_path</code> is finally <em>consumed</em> — as <code>ModelFacts.wire_protocol</code><a class="headerlink" href="#3-api_path-is-finally-consumed-as-modelfactswire_protocol" title="Permanent link">&para;</a></h3>
+<p>The declared-but-inert field is carried into the unified record (renamed to
+say what it means) rather than a parallel mechanism being invented beside it.
+<code>_is_responses_api_model</code> and <code>RESPONSES_API_PREFIXES</code> become <em>seed data</em> for
+<code>openai_native</code>'s per-model table and then stop being a router. The three
+measured drifts are resolved as an explicit, reviewed table — each row a
+decision, not a coincidence of prefix matching.</p>
+<p>Naming: <code>api_path</code> described an OpenAI endpoint suffix; the field now selects
+a protocol handler across four wires, one of which (<code>generate_content</code>) is not
+an HTTP path at all. Renaming is part of the config clean break in Q0c, not a
+separate migration.</p>
+<h3 id="4-registration-time-is-the-wiring-point">4. Registration time is the wiring point<a class="headerlink" href="#4-registration-time-is-the-wiring-point" title="Permanent link">&para;</a></h3>
+<p>Handlers are attached where providers are registered
+(<a href="../../ppxai/engine/providers/__init__.py#L59"><code>providers/__init__.py:59</code></a>) —
+the harness-startup seam. A provider declares the set it can speak; the model
+picks one per request. This is also the seam at which an operator-declared
+protocol could later be added without a code change, though this ADR does
+<strong>not</strong> propose opening that surface yet (see <em>Future</em>).</p>
+<h3 id="5-perplexitys-agent-fleet-is-then-table-data">5. Perplexity's Agent fleet is then table data<a class="headerlink" href="#5-perplexitys-agent-fleet-is-then-table-data" title="Permanent link">&para;</a></h3>
+<p>I4b reduces to rows: <code>anthropic/claude-sonnet-5 → protocol="responses"</code>, plus
+<code>requires_max_output_tokens</code> (measured at I2: <code>anthropic/*</code> 400s without it).
+No second provider entry, no translation layer, no new protocol code — which is
+what the plan wanted, now actually true rather than assumed.</p>
+<p><strong>This settles the question I4b reserved for the owner</strong> ("new models on the
+existing <code>perplexity</code> provider, or a second provider entry?"). Under this ADR
+the question dissolves <em>for this case</em>: the Agent-API fleet is reached with the
+<strong>same Perplexity key, billed on the same Perplexity account, under the same
+price table</strong> — one identity, two wires — so one <code>perplexity</code> entry speaking two
+protocols is the natural expression. A second entry here would exist only to
+work around a provider being unable to speak two protocols, which is the
+limitation this removes.</p>
+<p>That reasoning is <strong>scoped to a shared identity</strong>, and does not generalize to
+every two-wire case. Where the second route is a different account with its own
+credential and rates, the entries stay separate no matter how the protocol is
+resolved — see §7, which decides exactly that for Anthropic-direct.</p>
+<h3 id="6-messages-is-designed-for-not-built">6. Messages is designed for, not built<a class="headerlink" href="#6-messages-is-designed-for-not-built" title="Permanent link">&para;</a></h3>
+<p>The <code>messages</code> handler is <strong>specified here and implemented by whoever picks up
+<code>feat/anthropic-provider</code></strong> — this ADR does not schedule it, and no migration
+step below builds it. What this ADR commits to is narrower and load-bearing:
+the contract above must not have to change when it arrives.</p>
+<p>Concretely, that means three things hold today:</p>
+<ul>
+<li><code>ctx</code> is client-agnostic (§1), so the <code>anthropic</code> SDK is not a special case.</li>
+<li><code>convert_messages</code> is a handler method with a protocol-owned return type, so
+  system-hoisting and <code>tool_result</code> batching are ordinary handler work rather
+  than a base-class exception.</li>
+<li>The wire validator travels with the converter, so a fourth protocol is
+  covered by ADR 0006 on day one instead of joining the two that currently
+  bypass it.</li>
+</ul>
+<p>The consequences of Messages <em>not</em> being OpenAI-shaped therefore land entirely
+inside its own handler. That is the test of whether this design is right, and
+it is the reason for specifying it before the handler set exists rather than
+after.</p>
+<h3 id="7-the-same-model-over-two-wires-stays-two-catalog-entries-decided">7. The same model over two wires stays two catalog entries — DECIDED<a class="headerlink" href="#7-the-same-model-over-two-wires-stays-two-catalog-entries-decided" title="Permanent link">&para;</a></h3>
+<p><strong>Owner decision, 2026-08-30:</strong> <code>anthropic/claude-sonnet-5</code> (via Perplexity)
+and <code>claude-sonnet-5</code> (native Messages) are <strong>separate catalog entries on
+separate providers</strong> — <em>"different provider, different billing, accounting and
+API access token."</em></p>
+<p>This was raised in §6 as an open product question about the model picker. It
+is not: all three reasons are <strong>structural</strong>, and each is keyed on provider
+identity in shipped code.</p>
+<table>
+<thead>
+<tr>
+<th>Axis</th>
+<th>Where it is keyed</th>
+<th>Consequence of merging</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>API token</strong></td>
+<td><code>api_key_env</code> is a <strong>provider-level</strong> config key, read by <code>get_api_key(provider)</code> (<a href="../../ppxai/config/providers.py#L103-L106"><code>config/providers.py:103-106</code></a>)</td>
+<td>One catalog entry cannot resolve two credentials — the second route has no key to send</td>
+</tr>
+<tr>
+<td><strong>Billing</strong></td>
+<td><code>pricing</code> is a <strong>provider-level</strong> config block, read by <code>get_provider_config(provider).get("pricing")</code> (<a href="../../ppxai/config/providers.py#L83"><code>config/providers.py:83</code></a>)</td>
+<td>Two routes at different rates would share one price table; every cost figure for one of them is wrong</td>
+</tr>
+<tr>
+<td><strong>Accounting</strong></td>
+<td>Usage aggregates by splitting the <code>"provider/model"</code> key on <code>/</code> (<a href="../../ppxai/usage.py#L243"><code>usage.py:243</code></a>) — the <strong>provider name is literally the accounting key</strong></td>
+<td>The two routes collapse into one bucket in <code>/cost</code> and <code>by_provider</code>, unattributable</td>
+</tr>
+</tbody>
+</table>
+<p>So merging them would not be a nicer model picker with a hidden route — it
+would be one entry that cannot authenticate its second route, prices it wrong,
+and cannot report it separately. <strong>The catalog entry is the billing boundary</strong>,
+and that is a stronger invariant than the display convenience §6 weighed.</p>
+<p><strong>This does not weaken the ADR — it sharpens what the ADR is for.</strong> Protocol
+stays a per-model capability: it decides <em>how a request is encoded and sent</em>.
+Identity, credentials, price and accounting stay per-provider: they decide
+<em>whose account pays and under what terms</em>. Those are different questions, and
+this ADR only unifies the first. <code>PerplexityProvider</code> speaking two protocols is
+still right (one key, one price table, one bucket, two wires); Anthropic-direct
+is a separate provider because it is a separate account — not because it speaks
+a different protocol.</p>
+<p><strong>Consequences for the Anthropic work:</strong> <code>feat/anthropic-provider</code> registers a
+new provider with its own <code>api_key_env</code>, <code>pricing</code> block and catalog entries,
+and declares the <code>messages</code> handler from §6. Users see Claude models twice, and
+that is correct — the two entries bill differently and draw on different
+credentials. Worth a doc note so it does not read as a duplication bug.</p>
+<hr />
+<h2 id="why-this-and-not-the-alternatives">Why this and not the alternatives<a class="headerlink" href="#why-this-and-not-the-alternatives" title="Permanent link">&para;</a></h2>
+<p><strong>Not "add a second provider entry for the Agent API."</strong> It answers the
+symptom. Two entries would still each hardcode their protocol, <code>api_path</code> would
+still be inert, and the three measured <code>openai_native</code> drifts would remain
+untouched. It also doubles the config/pricing/install surface (example config,
+<code>install.sh</code>, <code>scripts/install.ps1</code>, <code>vscode-extension/src/config.ts</code>, four
+pricing tables — the same list I3 had to touch) for what is one API's routing
+detail.</p>
+<p><strong>Not "make <code>PerplexityProvider</code> inherit from <code>OpenAINativeProvider</code>."</strong> It
+would reach the helpers with the least typing and is the worst option: it
+inverts an unrelated is-a relationship purely to share a wire format, and drags
+<code>enable_web_search</code>, reasoning-model handling and OpenAI's pricing assumptions
+along with it.</p>
+<p><strong>Not "duplicate the Responses block into <code>perplexity.py</code>."</strong> Cheapest now, and
+it guarantees the two copies diverge — the Responses shape is external and
+changes on OpenAI's schedule, not ours.</p>
+<p><strong>Not "fix the drift only."</strong> Correcting <code>RESPONSES_API_PREFIXES</code> to match the
+profile table would clear today's three disagreements in about ten minutes and
+leave the mechanism that produced them — two sources of truth, the declared one
+inert — fully intact. It would also leave the operator override still silently
+doing nothing.</p>
+<p><strong>Accepted cost.</strong> This touches all four providers and the <code>chat.py</code> dispatch,
+and it refactors working wire code. That is why it is an ADR and why the
+migration below is staged with a no-behaviour-change first step: the risk is
+concentrated in the move, so the move is made provable before anything else
+depends on it.</p>
+<hr />
+<h2 id="migration">Migration<a class="headerlink" href="#migration" title="Permanent link">&para;</a></h2>
+<p>Ordered so each step is verifiable before the next depends on it. Every step is
+gated on the owner's explicit go, per the arc's standing rule.</p>
+<ol>
+<li>
+<p>✅ <strong>DONE</strong> (<code>6b0f2214</code>, 2026-08-30) — <strong>Unify the fact systems (§2).</strong>
+   <em>As shipped, per Q0e/Q0g rather than this paragraph's original wording:</em>
+   <code>ModelFacts</code> + one resolver replaces <code>ModelProfile</code>'s ladder, and
+   <code>ProviderCapabilities</code> was <strong>retargeted in place</strong> to the endpoint record
+   (Q0g) rather than replaced — the two records are disjoint, so there is no
+   merge site left to arbitrate. Both old accessors are deleted; config keys
+   merge under Q0c with the <code>/doctor</code> scan in the same commit. <strong>Not
+   byte-identical:</strong> four <em>declared</em> deviations in two classes (Q0d) — the
+   <code>perplexity</code> endpoint's <code>citations</code> semantic and three <code>supports_vision</code>
+   rows — plus five latent defects
+   the unification exposed and fixed — none of them reachable in shipped
+   default behaviour; see the CHANGELOG's reachability tiering. Fences as
+   listed, plus <code>tests/test_adr0012_migration_fence.py</code>, which compares all 45
+   example-config records field-by-field against a fixture harvested by running
+   the <strong>old</strong> code over the <strong>old</strong> file, with each deviation named explicitly
+   and self-checked.</p>
+</li>
+<li>
+<p>✅ <strong>DONE</strong> (W2, 2026-08-30) — <strong>Extract, no behaviour change.</strong> The
+   Responses block is <code>ppxai/engine/providers/wire/responses.py</code>
+   (<code>ResponsesHandler</code>), behind the <code>ProtocolHandler</code> contract in
+   <code>wire/protocol.py</code>. The six lifted members were copied out of
+   <code>openai_native.py</code> <strong>mechanically</strong>, so "no behaviour change" is a property
+   of the extraction rather than a promise, and the four converters plus both
+   stream handlers were diffed against the live pre-move sources to confirm it.
+   Fence: <code>tests/test_wire_responses_extraction.py</code> spies the outgoing
+   <code>responses.create(**kwargs)</code> and asserts the literal pre-move kwargs.</p>
+</li>
+<li>✅ <strong>DONE</strong> (W2, 2026-08-30) — <strong>Make the protocol field load-bearing.</strong>
+   <code>_wire_for(model)</code> is the single reader; all four dispatch sites (<code>chat</code>,
+   <code>chat_sync_simple</code>, <code>oneshot</code>, the 404 auto-fallback) consult it.
+   <code>RESPONSES_API_PREFIXES</code> is now seed data for <code>RESPONSES_WIRE_GLOBS</code>;
+   <code>_is_responses_api_model</code> routes nothing. <strong>Closes debt Item 61.</strong></li>
+</ol>
+<p>The three measured drifts were resolved per row on evidence, not by
+   copying one table onto the other: the two pro models in the <strong>router's</strong>
+   favour (commit <code>5e1ace2f</code> added them after a live <em>"not a chat model"</em>
+   404), <code>gpt-5.3-codex</code> in the <strong>profile's</strong> favour (codex 404s on Chat
+   Completions). A <strong>fourth</strong> drift surfaced in the same sweep —
+   <code>gpt-5.5-pro</code>, reached by neither mechanism — and is included <strong>by
+   analogy, not separately probed</strong>, marked as such in the table.</p>
+<p>Two bonuses this step made cheap: ADR 0006's <code>assert_wire_blocks_clean</code>
+   gained its <strong>second</strong> call site inside the moved converter, taking Item 62
+   (a) from 1-of-3 wires to 2-of-3; and the send-path fence's scan widened
+   from <code>glob</code> to <code>rglob</code> with <code>ctx.</code> added to its banned-attribute pattern,
+   because the code it guards moved into a subpackage under a new receiver
+   name.
+3. ✅ <strong>DONE</strong> (W3, 2026-08-31) — <strong>Perplexity speaks both.</strong> One provider,
+   two wires: Sonar stays on Chat Completions, the Agent fleet
+   (<code>anthropic/* · openai/* · google/* · xai/* · perplexity/*</code>) resolves
+   <code>responses</code>. The wires differ only in transport, so a thin <code>_WireCtx</code> view
+   swaps the SDK client and delegates everything else — key, capabilities,
+   facts, token/extra-body lookups, throttle and error handling — to the one
+   provider that owns the account.</p>
+<p><strong>Canary verified live 2026-08-31</strong>, end to end through
+   <code>PerplexityProvider.chat</code>: <code>anthropic/claude-sonnet-5</code> emitted a native
+   <code>function_call</code> for <code>read_file(path="/etc/hostname")</code>, <code>native=True</code>,
+   tool_call_id <code>toolu_bdrk_…</code>, routed entirely by <code>wire_protocol</code> with no
+   model-name branch anywhere.</p>
+<p><strong>The trial earned its keep — it failed twice first, both times on this
+   ADR's own defect shape (a declared value the wire never sees):</strong>
+   1. <code>enable_web_search</code> was a <em>required</em> host attribute that only
+      <code>OpenAINativeProvider</code> had, so the first request from a second host
+      raised <code>AttributeError</code> inside the handler. The host contract was
+      implicit-by-docstring; it is now read with a default, and a fence
+      checks every <code>ctx.</code> read against a real second host.
+   2. <code>ModelFacts.max_tokens</code> could not reach the request at all — the
+      handler asked <code>_get_max_tokens()</code>, which reads <strong>config only</strong>. The
+      fleet's 4096 sat in the table while the API answered <em>"max_output_tokens
+      is required when using Anthropic models"</em>. One resolver now reads
+      config first, then the fact.</p>
+<p><strong><code>perplexity/sonar</code> measured differently from bare <code>sonar</code></strong> on
+   2026-08-31: the namespaced ID on the Responses wire accepted a tools array
+   and called the tool, while bare <code>sonar</code> answers 400 <em>"Tool calling is not
+   supported for this model"</em> on Chat Completions. The same model, two wires,
+   two capabilities — the sharpest evidence in the tree that capability
+   cannot be a property of a provider.
+4. ✅ <strong>DONE</strong> (W4, 2026-08-31) — <strong><code>chat_completions</code> and <code>generate_content</code>
+   become handlers.</strong> All three live wires are registered; each owns its
+   converter and declares its own return type. <strong>Closes debt Item 62, both
+   halves.</strong></p>
+<p><code>GeminiProvider._convert_messages</code> is <strong>deleted</strong>, not narrowed, along
+   with the three helpers that moved with it. <code>BaseProvider._convert_messages</code>
+   survives as a <em>delegation</em> to the chat-completions handler — most
+   providers speak that wire — but is no longer one protocol's emitter
+   installed as everyone's default, which is what forced the incompatible
+   override in the first place.</p>
+<p><code>assert_wire_blocks_clean</code> now runs on <strong>3 of 3</strong> wires. The fence
+   parametrises over the handler <strong>registry</strong>, not a hand-written list, so a
+   fourth wire that forgets the validator fails on the day it is written —
+   and it greps each handler's source too, because Item 62 (a) was precisely
+   a validator that existed and was not called.</p>
+<p>The extracted Gemini converter was diffed byte-for-byte against the
+   original across all four role paths before the override was removed.</p>
+<p><strong>Simplification report.</strong> Providers <strong>−318 lines</strong> net
+   (<code>openai_native</code> −351, <code>gemini</code> −168, <code>base</code> +20, <code>perplexity</code> +181 — the
+   last being W3's new two-wire capability, not moved code); <code>wire/</code> adds
+   983, of which a large share is the recorded measurement and rationale
+   these handlers now carry. Twelve methods verified absent from their
+   original files. The honest overall figure is <strong>+665 lines</strong> — this arc
+   bought a capability (a second Perplexity wire) and a closed defect class,
+   not a smaller tree.</p>
+<p>Steps 1–2 stand on their own merit — they fix measured drift and an inert
+config override — and are worth doing even if step 3 were abandoned.</p>
+<p><strong>Messages (<code>/v1/messages</code>) is not a step here.</strong> It is specified in §6 and
+built with <code>feat/anthropic-provider</code>, on that work's own schedule. If it lands
+<em>before</em> step 4, it should be written as a handler against this contract from
+the start rather than as a fifth bespoke provider — that is cheaper than
+retrofitting it, and it is the case this ADR is designed to absorb without
+change.</p>
+<hr />
+<h2 id="future-proper-solution">Future / proper solution<a class="headerlink" href="#future-proper-solution" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Operator-declared protocols.</strong> §4's registration seam could accept a
+  handler from config, letting a deployment add a wire format without a code
+  change. Deliberately not proposed now: it is a plugin surface, and it should
+  follow a real second consumer, not precede one.</li>
+<li><strong>Fold in <code>PROMPT_BASED_MODEL_PREFIXES</code>.</strong> The arc's I5 already plans to fold
+  that prefix tuple into the per-model table. It is the <em>same</em> anti-pattern as
+  <code>RESPONSES_API_PREFIXES</code> — a hardcoded prefix list shadowing declared
+  per-model data — and both should end up in one shape.</li>
+<li><strong><code>api_path="auto"</code>.</strong> Documented (try chat, fall back to responses on 404)
+  and, like the rest of the field, unimplemented. Under this ADR it becomes a
+  handler-selection strategy rather than a fourth branch. No consumer needs it
+  yet; it should stay unimplemented until one does, rather than shipping a
+  second untested routing mode.</li>
+</ul>
+<h2 id="triggers-to-revisit">Triggers to revisit<a class="headerlink" href="#triggers-to-revisit" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>streaming</code> stops being a pure endpoint fact. It holds today (no model
+  anywhere sets <code>streaming=False</code>), but reasoning models with streaming
+  restrictions are the obvious future exception — and the field would then
+  have to move from <code>ProviderFacts</code> to <code>ModelFacts</code>.</li>
+<li>A provider needs a protocol whose transport is not an SDK client at all (a
+  raw-HTTP or gRPC wire): <code>ctx</code> carrying <em>a</em> client stops being the right
+  abstraction. Note this trigger originally read "not OpenAI-SDK-shaped" and
+  was <strong>already live when written</strong> — Messages is exactly that case, which is
+  why §1 now specifies <code>ctx</code> client-agnostically and §6 designs for it. A
+  pre-armed trigger is worth less than a contract that does not need it.</li>
+<li>A fifth provider or a fourth protocol arrives before step 4 lands — the
+  handler set is still small enough to reshape cheaply, and would not stay so.</li>
+<li>Perplexity exposes a real <code>/models</code> endpoint. Capability and protocol could
+  then be partly enumerated rather than declared, changing what the table is
+  for (see <code>scripts/probe-perplexity-capabilities.py</code>, which exists precisely
+  because no such endpoint does).</li>
+<li>The Responses shape diverges between OpenAI and Perplexity. One shared
+  handler is correct only while the two remain the same wire; if they fork,
+  this becomes two handlers, and the composition model absorbs that without a
+  provider change.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1139,6 +1139,36 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Index
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#about-these-records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        About these records
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1158,6 +1188,82 @@
 
 
 <h1 id="architecture-decision-records-adrs">Architecture Decision Records (ADRs)<a class="headerlink" href="#architecture-decision-records-adrs" title="Permanent link">&para;</a></h1>
+<h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">&para;</a></h2>
+<p>Status is summarised; the record itself is authoritative.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Decision</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="0001-keys-command-cross-client/">0001</a></td>
+<td><code>/keys</code> cross-client behavior</td>
+<td>✅ Accepted — implemented</td>
+</tr>
+<tr>
+<td><a href="0002-command-context-three-pattern-split/">0002</a></td>
+<td>CommandContext three-pattern split</td>
+<td>✅ Accepted — implemented</td>
+</tr>
+<tr>
+<td><a href="0003-agent-platform-architecture/">0003</a></td>
+<td>Agent platform architecture</td>
+<td>✅ Accepted — Stage 2 shipped v1.19.0 (T9 container tier deferred)</td>
+</tr>
+<tr>
+<td><a href="0004-llm-gateway-features/">0004</a></td>
+<td>LLM gateway features</td>
+<td>✅ Accepted — implemented; §4 revised by ADR 0009</td>
+</tr>
+<tr>
+<td><a href="0005-inspection-triplet/">0005</a></td>
+<td>Inspection Triplet for runtime observability</td>
+<td>✅ Accepted — implemented</td>
+</tr>
+<tr>
+<td><a href="0006-content-block-schema-separation/">0006</a></td>
+<td>Engine-internal vs wire content schema</td>
+<td>✅ Accepted — implemented</td>
+</tr>
+<tr>
+<td><a href="0007-completion-first-class-service/">0007</a></td>
+<td>Completion as a first-class service</td>
+<td>🟡 Proposed — step 1 shipped v1.18.8; <strong>step 2 open</strong> (revised 2026-08-15: one residual import, not SDK-blocking)</td>
+</tr>
+<tr>
+<td><a href="0008-cross-tier-cost-and-resource-accounting/">0008</a></td>
+<td>Cross-tier cost + shared-resource accounting</td>
+<td>🟡 Proposed — <strong>not implemented</strong> (debt Item 49); premise updated 2026-08-15, tiers 2+3 merged</td>
+</tr>
+<tr>
+<td><a href="0009-task-execution-profiles/">0009</a></td>
+<td>Task execution profiles + web_search enrichment</td>
+<td>✅ Accepted — all four steps implemented v1.19.1</td>
+</tr>
+<tr>
+<td><a href="0010-config-shape-review/">0010</a></td>
+<td>Config shape: three axes</td>
+<td>✅ Implemented v1.19.1 — <strong>clean break</strong>, one deviation from the planned migration</td>
+</tr>
+<tr>
+<td><a href="0011-command-taxonomy-streamline/">0011</a></td>
+<td>Command taxonomy (<code>/auto</code> · <code>/run</code> · <code>/task</code>)</td>
+<td>✅ Accepted — implemented v1.19.1</td>
+</tr>
+<tr>
+<td><a href="0012-wire-protocol-as-per-model-capability/">0012</a></td>
+<td>Per-model facts: one resolution system, wire protocol included</td>
+<td>✅ Implemented v1.19.1 — all four migration steps: unified <code>ModelFacts</code>/<code>ProviderCapabilities</code> split, <code>ProtocolHandler</code> + three wire handlers, <code>wire_protocol</code> routing, Perplexity on two wires. <strong>Items 61 + 62 closed.</strong> §6 (Anthropic Messages) designed, ships with <code>feat/anthropic-provider</code></td>
+</tr>
+</tbody>
+</table>
+<p>The open records are <strong>0007 step 2</strong> and <strong>0008</strong>; everything else is
+implemented. Numbering is sequential — the next record is <code>0013</code>.</p>
+<h2 id="about-these-records">About these records<a class="headerlink" href="#about-these-records" title="Permanent link">&para;</a></h2>
 <p>Short, dated records of architecture decisions where the chosen
 option is non-obvious or where we deliberately deferred a "proper"
 solution. Each record names:</p>
@@ -1268,7 +1374,7 @@ is locked. (This matches established practice — e.g. ADR 0003 and ADR
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

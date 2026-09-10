@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1554,14 +1554,14 @@ runs that outlive any client connection).</p>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                                              │ called per iteration
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>              ┌────────────── handle_agent (commands/agent.py) ─────────────┐
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>              │  Outer continuation loop, in-process via asyncio.run.       │
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>              │  Builds continuation prompt; matches &quot;TASK_COMPLETE:&quot; in    │
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>              │  Builds continuation prompt; matches "TASK_COMPLETE:" in    │
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>              │  model output to decide whether to keep iterating.          │
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>              │  NOT HTTP-aware. Blocks the request handler.                │
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>              └─────────────────────────────────────────────────────────────┘
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>                          ▲                  ▲                    ▲
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                          │ in-process       │ NOT used           │ replicated
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                  ┌─── Rich TUI ────┐ ┌─── web (web/...) ────┐ ┌── VSCode ────┐
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                  │ factory dispatch │ │ streamChat(&#39;/agent&#39;) │ │ handleAgent  │
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                  │ factory dispatch │ │ streamChat('/agent') │ │ handleAgent  │
 </span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                  │   handle_agent   │ │ → /chat (no outer    │ │ Command —    │
 </span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                  │                  │ │   loop, just gate)   │ │ ~150 LoC of  │
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>                  │                  │ │                      │ │ duplicated   │
@@ -1763,7 +1763,7 @@ choice, its own tool budget. Two ways to model this:</p>
 </span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>       ┌─── POST /command/agent ─────┴──────────── spawn_subagent tool ────┐
 </span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>       │  Returns immediately:                       Engine-side built-in  │
 </span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>       │   {ok, result, side_effects:                tool. Calls           │
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>       │    [{kind: &quot;agent_run_started&quot;,             registry.start_run    │
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>       │    [{kind: "agent_run_started",             registry.start_run    │
 </span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>       │      run_id, task}], events:[]}             with parent_run_id    │
 </span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>       │  Background asyncio.create_task             = current run_id.     │
 </span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>       │  drives the loop.                                                 │
@@ -1781,7 +1781,7 @@ choice, its own tool budget. Two ways to model this:</p>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="err">GET  /agent/runs             → {runs: [{run_id, task, status, started_at, parent_run_id?, ...}]}</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="err">GET  /agent/runs/&lt;id&gt;        → {meta, state}</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="err">GET  /agent/runs/&lt;id&gt;/events → SSE stream (live + replay; ?since=N for resume)</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="err">POST /agent/runs/&lt;id&gt;/cancel → {ok, status: &quot;cancelling&quot;}</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="err">POST /agent/runs/&lt;id&gt;/cancel → {ok, status: "cancelling"}</span>
 </span></code></pre></div>
 <p><strong>SideEffectKind additions (proposed):</strong></p>
 <ul>
@@ -1952,7 +1952,8 @@ contain a hostile operator — which is why the <strong>in-process</strong> tool
 boundary (tiers a–c) is adequate for the preview and <strong>tier-d OS isolation +
 DNS-rebinding/TOCTOU egress hardening remain deferred</strong>. To make (A)
 <em>code-enforced</em> rather than an assumption about auth config, <code>/v1/agent/task</code>
-ships <strong>default-off</strong> behind <code>tools.agent.task_tier_enabled</code> (the tool-free
+ships <strong>default-off</strong> behind <code>execution.task.enabled</code> (v1.19.1, ADR 0010;
+shipped as <code>tools.agent.task_tier_enabled</code>) (the tool-free
 <code>/v1/agent/run</code> tier is always on). The whole agents API is <strong>in development
 and unsealed</strong> — see <a href="../../api-gateway/">docs/api-gateway.md</a> — and only
 becomes a stability-committed consumer contract once designed, tested,
@@ -2132,7 +2133,7 @@ resume path, which two-phase termination exists to avoid. One model each.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>SPAWNING → RUNNING ⇄ WAITING{consent | input}              (mid-run, resumed via /respond)
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>RUNNING  → COMPLETED_PENDING_ACK → FINALIZED               (end-of-run, /ack | retention-TTL)
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>RUNNING  → FAILED (provider) | ZOMBIE (tool-loop) | BUDGET_EXCEEDED | CANCELLED (explicit | cascade-TTL)
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>RUNNING  → INTERRUPTED (engine restart / cancel / budget cap killed the live asyncio.Task; records + checkpoint persist; resume is CONDITIONAL — see open-decision #5: only if the checkpoint is conclusive and artifacts don&#39;t already capture the work, else stays INTERRUPTED for an explicit decision)
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>RUNNING  → INTERRUPTED (engine restart / cancel / budget cap killed the live asyncio.Task; records + checkpoint persist; resume is CONDITIONAL — see open-decision #5: only if the checkpoint is conclusive and artifacts don't already capture the work, else stays INTERRUPTED for an explicit decision)
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>any terminal → tool sandbox torn down; artifacts retained until FINALIZED/GC
 </span></code></pre></div>
 <p><strong>Consent for unattended runs (resolves the "semi-autonomous" tension):</strong></p>
@@ -2174,7 +2175,8 @@ resume path, which two-phase termination exists to avoid. One model each.</p>
   isolation lands, the spec carries a <strong>token <em>reference</em>, not a raw
   key</strong>, so the swap to per-agent identity (item 9) is non-breaking.</li>
 </ul>
-<p><strong>Filesystem sealing — <code>tools.agent.sandbox</code> (proposed).</strong> The <em>read-path
+<p><strong>Filesystem sealing — <code>tools.agent.sandbox</code> (proposed; shipped as
+<code>execution.task.sandbox</code>, v1.19.1 ADR 0010).</strong> The <em>read-path
 scope</em> and <em>workdir</em> injected fields above are governed by a new
 <code>tools.agent.sandbox</code> config block that <strong>seals</strong> where a task may read and
 write. The scoping fields (<code>workdir</code>, <code>read_paths</code>, <code>skills_dir</code>, <code>specs_dir</code>)
@@ -2226,8 +2228,8 @@ is authoritative for the actual wire contract.</p>
 </span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;/result      → {body, artifact_refs:[...]}</span>
 </span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;/artifacts/&lt;artifact_id&gt;  → resolves via /files/preview</span>
 </span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/respond     → {resume_token, response}   (answer a WAITING)</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/ack         → {ok, status:&quot;finalized&quot;}   (two-phase termination)</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/cancel      → {ok, status:&quot;cancelling&quot;}</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/ack         → {ok, status:"finalized"}   (two-phase termination)</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/cancel      → {ok, status:"cancelling"}</span>
 </span></code></pre></div>
 <ul>
 <li><strong>Spawn idempotency:</strong> client-supplied <code>idempotency_key</code> → registry
@@ -2261,12 +2263,12 @@ event; filter on read</strong> — the file is the durable inspection/audit reco
 Two orthogonal filter axes, both in the schema from the first persisted
 event (additive-after-persist is painful, so they ship in Inc 3):</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>{
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  &quot;seq&quot;:      42,              // monotonic per-run sequence (the ?since= cursor)
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  &quot;ts&quot;:       1781551062.81,   // epoch seconds
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  &quot;type&quot;:     &quot;tool_call&quot;,     // existing EventType value
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  &quot;level&quot;:    &quot;debug&quot;,         // debug | info | warning | error  (severity axis)
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>  &quot;category&quot;: &quot;tool&quot;,          // lifecycle | tool | network | consent | result  (kind axis)
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  &quot;data&quot;:     { ... }          // type-specific payload
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  "seq":      42,              // monotonic per-run sequence (the ?since= cursor)
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  "ts":       1781551062.81,   // epoch seconds
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  "type":     "tool_call",     // existing EventType value
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  "level":    "debug",         // debug | info | warning | error  (severity axis)
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>  "category": "tool",          // lifecycle | tool | network | consent | result  (kind axis)
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  "data":     { ... }          // type-specific payload
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>}
 </span></code></pre></div>
 <ul>
@@ -2478,7 +2480,7 @@ with isolation moved to the <strong>tool-execution</strong> boundary
 </span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TokenRecord</span><span class="p">]:</span> <span class="o">...</span>                       <span class="c1"># metadata only</span>
 </span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">mint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">owner</span><span class="p">,</span> <span class="n">roles</span><span class="p">,</span> <span class="n">ttl_s</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TokenRecord</span><span class="p">]:</span> <span class="o">...</span>  <span class="c1"># material once</span>
 </span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">revoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token_id</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span> <span class="o">...</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span> <span class="o">...</span>   <span class="c1"># {&quot;mint&quot;,&quot;revoke&quot;,&quot;rotate&quot;,&quot;list&quot;}</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span> <span class="o">...</span>   <span class="c1"># {"mint","revoke","rotate","list"}</span>
 </span></code></pre></div>
 <p>Load-bearing properties:
    - <strong><code>resolve()</code> is the validator.</strong> Today's <code>server/auth.py</code>
@@ -2506,9 +2508,9 @@ with isolation moved to the <strong>tool-execution</strong> boundary
    owner-only ACL on Windows, all capabilities). <code>K8sSecretProvider</code>
    /<code>VaultSecretProvider</code> are interface stubs deferred to v1.20.x.</p>
 <p>Config (omit <code>secrets</code> → today's behavior):
-   <div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>&quot;server&quot;: { &quot;secrets&quot;: { &quot;providers&quot;: [
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  { &quot;type&quot;: &quot;file&quot;, &quot;path&quot;: &quot;~/.ppxai/tokens.json&quot; },
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  { &quot;type&quot;: &quot;env&quot;,  &quot;var&quot;: &quot;PPXAI_API_TOKEN&quot; }
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>"server": { "secrets": { "providers": [
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  { "type": "file", "path": "~/.ppxai/tokens.json" },
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  { "type": "env",  "var": "PPXAI_API_TOKEN" }
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>] } }
 </span></code></pre></div></p>
 <p><strong>Increment split (build-contract gated):</strong>
@@ -2563,17 +2565,17 @@ with isolation moved to the <strong>tool-execution</strong> boundary
     in production) reverse-proxies external traffic to those
     bindings.</p>
 <div class="language-text highlight"><pre><span></span><code>**Recommended position:** v1.19.x Phase 1 extends
-`POST /v1/agent/run`&#39;s request body with an optional `services`
+`POST /v1/agent/run`'s request body with an optional `services`
 object mapping name → `{port, path, auth}`; the response carries
 a `services` map of name → externally-reachable URL of the form
 `…/v1/agent/runs/&lt;id&gt;/services/&lt;name&gt;/`. ROADMAP Phase 1 row
-amended. When `services` is omitted or empty, ppxai&#39;s runtime
+amended. When `services` is omitted or empty, ppxai's runtime
 skips reverse-proxy registration (the CronJob case, where the
-agent doesn&#39;t stay up to receive inbound traffic). The bound
-service&#39;s logs / state are exposed via the **Inspection
+agent doesn't stay up to receive inbound traffic). The bound
+service's logs / state are exposed via the **Inspection
 Triplet pattern** (per [ADR 0005](0005-inspection-triplet.md))
 at `runs/&lt;run_id&gt;/agent-&lt;n&gt;/services/&lt;name&gt;/{state.json, events.jsonl}`
-— the C5 ask doesn&#39;t need to invent an inspection surface.
+— the C5 ask doesn't need to invent an inspection surface.
 
 Five sub-question resolutions pinned by peer outlook-monitor
 Phase-4 fit-test (sharpened in peer commit `b3ba0f6`):
@@ -2581,18 +2583,18 @@ Phase-4 fit-test (sharpened in peer commit `b3ba0f6`):
 - **C5.1 — Auth surface scope.** Narrow v1.19.x to
   `bearer | none`. The proposed `session` auth (cookie domain,
   CSRF, SameSite, Secure all unspecified) is deferred to v1.20.x
-  alongside the OIDC work that&#39;s already deferred. One protocol
+  alongside the OIDC work that's already deferred. One protocol
   fully specified beats three half-specified.
-- **C5.2 — Bearer auth source.** `auth: &quot;bearer&quot;` does NOT
+- **C5.2 — Bearer auth source.** `auth: "bearer"` does NOT
   mandate the `/v1/tokens` source. Per-service field
-  `token_source: &quot;v1-tokens&quot;` (default) or
-  `token_source: &quot;header:X-Custom-Token&quot;` for per-deployment
+  `token_source: "v1-tokens"` (default) or
+  `token_source: "header:X-Custom-Token"` for per-deployment
   static-secret models. outlook-monitor uses the latter
   (`OUTLOOK_ADMIN_TOKEN` env var rotated via secret update); the
   Phase 7 `/v1/tokens` registry is the default but not the
   only validator.
 - **C5.3 — Inbound network policy shape.** Symmetric primitive
-  on the same allowlist as Phase 5&#39;s outbound. In `meta.json`:
+  on the same allowlist as Phase 5's outbound. In `meta.json`:
 
   ```yaml
   network:
@@ -2604,12 +2606,12 @@ Phase-4 fit-test (sharpened in peer commit `b3ba0f6`):
 
   Committed in v1.19.x to avoid a v1.20.x retrofit.
 - **C5.4 — Lifecycle: restart policy + drain.** Adopt k8s
-  vocabulary: `restart_policy: &quot;Always&quot; | &quot;OnFailure&quot; | &quot;Never&quot;`
+  vocabulary: `restart_policy: "Always" | "OnFailure" | "Never"`
   per service. Clean-exit drain via explicit
   `POST /v1/agent/runs/&lt;id&gt;/terminate` that marks the run as
   terminating before the next `AGENT_SERVICE_DOWN` fires (so
-  ppxai&#39;s restart loop doesn&#39;t re-spawn an agent that intends to
-  exit, e.g. outlook-monitor&#39;s `/admin/drain`). Pinned: explicit
+  ppxai's restart loop doesn't re-spawn an agent that intends to
+  exit, e.g. outlook-monitor's `/admin/drain`). Pinned: explicit
   terminate API, not exit-code conventions.
 - **C5.5 — Reverse-proxy path semantics.** ppxai injects
   `X-Forwarded-Prefix` and the agent renders relative URLs
@@ -2624,16 +2626,16 @@ Plus two clarifications folded directly into the wire shape:
   on port 9090; the `services` map allows multiple name entries
   on the same port.
 - **CronJob compatibility.** `services` is optional and
-  explicitly empty for CronJob runs; ppxai&#39;s runtime skips
+  explicitly empty for CronJob runs; ppxai's runtime skips
   reverse-proxy registration when omitted.
 
 **Companion event type — `EventType.AGENT_SERVICE_DOWN`.**
 Symmetric with the existing `EventType.AGENT_ZOMBIE` (v1.18.0).
-Emitted by ppxai&#39;s runtime when a bound service exits or stops
-responding to liveness probes; consumers&#39; restart policy
+Emitted by ppxai's runtime when a bound service exits or stops
+responding to liveness probes; consumers' restart policy
 (managed by ppxai per `C5.4` vs. agent-internal supervision)
 decides what happens next. Payload shape:
-`{run_id, service_name, port, reason: &quot;exited&quot; | &quot;unresponsive&quot;, exit_code?}`.
+`{run_id, service_name, port, reason: "exited" | "unresponsive", exit_code?}`.
 Doc-only addition to ADR 0003 until Phase 1 implementation ships;
 extends the v1.18.0 event-type list at line 9 (kept in sync there).
 </code></pre></div>
@@ -2735,7 +2737,7 @@ registry is built.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

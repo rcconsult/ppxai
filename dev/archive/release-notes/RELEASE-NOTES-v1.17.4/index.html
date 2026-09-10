@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1395,12 +1395,12 @@ All client-side subcommand tables were deleted — the engine owns them.</p>
 - <strong>Server route</strong>: <code>POST /complete</code> now passes <code>current_provider</code> and live <code>tool_names</code> from <code>s.engine.tool_manager.list_tools()</code> so <code>/tools help &lt;tab&gt;</code>, <code>/model &lt;tab&gt;</code>, and <code>/provider &lt;tab&gt;</code> work for Web and VSCode with the same fidelity Rich + Textual already had.</p>
 <p><strong>Stable JSON schema</strong> (relayed unchanged by the server to HTTP clients):
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>{
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  &quot;text&quot;:          str,   # text to insert
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  &quot;display&quot;:       str,   # dropdown label
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  &quot;description&quot;:   str,   # meta/hover text
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  &quot;kind&quot;:          str,   # command|alias|dir|file|file_ref|context_ref
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  "text":          str,   # text to insert
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  "display":       str,   # dropdown label
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  "description":   str,   # meta/hover text
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  "kind":          str,   # command|alias|dir|file|file_ref|context_ref
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                          # |subcommand|tool|model|provider|theme
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  &quot;replace_start&quot;: int    # negative offset from cursor
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  "replace_start": int    # negative offset from cursor
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>}
 </span></code></pre></div></p>
 <p><strong>Tests</strong>
@@ -1434,11 +1434,11 @@ VSCode all load the same schema at startup and derive their field
 maps from it. <strong>There are zero hand-maintained parallel schemas.</strong></p>
 <p><strong>The golden source of truth:</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.0&quot;</span><span class="p">,</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;fields&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">&quot;provider&quot;</span><span class="p">:</span><span class="w">            </span><span class="p">{</span><span class="nt">&quot;client&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;currentProvider&quot;</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span><span class="w">    </span><span class="nt">&quot;group&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;core&quot;</span><span class="p">},</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">&quot;tools_enabled&quot;</span><span class="p">:</span><span class="w">       </span><span class="p">{</span><span class="nt">&quot;client&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;toolsEnabled&quot;</span><span class="p">,</span><span class="w">     </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;boolean&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;group&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;features&quot;</span><span class="p">},</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">&quot;context_attachments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;client&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;contextAttachments&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;array&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">    </span><span class="nt">&quot;group&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;multimodal&quot;</span><span class="p">},</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0"</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">"fields"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">"provider"</span><span class="p">:</span><span class="w">            </span><span class="p">{</span><span class="nt">"client"</span><span class="p">:</span><span class="w"> </span><span class="s2">"currentProvider"</span><span class="p">,</span><span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span><span class="w">  </span><span class="nt">"default"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">    </span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"core"</span><span class="p">},</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">"tools_enabled"</span><span class="p">:</span><span class="w">       </span><span class="p">{</span><span class="nt">"client"</span><span class="p">:</span><span class="w"> </span><span class="s2">"toolsEnabled"</span><span class="p">,</span><span class="w">     </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"boolean"</span><span class="p">,</span><span class="w"> </span><span class="nt">"default"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"features"</span><span class="p">},</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">"context_attachments"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"client"</span><span class="p">:</span><span class="w"> </span><span class="s2">"contextAttachments"</span><span class="p">,</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"array"</span><span class="p">,</span><span class="w"> </span><span class="nt">"default"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">    </span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"multimodal"</span><span class="p">},</span>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="err">...</span><span class="mi">18</span><span class="w"> </span><span class="err">e</span><span class="kc">ntr</span><span class="err">ies</span><span class="w"> </span><span class="kc">t</span><span class="err">o</span><span class="kc">tal</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="p">}</span>
@@ -1536,7 +1536,7 @@ schema generator will automate even that step.</p>
 </span></code></pre></div>
 <div class="language-ts highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// chatPanel.ts :: state:sync handler</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">mapped</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">_appState</span><span class="p">.</span><span class="nx">updateFromPython</span><span class="p">(</span><span class="nx">changes</span><span class="p">);</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nx">postMessage</span><span class="p">({</span><span class="w"> </span><span class="kr">type</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;stateSync&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">changes</span><span class="o">:</span><span class="w"> </span><span class="kt">mapped</span><span class="w"> </span><span class="p">});</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nx">postMessage</span><span class="p">({</span><span class="w"> </span><span class="kr">type</span><span class="o">:</span><span class="w"> </span><span class="s1">'stateSync'</span><span class="p">,</span><span class="w"> </span><span class="nx">changes</span><span class="o">:</span><span class="w"> </span><span class="kt">mapped</span><span class="w"> </span><span class="p">});</span>
 </span></code></pre></div>
 <p><strong>Files:</strong>
 - <code>ppxai/engine/app_state_schema.json</code> — new, canonical source (18 fields)
@@ -1688,7 +1688,7 @@ adding a field means editing one file.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

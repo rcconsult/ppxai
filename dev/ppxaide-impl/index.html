@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1283,7 +1283,7 @@
 <tr>
 <td><strong>App theme</strong></td>
 <td>Overall UI colors (Textual CSS)</td>
-<td>17+ themes (catppuccin-mocha, dracula, etc.)</td>
+<td>Every Textual built-in <strong>plus 2 custom</strong> (<code>tron-legacy</code>, <code>matrix</code>, in <code>tui/themes/themes.py</code>). 8 are in the Ctrl+T cycle (<code>CYCLE_THEMES</code>); all are reachable via Ctrl+P. The exact total tracks the installed Textual version, so it is not pinned here.</td>
 </tr>
 <tr>
 <td><strong>Syntax theme</strong></td>
@@ -1302,14 +1302,14 @@
 3. All mounted CodeEditor widgets have their <code>syntax_theme</code> property updated.</p>
 <p>Mapping logic:
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Dark app themes → dark syntax themes</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="s2">&quot;catppuccin-mocha&quot;</span><span class="p">:</span> <span class="s2">&quot;dracula&quot;</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="s2">&quot;dracula&quot;</span><span class="p">:</span> <span class="s2">&quot;dracula&quot;</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="s2">&quot;tokyo-night&quot;</span><span class="p">:</span> <span class="s2">&quot;dracula&quot;</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="s2">&quot;tron-legacy&quot;</span><span class="p">:</span> <span class="s2">&quot;vscode_dark&quot;</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="s2">&quot;matrix&quot;</span><span class="p">:</span> <span class="s2">&quot;vscode_dark&quot;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="s2">"catppuccin-mocha"</span><span class="p">:</span> <span class="s2">"dracula"</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="s2">"dracula"</span><span class="p">:</span> <span class="s2">"dracula"</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="s2">"tokyo-night"</span><span class="p">:</span> <span class="s2">"dracula"</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="s2">"tron-legacy"</span><span class="p">:</span> <span class="s2">"vscode_dark"</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="s2">"matrix"</span><span class="p">:</span> <span class="s2">"vscode_dark"</span>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Light app themes → light syntax theme</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="s2">&quot;textual-light&quot;</span><span class="p">:</span> <span class="s2">&quot;github_light&quot;</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="s2">&quot;solarized-light&quot;</span><span class="p">:</span> <span class="s2">&quot;github_light&quot;</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="s2">"textual-light"</span><span class="p">:</span> <span class="s2">"github_light"</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="s2">"solarized-light"</span><span class="p">:</span> <span class="s2">"github_light"</span>
 </span></code></pre></div></p>
 <p><strong>Framework limitation:</strong> custom app themes (tron-legacy, matrix) cannot have matching custom syntax themes — Textual's TextArea only supports the 5 built-in syntax themes. Map to the closest built-in (vscode_dark for cyan/green themes).</p>
 <h2 id="why-markdown-renders-nicely-but-code-needs-manual-sync">Why Markdown renders nicely but code needs manual sync<a class="headerlink" href="#why-markdown-renders-nicely-but-code-needs-manual-sync" title="Permanent link">&para;</a></h2>
@@ -1359,7 +1359,13 @@
 - <code>Space</code> — inject <code>@file:path</code> at cursor in chat input
 - <code>Escape</code> — return focus to chat input</p>
 <h2 id="kitty-keyboard-protocol">Kitty keyboard protocol<a class="headerlink" href="#kitty-keyboard-protocol" title="Permanent link">&para;</a></h2>
-<p>Textual 8.1.1 does NOT auto-negotiate Kitty keyboard protocol (upstream issue #6074 open). Ctrl+Enter only works in terminals that send CSI u sequences:
+<p>Textual <strong>does</strong> emit the Kitty-protocol enable sequence (<code>\x1b[&gt;1u</code>) from
+its drivers — <code>linux_driver.py</code>, <code>linux_inline_driver.py</code> and
+<code>windows_driver.py</code> in textual 8.1.1 all write it. What it does <em>not</em> do is
+negotiate: it never checks whether the terminal implements the protocol, and
+takes no fallback when it doesn't (upstream issue #6074). So enabling is
+unconditional, and Ctrl+Enter still works only in terminals that actually
+send CSI u sequences:
 - <strong>Kitty</strong> — works natively
 - <strong>Ghostty</strong> — requires <code>ctrl+enter=text:\x1b[13;5u</code> in config
 - <strong>WezTerm</strong> — requires <code>enable_kitty_keyboard = true</code>
@@ -1399,7 +1405,7 @@
 <tr>
 <td>iTerm2 (macOS)</td>
 <td>TGP/iTerm2</td>
-<td>textual-image</td>
+<td>ITerm2ImageWidget</td>
 <td>ITerm2Image</td>
 </tr>
 <tr>
@@ -1410,14 +1416,17 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Textual TUI:</strong> uses <code>render_lines()</code> override to inject escape sequences. Cannot use Rich renderables directly because Textual processes segments differently. See <code>ppxai/tui/widgets/iterm2_widget.py</code>.</p>
+<p><strong>Textual TUI:</strong> <code>image_handlers.py::get_image_widget_class()</code> selects on
+<code>TERM_PROGRAM</code> — <code>wezterm</code> and <code>iterm.app</code> <strong>both</strong> get <code>ITerm2ImageWidget</code>
+(OSC 1337); everything else falls to <code>textual-image</code>. The widget uses a
+<code>render_lines()</code> override to inject escape sequences. Cannot use Rich renderables directly because Textual processes segments differently. See <code>ppxai/tui/widgets/iterm2_widget.py</code>.</p>
 <p><strong>Rich TUI:</strong> uses Rich renderables with the <code>_NULL_CONTROL</code> trick to pass escape sequences through:
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">_NULL_CONTROL</span> <span class="o">=</span> <span class="p">[(</span><span class="n">ControlType</span><span class="o">.</span><span class="n">CURSOR_FORWARD</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">yield</span> <span class="n">Segment</span><span class="p">(</span><span class="n">escape_sequence</span><span class="p">,</span> <span class="n">control</span><span class="o">=</span><span class="n">_NULL_CONTROL</span><span class="p">)</span>
 </span></code></pre></div></p>
 <p>WezTerm requires <code>TERM_PROGRAM</code> environment variable for detection:
 <div class="language-lua highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">-- ~/.wezterm.lua</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">config</span><span class="p">.</span><span class="py">set_environment_variables</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">TERM_PROGRAM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;WezTerm&#39;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">config</span><span class="p">.</span><span class="py">set_environment_variables</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">TERM_PROGRAM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'WezTerm'</span><span class="w"> </span><span class="p">}</span>
 </span></code></pre></div></p>
 <p>Key files:
 - <code>ppxai/tui/renderable/iterm2.py</code> — ITerm2Image Rich renderable
@@ -1498,7 +1507,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

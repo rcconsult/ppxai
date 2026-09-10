@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1556,9 +1556,9 @@
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>1. Look up ModelProfile for current model
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>2. Merge with AGENTS.md overrides → ppxai-config.json overrides
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>3. Check tc_profile.mode:
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>   - &quot;native&quot; → send tools in API request, parse tool_calls from response
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>   - &quot;prompt_based&quot; → inject tool schema into system prompt, parse JSON from text
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>   - &quot;auto&quot; → try native first, fall back to prompt-based on empty/failure
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>   - "native" → send tools in API request, parse tool_calls from response
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>   - "prompt_based" → inject tool schema into system prompt, parse JSON from text
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>   - "auto" → try native first, fall back to prompt-based on empty/failure
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>4. Fallback flags:
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>   - fallback_on_empty → native returns empty → retry with prompt-based
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>   - fallback_on_failure → native tool parse fails → try prompt-based parser
@@ -1574,25 +1574,25 @@
 <p><strong>What:</strong> Native mode now uses proper <code>tool</code> role messages instead of synthetic assistant/user pairs.</p>
 <p><strong>Before (v1.15.x):</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Synthetic pair — all providers</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">&quot;[tool call: read_file]&quot;</span><span class="p">))</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">&quot;[tool result: file contents]&quot;</span><span class="p">))</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">"assistant"</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">"[tool call: read_file]"</span><span class="p">))</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">"user"</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">"[tool result: file contents]"</span><span class="p">))</span>
 </span></code></pre></div></p>
 <p><strong>After (v1.16.0):</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Native mode — proper tool messages</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">role</span><span class="o">=</span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">content</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">tool_calls</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;tc_1&quot;</span><span class="p">,</span> <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;read_file&quot;</span><span class="p">,</span> <span class="s2">&quot;arguments&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">}}]</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">role</span><span class="o">=</span><span class="s2">"assistant"</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">content</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">tool_calls</span><span class="o">=</span><span class="p">[{</span><span class="s2">"id"</span><span class="p">:</span> <span class="s2">"tc_1"</span><span class="p">,</span> <span class="s2">"function"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"read_file"</span><span class="p">,</span> <span class="s2">"arguments"</span><span class="p">:</span> <span class="s2">"..."</span><span class="p">}}]</span>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">))</span>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">role</span><span class="o">=</span><span class="s2">&quot;tool&quot;</span><span class="p">,</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">content</span><span class="o">=</span><span class="s2">&quot;file contents&quot;</span><span class="p">,</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">tool_call_id</span><span class="o">=</span><span class="s2">&quot;tc_1&quot;</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">role</span><span class="o">=</span><span class="s2">"tool"</span><span class="p">,</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">content</span><span class="o">=</span><span class="s2">"file contents"</span><span class="p">,</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">tool_call_id</span><span class="o">=</span><span class="s2">"tc_1"</span>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">))</span>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1"># Prompt-based mode — unchanged synthetic pairs</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">&quot;[tool call: read_file]&quot;</span><span class="p">))</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">&quot;[tool result: file contents]&quot;</span><span class="p">))</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">"assistant"</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">"[tool call: read_file]"</span><span class="p">))</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">"user"</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">"[tool result: file contents]"</span><span class="p">))</span>
 </span></code></pre></div></p>
 <p><strong>Why:</strong> OpenAI, Gemini, and other providers expect <code>tool</code> role messages when using native function calling. Synthetic pairs worked but caused some models to get confused about conversation structure.</p>
 <p><strong>Changes:</strong>
@@ -1660,13 +1660,13 @@
 3. Built-in profile — <code>model_profiles.py</code> default</p>
 <p><strong>ppxai-config.json example:</strong>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">&quot;local-vllm&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">      </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="nt">&quot;*/qwen3-coder-30b*&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">          </span><span class="nt">&quot;tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">            </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;native&quot;</span><span class="p">,</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">            </span><span class="nt">&quot;parallel_tool_calls&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">"local-vllm"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="nt">"*/qwen3-coder-30b*"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">          </span><span class="nt">"tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">            </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"native"</span><span class="p">,</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">            </span><span class="nt">"parallel_tool_calls"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">          </span><span class="p">}</span>
 </span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">        </span><span class="p">}</span>
 </span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="p">}</span>
@@ -1676,10 +1676,10 @@
 </span></code></pre></div></p>
 <p><strong>AGENTS.md example:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">tool_calling</span><span class="p">:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="s">&quot;gpt-5.2*&quot;</span><span class="p p-Indicator">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="s">"gpt-5.2*"</span><span class="p p-Indicator">:</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">native</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">strip_json_from_text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="s">&quot;o4-mini*&quot;</span><span class="p p-Indicator">:</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="s">"o4-mini*"</span><span class="p p-Indicator">:</span>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prompt_based</span>
 </span></code></pre></div></p>
 <p><strong><code>/model info</code> command:</strong> Shows effective profile with source attribution per field (e.g., "mode: native (built-in profile)" vs "mode: prompt_based (AGENTS.md override)").</p>
@@ -2140,12 +2140,12 @@
 <p>No configuration changes required. Existing <code>ppxai-config.json</code> files work without modification.</p>
 <p><strong>New optional config:</strong> Per-model <code>tool_calling</code> overrides in provider config:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">&quot;my-provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">      </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">        </span><span class="nt">&quot;model-name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">          </span><span class="nt">&quot;tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">            </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;prompt_based&quot;</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">"my-provider"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">        </span><span class="nt">"model-name"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">          </span><span class="nt">"tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">            </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"prompt_based"</span>
 </span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">          </span><span class="p">}</span>
 </span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">        </span><span class="p">}</span>
 </span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">      </span><span class="p">}</span>
@@ -2272,7 +2272,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

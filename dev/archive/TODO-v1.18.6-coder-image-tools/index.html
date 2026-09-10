@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1284,7 +1284,7 @@
 <h2 id="two-changes-in-one-image-rebuild">Two changes in one image rebuild<a class="headerlink" href="#two-changes-in-one-image-rebuild" title="Permanent link">&para;</a></h2>
 <h3 id="1-pick-up-the-latest-code">1. Pick up the latest code<a class="headerlink" href="#1-pick-up-the-latest-code" title="Permanent link">&para;</a></h3>
 <p>The current <code>localhost:32000/coder-server:latest</code> (<code>sha256:de680b6d</code>) was built on <strong>2026-05-06</strong> from the previous <code>bugfix/v1.18.4</code> branch with the four context-indicator commits (<code>a4002844</code>, <code>1507e5ca</code>, <code>f5c84b7e</code>, <code>70a0457f</code>). Master has since released v1.18.4 and v1.18.5 (master tip = <code>f1e0579f</code>). The current <code>bugfix/v1.18.6</code> branch is v1.18.5 + the same four cherry-picked fixes (<code>a4002844</code>, <code>1507e5ca</code>, <code>f5c84b7e</code>, <code>70a0457f</code>) + two benchmark commits (<code>68624251</code>, <code>c7a35b01</code>).</p>
-<p><strong>Action:</strong> rerun <code>deploy/microk8s/build.sh server</code> from <code>bugfix/v1.18.6</code>. Kaniko mounts <code>/home/itadmin/tools/ppxai</code> directly, so no further setup needed.</p>
+<p><strong>Action:</strong> rerun <code>deploy/microk8s/build.sh server</code> from <code>bugfix/v1.18.6</code>. Kaniko mounts <code>/path/to/ppxai</code> directly, so no further setup needed.</p>
 <h3 id="2-add-utility-tools-to-the-runtime-stage">2. Add utility tools to the runtime stage<a class="headerlink" href="#2-add-utility-tools-to-the-runtime-stage" title="Permanent link">&para;</a></h3>
 <p>Coder pods are general-purpose developer sandboxes — users run <code>ppxai-server</code> AND the AI agents inside execute shell commands on their behalf. Right now the runtime image (Stage 2 in <code>deploy/images/server/Dockerfile</code>) only has <code>poppler-utils</code> + <code>libreoffice-nogui</code> baked in. Common tools agents reach for are missing, which forces the agent into awkward workarounds (e.g. <code>python3 -c "import json; ..."</code> instead of <code>jq</code>).</p>
 <p><strong>Action:</strong> extend the Stage-2 <code>RUN apt-get install</code> to add these:</p>
@@ -1385,7 +1385,7 @@
 <p><strong><code>gh</code> (GitHub CLI, ~30 MB)</strong> — initially proposed, removed by maintainer. Agents that need PR/issue/release work via <code>gh</code> can install it on-demand inside the session:
   <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://cli.github.com/packages/githubcli-archive-keyring.gpg<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/usr/share/keyrings/githubcli-archive-keyring.gpg<span class="w"> </span>&gt;<span class="w"> </span>/dev/null
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;deb [arch=</span><span class="k">$(</span>dpkg<span class="w"> </span>--print-architecture<span class="k">)</span><span class="s2"> signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">"deb [arch=</span><span class="k">$(</span>dpkg<span class="w"> </span>--print-architecture<span class="k">)</span><span class="s2"> signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main"</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/apt/sources.list.d/github-cli.list
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>gh
 </span></code></pre></div>
@@ -1445,7 +1445,7 @@
 </span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>ln<span class="w"> </span>-sf<span class="w"> </span>/usr/bin/fdfind<span class="w"> </span>/usr/local/bin/fd<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/apt/lists/*
 </span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a>
-</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="c"># yq (Go binary — apt&#39;s yq is the slow Python wrapper)</span>
+</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="c"># yq (Go binary — apt's yq is the slow Python wrapper)</span>
 </span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="k">RUN</span><span class="w"> </span>curl<span class="w"> </span>-fsSL<span class="w"> </span>-o<span class="w"> </span>/usr/local/bin/yq<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">    </span>https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>/usr/local/bin/yq
@@ -1465,13 +1465,13 @@
 <h2 id="verify-after-the-rebuild">Verify after the rebuild<a class="headerlink" href="#verify-after-the-rebuild" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Once Kaniko has pushed :latest, spawn a fresh pod and shell in:</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>microk8s<span class="w"> </span>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-n<span class="w"> </span>coder<span class="w"> </span>coder-server-&lt;user&gt;<span class="w"> </span>--<span class="w"> </span>which<span class="w"> </span>git<span class="w"> </span>jq<span class="w"> </span>yq<span class="w"> </span>rg<span class="w"> </span>fd<span class="w"> </span>tree<span class="w"> </span>nano<span class="w"> </span>vim.tiny<span class="w"> </span>rtk
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Expect 9 paths, no &quot;not found&quot;.</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Expect 9 paths, no "not found".</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Quick sanity on tool versions:</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>microk8s<span class="w"> </span>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-n<span class="w"> </span>coder<span class="w"> </span>coder-server-&lt;user&gt;<span class="w"> </span>--<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="s1">&#39;git --version; jq --version; yq --version; rg --version | head -1; nano --version | head -1; rtk --version&#39;</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="s1">'git --version; jq --version; yq --version; rg --version | head -1; nano --version | head -1; rtk --version'</span>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1"># Confirm rtk-ai/rtk (NOT reachingforthejack/rtk) — the &quot;gain&quot; subcommand</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1"># Confirm rtk-ai/rtk (NOT reachingforthejack/rtk) — the "gain" subcommand</span>
 </span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># only exists on rtk-ai/rtk:</span>
 </span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>microk8s<span class="w"> </span>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-n<span class="w"> </span>coder<span class="w"> </span>coder-server-&lt;user&gt;<span class="w"> </span>--<span class="w"> </span>rtk<span class="w"> </span>gain<span class="w"> </span>--help<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-3
 </span></code></pre></div>
@@ -1485,7 +1485,7 @@
 <ul>
 <li>Dockerfile current state: <a href="../deploy/images/server/Dockerfile">deploy/images/server/Dockerfile</a></li>
 <li>Build script: <a href="../deploy/microk8s/build.sh">deploy/microk8s/build.sh</a> (<code>./build.sh server</code>)</li>
-<li>Kaniko job: <a href="../deploy/microk8s/kaniko-server-job.yaml">deploy/microk8s/kaniko-server-job.yaml</a> — mounts <code>/home/itadmin/tools/ppxai</code> as build context, so the current working-tree commit IS the build source</li>
+<li>Kaniko job: <a href="../deploy/microk8s/kaniko-server-job.yaml">deploy/microk8s/kaniko-server-job.yaml</a> — mounts <code>/path/to/ppxai</code> as build context, so the current working-tree commit IS the build source</li>
 <li>Live registry: <code>localhost:32000/coder-server:latest</code> (<code>sha256:de680b6d</code>, 2026-05-06; needs refresh)</li>
 </ul>
 
@@ -1562,7 +1562,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

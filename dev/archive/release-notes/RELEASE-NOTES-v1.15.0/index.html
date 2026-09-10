@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1922,7 +1922,7 @@
 - 400+ lines of rendering logic</p>
 <h4 id="mechanical-dispatch-pattern">Mechanical Dispatch Pattern<a class="headerlink" href="#mechanical-dispatch-pattern" title="Permanent link">&para;</a></h4>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">CommandResult</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Type-based dispatch - no conditionals needed!&quot;&quot;&quot;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="sd">"""Type-based dispatch - no conditionals needed!"""</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">MessageResult</span><span class="p">):</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_render_message</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">TableResult</span><span class="p">):</span>
@@ -2040,17 +2040,17 @@
 - Extensible - add new handlers without modifying core</p>
 <h3 id="7-generation-parameters-new">7. Generation Parameters ⭐ NEW<a class="headerlink" href="#7-generation-parameters-new" title="Permanent link">&para;</a></h3>
 <p>Configure model behavior to reduce hallucinations:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;custom&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">&quot;generation_params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">&quot;top_p&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.9</span><span class="p">,</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">&quot;frequency_penalty&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.15</span><span class="p">,</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="nt">&quot;presence_penalty&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"custom"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">"generation_params"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">"temperature"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">"top_p"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.9</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">"frequency_penalty"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.15</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="nt">"presence_penalty"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="p">},</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">      </span><span class="nt">&quot;my-model&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="nt">&quot;generation_params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">      </span><span class="nt">"my-model"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="nt">"generation_params"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"temperature"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="w"> </span><span class="p">}</span>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">      </span><span class="p">}</span>
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="p">}</span>
@@ -2083,22 +2083,22 @@
 </ul>
 <h3 id="10-new-configuration-sections-new">10. New Configuration Sections ⭐ NEW<a class="headerlink" href="#10-new-configuration-sections-new" title="Permanent link">&para;</a></h3>
 <p><strong>Visualization settings</strong> (<code>visualization</code>):
-<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">&quot;visualization&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;max_rows&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="p">,</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;max_columns&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">&quot;page_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">&quot;tree_depth&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">&quot;auto_detect&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">&quot;csv_delimiter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">&quot;theme&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;default&quot;</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">"visualization"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"max_rows"</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">"max_columns"</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">"page_size"</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">"tree_depth"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">"auto_detect"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">"csv_delimiter"</span><span class="p">:</span><span class="w"> </span><span class="s2">"auto"</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">"theme"</span><span class="p">:</span><span class="w"> </span><span class="s2">"default"</span>
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <p><strong>TUI settings</strong> (<code>tui</code>):
-<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">&quot;tui&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;theme&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;standard&quot;</span><span class="p">,</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;show_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;show_cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">&quot;show_datetime&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">"tui"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"theme"</span><span class="p">:</span><span class="w"> </span><span class="s2">"standard"</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">"show_version"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">"show_cwd"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">"show_datetime"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <h3 id="11-command-factory-pattern">11. Command Factory Pattern<a class="headerlink" href="#11-command-factory-pattern" title="Permanent link">&para;</a></h3>
@@ -2592,7 +2592,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

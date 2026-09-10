@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -871,10 +871,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-type_checking-pattern-static-analysis-only" class="md-nav__link">
+  <a href="#1-protocol-based-dependency-inversion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. TYPE_CHECKING Pattern (Static Analysis Only)
+        1. Protocol-Based Dependency Inversion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-three-top-level-axes-adr-0010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config: three top-level axes (ADR 0010)
       
     </span>
   </a>
@@ -1868,10 +1879,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-type_checking-pattern-static-analysis-only" class="md-nav__link">
+  <a href="#1-protocol-based-dependency-inversion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. TYPE_CHECKING Pattern (Static Analysis Only)
+        1. Protocol-Based Dependency Inversion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-three-top-level-axes-adr-0010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config: three top-level axes (ADR 0010)
       
     </span>
   </a>
@@ -2505,7 +2527,7 @@
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>         ▼                  ▼                    ▼
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>┌─────────────────────────────────────────────────────────────────┐
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│  ppxai/server/http.py   (FastAPI, REST + SSE)                   │
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│  POST /chat  GET /stream  GET /files/list  POST /command  …     │
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│  POST /chat (SSE)  GET /files/list  POST /command/&lt;name&gt;  …     │
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>└────────────────────────────┬────────────────────────────────────┘
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                             │
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                             ▼
@@ -2524,62 +2546,118 @@
 </span></code></pre></div>
 <h2 id="python-module-hierarchy">Python Module Hierarchy<a class="headerlink" href="#python-module-hierarchy" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ppxai/
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── config.py          # LEAF: No ppxai imports (safe to import anywhere)
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── themes.py          # LEAF: No ppxai imports
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── prompts.py         # LEAF: No ppxai imports
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>├── utils.py           # LEAF: No ppxai imports
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>├── common/            # Low-level utilities — every file here is a LEAF
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│   ├── logger.py      # No ppxai imports (enable_all/disable_all v1.15.4)
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>│   ├── preview.py     # Preview utilities (v1.15.4)
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>│   ├── consent.py     # Uses logger only
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>│   ├── format.py      # format_tokens / format_usage_badge (v1.18.0 Phase 4 — canonical Python source for the JS/TS mirrors in web/shared and vscode/src/shared)
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>│   ├── autosave_guard.py  # AutosaveFailureGuard state machine (v1.18.0 Phase 5f — surfaces sustained auto-save failures to the user)
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│   ├── atomic_file.py     # atomic_replace with Windows lock-retry (v1.18.0 Phase 5g — extracted from editor.py)
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>│   ├── docx_to_pdf.py     # convert_docx_to_pdf via LibreOffice headless (v1.18.0 Phase 5g — extracted from server/routes/file_serve.py)
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>│   ├── async_compat.py    # Asyncio compatibility helpers
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>│   └── file_type.py       # File-type / mimetype helpers
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>├── preview_server.py  # Stdlib HTTP preview server (v1.15.4)
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>├── engine/            # Core business logic
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>│   ├── types.py       # LEAF: No ppxai imports
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>│   ├── bootstrap.py   # LEAF: Bootstrap context parsing (v1.14.0)
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>│   ├── providers/     # Provider implementations
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>│   ├── tools/         # Tool system
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>│   │   ├── manager.py # Uses types only
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>│   │   └── builtin/   # Built-in tools (TYPE_CHECKING pattern)
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>│   └── client.py      # Facade (uses bootstrap.py)
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>├── server/            # HTTP server
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>│   └── http.py        # Uses engine, config
-</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>├── commands/          # UI-agnostic command layer (v1.15.0 factory + protocol)
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>│   ├── protocol.py    # CommandContext protocol (interface)
-</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>│   ├── factory.py     # CommandFactory + CommandSpec registry
-</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>│   ├── context.py     # Adapters: RichCommandContext (Pattern A proxy), ServerCommandContext (Pattern B explicit). Textual uses no adapter — see ADR 0002.
-</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>│   ├── results.py     # 17 CommandResult types (v1.15.0)
-</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>│   ├── system.py      # /help, /status, /theme
-</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>│   ├── provider.py    # /provider, /model
-</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>│   ├── agent.py       # /agent (agent loop)
-</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>│   └── utility.py     # /context, /debug-log
-</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>└── main.py            # Entry point
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── config/            # LEAF pkg: No ppxai imports (safe to import anywhere)
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│   ├── loader.py      # Config file discovery + load
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│   ├── store.py       # ConfigStore, get_config, reload
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│   ├── execution.py   # execution.* axis readers (ADR 0010/0011)
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│   ├── tls.py         # LEAF: the ONE outbound-TLS resolver (network.ssl.* + SSL_* env)
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│   └── …              # paths, providers, tools, features, prompts, context, defaults
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>├── constants.py       # LEAF: Enums and constants
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>├── prompts.py         # LEAF: No ppxai imports
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>├── common/            # Low-level utilities — every file here is a LEAF
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>│   ├── logger.py      # No ppxai imports (enable_all/disable_all v1.15.4)
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│   ├── preview.py     # Preview utilities (v1.15.4)
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>│   ├── consent.py     # Uses logger only
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>│   ├── format.py      # format_tokens / format_usage_badge (v1.18.0 Phase 4 — canonical Python source for the JS/TS mirrors in web/shared and vscode/src/shared)
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>│   ├── autosave_guard.py  # AutosaveFailureGuard state machine (v1.18.0 Phase 5f — surfaces sustained auto-save failures to the user)
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>│   ├── atomic_file.py     # atomic_replace with Windows lock-retry (v1.18.0 Phase 5g — extracted from editor.py)
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>│   ├── docx_to_pdf.py     # convert_docx_to_pdf via LibreOffice headless (v1.18.0 Phase 5g — extracted from server/routes/file_serve.py)
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>│   ├── async_compat.py    # Asyncio compatibility helpers
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>│   └── file_type.py       # File-type / mimetype helpers
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>├── preview_server.py  # Stdlib HTTP preview server (v1.15.4)
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>├── engine/            # Core business logic (~36 modules; the layering-relevant ones shown)
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>│   ├── types.py       # LEAF: No ppxai imports — ToolManagerProtocol / ToolEngineProtocol live here
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>│   ├── task_runner.py # build_task_runner — embeddable, drives in-process runs (T8b)
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>│   ├── task_backend.py# In-process run lifecycle for the TUIs (no HTTP)
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>│   ├── task_authorizer.py # authorize_task(): THE admission boundary for every tier
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>│   ├── bootstrap.py   # LEAF: Bootstrap context parsing (v1.14.0)
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>│   ├── providers/     # Provider implementations
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>│   ├── tools/         # Tool system
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>│   │   ├── manager.py # Uses types only
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>│   │   └── builtin/   # Built-in tools (Protocol-based imports)
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>│   └── client.py      # Facade (uses bootstrap.py)
+</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>├── server/            # HTTP server
+</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>│   └── http.py        # Uses engine, config
+</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>├── commands/          # UI-agnostic command layer (v1.15.0 factory + protocol)
+</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>│   ├── protocol.py    # CommandContext protocol (interface)
+</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>│   ├── factory.py     # CommandFactory + CommandSpec registry
+</span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>│   ├── context.py     # Adapters: RichCommandContext (Pattern A proxy), ServerCommandContext (Pattern B explicit). Textual uses no adapter — see ADR 0002.
+</span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>│   ├── task.py        # /task + /run handlers; per-verb loop gating (T8b)
+</span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>│   ├── results.py     # 21 CommandResult types
+</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>│   ├── system.py      # /help, /status, /theme
+</span><span id="__span-1-41"><a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>│   ├── provider.py    # /provider, /model
+</span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>│   ├── agent.py       # /auto (agent loop)
+</span><span id="__span-1-43"><a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>│   └── utility.py     # /context, /debug-log
+</span><span id="__span-1-44"><a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a>└── rich/main.py       # Rich TUI entry point (see pyproject [project.scripts])
 </span></code></pre></div>
 <h2 id="import-patterns">Import Patterns<a class="headerlink" href="#import-patterns" title="Permanent link">&para;</a></h2>
-<h3 id="1-type_checking-pattern-static-analysis-only">1. TYPE_CHECKING Pattern (Static Analysis Only)<a class="headerlink" href="#1-type_checking-pattern-static-analysis-only" title="Permanent link">&para;</a></h3>
-<p>Used in builtin tools to avoid circular imports with manager.py and client.py.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">..manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolManager</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">...client</span><span class="w"> </span><span class="kn">import</span> <span class="n">EngineClient</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">register_tools</span><span class="p">(</span><span class="n">manager</span><span class="p">:</span> <span class="s1">&#39;ToolManager&#39;</span><span class="p">,</span> <span class="n">engine</span><span class="p">:</span> <span class="s1">&#39;EngineClient&#39;</span><span class="p">):</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="o">...</span>
+<h3 id="1-protocol-based-dependency-inversion">1. Protocol-Based Dependency Inversion<a class="headerlink" href="#1-protocol-based-dependency-inversion" title="Permanent link">&para;</a></h3>
+<p>Circular imports between builtin tools and <code>manager.py</code>/<code>client.py</code> are broken by
+depending on a <strong>Protocol declared in a leaf module</strong>, not on the concrete class.
+Imports stay at the top of the file and are real at runtime.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># ppxai/engine/tools/builtin/editor.py</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">...types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolEngineProtocol</span><span class="p">,</span> <span class="n">ToolManagerProtocol</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">..base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseTool</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">register_tools</span><span class="p">(</span><span class="n">manager</span><span class="p">:</span> <span class="n">ToolManagerProtocol</span><span class="p">,</span> <span class="n">engine</span><span class="p">:</span> <span class="n">ToolEngineProtocol</span><span class="p">):</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="o">...</span>
 </span></code></pre></div>
-<p><strong>Why</strong>: Type hints are evaluated lazily (as strings) at runtime, so the imports
-inside TYPE_CHECKING block are only needed for static type checkers like mypy.</p>
-<p><strong>Files using this pattern</strong>:
-- <code>ppxai/engine/tools/builtin/*.py</code> (all builtin tools)
-- <code>ppxai/server/session_manager.py</code></p>
+<h3 id="config-three-top-level-axes-adr-0010">Config: three top-level axes (ADR 0010)<a class="headerlink" href="#config-three-top-level-axes-adr-0010" title="Permanent link">&para;</a></h3>
+<p>Configuration is organised by <em>what a key describes</em>, not by which code path
+happens to read it:</p>
+<table>
+<thead>
+<tr>
+<th>Axis</th>
+<th>Answers</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>providers.*</code></td>
+<td><strong>WHO</strong> answers</td>
+<td>base_url, api keys, models, per-provider <code>web_search</code></td>
+</tr>
+<tr>
+<td><code>tools.*</code></td>
+<td><strong>WHAT</strong> each tool is, tier-independently</td>
+<td><code>tools.shell.*</code>, <code>tools.web_search.*</code>, <code>tools.&lt;tool&gt;.egress</code>, the agent <em>loop</em> knobs (<code>max_iterations</code>, <code>zombie_threshold</code>)</td>
+</tr>
+<tr>
+<td><code>execution.*</code></td>
+<td><strong>WHERE</strong> work runs</td>
+<td><code>execution.task.*</code> (tier switch, sandbox, consent, budgets), <code>execution.run.*</code>, <code>execution.profiles</code>, <code>execution.egress_ceiling</code>, <code>execution.collect</code>, <code>execution.default_subagent</code></td>
+</tr>
+</tbody>
+</table>
+<p>The point of the split is that the security surface — tier switch, sandbox,
+consent, egress ceiling — reads top-to-bottom in one block instead of being
+a sub-key of a sub-key of <code>tools</code>. <code>network.*</code> sits alongside for transport
+settings (<code>network.ssl.*</code>, <code>network.allow_outbound</code>).</p>
+<p>ADR 0010 moved six tier keys off <code>tools.agent.*</code> as a <strong>clean break with no
+dual-read</strong>: a config left at an old path is silently ignored and reverts to
+its default, which is why <code>/doctor</code> scans the config <em>file</em> for stale paths.</p>
+<p><strong>Why</strong>: <code>ppxai/engine/types.py</code> is a leaf — it imports nothing from ppxai — so
+anything may import it. The tool depends on the <em>interface</em> it actually needs
+rather than on <code>EngineClient</code>, which would close an import cycle. The concrete
+class satisfies the Protocol structurally; nothing needs to inherit from it.</p>
+<p><strong>Protocols defined in <code>ppxai/engine/types.py</code></strong>: <code>ToolEngineProtocol</code>,
+<code>ToolManagerProtocol</code>, <code>EngineClientProtocol</code>, <code>ArtifactRef</code>,
+<code>MarshallableArtifact</code>.</p>
+<blockquote>
+<p><strong>Do not use <code>if TYPE_CHECKING:</code> or function-local imports to break cycles.</strong>
+This codebase deliberately does not use either — a cycle that needs hiding is a
+layering bug, and the fix is a Protocol in a leaf module. There are zero
+<code>TYPE_CHECKING</code> blocks in <code>engine/tools/builtin/</code> or <code>server/session_manager.py</code>
+(both of which an earlier revision of this document incorrectly cited as
+examples of the pattern). See
+<a href="../patterns/protocol-dependency-inversion/">patterns/protocol-dependency-inversion.md</a>.</p>
+</blockquote>
 <h3 id="2-dag-import-structure">2. DAG Import Structure<a class="headerlink" href="#2-dag-import-structure" title="Permanent link">&para;</a></h3>
 <p>The codebase follows a Directed Acyclic Graph (DAG) for imports:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>config.py, types.py, logger.py  (leaf modules - no ppxai imports)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>config/, engine/types.py, common/logger.py  (leaf modules - no ppxai imports)
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>           ↓
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>engine/providers/, engine/tools/manager.py
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>           ↓
@@ -2589,22 +2667,52 @@ inside TYPE_CHECKING block are only needed for static type checkers like mypy.</
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>           ↓
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>rich/, tui/, server/  (client layer)
 </span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>           ↓
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>main.py (entry points)
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>entry points (rich/main.py, tui/__init__.py, server/http.py)
 </span></code></pre></div>
 <p><strong>Rule</strong>: Each module only imports from modules "below" it in the hierarchy.
-No circular dependencies exist. The <code>commands/</code> layer uses <code>TYPE_CHECKING</code>
-for forward references to client types (CommandHandler, PPXAIDEApp).</p>
+No circular dependencies exist. The <code>commands/</code> layer types against
+<code>EngineClientProtocol</code> rather than importing the concrete <code>EngineClient</code>.</p>
+<p>Entry points are declared in <code>pyproject.toml</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Script</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai</code></td>
+<td><code>ppxai.rich.main:main</code></td>
+</tr>
+<tr>
+<td><code>ppxaide</code></td>
+<td><code>ppxai.tui:main</code></td>
+</tr>
+<tr>
+<td><code>ppxai-server</code></td>
+<td><code>ppxai.server.http:run_server</code></td>
+</tr>
+<tr>
+<td><code>ppxai-desktop</code></td>
+<td><code>ppxai.server.http:run_desktop</code></td>
+</tr>
+</tbody>
+</table>
 <h3 id="3-clean-leaf-modules">3. Clean Leaf Modules<a class="headerlink" href="#3-clean-leaf-modules" title="Permanent link">&para;</a></h3>
 <p>Modules that have no ppxai imports and can be imported by anything.</p>
 <ul>
-<li><code>ppxai/config.py</code> - Configuration loading and defaults</li>
-<li><code>ppxai/themes.py</code> - Theme definitions</li>
+<li><code>ppxai/config/</code> - Configuration package (<code>loader</code>, <code>store</code>, <code>paths</code>, <code>providers</code>,
+  <code>tools</code>, <code>execution</code>, <code>features</code>, <code>prompts</code>, <code>context</code>, <code>defaults</code>)</li>
+<li><code>ppxai/engine/types.py</code> - Protocols and shared type definitions</li>
+<li><code>ppxai/constants.py</code> - Enums and constants</li>
 <li><code>ppxai/prompts.py</code> - Prompt templates</li>
-<li><code>ppxai/utils.py</code> - Utility functions</li>
-<li><code>ppxai/engine/types.py</code> - Type definitions (Message, Event, etc.)</li>
+<li><code>ppxai/common/logger.py</code> - Logging</li>
 <li><code>ppxai/engine/bootstrap.py</code> - Bootstrap context parsing (v1.14.0)</li>
-<li><code>ppxai/common/logger.py</code> - Logging setup</li>
 </ul>
+<p>Theme definitions live with their client (<code>ppxai/rich/themes.py</code>,
+<code>ppxai/tui/themes/themes.py</code>), and helpers in <code>ppxai/rich/utils.py</code> — none of
+these is a top-level leaf module.</p>
 <p>These form the "bottom" of the import hierarchy.</p>
 <h3 id="4-bootstrap-context-v1140">4. Bootstrap Context (v1.14.0)<a class="headerlink" href="#4-bootstrap-context-v1140" title="Permanent link">&para;</a></h3>
 <p>The bootstrap module provides project-specific AI instructions:</p>
@@ -2777,17 +2885,17 @@ envelope.</p>
 </span></code></pre></div>
 <p><strong>Wire envelope</strong> (<code>POST /command/&lt;name&gt;</code> response):</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">                      </span><span class="c1">// mirrors result.success</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">                      </span><span class="c1">// CommandResult.to_dict()</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;FileViewResult&quot;</span><span class="p">,</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;success&quot;</span><span class="p">,</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nt">&quot;filepath&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/abs/path.py&quot;</span><span class="p">,</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">"ok"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">                      </span><span class="c1">// mirrors result.success</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">"result"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">                      </span><span class="c1">// CommandResult.to_dict()</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FileViewResult"</span><span class="p">,</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"success"</span><span class="p">,</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nt">"filepath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/abs/path.py"</span><span class="p">,</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="nt">"content"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span>
 </span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span><span class="nt">&quot;side_effects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span><span class="p">{</span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;open_editor&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;filepath&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/abs/path.py&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;line&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span><span class="p">}</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span><span class="nt">"side_effects"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span><span class="p">{</span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open_editor"</span><span class="p">,</span><span class="w"> </span><span class="nt">"filepath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/abs/path.py"</span><span class="p">,</span><span class="w"> </span><span class="nt">"line"</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span><span class="p">}</span>
 </span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">  </span><span class="p">],</span>
-</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
 </span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>Side-effect kinds (v1.18.1)</strong> — see <code>ppxai/commands/results.py::SideEffectKind</code>
@@ -2822,7 +2930,7 @@ different triggers:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>  ENGINE                              CLIENTS (web, VSCode)
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>  ──────                              ─────────────────────
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>  state.set(&quot;working_dir&quot;, x)
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>  state.set("working_dir", x)
 </span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>       │
 </span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>       ▼
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>  ┌───────────────────┐
@@ -2909,7 +3017,7 @@ pinned in <a href="../decisions/0002-command-context-three-pattern-split/">ADR 0
 </ol>
 <h2 id="testing-import-health">Testing Import Health<a class="headerlink" href="#testing-import-health" title="Permanent link">&para;</a></h2>
 <p>To verify no circular imports exist:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import ppxai&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import ppxai"</span>
 </span></code></pre></div>
 <p>If this fails with ImportError, there's a circular dependency.</p>
 <hr />
@@ -2926,35 +3034,35 @@ pinned in <a href="../decisions/0002-command-context-three-pattern-split/">ADR 0
 - Badge updates half-applied → confusing status display</p>
 <h4 id="solution-checkpointcommitrollback-pattern">Solution: Checkpoint/Commit/Rollback Pattern<a class="headerlink" href="#solution-checkpointcommitrollback-pattern" title="Permanent link">&para;</a></h4>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">BadgeTransaction</span><span class="p">:</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Transaction for atomic badge updates with rollback support.</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="sd">"""Transaction for atomic badge updates with rollback support.</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="sd">    GitOps-style API:</span>
 </span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="sd">    1. Checkpoint current state (automatic on enter)</span>
 </span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="sd">    2. Stage operations (add, update, remove, hide, show)</span>
 </span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="sd">    3. Commit changes (atomic - all succeed or all rollback)</span>
 </span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="sd">    4. Rollback on failure with user-friendly error messages</span>
-</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="sd">    """</span>
 </span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>
 </span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Backup current badge state.&quot;&quot;&quot;</span>
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">        </span><span class="sd">"""Backup current badge state."""</span>
 </span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>
 </span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
-</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply staged changes atomically.</span>
+</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="w">        </span><span class="sd">"""Apply staged changes atomically.</span>
 </span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="sd">        Returns: (success, error_message)</span>
-</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="sd">        """</span>
 </span><span id="__span-13-18"><a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a>
 </span><span id="__span-13-19"><a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">rollback</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-13-20"><a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Restore badge state from backup.&quot;&quot;&quot;</span>
+</span><span id="__span-13-20"><a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a><span class="w">        </span><span class="sd">"""Restore badge state from backup."""</span>
 </span></code></pre></div>
 <h4 id="usage-pattern">Usage Pattern<a class="headerlink" href="#usage-pattern" title="Permanent link">&para;</a></h4>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Atomic multi-operation update</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="k">with</span> <span class="n">status_bar</span><span class="o">.</span><span class="n">transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;tokens&quot;</span><span class="p">,</span> <span class="s2">&quot;Tokens&quot;</span><span class="p">,</span> <span class="s2">&quot;1234&quot;</span><span class="p">)</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="s2">&quot;ollama&quot;</span><span class="p">)</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;cost&quot;</span><span class="p">)</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"tokens"</span><span class="p">,</span> <span class="s2">"Tokens"</span><span class="p">,</span> <span class="s2">"1234"</span><span class="p">)</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">"provider"</span><span class="p">,</span> <span class="s2">"ollama"</span><span class="p">)</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s2">"cost"</span><span class="p">)</span>
 </span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
 </span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">success</span><span class="p">:</span>
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>        <span class="n">notify_user</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Update failed: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>        <span class="n">notify_user</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Update failed: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>        <span class="c1"># State automatically rolled back</span>
 </span></code></pre></div>
 <h4 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h4>
@@ -2973,17 +3081,17 @@ Context manager auto-rollbacks on exceptions via <code>__exit__</code>.</p>
 <h4 id="where-to-apply-this-pattern">Where to Apply This Pattern<a class="headerlink" href="#where-to-apply-this-pattern" title="Permanent link">&para;</a></h4>
 <p><strong>Provider/Model Switching:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">with</span> <span class="n">config_transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">set_provider</span><span class="p">(</span><span class="s2">&quot;ollama&quot;</span><span class="p">)</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">set_model</span><span class="p">(</span><span class="s2">&quot;qwen2.5-coder:32b&quot;</span><span class="p">)</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">set_provider</span><span class="p">(</span><span class="s2">"ollama"</span><span class="p">)</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">set_model</span><span class="p">(</span><span class="s2">"qwen2.5-coder:32b"</span><span class="p">)</span>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_tools</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_context_limit</span><span class="p">(</span><span class="mi">32000</span><span class="p">)</span>
 </span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
 </span></code></pre></div></p>
 <p><strong>Context Injection:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="k">with</span> <span class="n">context_transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">inject_file</span><span class="p">(</span><span class="s2">&quot;src/main.py&quot;</span><span class="p">)</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">inject_file</span><span class="p">(</span><span class="s2">&quot;tests/test_main.py&quot;</span><span class="p">)</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">inject_git_diff</span><span class="p">(</span><span class="s2">&quot;HEAD~1&quot;</span><span class="p">)</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">inject_file</span><span class="p">(</span><span class="s2">"src/main.py"</span><span class="p">)</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">inject_file</span><span class="p">(</span><span class="s2">"tests/test_main.py"</span><span class="p">)</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">inject_git_diff</span><span class="p">(</span><span class="s2">"HEAD~1"</span><span class="p">)</span>
 </span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
 </span></code></pre></div></p>
 <p><strong>Session State Management:</strong>
@@ -2996,18 +3104,18 @@ Context manager auto-rollbacks on exceptions via <code>__exit__</code>.</p>
 </span></code></pre></div></p>
 <p><strong>Multi-Step Tool Calls:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">with</span> <span class="n">tool_transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">&quot;config.json&quot;</span><span class="p">)</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">modify_config</span><span class="p">(</span><span class="s2">&quot;api_key&quot;</span><span class="p">,</span> <span class="n">new_value</span><span class="p">)</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">write_file</span><span class="p">(</span><span class="s2">&quot;config.json&quot;</span><span class="p">)</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">git_commit</span><span class="p">(</span><span class="s2">&quot;Update API key&quot;</span><span class="p">)</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">"config.json"</span><span class="p">)</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">modify_config</span><span class="p">(</span><span class="s2">"api_key"</span><span class="p">,</span> <span class="n">new_value</span><span class="p">)</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">write_file</span><span class="p">(</span><span class="s2">"config.json"</span><span class="p">)</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">git_commit</span><span class="p">(</span><span class="s2">"Update API key"</span><span class="p">)</span>
 </span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
 </span></code></pre></div></p>
 <p><strong>UI State Synchronization:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="k">with</span> <span class="n">ui_transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_statusbar</span><span class="p">(</span><span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="s2">&quot;ollama&quot;</span><span class="p">)</span>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_statusbar</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;llama3:70b&quot;</span><span class="p">)</span>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">show_panel</span><span class="p">(</span><span class="s2">&quot;side-panel&quot;</span><span class="p">)</span>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_title</span><span class="p">(</span><span class="s2">&quot;ollama/llama3:70b&quot;</span><span class="p">)</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_statusbar</span><span class="p">(</span><span class="s2">"provider"</span><span class="p">,</span> <span class="s2">"ollama"</span><span class="p">)</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_statusbar</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="s2">"llama3:70b"</span><span class="p">)</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">show_panel</span><span class="p">(</span><span class="s2">"side-panel"</span><span class="p">)</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_title</span><span class="p">(</span><span class="s2">"ollama/llama3:70b"</span><span class="p">)</span>
 </span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
 </span></code></pre></div></p>
 <h4 id="benefits-for-ai-agents">Benefits for AI Agents<a class="headerlink" href="#benefits-for-ai-agents" title="Permanent link">&para;</a></h4>
@@ -3034,32 +3142,32 @@ Rollback should work even if partially applied. Test with intentional failures.<
 Error messages should explain what failed, why, and what was attempted.</p>
 <h4 id="testing-transactional-code">Testing Transactional Code<a class="headerlink" href="#testing-transactional-code" title="Permanent link">&para;</a></h4>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_successful_transaction</span><span class="p">():</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;All operations succeed - state updated.&quot;&quot;&quot;</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">    </span><span class="sd">"""All operations succeed - state updated."""</span>
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>    <span class="k">with</span> <span class="n">transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;2&quot;</span><span class="p">)</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="s2">"A"</span><span class="p">,</span> <span class="s2">"1"</span><span class="p">)</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"b"</span><span class="p">,</span> <span class="s2">"B"</span><span class="p">,</span> <span class="s2">"2"</span><span class="p">)</span>
 </span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>        <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
 </span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>        <span class="k">assert</span> <span class="n">success</span>
 </span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>        <span class="k">assert</span> <span class="n">error</span> <span class="ow">is</span> <span class="kc">None</span>
 </span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>
 </span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_failed_transaction_rollback</span><span class="p">():</span>
-</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;One operation fails - all rollback.&quot;&quot;&quot;</span>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="w">    </span><span class="sd">"""One operation fails - all rollback."""</span>
 </span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>    <span class="n">initial_state</span> <span class="o">=</span> <span class="n">get_state</span><span class="p">()</span>
 </span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a>    <span class="k">with</span> <span class="n">transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
-</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
-</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;Duplicate&quot;</span><span class="p">,</span> <span class="s2">&quot;2&quot;</span><span class="p">)</span>  <span class="c1"># Fails</span>
+</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="s2">"A"</span><span class="p">,</span> <span class="s2">"1"</span><span class="p">)</span>
+</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="s2">"Duplicate"</span><span class="p">,</span> <span class="s2">"2"</span><span class="p">)</span>  <span class="c1"># Fails</span>
 </span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a>        <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
 </span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a>        <span class="k">assert</span> <span class="ow">not</span> <span class="n">success</span>
-</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a>        <span class="k">assert</span> <span class="s2">&quot;already exists&quot;</span> <span class="ow">in</span> <span class="n">error</span>
+</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a>        <span class="k">assert</span> <span class="s2">"already exists"</span> <span class="ow">in</span> <span class="n">error</span>
 </span><span id="__span-20-19"><a id="__codelineno-20-19" name="__codelineno-20-19" href="#__codelineno-20-19"></a>    <span class="k">assert</span> <span class="n">get_state</span><span class="p">()</span> <span class="o">==</span> <span class="n">initial_state</span>  <span class="c1"># Rolled back</span>
 </span><span id="__span-20-20"><a id="__codelineno-20-20" name="__codelineno-20-20" href="#__codelineno-20-20"></a>
 </span><span id="__span-20-21"><a id="__codelineno-20-21" name="__codelineno-20-21" href="#__codelineno-20-21"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_exception_safety</span><span class="p">():</span>
-</span><span id="__span-20-22"><a id="__codelineno-20-22" name="__codelineno-20-22" href="#__codelineno-20-22"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Exception during commit - auto rollback.&quot;&quot;&quot;</span>
+</span><span id="__span-20-22"><a id="__codelineno-20-22" name="__codelineno-20-22" href="#__codelineno-20-22"></a><span class="w">    </span><span class="sd">"""Exception during commit - auto rollback."""</span>
 </span><span id="__span-20-23"><a id="__codelineno-20-23" name="__codelineno-20-23" href="#__codelineno-20-23"></a>    <span class="n">initial_state</span> <span class="o">=</span> <span class="n">get_state</span><span class="p">()</span>
 </span><span id="__span-20-24"><a id="__codelineno-20-24" name="__codelineno-20-24" href="#__codelineno-20-24"></a>    <span class="k">try</span><span class="p">:</span>
 </span><span id="__span-20-25"><a id="__codelineno-20-25" name="__codelineno-20-25" href="#__codelineno-20-25"></a>        <span class="k">with</span> <span class="n">transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
-</span><span id="__span-20-26"><a id="__codelineno-20-26" name="__codelineno-20-26" href="#__codelineno-20-26"></a>            <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
-</span><span id="__span-20-27"><a id="__codelineno-20-27" name="__codelineno-20-27" href="#__codelineno-20-27"></a>            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Simulated error&quot;</span><span class="p">)</span>
+</span><span id="__span-20-26"><a id="__codelineno-20-26" name="__codelineno-20-26" href="#__codelineno-20-26"></a>            <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="s2">"A"</span><span class="p">,</span> <span class="s2">"1"</span><span class="p">)</span>
+</span><span id="__span-20-27"><a id="__codelineno-20-27" name="__codelineno-20-27" href="#__codelineno-20-27"></a>            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Simulated error"</span><span class="p">)</span>
 </span><span id="__span-20-28"><a id="__codelineno-20-28" name="__codelineno-20-28" href="#__codelineno-20-28"></a>    <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
 </span><span id="__span-20-29"><a id="__codelineno-20-29" name="__codelineno-20-29" href="#__codelineno-20-29"></a>        <span class="k">pass</span>
 </span><span id="__span-20-30"><a id="__codelineno-20-30" name="__codelineno-20-30" href="#__codelineno-20-30"></a>    <span class="k">assert</span> <span class="n">get_state</span><span class="p">()</span> <span class="o">==</span> <span class="n">initial_state</span>  <span class="c1"># Rolled back</span>
@@ -3131,6 +3239,52 @@ Error messages should explain what failed, why, and what was attempted.</p>
 <p><strong>StreamHandler</strong> — wraps the SSE fetch with a proper line buffer and <code>requestAnimationFrame</code>-gated rendering. Exposes an async iterator; <code>handleStreamEvent()</code> in app.js dispatches on <code>event.type</code>.</p>
 <p><strong>Inline image flow</strong> — when <code>display_file</code> SSE fires for an image extension: (1) inline <code>&lt;img&gt;</code> injected into chat bubble via <code>/files/image/{path}</code> endpoint, tracked in <code>_streamInlineImages</code>; (2) <code>stream_end</code> prepends <code>_streamInlineImages</code> to the server's text response to preserve order; (3) <code>showToolResult</code> skips the bubble for <code>display_file</code> events.</p>
 <h3 id="server-web-api-key-endpoints">Server ↔ Web API (key endpoints)<a class="headerlink" href="#server-web-api-key-endpoints" title="Permanent link">&para;</a></h3>
+<p>The <strong><code>/v1/*</code> gateway</strong> is a separate, externally-facing surface — see
+<a href="../api-gateway/">api-gateway.md</a> for its stability contract:</p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/v1/oneshot</code></td>
+<td>POST</td>
+<td><strong>Stable since v1.18.3</strong>, byte-identical wire since v1.18.4. Executes as a <code>kind=oneshot</code> registry run since v1.19.1 — same response.</td>
+</tr>
+<tr>
+<td><code>/v1/agent/run</code></td>
+<td>POST</td>
+<td>Tool-free background run (<code>kind=oneshot</code>)</td>
+</tr>
+<tr>
+<td><code>/v1/agent/task</code></td>
+<td>POST</td>
+<td>Tool-capable sandboxed run; gated by <code>execution.task.enabled</code></td>
+</tr>
+<tr>
+<td><code>/v1/agent/runs</code>, <code>/runs/{id}</code>, <code>/runs/{id}/events</code></td>
+<td>GET</td>
+<td>Registry listing, meta, SSE event stream</td>
+</tr>
+<tr>
+<td><code>/v1/agent/runs/{id}/{cancel,respond,ack,resume}</code></td>
+<td>POST</td>
+<td>Lifecycle verbs</td>
+</tr>
+<tr>
+<td><code>/v1/tokens</code></td>
+<td>POST</td>
+<td>Bearer minting (loopback bootstrap)</td>
+</tr>
+</tbody>
+</table>
+<p>⚠️ The whole <code>/v1/agent/*</code> + <code>/v1/tokens</code> surface is <strong>exempt from the v1
+stability contract</strong> until sealed; only <code>/v1/oneshot</code> is frozen.</p>
+<p>Internal endpoints (these keep evolving):</p>
 <table>
 <thead>
 <tr>
@@ -3181,12 +3335,17 @@ Error messages should explain what failed, why, and what was attempted.</p>
 <td>Preview rendering (PPTX slides, DOCX→PDF)</td>
 </tr>
 <tr>
-<td><code>/command</code></td>
+<td><code>/command/{name}</code></td>
 <td>POST</td>
 <td>CommandFactory server pattern (unified <code>/usage</code>, <code>/status</code>, etc.)</td>
 </tr>
 <tr>
-<td><code>/set_working_dir</code></td>
+<td><code>/context/working_dir</code></td>
+<td>GET</td>
+<td>Read the current working directory</td>
+</tr>
+<tr>
+<td><code>/context/working_dir</code></td>
 <td>POST</td>
 <td>Change working directory (REST, no SSE emitted)</td>
 </tr>
@@ -3248,13 +3407,13 @@ scans its own buffer to decide completion mode.</p>
 <h3 id="stable-completion-item-schema">Stable completion item schema<a class="headerlink" href="#stable-completion-item-schema" title="Permanent link">&para;</a></h3>
 <p>Every client — in-process or over HTTP — consumes the same dict shape:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="p">{</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>  <span class="s2">&quot;text&quot;</span><span class="p">:</span>          <span class="nb">str</span><span class="p">,</span>   <span class="c1"># text to insert</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>  <span class="s2">&quot;display&quot;</span><span class="p">:</span>       <span class="nb">str</span><span class="p">,</span>   <span class="c1"># what to show in the dropdown</span>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>  <span class="s2">&quot;description&quot;</span><span class="p">:</span>   <span class="nb">str</span><span class="p">,</span>   <span class="c1"># hover/meta text</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>  <span class="s2">&quot;kind&quot;</span><span class="p">:</span>          <span class="nb">str</span><span class="p">,</span>   <span class="c1"># command | alias | dir | file | file_ref</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>  <span class="s2">"text"</span><span class="p">:</span>          <span class="nb">str</span><span class="p">,</span>   <span class="c1"># text to insert</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>  <span class="s2">"display"</span><span class="p">:</span>       <span class="nb">str</span><span class="p">,</span>   <span class="c1"># what to show in the dropdown</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>  <span class="s2">"description"</span><span class="p">:</span>   <span class="nb">str</span><span class="p">,</span>   <span class="c1"># hover/meta text</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>  <span class="s2">"kind"</span><span class="p">:</span>          <span class="nb">str</span><span class="p">,</span>   <span class="c1"># command | alias | dir | file | file_ref</span>
 </span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>                          <span class="c1"># | context_ref | subcommand | tool | model</span>
 </span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>                          <span class="c1"># | provider | theme</span>
-</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>  <span class="s2">&quot;replace_start&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>   <span class="c1"># negative offset from cursor:</span>
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>  <span class="s2">"replace_start"</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>   <span class="c1"># negative offset from cursor:</span>
 </span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>                          <span class="c1"># replace |replace_start| chars with text</span>
 </span><span id="__span-24-10"><a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -3276,7 +3435,7 @@ is a one-file change in <code>engine/completion.py</code>. The web client picks
 it up for free (no recompile needed, just a server restart). VSCode
 picks it up on the next extension reload. Rich and Textual get it
 immediately because they call the engine in-process. Tests live next
-to the engine logic in <code>tests/test_completion_provider.py</code> (39 tests
+to the engine logic in <code>tests/test_completion_provider.py</code> (66 tests
 covering every source).</p>
 <h2 id="schema-driven-appstate-dto-v1174">Schema-Driven AppState DTO (v1.17.4)<a class="headerlink" href="#schema-driven-appstate-dto-v1174" title="Permanent link">&para;</a></h2>
 <p>Every client's observable application state (provider, model, tools,
@@ -3345,12 +3504,12 @@ TUI sources and asserts every <code>state.get/on/set("&lt;field&gt;")</code> cal
 references a schema-declared field — drift surfaces at CI time.</p>
 <h3 id="schema-entry-format">Schema entry format<a class="headerlink" href="#schema-entry-format" title="Permanent link">&para;</a></h3>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="p">{</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">  </span><span class="nt">&quot;provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="w">    </span><span class="nt">&quot;client&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;currentProvider&quot;</span><span class="p">,</span>
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">    </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="w">    </span><span class="nt">&quot;group&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;core&quot;</span><span class="p">,</span>
-</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="w">    </span><span class="nt">&quot;doc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Active provider ID&quot;</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">  </span><span class="nt">"provider"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="w">    </span><span class="nt">"client"</span><span class="p">:</span><span class="w"> </span><span class="s2">"currentProvider"</span><span class="p">,</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">    </span><span class="nt">"default"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span>
+</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="w">    </span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"core"</span><span class="p">,</span>
+</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="w">    </span><span class="nt">"doc"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Active provider ID"</span>
 </span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -3436,7 +3595,7 @@ is always immediately followed by <code>AGENT_RUN_ERROR</code>.</p>
 </span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>       AGENT_BEAT {iteration, beat, tool, ok, failures, elapsed_s}
 </span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>       [if failures ≥ zombie_threshold:]
 </span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>         AGENT_ZOMBIE {reason, threshold, last_tool, iteration, elapsed_s}
-</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a>         AGENT_RUN_ERROR {reason: &quot;zombie&quot;, ...}
+</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a>         AGENT_RUN_ERROR {reason: "zombie", ...}
 </span><span id="__span-27-11"><a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a>         return
 </span><span id="__span-27-12"><a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a>  → AGENT_RUN_COMPLETE {iteration, elapsed_s}   ← both exit paths
 </span><span id="__span-27-13"><a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a>    (or AGENT_RUN_ERROR on interrupt / provider error)
@@ -3456,7 +3615,7 @@ payload shape. Treat it as the wire contract: serialize only via
 </span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>    <span class="n">iteration</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
 </span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>    <span class="n">beat_sequence</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
 </span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>    <span class="n">last_beat_time</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
-</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>    <span class="n">last_tool</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>    <span class="n">last_tool</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
 </span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>    <span class="n">last_run_ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 </span><span id="__span-28-8"><a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>    <span class="n">consecutive_failures</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
 </span><span id="__span-28-9"><a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>    <span class="n">start_time</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
@@ -3682,7 +3841,7 @@ slowly; silently broken clients lose them suddenly.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

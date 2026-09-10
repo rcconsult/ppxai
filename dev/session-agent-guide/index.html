@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#session-agent-mode-user-guide-agent" class="md-skip">
+        <a href="#session-agent-mode-user-guide-auto" class="md-skip">
           Skip to content
         </a>
       
@@ -664,10 +664,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#agent-task-run-autonomous-task" class="md-nav__link">
+  <a href="#auto-task-run-autonomous-task" class="md-nav__link">
     <span class="md-ellipsis">
       
-        /agent &lt;task&gt; - Run Autonomous Task
+        /auto &lt;task&gt; - Run Autonomous Task
       
     </span>
   </a>
@@ -675,10 +675,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tools-agent-manage-agent-mode" class="md-nav__link">
+  <a href="#tools-auto-manage-agent-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        /tools agent - Manage Agent Mode
+        /tools auto - Manage Agent Mode
       
     </span>
   </a>
@@ -1875,10 +1875,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#agent-task-run-autonomous-task" class="md-nav__link">
+  <a href="#auto-task-run-autonomous-task" class="md-nav__link">
     <span class="md-ellipsis">
       
-        /agent &lt;task&gt; - Run Autonomous Task
+        /auto &lt;task&gt; - Run Autonomous Task
       
     </span>
   </a>
@@ -1886,10 +1886,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tools-agent-manage-agent-mode" class="md-nav__link">
+  <a href="#tools-auto-manage-agent-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        /tools agent - Manage Agent Mode
+        /tools auto - Manage Agent Mode
       
     </span>
   </a>
@@ -2348,10 +2348,10 @@
   
 
 
-<h1 id="session-agent-mode-user-guide-agent">Session Agent Mode User Guide (<code>/agent</code>)<a class="headerlink" href="#session-agent-mode-user-guide-agent" title="Permanent link">&para;</a></h1>
+<h1 id="session-agent-mode-user-guide-auto">Session Agent Mode User Guide (<code>/auto</code>)<a class="headerlink" href="#session-agent-mode-user-guide-auto" title="Permanent link">&para;</a></h1>
 <p><strong>Applies to</strong>: v1.14.2+ (agent mode introduced v1.13.0; this guide tracks the v1.14.2+ shape)
 <strong>Status</strong>: Production Ready
-<strong>Last verified against</strong>: v1.19.0 (guide content unchanged; renamed + disambiguation banner added)
+<strong>Last verified against</strong>: v1.19.1 (command renamed <code>/agent</code> → <code>/auto</code> per ADR 0011 — <strong>no alias</strong>; behavior unchanged)
 <strong>Renamed</strong> from <code>agent-mode-guide.md</code> (v1.19.0) to disambiguate the three agent surfaces.</p>
 <blockquote>
 <p><strong>⚠️ Three different "agents" — this guide covers only the first:</strong></p>
@@ -2365,18 +2365,18 @@
 </thead>
 <tbody>
 <tr>
-<td><strong><code>/agent</code> session mode</strong> (this guide)</td>
+<td><strong><code>/auto</code> session mode</strong> (this guide)</td>
 <td>The IN-SESSION iterative loop: your current chat session plans + executes tools turn by turn, inside the session's context and working dir.</td>
 <td>here</td>
 </tr>
 <tr>
-<td><strong><code>/agentrun</code> one-off runs</strong></td>
-<td>Tool-FREE background runs (<code>POST /v1/agent/run</code>): a single prompt answered by a per-run provider/model, no tools, fire-and-forget with a result pane. Web client only.</td>
+<td><strong><code>/run</code> one-off runs</strong></td>
+<td>One-off background runs (<code>POST /v1/agent/run</code>, <code>kind=oneshot</code>): a single prompt answered by a per-run provider/model; grant is config-decided (<code>execution.run.web_search</code> on → web_search only, off → closed-book); held result. All clients.</td>
 <td><a href="../api-gateway/">api-gateway.md</a> §<code>/v1/agent/*</code></td>
 </tr>
 <tr>
 <td><strong><code>/task</code> sub-agent platform</strong> (v1.19.0)</td>
-<td>Tool-CAPABLE, sandboxed, durable background runs (<code>POST /v1/agent/task</code>): capability grants (<code>--tools</code>), spec/skill files, egress allowlists, budgets, consent parks, held results, resume. Web + VSCode.</td>
+<td>Tool-CAPABLE, sandboxed, durable background runs (<code>POST /v1/agent/task</code>): capability grants (<code>--tools</code>), spec/skill files, egress allowlists, budgets, consent parks, held results, resume. All clients (the Rich TUI reads but cannot <code>launch</code>/<code>resume</code>).</td>
 <td><a href="../agent-task-command-design.html">agent-task-command-design.html</a>, <a href="../api-gateway/">api-gateway.md</a></td>
 </tr>
 </tbody>
@@ -2408,7 +2408,7 @@
 <h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
 <p><img alt="Agent Flow Diagram" src="../archive/future-agentic-flow.png" /></p>
 <ol>
-<li>You issue an <code>/agent &lt;task&gt;</code> command</li>
+<li>You issue an <code>/auto &lt;task&gt;</code> command</li>
 <li>The agent enters an autonomous loop (max 10 iterations by default)</li>
 <li>Each iteration: Plan → Execute tools → Check completion</li>
 <li>Loop continues until:</li>
@@ -2459,15 +2459,15 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Start ppxai (Rich TUI) or ppxaide (Textual TUI)</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>ppxai<span class="w">    </span><span class="c1"># or ppxaide</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Enable agent mode (optional - auto-enabled when using /agent)</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>/tools<span class="w"> </span>agent<span class="w"> </span>on
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Enable agent mode (optional - auto-enabled when using /auto)</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>/tools<span class="w"> </span>auto<span class="w"> </span>on
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Run an autonomous task</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>failing<span class="w"> </span><span class="nb">test</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>test_auth.py
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>/auto<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>failing<span class="w"> </span><span class="nb">test</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>test_auth.py
 </span></code></pre></div>
 <h3 id="your-first-agent-task">Your First Agent Task<a class="headerlink" href="#your-first-agent-task" title="Permanent link">&para;</a></h3>
 <p>Try this simple task to see agent mode in action:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/agent<span class="w"> </span>Create<span class="w"> </span>a<span class="w"> </span>hello.py<span class="w"> </span>file<span class="w"> </span>that<span class="w"> </span>prints<span class="w"> </span><span class="s2">&quot;Hello, Agent Mode!&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/auto<span class="w"> </span>Create<span class="w"> </span>a<span class="w"> </span>hello.py<span class="w"> </span>file<span class="w"> </span>that<span class="w"> </span>prints<span class="w"> </span><span class="s2">"Hello, Agent Mode!"</span>
 </span></code></pre></div>
 <p>The agent will:
 1. Analyze the task
@@ -2475,31 +2475,31 @@
 3. Signal completion with a summary</p>
 <hr />
 <h2 id="commands-reference">Commands Reference<a class="headerlink" href="#commands-reference" title="Permanent link">&para;</a></h2>
-<h3 id="agent-task-run-autonomous-task"><code>/agent &lt;task&gt;</code> - Run Autonomous Task<a class="headerlink" href="#agent-task-run-autonomous-task" title="Permanent link">&para;</a></h3>
+<h3 id="auto-task-run-autonomous-task"><code>/auto &lt;task&gt;</code> - Run Autonomous Task<a class="headerlink" href="#auto-task-run-autonomous-task" title="Permanent link">&para;</a></h3>
 <p>The main command for agent mode. Runs an autonomous loop until the task is complete.</p>
 <p><strong>Syntax:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/agent<span class="w"> </span>&lt;task<span class="w"> </span>description&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/auto<span class="w"> </span>&lt;task<span class="w"> </span>description&gt;
 </span></code></pre></div></p>
 <p><strong>Examples:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Simple file creation</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>/agent<span class="w"> </span>Create<span class="w"> </span>a<span class="w"> </span>Python<span class="w"> </span>script<span class="w"> </span>that<span class="w"> </span>calculates<span class="w"> </span>fibonacci<span class="w"> </span>numbers
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>/auto<span class="w"> </span>Create<span class="w"> </span>a<span class="w"> </span>Python<span class="w"> </span>script<span class="w"> </span>that<span class="w"> </span>calculates<span class="w"> </span>fibonacci<span class="w"> </span>numbers
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Bug fixing</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>TypeError<span class="w"> </span><span class="k">in</span><span class="w"> </span>utils.py<span class="w"> </span>line<span class="w"> </span><span class="m">42</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>/auto<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>TypeError<span class="w"> </span><span class="k">in</span><span class="w"> </span>utils.py<span class="w"> </span>line<span class="w"> </span><span class="m">42</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Code review with context</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>/agent<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>any<span class="w"> </span>issues
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>/auto<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>any<span class="w"> </span>issues
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
 </span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Refactoring with structure awareness</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>/agent<span class="w"> </span>Reorganize<span class="w"> </span>the<span class="w"> </span>API<span class="w"> </span>module<span class="w"> </span>based<span class="w"> </span>on<span class="w"> </span>@tree
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>/auto<span class="w"> </span>Reorganize<span class="w"> </span>the<span class="w"> </span>API<span class="w"> </span>module<span class="w"> </span>based<span class="w"> </span>on<span class="w"> </span>@tree
 </span></code></pre></div></p>
 <p><strong>Interrupt:</strong> Press <code>Ctrl-C</code> at any time to stop the agent loop.</p>
-<h3 id="tools-agent-manage-agent-mode"><code>/tools agent</code> - Manage Agent Mode<a class="headerlink" href="#tools-agent-manage-agent-mode" title="Permanent link">&para;</a></h3>
+<h3 id="tools-auto-manage-agent-mode"><code>/tools auto</code> - Manage Agent Mode<a class="headerlink" href="#tools-auto-manage-agent-mode" title="Permanent link">&para;</a></h3>
 <p>Enable, disable, or check agent mode status.</p>
 <p><strong>Syntax:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/tools<span class="w"> </span>agent<span class="w">          </span><span class="c1"># Show current status</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>/tools<span class="w"> </span>agent<span class="w"> </span>on<span class="w">       </span><span class="c1"># Enable agent mode</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>/tools<span class="w"> </span>agent<span class="w"> </span>off<span class="w">      </span><span class="c1"># Disable agent mode</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/tools<span class="w"> </span>auto<span class="w">          </span><span class="c1"># Show current status</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>/tools<span class="w"> </span>auto<span class="w"> </span>on<span class="w">       </span><span class="c1"># Enable agent mode</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>/tools<span class="w"> </span>auto<span class="w"> </span>off<span class="w">      </span><span class="c1"># Disable agent mode</span>
 </span></code></pre></div></p>
 <p><strong>Notes:</strong>
 - Enabling agent mode automatically enables tools
@@ -2518,108 +2518,108 @@
 <tr>
 <td><code>@file</code></td>
 <td>Include file contents</td>
-<td><code>/agent Refactor @auth.py</code></td>
+<td><code>/auto Refactor @auth.py</code></td>
 </tr>
 <tr>
 <td><code>@git</code></td>
 <td>Include git diff</td>
-<td><code>/agent Review @git and fix issues</code></td>
+<td><code>/auto Review @git and fix issues</code></td>
 </tr>
 <tr>
 <td><code>@tree</code></td>
 <td>Include project structure</td>
-<td><code>/agent Suggest improvements for @tree</code></td>
+<td><code>/auto Suggest improvements for @tree</code></td>
 </tr>
 <tr>
 <td><code>@clipboard</code></td>
 <td>Include clipboard text (v1.14.2+)</td>
-<td><code>/agent Debug this error @clipboard</code></td>
+<td><code>/auto Debug this error @clipboard</code></td>
 </tr>
 <tr>
 <td><code>@url</code></td>
 <td>Fetch web content (v1.14.2+)</td>
-<td><code>/agent Summarize @https://docs.example.com</code></td>
+<td><code>/auto Summarize @https://docs.example.com</code></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Combined usage:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/agent<span class="w"> </span>Review<span class="w"> </span>my<span class="w"> </span>changes<span class="w"> </span>@git<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>context<span class="w"> </span>of<span class="w"> </span>@tree<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>any<span class="w"> </span>bugs
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/auto<span class="w"> </span>Review<span class="w"> </span>my<span class="w"> </span>changes<span class="w"> </span>@git<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>context<span class="w"> </span>of<span class="w"> </span>@tree<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>any<span class="w"> </span>bugs
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Debug an error from clipboard</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>/agent<span class="w"> </span>Analyze<span class="w"> </span>this<span class="w"> </span>stack<span class="w"> </span>trace<span class="w"> </span>@clipboard<span class="w"> </span>and<span class="w"> </span>suggest<span class="w"> </span>fixes
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>/auto<span class="w"> </span>Analyze<span class="w"> </span>this<span class="w"> </span>stack<span class="w"> </span>trace<span class="w"> </span>@clipboard<span class="w"> </span>and<span class="w"> </span>suggest<span class="w"> </span>fixes
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># Implement based on documentation</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>/agent<span class="w"> </span>Implement<span class="w"> </span>the<span class="w"> </span>API<span class="w"> </span>from<span class="w"> </span>@https://api.example.com/spec.json
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>/auto<span class="w"> </span>Implement<span class="w"> </span>the<span class="w"> </span>API<span class="w"> </span>from<span class="w"> </span>@https://api.example.com/spec.json
 </span></code></pre></div></p>
 <hr />
 <h2 id="research-workflows">Research Workflows<a class="headerlink" href="#research-workflows" title="Permanent link">&para;</a></h2>
 <p>Agent mode excels at research and analysis tasks that require multiple steps.</p>
 <h3 id="codebase-analysis">Codebase Analysis<a class="headerlink" href="#codebase-analysis" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Find and explain a pattern</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>/agent<span class="w"> </span>Find<span class="w"> </span>all<span class="w"> </span>uses<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>Observer<span class="w"> </span>pattern<span class="w"> </span><span class="k">in</span><span class="w"> </span>this<span class="w"> </span>codebase<span class="w"> </span>and<span class="w"> </span>explain<span class="w"> </span>how<span class="w"> </span>they<span class="w"> </span>work
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>/auto<span class="w"> </span>Find<span class="w"> </span>all<span class="w"> </span>uses<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>Observer<span class="w"> </span>pattern<span class="w"> </span><span class="k">in</span><span class="w"> </span>this<span class="w"> </span>codebase<span class="w"> </span>and<span class="w"> </span>explain<span class="w"> </span>how<span class="w"> </span>they<span class="w"> </span>work
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Security audit</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>/agent<span class="w"> </span>Analyze<span class="w"> </span>@tree<span class="w"> </span><span class="k">for</span><span class="w"> </span>potential<span class="w"> </span>security<span class="w"> </span>issues<span class="w"> </span>and<span class="w"> </span>list<span class="w"> </span>them
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>/auto<span class="w"> </span>Analyze<span class="w"> </span>@tree<span class="w"> </span><span class="k">for</span><span class="w"> </span>potential<span class="w"> </span>security<span class="w"> </span>issues<span class="w"> </span>and<span class="w"> </span>list<span class="w"> </span>them
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># Dependency analysis</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>/agent<span class="w"> </span>Review<span class="w"> </span>the<span class="w"> </span>imports<span class="w"> </span><span class="k">in</span><span class="w"> </span>@main.py<span class="w"> </span>and<span class="w"> </span>identify<span class="w"> </span>any<span class="w"> </span>unused<span class="w"> </span>or<span class="w"> </span>deprecated<span class="w"> </span>dependencies
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>/auto<span class="w"> </span>Review<span class="w"> </span>the<span class="w"> </span>imports<span class="w"> </span><span class="k">in</span><span class="w"> </span>@main.py<span class="w"> </span>and<span class="w"> </span>identify<span class="w"> </span>any<span class="w"> </span>unused<span class="w"> </span>or<span class="w"> </span>deprecated<span class="w"> </span>dependencies
 </span></code></pre></div>
 <h3 id="code-review-workflow">Code Review Workflow<a class="headerlink" href="#code-review-workflow" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Review staged changes</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>/agent<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span><span class="k">for</span><span class="w"> </span>bugs,<span class="w"> </span>security<span class="w"> </span>issues,<span class="w"> </span>and<span class="w"> </span>style<span class="w"> </span>problems
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>/auto<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span><span class="k">for</span><span class="w"> </span>bugs,<span class="w"> </span>security<span class="w"> </span>issues,<span class="w"> </span>and<span class="w"> </span>style<span class="w"> </span>problems
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Compare with design doc</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>/agent<span class="w"> </span>Compare<span class="w"> </span>my<span class="w"> </span>implementation<span class="w"> </span>@git<span class="w"> </span>against<span class="w"> </span>the<span class="w"> </span>spec<span class="w"> </span><span class="k">in</span><span class="w"> </span>DESIGN.md
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>/auto<span class="w"> </span>Compare<span class="w"> </span>my<span class="w"> </span>implementation<span class="w"> </span>@git<span class="w"> </span>against<span class="w"> </span>the<span class="w"> </span>spec<span class="w"> </span><span class="k">in</span><span class="w"> </span>DESIGN.md
 </span></code></pre></div>
 <h3 id="documentation-research">Documentation Research<a class="headerlink" href="#documentation-research" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Generate documentation</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>/agent<span class="w"> </span>Read<span class="w"> </span>@utils.py<span class="w"> </span>and<span class="w"> </span>generate<span class="w"> </span>comprehensive<span class="w"> </span>docstrings<span class="w"> </span><span class="k">for</span><span class="w"> </span>all<span class="w"> </span>functions
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>/auto<span class="w"> </span>Read<span class="w"> </span>@utils.py<span class="w"> </span>and<span class="w"> </span>generate<span class="w"> </span>comprehensive<span class="w"> </span>docstrings<span class="w"> </span><span class="k">for</span><span class="w"> </span>all<span class="w"> </span>functions
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Update outdated docs</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>/agent<span class="w"> </span>Compare<span class="w"> </span>@README.md<span class="w"> </span>with<span class="w"> </span>the<span class="w"> </span>current<span class="w"> </span>@tree<span class="w"> </span>structure<span class="w"> </span>and<span class="w"> </span>update<span class="w"> </span>outdated<span class="w"> </span>sections
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>/auto<span class="w"> </span>Compare<span class="w"> </span>@README.md<span class="w"> </span>with<span class="w"> </span>the<span class="w"> </span>current<span class="w"> </span>@tree<span class="w"> </span>structure<span class="w"> </span>and<span class="w"> </span>update<span class="w"> </span>outdated<span class="w"> </span>sections
 </span></code></pre></div>
 <hr />
 <h2 id="development-workflows">Development Workflows<a class="headerlink" href="#development-workflows" title="Permanent link">&para;</a></h2>
 <p>Agent mode is powerful for development tasks that span multiple files.</p>
 <h3 id="bug-fixing">Bug Fixing<a class="headerlink" href="#bug-fixing" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Single file fix</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>failing<span class="w"> </span><span class="nb">test</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>test_auth.py
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>/auto<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>failing<span class="w"> </span><span class="nb">test</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>test_auth.py
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Multi-file fix</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>/agent<span class="w"> </span>The<span class="w"> </span>login<span class="w"> </span>fails<span class="w"> </span>with<span class="w"> </span><span class="m">401</span><span class="w"> </span>-<span class="w"> </span>find<span class="w"> </span>the<span class="w"> </span>cause<span class="w"> </span><span class="k">in</span><span class="w"> </span>auth.py<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>it
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>/auto<span class="w"> </span>The<span class="w"> </span>login<span class="w"> </span>fails<span class="w"> </span>with<span class="w"> </span><span class="m">401</span><span class="w"> </span>-<span class="w"> </span>find<span class="w"> </span>the<span class="w"> </span>cause<span class="w"> </span><span class="k">in</span><span class="w"> </span>auth.py<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>it
 </span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
 </span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># With test verification</span>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>bug<span class="w"> </span><span class="k">in</span><span class="w"> </span>parser.py<span class="w"> </span>and<span class="w"> </span>verify<span class="w"> </span>the<span class="w"> </span>tests<span class="w"> </span>pass
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>/auto<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>bug<span class="w"> </span><span class="k">in</span><span class="w"> </span>parser.py<span class="w"> </span>and<span class="w"> </span>verify<span class="w"> </span>the<span class="w"> </span>tests<span class="w"> </span>pass
 </span></code></pre></div>
 <h3 id="feature-implementation">Feature Implementation<a class="headerlink" href="#feature-implementation" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Simple feature</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>/agent<span class="w"> </span>Add<span class="w"> </span>a<span class="w"> </span>--verbose<span class="w"> </span>flag<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>CLI
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>/auto<span class="w"> </span>Add<span class="w"> </span>a<span class="w"> </span>--verbose<span class="w"> </span>flag<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>CLI
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Multi-step feature</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>/agent<span class="w"> </span>Implement<span class="w"> </span>user<span class="w"> </span>session<span class="w"> </span>management<span class="w"> </span>with<span class="w"> </span>tests
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>/auto<span class="w"> </span>Implement<span class="w"> </span>user<span class="w"> </span>session<span class="w"> </span>management<span class="w"> </span>with<span class="w"> </span>tests
 </span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># With context</span>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>/agent<span class="w"> </span>Based<span class="w"> </span>on<span class="w"> </span>@tree,<span class="w"> </span>add<span class="w"> </span>a<span class="w"> </span>caching<span class="w"> </span>layer<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>appropriate<span class="w"> </span>location
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>/auto<span class="w"> </span>Based<span class="w"> </span>on<span class="w"> </span>@tree,<span class="w"> </span>add<span class="w"> </span>a<span class="w"> </span>caching<span class="w"> </span>layer<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>appropriate<span class="w"> </span>location
 </span></code></pre></div>
 <h3 id="refactoring">Refactoring<a class="headerlink" href="#refactoring" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Rename across files</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>/agent<span class="w"> </span>Rename<span class="w"> </span>the<span class="w"> </span>class<span class="w"> </span><span class="s1">&#39;OldName&#39;</span><span class="w"> </span>to<span class="w"> </span><span class="s1">&#39;NewName&#39;</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>all<span class="w"> </span>files
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>/auto<span class="w"> </span>Rename<span class="w"> </span>the<span class="w"> </span>class<span class="w"> </span><span class="s1">'OldName'</span><span class="w"> </span>to<span class="w"> </span><span class="s1">'NewName'</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>all<span class="w"> </span>files
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Extract function</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>/agent<span class="w"> </span>Extract<span class="w"> </span>the<span class="w"> </span>validation<span class="w"> </span>logic<span class="w"> </span>from<span class="w"> </span>auth.py<span class="w"> </span>into<span class="w"> </span>a<span class="w"> </span>separate<span class="w"> </span>validator.py
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>/auto<span class="w"> </span>Extract<span class="w"> </span>the<span class="w"> </span>validation<span class="w"> </span>logic<span class="w"> </span>from<span class="w"> </span>auth.py<span class="w"> </span>into<span class="w"> </span>a<span class="w"> </span>separate<span class="w"> </span>validator.py
 </span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
 </span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># Restructure</span>
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>/agent<span class="w"> </span>Based<span class="w"> </span>on<span class="w"> </span>@tree,<span class="w"> </span>move<span class="w"> </span>utility<span class="w"> </span>functions<span class="w"> </span>from<span class="w"> </span>main.py<span class="w"> </span>to<span class="w"> </span>utils.py
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>/auto<span class="w"> </span>Based<span class="w"> </span>on<span class="w"> </span>@tree,<span class="w"> </span>move<span class="w"> </span>utility<span class="w"> </span>functions<span class="w"> </span>from<span class="w"> </span>main.py<span class="w"> </span>to<span class="w"> </span>utils.py
 </span></code></pre></div>
 <h3 id="test-development">Test Development<a class="headerlink" href="#test-development" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Generate tests</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>/agent<span class="w"> </span>Generate<span class="w"> </span>unit<span class="w"> </span>tests<span class="w"> </span><span class="k">for</span><span class="w"> </span>@calculator.py
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>/auto<span class="w"> </span>Generate<span class="w"> </span>unit<span class="w"> </span>tests<span class="w"> </span><span class="k">for</span><span class="w"> </span>@calculator.py
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Fix failing tests</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>all<span class="w"> </span>failing<span class="w"> </span>tests<span class="w"> </span><span class="k">in</span><span class="w"> </span>tests/test_api.py
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>/auto<span class="w"> </span>Fix<span class="w"> </span>all<span class="w"> </span>failing<span class="w"> </span>tests<span class="w"> </span><span class="k">in</span><span class="w"> </span>tests/test_api.py
 </span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
 </span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Add test coverage</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>/agent<span class="w"> </span>Add<span class="w"> </span>edge<span class="w"> </span><span class="k">case</span><span class="w"> </span>tests<span class="w"> </span><span class="k">for</span><span class="w"> </span>the<span class="w"> </span>parse_date<span class="w"> </span><span class="k">function</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>utils.py
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>/auto<span class="w"> </span>Add<span class="w"> </span>edge<span class="w"> </span><span class="k">case</span><span class="w"> </span>tests<span class="w"> </span><span class="k">for</span><span class="w"> </span>the<span class="w"> </span>parse_date<span class="w"> </span><span class="k">function</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>utils.py
 </span></code></pre></div>
 <hr />
 <h2 id="vscode-extension">VSCode Extension<a class="headerlink" href="#vscode-extension" title="Permanent link">&para;</a></h2>
@@ -2655,24 +2655,24 @@
 <h3 id="writing-effective-tasks">Writing Effective Tasks<a class="headerlink" href="#writing-effective-tasks" title="Permanent link">&para;</a></h3>
 <p><strong>Be specific:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Good - specific target and action</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>TypeError<span class="w"> </span>on<span class="w"> </span>line<span class="w"> </span><span class="m">42</span><span class="w"> </span>of<span class="w"> </span>utils.py
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>/auto<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>TypeError<span class="w"> </span>on<span class="w"> </span>line<span class="w"> </span><span class="m">42</span><span class="w"> </span>of<span class="w"> </span>utils.py
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Less effective - vague</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>bugs
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>/auto<span class="w"> </span>Fix<span class="w"> </span>bugs
 </span></code></pre></div></p>
 <p><strong>Include context:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Good - context provided</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>/agent<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span><span class="k">for</span><span class="w"> </span>security<span class="w"> </span>issues<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>auth<span class="w"> </span>module
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>/auto<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span><span class="k">for</span><span class="w"> </span>security<span class="w"> </span>issues<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>auth<span class="w"> </span>module
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Less effective - missing context</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>/agent<span class="w"> </span>Check<span class="w"> </span><span class="k">for</span><span class="w"> </span>security<span class="w"> </span>issues
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>/auto<span class="w"> </span>Check<span class="w"> </span><span class="k">for</span><span class="w"> </span>security<span class="w"> </span>issues
 </span></code></pre></div></p>
 <p><strong>Define success criteria:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Good - clear completion criteria</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>/agent<span class="w"> </span>Implement<span class="w"> </span>user<span class="w"> </span>validation<span class="w"> </span>and<span class="w"> </span>ensure<span class="w"> </span>all<span class="w"> </span>tests<span class="w"> </span>pass
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>/auto<span class="w"> </span>Implement<span class="w"> </span>user<span class="w"> </span>validation<span class="w"> </span>and<span class="w"> </span>ensure<span class="w"> </span>all<span class="w"> </span>tests<span class="w"> </span>pass
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># Less effective - unclear when done</span>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>/agent<span class="w"> </span>Add<span class="w"> </span>validation
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>/auto<span class="w"> </span>Add<span class="w"> </span>validation
 </span></code></pre></div></p>
 <h3 id="managing-consent">Managing Consent<a class="headerlink" href="#managing-consent" title="Permanent link">&para;</a></h3>
 <p>The agent requires consent for file edits:</p>
@@ -2714,17 +2714,17 @@
 <ol>
 <li>Let the agent complete its iterations</li>
 <li>Review the output</li>
-<li>Run <code>/agent continue</code> or issue a follow-up task</li>
+<li>Run <code>/auto continue</code> or issue a follow-up task</li>
 </ol>
 <hr />
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Agent mode behavior can be customized in <code>ppxai-config.json</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="p">{</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">&quot;agent&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">      </span><span class="nt">&quot;max_iterations&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">      </span><span class="nt">&quot;context_char_limit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span>
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">      </span><span class="nt">&quot;min_task_words&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">"agent"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">      </span><span class="nt">"max_iterations"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">      </span><span class="nt">"context_char_limit"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">      </span><span class="nt">"min_task_words"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
 </span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="p">}</span>
@@ -2738,19 +2738,19 @@
 <div class="language-markdown highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>---
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>provider_hints:
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>  local:
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Complete tasks fully without stopping on empty responses.&quot;
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Use tools proactively - don&#39;t ask for permission.&quot;
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;When editing files, make all changes in a single edit_file call.&quot;
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>"Complete tasks fully without stopping on empty responses."
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>"Use tools proactively - don't ask for permission."
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>"When editing files, make all changes in a single edit_file call."
 </span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>  ollama:
-</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Keep responses concise - limited context window.&quot;
-</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Prefer smaller, focused tool calls over complex multi-step operations.&quot;
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>"Keep responses concise - limited context window."
+</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>"Prefer smaller, focused tool calls over complex multi-step operations."
 </span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>model_hints:
-</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>  &quot;qwen2.5-coder:3b&quot;:
-</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Focus on code quality and correctness.&quot;
-</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Use edit_file for surgical changes, write_file only for new files.&quot;
-</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>  &quot;deepseek-r1*&quot;:
-</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Show your reasoning process before taking actions.&quot;
-</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="gu">    - &quot;Think step-by-step for complex problems.&quot;</span>
+</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>  "qwen2.5-coder:3b":
+</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>"Focus on code quality and correctness."
+</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>"Use edit_file for surgical changes, write_file only for new files."
+</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>  "deepseek-r1*":
+</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>"Show your reasoning process before taking actions."
+</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="gu">    - "Think step-by-step for complex problems."</span>
 </span><span id="__span-18-17"><a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a><span class="gu">---</span>
 </span><span id="__span-18-18"><a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a>
 </span><span id="__span-18-19"><a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a><span class="gh"># Project: My App</span>
@@ -2806,7 +2806,7 @@
 <li><strong>Higher values (3000-5000)</strong>: Better context retention, but more expensive</li>
 <li><strong>Warning</strong>: Very high limits (&gt;5000) may cause context overflow in some models</li>
 </ul>
-<p><strong><code>min_task_words</code></strong>: Safety feature that rejects vague single-word tasks. This prevents accidental dangerous actions from ambiguous commands like <code>/agent on</code> or <code>/agent delete</code>.</p>
+<p><strong><code>min_task_words</code></strong>: Safety feature that rejects vague single-word tasks. This prevents accidental dangerous actions from ambiguous commands like <code>/auto on</code> or <code>/auto delete</code>.</p>
 <ul>
 <li><strong>Default (3)</strong>: Requires descriptive tasks like "Fix the bug in auth.py"</li>
 <li><strong>Lower values (1-2)</strong>: Less safe, allows vague tasks</li>
@@ -2823,11 +2823,11 @@
 - Fork bombs and system-level destructive commands</p>
 <p>You can customize these in <code>ppxai-config.json</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p">{</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">    </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">      </span><span class="nt">&quot;safe_patterns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;^ls\\s*&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;^cat\\s+&quot;</span><span class="p">],</span>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">      </span><span class="nt">&quot;dangerous_patterns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;^rm\\s+&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;^kill\\s+&quot;</span><span class="p">],</span>
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">      </span><span class="nt">&quot;never_allow_patterns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;^rm\\s+-rf\\s+/&quot;</span><span class="p">]</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">    </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">      </span><span class="nt">"allowed_commands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"^ls\\s*"</span><span class="p">,</span><span class="w"> </span><span class="s2">"^cat\\s+"</span><span class="p">],</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">      </span><span class="nt">"dangerous_commands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"^rm\\s+"</span><span class="p">,</span><span class="w"> </span><span class="s2">"^kill\\s+"</span><span class="p">],</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">      </span><span class="nt">"never_allow"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"^rm\\s+-rf\\s+/"</span><span class="p">]</span>
 </span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="p">}</span>
@@ -2836,7 +2836,7 @@
 <hr />
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="agent-not-starting">Agent Not Starting<a class="headerlink" href="#agent-not-starting" title="Permanent link">&para;</a></h3>
-<p><strong>Problem:</strong> <code>/agent</code> command shows error</p>
+<p><strong>Problem:</strong> <code>/auto</code> command shows error</p>
 <p><strong>Solutions:</strong>
 1. Ensure engine client is available: Check if ppxai started correctly
 2. Try enabling tools manually: <code>/tools enable</code>
@@ -2856,7 +2856,7 @@
 <p><strong>Problem:</strong> Task incomplete after max iterations</p>
 <p><strong>Solutions:</strong>
 1. Review the agent's progress
-2. Run a follow-up <code>/agent</code> command with updated context
+2. Run a follow-up <code>/auto</code> command with updated context
 3. Consider if the task should be split into smaller parts</p>
 <h3 id="tool-errors">Tool Errors<a class="headerlink" href="#tool-errors" title="Permanent link">&para;</a></h3>
 <p><strong>Problem:</strong> Agent reports tool execution failed</p>
@@ -2868,10 +2868,10 @@
 <h2 id="examples-complete-workflows">Examples: Complete Workflows<a class="headerlink" href="#examples-complete-workflows" title="Permanent link">&para;</a></h2>
 <h3 id="example-1-debug-and-fix">Example 1: Debug and Fix<a class="headerlink" href="#example-1-debug-and-fix" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Start agent mode</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>/tools<span class="w"> </span>agent<span class="w"> </span>on
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>/tools<span class="w"> </span>auto<span class="w"> </span>on
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
 </span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Run autonomous debugging</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>/agent<span class="w"> </span>The<span class="w"> </span>tests<span class="w"> </span><span class="k">in</span><span class="w"> </span>test_parser.py<span class="w"> </span>are<span class="w"> </span>failing.<span class="w"> </span>Find<span class="w"> </span>the<span class="w"> </span>bug<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>it.
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>/auto<span class="w"> </span>The<span class="w"> </span>tests<span class="w"> </span><span class="k">in</span><span class="w"> </span>test_parser.py<span class="w"> </span>are<span class="w"> </span>failing.<span class="w"> </span>Find<span class="w"> </span>the<span class="w"> </span>bug<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>it.
 </span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>
 </span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="c1"># Agent output:</span>
 </span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="c1"># ━━━ Iteration 1/5 ━━━</span>
@@ -2895,7 +2895,7 @@
 </span></code></pre></div>
 <h3 id="example-2-code-review">Example 2: Code Review<a class="headerlink" href="#example-2-code-review" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># Review git changes</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>/agent<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span><span class="k">for</span><span class="w"> </span>bugs<span class="w"> </span>and<span class="w"> </span>security<span class="w"> </span>issues
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>/auto<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span><span class="k">for</span><span class="w"> </span>bugs<span class="w"> </span>and<span class="w"> </span>security<span class="w"> </span>issues
 </span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
 </span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="c1"># Agent output:</span>
 </span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="c1"># ━━━ Iteration 1/5 ━━━</span>
@@ -2920,7 +2920,7 @@
 </span></code></pre></div>
 <h3 id="example-3-feature-implementation">Example 3: Feature Implementation<a class="headerlink" href="#example-3-feature-implementation" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Implement a feature</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>/agent<span class="w"> </span>Add<span class="w"> </span>a<span class="w"> </span>--dry-run<span class="w"> </span>flag<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>CLI<span class="w"> </span>that<span class="w"> </span>shows<span class="w"> </span>what<span class="w"> </span>would<span class="w"> </span>happen<span class="w"> </span>without<span class="w"> </span>making<span class="w"> </span>changes
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>/auto<span class="w"> </span>Add<span class="w"> </span>a<span class="w"> </span>--dry-run<span class="w"> </span>flag<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>CLI<span class="w"> </span>that<span class="w"> </span>shows<span class="w"> </span>what<span class="w"> </span>would<span class="w"> </span>happen<span class="w"> </span>without<span class="w"> </span>making<span class="w"> </span>changes
 </span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
 </span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="c1"># Agent iterates through:</span>
 </span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="c1"># 1. Reading CLI entry point</span>
@@ -2940,8 +2940,7 @@
 <li><a href="../archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan/">Agentic Workflow Plan</a> - Technical implementation details</li>
 </ul>
 <hr />
-<p><strong>Agent mode introduced:</strong> v1.13.0
-<strong>Last verified against:</strong> v1.18.8 (2026-06-15)</p>
+<p><strong>Agent mode introduced:</strong> v1.13.0</p>
 
 
 
@@ -3016,7 +3015,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2666,7 +2666,7 @@
 <p><strong>Implementation:</strong>
 - <strong>File:</strong> <code>ppxai/engine/chat.py</code>, lines 492-496
 - Replace the recovery message with a more direct, system-like format:
-  <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[SYSTEM: Tool call failed. Your response contained text about using &#39;{tool}&#39; but no valid tool call was executed.
+  <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[SYSTEM: Tool call failed. Your response contained text about using '{tool}' but no valid tool call was executed.
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>To use a tool, you MUST output ONLY the tool call — no surrounding text.
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Retry the tool call now, or respond with your answer if you cannot use tools.]
 </span></code></pre></div>
@@ -3086,23 +3086,23 @@
 <h2 id="8-appendix-b-session-event-flow">8. Appendix B: Session Event Flow<a class="headerlink" href="#8-appendix-b-session-event-flow" title="Permanent link">&para;</a></h2>
 <h3 id="complete-sse-event-sequence-sonar-clean-session-successful">Complete SSE Event Sequence — sonar (clean session, successful)<a class="headerlink" href="#complete-sse-event-sequence-sonar-clean-session-successful" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>21:44:14 | stream_start     | model: sonar
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>21:44:16 | tool_call         | list_directory {path: &#39;.&#39;, format: &#39;long&#39;}
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>21:44:16 | tool_call         | list_directory {path: '.', format: 'long'}
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>21:44:16 | tool_result       | list_directory → 9 items
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>21:44:17 | tool_call         | read_file {filepath: &#39;index.html&#39;}
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>21:44:17 | tool_call         | read_file {filepath: 'index.html'}
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>21:44:17 | tool_result       | read_file → &lt;!DOCTYPE html&gt;...
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>21:44:19 | tool_call         | read_file {filepath: &#39;styles.css&#39;}
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>21:44:19 | tool_call         | read_file {filepath: 'styles.css'}
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>21:44:19 | tool_result       | read_file → /* Summer Season...
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>21:44:21 | tool_call         | read_file {filepath: &#39;script.js&#39;}
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>21:44:21 | tool_call         | read_file {filepath: 'script.js'}
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>21:44:21 | tool_result       | read_file → // Recipe Manager...
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>21:44:23 | tool_call         | read_file {filepath: &#39;recipes.json&#39;}
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>21:44:23 | tool_result       | read_file → [{&quot;id&quot;: 1...
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>21:44:26 | tool_call         | read_file {filepath: &#39;background_server.ps1&#39;}
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>21:44:23 | tool_call         | read_file {filepath: 'recipes.json'}
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>21:44:23 | tool_result       | read_file → [{"id": 1...
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>21:44:26 | tool_call         | read_file {filepath: 'background_server.ps1'}
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>21:44:26 | tool_result       | read_file → #!/usr/bin/env pwsh...
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>21:44:28 | tool_call         | read_file {filepath: &#39;background_server_final.ps1&#39;}
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>21:44:28 | tool_call         | read_file {filepath: 'background_server_final.ps1'}
 </span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>21:44:28 | tool_result       | read_file → #!/usr/bin/env pwsh...
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>21:44:30 | tool_call         | read_file {filepath: &#39;run_server.ps1&#39;}
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>21:44:30 | tool_call         | read_file {filepath: 'run_server.ps1'}
 </span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>21:44:30 | tool_result       | read_file → #!/usr/bin/env pwsh...
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>21:44:32 | tool_call         | read_file {filepath: &#39;run_server_fixed.ps1&#39;}
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>21:44:32 | tool_call         | read_file {filepath: 'run_server_fixed.ps1'}
 </span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>21:44:32 | tool_result       | read_file → #!/usr/bin/env pwsh...
 </span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>21:44:40 | stream_end        | ## Filesystem Audit Report...
 </span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>21:44:40 | done              | [DONE]
@@ -3111,14 +3111,14 @@
 <p>This is the reference flow that all models should achieve. The key characteristic is no text output between tool calls — sonar chains them back-to-back with ~1.5s model thinking time between each.</p>
 <h3 id="codex-mini-apply_patch-recovery-from-session-file">codex-mini apply_patch Recovery (from session file)<a class="headerlink" href="#codex-mini-apply_patch-recovery-from-session-file" title="Permanent link">&para;</a></h3>
 <p>The session file (<code>session_20260213_175858.json</code>, messages 127-149) captures codex-mini's 3-attempt <code>apply_patch</code> recovery:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Attempt 1: {&quot;tool&quot;: &quot;apply_patch&quot;, &quot;arguments&quot;: {&quot;path&quot;: &quot;IMPROVEMENT_PLAN.md&quot;, &quot;patch&quot;: &quot;...&quot;}}
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>           → ERROR: &quot;Missing required arguments for apply_patch: file_path&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Attempt 1: {"tool": "apply_patch", "arguments": {"path": "IMPROVEMENT_PLAN.md", "patch": "..."}}
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>           → ERROR: "Missing required arguments for apply_patch: file_path"
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>Attempt 2: {&quot;tool&quot;: &quot;apply_patch&quot;, &quot;arguments&quot;: {&quot;path&quot;: &quot;IMPROVEMENT_PLAN.md&quot;, &quot;patch&quot;: &quot;...&quot;}}
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>Attempt 2: {"tool": "apply_patch", "arguments": {"path": "IMPROVEMENT_PLAN.md", "patch": "..."}}
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>           → ERROR: same (repeated exact params)
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>Attempt 3: {&quot;tool&quot;: &quot;apply_patch&quot;, &quot;arguments&quot;: {&quot;file_path&quot;: &quot;IMPROVEMENT_PLAN.md&quot;, &quot;unified_diff&quot;: &quot;...&quot;}}
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>           → SUCCESS: &quot;✓ Successfully created IMPROVEMENT_PLAN.md (19 lines)&quot;
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>Attempt 3: {"tool": "apply_patch", "arguments": {"file_path": "IMPROVEMENT_PLAN.md", "unified_diff": "..."}}
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>           → SUCCESS: "✓ Successfully created IMPROVEMENT_PLAN.md (19 lines)"
 </span></code></pre></div>
 <p>This demonstrates genuine error recovery — the model read the error message ("Missing required arguments: file_path"), understood it needed to change the parameter name from <code>path</code> to <code>file_path</code>, and also switched <code>patch</code> to <code>unified_diff</code>. This is the strongest evidence that codex-mini can learn from tool feedback within a session.</p>
 <hr />
@@ -3992,7 +3992,7 @@
 - Starlette <code>StreamingResponse</code> doesn't propagate client disconnects to the async generator</p>
 <h3 id="114-o3-mini-max_tokens-vs-max_completion_tokens-error">11.4 o3-mini — <code>max_tokens</code> vs <code>max_completion_tokens</code> Error<a class="headerlink" href="#114-o3-mini-max_tokens-vs-max_completion_tokens-error" title="Permanent link">&para;</a></h3>
 <p>From an earlier test in the same log session (line 5480):
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Engine error: Invalid request: Unsupported parameter: &#39;max_tokens&#39; is not supported with this model. Use &#39;max_completion_tokens&#39; instead.
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Engine error: Invalid request: Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.
 </span></code></pre></div></p>
 <p><strong>Status:</strong> Already fixed by <code>_needs_max_completion_tokens()</code> in <code>OpenAINativeProvider</code>. This error occurred because o3-mini was routed through <code>OpenAICompatibleProvider</code> (which uses the old parameter name) instead of <code>OpenAINativeProvider</code>. The provider registry should route all <code>o3*</code> models through the native provider.</p>
 <hr />
@@ -4643,7 +4643,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1503,11 +1503,11 @@
 <ol>
 <li><strong>Test assumptions</strong> - Test assumed tool registration order (fragile)</li>
 <li><strong>Release script adds Claude credits</strong> - Violates project guidelines
-   <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">commit_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span><span class="si">{</span><span class="n">message</span><span class="si">}</span>
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">commit_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""</span><span class="si">{</span><span class="n">message</span><span class="si">}</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="s2">🤖 Generated with [Claude Code](https://claude.com/claude-code)</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="s2">Co-Authored-By: Claude Opus 4.5 &lt;noreply@anthropic.com&gt;&quot;&quot;&quot;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="s2">Co-Authored-By: Claude Opus 4.5 &lt;noreply@anthropic.com&gt;"""</span>
 </span></code></pre></div></li>
 <li><strong>No pre-release test run</strong> - Tests not run locally before release</li>
 <li><strong>Tag immutability</strong> - Can't fix test on existing tag without force-push</li>
@@ -1521,13 +1521,13 @@
 
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Before (fragile - assumes order):</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">first_call_kwargs</span> <span class="o">=</span> <span class="n">mock_manager</span><span class="o">.</span><span class="n">register_function</span><span class="o">.</span><span class="n">call_args_list</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">assert</span> <span class="n">first_call_kwargs</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;web_search&quot;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">assert</span> <span class="n">first_call_kwargs</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"web_search"</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># After (robust - checks all tools):</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">tool_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">call</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">call</span> <span class="ow">in</span> <span class="n">mock_manager</span><span class="o">.</span><span class="n">register_function</span><span class="o">.</span><span class="n">call_args_list</span><span class="p">]</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="k">assert</span> <span class="s2">&quot;web_search&quot;</span> <span class="ow">in</span> <span class="n">tool_names</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">assert</span> <span class="s2">&quot;get_weather&quot;</span> <span class="ow">in</span> <span class="n">tool_names</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="k">assert</span> <span class="s2">&quot;fetch_url&quot;</span> <span class="ow">in</span> <span class="n">tool_names</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">tool_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">call</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">"name"</span><span class="p">]</span> <span class="k">for</span> <span class="n">call</span> <span class="ow">in</span> <span class="n">mock_manager</span><span class="o">.</span><span class="n">register_function</span><span class="o">.</span><span class="n">call_args_list</span><span class="p">]</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="k">assert</span> <span class="s2">"web_search"</span> <span class="ow">in</span> <span class="n">tool_names</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">assert</span> <span class="s2">"get_weather"</span> <span class="ow">in</span> <span class="n">tool_names</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="k">assert</span> <span class="s2">"fetch_url"</span> <span class="ow">in</span> <span class="n">tool_names</span>
 </span></code></pre></div>
 
 </details>
@@ -1540,11 +1540,11 @@
 <summary>Changes made</summary>
 
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Before:</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">commit_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span><span class="si">{</span><span class="n">message</span><span class="si">}</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">commit_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""</span><span class="si">{</span><span class="n">message</span><span class="si">}</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="s2">🤖 Generated with [Claude Code](https://claude.com/claude-code)</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="s2">Co-Authored-By: Claude Opus 4.5 &lt;noreply@anthropic.com&gt;&quot;&quot;&quot;</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="s2">Co-Authored-By: Claude Opus 4.5 &lt;noreply@anthropic.com&gt;"""</span>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># After:</span>
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">commit_msg</span> <span class="o">=</span> <span class="n">message</span>
@@ -1562,7 +1562,7 @@
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>gh<span class="w"> </span>workflow<span class="w"> </span>list
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Manually trigger build workflow</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>gh<span class="w"> </span>workflow<span class="w"> </span>run<span class="w"> </span><span class="s2">&quot;Build Executables&quot;</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>gh<span class="w"> </span>workflow<span class="w"> </span>run<span class="w"> </span><span class="s2">"Build Executables"</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Monitor the run</span>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>gh<span class="w"> </span>run<span class="w"> </span>watch
@@ -1595,7 +1595,7 @@
 </span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>gh<span class="w"> </span>release<span class="w"> </span>upload<span class="w"> </span>v1.15.2<span class="w"> </span>vscode-extension/ppxai-*.vsix
 </span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>
 </span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="c1"># Verify</span>
-</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>gh<span class="w"> </span>release<span class="w"> </span>view<span class="w"> </span>v1.15.2<span class="w"> </span>--json<span class="w"> </span>assets<span class="w"> </span>--jq<span class="w"> </span><span class="s1">&#39;.assets[].name&#39;</span>
+</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>gh<span class="w"> </span>release<span class="w"> </span>view<span class="w"> </span>v1.15.2<span class="w"> </span>--json<span class="w"> </span>assets<span class="w"> </span>--jq<span class="w"> </span><span class="s1">'.assets[].name'</span>
 </span></code></pre></div>
 <h4 id="option-c-create-v1153-patch-release-cleanest">Option C: Create v1.15.3 Patch Release (CLEANEST)<a class="headerlink" href="#option-c-create-v1153-patch-release-cleanest" title="Permanent link">&para;</a></h4>
 <p>Create a new release with the test fix:</p>
@@ -1615,8 +1615,8 @@
 <p><strong>Problem:</strong> Tests not run locally before release
 <strong>Solution:</strong> Add mandatory pre-release checks to release script</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">pre_release_checks</span><span class="p">(</span><span class="n">version</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">skip_tests</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Run comprehensive pre-release validation.&quot;&quot;&quot;</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">📋 Pre-Release Validation&quot;</span><span class="p">)</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="sd">"""Run comprehensive pre-release validation."""</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">📋 Pre-Release Validation"</span><span class="p">)</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="c1"># 1. Check working directory is clean</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">check_git_status</span><span class="p">()</span>
@@ -1629,12 +1629,12 @@
 </span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
 </span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>    <span class="c1"># 4. Run tests locally (unless --skip-tests)</span>
 </span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_tests</span><span class="p">:</span>
-</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  🧪 Running tests...&quot;</span><span class="p">)</span>
-</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">run_command</span><span class="p">(</span><span class="s2">&quot;uv run pytest tests/ -v&quot;</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"  🧪 Running tests..."</span><span class="p">)</span>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">run_command</span><span class="p">(</span><span class="s2">"uv run pytest tests/ -v"</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  ❌ Tests failed! Fix before releasing.&quot;</span><span class="p">)</span>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>            <span class="nb">print</span><span class="p">(</span><span class="s2">"  ❌ Tests failed! Fix before releasing."</span><span class="p">)</span>
 </span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  ✅ All tests passed&quot;</span><span class="p">)</span>
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"  ✅ All tests passed"</span><span class="p">)</span>
 </span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>
 </span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>    <span class="c1"># 5. Validate version consistency</span>
 </span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>    <span class="n">run_validate_release</span><span class="p">(</span><span class="n">version</span><span class="p">)</span>
@@ -1654,23 +1654,23 @@
 
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># ❌ Fragile - assumes order:</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">expected_first</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="k">assert</span> <span class="nb">list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="k">assert</span> <span class="nb">list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"foo"</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1"># ✅ Robust - checks membership:</span>
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="k">assert</span> <span class="n">expected_first</span> <span class="ow">in</span> <span class="n">results</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="k">assert</span> <span class="s2">&quot;foo&quot;</span> <span class="ow">in</span> <span class="nb">list</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="k">assert</span> <span class="s2">"foo"</span> <span class="ow">in</span> <span class="nb">list</span>
 </span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1"># ❌ Fragile - assumes exact dict key order:</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="k">assert</span> <span class="nb">list</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">]</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="k">assert</span> <span class="nb">list</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"a"</span><span class="p">,</span> <span class="s2">"b"</span><span class="p">,</span> <span class="s2">"c"</span><span class="p">]</span>
 </span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
 </span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="c1"># ✅ Robust - checks keys exist:</span>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">}</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"a"</span><span class="p">,</span> <span class="s2">"b"</span><span class="p">,</span> <span class="s2">"c"</span><span class="p">}</span>
 </span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
 </span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="c1"># ❌ Fragile - exact match on dynamic content:</span>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="k">assert</span> <span class="n">output</span> <span class="o">==</span> <span class="s2">&quot;Server started at 2026-02-06 15:30:00&quot;</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="k">assert</span> <span class="n">output</span> <span class="o">==</span> <span class="s2">"Server started at 2026-02-06 15:30:00"</span>
 </span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
 </span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="c1"># ✅ Robust - pattern match:</span>
-</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="k">assert</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Server started at \d</span><span class="si">{4}</span><span class="s2">-\d</span><span class="si">{2}</span><span class="s2">-\d</span><span class="si">{2}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="k">assert</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"Server started at \d</span><span class="si">{4}</span><span class="s2">-\d</span><span class="si">{2}</span><span class="s2">-\d</span><span class="si">{2}</span><span class="s2">"</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
 </span></code></pre></div>
 
 </details>
@@ -1686,7 +1686,7 @@
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">jobs</span><span class="p">:</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">test</span><span class="p">:</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="c1"># Don&#39;t fail workflow, just record result</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="c1"># Don't fail workflow, just record result</span>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nt">continue-on-error</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
 </span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">      </span><span class="c1"># ... existing test steps ...</span>
@@ -1698,9 +1698,9 @@
 </span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
 </span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Check test status</span>
 </span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="w">          </span><span class="no">if [ &quot;${{ needs.test.result }}&quot; != &quot;success&quot; ]; then</span>
-</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">            </span><span class="no">echo &quot;⚠️  WARNING: Tests failed but building anyway&quot;</span>
-</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="w">            </span><span class="no">echo &quot;⚠️  This is a recovery build - review test failures&quot;</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="w">          </span><span class="no">if [ "${{ needs.test.result }}" != "success" ]; then</span>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">            </span><span class="no">echo "⚠️  WARNING: Tests failed but building anyway"</span>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="w">            </span><span class="no">echo "⚠️  This is a recovery build - review test failures"</span>
 </span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="w">          </span><span class="no">fi</span>
 </span></code></pre></div>
 <p><strong>Consideration:</strong> This could hide test failures. Better solution: robust tests + pre-release validation.</p>
@@ -1719,7 +1719,7 @@
 <strong>Solution:</strong> Fixed in <code>scripts/release.py</code> - now uses clean commit message</p>
 <p><strong>Verification:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Check release commit format</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>git<span class="w"> </span>log<span class="w"> </span>--oneline<span class="w"> </span>--grep<span class="o">=</span><span class="s2">&quot;feat: v1&quot;</span><span class="w"> </span>-10<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-5
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>git<span class="w"> </span>log<span class="w"> </span>--oneline<span class="w"> </span>--grep<span class="o">=</span><span class="s2">"feat: v1"</span><span class="w"> </span>-10<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-5
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Should NOT contain:</span>
 </span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># - 🤖 Generated with [Claude Code]</span>
@@ -1731,9 +1731,9 @@
 <h3 id="validate-fixed-release-process">Validate Fixed Release Process<a class="headerlink" href="#validate-fixed-release-process" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># 1. Create test release on feature branch</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>test/release-fix
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;test&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>test-file.txt
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">"test"</span><span class="w"> </span>&gt;<span class="w"> </span>test-file.txt
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>git<span class="w"> </span>add<span class="w"> </span>test-file.txt
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;test: release process validation&quot;</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"test: release process validation"</span>
 </span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># 2. Run release script with --dry-run</span>
 </span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>.uv/uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/release.py<span class="w"> </span>v1.15.4-test<span class="w"> </span>--dry-run
@@ -1871,7 +1871,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

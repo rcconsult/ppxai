@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -558,10 +558,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#flags-for-task-run" class="md-nav__link">
+  <a href="#launch-flags" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Flags for /task run
+        Launch flags
       
     </span>
   </a>
@@ -603,6 +603,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="6. Spec files (--spec)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#named-profiles-profile-and-enrichment-adr-0009-step-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Named profiles (--profile) and enrichment (ADR 0009 step ③)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -655,6 +672,17 @@
     <span class="md-ellipsis">
       
         11. HTTP API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#making-a-bare-task-work-executiontaskdefault_grant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Making a bare /task work: execution.task.default_grant
       
     </span>
   </a>
@@ -1369,10 +1397,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#flags-for-task-run" class="md-nav__link">
+  <a href="#launch-flags" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Flags for /task run
+        Launch flags
       
     </span>
   </a>
@@ -1414,6 +1442,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="6. Spec files (--spec)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#named-profiles-profile-and-enrichment-adr-0009-step-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Named profiles (--profile) and enrichment (ADR 0009 step ③)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1472,6 +1517,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#making-a-bare-task-work-executiontaskdefault_grant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Making a bare /task work: execution.task.default_grant
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1493,15 +1549,18 @@
 
 
 <h1 id="task-agent-user-guide-task">Task Agent User Guide (<code>/task</code>)<a class="headerlink" href="#task-agent-user-guide-task" title="Permanent link">&para;</a></h1>
-<p><strong>Applies to</strong>: v1.19.0+ · <strong>Clients</strong>: Web + VSCode (TUIs: not yet — the
-in-process TUIs have no channel to the run registry; their autocomplete
-deliberately does not offer <code>/task</code>)
-<strong>Status</strong>: Shipped (T1–T8a), live-trial-verified · API surface under the
+<p><strong>Applies to</strong>: v1.19.0+ (TUIs: v1.19.1+) · <strong>Clients</strong>: Web, VSCode, Textual
+(<code>ppxaide</code>) and Rich (<code>ppxai</code>). The TUIs drive the run registry <strong>in-process</strong>
+(<code>ppxai/engine/task_runner.py</code>), no HTTP channel involved. The Rich TUI's
+blocking prompt has no live event loop, so it answers every read verb but
+rejects <code>launch</code> and <code>resume</code> with an error pointing at <code>ppxaide</code>.
+<strong>Status</strong>: Shipped (T1–T8b), live-trial-verified · API surface under the
 <code>/v1/agent/*</code> in-development exemption — see
 <a href="../api-gateway/">api-gateway.md</a></p>
 <p><code>/task</code> launches <strong>tool-capable, sandboxed, durable background agent runs</strong>.
-Unlike the in-session <a href="../session-agent-guide/"><code>/agent</code> mode</a> (which drives
-tools inside your current chat) and the tool-free <code>/agentrun</code> one-off, a
+Unlike the in-session <a href="../session-agent-guide/"><code>/auto</code> mode</a> (which drives
+tools inside your current chat) and the <code>/run</code> one-off (config-decided
+grant), a
 <code>/task</code> run executes on the server with an explicit <strong>capability grant</strong>,
 survives client disconnects and server restarts, and has a full lifecycle:
 consent parks, held results, and resume.</p>
@@ -1516,15 +1575,15 @@ consent parks, held results, and resume.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>/agent</code> session mode</td>
+<td><code>/auto</code> session mode</td>
 <td>session's tools</td>
 <td>inside your chat session</td>
 <td><a href="../session-agent-guide/">session-agent-guide.md</a></td>
 </tr>
 <tr>
-<td><code>/agentrun</code> one-off</td>
-<td>none (tool-free)</td>
-<td>background, fire-and-forget</td>
+<td><code>/run</code> one-off</td>
+<td>config-decided: none or <code>web_search</code> (<code>execution.run.web_search</code>)</td>
+<td>background, held result</td>
 <td><a href="../api-gateway/">api-gateway.md</a></td>
 </tr>
 <tr>
@@ -1540,41 +1599,50 @@ consent parks, held results, and resume.</p>
 <p>The tool-capable tier ships <strong>default-off</strong> (trusted-operator opt-in). In
 <code>~/.ppxai/ppxai-config.json</code>:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>{
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  &quot;tools&quot;: {
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    &quot;agent&quot;: {
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>      &quot;task_tier_enabled&quot;: true,
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>      &quot;default_subagent&quot;: { &quot;provider&quot;: &quot;gemini&quot;, &quot;model&quot;: &quot;gemini-3.1-pro-preview&quot; }
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    }
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  "execution": {
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    "task": {
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>      "enabled": true
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    },
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    "default_subagent": { "provider": "gemini", "model": "gemini-3.1-pro-preview" }
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  }
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>}
 </span></code></pre></div>
 <p><code>default_subagent</code> is the fallback provider/model when neither the request
 nor a spec names one (pick any tool-calling model you have configured).
-Without <code>task_tier_enabled</code>, <code>POST /v1/agent/task</code> returns 403 with an
+Without <code>execution.task.enabled</code>, <code>POST /v1/agent/task</code> returns 403 with an
 enable hint.</p>
 <h2 id="2-first-run">2. First run<a class="headerlink" href="#2-first-run" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/task run &quot;summarize README.md&quot; --tools read_file
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/task "summarize README.md" --tools read_file
 </span></code></pre></div>
 <ul>
+<li><strong>Direct launch</strong> (v1.19.1, ADR 0011): there is no <code>run</code> subcommand —
+  the prompt (+ flags) IS the launch. Quoting the prompt is recommended,
+  never required.</li>
 <li>The run id (<code>run_xxxxxxxxxxxx</code>) prints immediately; the chat stays usable.</li>
 <li>A live watcher tails the run's events into the transcript (web: a
   right-panel pane; VSCode: transcript lines like <code>→ read_file</code>).</li>
 <li>Relative paths resolve against <strong>your session's working directory</strong> by
   default (v1.19.0 workdir alignment) — the same place <code>/pwd</code> shows.</li>
 <li>When it finishes, the result is <strong>held</strong> (<code>completed_pending_ack</code>) until
-  you collect it: <code>/task ack &lt;id&gt;</code> (or the Collect button).</li>
+  you collect it: <code>/task collect &lt;id&gt;</code> (or the Collect button).</li>
 </ul>
 <h2 id="3-command-reference">3. Command reference<a class="headerlink" href="#3-command-reference" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/task run &quot;&lt;desc&gt;&quot; --tools a,b,c [flags]   launch a run
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/task "&lt;desc&gt;" --tools a,b,c [flags]       launch a run (direct — no verb)
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>/task ls | list                            list runs, newest first
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>/task show &lt;id&gt; | open | watch             print meta/result + (re)watch
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>/task respond &lt;id&gt; approve|deny|&quot;&lt;text&gt;&quot;   answer a waiting (consent) park
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>/task ack &lt;id&gt;                             collect a held result → finalized
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>/task get &lt;id&gt; | watch                     print meta/result + (re)watch
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>/task respond &lt;id&gt; approve|deny|"&lt;text&gt;"   answer a waiting (consent) park
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>/task collect &lt;id&gt;                         collect a held result → finalized
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>/task resume &lt;id&gt;                          continue an interrupted run
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>/task cancel &lt;id&gt;                          cooperative cancel
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>/task help                                 this summary
 </span></code></pre></div>
-<h3 id="flags-for-task-run">Flags for <code>/task run</code><a class="headerlink" href="#flags-for-task-run" title="Permanent link">&para;</a></h3>
+<p>Disambiguation: a first token that is a lifecycle verb counts as one only
+when followed by a run id (<code>run_</code> + 12 hex) or nothing — anything else
+launches (<code>/task get the weather --tools web_search</code> launches). <code>show</code>,
+<code>open</code> and <code>ack</code> still work as aliases of <code>get</code>/<code>collect</code>; the v1.19.0
+verbs <code>task run</code>, and <code>show</code>/<code>ack</code> as <em>canonical</em> names, are retired
+(v1.19.1 breaking change).</p>
+<h3 id="launch-flags">Launch flags<a class="headerlink" href="#launch-flags" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -1589,11 +1657,19 @@ enable hint.</p>
 </tr>
 <tr>
 <td><code>--spec &lt;name&gt;</code></td>
-<td>Load a spec file from <code>tools.agent.sandbox.specs_dir</code> (name only, no paths). Spec fields fill anything you didn't pass; explicit flags win.</td>
+<td>Load a spec file from <code>execution.task.sandbox.specs_dir</code> (name only, no paths). Spec fields fill anything you didn't pass; explicit flags win.</td>
 </tr>
 <tr>
 <td><code>--skill &lt;name&gt;</code></td>
-<td>Mount a skill from <code>tools.agent.sandbox.skills_dir</code>: its <code>SKILL.md</code> acts as a spec and its directory (incl. <code>references/</code>) is mounted into the run's read scope. Repeatable / comma-separated; skills compose.</td>
+<td>Mount a skill from <code>execution.task.sandbox.skills_dir</code>: its <code>SKILL.md</code> acts as a spec and its directory (incl. <code>references/</code>) is mounted into the run's read scope. Repeatable / comma-separated; skills compose.</td>
+</tr>
+<tr>
+<td><code>--profile &lt;name&gt;</code></td>
+<td>Use a named execution profile from <code>execution.profiles</code> in <code>ppxai-config.json</code> — a standing, reusable grant with the same fields as a spec file (ADR 0009). Precedence: request &gt; spec &gt; skills &gt; profile &gt; <code>default_subagent</code>; <code>tools</code>/<code>--allow</code> lists <strong>replace</strong> the profile's (narrowing works).</td>
+</tr>
+<tr>
+<td><code>--enrichment on\|off</code></td>
+<td>Context enrichment (ADR 0009 §3): <code>on</code> derives <code>web_search</code> + the full search-backend egress baseline for the run — the fix for closed-book local models. Tri-state: omitted = inherit from spec/skill/profile. An explicit <code>--tools</code> list omitting <code>web_search</code> together with effective enrichment is a contradiction → 400 naming both layers.</td>
 </tr>
 <tr>
 <td><code>--allow host[/prefix]</code></td>
@@ -1632,19 +1708,36 @@ with the <strong>"ppxai: Set API Token"</strong> palette entry). Minting remotel
 possible — ask the operator for a token and use <code>/token set</code>.</p>
 <h2 id="5-lifecycle-consent-hold-resume">5. Lifecycle: consent → hold → resume<a class="headerlink" href="#5-lifecycle-consent-hold-resume" title="Permanent link">&para;</a></h2>
 <p><strong>Waiting (consent parks, T5).</strong> A run that needs a human decision — e.g. a
-<code>spawn_subagent</code> under <code>tools.agent.spawn_consent: "deny"</code> (the default) —
-parks as <code>waiting</code>, and the watcher raises a consent card (web) or QuickPick
-(VSCode). Answer inline or with <code>/task respond &lt;id&gt; approve|deny|"note"</code>.
+<code>spawn_subagent</code> under <code>execution.task.consent.spawn_consent: "deny"</code> (the
+default) — parks as <code>waiting</code>, and the watcher raises a consent card (web) or
+QuickPick (VSCode). Answer inline or with <code>/task respond &lt;id&gt; approve|deny|"note"</code>.
 An unanswered park <strong>denies when its TTL expires</strong>
-(<code>tools.agent.consent_ttl_s</code>, default 300 s — fail-closed), and the run
-continues without the action.</p>
-<p><strong>Held results (T6).</strong> A successful top-level run lands in
+(<code>execution.task.consent.consent_ttl_s</code>, default 300 s — fail-closed), and the
+run continues without the action.</p>
+<blockquote>
+<p><strong>Consent gates <code>spawn_subagent</code> only.</strong> Interactive consent applies to the
+spawn capability, not to filesystem or other granted tools. A run granted
+<code>--tools read_file</code> reads <strong>silently</strong> — the <code>--tools</code> allowlist <em>is</em> the
+consent. Where those reads may go is a separate question, governed by the
+sandbox seal (§9), which ships <strong>off by default</strong>. So a <code>/task … --tools
+read_file</code> on an unsealed host can read any file the process can reach with
+no prompt. See <strong>Item 46</strong> in <a href="../debt-inventory/">debt-inventory.md</a>.</p>
+</blockquote>
+<p><strong>Held results (T6) + <code>execution.collect</code> (U4, v1.19.1).</strong> Under the
+default <code>execution.collect: "yes"</code>, a successful top-level run lands in
 <code>completed_pending_ack</code>: the run has exited (budget freed, sandbox torn
-down) but the result is held until <code>/task ack &lt;id&gt;</code> collects it →
-<code>finalized</code>. A disconnected UI never loses a result. Uncollected holds are
-finalized by a lazy reaper after <code>tools.agent.result_retention_s</code> (default
+down) but the result is held until <code>/task collect &lt;id&gt;</code> (or the Collect
+button) collects it → <code>finalized</code> <strong>and plain-merges the result text into
+your active session</strong> — the model sees it on your next turn. A
+disconnected UI never loses a result. Uncollected holds are finalized by a
+lazy reaper after <code>execution.task.budgets.result_retention_s</code> (default
 3600 s; <code>0</code> = hold until explicit ack; data is never deleted, only marked
-collected).</p>
+collected).
+Other <code>execution.collect</code> values: <code>"auto"</code> — runs auto-finalize and the
+watching client merges the result automatically on completion; <code>"no"</code> —
+collect is impossible (button disabled, verb warns with the enable hint;
+the result stays on the run record only). One global key covering <code>/run</code>
+and <code>/task</code>.</p>
 <p><strong>Resume (T7).</strong> <code>interrupted</code> / <code>cancelled</code> runs whose checkpoint is
 conclusive can continue under the same run id: <code>/task resume &lt;id&gt;</code> (or the
 Resume button). The runner is rebuilt from the run's persisted inputs —
@@ -1655,17 +1748,49 @@ reason. Runs orphaned by a server restart are swept to <code>interrupted</code>
 <h2 id="6-spec-files-spec">6. Spec files (<code>--spec</code>)<a class="headerlink" href="#6-spec-files-spec" title="Permanent link">&para;</a></h2>
 <p>A spec is an operator-authored file declaring a run shape — grant,
 provider/model, budget, egress, system prompt — resolved by name under
-<code>tools.agent.sandbox.specs_dir</code>. See
+<code>execution.task.sandbox.specs_dir</code>. See
 <a href="../examples/task-specs/README.md"><code>examples/task-specs/</code></a> for ready-to-use
 <code>.md</code> (front-matter + body-as-system) and <code>.json</code> examples.</p>
 <ul>
-<li>Precedence: explicit flag &gt; spec &gt; skill &gt; <code>default_subagent</code>.</li>
+<li>Precedence: explicit flag &gt; spec &gt; skill &gt; profile &gt; <code>default_subagent</code>.</li>
 <li>The merged result faces the same ceiling as a direct request: no shell
-  tool, <code>task_tier_enabled</code> still required — a spec cannot widen what the
-  operator allows.</li>
+  tool, <code>execution.task.enabled</code> still required — a spec cannot widen what
+  the operator allows.</li>
+</ul>
+<h3 id="named-profiles-profile-and-enrichment-adr-0009-step-3">Named profiles (<code>--profile</code>) and enrichment (ADR 0009 step ③)<a class="headerlink" href="#named-profiles-profile-and-enrichment-adr-0009-step-3" title="Permanent link">&para;</a></h3>
+<p>A <strong>profile</strong> is the config-native, reusable layer over the same primitive:
+<code>execution.profiles.&lt;name&gt;</code> in <code>ppxai-config.json</code> is a spec-shaped mapping
+a run selects by name — specs stay for one-off/authored runs, profiles for
+the standing set an operator curates. They compose, not compete.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>"execution": {
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  "profiles": {
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    "research": { "tools": ["web_search", "read_file"], "enrichment": true },
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    "coding":   { "tools": ["read_file", "apply_patch"], "enrichment": false }
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>  },
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>  "egress_ceiling": ["api.perplexity.ai", "*.googleapis.com"]  // optional cap
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>}
+</span></code></pre></div>
+<ul>
+<li><strong>List fields replace, never union</strong>: a more specific layer that states
+  <code>tools</code> or egress supplies <em>all</em> of it, so narrowing is expressible
+  (skills are the deliberate exception — they union capability in).</li>
+<li><strong><code>enrichment: true</code></strong> derives <code>web_search</code> + the full backend-superset
+  egress once, after precedence resolution — closed-book local models get
+  grounding by construction for that profile. Disable with
+  <code>enrichment: false</code> (the designed field), not by omitting the tool: an
+  explicit more-specific <code>tools</code> list omitting <code>web_search</code> under effective
+  enrichment fails pre-start (400 naming both layers).</li>
+<li><strong><code>execution.egress_ceiling</code></strong> (optional) caps every run's assembled
+  allowlist intersectively — config-only, a run can never raise it. An
+  enriched run whose ceiling breaks the <strong>effective</strong> search egress set
+  refuses to start — the check is all-of, because the egress chokepoint
+  enforces all-of (half-enriched = the silent closed-book failure this
+  exists to prevent). Want a narrow ceiling? Pin one backend with
+  <code>tools.web_search.{preferred, strict: true}</code> — the pinned backend's
+  hosts become the whole effective set, so the two configs compose.</li>
 </ul>
 <h2 id="7-skills-skill">7. Skills (<code>--skill</code>)<a class="headerlink" href="#7-skills-skill" title="Permanent link">&para;</a></h2>
-<p>A skill is a directory under <code>tools.agent.sandbox.skills_dir</code> containing a
+<p>A skill is a directory under <code>execution.task.sandbox.skills_dir</code> containing a
 <code>SKILL.md</code> (a spec, T3 loader) plus reference material. Granting a skill
 mounts its directory into the run's <strong>read scope</strong> (when the seal is on),
 so the agent can read <code>references/…</code>. Multiple skills compose: tool grants
@@ -1679,23 +1804,26 @@ Examples: <a href="../examples/task-skills/README.md"><code>examples/task-skills
 <li>Otherwise your <strong>session working dir</strong> is threaded automatically — so
    <code>"summarize README.md"</code> means the same thing in chat and in a task run.</li>
 <li>Otherwise the server default: <code>server.working_dir</code> config, else home.</li>
-<li><strong>Seal ON</strong>: the per-run jail always wins; a requested workdir is
-   ignored with a "⚠️ sandbox seal active" warning (warn-don't-fail, so the
-   same command works across sealed and unsealed hosts).</li>
+<li><strong>Seal ON</strong> (<code>execution.task.sandbox.enforcement: "in_process"</code>): the
+   per-run jail always wins; a requested workdir is ignored with a "⚠️
+   sandbox seal active" warning (warn-don't-fail, so the same command works
+   across sealed and unsealed hosts).</li>
 </ol>
-<p><code>/task show &lt;id&gt;</code> prints the effective <code>wd:</code>; resume reuses it; spawned
+<p><code>/task get &lt;id&gt;</code> prints the effective <code>wd:</code>; resume reuses it; spawned
 children inherit it.</p>
 <h2 id="9-the-sandbox-seal-operator-posture">9. The sandbox seal (operator posture)<a class="headerlink" href="#9-the-sandbox-seal-operator-posture" title="Permanent link">&para;</a></h2>
 <p>The filesystem jail is <strong>per-deployment operator posture</strong>, not a per-run
 flag (there is deliberately no "unseal this run"):</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>&quot;sandbox&quot;: {
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  &quot;enforcement&quot;: &quot;in_process&quot;,          // &quot;off&quot; (default) | &quot;in_process&quot;
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  &quot;workdir&quot;:   { &quot;root&quot;: &quot;~/.ppxai/runs&quot;, &quot;writable&quot;: true, &quot;cleanup&quot;: &quot;keep&quot; },
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  &quot;read_paths&quot;: { &quot;allow&quot;: [&quot;~/projects&quot;], &quot;deny&quot;: [], &quot;follow_symlinks&quot;: false },
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>  &quot;specs_dir&quot;: &quot;/path/to/task-specs&quot;,
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>  &quot;skills_dir&quot;: &quot;/path/to/task-skills&quot;,
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>  &quot;allow_skill_scripts&quot;: false
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>}
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>"execution": { "task": {
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  "sandbox": {
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    "enforcement": "in_process",          // "off" (default) | "in_process"
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    "workdir":   { "root": "~/.ppxai/runs", "writable": true, "cleanup": "keep" },
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    "read_paths": { "allow": ["~/projects"], "deny": [], "follow_symlinks": false },
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    "specs_dir": "/path/to/task-specs",
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    "skills_dir": "/path/to/task-skills",
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    "allow_skill_scripts": false
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>  }
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>} }
 </span></code></pre></div>
 <p>Sealed runs get an empty per-run <code>work/</code> dir as their only writable root;
 reads are confined to <code>read_paths.allow</code> + skill mounts; denials surface as
@@ -1714,7 +1842,7 @@ trust boundary; the assistant works your repo), <strong>k8s coder pod = seal off
 </thead>
 <tbody>
 <tr>
-<td><code>403 … task_tier_enabled</code></td>
+<td><code>403 … execution.task.enabled</code></td>
 <td>Tier is default-off → enable it in config (§1).</td>
 </tr>
 <tr>
@@ -1739,7 +1867,15 @@ trust boundary; the assistant works your repo), <strong>k8s coder pod = seal off
 </tr>
 <tr>
 <td>Agent says a file "does not exist"</td>
-<td>Check <code>wd:</code> in <code>/task show</code> — pass <code>--work-dir</code> or an absolute path.</td>
+<td>Check <code>wd:</code> in <code>/task get</code> — pass <code>--work-dir</code> or an absolute path.</td>
+</tr>
+<tr>
+<td>Perplexity <code>/task</code> refuses, confabulates, or summarizes an <em>external</em> URL</td>
+<td><code>sonar-pro</code> is prompt-based and does not reliably call granted tools on <code>/task</code> (<strong>Item 43</strong>). Use a native-tool provider (e.g. <code>nvidia/deepseek-v4-pro</code>) for tool-capable runs.</td>
+</tr>
+<tr>
+<td>Gemini 3.x <code>/task</code> fails with <code>400 … missing a thought_signature</code></td>
+<td>Known gap (<strong>Item 45</strong>): ppxai doesn't yet replay Gemini 3.x <code>thought_signature</code>. Use Gemini 2.5 or another native-tool provider for now.</td>
 </tr>
 <tr>
 <td>Run stuck <code>waiting</code></td>
@@ -1747,7 +1883,7 @@ trust boundary; the assistant works your repo), <strong>k8s coder pod = seal off
 </tr>
 <tr>
 <td>Result seems missing after finish</td>
-<td>It's held — <code>/task ack &lt;id&gt;</code>.</td>
+<td>It's held — <code>/task collect &lt;id&gt;</code>.</td>
 </tr>
 <tr>
 <td><code>409 cannot be resumed: …</code></td>
@@ -1767,6 +1903,29 @@ trust boundary; the assistant works your repo), <strong>k8s coder pod = seal off
 exemption) and
 <a href="../agent-platform-call-graphs/">agent-platform-call-graphs.md</a> for
 route→event call graphs.</p>
+<h2 id="making-a-bare-task-work-executiontaskdefault_grant">Making a bare <code>/task</code> work: <code>execution.task.default_grant</code><a class="headerlink" href="#making-a-bare-task-work-executiontaskdefault_grant" title="Permanent link">&para;</a></h2>
+<p>A tool-capable run must carry an explicit grant, so a bare
+<code>/task "&lt;desc&gt;"</code> with no <code>--tools</code>/<code>--spec</code>/<code>--skill</code>/<code>--profile</code> is
+rejected. If you keep typing the same grant, declare it once:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">"execution"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">"task"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">"default_grant"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"web_search"</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">"allow_user_default"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><code>default_grant</code> is AgentSpec-shaped (<code>tools</code>, <code>network</code>, <code>budget</code>). It is a
+new <strong>precedence layer, not a new power</strong>: it sits <em>below</em> an explicit
+request, spec, skill or profile and <em>above</em> the built-in empty default, and
+whatever grant results still passes every clamp unchanged — shell rejected,
+egress intersected with <code>execution.egress_ceiling</code>, tool kill-switches,
+provider validation, and child ⊆ parent for spawns. It can never widen what
+the operator allows.</p>
+<p><code>allow_user_default</code> (operator bool, default <code>true</code>) turns the layer off
+entirely for a locked-down deployment. It is fail-closed: with it <code>false</code>, a
+bare <code>/task</code> goes back to being rejected.</p>
 
 
 
@@ -1841,7 +2000,7 @@ route→event call graphs.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

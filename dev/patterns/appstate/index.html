@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1247,7 +1247,7 @@
 </ol>
 <h2 id="worked-example-context_attachments-v1174">Worked Example: <code>context_attachments</code> (v1.17.4)<a class="headerlink" href="#worked-example-context_attachments-v1174" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># engine/app_state.py</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="s2">&quot;context_attachments&quot;</span><span class="p">:</span> <span class="p">[],</span>  <span class="c1"># List of {name, kind, media_type, turn_index}</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="s2">"context_attachments"</span><span class="p">:</span> <span class="p">[],</span>  <span class="c1"># List of {name, kind, media_type, turn_index}</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                            <span class="c1"># Stable JSON schema — JS/TS mirrors in camelCase</span>
 </span></code></pre></div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># engine/session.py — new callback, fired from 6 mutation sites</span>
@@ -1255,19 +1255,19 @@
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;message_count&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">messages</span><span class="p">)</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">"message_count"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">messages</span><span class="p">)</span>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_notify_messages_changed</span><span class="p">()</span>  <span class="c1"># → engine refreshes AppState</span>
 </span></code></pre></div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># engine/client.py — wire the callback, recompute on each mutation</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">on_messages_changed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_context_attachments</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">_refresh_context_attachments</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Walk session.messages, write to AppState — equality-dedup&#39;d.&quot;&quot;&quot;</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="sd">"""Walk session.messages, write to AppState — equality-dedup'd."""</span>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">attachments</span> <span class="o">=</span> <span class="p">[</span><span class="o">...</span><span class="p">]</span>  <span class="c1"># scan once</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;context_attachments&quot;</span><span class="p">,</span> <span class="n">attachments</span><span class="p">)</span>  <span class="c1"># no-op if unchanged</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">"context_attachments"</span><span class="p">,</span> <span class="n">attachments</span><span class="p">)</span>  <span class="c1"># no-op if unchanged</span>
 </span></code></pre></div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># rich/main.py — status bar reads AppState, never scans messages</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">attachments</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;context_attachments&quot;</span><span class="p">)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">attachments</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"context_attachments"</span><span class="p">)</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">render_status_panel</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">pending_files</span><span class="o">=</span><span class="n">attachments</span><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="rules">Rules<a class="headerlink" href="#rules" title="Permanent link">&para;</a></h2>
@@ -1362,7 +1362,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

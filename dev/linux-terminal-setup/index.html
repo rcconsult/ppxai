@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1548,7 +1548,7 @@
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>cat<span class="w"> </span>~/.ppxai/logs/keys.log<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>ctrl+enter
 </span></code></pre></div>
 <p><strong>Expected output:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>key=&#39;ctrl+enter&#39; character=None aliases=[&#39;ctrl+enter&#39;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>key='ctrl+enter' character=None aliases=['ctrl+enter']
 </span></code></pre></div></p>
 <hr />
 <h2 id="alternative-kitty-terminal">Alternative: Kitty Terminal<a class="headerlink" href="#alternative-kitty-terminal" title="Permanent link">&para;</a></h2>
@@ -1571,7 +1571,7 @@
 <h3 id="installation_2">Installation<a class="headerlink" href="#installation_2" title="Permanent link">&para;</a></h3>
 <p><strong>Ubuntu/Debian:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://apt.fury.io/wez/gpg.key<span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>gpg<span class="w"> </span>--yes<span class="w"> </span>--dearmor<span class="w"> </span>-o<span class="w"> </span>/usr/share/keyrings/wezterm-fury.gpg
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/apt/sources.list.d/wezterm.list
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/apt/sources.list.d/wezterm.list
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>wezterm
 </span></code></pre></div></p>
 <h3 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h3>
@@ -1587,7 +1587,7 @@
 <h2 id="fallback-using-ctrlj">Fallback: Using Ctrl+J<a class="headerlink" href="#fallback-using-ctrlj" title="Permanent link">&para;</a></h2>
 <p>If you prefer to use <strong>GNOME Terminal</strong>, <strong>Konsole</strong>, or other terminals that don't support Ctrl+Enter:</p>
 <p><strong>Workaround:</strong> Use <strong>Ctrl+J</strong> to submit messages (works in all terminals)</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># ppxaide footer will show: &quot;Ctrl+J: Send&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># ppxaide footer will show: "Ctrl+J: Send"</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>ppxaide
 </span></code></pre></div>
 <p><strong>Why Ctrl+J works:</strong>
@@ -1618,7 +1618,7 @@
 <h3 id="option-3-manual-launch">Option 3: Manual Launch<a class="headerlink" href="#option-3-manual-launch" title="Permanent link">&para;</a></h3>
 <p>Keep your existing terminal as default, launch ppxaide in Ghostty manually:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Add alias to ~/.bashrc or ~/.zshrc</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">ppxaide</span><span class="o">=</span><span class="s1">&#39;ghostty -e ppxaide&#39;</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">ppxaide</span><span class="o">=</span><span class="s1">'ghostty -e ppxaide'</span>
 </span></code></pre></div>
 <hr />
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
@@ -1634,7 +1634,7 @@
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>ghostty<span class="w"> </span>-e<span class="w"> </span>ppxaide<span class="w"> </span>--debug
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1"># Press Ctrl+Enter, then check log</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>grep<span class="w"> </span><span class="s2">&quot;ctrl+enter&quot;</span><span class="w"> </span>~/.ppxai/logs/keys.log
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>grep<span class="w"> </span><span class="s2">"ctrl+enter"</span><span class="w"> </span>~/.ppxai/logs/keys.log
 </span></code></pre></div></p>
 <h3 id="ghostty-not-found">Ghostty Not Found<a class="headerlink" href="#ghostty-not-found" title="Permanent link">&para;</a></h3>
 <p><strong>Verify installation:</strong>
@@ -1643,7 +1643,7 @@
 </span></code></pre></div></p>
 <p><strong>Add to PATH if needed:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Add to ~/.bashrc or ~/.zshrc</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.local/bin:</span><span class="nv">$PATH</span><span class="s2">&quot;</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/.local/bin:</span><span class="nv">$PATH</span><span class="s2">"</span>
 </span></code></pre></div></p>
 <h3 id="desktop-integration-not-working">Desktop Integration Not Working<a class="headerlink" href="#desktop-integration-not-working" title="Permanent link">&para;</a></h3>
 <p><strong>Verify desktop file:</strong>
@@ -1664,9 +1664,12 @@
 - Ctrl+Enter → <code>\x1b[13;5u</code> (escape sequence - distinct!)
 - Allows distinguishing all modifier+key combinations</p>
 <p><strong>Textual Support:</strong>
-Textual (ppxaide's framework) automatically enables Kitty keyboard protocol:
+Textual (ppxaide's framework) unconditionally <em>enables</em> the Kitty keyboard
+protocol — but it does not negotiate or verify support, so a terminal that
+ignores the sequence simply never delivers Ctrl+Enter (see
+<a href="../ppxaide-impl/#kitty-keyboard-protocol">ppxaide-impl.md</a>):
 <div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># From textual/drivers/linux_driver.py</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\x1b</span><span class="s2">[&gt;1u&quot;</span><span class="p">)</span>  <span class="c1"># Enable Kitty keyboard protocol</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">"</span><span class="se">\x1b</span><span class="s2">[&gt;1u"</span><span class="p">)</span>  <span class="c1"># Enable Kitty keyboard protocol</span>
 </span></code></pre></div></p>
 <p><strong>The Problem:</strong>
 - GNOME Terminal, Konsole, xterm don't implement the protocol
@@ -1759,7 +1762,7 @@ Textual (ppxaide's framework) automatically enables Kitty keyboard protocol:
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

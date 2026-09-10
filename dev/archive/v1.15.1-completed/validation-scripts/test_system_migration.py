@@ -14,38 +14,33 @@ Tests v2 handlers for:
 v1.15.0: Type-based renderer dispatch testing
 """
 
-import sys
 import os
+import sys
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from rich.console import Console
 
-from ppxai.commands.context import RichCommandContext
-from ppxai.commands.handler import CommandHandler
-from ppxai.commands.utility import (
-    handle_cd,
-    handle_pwd,
-    handle_config,
-    handle_debug_log,
-    handle_context,
-)
 from ppxai.commands.agent import (
     handle_checkpoint,
     handle_undo,
 )
+from ppxai.commands.context import RichCommandContext
+from ppxai.commands.handler import CommandHandler
 from ppxai.commands.results import (
-    CommandResult,
-    KeyValueResult,
-    ConfirmationResult,
     ErrorResult,
-    TreeResult,
-    TableResult,
-    TextResult,
+    KeyValueResult,
 )
+from ppxai.commands.utility import (
+    handle_cd,
+    handle_config,
+    handle_context,
+    handle_debug_log,
+    handle_pwd,
+)
+from ppxai.config import get_api_key, get_base_url, get_default_model, get_default_provider
 from ppxai.rendering.rich_renderer import RichRenderer
-from ppxai.config import get_default_provider, get_default_model, get_api_key, get_base_url
 
 console = Console()
 

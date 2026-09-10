@@ -19,15 +19,15 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 empirically accept image_url content - ppxai Documentation</title>
+        <title>Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 empirically accept image_url content — FIXED 2026-06-08 - ppxai Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#qwen35-27b-fp8-and-qwen36-27b-fp8-empirically-accept-image_url-content" class="md-skip">
+        <a href="#qwen35-27b-fp8-and-qwen36-27b-fp8-empirically-accept-image_url-content-fixed-2026-06-08" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 empirically accept image_url content
+              Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 empirically accept image_url content — FIXED 2026-06-08
             
           </span>
         </div>
@@ -1146,6 +1146,29 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#why-this-tripped-people-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this tripped people up
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-actually-true-fix-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's actually true (fix + evidence)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What&#39;s actually true (fix + evidence)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#empirical-evidence-cross-repo" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1155,8 +1178,8 @@
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#how-to-reproduce-on-this-cluster" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1166,15 +1189,9 @@
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#open-rerun-36-against-current-cluster" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Open: rerun 3.6 against current cluster
-      
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1209,30 +1226,43 @@
   
 
 
-<h1 id="qwen35-27b-fp8-and-qwen36-27b-fp8-empirically-accept-image_url-content">Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 empirically accept image_url content<a class="headerlink" href="#qwen35-27b-fp8-and-qwen36-27b-fp8-empirically-accept-image_url-content" title="Permanent link">&para;</a></h1>
-<p><strong>Hazard:</strong> <code>ppxai/engine/model_profiles.py</code> has no entry for either
-<code>Qwen/Qwen3.5-27B-FP8</code> or <code>Qwen/Qwen3.6-27B-FP8</code>. Both fall through to the
-default <code>supports_vision=False</code>. That makes the chat-attach pipeline send a
-text placeholder for image attachments, and the downstream model (which CAN
-in fact see images via vLLM) is left without input and tends to hallucinate
-a description that looks confident but is fabricated.</p>
-<p><strong>Verifies in code:</strong></p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># In ppxai repo:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;Qwen.*3\.[56]-27B|Qwen3\.[56]-27B&quot;</span><span class="w"> </span>ppxai/engine/model_profiles.py
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Expected output as of this commit: NO MATCH</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># When fixed: a glob like &quot;Qwen/Qwen3.[56]-27B-FP8*&quot; with supports_vision=True</span>
+<h1 id="qwen35-27b-fp8-and-qwen36-27b-fp8-empirically-accept-image_url-content-fixed-2026-06-08">Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 empirically accept image_url content — FIXED 2026-06-08<a class="headerlink" href="#qwen35-27b-fp8-and-qwen36-27b-fp8-empirically-accept-image_url-content-fixed-2026-06-08" title="Permanent link">&para;</a></h1>
+<p><strong>TL;DR:</strong> <code>ppxai/engine/model_profiles.py</code> had no entry for either
+<code>Qwen/Qwen3.5-27B-FP8</code> or <code>Qwen/Qwen3.6-27B-FP8</code>, so both fell through to
+the default <code>supports_vision=False</code> even though the models genuinely accept
+<code>image_url</code> content through vLLM. <strong>Fixed 2026-06-08</strong> — see
+<code>model_profiles.py:481-505</code> for the glob entry and the resolved evidence
+trail below.</p>
+<p><strong>Verify with:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># In ppxai repo — the entry exists as a single glob covering both models:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>grep<span class="w"> </span>-n<span class="w"> </span><span class="s2">"Qwen/Qwen3.\[56\]-27B-FP8"</span><span class="w"> </span>ppxai/engine/model_profiles.py
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Expected: model_profiles.py:481:    "Qwen/Qwen3.[56]-27B-FP8*": ModelProfile(</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">#           ...with supports_vision=True at the entry (~line 505)</span>
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Confirms current (wrong) ppxai detection:</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Confirms current (fixed) ppxai detection — verified by execution:</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.engine.model_profiles</span><span class="w"> </span><span class="kn">import</span> <span class="n">supports_vision</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">assert</span> <span class="n">supports_vision</span><span class="p">(</span><span class="s2">&quot;Qwen/Qwen3.5-27B-FP8&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span>  <span class="c1"># ← bug</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">assert</span> <span class="n">supports_vision</span><span class="p">(</span><span class="s2">&quot;Qwen/Qwen3.6-27B-FP8&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span>  <span class="c1"># ← bug</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">assert</span> <span class="n">supports_vision</span><span class="p">(</span><span class="s2">"Qwen/Qwen3.5-27B-FP8"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">assert</span> <span class="n">supports_vision</span><span class="p">(</span><span class="s2">"Qwen/Qwen3.6-27B-FP8"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span>
 </span></code></pre></div>
-<p><strong>Why it matters:</strong> the user's first reaction to a wrong description is "ppxai
-lied about VL support." The chat warning DOES say "sent as a text placeholder"
-but the model's confident hallucination on top of that is the failure mode
-that gets reported. The fix is a one-glob <code>ModelProfile</code> entry in
-<code>model_profiles.py</code> — backed by the empirical evidence below.</p>
-<h2 id="empirical-evidence-cross-repo">Empirical evidence (cross-repo)<a class="headerlink" href="#empirical-evidence-cross-repo" title="Permanent link">&para;</a></h2>
+<h2 id="why-this-tripped-people-up">Why this tripped people up<a class="headerlink" href="#why-this-tripped-people-up" title="Permanent link">&para;</a></h2>
+<p>Before the fix, the chat-attach pipeline sent a text placeholder for image
+attachments on these models, and the downstream model (which CAN in fact see
+images via vLLM) was left without input and tended to hallucinate a
+confident-looking but fabricated description. The HuggingFace card for 3.5
+says "Text-only" — that label was (and remains) empirically wrong for how
+the model behaves through vLLM, which is exactly the trap: the obvious
+source of truth (the model card) disagreed with observed behavior, and
+<code>model_profiles.py</code>'s default (<code>supports_vision=False</code>) silently sided with
+the card.</p>
+<p>The user's first reaction to a wrong description was "ppxai lied about VL
+support." The chat warning did say "sent as a text placeholder," but the
+model's confident hallucination on top of that was the failure mode that
+got reported.</p>
+<h2 id="whats-actually-true-fix-evidence">What's actually true (fix + evidence)<a class="headerlink" href="#whats-actually-true-fix-evidence" title="Permanent link">&para;</a></h2>
+<p>The fix is the one-glob <code>ModelProfile</code> entry at
+<code>ppxai/engine/model_profiles.py:481-505</code> — <code>"Qwen/Qwen3.[56]-27B-FP8*"</code>
+with <code>supports_vision=True</code> — backed by the empirical evidence below.</p>
+<h3 id="empirical-evidence-cross-repo">Empirical evidence (cross-repo)<a class="headerlink" href="#empirical-evidence-cross-repo" title="Permanent link">&para;</a></h3>
 <p>The sister <code>trad-ai-chat</code> repo has a self-contained 9-test VL probe that
 generates 3 fixture images inline via Pillow and POSTs OpenAI-style
 <code>image_url</code> content blocks against an arbitrary vLLM/OpenAI endpoint.</p>
@@ -1254,7 +1284,7 @@ generates 3 fixture images inline via Pillow and POSTs OpenAI-style
 </tr>
 <tr>
 <td>Baseline</td>
-<td><code>https://codeai.trad.int/qwen35/v1</code> model <code>Qwen/Qwen3.5-27B-FP8</code></td>
+<td><code>https://codeai.internal/qwen35/v1</code> model <code>Qwen/Qwen3.5-27B-FP8</code></td>
 </tr>
 <tr>
 <td>Score</td>
@@ -1271,46 +1301,45 @@ generates 3 fixture images inline via Pillow and POSTs OpenAI-style
 </tbody>
 </table>
 <p>Per-test result table is captured in the sister-session memory at
-<code>~/.claude/projects/-home-itadmin-ai-git-trad-ai-chat/memory/project_vllm_vl_capabilities_test.md</code>.</p>
+<code>~/.claude/projects/&lt;trad-ai-chat-slug&gt;/memory/project_vllm_vl_capabilities_test.md</code>.</p>
 <p>The architecture-comparison doc at
 <code>trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md</code> (2026-04-30)
 states Qwen3.6-27B-FP8 has an <strong>explicit vision encoder</strong> in the
-architecture ("Text + image + video") and recommends running the same
-<code>test-vl-capabilities.sh</code> script to confirm 3.6 passes natively. The
-HuggingFace card for 3.5 says "Text-only" — that label is empirically
-wrong for how the model behaves through vLLM.</p>
-<h2 id="how-to-reproduce-on-this-cluster">How to reproduce on this cluster<a class="headerlink" href="#how-to-reproduce-on-this-cluster" title="Permanent link">&para;</a></h2>
+architecture ("Text + image + video"). The fix comment block in
+<code>model_profiles.py</code> (immediately above the entry) records a third,
+in-cluster confirmation on 2026-06-08: a 256x128 PNG containing
+"VL TEST 8472" returned the correct <code>"8472"</code> from both endpoints
+(<code>chat_template_kwargs={"enable_thinking": False}</code>, finish_reason=stop) —
+closing the "rerun 3.6 against current cluster" gap this lesson originally
+flagged as open.</p>
+<h3 id="how-to-reproduce-on-this-cluster">How to reproduce on this cluster<a class="headerlink" href="#how-to-reproduce-on-this-cluster" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Pull the API key the same way the sister script does:</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">API_KEY</span><span class="o">=</span><span class="k">$(</span>/snap/kubectl/current/kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>vllm-qwen35-api-key<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span>-n<span class="w"> </span>vllm<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.data.api-key}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="k">)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span>-n<span class="w"> </span>vllm<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.data.api-key}'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="k">)</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Then point at whichever endpoint you want to probe. For coder.trad.int:</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nb">cd</span><span class="w"> </span>/home/itadmin/ai/git/trad-ai-chat
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Then point at whichever endpoint you want to probe. For coder.internal:</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nb">cd</span><span class="w"> </span>/path/to/trad-ai-chat
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>./scripts/test-vl-capabilities.sh<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span>http://vllm-qwen35-27b-fp8-worker.vllm.svc.cluster.local/v1<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span>Qwen/Qwen3.5-27B-FP8
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c1"># Exit code 0 = required tests pass. Exit code 1 = one or more required failed.</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># Test 3 (chart comprehension) is OPTIONAL — don&#39;t fail the build on those.</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># Test 3 (chart comprehension) is OPTIONAL — don't fail the build on those.</span>
 </span></code></pre></div>
 <p>The script needs <code>curl</code>, <code>python3</code>, and Pillow (auto-detected from
 <code>&lt;repo&gt;/.venv</code> per the script). No external network. No
 sudo. Fixtures generated inline.</p>
-<h2 id="open-rerun-36-against-current-cluster">Open: rerun 3.6 against current cluster<a class="headerlink" href="#open-rerun-36-against-current-cluster" title="Permanent link">&para;</a></h2>
-<p>The 2026-04-23 baseline is on 3.5. The qwen36-27b-fp8-mig deployment is
-newer; nobody has run <code>test-vl-capabilities.sh</code> against it yet. The
-empirically-derived <code>supports_vision=True</code> entry SHOULD be added to
-ppxai for 3.6 anyway based on the architecture claim, but rerunning the
-script before adding the profile entry is the conservative path.</p>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Debt: <a href="../../debt-inventory/">Item 24 in docs/debt-inventory.md</a> — the
-  ppxai-side fix path. Item 24 also covers the secondary
-  <code>auto_caption</code> VL-sidecar fallback bug that's worth a separate
-  diagnose pass.</li>
+<li>Debt: <a href="../../debt-inventory/">Item 24 in docs/debt-inventory.md</a> — closed;
+  full resolution detail (including the secondary <code>auto_caption</code> VL-sidecar
+  fallback fix) archived in
+  <a href="../../archive/DEBT-INVENTORY-CLOSED/">docs/archive/DEBT-INVENTORY-CLOSED.md</a>.</li>
 <li><a href="../">Two-tier memory rule</a> — this lesson belongs here in
   <code>docs/lessons/</code> (cross-host, grep-verifiable) rather than per-host
-  memory because the evidence trail spans two repos.</li>
+  memory because the evidence trail spans two repos, even though the bug
+  itself is now resolved — the trail is what future re-derivation risk
+  needs.</li>
 </ul>
 
 
@@ -1386,7 +1415,7 @@ script before adding the profile entry is the conservative path.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

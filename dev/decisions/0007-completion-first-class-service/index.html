@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1154,6 +1154,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#re-measured-status-2026-08-15-bugfixv1191" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Re-measured status (2026-08-15, bugfix/v1.19.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1249,8 +1266,9 @@
 
 
 <h1 id="adr-0007-completion-as-a-first-class-service-command-roster-via-appstate">ADR 0007 — Completion as a first-class service; command roster via AppState<a class="headerlink" href="#adr-0007-completion-as-a-first-class-service-command-roster-via-appstate" title="Permanent link">&para;</a></h1>
-<p><strong>Date:</strong> 2026-06-14
-<strong>Status:</strong> Proposed (target v1.19.x)
+<p><strong>Date:</strong> 2026-06-14 (revised 2026-08-15 — coupling re-measured on
+<code>bugfix/v1.19.1</code>; the SDK trigger below partially fired)
+<strong>Status:</strong> Proposed — step 1 shipped v1.18.8 (<code>CommandFactory.iter_completion_specs</code>, <code>commands/factory.py</code>); step 2 (extract <code>ppxai/completion/</code> package) open, target v1.19.x
 <strong>Related:</strong>
 - <code>ppxai/engine/completion.py</code> — current home of <code>complete()</code>
 - <code>ppxai/commands/factory.py</code> — <code>CommandFactory</code>, <code>CompletionCommandInfo</code>, <code>iter_completion_specs()</code>
@@ -1287,8 +1305,96 @@ its context, not be handed it three different ways.</p>
    all clients, with no per-client code when a command is added.</li>
 </ol>
 <p>The call graph shows the coupling sits entirely <em>below</em> the shared
-<code>complete()</code> seam — no client references <code>CommandFactory</code> — so the seam is
-the right place to invert, and the roster is the right thing to publish.</p>
+<code>complete()</code> seam, so the seam is the right place to invert, and the roster
+is the right thing to publish.</p>
+<blockquote>
+<p><strong>Correction (2026-08-15):</strong> the original text said "no client references
+<code>CommandFactory</code>". That is no longer true — the two in-process TUIs
+dispatch through it directly (<code>rich/main.py:20</code>,
+<code>rich/event_handler.py:20</code>, <code>tui/app.py:61</code>). It does not change the
+decision: those are <em>dispatch</em> references, not roster reads, and the
+roster is still funnelled through the single <code>complete()</code> seam. It does
+mean the eventual <code>CompletionService</code> cannot assume the command layer is
+reachable only from completion.</p>
+</blockquote>
+<h3 id="re-measured-status-2026-08-15-bugfixv1191">Re-measured status (2026-08-15, <code>bugfix/v1.19.1</code>)<a class="headerlink" href="#re-measured-status-2026-08-15-bugfixv1191" title="Permanent link">&para;</a></h3>
+<p>What step 1 actually fixed, and what is left:</p>
+<ul>
+<li>✅ <strong>Private-registry access is gone.</strong> <code>engine/completion.py</code> reads the
+  public <code>iter_completion_specs()</code> snapshot and <code>CommandFactory.get()</code> for
+  alias resolution. No <code>_registry</code> / <code>_aliases</code> poking remains.</li>
+<li>⚠️ <strong>The layer inversion itself is unchanged</strong>: <code>from ..commands.factory
+  import CommandFactory</code> at <code>ppxai/engine/completion.py:48</code>. It is the
+  <strong>only</strong> <code>engine → commands</code> import in the entire engine package — the
+  extraction stays a one-edge job.</li>
+<li>🔎 <strong>It does not block SDK embedding — measured on the real consumer
+  surface.</strong> ppxai-sre's actual integration surface is these eight symbols:
+  <code>engine.client.EngineClient</code>, <code>engine.types.{Event, EventType}</code>,
+  <code>engine.tools.base.FunctionTool</code>, <code>engine.tools.manager.ToolManager</code>,
+  <code>engine.bootstrap.BootstrapContext</code>, <code>config.loader.PPXAI_HOME</code>,
+  <code>config.providers.get_provider_config</code>, <code>engine.model_profiles.get_profile</code>.
+  Importing all eight loads 64 <code>ppxai.*</code> modules and <strong>zero</strong>
+  <code>ppxai.commands</code> modules; nothing matching <code>completion</code> is imported.
+  Reproduced independently in both repos' environments (2026-08-15). The
+  inversion is latent, traversed only when a caller imports completion
+  explicitly, which today only the three client glue layers do.</li>
+</ul>
+<p><strong>Measured as three composable spans (2026-08-15).</strong> A <code>sys.meta_path</code>
+  observer was installed <em>before</em> any ppxai import, recording every
+  <code>ppxai.commands*</code> / <code>ppxai.*completion*</code> resolution with its stack, then
+  real execution was driven — not bare imports. Each span is independently
+  re-runnable:</p>
+<table>
+<thead>
+<tr>
+<th>Span</th>
+<th>What was driven</th>
+<th><code>commands</code> / <code>completion</code> imports</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Import time + full consumer package load</td>
+<td>all 12 consumer modules</td>
+<td><strong>0 / 0</strong> (closure flat at 64)</td>
+</tr>
+<tr>
+<td>Client + tool-manager construction (the provider-build path)</td>
+<td><code>EngineClient()</code>, <code>ToolManager()</code></td>
+<td><strong>0 / 0</strong> (closure flat at 64)</td>
+</tr>
+<tr>
+<td>Request-time loop + tool dispatch</td>
+<td><code>tests/test_tool_messages.py</code> in full — 41 tests, native branch, multi-tool batches, mid-batch error, interrupt, loop detection, session serialization</td>
+<td><strong>0 / 0</strong> (73 modules)</td>
+</tr>
+</tbody>
+</table>
+<p>The third span injects a scripted <code>MockProvider</code> directly, so it exercises
+  the <em>loop</em> rather than provider construction — which is precisely what the
+  second span covers, so the three compose. The observer recorded stack
+  frames for attribution and never fired.</p>
+<p><strong>The resulting claim, stated exactly:</strong> no <code>engine → commands</code> coupling
+  at import time, package load, client construction, or request-time
+  execution including tool dispatch. <strong>The only unexercised code is the
+  provider's own network round-trip</strong> — HTTP and serialization under
+  <code>engine/providers/</code>, structurally not a place the command layer can be
+  reached from. Closing that last sliver would need live credentials and is
+  not where a lazy import could plausibly live.</p>
+<p>(Baseline reproduced on this side: <code>tests/test_tool_messages.py</code> is 41
+  tests, green in 1.27s.)</p>
+<p>Note the consumer's engine entry point is <strong><code>EngineClient</code></strong>, not
+  <code>task_runner</code> — <code>build_task_runner</code>'s extraction (<code>eeb82076</code>) widened
+  what an embedder <em>could</em> drive in-process, but ppxai-sre has not adopted
+  it and reaches the engine through a single <code>engine.chat()</code> call today.
+- 📈 <strong>Surface has grown since the ADR was written.</strong> <code>/task</code> and <code>/run</code>
+  are now factory-registered, so the roster completion depends on is
+  broader; completion also gained client-specific gating (the <code>clients</code>
+  set, <code>engine/completion.py:73-75</code>) and dynamic run-id suggestions. None
+  of that isnew coupling, but it raises the cost of the eventual move.</p>
+<p>Nothing here changes the decision. It moves the <em>priority</em>: this is an
+architectural cleanup with no current correctness defect, not a
+release-blocker.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <p>Split the two concerns and give each a first-class home.</p>
 <h3 id="behaviour-a-completionservice-component-injected-at-startup">Behaviour → a <code>CompletionService</code> component, injected at startup<a class="headerlink" href="#behaviour-a-completionservice-component-injected-at-startup" title="Permanent link">&para;</a></h3>
@@ -1362,7 +1468,19 @@ seed. Incremental path:</p>
 <h2 id="triggers-to-revisit">Triggers to revisit<a class="headerlink" href="#triggers-to-revisit" title="Permanent link">&para;</a></h2>
 <ul>
 <li>A "ship the engine as a standalone library" goal (makes the residual
-  <code>engine → commands</code> import a hard blocker, not a smell).</li>
+  <code>engine → commands</code> import a hard blocker, not a smell).
+  <strong>Partially fired 2026-08-15:</strong> ppxai-sre consumes ppxai as an SDK
+  dependency to implement its agents, and <code>build_task_runner</code> was extracted
+  to <code>ppxai/engine/task_runner.py</code> (<code>eeb82076</code>) precisely to serve that
+  model. It is <em>not</em> yet hard-blocking, because that consumer's import path
+  never reaches <code>engine.completion</code> (measured above). It becomes hard the
+  moment any of these is true:</li>
+<li><code>ppxai/engine/</code> is packaged as its own distribution, so an unused
+    upward import is a real dependency rather than a dormant one;</li>
+<li>an embedder needs the command roster — a palette, a menu, an
+    <code>/help</code> equivalent — <strong>without</strong> running the client command layer;</li>
+<li>the <code>commands</code> package acquires an import-time side effect (config
+    read, registry build, I/O) that an embedder must not pay for.</li>
 <li>A second client surface needing the live command roster (palette, menu),
   which makes the AppState roster publication pay for itself.</li>
 <li>A second cross-layer capability appearing with the same "belongs to no
@@ -1443,7 +1561,7 @@ seed. Incremental path:</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -1,0 +1,1722 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/TODO-docs-accuracy-sweep/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>TODO — documentation accuracy sweep (v1.19.1) - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#todo-documentation-accuracy-sweep-v1191" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              TODO — documentation accuracy sweep (v1.19.1)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-use-this-document" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to use this document
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ground-truth-as-of-7c82c95e-verify-anything-you-depend-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ground truth as of 7c82c95e (verify anything you depend on)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-0-done-2026-08-15-one-wrong-fact-nine-places" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHASE 0 — ✅ DONE (2026-08-15) — one wrong fact, nine places
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-done-top-level-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHASE 1 — ✅ DONE — top-level files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-done-release-paperwork-blocked-any-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHASE 2 — ✅ DONE — release paperwork (blocked any release)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-done-actively-wrong-user-guides-high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHASE 3 — ✅ DONE — actively-wrong user guides (High)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-done-dev-guides-taught-broken-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHASE 4 — ✅ DONE — dev guides taught broken code
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-done-missing-documentation-for-shipped-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHASE 5 — ✅ DONE — missing documentation for shipped features
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-6-done-lifecycle-archive-completed-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHASE 6 — ✅ DONE — lifecycle: archive completed docs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-7-done-sentinel-extensions-21-27-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHASE 7 — ✅ DONE — sentinel extensions (21 → 27 tests)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lower-severity-remainder-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lower-severity remainder — ✅ DONE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rejected-on-verification-do-not-re-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rejected on verification — do NOT re-file
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="todo-documentation-accuracy-sweep-v1191">TODO — documentation accuracy sweep (v1.19.1)<a class="headerlink" href="#todo-documentation-accuracy-sweep-v1191" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> ✅ <strong>COMPLETE</strong> — all 7 phases + the lower-severity remainder
+executed 2026-08-15 on <code>bugfix/v1.19.1</code>, one commit per phase
+(<code>421e381c</code> P0 · <code>b7c6b527</code> P1 · <code>20c695ab</code> P2 · <code>7698bd75</code> P7 ·
+<code>0b3bde98</code> P3 · <code>66639086</code> P4 · <code>7bec4940</code> P6 · <code>575ae3e7</code> P5).
+Filed 2026-08-15 @ <code>7c82c95e</code>.</p>
+<p><strong>Two filed findings were REJECTED on verification</strong> (in addition to the
+macOS-Intel one at the bottom) — do not re-file:
+1. <em>"<code>autorouter-config.md:30</code> names the wrong OpenAI coding model."</em>
+   False: it names <code>gpt-5.4-mini</code>, which <strong>is</strong> <code>providers.openai.coding_model</code>
+   in <code>ppxai-config.json</code>.
+2. <em>"The <code>strip_orphan_tool_calls</code> grep in the Perplexity lesson no longer
+   resolves."</em> Half false: it still resolves in <code>engine/session.py:29</code>. Only
+   the <strong>chat.py</strong> grep was stale (that file now calls the composed
+   <code>sanitize_outbound</code>), and only that half was corrected.</p>
+<p>The widened ADR-0010 sentinel found <strong>four more</strong> cases on its first run that
+no reviewer had filed: <code>AGENTS.md:530</code>, <code>scripts/trial-task-lifecycle.py:21</code>,
+and five stale version stamps.
+<strong>Scope:</strong> repo documentation only — no production-code changes except where a doc
+fix requires confirming behavior.</p>
+<h2 id="how-to-use-this-document">How to use this document<a class="headerlink" href="#how-to-use-this-document" title="Permanent link">&para;</a></h2>
+<p>Work the phases in the recommended order below. Every finding cites <code>file:line</code> for
+both the wrong claim and the evidence. <strong>Re-verify before editing</strong> — this file is a
+point-in-time snapshot and the tree moves. When a phase lands, mark it ✅ here in the
+same commit.</p>
+<p><strong>Method that produced it:</strong> four parallel reviews (top-level files / user guides /
+process+lifecycle / patterns+lessons+specialist), each required to verify claims
+against source. ~93 findings retained, 1 rejected on verification (see the bottom
+section — do not re-file it). Mechanical drift already fenced by
+<code>tests/test_docs_consistency.py</code> (retired ADR-0011 command names, broken relative
+links, phantom repo paths, legacy <code>tools.agent.*</code> key paths) was excluded from scope.</p>
+<h2 id="ground-truth-as-of-7c82c95e-verify-anything-you-depend-on">Ground truth as of <code>7c82c95e</code> (verify anything you depend on)<a class="headerlink" href="#ground-truth-as-of-7c82c95e-verify-anything-you-depend-on" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Version <strong>1.19.1, UNRELEASED</strong>; v1.19.0 is the latest GitHub release. 120 commits ahead of <code>master</code>.</li>
+<li>ADRs <strong>0009, 0010, 0011 all Accepted AND implemented</strong>. ADR 0010 shipped as a
+  <strong>clean break</strong> — legacy <code>tools.agent.{task_tier_enabled,sandbox,spawn_consent,consent_ttl_s,result_retention_s,default_subagent}</code>
+  moved to <code>execution.*</code> and the old paths are silently ignored, not dual-read.</li>
+<li><strong>T8b shipped</strong> (unparked 2026-08-08). <code>/task</code> + <code>/run</code> register client-agnostically in
+  <code>ppxai/commands/factory.py:37-40</code> + <code>ppxai/commands/task.py:440</code>, backed by the in-process
+  <code>ppxai/engine/task_runner.py</code>. <strong>Nuance:</strong> Textual has full parity; <strong>Rich lacks
+  <code>launch</code>/<code>resume</code></strong> (they need a live event loop — <code>ppxai/commands/task.py:52,69-88</code>).</li>
+<li>Suite collects <strong>5097</strong> tests.</li>
+</ul>
+<hr />
+<h2 id="phase-0-done-2026-08-15-one-wrong-fact-nine-places">PHASE 0 — ✅ DONE (2026-08-15) — one wrong fact, nine places<a class="headerlink" href="#phase-0-done-2026-08-15-one-wrong-fact-nine-places" title="Permanent link">&para;</a></h2>
+<p>Every "web + VSCode only" / "T8b parked" claim is false (see ground truth above).
+All nine below are fixed, plus four spots the review missed: ADR
+<code>0011-command-taxonomy-streamline.md:172</code> (annotated <em>Resolved</em>, ADR body kept
+historical), <code>plan-run-taxonomy-sequencing.md:192</code>, and three live references to
+the retired key (<code>tools.agent.task_tier_enabled</code> -&gt; <code>execution.task.enabled</code>)
+<strong>outside <code>docs/</code></strong> — <code>scripts/gateway-smoke.py:16,758</code> and
+<code>.claude/skills/build-install/SKILL.md:562</code> — which survived precisely because
+the ADR-0010 sentinel only scans <code>docs/</code>
+(Phase 7 item 2, now empirically confirmed; widen it to <code>scripts/</code> and
+<code>.claude/</code> too). <code>docs/release-notes-v1.19.0.md</code> and the <code>CHANGELOG</code> <code>[1.19.0]</code>
+section were left alone on purpose: they are historical records that were
+accurate at their release.</p>
+<table>
+<thead>
+<tr>
+<th>File:line</th>
+<th>Claim to fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CLAUDE.md:25</code></td>
+<td>"Surface split: <code>/run</code> and <code>/task</code> exist in <strong>web + VSCode only</strong> … until the parked T8b transport decision lands"</td>
+</tr>
+<tr>
+<td><code>CLAUDE.md:29</code></td>
+<td>"T8b (TUI port) is ⏸️ PARKED (2026-07-07)"</td>
+</tr>
+<tr>
+<td><code>README.md:235</code></td>
+<td>"Ships in <strong>Web</strong> and <strong>VSCode</strong>"</td>
+</tr>
+<tr>
+<td><code>docs/task-agent-guide.md:3-6</code></td>
+<td>"Clients: Web + VSCode (TUIs: not yet…)"</td>
+</tr>
+<tr>
+<td><code>docs/session-agent-guide.md:13-14</code></td>
+<td>surface table lists <code>/run</code>//<code>task</code> as Web+VSCode</td>
+</tr>
+<tr>
+<td><code>docs/agent-task-command-design.html:152</code></td>
+<td>"The TUI port (T8b) is parked pending a transport decision"</td>
+</tr>
+<tr>
+<td><code>docs/agent-task-command-design.html:257</code></td>
+<td>"<strong>Parked:</strong> TUI port (T8b)"</td>
+</tr>
+<tr>
+<td><code>docs/plan-task-command-sequencing.md:500</code></td>
+<td>"T8b — ⏸️ PARKED (2026-07-07 — resume here)" — contradicts its own <code>:568</code></td>
+</tr>
+<tr>
+<td><code>docs/archive/plan-v1.19.0-sequencing.md:3-7</code></td>
+<td>banner "T8b is parked"</td>
+</tr>
+</tbody>
+</table>
+<p>Also <code>docs/plan-task-command-sequencing.md:568</code> header still says "🚧 IN PROGRESS" —
+<code>f3cf3d53</code> and <code>394bdf1f</code> closed the remaining gaps; it is DONE.
+And <code>docs/archive/plan-v1.19.0-sequencing.md:11</code> still says "<strong>Status:</strong> Active" three lines
+under a "CLOSED" banner.</p>
+<h2 id="phase-1-done-top-level-files">PHASE 1 — ✅ DONE — top-level files<a class="headerlink" href="#phase-1-done-top-level-files" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>File:line</th>
+<th>Sev</th>
+<th>Issue</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1-3</td>
+<td>see Phase 0</td>
+<td>High</td>
+<td>T8b</td>
+<td>Phase 0</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>CLAUDE.md:13</code></td>
+<td>Med</td>
+<td>"two implemented ADRs" — it's <strong>three</strong> (0009, 0010, 0011)</td>
+<td>say three</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>CLAUDE.md:60</code></td>
+<td>Med</td>
+<td>"4,796 passing … verified 2026-08-04 @ <code>2aa3669b</code>"</td>
+<td>5,097 + fresh date/commit</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>CLAUDE.md:27</code></td>
+<td>Med</td>
+<td>"Legacy keys they supersede are dual-read" — only <code>execution.run.grounding</code> dual-reads (<code>ppxai/config/execution.py:56-60</code>); <code>execution.task.*</code> is a clean break and is omitted from the axis rundown entirely</td>
+<td>scope the dual-read claim, add <code>execution.task.*</code> + "no dual-read"</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>README.md:164</code></td>
+<td>Low-Med</td>
+<td>Gemini list names 2.5 Pro / 3-Flash Preview — absent from <code>ppxai-config.json:143-172</code>; omits <code>gemini-3.1-flash-lite</code> + both Gemma 4</td>
+<td>sync to shipped catalog</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>README.md:165</code></td>
+<td>Low-Med</td>
+<td>"GPT-5.4 (default)" — real default <code>gpt-5.4-mini</code> (<code>ppxai-config.json:217</code>); names <code>gpt-5.1-codex</code> (absent; real is <code>gpt-5.3-codex</code>) + o-series (absent); omits GPT-5.5/5.5-pro</td>
+<td>sync to shipped catalog</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>README.md:3,475</code></td>
+<td>Low</td>
+<td>badge <code>tests-4796</code></td>
+<td>leave to <code>/release</code> (badge trails by design)</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>README.md:226</code></td>
+<td>Low</td>
+<td><code>/task</code> has a full subsection; <code>/run</code> never does</td>
+<td>add a short <code>/run</code> subsection</td>
+</tr>
+</tbody>
+</table>
+<p>No findings: ROADMAP.md, AGENTS.md, BUILD.md, CONTRIBUTING.md, SECURITY.md,
+SPECIFICATIONS.md, RELATED-PROJECTS.md, CODE_OF_CONDUCT.md.</p>
+<h2 id="phase-2-done-release-paperwork-blocked-any-release">PHASE 2 — ✅ DONE — release paperwork (blocked any release)<a class="headerlink" href="#phase-2-done-release-paperwork-blocked-any-release" title="Permanent link">&para;</a></h2>
+<ol>
+<li>~~<strong><code>docs/release-notes-v1.19.1-DRAFT.md</code> is ~40 commits stale</strong>~~ —
+   <strong>DONE 2026-09-10.</strong> The draft was 101 commits stale by the time it was
+   finalized. Written out as <code>docs/release-notes-v1.19.1.md</code> and the draft
+   deleted; <code>scripts/validate-release.py v1.19.1</code> no longer errors on it.
+   Original finding: <strong><code>docs/release-notes-v1.19.1-DRAFT.md</code> was stale</strong> (last touched <code>573b76ff</code>,
+   2026-08-06). Missing: security/admission-boundary unification (<code>135abf48</code>), the entire
+   <code>network.ssl.*</code> + outbound-TLS-resolver feature and its review fixes (<code>f9dff325</code>,
+   <code>ccdd0f3f</code>, <code>7c82c95e</code>), Gemini <code>response_format</code>/grounding fixes (<code>f72c10c7</code>,
+   <code>23d8695a</code>), T8b shipping, Items 56-59, <code>5e80b8d7</code>, <code>cf4791d3</code>, <code>3acc90ae</code>,
+   <code>41e709f6</code>, rtk bump. <code>/release</code> renames this file into the shipped notes.
+   <strong>Backfill from <code>CHANGELOG.md</code>.</strong></li>
+<li><strong><code>CHANGELOG.md [1.19.1]</code> never states T8b shipped as a feature.</strong> Its only T8b
+   mentions (lines 129/137/142) sit inside <em>Security</em>, describing a bug T8b launched
+   with. Add an explicit Added/Changed bullet.</li>
+</ol>
+<h2 id="phase-3-done-actively-wrong-user-guides-high">PHASE 3 — ✅ DONE — actively-wrong user guides (High)<a class="headerlink" href="#phase-3-done-actively-wrong-user-guides-high" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File:line</th>
+<th>Issue</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docs/api-gateway.md:531</code></td>
+<td>"Native … <strong>no run record</strong>" — contradicts its own <code>:416-420</code></td>
+<td><code>ppxai/server/routes/oneshot.py:597</code> calls <code>registry.start_run(kind="oneshot")</code></td>
+</tr>
+<tr>
+<td><code>docs/consent-contract.md:225</code></td>
+<td>spawn_consent <code>deny</code> = "refused outright — no callback, no park"</td>
+<td><code>ppxai/engine/tools/agent_spawn.py:178-186,314-323</code> parks as <code>waiting{consent}</code>, denies on TTL; contradicts doc's own <code>:223</code></td>
+</tr>
+<tr>
+<td><code>docs/installation.md:964</code></td>
+<td>"get_weather falls back to HTTP when HTTPS fails"</td>
+<td>removed by ADR 0009 §2 / Item 52 — <code>ppxai/engine/tools/builtin/web.py:60-65</code></td>
+</tr>
+<tr>
+<td><code>docs/provider-setup.md:105</code></td>
+<td>Gemini example uses <code>gemini-2.5-flash</code>/<code>-flash-lite</code></td>
+<td>both past shutdown — <code>ppxai/engine/model_deprecations.py:85-93</code></td>
+</tr>
+<tr>
+<td><code>docs/index.md:79</code></td>
+<td>Tab completion <code>N/A</code> for VSCode + Web</td>
+<td><code>ppxai/server/routes/completion.py:39</code>, <code>vscode-extension/src/chatPanel.ts:828-851</code></td>
+</tr>
+<tr>
+<td><code>docs/shell-wrappers.md:104,130</code></td>
+<td><code>enabled:"always"</code> "raises a clear error if binary missing"</td>
+<td>silently no-ops — <code>ppxai/engine/tools/wrappers/base.py::is_active()</code> ignores PATH (own test <code>test_is_active_always_ignores_binary</code>)</td>
+</tr>
+<tr>
+<td><code>docs/container-tools-guide.md:150,609</code></td>
+<td>logs 60s vs list/inspect 30s — <strong>reversed</strong></td>
+<td><code>ppxai/engine/tools/builtin/container.py:96</code> default 30s; 60s is <code>ConsentCLITool</code>. ⚠️ introduced by docs-sweep <code>46c7c255</code> itself</td>
+</tr>
+<tr>
+<td><code>docs/shell-consent-guide.md:259</code></td>
+<td><code>tools.shell.sandboxed_paths</code> presented as enforced</td>
+<td>parsed (<code>ppxai/config/tools.py:88</code>), never read — inert</td>
+</tr>
+<tr>
+<td><code>docs/patterns/transactional-state.md:~68-72</code></td>
+<td>claims <code>status_bar.transaction()</code> is live for provider/model switch + session restore</td>
+<td>only 3 call sites, all in the <code>/badge</code> demo (<code>ppxai/tui/app.py:~1357</code>); real restore is sequential best-effort (<code>ppxai/engine/session_ops.py:20</code>); no test references <code>BadgeTransaction</code></td>
+</tr>
+<tr>
+<td><code>docs/vllm-tool-calling-guide.md:459-479</code></td>
+<td>"native tool calling now safe for GPT-OSS (vLLM PR #30205+)"</td>
+<td><code>ppxai/engine/model_profiles.py:657-661</code> forces <code>prompt_based</code>; <code>ppxai/engine/chat.py:693-694</code> overrides capability flags; upstream issue #23567 open</td>
+</tr>
+<tr>
+<td><code>docs/decisions/README.md</code></td>
+<td>has <strong>no ADR index at all</strong> — pure process prose</td>
+<td>add a table of all 11 ADRs with status</td>
+</tr>
+</tbody>
+</table>
+<h2 id="phase-4-done-dev-guides-taught-broken-code">PHASE 4 — ✅ DONE — dev guides taught broken code<a class="headerlink" href="#phase-4-done-dev-guides-taught-broken-code" title="Permanent link">&para;</a></h2>
+<p><code>docs/custom-command-development-guide.md</code>:
+- <code>:309</code> <code>handler.engine_client.working_dir</code> → <strong>AttributeError</strong>; real API <code>get_working_dir()</code> (<code>ppxai/engine/client.py:539</code>)
+- <code>:87-91</code> "return True → exit the application" — false; <code>/quit</code>//<code>exit</code> are hardcoded pre-dispatch (<code>ppxai/commands/handler.py:575-590</code>)
+- <code>:3</code> "works with both Rich and Textual" — the taught style (<code>console.print</code>, <code>handler.theme</code>) is Rich-only
+- <code>:597</code> documents default <code>category="custom"</code>; real default is <code>"general"</code>. Examples at <code>:706-814</code> use <code>git</code>//<code>notes</code>//<code>tools</code>, but <code>reload_user_commands()</code> only unregisters <code>category="custom"</code> (<code>ppxai/commands/factory.py:402-437</code>) → <strong>zombie commands after <code>/reload</code></strong>
+- <code>:104</code> <code>aliases: List[str] = []</code> in a dataclass → <code>ValueError</code>; real code uses <code>field(default_factory=list)</code>
+- missing entirely: the real <code>CommandContext</code>/<code>CommandResult</code> pattern (used by <code>/reload</code> itself)</p>
+<p><code>docs/custom-tool-development-guide.md</code>:
+- teaches <code>if TYPE_CHECKING:</code> imports — violates the repo's standing no-TYPE_CHECKING rule
+- <code>:633,791</code> <code>/tools list</code> "Source" column doesn't exist (<code>ppxai/commands/tools.py:146-176</code>)
+- <code>:609</code> drops the required <code>engine</code> arg; <code>:1132</code> version footer stale
+- no mention of <code>tools.&lt;tool&gt;.egress</code> / <code>execution.egress_ceiling</code> despite network-tool examples</p>
+<h2 id="phase-5-done-missing-documentation-for-shipped-features">PHASE 5 — ✅ DONE — missing documentation for shipped features<a class="headerlink" href="#phase-5-done-missing-documentation-for-shipped-features" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><code>network.ssl.*</code> has zero user-facing coverage</strong> — absent from README, <code>docs/index.md</code>,
+  <code>docs/README.md</code>, <code>known-issues.md</code>, <code>dev-setup.md</code>. <code>installation.md:952-974</code> covers only
+  env vars, not the persistent config keys (<code>ppxai/config/tls.py:130-181</code>);
+  <code>provider-setup.md:508</code> never mentions <code>network.ssl.cert_file</code> though <code>/doctor</code>
+  (<code>ppxai/commands/doctor.py:204-209</code>) recommends it.</li>
+<li><code>/doctor</code>'s "Config shape (ADR 0010)" section (<code>ppxai/commands/doctor.py:671-753</code>) — unmentioned</li>
+<li><code>/reload</code> — no coverage anywhere</li>
+<li><code>execution.task.default_grant</code> / <code>allow_user_default</code> (Item 58) missing from <code>task-agent-guide.md:88,91,167</code></li>
+<li><code>docs/architecture.md</code>: no <code>/v1/oneshot</code> or <code>/v1/agent/*</code> in the endpoint table (<code>:771</code>);
+  engine tree shows 5 of 36 files (<code>:60</code>); commands tree omits <code>task.py</code> (<code>:70</code>); web tree omits
+  the Task/Run UI files (<code>:704</code>); ADR 0010's three-axis design never explained;
+  <code>ppxai/config/tls.py</code> missing from the leaf-module list</li>
+<li><code>docs/README.md:77-98</code> built-in tools table omits the office family (11 tools) + 9 container/k8s tools</li>
+<li><code>docs/debug-logging.md:7</code> lists 4 log files; 13 are produced</li>
+<li><code>docs/file-editing-guide.md</code> — no mention of the R13 post-write syntax validator gating all 5 edit tools</li>
+</ul>
+<h2 id="phase-6-done-lifecycle-archive-completed-docs">PHASE 6 — ✅ DONE — lifecycle: archive completed docs<a class="headerlink" href="#phase-6-done-lifecycle-archive-completed-docs" title="Permanent link">&para;</a></h2>
+<p>Move to <code>docs/archive/</code> (each self-declares completion — verify the banner before moving,
+then fix inbound links):</p>
+<p><code>branch-review-v1.19.1.md</code> · <code>plan-run-taxonomy-sequencing.md</code> · <code>plan-v1.19.0-sequencing.md</code>
+(fix <code>:11</code> "Active" first) · <code>plan-adr0009-step1-oneshot-enrichment.md</code> ·
+<code>plan-oneshot-grounding.md</code> · <code>handoff-adr0010-k8s.md</code> ·
+<code>handoff-build-task-runner-extraction.md</code> · <code>handoff-session-provider.md</code> ·
+<code>exception-handling-audit.md</code> · <code>discussion-agents-framework.md</code> (superseded by ADR 0003).</p>
+<p>Keep live: <code>handoff-seam-watcher.md</code> (protocol index), <code>handoff-a4-response.md</code> (unbuilt),
+<code>mcp-integration-plan.md</code> (v1.20.x), <code>TODO-routing.md</code>, the release-notes rotation.
+<strong>No <code>docs/handoffs/</code> subdir needed</strong> — archiving the completed three leaves only two.</p>
+<p>Flag, don't move: <code>agent-platform-call-graphs.md</code> (predates the <code>authorize_task()</code> admission
+unification it doesn't describe); <code>model-behavior-analysis.md</code> (self-declared "living, updated
+each benchmark session", untouched ~3 months; Items 54/55 would change its rankings).</p>
+<p>Also <code>docs/debt-inventory.md:1497-1502</code> — Item 37 letter (t) should be marked RETIRED
+(cite <code>eeb82076</code>), matching how sibling (r) is already handled.</p>
+<h2 id="phase-7-done-sentinel-extensions-21-27-tests">PHASE 7 — ✅ DONE — sentinel extensions (21 → 27 tests)<a class="headerlink" href="#phase-7-done-sentinel-extensions-21-27-tests" title="Permanent link">&para;</a></h2>
+<p>Per the standing "extend the sentinel, don't re-audit" rule:
+1. <strong>T8b/surface-split fence</strong> — fail on <code>web + VSCode only</code> and on <code>T8b</code> near <code>PARKED</code> in active docs.
+2. <strong>Scope gap found during this review:</strong> <code>ADR_0010_MOVED_KEYS</code> scans only <code>docs/</code>, <strong>not
+   top-level files</strong>, and omits <code>sandbox</code> from the checked keys. Widen both.
+3. <strong>Test-count drift</strong> — assert CLAUDE.md's stated count is within N of actual collection
+   (README badge exempt — it trails by design).
+4. <strong>Doc-vs-config model catalog</strong> — assert model ids named in README/<code>provider-setup.md</code> exist
+   in <code>ppxai-config.json</code> (would have caught findings 7, 8, and the Gemini 2.5 one).
+5. <strong>Stale version banners</strong> — several guides carry <code>v1.11.2</code> / <code>v1.13.0</code> / <code>v1.13.10</code> footers
+   while linked as current.</p>
+<h2 id="lower-severity-remainder-done">Lower-severity remainder — ✅ DONE<a class="headerlink" href="#lower-severity-remainder-done" title="Permanent link">&para;</a></h2>
+<p><code>patterns/command-envelope.md</code> <code>:16</code> canonical envelope omits <code>events</code>, <code>:34</code> names the deleted
+<code>TextualCommandContext</code>, <code>:27</code> "15 kinds" now 16 · <code>patterns/appstate.md:28,44</code> (schema-derived
+now; handler is a fan-out) · lessons: <code>mcp-not-yet-integrated.md:29</code> (<code>.mcp.json</code> is now empty
+<code>{}</code>), <code>:17</code> line drift; <code>perplexity-alternation-…:19</code> grep no longer resolves (now
+<code>sanitize_outbound</code>); <code>stale-tests-outlive-deleted-behavior.md</code> cites renamed classes ·
+<code>ppxaide-impl.md:114</code> iTerm2 widget wrong, <code>:92</code> contradicts <code>linux-terminal-setup.md:266-271</code>
+on the Kitty protocol, <code>:30</code> theme count (22, not 17+) · <code>multimodal-api-models-reference.md:84-91</code>
+omits <code>sonar-reasoning-pro</code>, <code>:75</code> gpt-5.4 pricing ≠ config · <code>vllm-notes.md:12-17</code> lacks a
+Qwen3-Coder parser row · <code>docs/research/*</code> citing gaps already closed (<code>build_task_runner</code>
+extraction; <code>state.json</code> persistence) · <code>autorouter-config.md:30</code> wrong OpenAI coding model ·
+<code>bootstrap-context-guide.md:459,72,347</code> · <code>context-injection.md:413</code> ·
+<code>file-editing-guide.md:109,668</code> · <code>model-selection-guide.md:57</code> vs <code>AGENTS.md:179-190</code> ·
+<code>docs/README.md:205</code> "16-file package" now 17.</p>
+<hr />
+<h2 id="rejected-on-verification-do-not-re-file">Rejected on verification — do NOT re-file<a class="headerlink" href="#rejected-on-verification-do-not-re-file" title="Permanent link">&para;</a></h2>
+<p><strong>"macOS Intel binaries are no longer built."</strong> A reviewer inferred this from
+<code>.github/workflows/build.yml</code> having only <code>macos-arm64</code> in its matrix. <strong>False.</strong>
+<code>scripts/release.py:884</code> marks Intel assets <em>"Optional Intel Mac builds (built locally, not by
+CI)"</em>, and v1.19.0 shipped all five Intel artifacts including <code>ppxai-1.19.0-macos-intel.dmg</code>.
+<code>docs/installation.md:268,385</code>, <code>BUILD.md:309</code> and <code>vscode-extension/README.md:45</code> are correct.</p>
+<p>Minor real nit noticed while checking: <code>ppxaide-macos-intel</code> ships but is absent from
+<code>release.py</code>'s <code>optional</code> asset list — cosmetic, no user impact.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

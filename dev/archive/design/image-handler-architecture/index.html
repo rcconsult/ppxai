@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1477,7 +1477,7 @@
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    ↓ (creates based on capabilities)
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>ImageHandler (Protocol)
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    ├── FullImageHandler (textual-image available + terminal supports images)
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    └── FallbackHandler (library missing OR terminal doesn&#39;t support images)
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    └── FallbackHandler (library missing OR terminal doesn't support images)
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        ↓
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>ImageViewer (delegates all operations to handler)
 </span></code></pre></div>
@@ -1486,15 +1486,15 @@
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>│  ImageHandlerFactory.create()       │
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>└─────────────┬───────────────────────┘
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>              │
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>              ├─ Library installed? ──No──→ FallbackHandler(reason=&#39;library&#39;)
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>              ├─ Library installed? ──No──→ FallbackHandler(reason='library')
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>              │
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>              └─ Yes
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>                 │
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>                 ├─ Terminal supports images? ──No──→ FallbackHandler(reason=&#39;terminal&#39;)
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>                 ├─ Terminal supports images? ──No──→ FallbackHandler(reason='terminal')
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>                 │
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>                 └─ Yes
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>                    │
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>                    ├─ Create viewer? ──Fail──→ FallbackHandler(reason=&#39;error&#39;)
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>                    ├─ Create viewer? ──Fail──→ FallbackHandler(reason='error')
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>                    │
 </span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>                    └─ Success ──→ FullImageHandler
 </span></code></pre></div>
@@ -1503,34 +1503,34 @@
 <p><strong>File:</strong> <code>ppxai/tui/widgets/image_handlers.py</code></p>
 <p>Defines the interface all handlers must implement:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ImageHandler</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Protocol defining the interface for image handlers.&quot;&quot;&quot;</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="sd">"""Protocol defining the interface for image handlers."""</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">compose</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ComposeResult</span><span class="p">:</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Compose the handler&#39;s UI elements.&quot;&quot;&quot;</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">        </span><span class="sd">"""Compose the handler's UI elements."""</span>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="o">...</span>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">zoom_in</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Zoom in (if supported).&quot;&quot;&quot;</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">        </span><span class="sd">"""Zoom in (if supported)."""</span>
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="o">...</span>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">zoom_out</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Zoom out (if supported).&quot;&quot;&quot;</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">        </span><span class="sd">"""Zoom out (if supported)."""</span>
 </span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        <span class="o">...</span>
 </span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
 </span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">zoom_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset zoom to default (if supported).&quot;&quot;&quot;</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">        </span><span class="sd">"""Reset zoom to default (if supported)."""</span>
 </span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>        <span class="o">...</span>
 </span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>
 </span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">pan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dy</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Pan the view (if supported).&quot;&quot;&quot;</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">        </span><span class="sd">"""Pan the view (if supported)."""</span>
 </span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>        <span class="o">...</span>
 </span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>
 </span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">focus</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Focus the handler&#39;s main widget.&quot;&quot;&quot;</span>
+</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">        </span><span class="sd">"""Focus the handler's main widget."""</span>
 </span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>        <span class="o">...</span>
 </span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>
 </span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Load a new image.&quot;&quot;&quot;</span>
+</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">        </span><span class="sd">"""Load a new image."""</span>
 </span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>        <span class="o">...</span>
 </span></code></pre></div>
 <h3 id="2-fullimagehandler">2. FullImageHandler<a class="headerlink" href="#2-fullimagehandler" title="Permanent link">&para;</a></h3>
@@ -1541,7 +1541,7 @@
 - Exposes <code>is_available</code> property to indicate successful creation</p>
 <p><strong>Implementation:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">FullImageHandler</span><span class="p">:</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handler for full image viewing using textual-image.&quot;&quot;&quot;</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="sd">"""Handler for full image viewing using textual-image."""</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">parent</span><span class="p">:</span> <span class="n">Widget</span><span class="p">):</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>        <span class="k">try</span><span class="p">:</span>
@@ -1550,7 +1550,7 @@
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_viewer</span> <span class="o">=</span> <span class="kc">None</span>
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
 </span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">zoom_in</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_viewer</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_viewer</span><span class="p">,</span> <span class="s2">&quot;zoom_in&quot;</span><span class="p">):</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_viewer</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_viewer</span><span class="p">,</span> <span class="s2">"zoom_in"</span><span class="p">):</span>
 </span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_viewer</span><span class="o">.</span><span class="n">zoom_in</span><span class="p">()</span>
 </span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
 </span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="c1"># ... other methods delegate similarly</span>
@@ -1568,7 +1568,7 @@
 - <code>error</code> - Failed to create full viewer</p>
 <p><strong>Implementation:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">FallbackHandler</span><span class="p">:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handler for fallback mode when images can&#39;t be displayed.&quot;&quot;&quot;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="sd">"""Handler for fallback mode when images can't be displayed."""</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span> <span class="n">parent</span><span class="p">:</span> <span class="n">Widget</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_reason</span> <span class="o">=</span> <span class="n">reason</span>
@@ -1577,13 +1577,13 @@
 </span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
 </span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">compose</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ComposeResult</span><span class="p">:</span>
 </span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="c1"># Shows different message based on reason</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reason</span> <span class="o">==</span> <span class="s2">&quot;library&quot;</span><span class="p">:</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>            <span class="n">info_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;[yellow]Image preview not available.[/yellow]&quot;</span><span class="p">)</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>            <span class="n">info_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;[dim]Install for image preview:[/dim]&quot;</span><span class="p">)</span>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>            <span class="n">info_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;[cyan]pip install ppxai[tui][/cyan]&quot;</span><span class="p">)</span>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reason</span> <span class="o">==</span> <span class="s2">&quot;terminal&quot;</span><span class="p">:</span>
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>            <span class="n">info_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[yellow]Terminal: </span><span class="si">{</span><span class="n">protocol</span><span class="si">}</span><span class="s2">[/yellow]&quot;</span><span class="p">)</span>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>            <span class="n">info_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;[dim]Requires iTerm2, Kitty, or WezTerm[/dim]&quot;</span><span class="p">)</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reason</span> <span class="o">==</span> <span class="s2">"library"</span><span class="p">:</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>            <span class="n">info_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"[yellow]Image preview not available.[/yellow]"</span><span class="p">)</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>            <span class="n">info_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"[dim]Install for image preview:[/dim]"</span><span class="p">)</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>            <span class="n">info_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"[cyan]pip install ppxai[tui][/cyan]"</span><span class="p">)</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reason</span> <span class="o">==</span> <span class="s2">"terminal"</span><span class="p">:</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>            <span class="n">info_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[yellow]Terminal: </span><span class="si">{</span><span class="n">protocol</span><span class="si">}</span><span class="s2">[/yellow]"</span><span class="p">)</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>            <span class="n">info_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"[dim]Requires iTerm2, Kitty, or WezTerm[/dim]"</span><span class="p">)</span>
 </span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>        <span class="c1"># ...</span>
 </span></code></pre></div></p>
 <h3 id="4-imagehandlerfactory">4. ImageHandlerFactory<a class="headerlink" href="#4-imagehandlerfactory" title="Permanent link">&para;</a></h3>
@@ -1591,30 +1591,30 @@
 <p><strong>Key Method:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nd">@staticmethod</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span> <span class="n">parent</span><span class="p">:</span> <span class="n">Widget</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ImageHandler</span><span class="p">:</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create appropriate image handler.</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="sd">"""Create appropriate image handler.</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="sd">    Decision tree:</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="sd">    1. If textual-image not installed → FallbackHandler(reason=&#39;library&#39;)</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="sd">    2. If terminal doesn&#39;t support images → FallbackHandler(reason=&#39;terminal&#39;)</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="sd">    1. If textual-image not installed → FallbackHandler(reason='library')</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="sd">    2. If terminal doesn't support images → FallbackHandler(reason='terminal')</span>
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="sd">    3. If both available → FullImageHandler</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="sd">    4. If FullImageHandler creation fails → FallbackHandler(reason=&#39;error&#39;)</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="sd">    4. If FullImageHandler creation fails → FallbackHandler(reason='error')</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="sd">    """</span>
 </span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="c1"># Check library availability</span>
 </span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">_IMAGEVIEW_AVAILABLE</span><span class="p">:</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>        <span class="k">return</span> <span class="n">FallbackHandler</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;library&quot;</span><span class="p">)</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>        <span class="k">return</span> <span class="n">FallbackHandler</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">"library"</span><span class="p">)</span>
 </span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
 </span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>    <span class="c1"># Check terminal capabilities</span>
 </span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">can_display_images</span><span class="p">():</span>
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>        <span class="k">return</span> <span class="n">FallbackHandler</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;terminal&quot;</span><span class="p">)</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>        <span class="k">return</span> <span class="n">FallbackHandler</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">"terminal"</span><span class="p">)</span>
 </span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>
 </span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>    <span class="c1"># Both available - try to create full handler</span>
 </span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>    <span class="k">if</span> <span class="n">path</span><span class="p">:</span>
 </span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>        <span class="n">handler</span> <span class="o">=</span> <span class="n">FullImageHandler</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">parent</span><span class="p">)</span>
 </span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">handler</span><span class="o">.</span><span class="n">is_available</span><span class="p">:</span>
-</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>            <span class="k">return</span> <span class="n">FallbackHandler</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;error&quot;</span><span class="p">)</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>            <span class="k">return</span> <span class="n">FallbackHandler</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">"error"</span><span class="p">)</span>
 </span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>        <span class="k">return</span> <span class="n">handler</span>
 </span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>
-</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>    <span class="k">return</span> <span class="n">FallbackHandler</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;library&quot;</span><span class="p">)</span>
+</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>    <span class="k">return</span> <span class="n">FallbackHandler</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">"library"</span><span class="p">)</span>
 </span></code></pre></div></p>
 <h3 id="5-imageviewer-widget">5. ImageViewer Widget<a class="headerlink" href="#5-imageviewer-widget" title="Permanent link">&para;</a></h3>
 <p><strong>Purpose:</strong> High-level widget that delegates to handlers.</p>
@@ -1652,21 +1652,21 @@
 <p><strong>Module:</strong> <code>ppxai/tui/terminal.py</code></p>
 <p>The factory uses terminal capability detection to determine if image rendering is possible:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">can_display_images</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Quick check if terminal can display images.&quot;&quot;&quot;</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="sd">"""Quick check if terminal can display images."""</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="k">return</span> <span class="n">detect_image_protocol</span><span class="p">()</span> <span class="o">!=</span> <span class="n">ImageProtocol</span><span class="o">.</span><span class="n">NONE</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">detect_image_protocol</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">ImageProtocol</span><span class="p">:</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Detect the best available image display protocol.&quot;&quot;&quot;</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="sd">"""Detect the best available image display protocol."""</span>
 </span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="c1"># iTerm2 and compatible</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="k">if</span> <span class="n">term_program</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;iTerm.app&quot;</span><span class="p">,</span> <span class="s2">&quot;WezTerm&quot;</span><span class="p">,</span> <span class="s2">&quot;mintty&quot;</span><span class="p">):</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="k">if</span> <span class="n">term_program</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"iTerm.app"</span><span class="p">,</span> <span class="s2">"WezTerm"</span><span class="p">,</span> <span class="s2">"mintty"</span><span class="p">):</span>
 </span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="k">return</span> <span class="n">ImageProtocol</span><span class="o">.</span><span class="n">ITERM2</span>
 </span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
 </span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    <span class="c1"># Kitty</span>
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;KITTY_WINDOW_ID&quot;</span><span class="p">):</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"KITTY_WINDOW_ID"</span><span class="p">):</span>
 </span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>        <span class="k">return</span> <span class="n">ImageProtocol</span><span class="o">.</span><span class="n">KITTY</span>
 </span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>
 </span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>    <span class="c1"># Sixel support</span>
-</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>    <span class="k">if</span> <span class="n">term_program</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;mlterm&quot;</span><span class="p">,</span> <span class="s2">&quot;xterm&quot;</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">,</span> <span class="s2">&quot;contour&quot;</span><span class="p">}:</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>    <span class="k">if</span> <span class="n">term_program</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">"mlterm"</span><span class="p">,</span> <span class="s2">"xterm"</span><span class="p">,</span> <span class="s2">"foot"</span><span class="p">,</span> <span class="s2">"contour"</span><span class="p">}:</span>
 </span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>        <span class="k">return</span> <span class="n">ImageProtocol</span><span class="o">.</span><span class="n">SIXEL</span>
 </span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>
 </span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>    <span class="k">return</span> <span class="n">ImageProtocol</span><span class="o">.</span><span class="n">NONE</span>
@@ -1716,13 +1716,13 @@
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Create viewer - automatically selects appropriate handler</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">viewer</span> <span class="o">=</span> <span class="n">ImageViewer</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;image.png&quot;</span><span class="p">))</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">viewer</span> <span class="o">=</span> <span class="n">ImageViewer</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">"image.png"</span><span class="p">))</span>
 </span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
 </span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># Check if full mode is available</span>
 </span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="k">if</span> <span class="n">ImageViewer</span><span class="o">.</span><span class="n">is_imageview_available</span><span class="p">():</span>
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Full image rendering available&quot;</span><span class="p">)</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"Full image rendering available"</span><span class="p">)</span>
 </span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="k">else</span><span class="p">:</span>
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Fallback mode (file info only)&quot;</span><span class="p">)</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"Fallback mode (file info only)"</span><span class="p">)</span>
 </span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>
 </span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="c1"># All operations work regardless of handler</span>
 </span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="n">viewer</span><span class="o">.</span><span class="n">action_zoom_in</span><span class="p">()</span>   <span class="c1"># Works in full mode, no-op in fallback</span>
@@ -1878,7 +1878,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

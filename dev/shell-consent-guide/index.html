@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2415,7 +2415,7 @@
 
 
 <h1 id="shell-command-consent-guide">Shell Command Consent Guide<a class="headerlink" href="#shell-command-consent-guide" title="Permanent link">&para;</a></h1>
-<p><strong>Version:</strong> v1.11.2
+<p><strong>Version:</strong> v1.11.2+
 <strong>Last Updated:</strong> 2025-12-22</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>ppxai v1.11.2 introduces a <strong>consent-based security system</strong> for shell commands executed by AI. This system protects users from potentially dangerous or destructive shell commands while allowing safe operations to proceed automatically.</p>
@@ -2597,27 +2597,27 @@
 <p>The AI tool system requests to execute a command:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># AI calls the execute_shell_command tool</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="p">{</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  <span class="s2">&quot;tool&quot;</span><span class="p">:</span> <span class="s2">&quot;execute_shell_command&quot;</span><span class="p">,</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  <span class="s2">&quot;command&quot;</span><span class="p">:</span> <span class="s2">&quot;rm -f /tmp/test.txt&quot;</span><span class="p">,</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  <span class="s2">&quot;working_dir&quot;</span><span class="p">:</span> <span class="s2">&quot;/home/user/project&quot;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  <span class="s2">"tool"</span><span class="p">:</span> <span class="s2">"execute_shell_command"</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  <span class="s2">"command"</span><span class="p">:</span> <span class="s2">"rm -f /tmp/test.txt"</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  <span class="s2">"working_dir"</span><span class="p">:</span> <span class="s2">"/home/user/project"</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="2-command-classification">2. Command Classification<a class="headerlink" href="#2-command-classification" title="Permanent link">&para;</a></h3>
 <p>ppxai analyzes the command using regex patterns:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Check never-allow patterns first</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">if</span> <span class="n">matches_never_allow_pattern</span><span class="p">(</span><span class="n">command</span><span class="p">):</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="k">return</span> <span class="n">DENY</span><span class="p">,</span> <span class="s2">&quot;Command is forbidden&quot;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="k">return</span> <span class="n">DENY</span><span class="p">,</span> <span class="s2">"Command is forbidden"</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Check allowed patterns</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="k">if</span> <span class="n">matches_allowed_pattern</span><span class="p">(</span><span class="n">command</span><span class="p">):</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="k">return</span> <span class="n">APPROVE</span><span class="p">,</span> <span class="s2">&quot;Command is safe&quot;</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="k">return</span> <span class="n">APPROVE</span><span class="p">,</span> <span class="s2">"Command is safe"</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># Check dangerous patterns</span>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="k">if</span> <span class="n">matches_dangerous_pattern</span><span class="p">(</span><span class="n">command</span><span class="p">):</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="k">return</span> <span class="n">REQUEST_CONSENT</span><span class="p">,</span> <span class="s2">&quot;Command requires approval&quot;</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="k">return</span> <span class="n">REQUEST_CONSENT</span><span class="p">,</span> <span class="s2">"Command requires approval"</span>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Default: require consent for unknown commands</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="k">return</span> <span class="n">REQUEST_CONSENT</span><span class="p">,</span> <span class="s2">&quot;Unknown command requires approval&quot;</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="k">return</span> <span class="n">REQUEST_CONSENT</span><span class="p">,</span> <span class="s2">"Unknown command requires approval"</span>
 </span></code></pre></div>
 <h3 id="3-user-consent-for-dangerous-commands">3. User Consent (for Dangerous Commands)<a class="headerlink" href="#3-user-consent-for-dangerous-commands" title="Permanent link">&para;</a></h3>
 <h4 id="tui-consent-prompt">TUI Consent Prompt<a class="headerlink" href="#tui-consent-prompt" title="Permanent link">&para;</a></h4>
@@ -2661,58 +2661,58 @@
 <h3 id="default-configuration">Default Configuration<a class="headerlink" href="#default-configuration" title="Permanent link">&para;</a></h3>
 <p>ppxai includes sensible defaults in <code>ppxai-config.json</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">&quot;require_consent&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">&quot;dangerous_commands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="s2">&quot;^rm\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="s2">&quot;^mv\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="s2">&quot;^dd\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">        </span><span class="s2">&quot;^chmod\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">        </span><span class="s2">&quot;^chown\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">        </span><span class="s2">&quot;^sudo\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">        </span><span class="s2">&quot;^curl.*\\|.*bash&quot;</span><span class="p">,</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">        </span><span class="s2">&quot;^wget.*\\|.*bash&quot;</span><span class="p">,</span>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">        </span><span class="s2">&quot;&gt;\\s*/dev/&quot;</span><span class="p">,</span>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">        </span><span class="s2">&quot;^kill\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">        </span><span class="s2">&quot;^pkill\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">        </span><span class="s2">&quot;^killall\\s+&quot;</span>
-</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">      </span><span class="p">],</span>
-</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">      </span><span class="nt">&quot;allowed_commands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">        </span><span class="s2">&quot;^ls\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="w">        </span><span class="s2">&quot;^cat\\s+(?!.*[&gt;&lt;])&quot;</span><span class="p">,</span>
-</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="w">        </span><span class="s2">&quot;^grep\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="w">        </span><span class="s2">&quot;^echo\\s+(?!.*&gt;)&quot;</span><span class="p">,</span>
-</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="w">        </span><span class="s2">&quot;^pwd$&quot;</span><span class="p">,</span>
-</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="w">        </span><span class="s2">&quot;^which\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="w">        </span><span class="s2">&quot;^whoami$&quot;</span><span class="p">,</span>
-</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="w">        </span><span class="s2">&quot;^date$&quot;</span><span class="p">,</span>
-</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="w">        </span><span class="s2">&quot;^uname\\s+&quot;</span>
-</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="w">      </span><span class="p">],</span>
-</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="w">      </span><span class="nt">&quot;never_allow&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a><span class="w">        </span><span class="s2">&quot;rm\\s+-rf\\s+/&quot;</span><span class="p">,</span>
-</span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a><span class="w">        </span><span class="s2">&quot;dd\\s+.*of=/dev/&quot;</span><span class="p">,</span>
-</span><span id="__span-4-33"><a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a><span class="w">        </span><span class="s2">&quot;:\\(\\)\\{\\s*:\\|:\\&amp;\\s*\\};:&quot;</span><span class="p">,</span>
-</span><span id="__span-4-34"><a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a><span class="w">        </span><span class="s2">&quot;mkfs\\.&quot;</span><span class="p">,</span>
-</span><span id="__span-4-35"><a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a><span class="w">        </span><span class="s2">&quot;^\\s*&gt;\\s*/dev/sda&quot;</span>
-</span><span id="__span-4-36"><a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a><span class="w">      </span><span class="p">],</span>
-</span><span id="__span-4-37"><a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a><span class="w">      </span><span class="nt">&quot;sandboxed_paths&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
-</span><span id="__span-4-38"><a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-4-39"><a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-4-40"><a id="__codelineno-4-40" name="__codelineno-4-40" href="#__codelineno-4-40"></a><span class="p">}</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">"dangerous_commands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="s2">"^rm\\s+"</span><span class="p">,</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="s2">"^mv\\s+"</span><span class="p">,</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="s2">"^dd\\s+"</span><span class="p">,</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="s2">"^chmod\\s+"</span><span class="p">,</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">        </span><span class="s2">"^chown\\s+"</span><span class="p">,</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">        </span><span class="s2">"^sudo\\s+"</span><span class="p">,</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">        </span><span class="s2">"^curl.*\\|.*bash"</span><span class="p">,</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">        </span><span class="s2">"^wget.*\\|.*bash"</span><span class="p">,</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">        </span><span class="s2">"&gt;\\s*/dev/"</span><span class="p">,</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">        </span><span class="s2">"^kill\\s+"</span><span class="p">,</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">        </span><span class="s2">"^pkill\\s+"</span><span class="p">,</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">        </span><span class="s2">"^killall\\s+"</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">      </span><span class="p">],</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">      </span><span class="nt">"allowed_commands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">        </span><span class="s2">"^ls\\s+"</span><span class="p">,</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">        </span><span class="s2">"^cat\\s+(?!.*[&gt;&lt;])"</span><span class="p">,</span>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="w">        </span><span class="s2">"^grep\\s+"</span><span class="p">,</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="w">        </span><span class="s2">"^echo\\s+(?!.*&gt;)"</span><span class="p">,</span>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="w">        </span><span class="s2">"^pwd$"</span><span class="p">,</span>
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="w">        </span><span class="s2">"^which\\s+"</span><span class="p">,</span>
+</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="w">        </span><span class="s2">"^whoami$"</span><span class="p">,</span>
+</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="w">        </span><span class="s2">"^date$"</span><span class="p">,</span>
+</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="w">        </span><span class="s2">"^uname\\s+"</span>
+</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="w">      </span><span class="p">],</span>
+</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="w">      </span><span class="nt">"never_allow"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="w">        </span><span class="s2">"rm\\s+-rf\\s+/"</span><span class="p">,</span>
+</span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a><span class="w">        </span><span class="s2">"dd\\s+.*of=/dev/"</span><span class="p">,</span>
+</span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a><span class="w">        </span><span class="s2">":\\(\\)\\{\\s*:\\|:\\&amp;\\s*\\};:"</span><span class="p">,</span>
+</span><span id="__span-4-33"><a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a><span class="w">        </span><span class="s2">"mkfs\\."</span><span class="p">,</span>
+</span><span id="__span-4-34"><a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a><span class="w">        </span><span class="s2">"^\\s*&gt;\\s*/dev/sda"</span>
+</span><span id="__span-4-35"><a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a><span class="w">      </span><span class="p">],</span>
+</span><span id="__span-4-36"><a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a><span class="w">      </span><span class="nt">"sandboxed_paths"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+</span><span id="__span-4-37"><a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-4-38"><a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-4-39"><a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a><span class="p">}</span>
 </span></code></pre></div>
+<p><strong>Note:</strong> <code>tools.shell.require_consent</code> is not a real toggle. It is parsed by <code>get_shell_config()</code> (<code>ppxai/config/tools.py</code>) but never read by the consent decision path (<code>ppxai/common/consent.py</code>, <code>ppxai/engine/consent_ops.py</code>) — setting it has no effect. Shell command consent cannot currently be disabled; see the <a href="#q-can-i-disable-shell-consent-entirely">FAQ</a> below.</p>
 <h3 id="customizing-command-patterns">Customizing Command Patterns<a class="headerlink" href="#customizing-command-patterns" title="Permanent link">&para;</a></h3>
 <p>You can customize patterns to match your security requirements:</p>
 <h4 id="example-allow-npm-and-git-commands">Example: Allow npm and git commands<a class="headerlink" href="#example-allow-npm-and-git-commands" title="Permanent link">&para;</a></h4>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">&quot;allowed_commands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="s2">&quot;^ls\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="s2">&quot;^cat\\s+(?!.*[&gt;&lt;])&quot;</span><span class="p">,</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="s2">&quot;^pwd$&quot;</span><span class="p">,</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="s2">&quot;^npm\\s+(install|run|test)&quot;</span><span class="p">,</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="s2">&quot;^git\\s+(status|log|diff|add|commit)&quot;</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">"allowed_commands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="s2">"^ls\\s+"</span><span class="p">,</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="s2">"^cat\\s+(?!.*[&gt;&lt;])"</span><span class="p">,</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="s2">"^pwd$"</span><span class="p">,</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="s2">"^npm\\s+(install|run|test)"</span><span class="p">,</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="s2">"^git\\s+(status|log|diff|add|commit)"</span>
 </span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="p">]</span>
 </span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span><span class="p">}</span>
@@ -2721,33 +2721,41 @@
 <p><strong>Note:</strong> The pattern <code>^cat\\s+(?!.*[&gt;&lt;])</code> uses a negative lookahead <code>(?!.*[&gt;&lt;])</code> to ensure <code>cat</code> commands with redirections (<code>&gt;</code> or <code>&lt;</code>) are <strong>not</strong> matched as safe. This prevents dangerous file-writing operations like <code>cat &gt; file.txt</code> from bypassing consent.</p>
 <h4 id="example-block-all-package-managers">Example: Block all package managers<a class="headerlink" href="#example-block-all-package-managers" title="Permanent link">&para;</a></h4>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">&quot;dangerous_commands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="s2">&quot;^rm\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">        </span><span class="s2">&quot;^mv\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="s2">&quot;^apt\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="s2">&quot;^yum\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="s2">&quot;^dnf\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="s2">&quot;^brew\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">        </span><span class="s2">&quot;^npm\\s+install&quot;</span><span class="p">,</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">        </span><span class="s2">&quot;^pip\\s+install&quot;</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">"dangerous_commands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="s2">"^rm\\s+"</span><span class="p">,</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">        </span><span class="s2">"^mv\\s+"</span><span class="p">,</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="s2">"^apt\\s+"</span><span class="p">,</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="s2">"^yum\\s+"</span><span class="p">,</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="s2">"^dnf\\s+"</span><span class="p">,</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="s2">"^brew\\s+"</span><span class="p">,</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">        </span><span class="s2">"^npm\\s+install"</span><span class="p">,</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">        </span><span class="s2">"^pip\\s+install"</span>
 </span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">      </span><span class="p">]</span>
 </span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="p">}</span>
 </span></code></pre></div>
 <h4 id="example-sandbox-to-project-directory-only">Example: Sandbox to project directory only<a class="headerlink" href="#example-sandbox-to-project-directory-only" title="Permanent link">&para;</a></h4>
+<blockquote>
+<p>⚠️ <strong><code>tools.shell.sandboxed_paths</code> is not enforced.</strong> Like
+<code>require_consent</code> above, it is parsed by <code>get_shell_config()</code>
+(<code>ppxai/config/tools.py</code>) and never read by any consumer — setting it
+confines nothing. The example below documents the intended shape only.
+To actually confine filesystem access today, use the per-run seal on the
+<code>/task</code> tier (<code>execution.task.sandbox</code>), which <em>is</em> enforced.</p>
+</blockquote>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">      </span><span class="nt">&quot;sandboxed_paths&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">        </span><span class="s2">&quot;/home/user/projects/myproject&quot;</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">      </span><span class="nt">"sandboxed_paths"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">        </span><span class="s2">"/home/user/projects/myproject"</span>
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">      </span><span class="p">],</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">      </span><span class="nt">&quot;never_allow&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">        </span><span class="s2">&quot;cd\\s+\\.\\.&quot;</span><span class="p">,</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">        </span><span class="s2">&quot;cd\\s+/&quot;</span><span class="p">,</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">        </span><span class="s2">&quot;cd\\s+~&quot;</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">      </span><span class="nt">"never_allow"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">        </span><span class="s2">"cd\\s+\\.\\."</span><span class="p">,</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">        </span><span class="s2">"cd\\s+/"</span><span class="p">,</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">        </span><span class="s2">"cd\\s+~"</span>
 </span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">      </span><span class="p">]</span>
 </span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">  </span><span class="p">}</span>
@@ -2808,8 +2816,8 @@
 <p>Consent decisions are stored in-memory for the session:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Example: Internal consent state</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">consent_decisions</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="s2">&quot;rm</span><span class="se">\\</span><span class="s2">s+&quot;</span><span class="p">:</span> <span class="s2">&quot;always&quot;</span><span class="p">,</span>      <span class="c1"># All rm commands approved</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="s2">&quot;chmod</span><span class="se">\\</span><span class="s2">s+&quot;</span><span class="p">:</span> <span class="s2">&quot;never&quot;</span><span class="p">,</span>    <span class="c1"># All chmod commands denied</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="s2">"rm</span><span class="se">\\</span><span class="s2">s+"</span><span class="p">:</span> <span class="s2">"always"</span><span class="p">,</span>      <span class="c1"># All rm commands approved</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="s2">"chmod</span><span class="se">\\</span><span class="s2">s+"</span><span class="p">:</span> <span class="s2">"never"</span><span class="p">,</span>    <span class="c1"># All chmod commands denied</span>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="consent-options">Consent Options<a class="headerlink" href="#consent-options" title="Permanent link">&para;</a></h3>
@@ -2871,17 +2879,17 @@
 <h3 id="1-review-command-patterns-regularly">1. Review Command Patterns Regularly<a class="headerlink" href="#1-review-command-patterns-regularly" title="Permanent link">&para;</a></h3>
 <p>Audit your <code>ppxai-config.json</code> patterns periodically:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Check current configuration</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>cat<span class="w"> </span>ppxai-config.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.tools.shell&#39;</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>cat<span class="w"> </span>ppxai-config.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">'.tools.shell'</span>
 </span></code></pre></div>
 <h3 id="2-use-least-privilege">2. Use Least Privilege<a class="headerlink" href="#2-use-least-privilege" title="Permanent link">&para;</a></h3>
 <p>Only allow commands that AI actually needs:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p">{</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">      </span><span class="nt">&quot;allowed_commands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">        </span><span class="s2">&quot;^ls\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">        </span><span class="s2">&quot;^cat\\s+&quot;</span><span class="p">,</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">        </span><span class="s2">&quot;^grep\\s+&quot;</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">      </span><span class="nt">"allowed_commands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">        </span><span class="s2">"^ls\\s+"</span><span class="p">,</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">        </span><span class="s2">"^cat\\s+"</span><span class="p">,</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">        </span><span class="s2">"^grep\\s+"</span>
 </span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">      </span><span class="p">]</span>
 </span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">  </span><span class="p">}</span>
@@ -2890,33 +2898,37 @@
 <h3 id="3-test-patterns-before-deployment">3. Test Patterns Before Deployment<a class="headerlink" href="#3-test-patterns-before-deployment" title="Permanent link">&para;</a></h3>
 <p>Create test commands to verify patterns work correctly:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Test script: test_patterns.py</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.engine.consent_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConsentManager</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.common.consent</span><span class="w"> </span><span class="kn">import</span> <span class="n">classify_shell_command</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">manager</span> <span class="o">=</span> <span class="n">ConsentManager</span><span class="p">()</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="n">manager</span><span class="o">.</span><span class="n">load_shell_config</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Test safe command</span>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="k">assert</span> <span class="n">manager</span><span class="o">.</span><span class="n">classify_shell_command</span><span class="p">(</span><span class="s2">&quot;ls -la&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;SAFE&quot;</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="s2">"allowed_commands"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"^ls</span><span class="se">\\</span><span class="s2">s+"</span><span class="p">],</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="s2">"dangerous_commands"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"^rm</span><span class="se">\\</span><span class="s2">s+"</span><span class="p">],</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    <span class="s2">"never_allow"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"rm</span><span class="se">\\</span><span class="s2">s+-rf</span><span class="se">\\</span><span class="s2">s+/"</span><span class="p">],</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="p">}</span>
 </span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
-</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="c1"># Test dangerous command</span>
-</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="k">assert</span> <span class="n">manager</span><span class="o">.</span><span class="n">classify_shell_command</span><span class="p">(</span><span class="s2">&quot;rm -f file.txt&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;DANGEROUS&quot;</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="c1"># Test safe command</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="k">assert</span> <span class="n">classify_shell_command</span><span class="p">(</span><span class="s2">"ls -la"</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"safe"</span>
 </span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>
-</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="c1"># Test never-allow command</span>
-</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="k">assert</span> <span class="n">manager</span><span class="o">.</span><span class="n">classify_shell_command</span><span class="p">(</span><span class="s2">&quot;rm -rf /&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;NEVER&quot;</span>
+</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="c1"># Test dangerous command</span>
+</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="k">assert</span> <span class="n">classify_shell_command</span><span class="p">(</span><span class="s2">"rm -f file.txt"</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"dangerous"</span>
+</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>
+</span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="c1"># Test never-allow command</span>
+</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="k">assert</span> <span class="n">classify_shell_command</span><span class="p">(</span><span class="s2">"rm -rf /"</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"never"</span>
 </span></code></pre></div>
+<p><code>classify_shell_command(command, config)</code> is a module-level function in <code>ppxai/common/consent.py</code> (not a <code>ConsentManager</code> method) — pass it the same <code>shell_config</code> dict <code>get_shell_config()</code> builds. The <code>ConsentManager</code> class itself lives in <code>ppxai/common/consent.py</code> and takes <code>shell_config</code> as an <code>__init__</code> argument; there is no <code>load_shell_config()</code> method.</p>
 <h3 id="4-monitor-consent-decisions">4. Monitor Consent Decisions<a class="headerlink" href="#4-monitor-consent-decisions" title="Permanent link">&para;</a></h3>
 <p>Enable debug logging to track consent requests:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># TUI: Enable debug logging</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>/debug-log<span class="w"> </span>on
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># VSCode: Check server logs</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>tail<span class="w"> </span>-f<span class="w"> </span>~/.ppxai/logs/server.log
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>tail<span class="w"> </span>-f<span class="w"> </span>~/.ppxai/logs/server-debug.log
 </span></code></pre></div>
 <h3 id="5-use-git-for-auditing">5. Use Git for Auditing<a class="headerlink" href="#5-use-git-for-auditing" title="Permanent link">&para;</a></h3>
 <p>Track configuration changes with version control:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Add ppxai-config.json to git</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>git<span class="w"> </span>add<span class="w"> </span>ppxai-config.json
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: Restrict shell commands to read-only operations&quot;</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"feat: Restrict shell commands to read-only operations"</span>
 </span></code></pre></div>
 <h3 id="6-educate-users">6. Educate Users<a class="headerlink" href="#6-educate-users" title="Permanent link">&para;</a></h3>
 <p>Document your organization's shell command policy:</p>
@@ -2941,19 +2953,18 @@
 <p><strong>Problem:</strong> Safe command is asking for consent.</p>
 <p><strong>Solution:</strong> Check pattern syntax and order:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="p">{</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">&quot;allowed_commands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="s2">&quot;^ls\\s+&quot;</span><span class="p">,</span><span class="w">      </span><span class="c1">// ✅ Correct: matches &quot;ls -la&quot;</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="s2">&quot;^ls&quot;</span><span class="p">,</span><span class="w">          </span><span class="c1">// ❌ Wrong: too broad, matches &quot;lsblk&quot;</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span><span class="s2">&quot;ls&quot;</span><span class="p">,</span><span class="w">           </span><span class="c1">// ❌ Wrong: matches &quot;false-ls-command&quot;</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">"allowed_commands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="s2">"^ls\\s+"</span><span class="p">,</span><span class="w">      </span><span class="c1">// ✅ Correct: matches "ls -la"</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="s2">"^ls"</span><span class="p">,</span><span class="w">          </span><span class="c1">// ❌ Wrong: too broad, matches "lsblk"</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span><span class="s2">"ls"</span><span class="p">,</span><span class="w">           </span><span class="c1">// ❌ Wrong: matches "false-ls-command"</span>
 </span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">  </span><span class="p">]</span>
 </span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="consent-prompts-not-appearing">Consent Prompts Not Appearing<a class="headerlink" href="#consent-prompts-not-appearing" title="Permanent link">&para;</a></h3>
 <p><strong>Problem:</strong> AI executes dangerous commands without asking.</p>
-<p><strong>Solution:</strong> Verify consent is enabled:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Check configuration</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>cat<span class="w"> </span>ppxai-config.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.tools.shell.require_consent&#39;</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="c1"># Should output: true</span>
+<p><strong>Solution:</strong> Consent is always required for <code>dangerous</code>/unknown-risk commands — it cannot be turned off. If a command is slipping through unprompted, it's almost always because it matches an <code>allowed_commands</code> pattern too broadly. Check which pattern matched:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Inspect your allowed_commands patterns for over-broad matches</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>cat<span class="w"> </span>ppxai-config.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">'.tools.shell.allowed_commands'</span>
 </span></code></pre></div>
 <h3 id="pattern-regex-errors">Pattern Regex Errors<a class="headerlink" href="#pattern-regex-errors" title="Permanent link">&para;</a></h3>
 <p><strong>Problem:</strong> Application crashes with regex error.</p>
@@ -2961,101 +2972,110 @@
 <div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 </span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="c1"># Test pattern compilation</span>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="n">pattern</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;^rm\s+&quot;</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="n">pattern</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">"^rm\s+"</span>
 </span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="k">try</span><span class="p">:</span>
 </span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✅ Pattern valid: </span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"✅ Pattern valid: </span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="k">except</span> <span class="n">re</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;❌ Pattern invalid: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"❌ Pattern invalid: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="commands-always-blocked">Commands Always Blocked<a class="headerlink" href="#commands-always-blocked" title="Permanent link">&para;</a></h3>
 <p><strong>Problem:</strong> Legitimate commands are always denied.</p>
 <p><strong>Solution:</strong> Check if pattern is in <code>never_allow</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="p">{</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">&quot;never_allow&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span><span class="s2">&quot;rm\\s+-rf\\s+/&quot;</span><span class="p">,</span><span class="w">      </span><span class="c1">// ✅ Only blocks &quot;rm -rf /&quot;</span>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="s2">&quot;^rm\\s+&quot;</span><span class="p">,</span><span class="w">             </span><span class="c1">// ❌ Blocks ALL rm commands</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">"never_allow"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span><span class="s2">"rm\\s+-rf\\s+/"</span><span class="p">,</span><span class="w">      </span><span class="c1">// ✅ Only blocks "rm -rf /"</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="s2">"^rm\\s+"</span><span class="p">,</span><span class="w">             </span><span class="c1">// ❌ Blocks ALL rm commands</span>
 </span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">  </span><span class="p">]</span>
 </span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="p">}</span>
 </span></code></pre></div>
 <h2 id="advanced-topics">Advanced Topics<a class="headerlink" href="#advanced-topics" title="Permanent link">&para;</a></h2>
 <h3 id="custom-consent-handlers">Custom Consent Handlers<a class="headerlink" href="#custom-consent-handlers" title="Permanent link">&para;</a></h3>
+<p><code>EngineClient(shell_consent_callback=...)</code> takes a plain async function, not a
+request/response object pair. The real signature (see
+<code>ppxai/engine/client.py</code>):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">shell_consent_callback</span><span class="p">(</span><span class="n">command</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">risk_level</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">    </span><span class="sd">"""</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="sd">    Args:</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="sd">        command: The shell command the AI wants to run</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="sd">        working_dir: Working directory for the command</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="sd">        risk_level: "safe", "dangerous", or "never" (ShellRiskLevel)</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="sd">    Returns:</span>
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="sd">        (approved, response) where response is one of "y", "n", "always", "never"</span>
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="sd">        (ConsentResponse) — "always"/"never" are remembered for the rest of</span>
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="sd">        the session, "y"/"n" apply to this command only.</span>
+</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="sd">    """</span>
+</span></code></pre></div>
 <p>Implement custom consent logic for programmatic control:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.engine</span><span class="w"> </span><span class="kn">import</span> <span class="n">EngineClient</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.engine.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConsentRequest</span><span class="p">,</span> <span class="n">ConsentDecision</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">custom_shell_consent</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">ConsentRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConsentDecision</span><span class="p">:</span>
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Custom consent handler with logging and policy enforcement.&quot;&quot;&quot;</span>
-</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>
-</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>    <span class="c1"># Log request</span>
-</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;🔔 Consent requested: </span><span class="si">{</span><span class="n">request</span><span class="o">.</span><span class="n">command</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>
-</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>    <span class="c1"># Apply custom policy</span>
-</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>    <span class="k">if</span> <span class="s2">&quot;production&quot;</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">working_dir</span><span class="p">:</span>
-</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>        <span class="c1"># Never allow shell commands in production</span>
-</span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a>        <span class="k">return</span> <span class="n">ConsentDecision</span><span class="p">(</span>
-</span><span id="__span-21-14"><a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a>            <span class="n">approved</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-21-15"><a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a>            <span class="n">remember</span><span class="o">=</span><span class="s2">&quot;always&quot;</span><span class="p">,</span>
-</span><span id="__span-21-16"><a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a>            <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;Shell commands forbidden in production&quot;</span>
-</span><span id="__span-21-17"><a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a>        <span class="p">)</span>
-</span><span id="__span-21-18"><a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a>
-</span><span id="__span-21-19"><a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a>    <span class="c1"># Use default UI prompt for dev environments</span>
-</span><span id="__span-21-20"><a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">default_consent_handler</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
-</span><span id="__span-21-21"><a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a>
-</span><span id="__span-21-22"><a id="__codelineno-21-22" name="__codelineno-21-22" href="#__codelineno-21-22"></a><span class="c1"># Use custom handler</span>
-</span><span id="__span-21-23"><a id="__codelineno-21-23" name="__codelineno-21-23" href="#__codelineno-21-23"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">EngineClient</span><span class="p">(</span><span class="n">shell_consent_callback</span><span class="o">=</span><span class="n">custom_shell_consent</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.engine</span><span class="w"> </span><span class="kn">import</span> <span class="n">EngineClient</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">custom_shell_consent</span><span class="p">(</span><span class="n">command</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">risk_level</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span><span class="sd">"""Custom consent handler with logging and policy enforcement."""</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>    <span class="c1"># Log request</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"🔔 Consent requested: </span><span class="si">{</span><span class="n">command</span><span class="si">}</span><span class="s2"> (risk=</span><span class="si">{</span><span class="n">risk_level</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>    <span class="c1"># Apply custom policy</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>    <span class="k">if</span> <span class="s2">"production"</span> <span class="ow">in</span> <span class="n">working_dir</span><span class="p">:</span>
+</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>        <span class="c1"># Never allow shell commands in production</span>
+</span><span id="__span-22-12"><a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a>        <span class="k">return</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">"never"</span><span class="p">)</span>
+</span><span id="__span-22-13"><a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a>
+</span><span id="__span-22-14"><a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a>    <span class="c1"># Fall back to your own UI prompt for dev environments</span>
+</span><span id="__span-22-15"><a id="__codelineno-22-15" name="__codelineno-22-15" href="#__codelineno-22-15"></a>    <span class="n">approved</span> <span class="o">=</span> <span class="k">await</span> <span class="n">my_ui_prompt</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">,</span> <span class="n">risk_level</span><span class="p">)</span>
+</span><span id="__span-22-16"><a id="__codelineno-22-16" name="__codelineno-22-16" href="#__codelineno-22-16"></a>    <span class="k">return</span> <span class="p">(</span><span class="n">approved</span><span class="p">,</span> <span class="s2">"y"</span> <span class="k">if</span> <span class="n">approved</span> <span class="k">else</span> <span class="s2">"n"</span><span class="p">)</span>
+</span><span id="__span-22-17"><a id="__codelineno-22-17" name="__codelineno-22-17" href="#__codelineno-22-17"></a>
+</span><span id="__span-22-18"><a id="__codelineno-22-18" name="__codelineno-22-18" href="#__codelineno-22-18"></a><span class="c1"># Use custom handler</span>
+</span><span id="__span-22-19"><a id="__codelineno-22-19" name="__codelineno-22-19" href="#__codelineno-22-19"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">EngineClient</span><span class="p">(</span><span class="n">shell_consent_callback</span><span class="o">=</span><span class="n">custom_shell_consent</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="integration-with-external-approval-systems">Integration with External Approval Systems<a class="headerlink" href="#integration-with-external-approval-systems" title="Permanent link">&para;</a></h3>
 <p>Connect to enterprise approval workflows:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">enterprise_consent</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">ConsentRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConsentDecision</span><span class="p">:</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Request approval from external system.&quot;&quot;&quot;</span>
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
-</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>    <span class="c1"># Call approval API</span>
-</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">approval_api</span><span class="o">.</span><span class="n">request_approval</span><span class="p">(</span>
-</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>        <span class="n">user</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;USER&quot;</span><span class="p">),</span>
-</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>        <span class="n">command</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">command</span><span class="p">,</span>
-</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>        <span class="n">directory</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span>
-</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>        <span class="n">justification</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">context</span>
-</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>    <span class="p">)</span>
-</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>
-</span><span id="__span-22-12"><a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a>    <span class="k">return</span> <span class="n">ConsentDecision</span><span class="p">(</span>
-</span><span id="__span-22-13"><a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a>        <span class="n">approved</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">approved</span><span class="p">,</span>
-</span><span id="__span-22-14"><a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a>        <span class="n">remember</span><span class="o">=</span><span class="s2">&quot;session&quot;</span><span class="p">,</span>
-</span><span id="__span-22-15"><a id="__codelineno-22-15" name="__codelineno-22-15" href="#__codelineno-22-15"></a>        <span class="n">reason</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">reason</span>
-</span><span id="__span-22-16"><a id="__codelineno-22-16" name="__codelineno-22-16" href="#__codelineno-22-16"></a>    <span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">enterprise_consent</span><span class="p">(</span><span class="n">command</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">risk_level</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">    </span><span class="sd">"""Request approval from external system."""</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>    <span class="c1"># Call approval API</span>
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">approval_api</span><span class="o">.</span><span class="n">request_approval</span><span class="p">(</span>
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>        <span class="n">user</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">"USER"</span><span class="p">),</span>
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>        <span class="n">command</span><span class="o">=</span><span class="n">command</span><span class="p">,</span>
+</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>        <span class="n">directory</span><span class="o">=</span><span class="n">working_dir</span><span class="p">,</span>
+</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>        <span class="n">risk_level</span><span class="o">=</span><span class="n">risk_level</span><span class="p">,</span>
+</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>    <span class="p">)</span>
+</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>
+</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a>    <span class="k">return</span> <span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">approved</span><span class="p">,</span> <span class="s2">"y"</span> <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">approved</span> <span class="k">else</span> <span class="s2">"n"</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="command-whitelisting-by-directory">Command Whitelisting by Directory<a class="headerlink" href="#command-whitelisting-by-directory" title="Permanent link">&para;</a></h3>
 <p>Allow different commands in different directories:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">directory_based_consent</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">ConsentRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConsentDecision</span><span class="p">:</span>
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Different rules for different directories.&quot;&quot;&quot;</span>
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>    <span class="c1"># Allow destructive commands in /tmp</span>
-</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">working_dir</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;/tmp&quot;</span><span class="p">):</span>
-</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>        <span class="k">return</span> <span class="n">ConsentDecision</span><span class="p">(</span><span class="n">approved</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">remember</span><span class="o">=</span><span class="s2">&quot;always&quot;</span><span class="p">)</span>
-</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>
-</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>    <span class="c1"># Deny all writes in /etc</span>
-</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">working_dir</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;/etc&quot;</span><span class="p">):</span>
-</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>        <span class="k">return</span> <span class="n">ConsentDecision</span><span class="p">(</span><span class="n">approved</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">remember</span><span class="o">=</span><span class="s2">&quot;always&quot;</span><span class="p">)</span>
-</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>
-</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>    <span class="c1"># Use default for other directories</span>
-</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">default_consent_handler</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">directory_based_consent</span><span class="p">(</span><span class="n">command</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">risk_level</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">    </span><span class="sd">"""Different rules for different directories."""</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>    <span class="c1"># Allow destructive commands in /tmp for the rest of the session</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>    <span class="k">if</span> <span class="n">working_dir</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"/tmp"</span><span class="p">):</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>        <span class="k">return</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="s2">"always"</span><span class="p">)</span>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>    <span class="c1"># Deny all writes in /etc for the rest of the session</span>
+</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>    <span class="k">if</span> <span class="n">working_dir</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"/etc"</span><span class="p">):</span>
+</span><span id="__span-24-10"><a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a>        <span class="k">return</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">"never"</span><span class="p">)</span>
+</span><span id="__span-24-11"><a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a>
+</span><span id="__span-24-12"><a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a>    <span class="c1"># Fall back to your own UI prompt for other directories</span>
+</span><span id="__span-24-13"><a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a>    <span class="n">approved</span> <span class="o">=</span> <span class="k">await</span> <span class="n">my_ui_prompt</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">,</span> <span class="n">risk_level</span><span class="p">)</span>
+</span><span id="__span-24-14"><a id="__codelineno-24-14" name="__codelineno-24-14" href="#__codelineno-24-14"></a>    <span class="k">return</span> <span class="p">(</span><span class="n">approved</span><span class="p">,</span> <span class="s2">"y"</span> <span class="k">if</span> <span class="n">approved</span> <span class="k">else</span> <span class="s2">"n"</span><span class="p">)</span>
 </span></code></pre></div>
+<p><strong>Note:</strong> <code>ConsentRequest</code> (<code>ppxai/common/consent.py</code>) is an internal dataclass
+used by <code>ConsentManager</code>/<code>SyncConsentManager</code> to bundle prompt data for the
+built-in TUI/VSCode/web callbacks — it is not what your callback receives, and
+<code>ConsentDecision</code> (<code>ppxai/constants.py</code>) is a plain <code>str, Enum</code> of
+<code>"yes"|"no"|"always"|"never"</code>, not a constructible response object. Don't call
+<code>ConsentDecision(approved=..., ...)</code>; it raises <code>TypeError</code>.</p>
 <h2 id="frequently-asked-questions">Frequently Asked Questions<a class="headerlink" href="#frequently-asked-questions" title="Permanent link">&para;</a></h2>
 <h3 id="q-can-i-disable-shell-consent-entirely">Q: Can I disable shell consent entirely?<a class="headerlink" href="#q-can-i-disable-shell-consent-entirely" title="Permanent link">&para;</a></h3>
-<p><strong>A:</strong> Yes, but <strong>not recommended</strong> for security:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="p">{</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">    </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">      </span><span class="nt">&quot;require_consent&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="p">}</span>
-</span></code></pre></div>
+<p><strong>A:</strong> No. Shell command consent cannot currently be disabled. <code>tools.shell.require_consent</code> is parsed by config loading but never read by the consent decision path, so setting it to <code>false</code> has no effect — dangerous/unknown-risk commands always prompt. The closest you can get is broadening <code>allowed_commands</code> so more commands auto-approve, or supplying a <code>shell_consent_callback</code> that always approves (see <a href="#custom-consent-handlers">Custom Consent Handlers</a>) — the latter still runs on every request, it just doesn't prompt a human.</p>
 <h3 id="q-how-do-i-allow-all-git-commands">Q: How do I allow all git commands?<a class="headerlink" href="#q-how-do-i-allow-all-git-commands" title="Permanent link">&para;</a></h3>
 <p><strong>A:</strong> Add git pattern to <code>allowed_commands</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="p">{</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w">  </span><span class="nt">&quot;allowed_commands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">    </span><span class="s2">&quot;^git\\s+&quot;</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w">  </span><span class="nt">"allowed_commands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">    </span><span class="s2">"^git\\s+"</span>
 </span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="w">  </span><span class="p">]</span>
 </span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -3086,7 +3106,7 @@
 <li>Include your <code>ppxai-config.json</code> (redact secrets!)</li>
 </ol>
 <hr />
-<p><strong>Version:</strong> v1.11.2
+<p><strong>Version:</strong> v1.11.2+
 <strong>Last Updated:</strong> 2025-12-22
 <strong>License:</strong> MIT</p>
 
@@ -3163,7 +3183,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

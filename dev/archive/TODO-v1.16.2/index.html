@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1711,7 +1711,7 @@ directory root</strong> as <code>main.py</code> instead of <code>outlook_agent/m
 <li>
 <p><strong><code>ppxai/server/http.py</code> — <code>/files/read</code> returns <code>path.name</code> (basename only):</strong>
    <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Lines 2133, 2148 — both text and binary responses:</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>   <span class="c1"># ← &quot;main.py&quot; not &quot;outlook_agent/main.py&quot;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="s2">"filename"</span><span class="p">:</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>   <span class="c1"># ← "main.py" not "outlook_agent/main.py"</span>
 </span></code></pre></div>
    The server should return the <strong>relative path from the working directory</strong>, not just the
    filename basename.</p>
@@ -1720,11 +1720,11 @@ directory root</strong> as <code>main.py</code> instead of <code>outlook_agent/m
 <p><strong><code>~/.ppxai/web/app.js</code> — editor uses <code>data.filename</code> for save path:</strong>
    <div class="language-javascript highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// Line 2802 — handleEditCommand():</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">this</span><span class="p">.</span><span class="nx">showEditorPanel</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">filename</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">filepath</span><span class="p">,</span><span class="w"> </span><span class="nx">data</span><span class="p">.</span><span class="nx">content</span><span class="p">,</span><span class="w"> </span><span class="nx">line</span><span class="p">,</span><span class="w"> </span><span class="nx">col</span><span class="p">);</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1">//                   ↑ picks up &quot;main.py&quot; stripping the directory</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1">//                   ↑ picks up "main.py" stripping the directory</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1">// Line 3052 — saveEditor():</span>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nx">body</span><span class="o">:</span><span class="w"> </span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span><span class="w"> </span><span class="nx">path</span><span class="o">:</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">editorFilename</span><span class="p">,</span><span class="w"> </span><span class="nx">content</span><span class="w"> </span><span class="p">})</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1">//                           ↑ sends &quot;main.py&quot; → writes to root</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1">//                           ↑ sends "main.py" → writes to root</span>
 </span></code></pre></div>
    The web app prefers <code>data.filename</code> over the original <code>filepath</code> that was requested.
    Since <code>data.filename</code> is just the basename, the directory is lost.</p>
@@ -1740,8 +1740,8 @@ directory root</strong> as <code>main.py</code> instead of <code>outlook_agent/m
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">rel_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span>  <span class="c1"># fallback if outside working dir</span>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="k">return</span> <span class="p">{</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="n">rel_path</span><span class="p">,</span>   <span class="c1"># &quot;outlook_agent/main.py&quot; not &quot;main.py&quot;</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="s2">"filename"</span><span class="p">:</span> <span class="n">rel_path</span><span class="p">,</span>   <span class="c1"># "outlook_agent/main.py" not "main.py"</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="s2">"path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span>
 </span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="o">...</span>
 </span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -1765,7 +1765,7 @@ is preserved in <code>editorFilename</code>.</p>
 <h3 id="symptom_1">Symptom<a class="headerlink" href="#symptom_1" title="Permanent link">&para;</a></h3>
 <p>The validator fires a <code>claim_without_action</code> warning when the model acknowledges a mistake
 rather than claiming it completed a file modification:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>SSE: warning - claim_without_action ... &quot;Model claims to have modified &#39;o...&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>SSE: warning - claim_without_action ... "Model claims to have modified 'o..."
 </span></code></pre></div>
 <p>Triggered by the model saying:</p>
 <blockquote>
@@ -1830,12 +1830,12 @@ inject <code>@file:path</code> into the chat input.</p>
 <h3 id="symptom_2">Symptom<a class="headerlink" href="#symptom_2" title="Permanent link">&para;</a></h3>
 <p>Observed in TUI debug log: switching provider via <code>/provider gemini</code> logs model hint matching
 <strong>4 times in a row</strong> for the same model:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>02:00:29.560  Model switch to &#39;gemini-2.5-flash&#39;: 14 model hints (matched: [&#39;gemini-2.5-flash*&#39;])
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>02:00:29.561  Provider switch to &#39;gemini&#39;: 21 provider hints, 14 model hints
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>02:00:29.584  Model switch to &#39;gemini-2.5-flash&#39;: 14 model hints (matched: [&#39;gemini-2.5-flash*&#39;])
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>02:00:29.585  Provider switch to &#39;gemini&#39;: 21 provider hints, 14 model hints
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>02:00:29.585  Model switch to &#39;gemini-2.5-flash&#39;: 14 model hints (matched: [&#39;gemini-2.5-flash*&#39;])
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>02:00:29.585  Model switch to &#39;gemini-2.5-flash&#39;: 14 model hints (matched: [&#39;gemini-2.5-flash*&#39;])
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>02:00:29.560  Model switch to 'gemini-2.5-flash': 14 model hints (matched: ['gemini-2.5-flash*'])
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>02:00:29.561  Provider switch to 'gemini': 21 provider hints, 14 model hints
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>02:00:29.584  Model switch to 'gemini-2.5-flash': 14 model hints (matched: ['gemini-2.5-flash*'])
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>02:00:29.585  Provider switch to 'gemini': 21 provider hints, 14 model hints
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>02:00:29.585  Model switch to 'gemini-2.5-flash': 14 model hints (matched: ['gemini-2.5-flash*'])
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>02:00:29.585  Model switch to 'gemini-2.5-flash': 14 model hints (matched: ['gemini-2.5-flash*'])
 </span></code></pre></div>
 <p>Reproduced across two separate sessions at 02:00 and 02:09.</p>
 <h3 id="root-cause-suspected">Root Cause (suspected)<a class="headerlink" href="#root-cause-suspected" title="Permanent link">&para;</a></h3>
@@ -1911,8 +1911,8 @@ fetch, error handling, and response rendering.</p>
 24-event dispatch, render throttle, and DOM mutations in one function.</p>
 <p>The buffer split is fragile:
 <div class="language-javascript highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">buffer</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">decoder</span><span class="p">.</span><span class="nx">decode</span><span class="p">(</span><span class="nx">value</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">stream</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">});</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">lines</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">buffer</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="s1">&#39;\n&#39;</span><span class="p">);</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nx">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lines</span><span class="p">.</span><span class="nx">pop</span><span class="p">()</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">lines</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">buffer</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="s1">'\n'</span><span class="p">);</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nx">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lines</span><span class="p">.</span><span class="nx">pop</span><span class="p">()</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">''</span><span class="p">;</span>
 </span></code></pre></div>
 Silently corrupts events if a JSON payload spans two TCP chunks. The render throttle
 (<code>fullContent.length % 50 === 0</code>) re-runs the full <code>marked.js</code> parse each time with no
@@ -2162,10 +2162,10 @@ settings (stack size, dedup, persist). Views read <code>appState.get('serverUrl'
 </span></code></pre></div>
 <h3 id="config-additions">Config Additions<a class="headerlink" href="#config-additions" title="Permanent link">&para;</a></h3>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="p">{</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">&quot;web_ui&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nt">&quot;view_stack_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">&quot;view_stack_dedup&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nt">&quot;view_stack_persist&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">"web_ui"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nt">"view_stack_size"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">"view_stack_dedup"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nt">"view_stack_persist"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 </span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -2384,7 +2384,7 @@ settings (stack size, dedup, persist). Views read <code>appState.get('serverUrl'
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

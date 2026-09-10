@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1504,11 +1504,11 @@
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_completer</span> <span class="o">=</span> <span class="n">completer</span>  <span class="c1"># Keep for API compatibility but unused  # LINE 27</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_completer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">completer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Set the completer (kept for API compatibility, currently unused).  # LINE 143</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="sd">"""Set the completer (kept for API compatibility, currently unused).  # LINE 143</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="sd">    Args:</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="sd">        completer: TextualCompleter instance</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="sd">    """</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_completer</span> <span class="o">=</span> <span class="n">completer</span>
 </span></code></pre></div></p>
 <p><strong><a href="../ppxai/tui/app.py#L222-L227">ppxai/tui/app.py:222-227</a></strong>
@@ -1530,13 +1530,13 @@
 </ol>
 <p><strong>Git commands to run:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># When was it deprecated?</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>log<span class="w"> </span>--all<span class="w"> </span>--full-history<span class="w"> </span>--<span class="w"> </span><span class="s2">&quot;**/completion_popup.py*&quot;</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>log<span class="w"> </span>--all<span class="w"> </span>--full-history<span class="w"> </span>--<span class="w"> </span><span class="s2">"**/completion_popup.py*"</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Find related commits</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>git<span class="w"> </span>log<span class="w"> </span>--all<span class="w"> </span>--grep<span class="o">=</span><span class="s2">&quot;autocomplete\|completion&quot;</span><span class="w"> </span>--oneline
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>git<span class="w"> </span>log<span class="w"> </span>--all<span class="w"> </span>--grep<span class="o">=</span><span class="s2">"autocomplete\|completion"</span><span class="w"> </span>--oneline
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Find when it was marked unused</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>git<span class="w"> </span>log<span class="w"> </span>-p<span class="w"> </span>--all<span class="w"> </span>-S<span class="w"> </span><span class="s2">&quot;unused&quot;</span><span class="w"> </span>--<span class="w"> </span>ppxai/tui/widgets/input_box.py
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>git<span class="w"> </span>log<span class="w"> </span>-p<span class="w"> </span>--all<span class="w"> </span>-S<span class="w"> </span><span class="s2">"unused"</span><span class="w"> </span>--<span class="w"> </span>ppxai/tui/widgets/input_box.py
 </span></code></pre></div></p>
 <h2 id="implementation-options">Implementation Options<a class="headerlink" href="#implementation-options" title="Permanent link">&para;</a></h2>
 <h3 id="option-1-re-enable-original-completionpopup-widget-low-effort">Option 1: Re-Enable Original CompletionPopup Widget (Low Effort)<a class="headerlink" href="#option-1-re-enable-original-completionpopup-widget-low-effort" title="Permanent link">&para;</a></h3>
@@ -1591,10 +1591,10 @@
 <h2 id="implementation-plan">Implementation Plan<a class="headerlink" href="#implementation-plan" title="Permanent link">&para;</a></h2>
 <h3 id="step-1-investigation-30-min">Step 1: Investigation (30 min)<a class="headerlink" href="#step-1-investigation-30-min" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Find deprecation history</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>git<span class="w"> </span>log<span class="w"> </span>--all<span class="w"> </span>--full-history<span class="w"> </span>--<span class="w"> </span><span class="s2">&quot;**/completion_popup.py*&quot;</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>git<span class="w"> </span>log<span class="w"> </span>--all<span class="w"> </span>--full-history<span class="w"> </span>--<span class="w"> </span><span class="s2">"**/completion_popup.py*"</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Check for related issues</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>git<span class="w"> </span>log<span class="w"> </span>--all<span class="w"> </span>--grep<span class="o">=</span><span class="s2">&quot;autocomplete&quot;</span><span class="w"> </span>--oneline<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>git<span class="w"> </span>log<span class="w"> </span>--all<span class="w"> </span>--grep<span class="o">=</span><span class="s2">"autocomplete"</span><span class="w"> </span>--oneline<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Review deprecated file</span>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>cat<span class="w"> </span>ppxai/tui/widgets/completion_popup.py.deprecated
@@ -1621,14 +1621,14 @@
 </span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
 </span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">compose</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ComposeResult</span><span class="p">:</span>
 </span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>        <span class="k">with</span> <span class="n">Horizontal</span><span class="p">():</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>            <span class="k">yield</span> <span class="n">Static</span><span class="p">(</span><span class="s2">&quot;[bold cyan]&gt;[/bold cyan]&quot;</span><span class="p">,</span> <span class="n">classes</span><span class="o">=</span><span class="s2">&quot;prompt&quot;</span><span class="p">)</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>            <span class="k">yield</span> <span class="n">Static</span><span class="p">(</span><span class="s2">"[bold cyan]&gt;[/bold cyan]"</span><span class="p">,</span> <span class="n">classes</span><span class="o">=</span><span class="s2">"prompt"</span><span class="p">)</span>
 </span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>            <span class="k">yield</span> <span class="n">Input</span><span class="p">(</span>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>                <span class="n">placeholder</span><span class="o">=</span><span class="s2">&quot;Type a message or /help for commands...&quot;</span><span class="p">,</span>
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>                <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;chat-input&quot;</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>                <span class="n">placeholder</span><span class="o">=</span><span class="s2">"Type a message or /help for commands..."</span><span class="p">,</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>                <span class="nb">id</span><span class="o">=</span><span class="s2">"chat-input"</span>
 </span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>            <span class="p">)</span>
 </span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>
 </span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">on_input_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">:</span> <span class="n">Input</span><span class="o">.</span><span class="n">Changed</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Handle input changes for autocomplete.&quot;&quot;&quot;</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">        </span><span class="sd">"""Handle input changes for autocomplete."""</span>
 </span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completer</span><span class="p">:</span>
 </span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>            <span class="k">return</span>
 </span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>
@@ -1643,7 +1643,7 @@
 </span><span id="__span-5-32"><a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_hide_completions</span><span class="p">()</span>
 </span><span id="__span-5-33"><a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a>
 </span><span id="__span-5-34"><a id="__codelineno-5-34" name="__codelineno-5-34" href="#__codelineno-5-34"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_show_completions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">completions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-5-35"><a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Show autocomplete popup.&quot;&quot;&quot;</span>
+</span><span id="__span-5-35"><a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a><span class="w">        </span><span class="sd">"""Show autocomplete popup."""</span>
 </span><span id="__span-5-36"><a id="__codelineno-5-36" name="__codelineno-5-36" href="#__codelineno-5-36"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="p">:</span>
 </span><span id="__span-5-37"><a id="__codelineno-5-37" name="__codelineno-5-37" href="#__codelineno-5-37"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
 </span><span id="__span-5-38"><a id="__codelineno-5-38" name="__codelineno-5-38" href="#__codelineno-5-38"></a>
@@ -1651,13 +1651,13 @@
 </span><span id="__span-5-40"><a id="__codelineno-5-40" name="__codelineno-5-40" href="#__codelineno-5-40"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">mount</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="p">)</span>
 </span><span id="__span-5-41"><a id="__codelineno-5-41" name="__codelineno-5-41" href="#__codelineno-5-41"></a>
 </span><span id="__span-5-42"><a id="__codelineno-5-42" name="__codelineno-5-42" href="#__codelineno-5-42"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_hide_completions</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-5-43"><a id="__codelineno-5-43" name="__codelineno-5-43" href="#__codelineno-5-43"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Hide autocomplete popup.&quot;&quot;&quot;</span>
+</span><span id="__span-5-43"><a id="__codelineno-5-43" name="__codelineno-5-43" href="#__codelineno-5-43"></a><span class="w">        </span><span class="sd">"""Hide autocomplete popup."""</span>
 </span><span id="__span-5-44"><a id="__codelineno-5-44" name="__codelineno-5-44" href="#__codelineno-5-44"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="p">:</span>
 </span><span id="__span-5-45"><a id="__codelineno-5-45" name="__codelineno-5-45" href="#__codelineno-5-45"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
 </span><span id="__span-5-46"><a id="__codelineno-5-46" name="__codelineno-5-46" href="#__codelineno-5-46"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span> <span class="o">=</span> <span class="kc">None</span>
 </span><span id="__span-5-47"><a id="__codelineno-5-47" name="__codelineno-5-47" href="#__codelineno-5-47"></a>
 </span><span id="__span-5-48"><a id="__codelineno-5-48" name="__codelineno-5-48" href="#__codelineno-5-48"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">on_completion_popup_selected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">CompletionPopup</span><span class="o">.</span><span class="n">Selected</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-5-49"><a id="__codelineno-5-49" name="__codelineno-5-49" href="#__codelineno-5-49"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Handle completion selection.&quot;&quot;&quot;</span>
+</span><span id="__span-5-49"><a id="__codelineno-5-49" name="__codelineno-5-49" href="#__codelineno-5-49"></a><span class="w">        </span><span class="sd">"""Handle completion selection."""</span>
 </span><span id="__span-5-50"><a id="__codelineno-5-50" name="__codelineno-5-50" href="#__codelineno-5-50"></a>        <span class="n">input_widget</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="n">Input</span><span class="p">)</span>
 </span><span id="__span-5-51"><a id="__codelineno-5-51" name="__codelineno-5-51" href="#__codelineno-5-51"></a>
 </span><span id="__span-5-52"><a id="__codelineno-5-52" name="__codelineno-5-52" href="#__codelineno-5-52"></a>        <span class="c1"># Replace current input with completion</span>
@@ -1668,13 +1668,13 @@
 </span><span id="__span-5-57"><a id="__codelineno-5-57" name="__codelineno-5-57" href="#__codelineno-5-57"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_hide_completions</span><span class="p">()</span>
 </span><span id="__span-5-58"><a id="__codelineno-5-58" name="__codelineno-5-58" href="#__codelineno-5-58"></a>
 </span><span id="__span-5-59"><a id="__codelineno-5-59" name="__codelineno-5-59" href="#__codelineno-5-59"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">on_completion_popup_cancelled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">CompletionPopup</span><span class="o">.</span><span class="n">Cancelled</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-5-60"><a id="__codelineno-5-60" name="__codelineno-5-60" href="#__codelineno-5-60"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Handle completion cancellation.&quot;&quot;&quot;</span>
+</span><span id="__span-5-60"><a id="__codelineno-5-60" name="__codelineno-5-60" href="#__codelineno-5-60"></a><span class="w">        </span><span class="sd">"""Handle completion cancellation."""</span>
 </span><span id="__span-5-61"><a id="__codelineno-5-61" name="__codelineno-5-61" href="#__codelineno-5-61"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_hide_completions</span><span class="p">()</span>
 </span><span id="__span-5-62"><a id="__codelineno-5-62" name="__codelineno-5-62" href="#__codelineno-5-62"></a>
 </span><span id="__span-5-63"><a id="__codelineno-5-63" name="__codelineno-5-63" href="#__codelineno-5-63"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">on_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-5-64"><a id="__codelineno-5-64" name="__codelineno-5-64" href="#__codelineno-5-64"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Handle key events for history navigation and completion.&quot;&quot;&quot;</span>
+</span><span id="__span-5-64"><a id="__codelineno-5-64" name="__codelineno-5-64" href="#__codelineno-5-64"></a><span class="w">        </span><span class="sd">"""Handle key events for history navigation and completion."""</span>
 </span><span id="__span-5-65"><a id="__codelineno-5-65" name="__codelineno-5-65" href="#__codelineno-5-65"></a>        <span class="c1"># History navigation (existing code)</span>
-</span><span id="__span-5-66"><a id="__codelineno-5-66" name="__codelineno-5-66" href="#__codelineno-5-66"></a>        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;up&quot;</span><span class="p">:</span>
+</span><span id="__span-5-66"><a id="__codelineno-5-66" name="__codelineno-5-66" href="#__codelineno-5-66"></a>        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">"up"</span><span class="p">:</span>
 </span><span id="__span-5-67"><a id="__codelineno-5-67" name="__codelineno-5-67" href="#__codelineno-5-67"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="p">:</span>
 </span><span id="__span-5-68"><a id="__codelineno-5-68" name="__codelineno-5-68" href="#__codelineno-5-68"></a>                <span class="c1"># Navigate completion popup</span>
 </span><span id="__span-5-69"><a id="__codelineno-5-69" name="__codelineno-5-69" href="#__codelineno-5-69"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="o">.</span><span class="n">select_previous</span><span class="p">()</span>
@@ -1684,7 +1684,7 @@
 </span><span id="__span-5-73"><a id="__codelineno-5-73" name="__codelineno-5-73" href="#__codelineno-5-73"></a>                <span class="c1"># Navigate history</span>
 </span><span id="__span-5-74"><a id="__codelineno-5-74" name="__codelineno-5-74" href="#__codelineno-5-74"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_navigate_history</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 </span><span id="__span-5-75"><a id="__codelineno-5-75" name="__codelineno-5-75" href="#__codelineno-5-75"></a>                <span class="n">event</span><span class="o">.</span><span class="n">prevent_default</span><span class="p">()</span>
-</span><span id="__span-5-76"><a id="__codelineno-5-76" name="__codelineno-5-76" href="#__codelineno-5-76"></a>        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;down&quot;</span><span class="p">:</span>
+</span><span id="__span-5-76"><a id="__codelineno-5-76" name="__codelineno-5-76" href="#__codelineno-5-76"></a>        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">"down"</span><span class="p">:</span>
 </span><span id="__span-5-77"><a id="__codelineno-5-77" name="__codelineno-5-77" href="#__codelineno-5-77"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="p">:</span>
 </span><span id="__span-5-78"><a id="__codelineno-5-78" name="__codelineno-5-78" href="#__codelineno-5-78"></a>                <span class="c1"># Navigate completion popup</span>
 </span><span id="__span-5-79"><a id="__codelineno-5-79" name="__codelineno-5-79" href="#__codelineno-5-79"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="o">.</span><span class="n">select_next</span><span class="p">()</span>
@@ -1694,12 +1694,12 @@
 </span><span id="__span-5-83"><a id="__codelineno-5-83" name="__codelineno-5-83" href="#__codelineno-5-83"></a>                <span class="c1"># Navigate history</span>
 </span><span id="__span-5-84"><a id="__codelineno-5-84" name="__codelineno-5-84" href="#__codelineno-5-84"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_navigate_history</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 </span><span id="__span-5-85"><a id="__codelineno-5-85" name="__codelineno-5-85" href="#__codelineno-5-85"></a>                <span class="n">event</span><span class="o">.</span><span class="n">prevent_default</span><span class="p">()</span>
-</span><span id="__span-5-86"><a id="__codelineno-5-86" name="__codelineno-5-86" href="#__codelineno-5-86"></a>        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;escape&quot;</span><span class="p">:</span>
+</span><span id="__span-5-86"><a id="__codelineno-5-86" name="__codelineno-5-86" href="#__codelineno-5-86"></a>        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">"escape"</span><span class="p">:</span>
 </span><span id="__span-5-87"><a id="__codelineno-5-87" name="__codelineno-5-87" href="#__codelineno-5-87"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="p">:</span>
 </span><span id="__span-5-88"><a id="__codelineno-5-88" name="__codelineno-5-88" href="#__codelineno-5-88"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_hide_completions</span><span class="p">()</span>
 </span><span id="__span-5-89"><a id="__codelineno-5-89" name="__codelineno-5-89" href="#__codelineno-5-89"></a>                <span class="n">event</span><span class="o">.</span><span class="n">prevent_default</span><span class="p">()</span>
 </span><span id="__span-5-90"><a id="__codelineno-5-90" name="__codelineno-5-90" href="#__codelineno-5-90"></a>                <span class="n">event</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-</span><span id="__span-5-91"><a id="__codelineno-5-91" name="__codelineno-5-91" href="#__codelineno-5-91"></a>        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;tab&quot;</span><span class="p">:</span>
+</span><span id="__span-5-91"><a id="__codelineno-5-91" name="__codelineno-5-91" href="#__codelineno-5-91"></a>        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">"tab"</span><span class="p">:</span>
 </span><span id="__span-5-92"><a id="__codelineno-5-92" name="__codelineno-5-92" href="#__codelineno-5-92"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="p">:</span>
 </span><span id="__span-5-93"><a id="__codelineno-5-93" name="__codelineno-5-93" href="#__codelineno-5-93"></a>                <span class="c1"># Select current completion</span>
 </span><span id="__span-5-94"><a id="__codelineno-5-94" name="__codelineno-5-94" href="#__codelineno-5-94"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_completion_popup</span><span class="o">.</span><span class="n">select_current</span><span class="p">()</span>
@@ -1940,7 +1940,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

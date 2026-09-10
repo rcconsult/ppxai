@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1660,7 +1660,7 @@
 - Notable incident: Replit's agent deleted a production database</p>
 <h3 id="what-corrupted-state-actually-means">What "Corrupted State" Actually Means<a class="headerlink" href="#what-corrupted-state-actually-means" title="Permanent link">&para;</a></h3>
 <p>When multi-file edits fail mid-way, the problem is <strong>filesystem state</strong>, not AI context:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Agent Task: &quot;Refactor auth module to use JWT&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Agent Task: "Refactor auth module to use JWT"
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Iteration 1: Edit auth.py ✅ (adds JWT imports, changes login())
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>Iteration 2: Edit user.py ✅ (updates User class)
@@ -1769,11 +1769,11 @@
 <p><strong>Git-based checkpoints</strong> (like Aider):</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>User: /agent refactor auth module
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    ↓
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>ppxai creates Git commit: &quot;ppxai: checkpoint before agent task&quot;
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>ppxai creates Git commit: "ppxai: checkpoint before agent task"
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    ↓
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>AI modifies auth.py + tests/test_auth.py (with user consent)
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    ↓
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>ppxai creates Git commit: &quot;ppxai: Refactored auth module&quot;
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>ppxai creates Git commit: "ppxai: Refactored auth module"
 </span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    ↓
 </span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>User can: /undo → git revert HEAD (undoes both files atomically)
 </span></code></pre></div>
@@ -1817,11 +1817,11 @@
 <h3 id="implementation-options">Implementation Options<a class="headerlink" href="#implementation-options" title="Permanent link">&para;</a></h3>
 <p><strong>Option 1: Git-based (Recommended)</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Before agent task</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;stash&quot;</span><span class="p">,</span> <span class="s2">&quot;push&quot;</span><span class="p">,</span> <span class="s2">&quot;-m&quot;</span><span class="p">,</span> <span class="s2">&quot;ppxai-checkpoint&quot;</span><span class="p">])</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># or: git commit with &quot;ppxai: checkpoint&quot; message</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"stash"</span><span class="p">,</span> <span class="s2">"push"</span><span class="p">,</span> <span class="s2">"-m"</span><span class="p">,</span> <span class="s2">"ppxai-checkpoint"</span><span class="p">])</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># or: git commit with "ppxai: checkpoint" message</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># After failure or /undo</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;stash&quot;</span><span class="p">,</span> <span class="s2">&quot;pop&quot;</span><span class="p">])</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"stash"</span><span class="p">,</span> <span class="s2">"pop"</span><span class="p">])</span>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># or: git revert HEAD</span>
 </span></code></pre></div>
 - Zero new dependencies (users already have Git)
@@ -1833,7 +1833,7 @@
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">checkpoints</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>        <span class="n">checkpoint_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;cp-</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>        <span class="n">checkpoint_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"cp-</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
 </span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">checkpoints</span><span class="p">[</span><span class="n">checkpoint_id</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
 </span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>            <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">files</span>
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>        <span class="p">}</span>
@@ -1848,7 +1848,7 @@
 - Fast for small files</p>
 <p><strong>Option 3: SQLite (persistent without Git)</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;~/.ppxai/checkpoints.db&quot;</span><span class="p">)</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">"~/.ppxai/checkpoints.db"</span><span class="p">)</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># Store: (checkpoint_id, file_path, content, timestamp)</span>
 </span></code></pre></div>
 - Tiny dependency (built into Python)
@@ -2122,7 +2122,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

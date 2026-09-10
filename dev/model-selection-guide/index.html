@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1379,10 +1379,10 @@ them. The cloned-from-gpt-5.4 hint set caused regressions on
 <code>claim_without_action</code> (fabricated audit) and <code>multi_tool_sequence</code>
 (skipped info-passing). <a href="../AGENTS.md">AGENTS.md</a> <code>gpt-5.5*</code> block has
 been stripped to 3 behavioral anchors only:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="s">&quot;gpt-5.5*&quot;</span><span class="p p-Indicator">:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">tools</span><span class="nv"> </span><span class="s">API</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">function</span><span class="nv"> </span><span class="s">calls</span><span class="nv"> </span><span class="s">—</span><span class="nv"> </span><span class="s">do</span><span class="nv"> </span><span class="s">not</span><span class="nv"> </span><span class="s">output</span><span class="nv"> </span><span class="s">tool-call</span><span class="nv"> </span><span class="s">JSON</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">response</span><span class="nv"> </span><span class="s">text.&quot;</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;For</span><span class="nv"> </span><span class="s">code</span><span class="nv"> </span><span class="s">modifications,</span><span class="nv"> </span><span class="s">use</span><span class="nv"> </span><span class="s">apply_patch</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">complete</span><span class="nv"> </span><span class="s">unified</span><span class="nv"> </span><span class="s">diffs</span><span class="nv"> </span><span class="s">(3+</span><span class="nv"> </span><span class="s">context</span><span class="nv"> </span><span class="s">lines</span><span class="nv"> </span><span class="s">before/after</span><span class="nv"> </span><span class="s">each</span><span class="nv"> </span><span class="s">change).&quot;</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">information</span><span class="nv"> </span><span class="s">returned</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">earlier</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">calls</span><span class="nv"> </span><span class="s">when</span><span class="nv"> </span><span class="s">chaining</span><span class="nv"> </span><span class="s">subsequent</span><span class="nv"> </span><span class="s">calls.&quot;</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="s">"gpt-5.5*"</span><span class="p p-Indicator">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Use</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">tools</span><span class="nv"> </span><span class="s">API</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">function</span><span class="nv"> </span><span class="s">calls</span><span class="nv"> </span><span class="s">—</span><span class="nv"> </span><span class="s">do</span><span class="nv"> </span><span class="s">not</span><span class="nv"> </span><span class="s">output</span><span class="nv"> </span><span class="s">tool-call</span><span class="nv"> </span><span class="s">JSON</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">response</span><span class="nv"> </span><span class="s">text."</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"For</span><span class="nv"> </span><span class="s">code</span><span class="nv"> </span><span class="s">modifications,</span><span class="nv"> </span><span class="s">use</span><span class="nv"> </span><span class="s">apply_patch</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">complete</span><span class="nv"> </span><span class="s">unified</span><span class="nv"> </span><span class="s">diffs</span><span class="nv"> </span><span class="s">(3+</span><span class="nv"> </span><span class="s">context</span><span class="nv"> </span><span class="s">lines</span><span class="nv"> </span><span class="s">before/after</span><span class="nv"> </span><span class="s">each</span><span class="nv"> </span><span class="s">change)."</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Use</span><span class="nv"> </span><span class="s">information</span><span class="nv"> </span><span class="s">returned</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">earlier</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">calls</span><span class="nv"> </span><span class="s">when</span><span class="nv"> </span><span class="s">chaining</span><span class="nv"> </span><span class="s">subsequent</span><span class="nv"> </span><span class="s">calls."</span>
 </span></code></pre></div>
 <p>The <code>gpt-5*</code> fallback block in both <code>AGENTS.md</code> and <code>~/.ppxai/AGENTS.md</code>
 also had <code>CRITICAL: STOP retrying after 2 failures</code> and <code>Avoid duplicate /
@@ -1465,9 +1465,9 @@ manually:</p>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># ... grind through the actual work ...</span>
 </span></code></pre></div>
 <p>Or set defaults in <code>~/.ppxai/ppxai-config.json</code>:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">&quot;openai&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;default_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-5.4-mini&quot;</span><span class="p">,</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;coding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-5.4-mini&quot;</span><span class="p">,</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">"openai"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gpt-5.4-mini"</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gpt-5.4-mini"</span><span class="p">,</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="err">...</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -1659,7 +1659,7 @@ worth more than 1 point); the passing count is the strict count.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

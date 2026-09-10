@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1666,8 +1666,17 @@
 
 
 <h1 id="tool-calling-in-ppxai">Tool Calling in ppxai<a class="headerlink" href="#tool-calling-in-ppxai" title="Permanent link">&para;</a></h1>
-<p><strong>Version:</strong> v1.15.6
-<strong>Updated:</strong> 2026-02-20</p>
+<p><strong>Version:</strong> v1.19.1
+<strong>Updated:</strong> 2026-08-04</p>
+<blockquote>
+<p><strong>Note (v1.19.x):</strong> Web search backend selection now goes through
+<code>resolve_web_search_backend()</code> (<code>ppxai/engine/tools/search_backends.py</code>).
+<code>tools.web_search.preferred</code> (global) or <code>providers.&lt;name&gt;.web_search.preferred</code>
+is an <strong>ordering</strong> — first choice, then the rest of the usable fallback
+chain — not a hard pin. Add <code>strict: true</code> in the same scope to make it a
+hard pin (no fallback, egress narrowed to just that backend). See
+<a href="../provider-setup/#web-search-backend-ordering-v1191">provider-setup.md</a>.</p>
+</blockquote>
 <hr />
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>ppxai supports <strong>two different tool calling methods</strong> depending on the AI provider:</p>
@@ -1784,7 +1793,22 @@
 <li>ppxai's parser extracts tool calls from response text</li>
 <li>Tools execute and results are added to conversation</li>
 </ol>
-<p><strong>This works reliably</strong> and is transparent to users.</p>
+<p><strong>This works reliably</strong> for interactive chat and is transparent to users.</p>
+<blockquote>
+<p>⚠️ <strong>Prompt-based tool calling is NOT reliable for the <code>/task</code> agent tier.</strong>
+A 2026-07-13 web-app trial (8 runs, same task <code>summarize docs/README.md</code>)
+found that under a <code>/task</code> run, <code>sonar-pro</code> <strong>never produced a real
+tool call in 6 attempts</strong> (no <code>tool_call</code> event, no validator
+<code>Recorded tool call</code> line). It nondeterministically <strong>refused</strong>,
+<strong>confabulated</strong> a summary, or ran an <strong>intrinsic web search</strong> and
+summarized an <em>unrelated external repo</em> while citing its URL
+(<code>github.com/steipete/summarize</code>) — never reading the granted local file.
+The same task on native-tool providers (<code>deepseek-ai/deepseek-v4-pro</code> on the <code>nvidia</code> provider) worked
+correctly. Do not grant tool-capable <code>/task</code> runs to Perplexity until this
+is gated/routed. See <strong>Item 43</strong> in
+<a href="../debt-inventory/">debt-inventory.md</a> and
+<a href="../task-agent-guide/">task-agent-guide.md §10</a> for the wire evidence.</p>
+</blockquote>
 <hr />
 <h2 id="gemini-native">Gemini (Native)<a class="headerlink" href="#gemini-native" title="Permanent link">&para;</a></h2>
 <h3 id="api-support">API Support<a class="headerlink" href="#api-support" title="Permanent link">&para;</a></h3>
@@ -1796,13 +1820,25 @@
 - ✅ Structured function arguments
 - ✅ Reliable tool selection
 - ✅ Works with ppxai without modification</p>
+<blockquote>
+<p>⚠️ <strong>Gemini 3.x (<code>gemini-3.1-pro-preview</code>) tool round-trips currently 400.</strong>
+A 2026-07-13 <code>/task</code> trial confirmed the model enters native mode and emits
+a real <code>read_file</code> call, then the follow-up turn fails with
+<code>400 INVALID_ARGUMENT — Function call is missing a thought_signature in
+functionCall parts</code>. Gemini 3.x requires each returned <code>functionCall</code> part
+to carry an opaque <code>thought_signature</code> that the client must echo back on
+the tool-response turn; ppxai's Gemini provider does not yet preserve or
+replay it (<code>grep -ri thought_signature ppxai/</code> → empty). Blocks all
+native-tool <code>/task</code> runs on Gemini 3.x models. Gemini 2.5 is unaffected.
+See <strong>Item 45</strong> in <a href="../debt-inventory/">debt-inventory.md</a>.</p>
+</blockquote>
 <h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">&quot;gemini&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">&quot;options&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="c1">// Enable in provider</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">"options"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="c1">// Enable in provider</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -1810,36 +1846,36 @@
 <h2 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
 <h3 id="capability-flags">Capability Flags<a class="headerlink" href="#capability-flags" title="Permanent link">&para;</a></h3>
 <p>The <code>native_tool_calling</code> capability flag indicates whether a provider supports native tool calling:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Provider has native API support</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Provider has native API support</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="provider-specific-settings">Provider-Specific Settings<a class="headerlink" href="#provider-specific-settings" title="Permanent link">&para;</a></h3>
 <p><strong>Perplexity:</strong>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">&quot;perplexity&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">  </span><span class="c1">// Uses prompt-based fallback</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">"perplexity"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">  </span><span class="c1">// Uses prompt-based fallback</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <p><strong>Gemini:</strong>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">&quot;gemini&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Uses native function calling</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Uses native function calling</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <p><strong>vLLM:</strong>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">&quot;vllm-gpt-oss&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Requires --enable-auto-tool-choice</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">"vllm-gpt-oss"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Requires --enable-auto-tool-choice</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <p><strong>Ollama:</strong>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">&quot;ollama&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Qwen2.5 models only</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">"ollama"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Qwen2.5 models only</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
 </span></code></pre></div></p>
@@ -1875,7 +1911,7 @@
 <td>Hermes parser, stable</td>
 </tr>
 <tr>
-<td>gpt-5.2</td>
+<td>gpt-5.2 [^retired]</td>
 <td>Native</td>
 <td>70.3%</td>
 <td>OpenAI flagship (100% halluc. resist)</td>
@@ -1894,6 +1930,7 @@
 </tr>
 </tbody>
 </table>
+<p>[^retired]: <code>gpt-5.2</code> is no longer a shipped model — superseded by <code>gpt-5.4</code>/<code>gpt-5.5</code>. Row retained as historical benchmark data only; do not use as a current model reference.</p>
 <p>The gap is due to:
 1. Parsing reliability
 2. Model training (native models trained specifically for tool calling)
@@ -1902,10 +1939,10 @@
 <h3 id="benchmark-metadata">Benchmark Metadata<a class="headerlink" href="#benchmark-metadata" title="Permanent link">&para;</a></h3>
 <p>Starting with v1.15.3, benchmark results include tool calling method metadata:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">&quot;tool_calling_method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;native&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// or &quot;prompt_based&quot;</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">&quot;provider_capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">"tool_calling_method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"native"</span><span class="p">,</span><span class="w">  </span><span class="c1">// or "prompt_based"</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">"provider_capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="p">}</span>
@@ -1927,8 +1964,8 @@
 <li>
 <p><strong>Add model-specific hints</strong> in <code>AGENTS.md</code>:
    <div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">sonar*</span><span class="p">:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;CRITICAL:</span><span class="nv"> </span><span class="s">For</span><span class="nv"> </span><span class="s">code</span><span class="nv"> </span><span class="s">editing,</span><span class="nv"> </span><span class="s">call</span><span class="nv"> </span><span class="s">apply_patch</span><span class="nv"> </span><span class="s">ONCE</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">detected</span><span class="nv"> </span><span class="s">issue:</span><span class="nv"> </span><span class="s">you</span><span class="nv"> </span><span class="s">make</span><span class="nv"> </span><span class="s">5-6</span><span class="nv"> </span><span class="s">duplicate</span><span class="nv"> </span><span class="s">calls.&quot;</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Do</span><span class="nv"> </span><span class="s">NOT</span><span class="nv"> </span><span class="s">output</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">call</span><span class="nv"> </span><span class="s">JSON</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">response</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">use</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">calling</span><span class="nv"> </span><span class="s">directly.&quot;</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"CRITICAL:</span><span class="nv"> </span><span class="s">For</span><span class="nv"> </span><span class="s">code</span><span class="nv"> </span><span class="s">editing,</span><span class="nv"> </span><span class="s">call</span><span class="nv"> </span><span class="s">apply_patch</span><span class="nv"> </span><span class="s">ONCE</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">detected</span><span class="nv"> </span><span class="s">issue:</span><span class="nv"> </span><span class="s">you</span><span class="nv"> </span><span class="s">make</span><span class="nv"> </span><span class="s">5-6</span><span class="nv"> </span><span class="s">duplicate</span><span class="nv"> </span><span class="s">calls."</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Do</span><span class="nv"> </span><span class="s">NOT</span><span class="nv"> </span><span class="s">output</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">call</span><span class="nv"> </span><span class="s">JSON</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">response</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">use</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">calling</span><span class="nv"> </span><span class="s">directly."</span>
 </span></code></pre></div></p>
 </li>
 <li>
@@ -1973,15 +2010,15 @@
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Tool-specific limits</span>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">manager</span><span class="o">.</span><span class="n">tool_display_limits</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="s2">&quot;get_weather&quot;</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        <span class="s2">&quot;short&quot;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>      <span class="c1"># One-line format</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        <span class="s2">&quot;detailed&quot;</span><span class="p">:</span> <span class="mi">1500</span><span class="p">,</span>  <span class="c1"># Current weather</span>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="s2">&quot;forecast&quot;</span><span class="p">:</span> <span class="mi">5000</span><span class="p">,</span>  <span class="c1"># Full 2-day forecast</span>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>        <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="mi">2000</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="s2">"get_weather"</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        <span class="s2">"short"</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>      <span class="c1"># One-line format</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        <span class="s2">"detailed"</span><span class="p">:</span> <span class="mi">1500</span><span class="p">,</span>  <span class="c1"># Current weather</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="s2">"forecast"</span><span class="p">:</span> <span class="mi">5000</span><span class="p">,</span>  <span class="c1"># Full 2-day forecast</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>        <span class="s2">"default"</span><span class="p">:</span> <span class="mi">2000</span>
 </span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    <span class="p">},</span>
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="s2">&quot;fetch_url&quot;</span><span class="p">:</span> <span class="mi">5000</span><span class="p">,</span>     <span class="c1"># Web pages</span>
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>    <span class="s2">&quot;web_search&quot;</span><span class="p">:</span> <span class="mi">3000</span><span class="p">,</span>    <span class="c1"># Search results</span>
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    <span class="s2">&quot;read_file&quot;</span><span class="p">:</span> <span class="mi">10000</span><span class="p">,</span>    <span class="c1"># Code files</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="s2">"fetch_url"</span><span class="p">:</span> <span class="mi">5000</span><span class="p">,</span>     <span class="c1"># Web pages</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>    <span class="s2">"web_search"</span><span class="p">:</span> <span class="mi">3000</span><span class="p">,</span>    <span class="c1"># Search results</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    <span class="s2">"read_file"</span><span class="p">:</span> <span class="mi">10000</span><span class="p">,</span>    <span class="c1"># Code files</span>
 </span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="format-aware-limits">Format-Aware Limits<a class="headerlink" href="#format-aware-limits" title="Permanent link">&para;</a></h3>
@@ -2018,24 +2055,26 @@
 </table>
 <p><strong>Example:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Short format uses 500 char limit</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">get_weather</span><span class="p">(</span><span class="s2">&quot;Geneva&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;short&quot;</span><span class="p">)</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># → &quot;Geneva: ☁️  +5°C&quot;</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">get_weather</span><span class="p">(</span><span class="s2">"Geneva"</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"short"</span><span class="p">)</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># → "Geneva: ☁️  +5°C"</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
 </span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># Forecast format uses 5000 char limit</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">get_weather</span><span class="p">(</span><span class="s2">&quot;Geneva&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;forecast&quot;</span><span class="p">)</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">get_weather</span><span class="p">(</span><span class="s2">"Geneva"</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"forecast"</span><span class="p">)</span>
 </span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># → Full 2-day forecast (4300 chars displayed)</span>
 </span></code></pre></div></p>
 <h3 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h3>
-<p>Display limits are applied in <a href="../ppxai/engine/chat.py#L412-L417">chat.py:412-417</a>:</p>
+<p>Display limits are applied where <code>get_tool_display_limit()</code> is called in
+<a href="../ppxai/engine/chat.py"><code>ppxai/engine/chat.py</code></a> (line numbers drift; search
+for <code>display_limit</code> rather than citing a fixed range):</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Get tool-specific limit</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">display_limit</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">tool_manager</span><span class="o">.</span><span class="n">get_tool_display_limit</span><span class="p">(</span><span class="n">tool_name</span><span class="p">,</span> <span class="n">tool_args</span><span class="p">)</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">truncated_result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[:</span><span class="n">display_limit</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;...&quot;</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">display_limit</span> <span class="k">else</span> <span class="n">result</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">truncated_result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[:</span><span class="n">display_limit</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"..."</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">display_limit</span> <span class="k">else</span> <span class="n">result</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
 </span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Display to user (truncated)</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="k">yield</span> <span class="n">Event</span><span class="p">(</span><span class="n">EventType</span><span class="o">.</span><span class="n">TOOL_RESULT</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;tool&quot;</span><span class="p">:</span> <span class="n">tool_name</span><span class="p">,</span> <span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="n">truncated_result</span><span class="p">})</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="k">yield</span> <span class="n">Event</span><span class="p">(</span><span class="n">EventType</span><span class="o">.</span><span class="n">TOOL_RESULT</span><span class="p">,</span> <span class="p">{</span><span class="s2">"tool"</span><span class="p">:</span> <span class="n">tool_name</span><span class="p">,</span> <span class="s2">"result"</span><span class="p">:</span> <span class="n">truncated_result</span><span class="p">})</span>
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
 </span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="c1"># Send to LLM (full result)</span>
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Tool returned:</span><span class="se">\n\n</span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">))</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="s2">"user"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Tool returned:</span><span class="se">\n\n</span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">"</span><span class="p">))</span>
 </span></code></pre></div>
 <h3 id="key-points">Key Points<a class="headerlink" href="#key-points" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2166,7 +2205,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

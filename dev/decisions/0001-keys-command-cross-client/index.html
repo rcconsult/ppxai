@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1272,7 +1272,7 @@
 
 <h1 id="adr-0001-keys-cross-client-behavior-in-v1181">ADR 0001 — <code>/keys</code> cross-client behavior in v1.18.1<a class="headerlink" href="#adr-0001-keys-cross-client-behavior-in-v1181" title="Permanent link">&para;</a></h1>
 <p><strong>Date:</strong> 2026-04-25
-<strong>Status:</strong> Accepted
+<strong>Status:</strong> Accepted — implemented (<code>commands/system.py::handle_keys</code>: universal Markdown + <code>vscode_delegate</code> on HTTP contexts, rich key table on TUI)
 <strong>Related:</strong> <code>docs/archive/TODO-v1.18.1-command-unification.md</code> Phase 2 step 1f</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p><code>/keys</code> is a TUI-introspection command. Today its server-side handler
@@ -1403,7 +1403,7 @@ signal that <code>/keys</code> matters in web/VSCode.</p>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>            <span class="k">pass</span>  <span class="c1"># fall through to universal-only</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="c1"># Universal cross-client bindings</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">md</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;## Keyboard Shortcuts (universal)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">md</span> <span class="o">=</span> <span class="s2">"""## Keyboard Shortcuts (universal)</span>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="s2">| Key | Action |</span>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="s2">|---|---|</span>
@@ -1415,17 +1415,17 @@ signal that <code>/keys</code> matters in web/VSCode.</p>
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
 </span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="s2">For client-specific shortcuts:</span>
 </span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="s2">- **Web:** see https://ppxai.dev/docs/keys/web</span>
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="s2">- **VSCode:** opening keybinding editor — search &quot;ppxai&quot;</span>
-</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="s2">- **Textual TUI:** run `/keys` inside the TUI&quot;&quot;&quot;</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="s2">- **VSCode:** opening keybinding editor — search "ppxai"</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="s2">- **Textual TUI:** run `/keys` inside the TUI"""</span>
 </span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>
 </span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">MarkdownResult</span><span class="p">(</span>
 </span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>        <span class="n">status</span><span class="o">=</span><span class="n">ResultStatus</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
-</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>        <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Keyboard Shortcuts&quot;</span><span class="p">,</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>        <span class="n">message</span><span class="o">=</span><span class="s2">"Keyboard Shortcuts"</span><span class="p">,</span>
 </span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>        <span class="n">content</span><span class="o">=</span><span class="n">md</span><span class="p">,</span>
 </span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>    <span class="p">)</span>
 </span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>    <span class="c1"># Side-effects per client capability — unknown kinds are no-ops</span>
-</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    <span class="n">result</span><span class="o">.</span><span class="n">add_side_effect</span><span class="p">(</span><span class="s2">&quot;vscode_delegate&quot;</span><span class="p">,</span>
-</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>                           <span class="n">command</span><span class="o">=</span><span class="s2">&quot;workbench.action.openGlobalKeybindings&quot;</span><span class="p">)</span>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    <span class="n">result</span><span class="o">.</span><span class="n">add_side_effect</span><span class="p">(</span><span class="s2">"vscode_delegate"</span><span class="p">,</span>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>                           <span class="n">command</span><span class="o">=</span><span class="s2">"workbench.action.openGlobalKeybindings"</span><span class="p">)</span>
 </span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>    <span class="k">return</span> <span class="n">result</span>
 </span></code></pre></div>
 <p>The web client honors the <code>MarkdownResult</code> rendering and ignores
@@ -1513,7 +1513,7 @@ TUI path?" — which is what we actually want.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

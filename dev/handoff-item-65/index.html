@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/discussion-agents-framework/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/handoff-item-65/">
       
       
       
@@ -19,15 +19,15 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Agents Framework — Design Discussion - ppxai Documentation</title>
+        <title>Item 65 — implementation plan (auditor → builder) - ppxai Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#agents-framework-design-discussion" class="md-skip">
+        <a href="#item-65-implementation-plan-auditor-builder" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Agents Framework — Design Discussion
+              Item 65 — implementation plan (auditor → builder)
             
           </span>
         </div>
@@ -1146,10 +1146,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#origin-of-the-idea" class="md-nav__link">
+  <a href="#0-sizing-correction-supersedes-an-earlier-auditor-claim" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Origin of the idea
+        0. Sizing correction (supersedes an earlier auditor claim)
       
     </span>
   </a>
@@ -1157,22 +1157,55 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#two-systems-not-one" class="md-nav__link">
+  <a href="#1-the-one-field-that-can-silently-change-meaning" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Two systems, not one
+        1. The one field that can silently change meaning
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Two systems, not one">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-wire_protocol-is-not-in-the-seed-rows-15-rows-need-it-stated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. wire_protocol is not in the seed rows — 15 rows need it stated
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-two-different-auto-values-do-not-conflate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Two different auto values — do not conflate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-reference-data-validation-pass-owner-approved-addition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Reference-data validation pass (owner-approved addition)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Reference-data validation pass (owner-approved addition)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#system-1-sub-agents-synchronous-interactive" class="md-nav__link">
+  <a href="#4a-what-was-probed-and-rejected" class="md-nav__link">
     <span class="md-ellipsis">
       
-        System 1 — Sub-agents (synchronous, interactive)
+        4a. What was probed and REJECTED
       
     </span>
   </a>
@@ -1180,10 +1213,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#system-2-autonomous-agents-asynchronous-unattended" class="md-nav__link">
+  <a href="#4b-what-to-actually-validate-against-published-data" class="md-nav__link">
     <span class="md-ellipsis">
       
-        System 2 — Autonomous agents (asynchronous, unattended)
+        4b. What to actually validate against published data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4c-provenance-owner-to-confirm-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4c. Provenance (owner to confirm scope)
       
     </span>
   </a>
@@ -1196,10 +1240,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#worked-example-prometheus-anomaly-watcher" class="md-nav__link">
+  <a href="#5-sequencing-two-commits-deliberately" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Worked example: Prometheus anomaly watcher
+        5. Sequencing — two commits, deliberately
       
     </span>
   </a>
@@ -1207,60 +1251,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#survey-of-existing-ppxai-sre-as-of-2026-04-24" class="md-nav__link">
+  <a href="#6-defect-found-while-planning-fix-in-step-2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Survey of existing ppxai-sre (as of 2026-04-24)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Survey of existing ppxai-sre (as of 2026-04-24)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#whats-already-there" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What's already there
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#gaps-vs-the-autonomous-agent-vision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Gaps vs. the autonomous-agent vision
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#repo-metadata" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Repo metadata
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-real-blocker-ppxais-api-surface" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The real blocker — ppxai's API surface
+        6. Defect found while planning (fix in step 2)
       
     </span>
   </a>
@@ -1268,82 +1262,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#proposed-ordering-not-committed" class="md-nav__link">
+  <a href="#7-ground-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Proposed ordering (not committed)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Proposed ordering (not committed)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ppxai-side-work-in-this-repo-on-featurev1180-or-later" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ppxai-side work (in this repo, on feature/v1.18.0 or later)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ppxai-sre-side-work-separate-repo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ppxai-sre-side work (separate repo)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#rationale-for-this-ordering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rationale for this ordering
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-decisions-still-open" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Design decisions still open
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#things-explicitly-not-decided-yet" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Things explicitly NOT decided yet
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-step-if-pursued" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next step if pursued
+        7. Ground rules
       
     </span>
   </a>
@@ -1370,316 +1292,191 @@
   
 
 
-<h1 id="agents-framework-design-discussion">Agents Framework — Design Discussion<a class="headerlink" href="#agents-framework-design-discussion" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> Not a decision yet. Captured for later review.
-<strong>Date:</strong> 2026-04-24
-<strong>Branch at time of discussion:</strong> <code>feature/v1.18.0</code>
-<strong>Related repos:</strong> <a href="https://github.com/rcconsult/ppxai">ppxai</a>, <a href="https://github.com/rcconsult/ppxai-sre">ppxai-sre</a></p>
+<h1 id="item-65-implementation-plan-auditor-builder">Item 65 — implementation plan (auditor → builder)<a class="headerlink" href="#item-65-implementation-plan-auditor-builder" title="Permanent link">&para;</a></h1>
+<p><strong>Written 2026-08-31 by the auditor session (ppxai-28) for the builder
+(ppxai-c7), against branch <code>bugfix/v1.19.1</code> @ <code>4b49e960</code>.</strong></p>
+<p>Item 65 = retire <code>BUILTIN_PROFILES</code> as the seed vocabulary for
+<code>ModelFacts</code>. Debt entry: <code>docs/debt-inventory.md</code> §Item 65.</p>
+<p>This file is the durable record. Every number below was derived by
+running against the tree at <code>4b49e960</code>, not recalled — re-derive before
+trusting it if the branch has moved.</p>
 <hr />
-<h2 id="origin-of-the-idea">Origin of the idea<a class="headerlink" href="#origin-of-the-idea" title="Permanent link">&para;</a></h2>
-<p>The conversation started from two separate observations:</p>
-<ol>
-<li>
-<p><strong>"I want sub-agents in ppxai or ppxai-sre — tool-like, spawned from a
-   prompt, driven by an <code>AGENT.md</code>/<code>SOUL.md</code> file, solve a scoped task
-   with input from the caller."</strong></p>
-</li>
-<li>
-<p><strong>"Also, <code>ppxai-sre</code> should provide a framework for autonomous agents
-   that run as daemons / k8s jobs / cron jobs — e.g. a Prometheus metric
-   watcher that detects anomalies, fires Alertmanager alerts, and
-   publishes an audit log."</strong></p>
-</li>
-</ol>
-<p>These are two distinct systems with shared DNA (agent definition format,
-tool registry, result publishing) but fundamentally different runtimes.
-Conflating them produces a chat-loop shape forced onto a cron job.</p>
-<hr />
-<h2 id="two-systems-not-one">Two systems, not one<a class="headerlink" href="#two-systems-not-one" title="Permanent link">&para;</a></h2>
-<h3 id="system-1-sub-agents-synchronous-interactive">System 1 — Sub-agents (synchronous, interactive)<a class="headerlink" href="#system-1-sub-agents-synchronous-interactive" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Spawned by a parent agent or a user prompt</li>
-<li>One task → returns a result → dies</li>
-<li>Runs <em>inside</em> ppxai/ppxai-sre as a built-in tool</li>
-<li>Operator is in the loop</li>
-</ul>
-<h3 id="system-2-autonomous-agents-asynchronous-unattended">System 2 — Autonomous agents (asynchronous, unattended)<a class="headerlink" href="#system-2-autonomous-agents-asynchronous-unattended" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Spawned by a scheduler (daemon / cron / k8s CronJob)</li>
-<li>Lifecycle per tick: wake → observe → decide → act → publish → sleep</li>
-<li>Runs <em>outside</em> ppxai as its own process/pod</li>
-<li>No operator in the loop — side effects are the product</li>
-</ul>
-<p><strong>Rule:</strong> share the <strong>definition format</strong> (<code>AGENT.md</code>) and the <strong>tool
-registry</strong>, keep the <strong>runtime</strong> separate. Don't unify prematurely.</p>
-<hr />
-<h2 id="worked-example-prometheus-anomaly-watcher">Worked example: Prometheus anomaly watcher<a class="headerlink" href="#worked-example-prometheus-anomaly-watcher" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>prometheus-anomaly-watcher/
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── AGENT.md                 # role, scope, schedule, tools, success criteria
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── runtime: k8s CronJob every 5min
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>└── lifecycle per tick:
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    1. Pull:    query prometheus (PromQL queries from AGENT.md)
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    2. Decide:  LLM call — &quot;anomalous vs the last 7d baseline?&quot;
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    3. Act:     if anomaly → POST to Alertmanager, write audit log
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    4. Publish: append to audit stream (Loki / Kafka / postgres)
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    5. Exit:    0 on success, non-zero on infra error → k8s retries
-</span></code></pre></div>
-<p>The LLM is <em>only</em> the decision step. Everything else is plumbing.</p>
-<hr />
-<h2 id="survey-of-existing-ppxai-sre-as-of-2026-04-24">Survey of existing <code>ppxai-sre</code> (as of 2026-04-24)<a class="headerlink" href="#survey-of-existing-ppxai-sre-as-of-2026-04-24" title="Permanent link">&para;</a></h2>
-<p>Confirmed via gh API — <code>rcconsult/ppxai-sre</code>, default branch <code>master</code>.</p>
-<h3 id="whats-already-there">What's already there<a class="headerlink" href="#whats-already-there" title="Permanent link">&para;</a></h3>
+<h2 id="0-sizing-correction-supersedes-an-earlier-auditor-claim">0. Sizing correction (supersedes an earlier auditor claim)<a class="headerlink" href="#0-sizing-correction-supersedes-an-earlier-auditor-claim" title="Permanent link">&para;</a></h2>
+<p>An earlier read reported <code>ModelProfile</code> at 85 refs and
+<code>ToolCallingProfile</code> at 75, and inferred that retiring the types was the
+larger share of the work. <strong>That was wrong</strong> — it counted raw grep hits
+without separating self-references inside the defining module.</p>
 <table>
 <thead>
 <tr>
-<th>Piece</th>
-<th>Status</th>
+<th>Symbol</th>
+<th>In <code>model_profiles.py</code></th>
+<th>External prod</th>
+<th>Tests</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>AGENT.md</code> definition format</td>
-<td>✅ Used in <code>agents/*/AGENT.md</code> — Identity, Role, Capabilities, Boundaries, Escalation Rules</td>
+<td><code>ModelProfile</code></td>
+<td>79</td>
+<td><strong>3</strong></td>
+<td>25</td>
 </tr>
 <tr>
-<td>Agent loader</td>
-<td>✅ <code>libs/core/src/ppxai_sre_core/bootstrap_loader.py</code> (<code>load_agent_bootstrap</code>, <code>find_agent_md</code>)</td>
-</tr>
-<tr>
-<td>Entry-point discovery</td>
-<td>✅ <code>[project.entry-points."ppxai_sre.agents"]</code> + <code>discovery.py</code></td>
-</tr>
-<tr>
-<td>Tool registry bridge</td>
-<td>✅ <code>tools_adapter.py</code> with <code>register_mcp_server</code> (MCP-based)</td>
-</tr>
-<tr>
-<td>Scheduler</td>
-<td>✅ <code>heartbeat.py</code> on APScheduler</td>
-</tr>
-<tr>
-<td>Manager/Executor split</td>
-<td>✅ <code>manager.py</code> + <code>executor.py</code></td>
-</tr>
-<tr>
-<td>Policy / consent model</td>
-<td>✅ <code>PolicyEngine</code> + <code>ActionTier</code> (AUTONOMOUS / NOTIFY_AND_ACT / REQUIRE_APPROVAL)</td>
-</tr>
-<tr>
-<td>Audit log</td>
-<td>✅ <code>AuditLogger</code> → JSONL</td>
-</tr>
-<tr>
-<td>Event bus integration</td>
-<td>✅ <code>SREEventType</code>, <code>sre_event</code> hook into ppxai's bus</td>
-</tr>
-<tr>
-<td>Packaging per agent</td>
-<td>✅ Dockerfile + PyInstaller spec per agent</td>
-</tr>
-<tr>
-<td>SRE tool pack</td>
-<td>⚠️ K8s + Prometheus implemented; Grafana / Slack / PagerDuty / Vault / Pure stubs</td>
+<td><code>ToolCallingProfile</code></td>
+<td>67</td>
+<td><strong>2</strong></td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
-<h3 id="gaps-vs-the-autonomous-agent-vision">Gaps vs. the autonomous-agent vision<a class="headerlink" href="#gaps-vs-the-autonomous-agent-vision" title="Permanent link">&para;</a></h3>
+<p>Four of those five external production references are <strong>prose in
+docstrings/comments</strong>. The only real code import is
+<code>ppxai/engine/model_facts.py:74</code>. Deleting the types is nearly free once
+the data moves; <strong>re-authoring the 65 rows is the whole job.</strong></p>
+<hr />
+<h2 id="1-the-one-field-that-can-silently-change-meaning">1. The one field that can silently change meaning<a class="headerlink" href="#1-the-one-field-that-can-silently-change-meaning" title="Permanent link">&para;</a></h2>
+<p><code>ToolCallingProfile.mode</code> defaults to <code>"native"</code>.
+<code>ModelFacts.tool_mode</code> defaults to <code>"prompt_based"</code> (ADR 0012 Q0a
+deliberately inverted it: "unmeasured implies assume not capable").</p>
+<p>Measured distribution across the 65 rows:</p>
+<div class="language-text highlight"><pre><span></span><code>native: 52   prompt_based: 11   auto: 2
+</code></pre></div>
+<p>So ~52 rows currently rely on the <em>profile's</em> default and would flip
+meaning under mechanical transcription.</p>
+<blockquote>
+<p><strong>RULE: every re-authored row states <code>tool_mode</code> explicitly.</strong>
+No row inherits the <code>ModelFacts</code> default.</p>
+</blockquote>
+<p>The comment at <code>model_facts.py:194-199</code> argues code rows <em>may</em> rely on
+dataclass defaults. That holds while rows are generated; it stops
+holding the moment a human types them.</p>
+<hr />
+<h2 id="2-wire_protocol-is-not-in-the-seed-rows-15-rows-need-it-stated">2. <code>wire_protocol</code> is not in the seed rows — 15 rows need it stated<a class="headerlink" href="#2-wire_protocol-is-not-in-the-seed-rows-15-rows-need-it-stated" title="Permanent link">&para;</a></h2>
+<p>Today it is supplied by two mechanisms <em>outside</em> <code>BUILTIN_PROFILES</code>:
+<code>_API_PATH_TO_WIRE</code> (3 rows with <code>api_path="responses"</code>) and
+<code>_WIRE_BY_GLOB</code> (12 gemini/gemma globs to <code>generate_content</code>).</p>
+<p>Transcription checklist — each must appear as an explicit
+<code>wire_protocol=</code> on its re-authored row:</p>
+<p><strong><code>responses</code> (3):</strong>
+<code>gpt-5.3-codex*</code>, <code>gpt-5.1-codex-mini*</code>, <code>gpt-5.1-codex*</code></p>
+<p><strong><code>generate_content</code> (12):</strong>
+<code>gemini-2.5-pro*</code>, <code>gemini-2.5-flash-lite*</code>, <code>gemini-2.5-flash*</code>,
+<code>gemini-3.5-flash*</code>, <code>gemini-3-flash*</code>, <code>gemini-3.1-flash-lite*</code>,
+<code>gemini-3.1-pro*customtools*</code>, <code>gemini-3.1-pro*</code>,
+<code>gemma-4-31b*</code>, <code>gemma-4-26b*</code>, <code>gemma-4-e*</code>, <code>gemma-4*</code></p>
+<p>The remaining 50 take the <code>chat_completions</code> default, which matches.</p>
+<p><strong>Live migration pressure:</strong> the 2026-08-31 fleet refresh established
+that the whole gpt-5.6 line needs <code>wire_protocol: responses</code> (it 400s on
+a tools array alone over chat-completions). That is currently expressed
+in <strong>config only</strong>. Check whether a <code>gpt-5.6*</code> glob belongs in the
+re-authored shipped table rather than living only in config.</p>
+<hr />
+<h2 id="3-two-different-auto-values-do-not-conflate">3. Two different <code>auto</code> values — do not conflate<a class="headerlink" href="#3-two-different-auto-values-do-not-conflate" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>api_path="auto"</code> — <em>documented but never implemented</em>. Maps to
+  <code>chat_completions</code> because mapping it to a handler name would route to
+  one that does not exist. After migration <code>_API_PATH_TO_WIRE</code>
+  disappears, so <strong>this decision must survive as an explicit row value
+  plus a comment</strong>, or the knowledge is lost.</li>
+<li><code>tool_mode="auto"</code> — a different field, and this one <strong>is</strong>
+  implemented. 2 rows use it.</li>
+</ul>
+<hr />
+<h2 id="4-reference-data-validation-pass-owner-approved-addition">4. Reference-data validation pass (owner-approved addition)<a class="headerlink" href="#4-reference-data-validation-pass-owner-approved-addition" title="Permanent link">&para;</a></h2>
+<p>Owner asked that published model data (HF / publisher model cards) be
+used to sanity-check seeded values rather than transcribing blind.</p>
+<h3 id="4a-what-was-probed-and-rejected">4a. What was probed and REJECTED<a class="headerlink" href="#4a-what-was-probed-and-rejected" title="Permanent link">&para;</a></h3>
+<p>The original framing — "fill in default guesses from published profiles
+where we have no measured data" — does not survive contact with the
+table. Two findings, both verified:</p>
 <ol>
-<li><strong>No k8s manifests / Helm chart</strong> — Dockerfiles exist, nothing to deploy them</li>
-<li><strong>No Alertmanager integration</strong> — the motivating metric-watcher example isn't wired</li>
-<li><strong>No <code>/metrics</code> endpoint on agents</strong> — audit logs yes, Prometheus scrape target no</li>
-<li><strong>No webhook/server runtime mode</strong> — scheduler exists, no "listen for alertmanager → respond" shape</li>
-<li><strong>Stalled since 2026-04-05</strong> (19 days) — ppxai has moved to v1.18.0 while <code>ppxai-sre</code> still pins <code>ppxai&gt;=1.17.3</code></li>
+<li><strong>All 65 rows carry a benchmark tier</strong> (S:8, A:16, B:24, C:14, D:3).
+   There is no unmeasured row. The premise does not hold here.</li>
+<li><strong><code>max_tokens: 0</code> / <code>max_tool_iterations: 0</code> are not missing values.</strong>
+   Per <code>model_profiles.py:57</code>, <code>0</code> means <em>"use provider default"</em> — a
+   deliberate delegation. 6 rows are <code>0</code> on <code>max_tokens</code>, 41 on
+   <code>max_tool_iterations</code>.</li>
 </ol>
-<h3 id="repo-metadata">Repo metadata<a class="headerlink" href="#repo-metadata" title="Permanent link">&para;</a></h3>
-<ul>
-<li>6 commits total, last push 2026-04-05</li>
-<li>0 open issues / PRs</li>
-<li>uv workspace monorepo; Python &gt;=3.11</li>
-<li>Core lib MIT; root repo no license declared</li>
-<li>Tests exist in <code>libs/core</code>, <code>agents/incident-responder</code>, <code>agents/cert-monitor</code>, <code>mcp-servers/kubernetes</code>, <code>mcp-servers/prometheus</code> — coverage unknown</li>
-</ul>
-<hr />
-<h2 id="the-real-blocker-ppxais-api-surface">The real blocker — ppxai's API surface<a class="headerlink" href="#the-real-blocker-ppxais-api-surface" title="Permanent link">&para;</a></h2>
-<p>The gap isn't in <code>ppxai-sre</code>. It's that <strong>ppxai has no documented public
-API</strong>. <code>ppxai-sre</code> depends on <code>ppxai&gt;=1.17.3</code> but every v1.17.x→v1.18.0
-refactor risks breaking it. Three structural issues:</p>
+<p>The 5 rows unstated on BOTH limits are all open-weight VL <strong>globs</strong>:
+<code>*qwen3-vl*</code>, <code>*qwen2-vl*</code>, <code>*llava*</code>, <code>*pixtral*</code>, <code>*minicpm-v*</code>.</p>
+<p>A glob has no single published number. <code>*minicpm-v*</code> matches
+MiniCPM-V / V-2 / V-2_6 / V-4_5 / V-4.6, whose published context lengths
+run 4K to 32K to 64K to 262K. <code>*pixtral*</code> matches Pixtral-12B (128K) and
+Pixtral-Large. Verified by search 2026-08-31.</p>
+<p>Worse, the quantities differ in kind: HF publishes <strong>context window</strong>
+(input capacity); <code>max_tokens</code> is an <strong>output cap</strong>. Conflating them
+turns a 128K context into a nonsense 128K output request.</p>
+<blockquote>
+<p><strong>DO NOT fill these five.</strong> Re-author them as <code>0</code>, with a comment
+stating that <code>0</code> means provider-delegation for a family glob. This
+turns an apparent hole into documented intent.</p>
+</blockquote>
+<h3 id="4b-what-to-actually-validate-against-published-data">4b. What to actually validate against published data<a class="headerlink" href="#4b-what-to-actually-validate-against-published-data" title="Permanent link">&para;</a></h3>
+<p>Three fields where publisher data genuinely decides something:</p>
 <ol>
-<li><strong>No public API contract</strong> — <code>ppxai-sre</code> reaches into <code>ppxai.engine</code>
-   internals. Every engine refactor is a potential break.</li>
-<li><strong>No tool registration entry point</strong> — <code>tools_adapter</code> bridges MCP
-   servers via import tricks, not a stable extension point.</li>
-<li><strong>No <code>spawn_agent</code> primitive</strong> — the interactive sub-agent pattern
-   (System 1) doesn't exist in ppxai yet, so there's no way to validate
-   the <code>AGENT.md</code> format in the human-in-the-loop case before running
-   it unattended.</li>
+<li><strong>The 15 <code>wire_protocol</code> rows (§2).</strong> Hard fact about which endpoint
+   serves a model; wrong means requests break outright. The gpt-5.6 line
+   already proved the failure mode.</li>
+<li><strong>The 23 <code>supports_vision: False</code> rows.</strong> This flag routes images
+   through a VL sidecar vs. sending natively
+   (<code>ppxai/engine/file_preprocessing.py</code>). A wrong <code>False</code> <strong>silently
+   degrades output</strong> rather than erroring — the worst failure shape.</li>
+<li><strong>The 14 <code>restricted_params</code> rows</strong> (all <code>('temperature','top_p')</code>).
+   Publisher-documented; wrong means hard API rejection.</li>
 </ol>
+<p>All three are unambiguous in a model card, unlike a context number.</p>
+<p>Any correction found lands as <strong>its own commit</strong>, separate from the
+transcription — so the byte-identical check in step 1 stays meaningful.</p>
+<h3 id="4c-provenance-owner-to-confirm-scope">4c. Provenance (owner to confirm scope)<a class="headerlink" href="#4c-provenance-owner-to-confirm-scope" title="Permanent link">&para;</a></h3>
+<p>No row records <em>where its value came from</em>. That is precisely Item 63
+("benchmark conclusions are hand-typed into code, unlinked and
+unchecked"). A <code>source</code> comment per re-authored row would make the next
+refresh checkable. <strong>Open question: in scope for Item 65, or deferred to
+Item 63?</strong> Do not decide this unilaterally.</p>
 <hr />
-<h2 id="proposed-ordering-not-committed">Proposed ordering (not committed)<a class="headerlink" href="#proposed-ordering-not-committed" title="Permanent link">&para;</a></h2>
-<h3 id="ppxai-side-work-in-this-repo-on-featurev1180-or-later">ppxai-side work (in this repo, on feature/v1.18.0 or later)<a class="headerlink" href="#ppxai-side-work-in-this-repo-on-featurev1180-or-later" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>#</th>
-<th>Item</th>
-<th style="text-align: center;">Effort</th>
-<th>Unblocks</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>A</td>
-<td>Bump ppxai-sre's ppxai pin to 1.18.0; fix breakage</td>
-<td style="text-align: center;">~1d</td>
-<td>Repo buildable again</td>
-</tr>
-<tr>
-<td>B</td>
-<td>Define and document ppxai's public API (<code>EngineClient</code>, tool registration, event bus). Mark everything else internal</td>
-<td style="text-align: center;">~3d</td>
-<td>ppxai-sre stops depending on private internals</td>
-</tr>
-<tr>
-<td>C</td>
-<td>Add <code>ppxai.tools</code> entry-point group to the tool loader so external packages register without import tricks</td>
-<td style="text-align: center;">~2d</td>
-<td>Clean ppxai-sre integration; enables third-party tool packs</td>
-</tr>
-<tr>
-<td>D</td>
-<td>Build <code>spawn_agent</code> built-in tool — loads <code>AGENT.md</code>, instantiates scoped <code>EngineClient</code>, returns structured result</td>
-<td style="text-align: center;">~5d</td>
-<td>Interactive sub-agents; foundation for ppxai-sre Manager agent</td>
-</tr>
-</tbody>
-</table>
-<h3 id="ppxai-sre-side-work-separate-repo">ppxai-sre-side work (separate repo)<a class="headerlink" href="#ppxai-sre-side-work-separate-repo" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>#</th>
-<th>Item</th>
-<th style="text-align: center;">Effort</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>E</td>
-<td>Alertmanager tool + Prometheus anomaly-watcher example agent</td>
-<td style="text-align: center;">~1 week</td>
-</tr>
-<tr>
-<td>F</td>
-<td>Helm chart + k8s CronJob manifests</td>
-<td style="text-align: center;">~3d</td>
-</tr>
-<tr>
-<td>G</td>
-<td><code>/metrics</code> endpoint per agent (Prom scrape target)</td>
-<td style="text-align: center;">~2d</td>
-</tr>
-</tbody>
-</table>
-<h3 id="rationale-for-this-ordering">Rationale for this ordering<a class="headerlink" href="#rationale-for-this-ordering" title="Permanent link">&para;</a></h3>
+<h2 id="5-sequencing-two-commits-deliberately">5. Sequencing — two commits, deliberately<a class="headerlink" href="#5-sequencing-two-commits-deliberately" title="Permanent link">&para;</a></h2>
+<p><strong>Step 1 — re-author, delete nothing.</strong>
+Replace the <code>SHIPPED_MODEL_FACTS</code> dict comprehension with 65 literal
+<code>ModelFacts(...)</code> rows. Keep <code>BUILTIN_PROFILES</code> and the flattener in
+place.</p>
+<p>This is the whole reviewable data diff, and the existing fence proves
+it: <code>tests/test_model_facts_are_the_source.py</code>
+::<code>test_every_profile_row_flattens_to_its_facts_row</code> compares each
+literal against the flattened original <strong>field for field</strong>. Green means
+byte-identical semantics.</p>
+<p><code>test_the_seed_table_is_still_the_expected_size</code> asserts
+<code>len(BUILTIN_PROFILES) == 65</code>. It should keep passing through step 1
+(seed table untouched); step 2 retires it.</p>
+<p><strong>Step 2 — delete the bridge, separate commit.</strong>
+Remove <code>ModelProfile</code>, <code>ToolCallingProfile</code>, <code>facts_from_profile</code>,
+<code>_seed_row</code>, <code>_wire_for</code>, <code>_API_PATH_TO_WIRE</code>, <code>_WIRE_BY_GLOB</code>,
+<code>BUILTIN_PROFILES</code>, and <code>model_profiles.py</code> itself if nothing else lives
+there. Retarget the ~25 test refs and 4 prose mentions.</p>
+<p>The comparison fence loses its left-hand side. <strong>Rewrite it, do not
+delete it</strong> — as invariants over <code>SHIPPED_MODEL_FACTS</code>: row count, every
+row states <code>tool_mode</code>, the 15 known non-default wires.</p>
+<p>Two commits is what makes step 1 reviewable — the same argument the debt
+item makes for why this was kept out of W4.</p>
+<hr />
+<h2 id="6-defect-found-while-planning-fix-in-step-2">6. Defect found while planning (fix in step 2)<a class="headerlink" href="#6-defect-found-while-planning-fix-in-step-2" title="Permanent link">&para;</a></h2>
+<p><code>facts_from_profile</code>'s docstring (<code>model_facts.py:221-224</code>) says it is
+<em>"the migration helper <code>/doctor</code> uses to show an operator what a legacy
+row becomes."</em></p>
+<p>Grep across <code>ppxai/</code> and <code>tests/</code> finds <strong>no <code>/doctor</code> caller</strong>. The only
+production call site is <code>_seed_row</code>, in the same file. Either the feature
+was never built or it was removed, and the docstring is now the sole
+evidence for a capability that does not exist — the same "declared is not
+consumed" shape that produced Item 61. It gets deleted in step 2 anyway,
+so correcting the record costs nothing.</p>
+<hr />
+<h2 id="7-ground-rules">7. Ground rules<a class="headerlink" href="#7-ground-rules" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>A</strong> gets ppxai-sre unstuck immediately.</li>
-<li><strong>B</strong> is load-bearing: without a documented public API, every ppxai
-  release is a ppxai-sre breakage risk.</li>
-<li><strong>C</strong> turns the ad-hoc tool bridge into a real extension point.</li>
-<li><strong>D</strong> validates the <code>AGENT.md</code> format and sub-agent execution model in
-  the interactive case, where bugs are cheap. No autonomous agents fire
-  real alerts before the format has been proven in chat.</li>
-<li><strong>E/F/G</strong> become a thin layer on top, not a parallel framework.</li>
+<li>Owner approved this plan 2026-08-31, explicitly allowing a second
+  iteration if issues surface. Surface them rather than improvising.</li>
+<li>§4c is an open owner question. Do not settle it in code.</li>
+<li>Derive counts; never restate one from this file without re-running it.</li>
 </ul>
-<p>A + B + C together are what I earlier called "extract
-<code>ppxai-agent-core</code>" — but you don't actually need a separate package.
-You just need a stable API surface within <code>ppxai</code> itself.</p>
-<hr />
-<h2 id="design-decisions-still-open">Design decisions still open<a class="headerlink" href="#design-decisions-still-open" title="Permanent link">&para;</a></h2>
-<ol>
-<li>
-<p><strong><code>AGENT.md</code> vs <code>SOUL.md</code></strong> — ppxai-sre uses <code>AGENT.md</code>. Should
-   ppxai's <code>spawn_agent</code> tool accept either, or only one? (Leaning:
-   only <code>AGENT.md</code>, match ppxai-sre.)</p>
-</li>
-<li>
-<p><strong>Frontmatter schema</strong> — ppxai-sre's <code>AGENT.md</code> is free-form prose
-   (Identity, Role, Capabilities, Boundaries, Escalation). Do we
-   formalize YAML frontmatter for machine-readable fields (name,
-   tools, model, schedule)? (Leaning: yes — prose for LLM context,
-   frontmatter for loader/runtime.)</p>
-</li>
-<li>
-<p><strong>Sub-agent discovery locations</strong> — <code>./AGENTS/*.md</code>,
-   <code>~/.ppxai/agents/*.md</code>, pyproject entry points. All three or just
-   one? (Leaning: all three, layered; package entry points are how
-   ppxai-sre exposes its agents to ppxai chat.)</p>
-</li>
-<li>
-<p><strong>Tool allowlist per sub-agent</strong> — explicit <code>tools:</code> list in
-   frontmatter, unknown tools rejected at load. Inherit from parent
-   or always explicit? (Leaning: always explicit, for auditability.)</p>
-</li>
-<li>
-<p><strong>Model/provider per sub-agent</strong> — per-agent <code>model:</code> in
-   frontmatter, or resolve via the in-progress routing work
-   (<code>RoutingRole</code>)? (Leaning: routing once it lands; per-agent model
-   pin as escape hatch.)</p>
-</li>
-<li>
-<p><strong>Consent flow for nested edits</strong> — sub-agent file edits: inherit
-   parent consent, or prompt fresh? (Leaning: inherit, with
-   observable trail in UI.)</p>
-</li>
-<li>
-<p><strong>Result contract</strong> — <code>SubAgentResult(summary, artifacts, success,
-   error)</code> or looser? (Leaning: strict; parent agents need to reason
-   about success/failure.)</p>
-</li>
-<li>
-<p><strong>Autonomous-agent safety primitives</strong> — dry-run mode, rate
-   limits, circuit breakers, RBAC scope. All in ppxai-sre, or some
-   primitives (circuit breaker) in ppxai itself since interactive
-   agents benefit too? (Leaning: circuit breaker in ppxai-sre's
-   <code>PolicyEngine</code> — already partially there.)</p>
-</li>
-<li>
-<p><strong>Observability contract</strong> — what every agent must emit.
-   Structured audit log ✅ (already in ppxai-sre). <code>/metrics</code>
-   endpoint? OpenTelemetry traces? (Leaning: audit log + <code>/metrics</code>
-   mandatory; OTel optional.)</p>
-</li>
-<li>
-<p><strong>Should ppxai grow an autonomous-agent runtime, or stay
-    interactive-only?</strong> — Currently ppxai has no daemon/CronJob
-    concept. Autonomous agents live entirely in ppxai-sre. Keep that
-    split? (Leaning: yes — ppxai is an interactive app, ppxai-sre is
-    the unattended-agent platform.)</p>
-</li>
-</ol>
-<hr />
-<h2 id="things-explicitly-not-decided-yet">Things explicitly NOT decided yet<a class="headerlink" href="#things-explicitly-not-decided-yet" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Timeline — nothing is scheduled against v1.18.0 or any other release</li>
-<li>Whether to do this at all — user said "I need to think about it"</li>
-<li>Whether to extract <code>ppxai-agent-core</code> as a separate Python package or
-  keep everything in <code>ppxai</code> with a documented public API</li>
-<li>MCP vs ppxai-native tool registration as the canonical extension
-  mechanism (ppxai-sre uses MCP; ppxai uses native tools)</li>
-</ul>
-<hr />
-<h2 id="next-step-if-pursued">Next step if pursued<a class="headerlink" href="#next-step-if-pursued" title="Permanent link">&para;</a></h2>
-<p>Pick one of:</p>
-<ul>
-<li><strong>Minimum unblock:</strong> just do item <strong>A</strong> (bump pin, fix breakage). ~1
-  day, no new design.</li>
-<li><strong>Stabilize:</strong> do <strong>A + B</strong>. Establishes public API contract before
-  1.18.0 ships. ~4 days.</li>
-<li><strong>Full path:</strong> do <strong>A + B + C + D</strong>, then hand off to ppxai-sre for
-  E. ~2 weeks on ppxai side, then ppxai-sre work begins. Ships
-  end-to-end in a v1.19 or v1.20 timeframe.</li>
-</ul>
-<p>No commitment until this gets reviewed.</p>
 
 
 
@@ -1754,7 +1551,7 @@ You just need a stable API surface within <code>ppxai</code> itself.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

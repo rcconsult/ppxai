@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1201,6 +1201,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#buttons-are-command-call-sites-too-v1191" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Buttons are command call sites too (v1.19.1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#rules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1246,16 +1257,17 @@
 <li>
 <p><strong>The wire envelope</strong> (<code>POST /command/&lt;name&gt;</code> response):
    <div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...Comma</span><span class="kc">n</span><span class="err">dResul</span><span class="kc">t</span><span class="err">.</span><span class="kc">t</span><span class="err">o_dic</span><span class="kc">t</span><span class="err">()...</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;side_effects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span><span class="w"> </span><span class="err">...payload</span><span class="p">}],</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">"ok"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">"result"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...Comma</span><span class="kc">n</span><span class="err">dResul</span><span class="kc">t</span><span class="err">.</span><span class="kc">t</span><span class="err">o_dic</span><span class="kc">t</span><span class="err">()...</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">"side_effects"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w"> </span><span class="err">...payload</span><span class="p">}],</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">"events"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">],</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">}</span>
 </span></code></pre></div>
-   <code>result</code> is the rendered payload (TableResult, MarkdownResult, FileViewResult, etc.). <code>side_effects</code> are orthogonal UI directives.</p>
+   <code>result</code> is the rendered payload (TableResult, MarkdownResult, FileViewResult, etc.). <code>side_effects</code> are orthogonal UI directives. <strong><code>events</code></strong> carries any engine side-channel events the handler enqueued (<code>state_sync</code>, <code>working_dir_changed</code>, …), drained into the response by <code>with_drained_events()</code> — without that piggyback they would sit in <code>engine._event_queue</code> until the next SSE turn. It is part of the envelope, not an extra.</p>
 </li>
 <li>
-<p><strong>Side-effect kinds name the user's intent, not the rendering.</strong> Web builds panels (xterm.js, CodeMirror, iframe); VSCode delegates to first-party APIs (<code>createTerminal</code>, <code>showTextDocument</code>, <code>executeCommand('vscode.open')</code>). The kind is the contract; the rendering is the client's choice. See <code>ppxai/commands/results.py::SideEffectKind</code> for the canonical list (15 kinds in v1.18.1).</p>
+<p><strong>Side-effect kinds name the user's intent, not the rendering.</strong> Web builds panels (xterm.js, CodeMirror, iframe); VSCode delegates to first-party APIs (<code>createTerminal</code>, <code>showTextDocument</code>, <code>executeCommand('vscode.open')</code>). The kind is the contract; the rendering is the client's choice. See <code>ppxai/commands/results.py::SideEffectKind</code> for the canonical list (<strong>16 kinds</strong> as of v1.19.1; 15 at v1.18.1).</p>
 </li>
 <li>
 <p><strong>Open-enum invariant.</strong> Clients ignore unknown kinds gracefully. Adding a new kind is non-breaking. <code>vscode_delegate</code> is the escape hatch for VSCode-only features (e.g. <code>workbench.action.openGlobalKeybindings</code>); web ignores it.</p>
@@ -1263,7 +1275,7 @@
 </ol>
 <h2 id="tui-handlers-vs-http-handlers">TUI handlers vs HTTP handlers<a class="headerlink" href="#tui-handlers-vs-http-handlers" title="Permanent link">&para;</a></h2>
 <p>The factory handlers are called from BOTH paths:
-- <strong>In-process</strong> (Rich/Textual): <code>CommandFactory.get("name").handler(context, args)</code> with a <code>RichCommandContext</code> / <code>TextualCommandContext</code>. The result's <code>side_effects</code> field is read directly by the TUI renderer; no envelope wrap.
+- <strong>In-process</strong> (Rich/Textual): <code>CommandFactory.get("name").handler(context, args)</code> with a <code>RichCommandContext</code>, or — for Textual — the app object itself, which satisfies the protocol directly. (<code>TextualCommandContext</code> was removed in v1.18.2; see ADR 0002 for why the three patterns are deliberately not unified.) The result's <code>side_effects</code> field is read directly by the TUI renderer; no envelope wrap.
 - <strong>HTTP</strong> (web/VSCode): <code>POST /command/&lt;name&gt;</code> → <code>ServerCommandContext</code> → handler → route layer wraps the result in the v1 envelope.</p>
 <p>Handlers branch on <code>isinstance(context, ServerCommandContext)</code> when they need to format differently for HTTP (e.g. <code>/help</code> returns <code>MarkdownResult</code> for HTTP and <code>TextResult</code> with Rich markup for TUI; same content, two formatters via <code>CommandFactory.generate_help(markdown=True)</code>).</p>
 <h2 id="prompt_quick_pick-resume-protocol"><code>prompt_quick_pick</code> resume protocol<a class="headerlink" href="#prompt_quick_pick-resume-protocol" title="Permanent link">&para;</a></h2>
@@ -1274,12 +1286,35 @@
 <ul>
 <li><strong>Web</strong> — renders an inline form below the notification; on submit, dispatches <code>/&lt;command_to_resume&gt; &lt;args&gt;</code>.</li>
 <li><strong>VSCode</strong> — <code>vscode.window.showInputBox({prompt: question, placeHolder})</code>; on non-empty reply, dispatches via <code>dispatchCommandFromSideEffect</code>.</li>
-<li><strong>TUI</strong> — ignores the kind (open-enum invariant). The notification message that accompanies the side-effect serves as the user-visible nudge; the user retypes <code>/agent</code> themselves with more detail.</li>
+<li><strong>TUI</strong> — ignores the kind (open-enum invariant). The notification message that accompanies the side-effect serves as the user-visible nudge; the user retypes <code>/auto</code> themselves with more detail.</li>
 </ul>
-<p>First user: <code>validate_agent_task</code> rejection. <code>/agent fix</code> → engine returns <code>NotificationResult(WARNING)</code> + <code>prompt_text</code> side-effect → web/VSCode auto-resume the elaboration without the user retyping the slash command.</p>
+<p>First user: <code>validate_agent_task</code> rejection. <code>/auto fix</code> → engine returns <code>NotificationResult(WARNING)</code> + <code>prompt_text</code> side-effect → web/VSCode auto-resume the elaboration without the user retyping the slash command.</p>
+<h2 id="buttons-are-command-call-sites-too-v1191">Buttons are command call sites too (v1.19.1)<a class="headerlink" href="#buttons-are-command-call-sites-too-v1191" title="Permanent link">&para;</a></h2>
+<p>Rule 1 below is usually read as "don't add new endpoints." The other half is
+easier to miss: <strong>a UI affordance that performs a command must dispatch that
+command</strong>, not call a bespoke endpoint that happens to do the same thing
+server-side.</p>
+<p>Until v1.19.1 the web Clear button, the VSCode webview Clear button, and the
+<code>ppxai.clearHistory</code> palette command all called <code>POST /sessions/clear</code>
+directly while a typed <code>/clear</code> went through the envelope. Same server-side
+effect, but the bespoke call <strong>discards the response body</strong> — and the body is
+where <code>events[]</code> lives. So every AppState field the handler pushed had to be
+re-fetched by hand at each call site, and a missed site was a silently stale
+badge (debt Item 48: the buttons kept the staleness bug alive after the typed
+command was fixed).</p>
+<p>This fails silently by construction: the UI still clears, nothing errors,
+only derived state drifts. Guard it with source sentinels —
+<code>tests/test_context_percentage_state.py::TestClearGoesThroughTheCommandEnvelope</code>
+pins all three entry points onto the one dispatch path.</p>
+<p>The shape to copy: give the client ONE method that dispatches the command
+(<code>PpxaiApp.clearConversation</code>, <code>ChatViewProvider.clearConversation</code>); every
+entry point calls it; only genuinely client-side state (staged files, a local
+history mirror) is reset by hand next to it, with a comment saying why no
+server event can do it.</p>
 <h2 id="rules">Rules<a class="headerlink" href="#rules" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Never add a bespoke REST endpoint for command logic.</strong> Routes like <code>/sessions</code>, <code>/checkpoint/list</code> exist for non-command UI (dropdowns, file-tree widget); they MUST NOT duplicate handler logic that lives in the factory.</li>
+<li><strong>Never add a bespoke REST endpoint for command logic</strong>, and never call
+   one from a UI affordance that is performing a command (see above). Routes like <code>/sessions</code>, <code>/checkpoint/list</code> exist for non-command UI (dropdowns, file-tree widget); they MUST NOT duplicate handler logic that lives in the factory.</li>
 <li><strong><code>SideEffectKind</code> constants over bare strings.</strong> Use <code>result.add_side_effect(SideEffectKind.OPEN_EDITOR, filepath=p)</code> so a typo is <code>AttributeError</code>, not silently-ignored. The taxonomy sentinel test (<code>tests/test_command_envelope.py::TestSideEffectKindTaxonomy</code>) pins the exact set of v1.18.1 kinds; add a new kind in BOTH the constants class AND the <code>SideEffect</code> docstring AND the sentinel's <code>EXPECTED_KINDS_V1</code> set.</li>
 <li><strong>Test the envelope shape, not just the result type.</strong> The envelope contract (<code>{ok, result, side_effects, version}</code>) is what web/VSCode read. <code>tests/test_command_envelope.py</code> pins it.</li>
 <li><strong>Per-command behavior tests live next to the handler.</strong> Each handler gets a <code>tests/test_&lt;command&gt;_handler.py</code> with branches for: existing-arg, missing-arg, malformed-arg, server-side capability mismatch.</li>
@@ -1359,7 +1394,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

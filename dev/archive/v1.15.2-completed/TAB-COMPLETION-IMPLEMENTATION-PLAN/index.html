@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1691,12 +1691,12 @@
 <hr />
 <h2 id="design-readline-style-tab-completion">Design: Readline-Style Tab Completion<a class="headerlink" href="#design-readline-style-tab-completion" title="Permanent link">&para;</a></h2>
 <h3 id="user-flow">User Flow<a class="headerlink" href="#user-flow" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>User types: &quot;/show @&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>User types: "/show @"
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>User presses: Tab
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>System:
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  1. Intercepts Tab key in on_key()
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  2. Gets current text and cursor position
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  3. Calls completer.get_completions(&quot;/show @&quot;)
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  3. Calls completer.get_completions("/show @")
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  4. If 1 match → inserts completion
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  5. If multiple → shows popup or cycles through matches
 </span></code></pre></div>
@@ -1725,14 +1725,14 @@
 - <code>ppxai/tui/widgets/input_box.py</code></p>
 <p><strong>Changes:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle key events for history and Tab completion.&quot;&quot;&quot;</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;up&quot;</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="sd">"""Handle key events for history and Tab completion."""</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">"up"</span><span class="p">:</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_navigate_history</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="n">event</span><span class="o">.</span><span class="n">prevent_default</span><span class="p">()</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;down&quot;</span><span class="p">:</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">"down"</span><span class="p">:</span>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_navigate_history</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="n">event</span><span class="o">.</span><span class="n">prevent_default</span><span class="p">()</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;tab&quot;</span><span class="p">:</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">"tab"</span><span class="p">:</span>
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="c1"># Readline-style Tab completion</span>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completer</span><span class="p">:</span>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_tab_completion</span><span class="p">()</span>
@@ -1748,7 +1748,7 @@
 <p><strong>Goal:</strong> Auto-insert when only one completion available</p>
 <p><strong>New method:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_handle_tab_completion</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle Tab key for completion.&quot;&quot;&quot;</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="sd">"""Handle Tab key for completion."""</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completer</span><span class="p">:</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>        <span class="k">return</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
@@ -1772,7 +1772,7 @@
 </span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_handle_multiple_completions</span><span class="p">(</span><span class="n">completions</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">cursor_pos</span><span class="p">)</span>
 </span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>
 </span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="k">def</span><span class="w"> </span><span class="nf">_insert_completion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">completion</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">original_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">cursor_pos</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Insert a completion at cursor position.&quot;&quot;&quot;</span>
+</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="w">    </span><span class="sd">"""Insert a completion at cursor position."""</span>
 </span><span id="__span-3-27"><a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>    <span class="n">input_widget</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="n">Input</span><span class="p">)</span>
 </span><span id="__span-3-28"><a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>
 </span><span id="__span-3-29"><a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>    <span class="c1"># Replace text up to cursor with completion</span>
@@ -1788,7 +1788,7 @@
 <p><strong>Goal:</strong> Show popup or cycle through multiple matches</p>
 <p><strong>Option A: Common Prefix Insertion (bash-style)</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_handle_multiple_completions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">completions</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">cursor_pos</span><span class="p">):</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle multiple completions - insert common prefix.&quot;&quot;&quot;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="sd">"""Handle multiple completions - insert common prefix."""</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="c1"># Find common prefix</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">completion_texts</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">completions</span><span class="p">]</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">common_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_common_prefix</span><span class="p">(</span><span class="n">completion_texts</span><span class="p">)</span>
@@ -1801,23 +1801,23 @@
 </span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_show_completion_choices</span><span class="p">(</span><span class="n">completions</span><span class="p">)</span>
 </span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>
 </span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="k">def</span><span class="w"> </span><span class="nf">_find_common_prefix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">strings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Find common prefix of strings.&quot;&quot;&quot;</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="sd">"""Find common prefix of strings."""</span>
 </span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">strings</span><span class="p">:</span>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>        <span class="k">return</span> <span class="s2">""</span>
 </span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>
 </span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>    <span class="n">prefix</span> <span class="o">=</span> <span class="n">strings</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 </span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">strings</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
 </span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>        <span class="k">while</span> <span class="ow">not</span> <span class="n">s</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">prefix</span><span class="p">):</span>
 </span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>            <span class="n">prefix</span> <span class="o">=</span> <span class="n">prefix</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 </span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>            <span class="k">if</span> <span class="ow">not</span> <span class="n">prefix</span><span class="p">:</span>
-</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>                <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>                <span class="k">return</span> <span class="s2">""</span>
 </span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>    <span class="k">return</span> <span class="n">prefix</span>
 </span></code></pre></div></p>
 <p><strong>Option B: Popup Menu (IDE-style)</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_show_completion_choices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">completions</span><span class="p">):</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Show completion popup with choices.&quot;&quot;&quot;</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="sd">"""Show completion popup with choices."""</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="c1"># Create overlay popup with completions</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="c1"># Use Textual&#39;s OptionList or custom widget</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="c1"># Use Textual's OptionList or custom widget</span>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="c1"># Position near cursor</span>
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="c1"># Arrow keys to navigate, Enter to select, Escape to cancel</span>
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="k">pass</span>  <span class="c1"># Implement popup widget</span>
@@ -1840,12 +1840,12 @@
 </span></code></pre></div></p>
 <p><strong>Cycling logic:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_handle_tab_completion</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle Tab with cycling support.&quot;&quot;&quot;</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="sd">"""Handle Tab with cycling support."""</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">input_widget</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="n">Input</span><span class="p">)</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">text</span> <span class="o">=</span> <span class="n">input_widget</span><span class="o">.</span><span class="n">value</span>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">cursor_pos</span> <span class="o">=</span> <span class="n">input_widget</span><span class="o">.</span><span class="n">cursor_position</span>
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="c1"># Check if we&#39;re continuing a completion cycle</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="c1"># Check if we're continuing a completion cycle</span>
 </span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completion_state</span><span class="p">:</span>
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>        <span class="n">completions</span><span class="p">,</span> <span class="n">current_index</span><span class="p">,</span> <span class="n">original_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completion_state</span>
 </span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
@@ -1872,9 +1872,9 @@
 </span><span id="__span-7-31"><a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_completion_state</span> <span class="o">=</span> <span class="p">(</span><span class="n">completions</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">text_to_complete</span><span class="p">)</span>
 </span><span id="__span-7-32"><a id="__codelineno-7-32" name="__codelineno-7-32" href="#__codelineno-7-32"></a>
 </span><span id="__span-7-33"><a id="__codelineno-7-33" name="__codelineno-7-33" href="#__codelineno-7-33"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-7-34"><a id="__codelineno-7-34" name="__codelineno-7-34" href="#__codelineno-7-34"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle keys - reset completion state on non-Tab keys.&quot;&quot;&quot;</span>
+</span><span id="__span-7-34"><a id="__codelineno-7-34" name="__codelineno-7-34" href="#__codelineno-7-34"></a><span class="w">    </span><span class="sd">"""Handle keys - reset completion state on non-Tab keys."""</span>
 </span><span id="__span-7-35"><a id="__codelineno-7-35" name="__codelineno-7-35" href="#__codelineno-7-35"></a>    <span class="c1"># Reset completion state on any key except Tab</span>
-</span><span id="__span-7-36"><a id="__codelineno-7-36" name="__codelineno-7-36" href="#__codelineno-7-36"></a>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">!=</span> <span class="s2">&quot;tab&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completion_state</span><span class="p">:</span>
+</span><span id="__span-7-36"><a id="__codelineno-7-36" name="__codelineno-7-36" href="#__codelineno-7-36"></a>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">!=</span> <span class="s2">"tab"</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completion_state</span><span class="p">:</span>
 </span><span id="__span-7-37"><a id="__codelineno-7-37" name="__codelineno-7-37" href="#__codelineno-7-37"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_completion_state</span> <span class="o">=</span> <span class="kc">None</span>
 </span><span id="__span-7-38"><a id="__codelineno-7-38" name="__codelineno-7-38" href="#__codelineno-7-38"></a>
 </span><span id="__span-7-39"><a id="__codelineno-7-39" name="__codelineno-7-39" href="#__codelineno-7-39"></a>    <span class="c1"># ... existing key handlers ...</span>
@@ -1901,7 +1901,7 @@
 <p>By default, Tab in Textual triggers focus navigation between widgets. We must prevent this.</p>
 <h3 id="solution-1-eventprevent_default">Solution 1: event.prevent_default()<a class="headerlink" href="#solution-1-eventprevent_default" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;tab&quot;</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">"tab"</span><span class="p">:</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completer</span><span class="p">:</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_tab_completion</span><span class="p">()</span>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>            <span class="n">event</span><span class="o">.</span><span class="n">prevent_default</span><span class="p">()</span>  <span class="c1"># &lt;-- CRITICAL</span>
@@ -1912,7 +1912,7 @@
 - Let Tab work for focus when no completer</p>
 <h3 id="solution-2-consume-event">Solution 2: Consume event<a class="headerlink" href="#solution-2-consume-event" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;tab&quot;</span><span class="p">:</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s2">"tab"</span><span class="p">:</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completer</span><span class="p">:</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_tab_completion</span><span class="p">()</span>
 </span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>            <span class="n">event</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>  <span class="c1"># Stops propagation</span>
@@ -1969,21 +1969,21 @@
 <div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># tests/test_tab_completion.py</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_single_match_completion</span><span class="p">():</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Tab completes single match.&quot;&quot;&quot;</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="sd">"""Tab completes single match."""</span>
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    <span class="n">input_box</span> <span class="o">=</span> <span class="n">InputBox</span><span class="p">(</span><span class="n">completer</span><span class="o">=</span><span class="n">mock_completer</span><span class="p">)</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    <span class="c1"># Simulate typing &quot;/&quot; and pressing Tab</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    <span class="c1"># Simulate typing "/" and pressing Tab</span>
 </span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    <span class="c1"># Assert completion inserted</span>
 </span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
 </span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_multiple_match_common_prefix</span><span class="p">():</span>
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Tab inserts common prefix for multiple matches.&quot;&quot;&quot;</span>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">    </span><span class="sd">"""Tab inserts common prefix for multiple matches."""</span>
 </span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>    <span class="k">pass</span>
 </span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
 </span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_tab_preserves_focus</span><span class="p">():</span>
-</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Tab completion doesn&#39;t lose focus.&quot;&quot;&quot;</span>
+</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">    </span><span class="sd">"""Tab completion doesn't lose focus."""</span>
 </span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>    <span class="k">pass</span>
 </span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>
 </span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_no_completer_allows_focus_change</span><span class="p">():</span>
-</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Tab without completer allows focus navigation.&quot;&quot;&quot;</span>
+</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="w">    </span><span class="sd">"""Tab without completer allows focus navigation."""</span>
 </span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>    <span class="k">pass</span>
 </span></code></pre></div>
 <h3 id="manual-testing">Manual Testing<a class="headerlink" href="#manual-testing" title="Permanent link">&para;</a></h3>
@@ -1991,10 +1991,10 @@
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>uv<span class="w"> </span>run<span class="w"> </span>ppxaide
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Test cases:</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="m">1</span>.<span class="w"> </span>Type<span class="w"> </span><span class="s2">&quot;/&quot;</span><span class="w"> </span>→<span class="w"> </span>Press<span class="w"> </span>Tab<span class="w"> </span>→<span class="w"> </span>Should<span class="w"> </span><span class="nb">complete</span><span class="w"> </span>to<span class="w"> </span>first<span class="w"> </span>match
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="m">2</span>.<span class="w"> </span>Type<span class="w"> </span><span class="s2">&quot;@&quot;</span><span class="w"> </span>→<span class="w"> </span>Press<span class="w"> </span>Tab<span class="w"> </span>→<span class="w"> </span>Should<span class="w"> </span>show<span class="w"> </span>@file/@clipboard/@url
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="m">3</span>.<span class="w"> </span>Type<span class="w"> </span><span class="s2">&quot;/show @&quot;</span><span class="w"> </span>→<span class="w"> </span>Press<span class="w"> </span>Tab<span class="w"> </span>→<span class="w"> </span>Should<span class="w"> </span><span class="nb">complete</span><span class="w"> </span>context<span class="w"> </span>providers
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="m">4</span>.<span class="w"> </span>Type<span class="w"> </span><span class="s2">&quot;@file&quot;</span><span class="w"> </span>→<span class="w"> </span>Press<span class="w"> </span>Tab<span class="w"> </span>→<span class="w"> </span>Should<span class="w"> </span>show<span class="w"> </span>file<span class="w"> </span>list
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="m">1</span>.<span class="w"> </span>Type<span class="w"> </span><span class="s2">"/"</span><span class="w"> </span>→<span class="w"> </span>Press<span class="w"> </span>Tab<span class="w"> </span>→<span class="w"> </span>Should<span class="w"> </span><span class="nb">complete</span><span class="w"> </span>to<span class="w"> </span>first<span class="w"> </span>match
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="m">2</span>.<span class="w"> </span>Type<span class="w"> </span><span class="s2">"@"</span><span class="w"> </span>→<span class="w"> </span>Press<span class="w"> </span>Tab<span class="w"> </span>→<span class="w"> </span>Should<span class="w"> </span>show<span class="w"> </span>@file/@clipboard/@url
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="m">3</span>.<span class="w"> </span>Type<span class="w"> </span><span class="s2">"/show @"</span><span class="w"> </span>→<span class="w"> </span>Press<span class="w"> </span>Tab<span class="w"> </span>→<span class="w"> </span>Should<span class="w"> </span><span class="nb">complete</span><span class="w"> </span>context<span class="w"> </span>providers
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="m">4</span>.<span class="w"> </span>Type<span class="w"> </span><span class="s2">"@file"</span><span class="w"> </span>→<span class="w"> </span>Press<span class="w"> </span>Tab<span class="w"> </span>→<span class="w"> </span>Should<span class="w"> </span>show<span class="w"> </span>file<span class="w"> </span>list
 </span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="m">5</span>.<span class="w"> </span>Press<span class="w"> </span>Tab<span class="w"> </span>repeatedly<span class="w"> </span>→<span class="w"> </span>Should<span class="w"> </span>cycle<span class="w"> </span>through<span class="w"> </span>matches
 </span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="m">6</span>.<span class="w"> </span>Type<span class="w"> </span>text,<span class="w"> </span>press<span class="w"> </span>Tab,<span class="w"> </span>press<span class="w"> </span>letter<span class="w"> </span>→<span class="w"> </span>Should<span class="w"> </span>reset<span class="w"> </span>cycle
 </span></code></pre></div>
@@ -2202,7 +2202,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1678,13 +1678,13 @@
 </tr>
 <tr>
 <td><strong>Gemini</strong></td>
-<td><code>gemini-2.5-pro</code></td>
-<td>Most capable model for complex reasoning</td>
+<td><code>gemini-3.5-flash</code></td>
+<td>Fast model, current default in the shipped config</td>
 </tr>
 <tr>
 <td><strong>OpenAI</strong></td>
-<td><code>gpt-5.2</code></td>
-<td>Flagship model with best native tool calling (70.3% benchmark)</td>
+<td><code>gpt-5.4-mini</code></td>
+<td>Balanced cost/performance, current default in the shipped config</td>
 </tr>
 <tr>
 <td><strong>Custom</strong></td>
@@ -1693,7 +1693,7 @@
 </tr>
 <tr>
 <td><strong>Ollama</strong></td>
-<td><code>codellama</code></td>
+<td><code>qwen2.5-coder:3b</code></td>
 <td>Specialized local coding model</td>
 </tr>
 </tbody>
@@ -1702,14 +1702,14 @@
 <p>You can customize which model is used for coding tasks by editing your <code>ppxai-config.json</code>:</p>
 <h3 id="example-use-gemini-3-pro-preview-for-coding">Example: Use Gemini 3 Pro Preview for Coding<a class="headerlink" href="#example-use-gemini-3-pro-preview-for-coding" title="Permanent link">&para;</a></h3>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">&quot;gemini&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Google Gemini&quot;</span><span class="p">,</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="nt">&quot;base_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://generativelanguage.googleapis.com/v1beta/openai&quot;</span><span class="p">,</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">      </span><span class="nt">&quot;api_key_env&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;GEMINI_API_KEY&quot;</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="nt">&quot;default_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gemini-2.5-flash&quot;</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="nt">&quot;coding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gemini-3.1-pro-preview&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// Changed from gemini-2.5-pro</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">      </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Google Gemini"</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://generativelanguage.googleapis.com/v1beta/openai"</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">      </span><span class="nt">"api_key_env"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GEMINI_API_KEY"</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-2.5-flash"</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.1-pro-preview"</span><span class="p">,</span><span class="w">  </span><span class="c1">// Changed from gemini-2.5-pro</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="c1">// ... model definitions ...</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">      </span><span class="p">}</span>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="p">}</span>
@@ -1718,14 +1718,14 @@
 </span></code></pre></div>
 <h3 id="example-use-o1-for-openai-coding-tasks">Example: Use o1 for OpenAI Coding Tasks<a class="headerlink" href="#example-use-o1-for-openai-coding-tasks" title="Permanent link">&para;</a></h3>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">&quot;openai&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OpenAI ChatGPT&quot;</span><span class="p">,</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">&quot;base_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://api.openai.com/v1&quot;</span><span class="p">,</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">&quot;api_key_env&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OPENAI_API_KEY&quot;</span><span class="p">,</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="nt">&quot;default_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="nt">&quot;coding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;o1&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// Use advanced reasoning model for coding</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">      </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">"openai"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"OpenAI ChatGPT"</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://api.openai.com/v1"</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">"api_key_env"</span><span class="p">:</span><span class="w"> </span><span class="s2">"OPENAI_API_KEY"</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gpt-4o-mini"</span><span class="p">,</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"o1"</span><span class="p">,</span><span class="w">  </span><span class="c1">// Use advanced reasoning model for coding</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="c1">// ... model definitions ...</span>
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">      </span><span class="p">}</span>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="p">}</span>
@@ -1734,14 +1734,14 @@
 </span></code></pre></div>
 <h3 id="example-disable-autorouting-use-same-model">Example: Disable Autorouting (Use Same Model)<a class="headerlink" href="#example-disable-autorouting-use-same-model" title="Permanent link">&para;</a></h3>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">&quot;gemini&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Google Gemini&quot;</span><span class="p">,</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">      </span><span class="nt">&quot;base_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://generativelanguage.googleapis.com/v1beta/openai&quot;</span><span class="p">,</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">      </span><span class="nt">&quot;api_key_env&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;GEMINI_API_KEY&quot;</span><span class="p">,</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="nt">&quot;default_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gemini-2.5-flash-lite&quot;</span><span class="p">,</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">      </span><span class="nt">&quot;coding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gemini-2.5-flash-lite&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// Same as default, no switching</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Google Gemini"</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://generativelanguage.googleapis.com/v1beta/openai"</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">      </span><span class="nt">"api_key_env"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GEMINI_API_KEY"</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-2.5-flash-lite"</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">      </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-2.5-flash-lite"</span><span class="p">,</span><span class="w">  </span><span class="c1">// Same as default, no switching</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">        </span><span class="c1">// ... model definitions ...</span>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="p">}</span>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="p">}</span>
@@ -1764,10 +1764,10 @@
 <h3 id="use-case-1-cost-optimization">Use Case 1: Cost Optimization<a class="headerlink" href="#use-case-1-cost-optimization" title="Permanent link">&para;</a></h3>
 <p><strong>Scenario:</strong> Use a cheap model for chat, but auto-route to a powerful model for coding.</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">&quot;gemini&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">&quot;default_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gemini-2.5-flash-lite&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// $0.075/$0.30 per million tokens</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">&quot;coding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gemini-2.5-pro&quot;</span><span class="w">            </span><span class="c1">// $1.25/$5.00 per million tokens</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.1-flash-lite"</span><span class="p">,</span><span class="w">   </span><span class="c1">// $0.10/$0.40 per million tokens</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.1-pro-preview"</span><span class="w">    </span><span class="c1">// $2.00/$12.00 per million tokens</span>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">}</span>
@@ -1776,10 +1776,10 @@
 <h3 id="use-case-2-consistent-model">Use Case 2: Consistent Model<a class="headerlink" href="#use-case-2-consistent-model" title="Permanent link">&para;</a></h3>
 <p><strong>Scenario:</strong> Always use the same model, never auto-route.</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">&quot;openai&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">&quot;default_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">&quot;coding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-4o&quot;</span><span class="w">  </span><span class="c1">// Same as default</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">"openai"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gpt-4o"</span><span class="p">,</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gpt-4o"</span><span class="w">  </span><span class="c1">// Same as default</span>
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">}</span>
@@ -1790,10 +1790,10 @@
 <h3 id="use-case-3-specialized-coding-model">Use Case 3: Specialized Coding Model<a class="headerlink" href="#use-case-3-specialized-coding-model" title="Permanent link">&para;</a></h3>
 <p><strong>Scenario:</strong> Use Ollama with a specialized coding model.</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">&quot;ollama&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">      </span><span class="nt">&quot;default_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;llama3.2&quot;</span><span class="p">,</span><span class="w">      </span><span class="c1">// General chat</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">      </span><span class="nt">&quot;coding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;codellama&quot;</span><span class="w">        </span><span class="c1">// Specialized for code</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">"ollama"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"llama3.2"</span><span class="p">,</span><span class="w">         </span><span class="c1">// General chat</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">      </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"qwen2.5-coder:3b"</span><span class="w">    </span><span class="c1">// Specialized for code</span>
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="p">}</span>
@@ -1807,15 +1807,19 @@
 <li>Built-in defaults (if no config file found)</li>
 </ol>
 <h2 id="built-in-provider-defaults">Built-in Provider Defaults<a class="headerlink" href="#built-in-provider-defaults" title="Permanent link">&para;</a></h2>
-<p>If you don't create a <code>ppxai-config.json</code>, these defaults are used:</p>
+<p>There is no hardcoded fallback config in code — <code>load_config()</code>
+(<code>ppxai/config/loader.py</code>) returns an empty <code>providers: {}</code> if no config
+file is found at all. In practice, first-run seeding copies the bundled
+<a href="../ppxai-config.example.json"><code>ppxai-config.example.json</code></a> to
+<code>~/.ppxai/ppxai-config.json</code>, which currently ships:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">&quot;perplexity&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">&quot;default_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sonar&quot;</span><span class="p">,</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">&quot;coding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sonar-pro&quot;</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">"perplexity"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sonar-pro"</span><span class="p">,</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sonar-pro"</span>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="nt">&quot;gemini&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nt">&quot;default_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gemini-2.5-flash&quot;</span><span class="p">,</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="nt">&quot;coding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gemini-2.5-flash&quot;</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.5-flash"</span><span class="p">,</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.5-flash"</span>
 </span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -1832,7 +1836,7 @@
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Output shows:</span>
 </span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Auto-routing is currently: enabled</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># Auto-routing uses gemini-2.5-pro for coding commands</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># Auto-routing uses gemini-3.5-flash for coding commands</span>
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># Use /autoroute on or /autoroute off to change</span>
 </span></code></pre></div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
@@ -1915,7 +1919,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

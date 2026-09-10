@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1212,13 +1212,13 @@
 <h1 id="mcp-is-not-integrated-in-ppxai-verified-2026-05-23">MCP is not integrated in ppxai (verified 2026-05-23)<a class="headerlink" href="#mcp-is-not-integrated-in-ppxai-verified-2026-05-23" title="Permanent link">&para;</a></h1>
 <p><strong>TL;DR:</strong> ppxai has three filename-level breadcrumbs that look like
 MCP support but isn't. The integration is planned for v1.20.x, not
-shipped. Authoritative plan: <a href="../MCP-INTEGRATION-PLAN.md"><code>../MCP-INTEGRATION-PLAN.md</code></a>.</p>
+shipped. Authoritative plan: <a href="../../mcp-integration-plan/"><code>../mcp-integration-plan.md</code></a>.</p>
 <p><strong>Verify with:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Confirm zero MCP imports across production code:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;from mcp\|import mcp&quot;</span><span class="w"> </span>ppxai/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">"from mcp\|import mcp"</span><span class="w"> </span>ppxai/
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Confirm tool_manager has no extension point for non-builtin sources:</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>grep<span class="w"> </span>-n<span class="w"> </span><span class="s1">&#39;&quot;source&quot;&#39;</span><span class="w"> </span>ppxai/engine/tools/manager.py
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>grep<span class="w"> </span>-n<span class="w"> </span><span class="s1">'"source"'</span><span class="w"> </span>ppxai/engine/tools/manager.py
 </span></code></pre></div></p>
 <p>The first returns nothing. The second shows
 <code>tool_manager.py:193</code> hardcodes <code>"source": "engine"</code> with no
@@ -1233,10 +1233,11 @@ extension point for non-builtin tool sources.</p>
    intent, not shipped functionality.</p>
 </li>
 <li>
-<p><strong><code>.mcp.json</code> at repo root</strong> lists <code>code-review-graph</code> as if it
-   were a wired MCP server config. It's a placeholder. <strong>Zero Python
-   code in <code>ppxai/</code> loads it</strong> — verified by grep across the whole
-   tree.</p>
+<p><strong><code>.mcp.json</code> at repo root</strong> is now an empty <code>{"mcpServers": {}}</code>.
+   It previously listed <code>code-review-graph</code> as if it were a wired MCP
+   server config; either way it is not evidence of integration —
+   <strong>zero Python code in <code>ppxai/</code> loads this file</strong>, verified by grep
+   across the whole tree.</p>
 </li>
 <li>
 <p><strong><code>tests/test_mcp.py</code></strong> exists. It's a <em>diagnostic script</em> — "can
@@ -1254,7 +1255,7 @@ build downstream code against a feature that isn't there.</p>
   with no extension point. External tool sources (MCP servers,
   ppxai-sre's <code>tools_adapter.py</code> workaround, etc.) have no public
   way to surface tools through the engine today.</li>
-<li>The MCP integration plan (<a href="../MCP-INTEGRATION-PLAN.md"><code>../MCP-INTEGRATION-PLAN.md</code></a>,
+<li>The MCP integration plan (<a href="../../mcp-integration-plan/"><code>../mcp-integration-plan.md</code></a>,
   ~500 lines, committed 2026-05-23) enumerates 17 missing pieces
   across engine / slash command / UI / security / config layers, and
   a 5-phase implementation breakdown (~6-8d total).</li>
@@ -1302,7 +1303,7 @@ build downstream code against a feature that isn't there.</p>
 </ol>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../MCP-INTEGRATION-PLAN.md"><code>../MCP-INTEGRATION-PLAN.md</code></a> — the
+<li><a href="../../mcp-integration-plan/"><code>../mcp-integration-plan.md</code></a> — the
   full v1.20.x plan + verified-state section</li>
 <li><a href="../../ROADMAP.md"><code>../../ROADMAP.md</code></a> §"v1.20.x — MCP integration
   Day-0 (planned)"</li>
@@ -1387,7 +1388,7 @@ build downstream code against a feature that isn't there.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

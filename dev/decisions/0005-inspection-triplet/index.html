@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1311,7 +1311,7 @@
 
 <h1 id="adr-0005-inspection-triplet-pattern-for-runtime-observability">ADR 0005 — Inspection Triplet pattern for runtime observability<a class="headerlink" href="#adr-0005-inspection-triplet-pattern-for-runtime-observability" title="Permanent link">&para;</a></h1>
 <p><strong>Date:</strong> 2026-05-10
-<strong>Status:</strong> Proposed (formalizing a pattern already half-implemented)
+<strong>Status:</strong> Accepted (status reconciled 2026-08-01 — the pattern shipped and is load-bearing) — implemented: agent runs (<code>engine/agent_runs.py</code>: <code>meta.json</code> + <code>state.json</code> atomic temp-then-rename + <code>events.jsonl</code>, producers T5/T6/T7) and preview backend (<code>engine/preview_backend.py</code>)
 <strong>Related:</strong>
 - <a href="../0003-agent-platform-architecture/">ADR 0003</a> — Agent platform architecture; Stage 2's <code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/</code> namespace IS this pattern, scoped to agent runs only
 - <a href="../../research/2026-05-10-openshell-coordination-patterns/"><code>docs/research/2026-05-10-openshell-coordination-patterns.md</code></a> — prior art (NVIDIA OpenShell <code>runs/&lt;run_id&gt;/</code> namespace)
@@ -1626,7 +1626,7 @@ shape each time.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -1,0 +1,1806 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/provider-wire-call-graphs/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Per-model facts — resolution call graphs (ADR 0012) - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#per-model-facts-resolution-call-graphs-adr-0012" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Per-model facts — resolution call graphs (ADR 0012)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-shape-in-one-picture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The shape in one picture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graph-1-the-send-path-chat_with_tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph 1 — the send path (chat_with_tools)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graph-2-the-provider-send-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph 2 — the provider send paths
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graph-2b-which-wire-and-who-asks-adr-0012-w2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph 2b — which wire, and who asks (ADR 0012 W2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graph-2c-one-account-two-wires-adr-0012-w3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph 2c — one account, two wires (ADR 0012 W3)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Graph 2c — one account, two wires (ADR 0012 W3)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-live-trial-caught-that-no-unit-test-would-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the live trial caught that no unit test would have
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graph-2d-the-end-state-4-providers-3-wires-adr-0012-w4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph 2d — the end state: 4 providers, 3 wires (ADR 0012 W4)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graph-3-resolution-without-a-provider-instance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph 3 — resolution without a provider instance
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Graph 3 — resolution without a provider instance">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-questions-that-look-alike-and-are-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two questions that look alike and are not
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-provider-owned-floor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The provider-owned floor
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graph-4-doctor-and-the-config-shape-scans" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph 4 — /doctor and the config-shape scans
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graph-5-provider-model-info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph 5 — /provider model info
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-answer-comes-from-precedence-in-one-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the answer comes from — precedence, in one table
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-yet-consumed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not yet consumed
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="per-model-facts-resolution-call-graphs-adr-0012">Per-model facts — resolution call graphs (ADR 0012)<a class="headerlink" href="#per-model-facts-resolution-call-graphs-adr-0012" title="Permanent link">&para;</a></h1>
+<p><strong>Purpose:</strong> a reference map of how a per-model question gets answered,
+traced from code. Use it for debugging (where does this answer come from?),
+refactoring (what depends on this seam?), and onboarding (the shape of the
+capability system at a glance).</p>
+<p>Created in W1 of <a href="../plan-adr-0012-implementation/"><code>plan-adr-0012-implementation.md</code></a>.
+The design record is <a href="../decisions/0012-wire-protocol-as-per-model-capability/">ADR 0012</a>.</p>
+<p>Traced by hand and cross-checked against <code>graphify update .</code> (refreshed
+2026-08-30 in W1: 8,261 nodes / 39,569 edges). That check is what confirms
+the collapse actually happened rather than merely being tested: the five
+accessors this ADR deletes —<code>get_capabilities_for_model</code>,
+<code>shipped_capabilities_for_model</code>, <code>get_effective_profile</code>,
+<code>get_tool_calling_config</code>, <code>apply_capability_overrides</code> — resolve to <strong>zero
+nodes</strong>, so no caller anywhere still reaches them.</p>
+<hr />
+<h2 id="the-shape-in-one-picture">The shape in one picture<a class="headerlink" href="#the-shape-in-one-picture" title="Permanent link">&para;</a></h2>
+<p>Two disjoint records, two accessors, and <strong>nothing that merges them</strong>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>                    ┌──────────────────────────────────────┐
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                    │  What does this ENDPOINT do?         │
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                    │  web_search · web_fetch · weather    │
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                    │  citations · streaming               │
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                    └──────────────────────────────────────┘
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                                    │
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                    BaseProvider.get_capabilities()          ← no model arg
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>                                    │
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                    ┌───────────────┴───────────────┐
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>            default_capabilities            providers.&lt;p&gt;.facts
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>            (provider class)                (operator, per provider)
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>                    ┌──────────────────────────────────────┐
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                    │  What does this MODEL do?            │
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                    │  wire_protocol · tool_mode ·         │
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                    │  fallbacks · limits · vision · tier  │
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                    └──────────────────────────────────────┘
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                                    │
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>                 BaseProvider.get_facts_for_model(model)
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                                    │
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>                    ┌───────────────┴───────────────┐
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>            shipped_facts_for_model()      providers.&lt;p&gt;.models.&lt;m&gt;.facts
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>                    │                      (operator, per model)
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>        ┌───────────┴───────────┐
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>  &lt;Provider&gt;.shipped_model_facts   SHIPPED_MODEL_FACTS
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>  (provider's own rows)            (global seed, 65 globs)
+</span></code></pre></div>
+<p><strong>The disjointness is the design.</strong> No field appears on both records, so a
+provider block cannot state a model fact and a model block cannot state an
+endpoint fact. There is no arbitration step in either graph because there
+is nothing to arbitrate — which is what makes debt Item 43's regression
+structurally impossible rather than merely tested against.</p>
+<hr />
+<h2 id="graph-1-the-send-path-chat_with_tools">Graph 1 — the send path (<code>chat_with_tools</code>)<a class="headerlink" href="#graph-1-the-send-path-chat_with_tools" title="Permanent link">&para;</a></h2>
+<p>The path that decides whether a tools array reaches the wire.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ppxai/engine/chat.py::chat_with_tools()
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  │
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  ├─ facts = ctx.provider.get_facts_for_model(ctx.model)        [chat.py:600]
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  │    │
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  │    └─ BaseProvider.get_facts_for_model()      [providers/base.py]
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  │         ├─ self.shipped_facts_for_model(model)
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  │         │    └─ model_facts.shipped_facts_for_model(model, self.shipped_model_facts)
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  │         │         ├─ match_table(provider table)   ← exact ids, then globs
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>  │         │         └─ match_table(SHIPPED_MODEL_FACTS)
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  │         │              └─ UNMEASURED  (tool_mode="prompt_based")
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  │         └─ facts_config.resolve_model_facts(shipped, provider, model)
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>  │              └─ apply_overrides(shipped, model_fact_overrides(...))
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>  │                   └─ reads providers.&lt;p&gt;.models.&lt;m&gt;.facts FROM THE FILE
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>  │
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>  ├─ use_native_tools = facts.tool_mode != "prompt_based"       [chat.py:637]
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>  │
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>  └─ facts.fallback_on_empty / .fallback_on_failure /
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>     .strip_json_from_text / .parallel_tool_calls / .max_tool_iterations
+</span></code></pre></div>
+<p><strong>What this replaced.</strong> Two systems asked in a fixed order: <code>get_profile()</code>
+for <code>tool_calling.mode</code>, then <code>ProviderCapabilities.native_tool_calling</code> as
+a gate. <code>mode == "prompt_based"</code> short-circuited <em>before</em> the capability was
+read — debt Item 43's Layer-2 bug — so a capability resolving native never
+reached the wire. <code>get_effective_profile</code> (deleted) merged a third
+vocabulary on top, from AGENTS.md.</p>
+<h2 id="graph-2-the-provider-send-paths">Graph 2 — the provider send paths<a class="headerlink" href="#graph-2-the-provider-send-paths" title="Permanent link">&para;</a></h2>
+<p>Each provider gates its tools array on the same hook. The fence for this is
+<code>tests/test_per_model_capabilities.py</code> (source scan, so a NEW provider or a
+NEW send path is covered the day it is written).</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>openai_native._chat_completions_api()      ┐
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>wire/responses.build_request(ctx, ...)     ├─ get_facts_for_model(model)
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>openai_compat.chat()                       │    .tool_mode != "prompt_based"
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>gemini._build_config(model=...)            ┘
+</span></code></pre></div>
+<p><code>gemini._build_config</code> takes <code>model</code> for exactly this reason; reading
+<code>self.capabilities</code> made the per-model answer unreachable (plan I1).</p>
+<p>W2 moved the second row out of the provider and into the handler, so the
+fence's path scan moved with it — and its glob widened from <code>*.py</code> to
+<code>rglob("*.py")</code>, because a top-level-only scan would have stopped seeing that
+send path on exactly the commit that relocated it. The banned-attribute
+pattern gained <code>ctx.</code> alongside <code>self.</code> for the same reason: the handler's
+receiver is named <code>ctx</code>, so a <code>self</code>-only regex would miss the identical bug
+in the new code.</p>
+<h2 id="graph-2b-which-wire-and-who-asks-adr-0012-w2">Graph 2b — which wire, and who asks (ADR 0012 W2)<a class="headerlink" href="#graph-2b-which-wire-and-who-asks-adr-0012-w2" title="Permanent link">&para;</a></h2>
+<p>Routing used to be three independent re-asks of a hardcoded prefix tuple.
+It is now one reader over the per-model fact, which is what makes an operator
+override reach the wire at all (debt Item 61).</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>              ┌─ chat()                  ─┐
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>              ├─ chat_sync_simple()       │   self._wire_for(model)
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>call sites ───┤                           ├──   = get_facts_for_model(model)
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>              ├─ oneshot()                │       .wire_protocol
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>              └─ 404 auto-fallback       ─┘            │
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>                                                       │
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>                        ┌──────────────────────────────┴───────────┐
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>                        │                                          │
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>                "responses"                                "chat_completions"
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>                        │                                          │
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        wire.get_handler("responses")            openai_native._chat_completions_api()
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>                        │                        (becomes a handler in W4)
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>        ResponsesHandler.chat / .oneshot
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>                  └─ build_request(ctx, ...)
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>                       ├─ convert_messages()   ← ADR 0006 validator lives here
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>                       ├─ convert_tools()
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>                       └─ build_tool_hint()
+</span></code></pre></div>
+<p>Four call sites, ONE resolver — that is the fix. The four branches themselves
+collapse in W4, when <code>chat_completions</code> becomes a handler and dispatch is a
+dict lookup with no <code>if</code> at all.</p>
+<p><code>get_handler()</code> raises <code>KeyError</code> for an unregistered protocol rather than
+falling back to a default. A silent fallback is precisely how <code>api_path</code> sat
+declared, config-overridable and inert for three releases: nothing consumed
+it, and nothing complained.</p>
+<p><strong>Seed data, not a router.</strong> <code>RESPONSES_API_PREFIXES</code> survives as the seed
+form of <code>RESPONSES_WIRE_GLOBS</code> and for the fallback's log line;
+<code>_is_responses_api_model()</code> is no longer on any routing path. The two glob
+sets that build <code>shipped_model_facts</code> state <em>different fields</em> of one record
+(<code>tool_mode</code> vs <code>wire_protocol</code>) and must stay disjoint — a model in both
+would lose one fact to dict-merge order, so a fence asserts they never
+overlap.</p>
+<h2 id="graph-2c-one-account-two-wires-adr-0012-w3">Graph 2c — one account, two wires (ADR 0012 W3)<a class="headerlink" href="#graph-2c-one-account-two-wires-adr-0012-w3" title="Permanent link">&para;</a></h2>
+<p>Perplexity is the first provider to speak two protocols. Nothing about the
+routing changed to allow it — the same <code>_wire_for</code> reader, the same handler
+registry. What it needed was a second <em>transport</em>, because the two wires sit
+at different paths on one host.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>PerplexityProvider                    ← owns the ACCOUNT
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  ├─ client              → https://api.perplexity.ai      (/chat/completions)
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  ├─ _responses_client   → https://api.perplexity.ai/v1   (/responses)
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  │
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>  ├─ _wire_for(model) = get_facts_for_model(model).wire_protocol
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>  │       │
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>  │       ├─ "chat_completions" → sonar · sonar-pro · sonar-reasoning-pro
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>  │       │                        (this provider's own code path)
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>  │       │
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>  │       └─ "responses"        → anthropic/* · openai/* · google/*
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>  │                                xai/* · perplexity/*
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>  │                                    │
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>  │                                    ▼
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>  │                          get_handler("responses").chat/oneshot(
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>  │                              ctx = _WireCtx(self), …)
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>  │
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>  └─ _WireCtx(host)      ← a VIEW, not a copy
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>         .client         = host._responses_client     ← the ONLY override
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>         .__getattr__    → host                        ← everything else
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>             (api_key · capabilities · get_facts_for_model ·
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>              _get_max_tokens · _get_extra_body · _classify_throttle ·
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>              _format_error · _log_error_traceback · provider_id)
+</span></code></pre></div>
+<p>The view is the point. A second provider <em>instance</em> would imply a second
+account and duplicate the config, price table and usage counters; mutating
+<code>self.client</code> per request would make the transport mutable state on a shared
+object. One object owns the account; only the transport is swapped.</p>
+<h3 id="what-the-live-trial-caught-that-no-unit-test-would-have">What the live trial caught that no unit test would have<a class="headerlink" href="#what-the-live-trial-caught-that-no-unit-test-would-have" title="Permanent link">&para;</a></h3>
+<p>The canary failed twice before it passed, both times on <strong>this ADR's own
+defect shape — a declared value the wire never sees</strong>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>  1st failure   AttributeError: 'PerplexityProvider' object has no
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>                attribute 'enable_web_search'
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>                → the handler's host contract was implicit-by-docstring.
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>                  ONE provider had the attribute, so "reads it from ctx"
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>                  looked total while being OpenAI-only.
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  2nd failure   400 "max_output_tokens is required when using Anthropic
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>                models"
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>                → the handler asked ctx._get_max_tokens(), which reads
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>                  CONFIG ONLY. The fleet's ModelFacts.max_tokens=4096 was
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>                  resolved, displayed, and unable to reach the request.
+</span></code></pre></div>
+<p>The second is worth dwelling on: a fact declared in the shipped table that
+the wire never sees is <em>exactly</em> debt Item 61, reproduced inside the handler
+built to fix Item 61. Two sources for one value is the bug; <code>_budget_for</code>
+now reads config first, then the fact, in one place.</p>
+<h2 id="graph-2d-the-end-state-4-providers-3-wires-adr-0012-w4">Graph 2d — the end state: 4 providers, 3 wires (ADR 0012 W4)<a class="headerlink" href="#graph-2d-the-end-state-4-providers-3-wires-adr-0012-w4" title="Permanent link">&para;</a></h2>
+<p>Every wire is a handler. Conversion is protocol-owned, so there is no shared
+method left for two protocols to disagree about — the shape debt Item 62 (b)
+described.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>  PROVIDERS (own an ACCOUNT: key, base_url, price table)
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  ┌──────────────────┬───────────────────┬──────────────┬───────────────┐
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  │ openai_native    │ perplexity        │ openai_compat│ gemini        │
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  └────────┬─────────┴─────────┬─────────┴──────┬───────┴───────┬───────┘
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>           │                   │                │               │
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>           │  get_facts_for_model(model).wire_protocol           │
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>           │                   │                │               │
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    ┌──────┴──────┬────────────┴───┐            │               │
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    ▼             ▼                ▼            ▼               ▼
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a> responses   chat_completions   responses   chat_completions  generate_content
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>  HANDLERS (own a WIRE: conversion + request shape)
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>  ┌───────────────────────┬──────────────────────┬────────────────────────┐
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>  │ ChatCompletionsHandler│ ResponsesHandler     │ GenerateContentHandler │
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>  │  -&gt; List[Dict]        │  -&gt; (instructions,   │  -&gt; (contents,         │
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>  │                       │      input_items)    │      system_instruction)│
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>  └───────────┬───────────┴──────────┬───────────┴────────────┬───────────┘
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>              │                      │                        │
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>              └──────────────────────┴────────────────────────┘
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>                                     │
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>                        assert_wire_blocks_clean()
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>                        ADR 0006 · 3 of 3 wires · was 1 of 3
+</span></code></pre></div>
+<p><strong>Three return types, deliberately.</strong> <code>ProtocolHandler.convert_messages</code> is
+typed <code>-&gt; Any</code> because each wire's request shape is genuinely its own. While
+conversion lived on <code>BaseProvider</code> typed <code>-&gt; List[Dict[str, Any]]</code>, Gemini
+had to override it returning a <code>tuple</code> — a Liskov violation invisible to the
+type checker, because the base's annotation was one wire's shape imposed on
+all of them. Pretending they share a type is what produced the bug.</p>
+<p><strong><code>BaseProvider._convert_messages</code> still exists</strong> and still returns
+<code>List[Dict]</code> — but it is now a <em>delegation</em> to <code>ChatCompletionsHandler</code>, not
+an implementation. Most providers speak that wire and call it directly; the
+difference is that a provider on another wire now asks its own handler
+instead of overriding the shared one.</p>
+<p><strong>The validator travels with the conversion.</strong> That is the whole fix for
+Item 62 (a): a sentinel attached to one protocol's emitter can only ever
+guard one protocol. The fence parametrises over the handler <strong>registry</strong>, so
+the fourth wire (<code>messages</code>, with <code>feat/anthropic-provider</code>) inherits the
+requirement rather than needing someone to remember it.</p>
+<h2 id="graph-3-resolution-without-a-provider-instance">Graph 3 — resolution without a provider instance<a class="headerlink" href="#graph-3-resolution-without-a-provider-instance" title="Permanent link">&para;</a></h2>
+<p>Some callers need an answer before any provider exists — there is no API key
+at admission time, and <code>/doctor</code> has no session at all. They share <strong>one</strong>
+set of entry points, and the sharing is the point: the guard that refuses a
+run and the message that suggests an alternative read the same resolution,
+so the suggestion cannot recommend a model the guard would reject.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>model_facts.provider_class_for(provider)          ← WHOSE class serves this?
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  ├─ providers.get_provider_class(provider)
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  └─ fallback: OpenAICompatibleProvider
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>       (get_provider_class() returns None for every openai_compat-TYPE
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>        provider — openrouter, nvidia, a vLLM box, an Ollama host — because
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>        those are configured by NAME, not registered. provider_ops falls
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        back the same way, so a caller that stops at None disagrees with
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        the deployment about what a provider is.)
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>model_facts.facts_without_an_instance(provider, model)   → ModelFacts
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>  ├─ provider_class_for(provider)
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>  ├─ shipped_facts_for_model(model, cls.shipped_model_facts,
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>  │                          cls.unmeasured_facts)
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>  └─ facts_config.resolve_model_facts(...)
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>model_facts.capabilities_without_an_instance(provider)   → ProviderCapabilities
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>  ├─ provider_class_for(provider).default_capabilities
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>  └─ facts_config.apply_provider_overrides(...)
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>  callers:
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>    task_authorizer._reject_tool_incapable_model()   ← the admission guard
+</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>    task_authorizer._tool_capable_models_hint()      ← its error message
+</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>    config/execution.py::get_effective_oneshot_path()  ← both records
+</span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>    config/facts_config.py::complete_record_for()    ← /doctor's scaffold
+</span></code></pre></div>
+<p>Extracted in W1 because the same four-line sequence had been written out at
+each site, and <em>that repetition is the bug</em>: four copies of one ladder is how
+a fifth caller gets a rung wrong.</p>
+<h3 id="two-questions-that-look-alike-and-are-not">Two questions that look alike and are not<a class="headerlink" href="#two-questions-that-look-alike-and-are-not" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>  "Should we attach a native tools array?"   facts.tool_mode != "prompt_based"
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>                                             → the SEND path (Graphs 1, 2)
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  "Can this model drive a tool loop at all?" can_drive_a_tool_loop(facts)
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>                                             → the oneshot enrichment gate
+</span></code></pre></div>
+<p>Every <code>ToolMode</code> value answers <strong>yes</strong> to the second: prompt-based tool
+calling is still tool calling — <code>chat.py</code> parses the JSON out of the
+response text, which is what <code>prompt_based</code> MEANS. Pre-ADR the gate asked
+<code>mode != "none"</code>, and <code>"none"</code> is the only value that ever meant incapable;
+it has no successor in <code>ToolMode</code>. Asking the send-path question at the gate
+dropped every prompt-based model to closed-book (latent — both enrichment
+switches default off).</p>
+<h3 id="the-provider-owned-floor">The provider-owned floor<a class="headerlink" href="#the-provider-owned-floor" title="Permanent link">&para;</a></h3>
+<p><code>shipped_facts_for_model</code> takes a third argument, and it is not a default in
+the usual sense:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>  match provider table   (exact ids, then globs)
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    └─ match SHIPPED_MODEL_FACTS
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>         └─ cls.unmeasured_facts  ?? UNMEASURED
+</span></code></pre></div>
+<p>The global <code>UNMEASURED</code> says <code>wire_protocol="chat_completions"</code> — safe for
+every provider that speaks it, and simply WRONG for Gemini, which has no
+such wire. A provider therefore supplies a <strong>complete</strong> alternative record
+(<code>BaseProvider.unmeasured_facts</code>), chosen whole. Nothing is merged
+field-by-field, so ADR 0012's "nothing to arbitrate" still holds. <code>tool_mode</code>
+stays conservative in that record: a protocol is a fact about the endpoint
+and is knowable without measuring; tool support is not.</p>
+<h2 id="graph-4-doctor-and-the-config-shape-scans">Graph 4 — <code>/doctor</code> and the config-shape scans<a class="headerlink" href="#graph-4-doctor-and-the-config-shape-scans" title="Permanent link">&para;</a></h2>
+<p>All four scans read the config <strong>FILE</strong>, never the accessors. Under a clean
+break the accessors cannot see a legacy key by construction, so only a file
+scan can tell an operator their setting stopped applying.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>commands/doctor.py::_format_facts_section()
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>  ├─ facts_config.migration_plan()              → legacy keys + where they go
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>  │    └─ legacy_blocks_in_config()             (the file)
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>  ├─ facts_config.misplaced_fields_in_config()  → model fact in a provider block
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>  ├─ facts_config.wrong_typed_fields_in_config()→ values no coercion rescues
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>  └─ facts_config.incomplete_blocks_in_config() → Q0d: records must be complete
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>commands/doctor.py  →  facts_config.complete_record_for(provider, model)
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>                          └─ facts_without_an_instance()   [Graph 3]
+</span></code></pre></div>
+<p><code>migration_plan()</code> <strong>pushes provider-level model facts DOWN</strong>: a legacy
+<code>providers.&lt;p&gt;.capabilities.native_tool_calling</code> maps to
+<code>providers.&lt;p&gt;.models.&lt;m&gt;.facts.tool_mode</code> for every configured model, not
+to a provider-level <code>facts.tool_mode</code>. The provider-level target would be
+ignored by the resolver and then flagged by the misplaced scan — advice that
+leaves the operator demoted and warned. Fenced by a property test:
+<em>every target the plan emits must be a location the misplaced scan accepts</em>.</p>
+<h2 id="graph-5-provider-model-info">Graph 5 — <code>/provider model info</code><a class="headerlink" href="#graph-5-provider-model-info" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>commands/provider.py::handle_model_info()
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>  ├─ shipped_facts_for_model(model_id, cls.shipped_model_facts)
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>  ├─ facts_config.model_fact_overrides(provider, model_id)
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>  ├─ apply_overrides(...)              → the effective record
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  └─ is_unmeasured(...)                → "(unmeasured)" rather than a false tier
+</span></code></pre></div>
+<p>This display used to re-implement the merge a <strong>third</strong> time, with its own
+layer order and field list — which is how <code>api_path</code> came to be shown here
+while nothing routed on it (debt Item 61). It now reports what the send path
+will actually do, and labels each field's source (<code>config</code> / <code>built-in</code> /
+<code>unmeasured</code>).</p>
+<hr />
+<h2 id="where-the-answer-comes-from-precedence-in-one-table">Where the answer comes from — precedence, in one table<a class="headerlink" href="#where-the-answer-comes-from-precedence-in-one-table" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Rung</th>
+<th>Source</th>
+<th>Wins over</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>providers.&lt;p&gt;.models.&lt;m&gt;.facts</code></td>
+<td>everything</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>&lt;Provider&gt;.shipped_model_facts</code></td>
+<td>the global seed</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>SHIPPED_MODEL_FACTS</code> (65 globs)</td>
+<td>either floor</td>
+</tr>
+<tr>
+<td>4a</td>
+<td><code>&lt;Provider&gt;.unmeasured_facts</code>, when declared</td>
+<td>the global floor</td>
+</tr>
+<tr>
+<td>4b</td>
+<td><code>UNMEASURED</code> (<code>tool_mode="prompt_based"</code>, <code>chat_completions</code>)</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>The endpoint record has its own two rungs, and they never meet the four
+above — that is the disjointness, restated as a table:</p>
+<table>
+<thead>
+<tr>
+<th>Rung</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>providers.&lt;p&gt;.facts</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>&lt;Provider&gt;.default_capabilities</code></td>
+</tr>
+</tbody>
+</table>
+<p>Within rungs 2 and 3, <strong>exact ids beat globs</strong> (two-pass <code>match_table</code>), so
+correctness does not depend on where a row was pasted. Between rungs, a
+provider row wins <strong>whole</strong> — rows are complete records, so there is no
+field-level merge and nothing to arbitrate.</p>
+<p>The provider dimension at rung 2 is load-bearing, not decoration:
+<code>anthropic/claude-sonnet-5</code> is reached over <code>responses</code> on Perplexity and
+<code>chat_completions</code> on OpenRouter, so one global row cannot state its
+<code>wire_protocol</code> correctly for both. That is the seam W3's fleet rows land in.</p>
+<hr />
+<h2 id="not-yet-consumed">Not yet consumed<a class="headerlink" href="#not-yet-consumed" title="Permanent link">&para;</a></h2>
+<p><code>wire_protocol</code> is <strong>resolved but not yet routed on</strong> — W2 makes
+<code>openai_native</code>'s three <code>_is_responses_api_model()</code> branches read it, which
+is what finally closes debt Item 61. Until then the field is data with one
+reader (<code>/provider</code>), and this doc should be updated the same day that
+changes.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

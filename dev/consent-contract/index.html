@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1398,7 +1398,7 @@ remains the user's responsibility outside the consent layer.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>apply_patch</code> / <code>replace_block</code> / <code>insert_text</code> / <code>delete_lines</code></td>
+<td><code>apply_patch</code> / <code>replace_block</code> / <code>insert_text</code> / <code>delete_lines</code> / <code>write_file</code></td>
 <td>YES</td>
 <td><strong>Allow</strong> (back-compat)</td>
 <td>Per-file in session.allowed_files; mode YES/ALWAYS/NEVER session-wide</td>
@@ -1635,20 +1635,25 @@ in <code>test_pdf_tools.py</code>, <code>test_csv_tools.py</code>, <code>test_ex
 <td><code>spawn_subagent</code> tool call</td>
 <td>YES (server context)</td>
 <td><strong>Deny</strong> (fail-closed)</td>
-<td><code>tools.agent.spawn_consent: deny\|auto</code></td>
+<td><code>execution.task.consent.spawn_consent: deny\|auto</code></td>
 </tr>
 <tr>
 <td>Mid-run interactive park (T5)</td>
 <td>YES — run parks as <code>waiting{kind:"consent"}</code></td>
 <td><strong>Deny on TTL expiry</strong> (fail-closed)</td>
-<td><code>tools.agent.consent_ttl_s</code> (default 300s)</td>
+<td><code>execution.task.consent.consent_ttl_s</code> (default 300s)</td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li><strong><code>spawn_subagent</code>:</strong> with <code>spawn_consent: "deny"</code> (default), any
-  <code>spawn_subagent</code> call in a server-context run is refused outright — no
-  callback, no park. Setting <code>auto</code> approves without a human in the loop
+<li><strong><code>spawn_subagent</code>:</strong> with <code>spawn_consent: "deny"</code> (default), a
+  <code>spawn_subagent</code> call needs a human decision. Over <code>/v1/agent/task</code> the
+  injected consent channel <strong>parks the run</strong> as <code>waiting{kind:"consent"}</code>
+  (T5 — <code>AGENT_WAITING</code>, answered via <code>POST .../respond</code>), and an
+  unanswered park <strong>denies when the TTL expires</strong> (fail-closed). Only with
+  no consent channel at all is the spawn refused outright, with a visible
+  event. "Deny" names the fail-closed <em>default outcome</em>, not an immediate
+  refusal. Setting <code>auto</code> approves without a human in the loop
   (delegated trust, not an unattended default).</li>
 <li><strong>T5 run park:</strong> a run needing a human decision emits <code>AGENT_WAITING</code>
   (<code>resume_token</code>, <code>ttl_s</code>) and halts at <code>status=waiting</code>. The human answers
@@ -1835,7 +1840,7 @@ separate review/hardening:</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

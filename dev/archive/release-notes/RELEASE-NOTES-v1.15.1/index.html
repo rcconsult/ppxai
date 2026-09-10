@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1455,7 +1455,7 @@ AI can now proactively display files in the split view after creating or modifyi
 - <strong>After file editing</strong>: AI displays the modified file for review
 - <strong>Reference files</strong>: AI can show relevant documentation or config files during conversation</p>
 <p><strong>How It Works:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>User: &quot;Create a FastAPI endpoint for user authentication&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>User: "Create a FastAPI endpoint for user authentication"
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>AI: *generates auth.py*
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>AI: *calls display_file tool*
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>Result: auth.py opens in split view with syntax highlighting
@@ -1468,10 +1468,10 @@ AI can now proactively display files in the split view after creating or modifyi
 <p><strong>Technical Details:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Tool definition</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="p">{</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;display_file&quot;</span><span class="p">,</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Display a file in the split view panel&quot;</span><span class="p">,</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        <span class="s2">&quot;filepath&quot;</span><span class="p">:</span> <span class="s2">&quot;Path to file (relative or absolute)&quot;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"display_file"</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Display a file in the split view panel"</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="s2">"parameters"</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        <span class="s2">"filepath"</span><span class="p">:</span> <span class="s2">"Path to file (relative or absolute)"</span>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="p">}</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">}</span>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
@@ -1479,8 +1479,8 @@ AI can now proactively display files in the split view after creating or modifyi
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">AI</span> <span class="err">→</span> <span class="n">display_file</span> <span class="n">tool</span> <span class="err">→</span> <span class="n">chat</span><span class="o">.</span><span class="n">py</span> <span class="n">emits</span> <span class="n">DISPLAY_FILE</span> <span class="n">event</span> <span class="err">→</span> <span class="n">Client</span> <span class="n">handlers</span> <span class="n">execute</span> <span class="o">/</span><span class="n">show</span>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Event emission (ppxai/engine/chat.py)</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="k">if</span> <span class="n">tool_name</span> <span class="o">==</span> <span class="s2">&quot;display_file&quot;</span> <span class="ow">and</span> <span class="s2">&quot;filepath&quot;</span> <span class="ow">in</span> <span class="n">tool_args</span><span class="p">:</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="k">yield</span> <span class="n">Event</span><span class="p">(</span><span class="n">EventType</span><span class="o">.</span><span class="n">DISPLAY_FILE</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;filepath&quot;</span><span class="p">:</span> <span class="n">resolved_path</span><span class="p">})</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="k">if</span> <span class="n">tool_name</span> <span class="o">==</span> <span class="s2">"display_file"</span> <span class="ow">and</span> <span class="s2">"filepath"</span> <span class="ow">in</span> <span class="n">tool_args</span><span class="p">:</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="k">yield</span> <span class="n">Event</span><span class="p">(</span><span class="n">EventType</span><span class="o">.</span><span class="n">DISPLAY_FILE</span><span class="p">,</span> <span class="p">{</span><span class="s2">"filepath"</span><span class="p">:</span> <span class="n">resolved_path</span><span class="p">})</span>
 </span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
 </span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="c1"># Client handlers</span>
 </span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="c1"># - ppxaide (Textual): _on_display_file() → executes /show command</span>
@@ -1555,12 +1555,12 @@ Engine client's HTTP streaming didn't properly yield to event loop during networ
 </span></code></pre></div></p>
 <p><strong>Timer Implementation:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_thinking</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Show &#39;Thinking...&#39; indicator and start timer.&quot;&quot;&quot;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="sd">"""Show 'Thinking...' indicator and start timer."""</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="c1"># Stop existing timer if any (prevent multiple timers)</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_timer</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">status_message</span> <span class="o">=</span> <span class="s2">&quot;⏳ Thinking...&quot;</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">status_message</span> <span class="o">=</span> <span class="s2">"⏳ Thinking..."</span>
 </span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 </span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">elapsed_time</span> <span class="o">=</span> <span class="mf">0.0</span>
 </span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="c1"># Update timer every 100ms</span>
@@ -1604,13 +1604,13 @@ Consent responses were inconsistent across clients:
 - Manual conversion in each client was error-prone</p>
 <p><strong>Solution:</strong>
 Created <code>normalize_consent_response()</code> function in <a href="../ppxai/common/consent.py">ppxai/common/consent.py</a> that accepts all variations:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">&quot;yes&quot;</span><span class="p">)</span> <span class="err">→</span> <span class="s2">&quot;y&quot;</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">&quot;YES&quot;</span><span class="p">)</span> <span class="err">→</span> <span class="s2">&quot;y&quot;</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span> <span class="err">→</span> <span class="s2">&quot;y&quot;</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">&quot;always&quot;</span><span class="p">)</span> <span class="err">→</span> <span class="s2">&quot;always&quot;</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">&quot;ALWAYS&quot;</span><span class="p">)</span> <span class="err">→</span> <span class="s2">&quot;always&quot;</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">&quot;no&quot;</span><span class="p">)</span> <span class="err">→</span> <span class="s2">&quot;n&quot;</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">&quot;N&quot;</span><span class="p">)</span> <span class="err">→</span> <span class="s2">&quot;n&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">"yes"</span><span class="p">)</span> <span class="err">→</span> <span class="s2">"y"</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">"YES"</span><span class="p">)</span> <span class="err">→</span> <span class="s2">"y"</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">"y"</span><span class="p">)</span> <span class="err">→</span> <span class="s2">"y"</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">"always"</span><span class="p">)</span> <span class="err">→</span> <span class="s2">"always"</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">"ALWAYS"</span><span class="p">)</span> <span class="err">→</span> <span class="s2">"always"</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">"no"</span><span class="p">)</span> <span class="err">→</span> <span class="s2">"n"</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">"N"</span><span class="p">)</span> <span class="err">→</span> <span class="s2">"n"</span>
 </span></code></pre></div>
 <p><strong>Updated Clients:</strong>
 - <strong>ppxaide (Textual TUI)</strong>: <code>_show_consent_dialog()</code> now uses normalization
@@ -1813,7 +1813,7 @@ When AI called <code>display_file</code> tool in Rich TUI (ppxai), the DISPLAY_F
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

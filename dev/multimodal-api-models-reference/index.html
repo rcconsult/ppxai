@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1252,10 +1252,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pricing-as-of-march-2026" class="md-nav__link">
+  <a href="#pricing-synced-to-ppxai-configjson-2026-08-15" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pricing (as of March 2026)
+        Pricing (synced to ppxai-config.json, 2026-08-15)
       
     </span>
   </a>
@@ -1591,9 +1591,11 @@
 <li><code>gpt-5.1</code> and variants — removed from ChatGPT March 11, 2026; still in API but migrate to 5.4</li>
 <li>Assistants API — sunset anticipated in 2026; migrate to Responses API</li>
 </ul>
-<h3 id="pricing-as-of-march-2026">Pricing (as of March 2026)<a class="headerlink" href="#pricing-as-of-march-2026" title="Permanent link">&para;</a></h3>
+<h3 id="pricing-synced-to-ppxai-configjson-2026-08-15">Pricing (synced to <code>ppxai-config.json</code>, 2026-08-15)<a class="headerlink" href="#pricing-synced-to-ppxai-configjson-2026-08-15" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>gpt-5.4</code>: $1.75/1M input, $14/1M output (90% discount on cached inputs)</li>
+<li><code>gpt-5.4</code>: <strong>$2.50/1M input, $15/1M output</strong> per the shipped
+  <code>ppxai-config.json</code> pricing block (an earlier revision of this doc quoted
+  $1.75/$14, which no longer matches). Cached inputs are discounted.</li>
 <li><code>gpt-5.4-mini</code>: lower cost tier for high-volume</li>
 </ul>
 <hr />
@@ -1632,13 +1634,13 @@
 <td>Deep retrieval; 200K context; $3/1M tokens</td>
 </tr>
 <tr>
-<td><code>sonar-reasoning</code></td>
+<td><code>sonar-reasoning-pro</code></td>
 <td>✅</td>
 <td>❌</td>
 <td>❌</td>
 <td>❌</td>
 <td>✅</td>
-<td>Multi-step reasoning; $1/1M tokens</td>
+<td>Multi-step reasoning. <strong>This is the id in the shipped config</strong> — plain <code>sonar-reasoning</code> is not configured.</td>
 </tr>
 <tr>
 <td><code>sonar-deep-research</code></td>
@@ -1824,7 +1826,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

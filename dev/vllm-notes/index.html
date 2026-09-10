@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1239,6 +1239,12 @@
 <td>Stable</td>
 </tr>
 <tr>
+<td><strong>Qwen3-Coder</strong></td>
+<td><strong>qwen3_coder</strong></td>
+<td><code>--tool-call-parser qwen3_coder</code></td>
+<td>Stable — top DGX performer (Qwen3-Coder-30B, 81.25%)</td>
+</tr>
+<tr>
 <td>Qwen2.5</td>
 <td>Hermes</td>
 <td><code>--tool-call-parser hermes</code></td>
@@ -1303,12 +1309,12 @@
 </span></code></pre></div></p>
 <p>ppxai config:
 <div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">&quot;custom&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">&quot;base_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://localhost:8000/v1&quot;</span><span class="p">,</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">        </span><span class="nt">&quot;Qwen/Qwen3-...&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;max_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8192</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">"custom"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://localhost:8000/v1"</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">        </span><span class="nt">"Qwen/Qwen3-..."</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"max_tokens"</span><span class="p">:</span><span class="w"> </span><span class="mi">8192</span><span class="p">,</span><span class="w"> </span><span class="nt">"temperature"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="w"> </span><span class="p">}</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="p">}</span>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="p">}</span>
@@ -1321,9 +1327,9 @@
 <p>Fallback: if native tool calling fails, set <code>native_tool_calling: false</code>.</p>
 <h2 id="known-issue-ill-use-x-tool-followed-by-json-text">Known issue: "I'll use X tool" followed by JSON text<a class="headerlink" href="#known-issue-ill-use-x-tool-followed-by-json-text" title="Permanent link">&para;</a></h2>
 <p>GPT-OSS sometimes outputs tool calls as JSON text instead of using native tool calling:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>I&#39;ll use the apply_patch tool.
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>I'll use the apply_patch tool.
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>```json
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>{&quot;tool&quot;: &quot;apply_patch&quot;, &quot;arguments&quot;: {...}}
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>{"tool": "apply_patch", "arguments": {...}}
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>```
 </span></code></pre></div>
 <p>Root causes:
@@ -1337,10 +1343,10 @@
 4. The fallback parser (<code>ppxai/engine/tools/parser.py</code>) attempts to extract tool calls from text responses.</p>
 <p>Example config:
 <div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">&quot;openai/gpt-oss-120b&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">      </span><span class="nt">&quot;max_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8192</span><span class="p">,</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">      </span><span class="nt">&quot;generation_params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">"openai/gpt-oss-120b"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">      </span><span class="nt">"max_tokens"</span><span class="p">:</span><span class="w"> </span><span class="mi">8192</span><span class="p">,</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">      </span><span class="nt">"generation_params"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"temperature"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="w"> </span><span class="p">}</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">}</span>
@@ -1419,7 +1425,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

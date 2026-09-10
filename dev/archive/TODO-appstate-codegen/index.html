@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1414,10 +1414,10 @@ generates those implementations, ensuring field parity and preventing drift.</p>
 <p><strong>1. <code>ppxai-state.schema.yaml</code></strong></p>
 <p>Unified field set for all clients. Must cover the union of fields across
 <code>app_state.py</code>, <code>app-state.js</code>, <code>appState.ts</code>, and EngineClient properties.</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.0&quot;</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">"1.0"</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">fields</span><span class="p">:</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">currentProvider</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;perplexity&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">currentModel</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sonar-pro&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">currentProvider</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="s">"perplexity"</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">currentModel</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="s">"sonar-pro"</span><span class="w"> </span><span class="p p-Indicator">}</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">workingDir</span><span class="p">:</span><span class="w">            </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">,</span><span class="nt"> nullable</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">sessionName</span><span class="p">:</span><span class="w">           </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">,</span><span class="nt"> nullable</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">messageCount</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
@@ -1611,7 +1611,7 @@ and <code>ChatPanel</code>.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

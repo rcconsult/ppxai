@@ -1,0 +1,2316 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/release-notes-v1.19.1/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Release Notes — v1.19.1 - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#release-notes-v1191" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Release Notes — v1.19.1
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#v1-gateway-compatibility-ppxai-sre-and-other-consumers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1 gateway compatibility (ppxai-sre and other consumers)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Highlights
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#breaking-change-a-project-local-ppxai-configjson-is-read-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠ Breaking change — a project-local ppxai-config.json is READ-ONLY
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#breaking-changes-adr-0011-command-taxonomy-hard-rename-no-aliases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠ Breaking changes (ADR 0011 — command taxonomy, hard rename, NO aliases)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#breaking-changes-adr-0010-config-shape-hard-move-no-dual-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠ Breaking changes (ADR 0010 — config shape, hard move, NO dual-read)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#breaking-changes-adr-0012-per-model-facts-hard-move-no-dual-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠ Breaking changes (ADR 0012 — per-model facts, hard move, NO dual-read)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-one-model-two-wires-perplexitys-agent-fleet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New: one model, two wires — Perplexity's Agent fleet
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="New: one model, two wires — Perplexity&#39;s Agent fleet">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-shipped-default-moved-and-one-model-has-no-successor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The shipped default moved — and one model has no successor
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-toolsweb_searchorder-the-whole-search-chain-not-just-its-head" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New: tools.web_search.order — the whole search chain, not just its head
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-executioncollect-run-results-into-your-session-u4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New: execution.collect — run results into your session (U4)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-enriched-v1oneshot-adr-0009-step-1-default-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New: enriched /v1/oneshot (ADR 0009 step ①, default off)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-execution-profiles-enrichment-adr-0009-step-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New: execution profiles + enrichment (ADR 0009 step ③)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changed-every-v1oneshot-is-now-a-registry-run-fu-one-off-tier-unification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed: every /v1/oneshot is now a registry run (FU — one-off tier unification)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changed-toolsweb_searchpreferred-is-now-an-ordering-adr-0009-step-4-q5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed: tools.web_search.preferred is now an ORDERING (ADR 0009 step ④, Q5)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-per-tool-egress-baselines-adr-0009-step-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New: per-tool egress baselines (ADR 0009 step ②)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-task-and-run-in-the-tuis-t8b-the-port-is-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New: /task and /run in the TUIs (T8b — the port is done)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-networkssl-tls-settings-in-config-not-just-env" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New: network.ssl.* — TLS settings in config, not just env
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-one-admission-boundary-for-every-tier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security: one admission boundary for every tier
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-cost-counts-every-tier-adr-0008" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New — /cost counts every tier (ADR 0008)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-anthropic-provider-claude-opt-in-untested-against-the-live-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New — Anthropic provider (Claude), opt-in — ⚠️ UNTESTED AGAINST THE LIVE API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fixed-auto-returned-500-over-post-commandauto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — /auto returned 500 over POST /command/auto
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fixed-model-catalog-corrections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — model catalog corrections
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrade-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="release-notes-v1191">Release Notes — v1.19.1<a class="headerlink" href="#release-notes-v1191" title="Permanent link">&para;</a></h1>
+<p>A bug-fix release that grew four accepted ADRs and a new provider. The
+headline is <strong>transcript integrity</strong> — the defect that opened the branch:
+malformed assistant turns (orphan <code>tool_calls</code>, empty-content assistants)
+were eating user prompts and 400-ing strict providers. Everything else
+accumulated around it.</p>
+<p><strong>Read the breaking-changes sections before upgrading.</strong> There are four, and
+three of them are silent: a stale config key is ignored rather than
+rejected, so settings revert to defaults with no error. <code>/doctor</code> prints the
+exact old→new mapping for anything still stale — run it first.</p>
+<h2 id="v1-gateway-compatibility-ppxai-sre-and-other-consumers">v1 gateway compatibility (ppxai-sre and other consumers)<a class="headerlink" href="#v1-gateway-compatibility-ppxai-sre-and-other-consumers" title="Permanent link">&para;</a></h2>
+<p><strong><code>POST /v1/oneshot</code> and <code>/v1/agent/*</code> are unchanged.</strong> Same paths, same
+request and response shapes, byte-identical since v1.18.4. Every breaking
+change below is a slash command or a config key — none of them is on the
+wire.</p>
+<p>One internal change worth knowing if you embed ppxai as a library rather
+than calling the API: <code>engine/model_profiles.py</code> was deleted (Item 65) and
+<code>facts_without_an_instance(provider, model)</code> replaces <code>get_profile(model)</code>.
+The provider argument is load-bearing, not cosmetic — passing <code>""</code> resolves
+against the global table and silently returns wrong facts, including
+<code>prompt_based</code> on a wire that refuses tools.</p>
+<h2 id="highlights">Highlights<a class="headerlink" href="#highlights" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><code>/cost</code> counts every tier.</strong> It used to report interactive chat only,
+  silently omitting every <code>/v1/oneshot</code> and <code>/v1/agent/task</code> token your
+  provider billed you for (ADR 0008).</li>
+<li><strong>A project-local <code>ppxai-config.json</code> is now read-only.</strong> Toggling a UI
+  setting no longer edits a repository you happen to be standing in.</li>
+<li><strong>Claude is a provider</strong> — opt-in, and ⚠️ <strong>UNTESTED against the live
+  API</strong>: it has never made a real API call. See
+  <a href="#known-limitations">Known limitations</a> before using it.</li>
+<li><strong><code>/task</code> and <code>/run</code> in every client</strong>, including both TUIs (T8b).</li>
+<li><strong>TLS settings in config</strong>, not just environment variables.</li>
+<li>5,823 tests, up from ~4,800 when the branch opened.</li>
+</ul>
+<hr />
+<h2 id="breaking-change-a-project-local-ppxai-configjson-is-read-only">⚠ Breaking change — a project-local <code>ppxai-config.json</code> is READ-ONLY<a class="headerlink" href="#breaking-change-a-project-local-ppxai-configjson-is-read-only" title="Permanent link">&para;</a></h2>
+<p>Reads and writes now resolve differently, on purpose:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>resolution order</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>read</strong></td>
+<td><code>PPXAI_CONFIG_FILE</code> → <code>./ppxai-config.json</code> → <code>~/.ppxai/ppxai-config.json</code></td>
+</tr>
+<tr>
+<td><strong>write</strong></td>
+<td><code>PPXAI_CONFIG_FILE</code> → <code>~/.ppxai/ppxai-config.json</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>./ppxai-config.json</code> is dropped from the <strong>write</strong> path. It is a file a
+project <em>ships</em> — checked in, shared, often an example — and persisting a UI
+toggle into it edits somebody's repository as a side effect.</p>
+<p>This was not hypothetical. ppxai's own test suite rewrote ppxai's own
+tracked config on every run: a smoke test POSTs to every route, <code>/debug-log</code>
+persists a setting, and pytest's working directory is the repo root. Nothing
+failed, because the rewrite was an encoding round-trip — so it survived for
+as long as anyone was willing to type <code>git checkout --</code>.</p>
+<p><strong>What changes for you:</strong> if you relied on <code>/debug-log on</code> writing to a
+project config, it now writes to <code>~/.ppxai/ppxai-config.json</code>. When the two
+paths diverge ppxai logs a warning naming both, because reads take the first
+file found and do not merge — the setting applies to the running session and
+the project config shadows it on the next start.</p>
+<h2 id="breaking-changes-adr-0011-command-taxonomy-hard-rename-no-aliases">⚠ Breaking changes (ADR 0011 — command taxonomy, hard rename, NO aliases)<a class="headerlink" href="#breaking-changes-adr-0011-command-taxonomy-hard-rename-no-aliases" title="Permanent link">&para;</a></h2>
+<p>The command surface is streamlined per
+<a href="../decisions/0011-command-taxonomy-streamline/">ADR 0011</a>. Old names are
+<strong>removed</strong>, not aliased. The <strong>API is untouched</strong> — <code>/v1/oneshot</code> and
+<code>/v1/agent/*</code> keep their exact paths and shapes; only slash-command muscle
+memory changes.</p>
+<table>
+<thead>
+<tr>
+<th>Removed</th>
+<th>Use instead</th>
+<th>Since stage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/agent &lt;task&gt;</code>, <code>/agent on\|off</code></td>
+<td><strong><code>/auto</code></strong> — same in-session autonomous loop, checkpoint/undo intact</td>
+<td>U1</td>
+</tr>
+<tr>
+<td><code>/tools agent</code></td>
+<td><strong><code>/tools auto</code></strong></td>
+<td>U1</td>
+</tr>
+<tr>
+<td><code>/task run "&lt;desc&gt;" …</code></td>
+<td><strong><code>/task "&lt;desc&gt;" …</code></strong> — direct launch; a first token counts as a verb only when followed by a run id (<code>run_</code> + 12 hex) or nothing</td>
+<td>U2</td>
+</tr>
+<tr>
+<td><code>task show</code> (canonical)</td>
+<td><strong><code>task get</code></strong> (<code>show</code>/<code>open</code> still accepted as aliases)</td>
+<td>U2</td>
+</tr>
+<tr>
+<td><code>task ack</code> (canonical)</td>
+<td><strong><code>task collect</code></strong> (<code>ack</code> still accepted as alias; merge semantics land with <code>execution.collect</code>)</td>
+<td>U2</td>
+</tr>
+<tr>
+<td><code>/agentrun &lt;task&gt;</code></td>
+<td><strong><code>/run &lt;prompt&gt;</code></strong> — same async one-off, now <code>kind=oneshot</code> on the full run gears with the U2 grammar; <strong>no flags</strong> (the grant is config-decided: <code>execution.run.web_search</code> on → <code>{web_search}</code>, off → closed-book)</td>
+<td>U3</td>
+</tr>
+<tr>
+<td><code>/agentruns</code></td>
+<td><strong><code>/run ls</code></strong> — kind-filtered (<code>/task ls</code> now shows only task runs too)</td>
+<td>U3</td>
+</tr>
+</tbody>
+</table>
+<h2 id="breaking-changes-adr-0010-config-shape-hard-move-no-dual-read">⚠ Breaking changes (ADR 0010 — config shape, hard move, NO dual-read)<a class="headerlink" href="#breaking-changes-adr-0010-config-shape-hard-move-no-dual-read" title="Permanent link">&para;</a></h2>
+<p>The execution-tier keys move off <code>tools.agent.*</code> onto the <code>execution.*</code> axis
+per <a href="../decisions/0010-config-shape-review/">ADR 0010</a>. <strong>There is no dual-read
+window.</strong> A config left at the old paths is not warned about at load time — it
+is simply <strong>ignored</strong>, and those settings silently revert to their defaults.</p>
+<p><strong>Migrate with <code>/doctor</code>.</strong> It gained a <code>Config shape (ADR 0010)</code> section that
+reads your config <em>file</em> and prints the exact old→new mapping for anything
+still stale:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Config shape (ADR 0010, v1.19.1):
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>   ⚠ 3 key(s) at their OLD location — BREAKING change in v1.19.1, no
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>     dual-read. These are being IGNORED and have reverted to their defaults.
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>     Move them:
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>      tools.agent.task_tier_enabled  -&gt;  execution.task.enabled
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>      tools.agent.sandbox            -&gt;  execution.task.sandbox
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>      tools.agent.spawn_consent      -&gt;  execution.task.consent.spawn_consent
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Legacy (ignored)</th>
+<th>Use instead</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tools.agent.task_tier_enabled</code></td>
+<td><strong><code>execution.task.enabled</code></strong></td>
+</tr>
+<tr>
+<td><code>tools.agent.sandbox.*</code></td>
+<td><strong><code>execution.task.sandbox.*</code></strong> (sub-fields unchanged)</td>
+</tr>
+<tr>
+<td><code>tools.agent.spawn_consent</code></td>
+<td><strong><code>execution.task.consent.spawn_consent</code></strong></td>
+</tr>
+<tr>
+<td><code>tools.agent.consent_ttl_s</code></td>
+<td><strong><code>execution.task.consent.consent_ttl_s</code></strong></td>
+</tr>
+<tr>
+<td><code>tools.agent.result_retention_s</code></td>
+<td><strong><code>execution.task.budgets.result_retention_s</code></strong></td>
+</tr>
+<tr>
+<td><code>tools.agent.default_subagent</code></td>
+<td><strong><code>execution.default_subagent</code></strong></td>
+</tr>
+</tbody>
+</table>
+<p>Before / after:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>// BEFORE (v1.19.0)                    // AFTER (v1.19.1)
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>"tools": {                             "execution": {
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  "agent": {                             "task": {
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    "task_tier_enabled": true,             "enabled": true,
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    "sandbox": { "enforcement":            "sandbox": { "enforcement":
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>                 "in_process" },                        "in_process" },
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    "spawn_consent": "auto",               "consent": { "spawn_consent": "auto",
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    "consent_ttl_s": 900,                               "consent_ttl_s": 900 },
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    "result_retention_s": 86400,           "budgets": {
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    "default_subagent": {                    "result_retention_s": 86400 }
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>      "provider": "gemini" },              },
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    "max_iterations": 50                   "default_subagent": {
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>  }                                          "provider": "gemini" }
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>}                                        },
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>                                         "tools": { "agent": {
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>                                           "max_iterations": 50 } }
+</span></code></pre></div>
+<p>Note <code>max_iterations</code> <strong>stays</strong> on <code>tools.agent</code> — along with
+<code>max_tool_iterations</code>, <code>max_same_tool_calls</code>, <code>context_char_limit</code>,
+<code>min_task_words</code>, <code>auto_retry_empty</code> and <code>zombie_threshold</code>. Those describe
+how the agent <em>tool</em> loops, which is tier-independent; only keys describing
+<em>where work runs</em> moved.</p>
+<p><strong>Why the axis exists:</strong> <code>providers.*</code> say WHO answers, <code>tools.*</code> say WHAT
+each tool is, <code>execution.*</code> says WHERE work runs. A tier switch was a sub-key
+of a sub-key of <code>tools</code>; the security surface (tier enablement, sandbox,
+consent, egress ceiling) now reads top-to-bottom in one block.</p>
+<p><strong><code>GET /agent/config</code> changed shape</strong> with it — the six tier keys are no
+longer in its response. It is an internal endpoint (not part of the <code>/v1/*</code>
+stability contract) and its only consumer is the bundled VSCode extension,
+versioned with the server. <strong><code>/v1/oneshot</code> and <code>/v1/agent/*</code> are unchanged</strong>:
+they consume config, they are not shaped by it, so no request or response
+field moves.</p>
+<p><strong>Deployment note:</strong> if you pin any of the six moved keys in a k8s
+ConfigMap or a checked-in <code>ppxai-config.json</code>, rename them in the same
+window — there is <strong>no grace period</strong> and a stale key is silently ignored.
+Run <code>/doctor</code>, which prints the old→new mapping for anything still stale.
+(An earlier draft named ppxai-sre specifically; that was checked and it
+carries no ppxai config keys, so it is unaffected.)</p>
+<p>Also removed as dead config in this pass: the root-level <strong><code>visualization.*</code></strong>
+block (documented as configuring <code>/show</code>, but nothing ever read it).</p>
+<h2 id="breaking-changes-adr-0012-per-model-facts-hard-move-no-dual-read">⚠ Breaking changes (ADR 0012 — per-model facts, hard move, NO dual-read)<a class="headerlink" href="#breaking-changes-adr-0012-per-model-facts-hard-move-no-dual-read" title="Permanent link">&para;</a></h2>
+<p><strong><code>capabilities.*</code> and <code>tool_calling.*</code> merge into one <code>facts</code> block.</strong> As
+with ADR 0010, this is a clean break: a config left at the old keys is
+<strong>silently ignored</strong> and those settings revert to defaults. Run <strong><code>/doctor</code></strong>,
+which scans the config <em>file</em> (not the loaded values — a moved key is
+invisible to every accessor) and prints the old→new mapping, flags fields in
+the wrong block, and offers a complete record to paste.</p>
+<p>Two record types replace what used to be one overlapping set:</p>
+<table>
+<thead>
+<tr>
+<th>Record</th>
+<th>Answers</th>
+<th>Lives on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ProviderCapabilities</code></td>
+<td>what the <strong>endpoint</strong> does — <code>web_search</code>, <code>web_fetch</code>, <code>weather</code>, <code>citations</code>, <code>streaming</code></td>
+<td>the provider block</td>
+</tr>
+<tr>
+<td><code>ModelFacts</code></td>
+<td>what a <strong>model</strong> does — <code>wire_protocol</code>, <code>tool_mode</code>, limits, fallbacks, vision, tier</td>
+<td>each model block</td>
+</tr>
+</tbody>
+</table>
+<p><strong>No field appears on both</strong>, so there is nothing to arbitrate. A
+<code>tool_mode</code> written in a provider block does not reach any model — <code>/doctor</code>
+reports it as misplaced rather than letting it silently half-work.</p>
+<p><strong><code>native_tool_calling</code> is deleted, not aliased.</strong> Use <code>tool_mode</code>, which
+says what the boolean could not: <code>native</code>, <code>prompt_based</code>, or <code>auto</code> (native
+with a prompt-based fallback). If you copied the example config, the
+migration is <code>native_tool_calling: true</code> → <code>tool_mode: "native"</code>, <code>false</code> →
+<code>tool_mode: "prompt_based"</code>.</p>
+<h2 id="new-one-model-two-wires-perplexitys-agent-fleet">New: one model, two wires — Perplexity's Agent fleet<a class="headerlink" href="#new-one-model-two-wires-perplexitys-agent-fleet" title="Permanent link">&para;</a></h2>
+<p>A Perplexity key now reaches <strong>Anthropic, OpenAI, Google and xAI models</strong>.
+Perplexity serves Sonar over Chat Completions and its Agent fleet over the
+OpenAI <em>Responses</em> API; ppxai picks the wire per model from
+<code>facts.wire_protocol</code>, so both live on the one <code>perplexity</code> provider — same
+key, same bill, same price table.</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">"anthropic/claude-sonnet-5"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"facts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"wire_protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"responses"</span><span class="p">,</span><span class="w"> </span><span class="nt">"tool_mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"auto"</span><span class="p">,</span><span class="w"> </span><span class="nt">"max_tokens"</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><code>max_tokens</code> is <strong>required</strong> for <code>anthropic/*</code> here — the API rejects a
+request without it.</p>
+<p><strong>This matters before 2026-09-27.</strong> Perplexity retires the Sonar
+chat-completions endpoint on that date. The Responses wire is the survivor,
+and both the provider and the <code>web_search</code> tool now follow
+<code>facts.wire_protocol</code> onto it — the tool used to run its own separate client
+that would have broken independently.</p>
+<h3 id="the-shipped-default-moved-and-one-model-has-no-successor">The shipped default moved — and one model has no successor<a class="headerlink" href="#the-shipped-default-moved-and-one-model-has-no-successor" title="Permanent link">&para;</a></h3>
+<p><code>default_model</code> and <code>coding_model</code> are now <strong><code>perplexity/sonar</code></strong> in the
+example config, <code>install.sh</code>, <code>scripts/install.ps1</code> and the VSCode bootstrap.
+A fresh install lands entirely on the surviving wire.</p>
+<p>Measured 2026-08-31, twice: the Responses wire serves <strong>only</strong>
+<code>perplexity/sonar</code>. Both <code>sonar-pro</code> (the previous default) and
+<code>sonar-reasoning-pro</code> answer <code>400 validation failed: model "..." is not
+supported</code> there, in bare <strong>and</strong> namespaced form. They keep working on the
+chat wire until 2026-09-27 and then have nowhere to go.</p>
+<p><code>/doctor</code> carries deprecation rows for all three bare ids, all pointing at
+<code>perplexity/sonar</code> — the lighter model, and the only honest target. Naming a
+replacement that 400s would send you to a second failure. <strong>Re-check before
+the date:</strong> if Perplexity ships the pro line on the Responses wire, those
+rows change.</p>
+<p><code>base_url</code> stays <code>https://api.perplexity.ai</code>. Do <strong>not</strong> append <code>/v1</code> — the
+provider derives the Responses root per wire, and pinning <code>/v1</code> would break
+the chat wire that <code>sonar-pro</code> still needs.</p>
+<h2 id="new-toolsweb_searchorder-the-whole-search-chain-not-just-its-head">New: <code>tools.web_search.order</code> — the whole search chain, not just its head<a class="headerlink" href="#new-toolsweb_searchorder-the-whole-search-chain-not-just-its-head" title="Permanent link">&para;</a></h2>
+<p><code>preferred</code> chose only the first backend; the rest of the fallback chain was
+fixed. Now:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"web_search"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"order"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"gemini"</span><span class="p">,</span><span class="w"> </span><span class="s2">"duckduckgo"</span><span class="p">,</span><span class="w"> </span><span class="s2">"perplexity"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</span></code></pre></div>
+<p>Backends you leave out are appended in the default order, so a short list
+means <em>"try these first"</em>, not <em>"only these"</em> — pinning to one backend is
+still <code>strict</code>'s job. Unknown ids are reported by <code>/doctor</code> and skipped
+rather than taking search offline. The egress allowlist is derived from the
+same resolved list, so the chain and the hosts a run may reach cannot drift
+apart.</p>
+<h2 id="new-executioncollect-run-results-into-your-session-u4">New: <code>execution.collect</code> — run results into your session (U4)<a class="headerlink" href="#new-executioncollect-run-results-into-your-session-u4" title="Permanent link">&para;</a></h2>
+<p>One global key for the <code>/run</code> + <code>/task</code> families (default <strong><code>yes</code></strong> — the
+shipped T6 behavior):</p>
+<ul>
+<li><strong><code>auto</code></strong> — a finished run merges its result into the active session
+  automatically (runs auto-finalize; the watching client merges once, on
+  completion — reopening an old run never re-merges).</li>
+<li><strong><code>yes</code></strong> — the run holds its result (📬) until you collect it; <strong>collect
+  now = finalize + merge</strong>: the Collect button / <code>collect</code> verb appends the
+  result to the active session, so the model sees it on your next turn.</li>
+<li><strong><code>no</code></strong> — collect impossible: the GUI renders the Collect button
+  <strong>disabled</strong> with the enable hint, the <code>collect</code> verb warns, and no merge
+  path exists. The result stays on the run record only.</li>
+</ul>
+<p>Merge is <strong>plain</strong> (owner decision Q3): the run enters the conversation
+as an ordinary user(task) → assistant(result) exchange — exactly the
+texts the run ran on and answered with, no provenance tagging. (The pair
+shape is deliberate: session alternation-fixing silently drops a lone
+leading assistant message and collapses same-role neighbors, so a
+single-message merge could vanish from the next provider request —
+caught in the live trial.) New wiring: <code>GET /config/execution</code> (clients
+read the mode) and <code>POST /sessions/merge-run-result</code> (owner-guarded for
+remote callers; loopback keeps the UI exemption's on-the-host trust
+basis).</p>
+<p>U3 behavior changes on <code>POST /v1/agent/run</code> (in-development <code>/v1/agent/*</code>
+surface — not the frozen <code>/v1/oneshot</code>): runs are stamped <code>kind=oneshot</code>;
+a successful run now <strong>holds</strong> its result (<code>completed_pending_ack</code>) until
+collected, like <code>/task</code>; and the loopback auth exemption applies <strong>only
+while <code>execution.run.web_search</code> is off</strong> — once the config grants
+web_search, the endpoint is a capability and requires a bearer even from
+localhost.</p>
+<p>U2 safety net: after a lifecycle verb, a <code>run_…</code>-ish token that is not a
+full run id (truncated paste, typo) errors instead of silently launching a
+task whose prompt is the mangled command.</p>
+<p>Why: "agent" meant three different things (in-session loop, tool-free
+background run, sandboxed task tier). After ADR 0011, <strong><code>/auto</code></strong> is
+autonomy <em>in your session</em>, <strong><code>/task</code></strong> and <strong><code>/run</code></strong> are registry runs,
+and "agent" names only the <code>/v1/agent/*</code> platform.</p>
+<h2 id="new-enriched-v1oneshot-adr-0009-step-1-default-off">New: enriched <code>/v1/oneshot</code> (ADR 0009 step ①, default off)<a class="headerlink" href="#new-enriched-v1oneshot-adr-0009-step-1-default-off" title="Permanent link">&para;</a></h2>
+<p>Two independent switches under <code>execution.run.*</code> (both default <strong>off</strong> —
+off/off is byte-identical to v1.19.0 and air-gap-safe with a local
+provider):</p>
+<ul>
+<li><code>execution.run.grounding</code> — provider-native search (Gemini grounding,
+  Perplexity Sonar). Supersedes <code>tools.web_search.oneshot_grounding</code>
+  (still honored via dual-read).</li>
+<li><code>execution.run.web_search</code> — the model gets exactly one tool,
+  <code>web_search</code>, and the request executes as an auditable <code>kind=oneshot</code>
+  registry run; the response gains an additive <code>grounding</code> field
+  (<code>searched</code>, <code>queries</code>, <code>backend</code>, <code>search_cost</code>, <code>run_id</code> — the debug
+  handle). Exists so local models get context enrichment.</li>
+</ul>
+<p>Native wins when both are on (never double retrieval). Per-combination
+behavior table in <a href="../api-gateway/">api-gateway.md</a>; <code>/doctor</code> reports the
+effective path per configured model. Revises ADR 0004's "no tool loop in
+oneshot" (opt-in, perimeter preserved).</p>
+<h2 id="new-execution-profiles-enrichment-adr-0009-step-3">New: execution profiles + <code>enrichment</code> (ADR 0009 step ③)<a class="headerlink" href="#new-execution-profiles-enrichment-adr-0009-step-3" title="Permanent link">&para;</a></h2>
+<p>Named, reusable task grants in config — <code>execution.profiles.&lt;name&gt;</code> is an
+AgentSpec-shaped mapping (same fields and normalizer as a <code>--spec</code> file), and
+a run selects one with <code>--profile &lt;name&gt;</code> (web + VSCode <code>/task</code>) or
+<code>"profile"</code> on <code>POST /v1/agent/task</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>"execution": { "profiles": {
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  "research": { "tools": ["web_search", "read_file"], "enrichment": true,
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>                "network": ["api.open-meteo.com"] },
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  "coding":   { "tools": ["read_file", "apply_patch"], "enrichment": false }
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>}}
+</span></code></pre></div>
+<ul>
+<li><strong>Precedence</strong> <code>request &gt; spec &gt; skills &gt; profile &gt; default_subagent</code>;
+  list fields (<code>tools</code>, <code>network</code>) <strong>replace, never union</strong> — a more
+  specific layer can actually narrow a grant (skills still union theirs in;
+  mounting capability is their purpose).</li>
+<li><strong><code>enrichment: true|false</code></strong> — first-class, tri-state (absent = inherit).
+  Effective true derives <code>web_search</code> + the full backend-superset egress
+  baseline once, after resolution. A more specific explicit <code>tools</code> list
+  omitting <code>web_search</code> under effective enrichment is a pre-start <strong>400
+  naming both layers</strong> — never a silent closed-book "enriched" run.
+  <code>--enrichment on|off</code> is also a per-run flag on <code>/task</code>.</li>
+<li><strong><code>execution.egress_ceiling</code></strong> — deployment-wide egress cap, config-only,
+  intersective, unset = no cap. Applied where every run's allowlist is
+  assembled (<code>/task</code>, <code>/run</code>, the <code>/v1/oneshot</code> facade). An enriched run
+  whose ceiling strips <strong>every</strong> search backend fails pre-start (400 naming
+  the stripped hosts, per Q3); a malformed ceiling is a loud 400, never a
+  silent no-cap.</li>
+</ul>
+<h2 id="changed-every-v1oneshot-is-now-a-registry-run-fu-one-off-tier-unification">Changed: every <code>/v1/oneshot</code> is now a registry run (FU — one-off tier unification)<a class="headerlink" href="#changed-every-v1oneshot-is-now-a-registry-run-fu-one-off-tier-unification" title="Permanent link">&para;</a></h2>
+<p>The plain (non-enriched) <code>/v1/oneshot</code> path now executes as a real
+<code>kind=oneshot</code> registry run, exactly like the enriched facade and
+<code>/v1/agent/run</code> — the direct non-registry code path is <strong>deleted</strong>, so the
+whole one-off tier has one execution path. <strong>The wire contract is
+unchanged</strong> (same request, same response envelope byte-for-byte, same 502
+error contract on provider failure — gateway-smoke 6/6 against the live
+server). What's new around it:</p>
+<ul>
+<li>Every oneshot call leaves an auditable record in <code>~/.ppxai/runs/&lt;id&gt;/</code>
+  and appears in <code>/run ls</code> (status <code>completed</code> — a plain oneshot never
+  holds; the HTTP response <em>is</em> the collect). Records are subject to the
+  standard retention reaper.</li>
+<li>A client disconnect now cancels the run cooperatively instead of
+  abandoning the provider call.</li>
+<li>Native grounding rides along by construction: the run's provider is
+  built through the same construction site that applies
+  <code>execution.run.grounding</code>, so grounded and closed-book calls share the
+  gears.</li>
+<li><code>scripts/gateway-smoke.py</code> updated to the U4 collect contract it had
+  missed: under <code>execution.collect: "yes"</code> (default) a <code>/v1/agent/run</code>
+  result is held (<code>completed_pending_ack</code>) — the smoke now acks it to
+  <code>finalized</code> (and accepts straight-<code>completed</code> under <code>auto</code>/<code>no</code>).</li>
+</ul>
+<h2 id="changed-toolsweb_searchpreferred-is-now-an-ordering-adr-0009-step-4-q5">Changed: <code>tools.web_search.preferred</code> is now an ORDERING (ADR 0009 step ④, Q5)<a class="headerlink" href="#changed-toolsweb_searchpreferred-is-now-an-ordering-adr-0009-step-4-q5" title="Permanent link">&para;</a></h2>
+<p>⚠ <strong>Behavior change for existing configs.</strong> A concrete <code>preferred</code>
+(<code>"perplexity"</code> / <code>"gemini"</code> / <code>"duckduckgo"</code>) used to be a hard pin: no
+cross-backend fallback, egress narrowed to that backend. It now means
+<strong>first-choice-then-fall-back</strong> — the chain stays live and the egress set
+is the full backend superset, i.e. <strong>egress widens on upgrade</strong>. To keep
+the old pin, add <strong><code>strict: true</code></strong> in the <em>same scope</em> as <code>preferred</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>"tools": { "web_search": { "preferred": "perplexity", "strict": true } }
+</span></code></pre></div>
+<ul>
+<li><code>preferred</code> + <code>strict</code> resolve <strong>together, as one scoped tuple</strong>: the
+  provider block (<code>providers.&lt;name&gt;.web_search</code>) owns both fields iff it
+  states <code>preferred</code>; otherwise the global block does. A per-provider
+  <code>strict</code> without a per-provider <code>preferred</code> is a dead key. <code>/doctor</code> now
+  reports the resolved tuple per scope and flags: a concrete <code>preferred</code>
+  without <code>strict</code> (the upgrade change), a dead per-provider <code>strict</code>, and
+  <code>strict</code> combined with enrichment (legal, but one backend outage returns
+  the run to closed-book).</li>
+<li>One shared resolver now feeds <strong>both</strong> the call-time search chain and the
+  AC-2 egress enumeration (they previously read config differently — a
+  per-provider override could select one backend while egress narrowed to
+  another). Provider context is threaded through <code>NetworkPolicy</code> into
+  <code>tool_targets</code>, so per-provider tuples resolve identically at both sites.</li>
+<li>Fallback ordering is honest now: a failed <code>preferred=gemini</code> tries
+  perplexity before DuckDuckGo (previously it skipped straight to DDG).</li>
+<li>Q3 ceiling check refined: enrichment survival is <strong>all-of</strong> over the
+  effective egress set (the egress chokepoint enforces all-of, so a
+  partially-surviving allowlist made the tool un-callable at run time while
+  passing grant time). A narrow ceiling composes with a <code>strict</code> pin — the
+  pinned backend's hosts are the whole effective set.</li>
+<li><strong>Fixed en route:</strong> the config loader's per-provider whitelist silently
+  dropped the <code>providers.&lt;name&gt;.web_search</code> block, so the per-provider
+  <code>preferred</code> override (documented since v1.13.4) was <strong>dead config</strong> for
+  every file-loaded provider. It now survives the load — if your config
+  carries such a block, it takes effect from this release (as an ordering;
+  add <code>strict: true</code> for a pin). <code>/doctor</code> reports the resolved tuple.</li>
+</ul>
+<h2 id="new-per-tool-egress-baselines-adr-0009-step-2">New: per-tool egress baselines (ADR 0009 step ②)<a class="headerlink" href="#new-per-tool-egress-baselines-adr-0009-step-2" title="Permanent link">&para;</a></h2>
+<p><code>tools.&lt;tool&gt;.egress</code> — operator-declared hosts merged into any run that
+<em>grants</em> that tool (task tier + oneshot facade). Generalizes the old
+web_search-only <code>task_default_allow</code> (dual-read). <code>get_weather</code> is now
+https-only (the plain-http wttr.in fallback that made it un-allowlistable
+is removed — debt Item 52 retired).</p>
+<h2 id="new-task-and-run-in-the-tuis-t8b-the-port-is-done">New: <code>/task</code> and <code>/run</code> in the TUIs (T8b — the port is done)<a class="headerlink" href="#new-task-and-run-in-the-tuis-t8b-the-port-is-done" title="Permanent link">&para;</a></h2>
+<p><code>/task</code> and <code>/run</code> previously existed only in the web and VSCode clients.
+They now ship in <strong>all four client families</strong>. The transport question
+parked since 2026-07-07 resolved in favour of <strong>embed</strong>: <code>build_task_runner</code>
+moved to <code>ppxai/engine/task_runner.py</code>, <code>ppxai/engine/task_backend.py</code>
+drives the same registry and the same sandbox in-process, and the TUIs
+became peers of the HTTP clients rather than a second implementation of
+them. No TUI grew an HTTP client, and no server is required.</p>
+<p><strong>Availability is gated per verb on a capability, not per client on a
+name.</strong> <code>launch</code> and <code>resume</code> schedule an <code>asyncio.Task</code> and need a live
+event loop; <code>ls</code> / <code>get</code> / <code>watch</code> / <code>cancel</code> / <code>collect</code> / <code>respond</code> are
+synchronous registry operations that do not.</p>
+<table>
+<thead>
+<tr>
+<th>Client</th>
+<th><code>/task</code> + <code>/run</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Web, VSCode</td>
+<td>full set</td>
+</tr>
+<tr>
+<td><strong>Textual</strong> (<code>ppxaide</code>)</td>
+<td>full set</td>
+</tr>
+<tr>
+<td><strong>Rich</strong> (<code>ppxai</code>)</td>
+<td>every verb <strong>except <code>launch</code> and <code>resume</code></strong>, which return an error naming the reason and pointing at <code>ppxaide</code></td>
+</tr>
+</tbody>
+</table>
+<p>Rich's gap is its blocking prompt, not a <code>/task</code> decision — it starts
+working the moment that main-loop question is settled, with no change to
+this command family. Textual also gained a parked-run consent screen (one
+prompt per park token; Escape defers rather than denies) and a focus
+opt-out, so <code>/task ls</code> no longer steals the cursor.</p>
+<h2 id="new-networkssl-tls-settings-in-config-not-just-env">New: <code>network.ssl.*</code> — TLS settings in config, not just env<a class="headerlink" href="#new-networkssl-tls-settings-in-config-not-just-env" title="Permanent link">&para;</a></h2>
+<p>TLS verification could previously be configured only through the
+<code>SSL_VERIFY</code> / <code>SSL_CERT_FILE</code> environment variables. It is now also
+settable in <code>ppxai-config.json</code>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"ssl"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"verify"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">"cert_file"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/path/to/ca.pem"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</span></code></pre></div>
+<p>Precedence: <code>SSL_VERIFY</code> → <code>SSL_CERT_FILE</code> → <code>network.ssl.verify</code> →
+<code>network.ssl.cert_file</code> → system trust store. <strong>Environment wins</strong>, so
+existing <code>.env</code> setups are unchanged.</p>
+<p><strong>A custom CA now ADDS to the system trust store rather than replacing
+it.</strong> This is the behavior most corporate-proxy users expect and the one
+that survives a laptop moving between networks: your internal hosts and
+the public internet both verify. Previously — and still, if you set
+<code>SSL_CERT_FILE</code> in the environment on an older build — OpenSSL narrowed
+the context to the bundle alone (measured: 1 trusted root vs 124).</p>
+<p>Three drifted outbound clients were unified onto one resolver
+(<code>ppxai/config/tls.py</code>) along the way: <code>web_premium.py</code> honoured
+<code>SSL_VERIFY</code> but ignored <code>SSL_CERT_FILE</code> entirely, so a custom-CA install
+silently verified against the system store on the premium search paths;
+and only <code>web.py</code> checked that the bundle path <em>exists</em>, so elsewhere a
+stale path became an opaque connection error instead of a fallback. A test
+now fails if any module reads those env vars directly again.</p>
+<p><strong>Disabled verification is no longer silent</strong> — startup logs a warning and
+<code>/doctor</code> reports it, including on an otherwise-clean config where nothing
+else would print.</p>
+<h2 id="security-one-admission-boundary-for-every-tier">Security: one admission boundary for every tier<a class="headerlink" href="#security-one-admission-boundary-for-every-tier" title="Permanent link">&para;</a></h2>
+<p>Two paths into the run registry had drifted apart, and T8b's in-process
+route reached the runner without the HTTP route's admission checks.
+Concretely, before this release: <code>ppxaide</code> could start a tool-capable run
+while <strong><code>execution.task.enabled</code> was false</strong>; a grant containing
+<strong><code>execute_shell_command</code></strong> evaded the server's explicit rejection; and
+<strong><code>--skill</code> values were passed straight through as filesystem read roots</strong>,
+so <code>--skill /etc</code> mounted that directory into the run's read scope. The
+suite was green throughout — no test drove one request through both paths.</p>
+<p>Admission now lives in one engine-level boundary,
+<code>ppxai/engine/task_authorizer.py::authorize_task()</code>, which every client
+passes through; the HTTP route is a thin adapter over it. The differences
+between the tool-capable and one-off tiers are expressed as <strong>data</strong>
+(<code>TierPolicy</code> rows) rather than as a second code path, and <code>AuthorizedTask</code>
+has exactly one construction site in the production tree — a hand-built
+literal is how the bypass existed in the first place.</p>
+<p>Three defects fell out of that merge, none of them in the original review:
+<code>tools.web_search.enabled=false</code> did not cover <code>/run</code>; the in-process
+<code>/run</code> borrowed the chat pane's provider/model instead of resolving it per
+run; and the oneshot iteration count lived in the route layer although it
+is part of the grant that config decides.</p>
+<p><strong>Operator-visible:</strong> none of this changes a request or response shape.
+<code>/v1/oneshot</code> stays byte-identical.</p>
+<h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Structured output silently disabled Gemini grounding.</strong> A caller
+  combining <code>response_format</code> with <code>execution.run.grounding</code> kept its JSON
+  and quietly lost its search. Verified against the live API on
+  <code>gemini-3.1-pro-preview</code>: <code>google_search</code> coexists with both
+  <code>response_mime_type</code> and <code>response_schema</code> — only <em>function
+  declarations</em> conflict with grounding. Affected web, VSCode and
+  <code>/v1/oneshot</code> consumers alike, since it sat in the provider.</li>
+<li><strong><code>response_format</code> was silently dropped on Gemini</strong> — the fix the item
+  above corrects a regression in. <code>/v1/oneshot</code> now <em>delivers</em>
+  <code>response_format</code> to the provider; note it delivers rather than
+  enforces, which the gateway doc now states explicitly.</li>
+<li><strong><code>/task</code> with no grant guided instead of firing a doomed HTTP 422</strong>
+  (Item 57). A bare <code>/task "&lt;desc&gt;"</code> is correctly rejected — a tool-capable
+  run must carry an explicit grant — but clients echoed a raw
+  <em>"❌ Task rejected: HTTP 422"</em>, which read as an outage. Both clients now
+  short-circuit client-side with actionable guidance, and the server's 422
+  names the flags a user actually types.</li>
+<li><strong><code>/task web_search</code> no longer loses live data under a narrowed task
+  egress</strong> (Item 59). With a soft <code>preferred: perplexity</code> and an allowlist
+  permitting only <code>api.perplexity.ai</code>, the resolver still enumerated the
+  DuckDuckGo fallback, the all-of egress rule denied the whole call over
+  the unreachable host, and the model fabricated an answer with a
+  disclaimer. Selection and egress can no longer diverge.</li>
+<li><strong>rtk (and any shell wrapper) no longer goes permanently silent</strong> when
+  its binary isn't on PATH at first check (Item 56). A negative
+  <code>shutil.which</code> result was memoized for the process lifetime, so a
+  startup-ordering window left the wrapper inactive with no rewrite and no
+  log line — observed in a long-running coder pod. Only positive hits are
+  cached now.</li>
+<li><strong>A user-configurable default <code>/task</code> grant</strong> (<code>execution.task.default_grant</code>,
+  Item 58) so a bare <code>/task "&lt;desc&gt;"</code> works in an environment that declares
+  the tools it normally wants. It is a new precedence <em>layer</em>, not a new
+  power: it sits below any explicit request/spec/skill/profile and above
+  the empty built-in default, and still passes every unchanged clamp.
+  <code>execution.task.allow_user_default</code> (default true) disables it for a
+  locked-down deployment.</li>
+<li><strong>The browser terminal had no interactive shell</strong> — no history, no line
+  editing, no completion. <code>get_shell_config()</code> dropped <code>shell_bin</code> and
+  <code>login_shell</code>, so an operator setting <code>tools.shell.shell_bin</code> was
+  ignored; and the fallback landed on <code>/bin/sh</code>, which is dash on
+  Debian/Ubuntu. Config now steers it, the unset case prefers bash, and the
+  PTY child launches interactive and login with a seeded writable
+  <code>HISTFILE</code>.</li>
+<li><strong>Office preview 500'd when LibreOffice was present but could not
+  render</strong> — the Ubuntu snap is confined to <code>$HOME</code> and fails on <code>/tmp</code>
+  sources <em>with exit code 0</em>. That now degrades to extracted text like the
+  LibreOffice-missing path, honouring the route's documented "never 500 for
+  a preview we can't rasterize" contract.</li>
+<li><strong>A transient lifecycle-wiring failure was permanent.</strong> One flag was set
+  before two operations were attempted inside a single <code>try</code>, so a single
+  failure meant orphaned runs stayed <code>running</code> forever and the active-run
+  badge could never light — silently, since it logs at debug level.</li>
+<li><code>/clear</code> left the status-bar <code>Ctx:</code> badge stale (Item 48) — fixed in
+  <strong>all four clients</strong>. <code>context_percentage</code> is refreshed by the engine's
+  messages-changed fan-out, so <code>/clear</code>, <code>/compact</code>, session load and
+  rollback all update it (engine + Rich). <strong>ppxaide</strong> gains the live <code>Ctx</code>
+  badge (same thresholds as Rich: <code>~</code> at ≥80%, <code>!</code> at ≥100%, hidden on an
+  empty session). <strong>Web + VSCode</strong> now receive the value as a push: the
+  terminal <code>stream_end</code> SSE event carries <code>context_percentage</code> in its
+  metadata (additive — alongside the existing <code>usage</code>), and out-of-band
+  changes (<code>/clear</code>, <code>/compact</code>, load) emit one discrete <code>state_sync</code>
+  through the command envelope. The field is deliberately NOT in the
+  <code>state_sync</code> whitelist — no per-message push traffic.</li>
+<li><strong>New: live web-app E2E suite</strong> (<code>tests/e2e/live-app.spec.ts</code>). Every other
+  spec in that directory drives a static <code>file://</code> harness; this one runs the
+  REAL web UI against a REAL <code>ppxai-server</code>, covering the wiring harnesses
+  can't see — command-envelope round-trips, SSE, and the AppState-driven
+  badges. Opt-in via <code>npm run test:live</code> (starts the working-tree server, not
+  the installed binary); <code>PPXAI_E2E_PROVIDER=&lt;name&gt;</code> enables the LLM-dependent
+  steps, which otherwise skip. Includes a regression fence for the Clear
+  bypass below: it asserts the button hits <code>POST /command/clear</code> and never the
+  bespoke <code>POST /sessions/clear</code>.</li>
+<li><strong>Clear buttons bypassed the command envelope.</strong> The web Clear button, the
+  VSCode Clear button, and the <code>ppxai.clearHistory</code> palette command called
+  <code>POST /sessions/clear</code> directly, while a typed <code>/clear</code> went through
+  <code>POST /command/clear</code>. The bespoke call discards the response body — which
+  is where the envelope's <code>events[]</code> live — so server-pushed AppState had to
+  be re-fetched by hand at each call site, and a missed one meant a stale
+  badge (this is what kept Item 48's staleness alive in the buttons after
+  the typed command was fixed). All three now dispatch <code>/clear</code> through the
+  envelope, so pushed state updates itself. VSCode gained a single
+  <code>clearConversation()</code> path shared by both of its entry points.</li>
+<li><strong>Config-error fail-safe was incomplete for <code>execution.run.grounding</code>.</strong>
+  When the config source itself could not be read, <code>get_execution_run_config()</code>
+  still consulted the <em>legacy</em> <code>tools.web_search.oneshot_grounding</code> key —
+  a second, still-readable source — so a box whose config failed to load
+  could keep provider-native search ON while every other <code>execution.*</code>
+  knob correctly fell back to off. Both keys now resolve to <code>false</code> when
+  the config is unreadable (an absent <code>execution</code> block is still normal
+  and resolves defaults as before). A capability must not survive the
+  failure of the config that governs it.</li>
+<li>Concurrent-run web_search cost misattribution: the process-global
+  reset-on-read usage channel replaced by a per-call ContextVar holder
+  (affected interactive chat too).</li>
+<li><code>load_config()</code> now passes the top-level <code>execution</code> block through (the
+  whitelist silently dropped it).</li>
+<li>Run audit: <code>tool_call</code> events carry a truncated args snapshot; a
+  <code>run_usage</code> event records per-run tokens + tool cost + backend.</li>
+</ul>
+<hr />
+<h2 id="new-cost-counts-every-tier-adr-0008">New — <code>/cost</code> counts every tier (ADR 0008)<a class="headerlink" href="#new-cost-counts-every-tier-adr-0008" title="Permanent link">&para;</a></h2>
+<p><code>usage.json</code>'s only writer was reachable from interactive paths, so every
+<code>/v1/oneshot</code> and <code>/v1/agent/task</code> token your provider billed you for was
+<strong>absent from <code>/cost</code></strong>. The number under-reported in the "cheaper than
+reality" direction, silently, exactly when background runs were active.</p>
+<p>A new append-only sink (<code>~/.ppxai/usage/usage-events.jsonl</code>) receives an
+event from every token-spending path, tagged by tier, provider, model, owner
+and run. <code>/cost</code> now shows the background tiers alongside the interactive
+total and reports an all-tier figure.</p>
+<ul>
+<li><strong>Nothing to turn on</strong>, no migration. The log starts empty and fills as
+  you use ppxai; existing <code>usage.json</code> history is untouched and still forms
+  the base of the report.</li>
+<li><strong>Existing <code>/cost</code> fields keep their meaning.</strong> <code>estimated_cost</code> is still
+  the interactive number; the all-tier figures are <em>new</em> keys
+  (<code>all_tier_cost</code>, <code>by_tier</code>, <code>background_cost</code>), so anything reading the
+  old fields does not silently change meaning.</li>
+<li><strong>Best-effort by contract.</strong> A failed usage write is logged and dropped,
+  never raised — accounting must not fail a chat turn or kill a running
+  agent. Do not treat the log as an audit trail.</li>
+<li>KV-cache contention on self-hosted endpoints stays <strong>acknowledged, not
+  modelled</strong>.</li>
+</ul>
+<p>Cost is also now priced by <strong>token class</strong>: cached input is billed
+differently from fresh input, and charging a cache read at the full input
+rate over-reports by up to 10x on the cached portion. <code>UsageStats</code> carries
+the cache counts and <code>calculate_cost</code> prices them separately. Providers that
+do not cache are unaffected — the new arguments default to zero and produce
+exactly the numbers they produced before.</p>
+<h2 id="new-anthropic-provider-claude-opt-in-untested-against-the-live-api">New — Anthropic provider (Claude), opt-in — ⚠️ UNTESTED AGAINST THE LIVE API<a class="headerlink" href="#new-anthropic-provider-claude-opt-in-untested-against-the-live-api" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>⚠️ <strong>This provider has never made a real API call.</strong> It is verified against
+a reading of the SDK surface and the published docs, not against
+Anthropic's observed behaviour. <strong>Unproven, not broken</strong> — it is inert
+unless you install the extra <em>and</em> configure the provider, so it cannot
+affect an existing install. Full detail and the three most likely failures
+under <a href="#known-limitations">Known limitations</a>.</p>
+</blockquote>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>anthropic
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span>sk-ant-...
+</span></code></pre></div>
+<p>Claude as a first-class provider rather than an OpenAI-compatible endpoint —
+the fourth <strong>wire</strong>, not a dialect. <code>ModelFacts.wire_protocol</code> has reserved
+<code>"messages"</code> since ADR 0012; it now has a handler. Going through the
+OpenAI-compatible shim instead would have cost adaptive thinking, <code>effort</code>,
+prompt caching, and structured refusals.</p>
+<p><strong>See Known limitations before using it.</strong></p>
+<h2 id="fixed-auto-returned-500-over-post-commandauto">Fixed — <code>/auto</code> returned 500 over <code>POST /command/auto</code><a class="headerlink" href="#fixed-auto-returned-500-over-post-commandauto" title="Permanent link">&para;</a></h2>
+<p><code>/auto</code> ran its agent loop with a bare <code>asyncio.run()</code>. The server's command
+route is an <code>async def</code> that calls the handler directly from the running
+event loop, so the call raised <code>RuntimeError: asyncio.run() cannot be called
+from a running event loop</code> — web and VSCode got a <strong>500</strong>, not degraded
+output. The Rich TUI was unaffected (no loop running), which is why it
+survived this long.</p>
+<p><code>/auto</code> also now reports <strong>"running without checkpoints"</strong> in its result
+rather than only on the server's stdout. Without a git repo the run creates
+no checkpoint and <code>/undo</code> cannot revert it; previously only the Rich TUI was
+told.</p>
+<h2 id="fixed-model-catalog-corrections">Fixed — model catalog corrections<a class="headerlink" href="#fixed-model-catalog-corrections" title="Permanent link">&para;</a></h2>
+<p>Several shipped model ids were dead or pointed at the wrong successor. These
+are user-visible because <code>/doctor</code> recommends from these tables:</p>
+<ul>
+<li><strong>Four dead NVIDIA ids were shipping</strong> and a fifth was recommended despite
+  never answering — three attempts, ten minutes of wall clock, zero output.
+  Recommending an id that never answers is worse than recommending nothing:
+  the user adopts it and their next request hangs.</li>
+<li><strong>Gemini 2.5 retired</strong> ahead of its 2026-10-16 sunset; two deprecation
+  rows pointed at <em>preview</em> successors and were corrected.</li>
+<li><strong>Perplexity's pro line</strong> has no successor on the surviving wire —
+  <code>sonar-pro</code> and <code>sonar-reasoning-pro</code> 400 on Responses, verified by three
+  live probes three weeks apart. Every affected operator is migrated to
+  <code>perplexity/sonar</code>, a downgrade and the only one available.</li>
+<li><strong>Two guessed prices corrected</strong> with measured ones.</li>
+</ul>
+<h2 id="known-limitations">Known limitations<a class="headerlink" href="#known-limitations" title="Permanent link">&para;</a></h2>
+<p><strong>The Anthropic provider has never made a live API call.</strong> Its tests shape
+requests and read response objects; the SDK is never invoked. It is verified
+against a reading of the SDK surface and the published docs, not against
+Anthropic's observed behaviour.</p>
+<p>Treat it as <strong>unproven, not broken</strong> — it is inert unless you install the
+<code>[anthropic]</code> extra <em>and</em> configure the provider, so it cannot affect an
+existing install. If you are the first to point it at a real key, expect
+bugs. The three most likely, in order of how quietly they fail:</p>
+<ol>
+<li><strong>Stream event shapes</strong> — wrong delta type names mean text and reasoning
+   stream as <em>nothing</em>: a silent empty response, not an error.</li>
+<li><strong>Cache token reporting</strong> — if <code>cache_control</code> does not yield the cache
+   counts in <code>usage</code>, <code>/cost</code> under-reports the cached portion.</li>
+<li><strong>Structured outputs placement</strong> — wrong slot means schema-pinned
+   <code>oneshot</code> calls 400.</li>
+</ol>
+<p>Its shipped prices are a dated snapshot and say so in the config.</p>
+<p><strong>Also unchanged from v1.19.0:</strong> <code>/task</code> container tier (T9) is still
+deferred; VSCode <code>/task</code> has no split-pane (deliberate T8a scope); the
+KV-cache contention model is acknowledged, not implemented.</p>
+<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
+<p><strong>5,823 passed, 1 skipped</strong> on macOS/Unix with <code>uv sync --all-extras</code>
+(2026-09-10). The count is environment-dependent: a base venv without the
+<code>[data]</code> extra skips the office and upload suites. On Windows expect extra
+platform skips (PTY, symlinks, POSIX signal semantics).</p>
+<p>Playwright specs under <code>tests/e2e/</code> are not in that count.</p>
+<h2 id="upgrade-notes">Upgrade notes<a class="headerlink" href="#upgrade-notes" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Run <code>/doctor</code> first.</strong> It prints the exact old→new mapping for every
+   stale config key, and stale keys are ignored silently rather than
+   rejected — that is the whole hazard.</li>
+<li><strong>Re-learn three commands:</strong> <code>/agent</code> → <code>/auto</code>, <code>/agentrun</code> → <code>/run</code>,
+   <code>/task run "x"</code> → <code>/task "x"</code>. No aliases.</li>
+<li>
+<p><strong>Move six config keys</strong> from <code>tools.agent.*</code> to <code>execution.*</code> (ADR
+   0010). Anything left behind reverts to its default.</p>
+</li>
+<li>
+<p><strong>🔴 If you configured <code>tools.agent.sandbox</code>, read this before upgrading.</strong>
+   That key held the <code>/task</code> filesystem seal. It moved to
+   <code>execution.task.sandbox</code>, and — like the other five — a copy left at the
+   old path is <strong>silently ignored</strong>. What makes this one different is what
+   the default is:</p>
+</li>
+</ol>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>"execution": { "task": { "sandbox": { "enforcement": "off", ... } } }
+</span></code></pre></div>
+<p><code>enforcement: "off"</code> does not weaken the seal, it <strong>removes it</strong>. The
+   whole <code>read_paths.deny</code> list — <code>.env</code>, <code>.git</code>, <code>.ssh</code>, <code>secrets</code> — stops
+   being applied, because the seal is gated on
+   <code>enforcement == "in_process"</code> as a unit. A <code>/task</code> run granted
+   <code>read_file</code> can then read any file the ppxai process can reach,
+   <strong>including <code>~/.ppxai/.env</code></strong> — every provider API key on the box — with
+   no consent prompt and nothing in the run's audit trail recording that
+   the jail was dropped.</p>
+<p>So the operator who was careful enough to configure a jail is precisely
+   the one this upgrade silently un-jails. <code>/doctor</code> now reports this row
+   with its cost rather than only its new path; run it, and move the key
+   before enabling <code>execution.task.enabled</code>.</p>
+<p><strong>You are not exposed if</strong> you never set <code>tools.agent.sandbox</code>, or if
+   <code>execution.task.enabled</code> is <code>false</code> — its default, and the shipped
+   example's value. The tool-capable tier has to be deliberately switched
+   on for any of this to be reachable.
+5. <strong>If you toggled settings from inside a checkout</strong>, they now persist to
+   <code>~/.ppxai/ppxai-config.json</code>. Check that file if a setting seems to have
+   moved.
+6. <strong><code>/cost</code> numbers will go up</strong> — not because you are spending more, but
+   because it finally counts what you were already being billed for.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

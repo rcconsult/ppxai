@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1443,9 +1443,9 @@
 <h2 id="critical-fixes">Critical Fixes<a class="headerlink" href="#critical-fixes" title="Permanent link">&para;</a></h2>
 <h3 id="fixed-400-message-alternation-error">🐛 Fixed: 400 Message Alternation Error<a class="headerlink" href="#fixed-400-message-alternation-error" title="Permanent link">&para;</a></h3>
 <p><strong>Issue</strong>: After first successful query with tools enabled, second query would fail with:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Error code: 400 - {&#39;error&#39;: {&#39;message&#39;: &#39;After the (optional) system message(s),
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>user or tool message(s) should alternate with assistant message(s).&#39;,
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>&#39;type&#39;: &#39;invalid_message&#39;, &#39;code&#39;: 400}}
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Error code: 400 - {'error': {'message': 'After the (optional) system message(s),
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>user or tool message(s) should alternate with assistant message(s).',
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>'type': 'invalid_message', 'code': 400}}
 </span></code></pre></div></p>
 <p><strong>Root Cause</strong>: TUI's event handler breaks out of the loop when receiving <code>STREAM_END</code>, which prevented the engine from adding the assistant message to session history before the break.</p>
 <p><strong>Fix</strong>: Assistant message is now added to session <strong>BEFORE</strong> yielding <code>STREAM_END</code> event, ensuring it's saved even if the caller breaks immediately.</p>
@@ -1665,7 +1665,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

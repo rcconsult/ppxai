@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1094,21 +1094,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#enable-container-tools" class="md-nav__link">
+  <a href="#container-tools-are-not-currently-configurable" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enable Container Tools
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#configuration-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration Options
+        Container Tools Are Not Currently Configurable
       
     </span>
   </a>
@@ -1365,10 +1354,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#disabling-consent-not-recommended" class="md-nav__link">
+  <a href="#disabling-consent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Disabling Consent (Not Recommended)
+        Disabling Consent
       
     </span>
   </a>
@@ -1863,21 +1852,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#enable-container-tools" class="md-nav__link">
+  <a href="#container-tools-are-not-currently-configurable" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enable Container Tools
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#configuration-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration Options
+        Container Tools Are Not Currently Configurable
       
     </span>
   </a>
@@ -2134,10 +2112,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#disabling-consent-not-recommended" class="md-nav__link">
+  <a href="#disabling-consent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Disabling Consent (Not Recommended)
+        Disabling Consent
       
     </span>
   </a>
@@ -2325,7 +2303,7 @@
 
 
 <h1 id="container-kubernetes-tools-user-guide">Container &amp; Kubernetes Tools User Guide<a class="headerlink" href="#container-kubernetes-tools-user-guide" title="Permanent link">&para;</a></h1>
-<p><strong>Version:</strong> v1.13.10
+<p><strong>Version:</strong> v1.13.10+
 <strong>Last Updated:</strong> 2026-01-14</p>
 <p>This guide covers ppxai's built-in tools for managing Docker, Podman, and Kubernetes resources through natural language commands.</p>
 <hr />
@@ -2342,7 +2320,7 @@
 </ol>
 <hr />
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>Both <strong>ppxai</strong> (Rich TUI) and <strong>ppxaide</strong> (Textual TUI) provide 14 container management tools that allow AI models to inspect and manage containers and Kubernetes resources on your behalf. These tools:</p>
+<p>Both <strong>ppxai</strong> (Rich TUI) and <strong>ppxaide</strong> (Textual TUI) provide 16 container management tools that allow AI models to inspect and manage containers and Kubernetes resources on your behalf. These tools:</p>
 <ul>
 <li>Use CLI wrappers (no external SDKs required)</li>
 <li>Work with Docker, Podman, and kubectl</li>
@@ -2494,71 +2472,49 @@
 </table>
 <hr />
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<h3 id="enable-container-tools">Enable Container Tools<a class="headerlink" href="#enable-container-tools" title="Permanent link">&para;</a></h3>
-<p>Container tools are enabled by default. To configure:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">// ppxai-config.json</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="p">{</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">&quot;container&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">      </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">      </span><span class="nt">&quot;require_consent&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">      </span><span class="nt">&quot;default_runtime&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">      </span><span class="nt">&quot;timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="p">}</span>
-</span></code></pre></div>
-<h3 id="configuration-options">Configuration Options<a class="headerlink" href="#configuration-options" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>enabled</code></td>
-<td><code>true</code></td>
-<td>Enable/disable all container tools</td>
-</tr>
-<tr>
-<td><code>require_consent</code></td>
-<td><code>true</code></td>
-<td>Require user approval for destructive operations</td>
-</tr>
-<tr>
-<td><code>default_runtime</code></td>
-<td><code>"auto"</code></td>
-<td>Container runtime: <code>"auto"</code>, <code>"docker"</code>, <code>"podman"</code></td>
-</tr>
-<tr>
-<td><code>timeout</code></td>
-<td><code>60</code></td>
-<td>Command timeout in seconds</td>
-</tr>
-</tbody>
-</table>
+<h3 id="container-tools-are-not-currently-configurable">Container Tools Are Not Currently Configurable<a class="headerlink" href="#container-tools-are-not-currently-configurable" title="Permanent link">&para;</a></h3>
+<p>Container tools are always enabled (registration is automatic when a runtime
+is detected) and are <strong>not</strong> configurable via <code>ppxai-config.json</code> today:</p>
+<ul>
+<li><strong>Runtime selection</strong> is always auto-detected: <code>detect_container_runtime()</code>
+  (<code>ppxai/engine/tools/builtin/container.py</code>) checks for <code>docker</code> in PATH
+  first, then falls back to <code>podman</code>. There is no way to force one or the
+  other.</li>
+<li><strong>Timeouts are fixed per-tool</strong> in code and cannot be overridden from
+  config. <strong>30s</strong> is the base for read operations — list, inspect and
+  <strong>logs</strong> — and also for the two exec tools, which override back down.
+  <strong>60s</strong> applies to the remaining consent-gated operations (start/stop,
+  <code>kube apply</code>). The split is <code>CLITool</code> vs <code>ConsentCLITool</code> in
+  <code>ppxai/engine/tools/builtin/container.py</code>, not read-vs-logs.</li>
+<li><strong>Consent is always required</strong> for destructive operations (start, stop,
+  restart, exec, <code>kubectl apply</code>, <code>pod_exec</code>) — it cannot be disabled.</li>
+</ul>
+<p><code>ppxai-config.json</code> does accept a <code>tools.container</code> block with <code>enabled</code>,
+<code>require_consent</code>, <code>default_runtime</code>, and <code>timeout</code> keys, but these are
+<strong>reserved and not yet wired up</strong> — <code>get_container_config()</code>
+(<code>ppxai/config/tools.py</code>) parses them, but nothing in
+<code>ppxai/engine/tools/builtin/container.py</code> reads the parsed result. Setting
+any of these keys today has <strong>zero effect</strong>.</p>
 <h3 id="runtime-auto-detection">Runtime Auto-Detection<a class="headerlink" href="#runtime-auto-detection" title="Permanent link">&para;</a></h3>
-<p>When <code>default_runtime</code> is <code>"auto"</code>:
-1. Checks for <code>docker</code> in PATH first
-2. Falls back to <code>podman</code> if Docker not found
-3. Tools disabled if neither found</p>
+<ol>
+<li>Checks for <code>docker</code> in PATH first</li>
+<li>Falls back to <code>podman</code> if Docker not found</li>
+<li>Tools are not registered if neither is found</li>
+</ol>
 <h3 id="tool-description-overrides">Tool Description Overrides<a class="headerlink" href="#tool-description-overrides" title="Permanent link">&para;</a></h3>
 <p>Customize tool descriptions for specific models:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">&quot;overrides&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">      </span><span class="nt">&quot;container_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;List Docker containers&quot;</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="p">},</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nt">&quot;model_overrides&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">      </span><span class="nt">&quot;qwen2.5-coder:0.5b&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">        </span><span class="nt">&quot;container_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;List containers&quot;</span>
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">"overrides"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">      </span><span class="nt">"container_list"</span><span class="p">:</span><span class="w"> </span><span class="s2">"List Docker containers"</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nt">"model_overrides"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">      </span><span class="nt">"qwen2.5-coder:0.5b"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">        </span><span class="nt">"container_list"</span><span class="p">:</span><span class="w"> </span><span class="s2">"List containers"</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="p">}</span>
 </span></code></pre></div>
 <hr />
 <h2 id="dockerpodman-tools">Docker/Podman Tools<a class="headerlink" href="#dockerpodman-tools" title="Permanent link">&para;</a></h2>
@@ -2575,11 +2531,11 @@
 - <code>status=exited</code> - Only stopped containers
 - <code>ancestor=nginx</code> - Containers from nginx image</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>User: Show me all my containers including stopped ones
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>AI: [Uses container_list with all=true]
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>User: List containers running the nginx image
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>AI: [Uses container_list with filter=&quot;ancestor=nginx&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>User: Show me all my containers including stopped ones
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>AI: [Uses container_list with all=true]
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>User: List containers running the nginx image
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>AI: [Uses container_list with filter="ancestor=nginx"]
 </span></code></pre></div></p>
 <hr />
 <h3 id="container_logs">container_logs<a class="headerlink" href="#container_logs" title="Permanent link">&para;</a></h3>
@@ -2591,11 +2547,11 @@
 | <code>tail</code> | integer | No | Lines from end (default: 100) |
 | <code>since</code> | string | No | Time filter (e.g., <code>10m</code>, <code>1h</code>, <code>2024-01-01</code>) |</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>User: Show me the last 50 lines of logs from my web container
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>AI: [Uses container_logs with container=&quot;web&quot;, tail=50]
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>User: Get logs from the api container for the last hour
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>AI: [Uses container_logs with container=&quot;api&quot;, since=&quot;1h&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>User: Show me the last 50 lines of logs from my web container
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>AI: [Uses container_logs with container="web", tail=50]
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>User: Get logs from the api container for the last hour
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>AI: [Uses container_logs with container="api", since="1h"]
 </span></code></pre></div></p>
 <hr />
 <h3 id="container_inspect">container_inspect<a class="headerlink" href="#container_inspect" title="Permanent link">&para;</a></h3>
@@ -2611,11 +2567,11 @@
 - <code>{{.Mounts}}</code> - Volume mounts
 - <code>{{.State.Status}}</code> - Container status</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>User: What&#39;s the IP address of my database container?
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>AI: [Uses container_inspect with container=&quot;db&quot;, format=&quot;{{.NetworkSettings.IPAddress}}&quot;]
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>User: Show me the environment variables in the api container
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>AI: [Uses container_inspect with container=&quot;api&quot;, format=&quot;{{.Config.Env}}&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>User: What's the IP address of my database container?
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>AI: [Uses container_inspect with container="db", format="{{.NetworkSettings.IPAddress}}"]
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>User: Show me the environment variables in the api container
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>AI: [Uses container_inspect with container="api", format="{{.Config.Env}}"]
 </span></code></pre></div></p>
 <hr />
 <h3 id="container_start-container_stop-container_restart">container_start / container_stop / container_restart<a class="headerlink" href="#container_start-container_stop-container_restart" title="Permanent link">&para;</a></h3>
@@ -2625,10 +2581,10 @@
 |------|------|----------|-------------|
 | <code>container</code> | string | <strong>Yes</strong> | Container name or ID |</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>User: Start my web container
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>AI: [Requests consent] &quot;Allow: docker start web&quot;
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>User: [Approves]
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>AI: [Uses container_start with container=&quot;web&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>User: Start my web container
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>AI: [Requests consent] "Allow: docker start web"
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>User: [Approves]
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>AI: [Uses container_start with container="web"]
 </span></code></pre></div></p>
 <hr />
 <h3 id="container_exec">container_exec<a class="headerlink" href="#container_exec" title="Permanent link">&para;</a></h3>
@@ -2640,13 +2596,13 @@
 | <code>command</code> | string | <strong>Yes</strong> | Command to execute |
 | <code>workdir</code> | string | No | Working directory inside container |</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>User: List files in the /app directory of my web container
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>AI: [Requests consent] &quot;Allow: docker exec web ls -la /app&quot;
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>User: [Approves]
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>AI: [Uses container_exec with container=&quot;web&quot;, command=&quot;ls -la /app&quot;]
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>
-</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>User: Check the nginx config in my proxy container
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>AI: [Requests consent] &quot;Allow: docker exec proxy cat /etc/nginx/nginx.conf&quot;
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>User: List files in the /app directory of my web container
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>AI: [Requests consent] "Allow: docker exec web ls -la /app"
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>User: [Approves]
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>AI: [Uses container_exec with container="web", command="ls -la /app"]
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>User: Check the nginx config in my proxy container
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>AI: [Requests consent] "Allow: docker exec proxy cat /etc/nginx/nginx.conf"
 </span></code></pre></div></p>
 <hr />
 <h3 id="image_list">image_list<a class="headerlink" href="#image_list" title="Permanent link">&para;</a></h3>
@@ -2660,11 +2616,11 @@
 - <code>reference=nginx*</code> - Images starting with "nginx"
 - <code>dangling=true</code> - Untagged images</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>User: What images do I have locally?
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>AI: [Uses image_list]
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>User: Show me all nginx-related images
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>AI: [Uses image_list with filter=&quot;reference=nginx*&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>User: What images do I have locally?
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>AI: [Uses image_list]
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>User: Show me all nginx-related images
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>AI: [Uses image_list with filter="reference=nginx*"]
 </span></code></pre></div></p>
 <hr />
 <h2 id="kubernetes-tools">Kubernetes Tools<a class="headerlink" href="#kubernetes-tools" title="Permanent link">&para;</a></h2>
@@ -2681,11 +2637,11 @@
 - <code>environment=production</code> - Production pods
 - <code>app=web,tier=frontend</code> - Multiple labels</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>User: List all pods in the production namespace
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>AI: [Uses pod_list with namespace=&quot;production&quot;]
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>User: Show me all nginx pods across all namespaces
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>AI: [Uses pod_list with all_namespaces=true, selector=&quot;app=nginx&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>User: List all pods in the production namespace
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>AI: [Uses pod_list with namespace="production"]
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>User: Show me all nginx pods across all namespaces
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>AI: [Uses pod_list with all_namespaces=true, selector="app=nginx"]
 </span></code></pre></div></p>
 <hr />
 <h3 id="pod_logs">pod_logs<a class="headerlink" href="#pod_logs" title="Permanent link">&para;</a></h3>
@@ -2699,14 +2655,14 @@
 | <code>tail</code> | integer | No | Lines from end (default: 100) |
 | <code>previous</code> | boolean | No | Logs from previous instance |</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>User: Get logs from the api-deployment-xxx pod in staging
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>AI: [Uses pod_logs with pod=&quot;api-deployment-xxx&quot;, namespace=&quot;staging&quot;]
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>User: Show me logs from the crashed instance of my web pod
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>AI: [Uses pod_logs with pod=&quot;web-xxx&quot;, previous=true]
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>
-</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>User: Get logs from the sidecar container in my pod
-</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>AI: [Uses pod_logs with pod=&quot;my-pod&quot;, container=&quot;sidecar&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>User: Get logs from the api-deployment-xxx pod in staging
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>AI: [Uses pod_logs with pod="api-deployment-xxx", namespace="staging"]
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>User: Show me logs from the crashed instance of my web pod
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>AI: [Uses pod_logs with pod="web-xxx", previous=true]
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>User: Get logs from the sidecar container in my pod
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>AI: [Uses pod_logs with pod="my-pod", container="sidecar"]
 </span></code></pre></div></p>
 <hr />
 <h3 id="pod_describe">pod_describe<a class="headerlink" href="#pod_describe" title="Permanent link">&para;</a></h3>
@@ -2717,8 +2673,8 @@
 | <code>pod</code> | string | <strong>Yes</strong> | Pod name |
 | <code>namespace</code> | string | No | Namespace |</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>User: Why is my api pod failing to start?
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>AI: [Uses pod_describe with pod=&quot;api-xxx&quot;, namespace=&quot;production&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>User: Why is my api pod failing to start?
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>AI: [Uses pod_describe with pod="api-xxx", namespace="production"]
 </span></code></pre></div></p>
 <hr />
 <h3 id="pod_exec">pod_exec<a class="headerlink" href="#pod_exec" title="Permanent link">&para;</a></h3>
@@ -2731,10 +2687,10 @@
 | <code>namespace</code> | string | No | Namespace |
 | <code>container</code> | string | No | Container (for multi-container pods) |</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>User: Check the environment variables in the api pod
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>AI: [Requests consent] &quot;Allow: kubectl exec api-xxx -- env&quot;
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>User: [Approves]
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>AI: [Uses pod_exec with pod=&quot;api-xxx&quot;, command=&quot;env&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>User: Check the environment variables in the api pod
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>AI: [Requests consent] "Allow: kubectl exec api-xxx -- env"
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>User: [Approves]
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>AI: [Uses pod_exec with pod="api-xxx", command="env"]
 </span></code></pre></div></p>
 <hr />
 <h3 id="deployment_list">deployment_list<a class="headerlink" href="#deployment_list" title="Permanent link">&para;</a></h3>
@@ -2745,8 +2701,8 @@
 | <code>namespace</code> | string | No | Target namespace |
 | <code>all_namespaces</code> | boolean | No | List across all namespaces |</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>User: What deployments are running in production?
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>AI: [Uses deployment_list with namespace=&quot;production&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>User: What deployments are running in production?
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>AI: [Uses deployment_list with namespace="production"]
 </span></code></pre></div></p>
 <hr />
 <h3 id="service_list">service_list<a class="headerlink" href="#service_list" title="Permanent link">&para;</a></h3>
@@ -2757,8 +2713,8 @@
 | <code>namespace</code> | string | No | Target namespace |
 | <code>all_namespaces</code> | boolean | No | List across all namespaces |</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>User: Show me all services in the cluster
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>AI: [Uses service_list with all_namespaces=true]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>User: Show me all services in the cluster
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>AI: [Uses service_list with all_namespaces=true]
 </span></code></pre></div></p>
 <hr />
 <h3 id="kubectl_apply">kubectl_apply<a class="headerlink" href="#kubectl_apply" title="Permanent link">&para;</a></h3>
@@ -2770,23 +2726,23 @@
 | <code>namespace</code> | string | No | Target namespace |
 | <code>dry_run</code> | boolean | No | Validate without applying |</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>User: Apply my deployment manifest
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>AI: [Requests consent] &quot;Allow: kubectl apply -f deployment.yaml&quot;
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>User: [Approves]
-</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>AI: [Uses kubectl_apply with file=&quot;deployment.yaml&quot;]
-</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>
-</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>User: Validate my config without applying it
-</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>AI: [Requests consent] &quot;Allow: kubectl apply -f config.yaml --dry-run=client&quot;
-</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>User: [Approves]
-</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>AI: [Uses kubectl_apply with file=&quot;config.yaml&quot;, dry_run=true]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>User: Apply my deployment manifest
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>AI: [Requests consent] "Allow: kubectl apply -f deployment.yaml"
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>User: [Approves]
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>AI: [Uses kubectl_apply with file="deployment.yaml"]
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>User: Validate my config without applying it
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>AI: [Requests consent] "Allow: kubectl apply -f config.yaml --dry-run=client"
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>User: [Approves]
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>AI: [Uses kubectl_apply with file="config.yaml", dry_run=true]
 </span></code></pre></div></p>
 <hr />
 <h3 id="namespace_list">namespace_list<a class="headerlink" href="#namespace_list" title="Permanent link">&para;</a></h3>
 <p>List all namespaces.</p>
 <p><strong>Parameters:</strong> None</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>User: What namespaces exist in the cluster?
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>AI: [Uses namespace_list]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>User: What namespaces exist in the cluster?
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>AI: [Uses namespace_list]
 </span></code></pre></div></p>
 <hr />
 <h2 id="security-consent">Security &amp; Consent<a class="headerlink" href="#security-consent" title="Permanent link">&para;</a></h2>
@@ -2833,58 +2789,54 @@
 <li>User can: <strong>Allow</strong>, <strong>Deny</strong>, <strong>Always Allow</strong>, or <strong>Never Allow</strong></li>
 <li>Session-level preferences are remembered</li>
 </ol>
-<h3 id="disabling-consent-not-recommended">Disabling Consent (Not Recommended)<a class="headerlink" href="#disabling-consent-not-recommended" title="Permanent link">&para;</a></h3>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="p">{</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">    </span><span class="nt">&quot;container&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">      </span><span class="nt">&quot;require_consent&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="p">}</span>
-</span></code></pre></div>
-<p><strong>Warning:</strong> Disabling consent allows the AI to execute destructive operations without confirmation.</p>
+<h3 id="disabling-consent">Disabling Consent<a class="headerlink" href="#disabling-consent" title="Permanent link">&para;</a></h3>
+<p>Not currently possible. Consent for destructive operations
+(<code>container_start</code>, <code>container_stop</code>, <code>container_restart</code>, <code>container_exec</code>,
+<code>kubectl_apply</code>, <code>pod_exec</code>) is unconditional in code — the
+<code>tools.container.require_consent</code> config key is reserved but not read by
+<code>ppxai/engine/tools/builtin/container.py</code>. See <a href="#configuration">Configuration</a>.</p>
 <hr />
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="error-no-container-runtime-found">"Error: No container runtime found"<a class="headerlink" href="#error-no-container-runtime-found" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> Neither Docker nor Podman is installed or in PATH.</p>
 <p><strong>Solution:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Check if docker/podman is in PATH</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>which<span class="w"> </span>docker
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>which<span class="w"> </span>podman
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>
-</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="c1"># If installed but not in PATH, add to ~/.bashrc or ~/.zshrc</span>
-</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PATH</span><span class="s2">:/usr/local/bin&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># Check if docker/podman is in PATH</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>which<span class="w"> </span>docker
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>which<span class="w"> </span>podman
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="c1"># If installed but not in PATH, add to ~/.bashrc or ~/.zshrc</span>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">"</span><span class="nv">$PATH</span><span class="s2">:/usr/local/bin"</span>
 </span></code></pre></div></p>
 <h3 id="error-kubectl-not-found">"Error: kubectl not found"<a class="headerlink" href="#error-kubectl-not-found" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> kubectl is not installed or in PATH.</p>
 <p><strong>Solution:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># Install kubectl</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>brew<span class="w"> </span>install<span class="w"> </span>kubectl<span class="w">  </span><span class="c1"># macOS</span>
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>kubectl<span class="w">  </span><span class="c1"># Ubuntu</span>
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="c1"># Verify</span>
-</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>kubectl<span class="w"> </span>version<span class="w"> </span>--client
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Install kubectl</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>brew<span class="w"> </span>install<span class="w"> </span>kubectl<span class="w">  </span><span class="c1"># macOS</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>kubectl<span class="w">  </span><span class="c1"># Ubuntu</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="c1"># Verify</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>kubectl<span class="w"> </span>version<span class="w"> </span>--client
 </span></code></pre></div></p>
 <h3 id="permission-denied-while-trying-to-connect-to-docker-daemon">"permission denied while trying to connect to Docker daemon"<a class="headerlink" href="#permission-denied-while-trying-to-connect-to-docker-daemon" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> User not in docker group (Linux).</p>
 <p><strong>Solution:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>docker<span class="w"> </span><span class="nv">$USER</span>
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="c1"># Log out and back in</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>docker<span class="w"> </span><span class="nv">$USER</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="c1"># Log out and back in</span>
 </span></code></pre></div></p>
 <h3 id="unable-to-connect-to-the-server">"Unable to connect to the server"<a class="headerlink" href="#unable-to-connect-to-the-server" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> Invalid kubeconfig or cluster unreachable.</p>
 <p><strong>Solution:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># Check current context</span>
-</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>kubectl<span class="w"> </span>config<span class="w"> </span>current-context
-</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
-</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="c1"># List available contexts</span>
-</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>kubectl<span class="w"> </span>config<span class="w"> </span>get-contexts
-</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>
-</span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a><span class="c1"># Switch context</span>
-</span><span id="__span-28-8"><a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>kubectl<span class="w"> </span>config<span class="w"> </span>use-context<span class="w"> </span>my-cluster
-</span><span id="__span-28-9"><a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>
-</span><span id="__span-28-10"><a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a><span class="c1"># Test connectivity</span>
-</span><span id="__span-28-11"><a id="__codelineno-28-11" name="__codelineno-28-11" href="#__codelineno-28-11"></a>kubectl<span class="w"> </span>cluster-info
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># Check current context</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>kubectl<span class="w"> </span>config<span class="w"> </span>current-context
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="c1"># List available contexts</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>kubectl<span class="w"> </span>config<span class="w"> </span>get-contexts
+</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>
+</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="c1"># Switch context</span>
+</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>kubectl<span class="w"> </span>config<span class="w"> </span>use-context<span class="w"> </span>my-cluster
+</span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>
+</span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a><span class="c1"># Test connectivity</span>
+</span><span id="__span-26-11"><a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a>kubectl<span class="w"> </span>cluster-info
 </span></code></pre></div></p>
 <h3 id="tools-not-appearing">Tools Not Appearing<a class="headerlink" href="#tools-not-appearing" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> Container tools not enabled or runtime not detected.</p>
@@ -2893,62 +2845,58 @@
 2. Check if tools registered: <code>/tools list</code>
 3. Verify runtime: <code>docker version</code> or <code>kubectl version</code></p>
 <h3 id="timeout-errors">Timeout Errors<a class="headerlink" href="#timeout-errors" title="Permanent link">&para;</a></h3>
-<p><strong>Cause:</strong> Command taking longer than default timeout.</p>
-<p><strong>Solution:</strong>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="p">{</span>
-</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="w">    </span><span class="nt">&quot;container&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="w">      </span><span class="nt">&quot;timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">120</span>
-</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="p">}</span>
-</span></code></pre></div></p>
+<p><strong>Cause:</strong> Command taking longer than the fixed per-tool timeout (30s for
+reads incl. logs and for exec, 60s for the other consent-gated operations —
+see <a href="#configuration">Configuration</a>).</p>
+<p><strong>Solution:</strong> Timeouts are not currently configurable. Reduce the scope of
+the command (e.g. <code>tail</code> fewer log lines) or run it directly via the shell
+CLI wrapper instead.</p>
 <hr />
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="debug-a-crashing-pod">Debug a Crashing Pod<a class="headerlink" href="#debug-a-crashing-pod" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>User: My api pod keeps crashing. Help me debug it.
-</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>
-</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>AI: Let me check the pod status and recent events.
-</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>[Uses pod_describe with pod=&quot;api-xxx&quot;, namespace=&quot;production&quot;]
-</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>
-</span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>The pod is in CrashLoopBackOff. Let me check the logs from the crashed instance.
-</span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a>[Uses pod_logs with pod=&quot;api-xxx&quot;, namespace=&quot;production&quot;, previous=true]
-</span><span id="__span-30-8"><a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a>
-</span><span id="__span-30-9"><a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a>I can see the error: &quot;FATAL: database connection refused&quot;.
-</span><span id="__span-30-10"><a id="__codelineno-30-10" name="__codelineno-30-10" href="#__codelineno-30-10"></a>Let me verify the database service is running.
-</span><span id="__span-30-11"><a id="__codelineno-30-11" name="__codelineno-30-11" href="#__codelineno-30-11"></a>[Uses service_list with namespace=&quot;production&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>User: My api pod keeps crashing. Help me debug it.
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>AI: Let me check the pod status and recent events.
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>[Uses pod_describe with pod="api-xxx", namespace="production"]
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>
+</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>The pod is in CrashLoopBackOff. Let me check the logs from the crashed instance.
+</span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>[Uses pod_logs with pod="api-xxx", namespace="production", previous=true]
+</span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>
+</span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>I can see the error: "FATAL: database connection refused".
+</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a>Let me verify the database service is running.
+</span><span id="__span-27-11"><a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a>[Uses service_list with namespace="production"]
 </span></code></pre></div>
 <h3 id="monitor-container-health">Monitor Container Health<a class="headerlink" href="#monitor-container-health" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>User: Show me the status of all my containers and their resource usage.
-</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>
-</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>AI: [Uses container_list with all=true]
-</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>
-</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>Here are your containers:
-</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>- web (running) - Up 2 days
-</span><span id="__span-31-7"><a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a>- api (running) - Up 2 days
-</span><span id="__span-31-8"><a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a>- db (running) - Up 5 days
-</span><span id="__span-31-9"><a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a>- cache (exited) - Exited (137) 3 hours ago
-</span><span id="__span-31-10"><a id="__codelineno-31-10" name="__codelineno-31-10" href="#__codelineno-31-10"></a>
-</span><span id="__span-31-11"><a id="__codelineno-31-11" name="__codelineno-31-11" href="#__codelineno-31-11"></a>The cache container has stopped. Would you like me to check its logs?
+<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>User: Show me the status of all my containers and their resource usage.
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>AI: [Uses container_list with all=true]
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>Here are your containers:
+</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>- web (running) - Up 2 days
+</span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>- api (running) - Up 2 days
+</span><span id="__span-28-8"><a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>- db (running) - Up 5 days
+</span><span id="__span-28-9"><a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>- cache (exited) - Exited (137) 3 hours ago
+</span><span id="__span-28-10"><a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a>
+</span><span id="__span-28-11"><a id="__codelineno-28-11" name="__codelineno-28-11" href="#__codelineno-28-11"></a>The cache container has stopped. Would you like me to check its logs?
 </span></code></pre></div>
 <h3 id="deploy-to-kubernetes">Deploy to Kubernetes<a class="headerlink" href="#deploy-to-kubernetes" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>User: Deploy my new configuration to the staging namespace.
-</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>
-</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>AI: Let me first validate the manifest.
-</span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>[Requests consent] &quot;Allow: kubectl apply -f app.yaml --dry-run=client&quot;
-</span><span id="__span-32-5"><a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>User: [Approves]
-</span><span id="__span-32-6"><a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>[Uses kubectl_apply with file=&quot;app.yaml&quot;, namespace=&quot;staging&quot;, dry_run=true]
-</span><span id="__span-32-7"><a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a>
-</span><span id="__span-32-8"><a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a>Validation passed. Ready to apply. Shall I proceed with the actual deployment?
-</span><span id="__span-32-9"><a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a>
-</span><span id="__span-32-10"><a id="__codelineno-32-10" name="__codelineno-32-10" href="#__codelineno-32-10"></a>User: Yes, go ahead.
-</span><span id="__span-32-11"><a id="__codelineno-32-11" name="__codelineno-32-11" href="#__codelineno-32-11"></a>
-</span><span id="__span-32-12"><a id="__codelineno-32-12" name="__codelineno-32-12" href="#__codelineno-32-12"></a>AI: [Requests consent] &quot;Allow: kubectl apply -f app.yaml -n staging&quot;
-</span><span id="__span-32-13"><a id="__codelineno-32-13" name="__codelineno-32-13" href="#__codelineno-32-13"></a>User: [Approves]
-</span><span id="__span-32-14"><a id="__codelineno-32-14" name="__codelineno-32-14" href="#__codelineno-32-14"></a>[Uses kubectl_apply with file=&quot;app.yaml&quot;, namespace=&quot;staging&quot;]
-</span><span id="__span-32-15"><a id="__codelineno-32-15" name="__codelineno-32-15" href="#__codelineno-32-15"></a>
-</span><span id="__span-32-16"><a id="__codelineno-32-16" name="__codelineno-32-16" href="#__codelineno-32-16"></a>Deployment successful. Let me verify the pods are starting.
-</span><span id="__span-32-17"><a id="__codelineno-32-17" name="__codelineno-32-17" href="#__codelineno-32-17"></a>[Uses pod_list with namespace=&quot;staging&quot;, selector=&quot;app=myapp&quot;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>User: Deploy my new configuration to the staging namespace.
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>AI: Let me first validate the manifest.
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>[Requests consent] "Allow: kubectl apply -f app.yaml --dry-run=client"
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>User: [Approves]
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>[Uses kubectl_apply with file="app.yaml", namespace="staging", dry_run=true]
+</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a>
+</span><span id="__span-29-8"><a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a>Validation passed. Ready to apply. Shall I proceed with the actual deployment?
+</span><span id="__span-29-9"><a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a>
+</span><span id="__span-29-10"><a id="__codelineno-29-10" name="__codelineno-29-10" href="#__codelineno-29-10"></a>User: Yes, go ahead.
+</span><span id="__span-29-11"><a id="__codelineno-29-11" name="__codelineno-29-11" href="#__codelineno-29-11"></a>
+</span><span id="__span-29-12"><a id="__codelineno-29-12" name="__codelineno-29-12" href="#__codelineno-29-12"></a>AI: [Requests consent] "Allow: kubectl apply -f app.yaml -n staging"
+</span><span id="__span-29-13"><a id="__codelineno-29-13" name="__codelineno-29-13" href="#__codelineno-29-13"></a>User: [Approves]
+</span><span id="__span-29-14"><a id="__codelineno-29-14" name="__codelineno-29-14" href="#__codelineno-29-14"></a>[Uses kubectl_apply with file="app.yaml", namespace="staging"]
+</span><span id="__span-29-15"><a id="__codelineno-29-15" name="__codelineno-29-15" href="#__codelineno-29-15"></a>
+</span><span id="__span-29-16"><a id="__codelineno-29-16" name="__codelineno-29-16" href="#__codelineno-29-16"></a>Deployment successful. Let me verify the pods are starting.
+</span><span id="__span-29-17"><a id="__codelineno-29-17" name="__codelineno-29-17" href="#__codelineno-29-17"></a>[Uses pod_list with namespace="staging", selector="app=myapp"]
 </span></code></pre></div>
 <hr />
 <h2 id="whats-not-supported">What's Not Supported<a class="headerlink" href="#whats-not-supported" title="Permanent link">&para;</a></h2>
@@ -3045,7 +2993,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
