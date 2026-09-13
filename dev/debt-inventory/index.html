@@ -1202,6 +1202,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#item-73-renderingtextual_renderer-tuiapp-import-cycle-hidden-by-import-order-imports-tui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 73 — rendering.textual_renderer ↔ tui.app import cycle, hidden by import order [imports / tui]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#item-3-k8s-session-manager-security-tests-originally-critique-8-in-v1182" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1550,6 +1561,11 @@ quoting them</strong> — this table is a map, not a source.</p>
 <td>coverage ceiling; Linux CI cannot decide it offline</td>
 </tr>
 <tr>
+<td><strong>73</strong></td>
+<td><code>rendering.textual_renderer</code> ↔ <code>tui.app</code> import cycle, hidden by import order</td>
+<td>fails to collect standalone; passes in the full suite only because an earlier module imports <code>tui.app</code> first</td>
+</tr>
+<tr>
 <td><strong>54</strong></td>
 <td>Gemini fleet migration</td>
 <td><strong>not a deadline item any more</strong> — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro</td>
@@ -1752,6 +1768,48 @@ store so the existing assertion becomes decidable there.</p>
 behaviour, or a report of a custom CA replacing the trust store in the
 field.</p>
 <p><strong>Effort:</strong> ~1–2 h for option 2 or 3.</p>
+<hr />
+<h3 id="item-73-renderingtextual_renderer-tuiapp-import-cycle-hidden-by-import-order-imports-tui">Item 73 — <code>rendering.textual_renderer</code> ↔ <code>tui.app</code> import cycle, hidden by import order [imports / tui]<a class="headerlink" href="#item-73-renderingtextual_renderer-tuiapp-import-cycle-hidden-by-import-order-imports-tui" title="Permanent link">&para;</a></h3>
+<p><strong>Filed 2026-09-14.</strong> Found while running <code>tests/test_preview_tui_renderer_gap.py</code>
+on its own after the v1.19.2 model-switch fix. It fails to COLLECT standalone,
+on HEAD as well, and passes inside the full suite only because an earlier
+module has already imported <code>ppxai.tui.app</code>.</p>
+<p><strong>What's wrong:</strong> a three-hop cycle that Python resolves or not depending on
+which end is imported first:</p>
+<div class="language-text highlight"><pre><span></span><code>ppxai/rendering/textual_renderer.py:51   from ..tui.widgets.dialog import ConsentDialog, PromptDialog
+ppxai/tui/__init__.py:22                 (package init imports .app)
+ppxai/tui/app.py:47                      from ppxai.rendering.textual_renderer import TextualRenderer
+</code></pre></div>
+<p>Importing the renderer first triggers the <code>ppxai.tui</code> package init, which
+imports the app, which imports the renderer back while it is still
+partially initialised:</p>
+<div class="language-text highlight"><pre><span></span><code>$ python -c "import ppxai.rendering.textual_renderer"
+ImportError: cannot import name 'TextualRenderer' from partially initialized
+module 'ppxai.rendering.textual_renderer' (most likely due to a circular import)
+</code></pre></div>
+<p>Importing <code>ppxai.tui.app</code> first works, so every consumer today happens to
+take that path. <code>TestEveryPackageImportsStandalone</code> in
+<code>tests/test_no_new_lazy_imports.py</code> did not catch it because it imports
+PACKAGES (<code>ppxai.rendering</code> — whose init does not pull the renderer), not
+every module.</p>
+<p><strong>Why it matters:</strong> a layering fact is inverted — <code>rendering</code> (a leaf
+renderer) reaches UP into <code>tui</code> for two dialog widgets, and the TUI package
+init eagerly imports the app. Any new consumer that imports the renderer
+first (a test, a script, a future client) hits the ImportError, and the
+failure reads as "broken test" rather than "import cycle".</p>
+<p><strong>Options:</strong> (1) move <code>ConsentDialog</code>/<code>PromptDialog</code> out of the renderer's
+import-time needs — import them where they are used, or have the app inject
+them (Protocol-based inversion, <code>docs/patterns/protocol-dependency-inversion.md</code>);
+(2) stop <code>ppxai/tui/__init__.py</code> importing <code>.app</code> at package-init time
+(the <code>ppxaide</code> entry point can import it explicitly); (3) extend
+<code>TestEveryPackageImportsStandalone</code> to every MODULE under <code>ppxai/</code> in a
+fresh interpreter, so the next cycle of this shape fails the suite instead
+of waiting for an unlucky import order.</p>
+<p><strong>Planned:</strong> v1.19.x cleanup — (3) first so the fence exists, then (1) or (2).</p>
+<p><strong>Trigger to revisit:</strong> any standalone collection error mentioning
+<code>partially initialized module</code>, or a new module importing
+<code>ppxai.rendering.textual_renderer</code> directly.</p>
+<p><strong>Effort:</strong> ~1 h for (3); ~1–2 h for (1) or (2) plus the TUI suite.</p>
 <hr />
 <h3 id="item-3-k8s-session-manager-security-tests-originally-critique-8-in-v1182">Item 3 — k8s session-manager security tests [originally Critique #8 in v1.18.2]<a class="headerlink" href="#item-3-k8s-session-manager-security-tests-originally-critique-8-in-v1182" title="Permanent link">&para;</a></h3>
 <p><strong>Affected files:</strong> <code>deploy/images/session-manager/main.py</code> (~648 LOC),
