@@ -48,6 +48,7 @@ quoting them** — this table is a map, not a source.
 |---|---|---|
 | **71** | the Anthropic provider has never made a live API call | **accepted + documented, NO ACTION** — marked untested on all five surfaces; ships as a known limitation. Not a release blocker |
 | **72** | the additive-CA TLS guarantee is pinned only on cafile hosts | coverage ceiling; Linux CI cannot decide it offline |
+| **73** | `rendering.textual_renderer` ↔ `tui.app` import cycle, hidden by import order | fails to collect standalone; passes in the full suite only because an earlier module imports `tui.app` first |
 | **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
 | **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
 | **3** | k8s session-manager security tests | trigger-deferred; quick pass done, full suite postponed |
@@ -183,6 +184,59 @@ behaviour, or a report of a custom CA replacing the trust store in the
 field.
 
 **Effort:** ~1–2 h for option 2 or 3.
+
+---
+
+### Item 73 — `rendering.textual_renderer` ↔ `tui.app` import cycle, hidden by import order [imports / tui]
+
+**Filed 2026-09-14.** Found while running `tests/test_preview_tui_renderer_gap.py`
+on its own after the v1.19.2 model-switch fix. It fails to COLLECT standalone,
+on HEAD as well, and passes inside the full suite only because an earlier
+module has already imported `ppxai.tui.app`.
+
+**What's wrong:** a three-hop cycle that Python resolves or not depending on
+which end is imported first:
+
+    ppxai/rendering/textual_renderer.py:51   from ..tui.widgets.dialog import ConsentDialog, PromptDialog
+    ppxai/tui/__init__.py:22                 (package init imports .app)
+    ppxai/tui/app.py:47                      from ppxai.rendering.textual_renderer import TextualRenderer
+
+Importing the renderer first triggers the `ppxai.tui` package init, which
+imports the app, which imports the renderer back while it is still
+partially initialised:
+
+    $ python -c "import ppxai.rendering.textual_renderer"
+    ImportError: cannot import name 'TextualRenderer' from partially initialized
+    module 'ppxai.rendering.textual_renderer' (most likely due to a circular import)
+
+Importing `ppxai.tui.app` first works, so every consumer today happens to
+take that path. `TestEveryPackageImportsStandalone` in
+`tests/test_no_new_lazy_imports.py` did not catch it because it imports
+PACKAGES (`ppxai.rendering` — whose init does not pull the renderer), not
+every module.
+
+**Why it matters:** a layering fact is inverted — `rendering` (a leaf
+renderer) reaches UP into `tui` for two dialog widgets, and the TUI package
+init eagerly imports the app. Any new consumer that imports the renderer
+first (a test, a script, a future client) hits the ImportError, and the
+failure reads as "broken test" rather than "import cycle".
+
+**Options:** (1) move `ConsentDialog`/`PromptDialog` out of the renderer's
+import-time needs — import them where they are used, or have the app inject
+them (Protocol-based inversion, `docs/patterns/protocol-dependency-inversion.md`);
+(2) stop `ppxai/tui/__init__.py` importing `.app` at package-init time
+(the `ppxaide` entry point can import it explicitly); (3) extend
+`TestEveryPackageImportsStandalone` to every MODULE under `ppxai/` in a
+fresh interpreter, so the next cycle of this shape fails the suite instead
+of waiting for an unlucky import order.
+
+**Planned:** v1.19.x cleanup — (3) first so the fence exists, then (1) or (2).
+
+**Trigger to revisit:** any standalone collection error mentioning
+`partially initialized module`, or a new module importing
+`ppxai.rendering.textual_renderer` directly.
+
+**Effort:** ~1 h for (3); ~1–2 h for (1) or (2) plus the TUI suite.
 
 ---
 
