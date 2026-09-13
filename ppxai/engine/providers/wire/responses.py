@@ -64,7 +64,13 @@ class ResponsesHandler:
                 # appears on system messages, but extract text defensively.
                 instructions_parts.append(m.text_content())
             elif m.role == "tool":
-                # Tool result — include tool_call_id for proper linking
+                # Tool result. The Responses API does NOT take a `tool` role
+                # with `tool_call_id` — that is the chat-completions shape. It
+                # takes a standalone `function_call_output` item keyed by
+                # `call_id`. Sending the chat shape here returned
+                # `400 Unknown parameter: 'input[N].tool_calls'` and made the
+                # whole responses-wire fleet (gpt-5.6-terra, gpt-5.3-codex,
+                # gpt-5-pro) unable to complete a single tool round trip.
                 content = flatten_uploaded_file_blocks(m.content)
                 # ADR 0006 Step 6 sentinel, ADR 0012 Item 62 fix (a): the
                 # validator had exactly ONE call site (the chat-completions
@@ -74,23 +80,49 @@ class ResponsesHandler:
                 # after the flatten. `__debug__`-gated: no cost under -O.
                 assert_wire_blocks_clean(content, role=m.role)
                 item: dict[str, Any] = {
-                    "role": "tool",
-                    "content": content,
+                    "type": "function_call_output",
+                    "call_id": m.tool_call_id or "",
+                    # `output` is a STRING on this wire, never a block list.
+                    # Join the ALREADY-FLATTENED blocks rather than calling
+                    # `text_content()`: the flatten emits the wire marker
+                    # (`<uploaded_file .../>`, ADR 0006) while text_content
+                    # emits the human-readable `[File: name]` used for logs.
+                    # Using the latter here would silently ship the log form
+                    # to the API and drop the flatten contract.
+                    "output": content if isinstance(content, str) else "".join(
+                        b.get("text", "")
+                        for b in content
+                        if isinstance(b, dict) and b.get("type") == "text"
+                    ),
                 }
-                if m.tool_call_id:
-                    item["tool_call_id"] = m.tool_call_id
                 input_items.append(item)
             else:
                 role = "assistant" if m.role == "assistant" else "user"
                 content = flatten_uploaded_file_blocks(m.content)
                 assert_wire_blocks_clean(content, role=m.role)
-                item = {
-                    "role": role,
-                    "content": content,
-                }
+                # Only emit the message item when it actually carries content.
+                # An assistant turn that was pure tool calls has empty content,
+                # and an empty item is noise the API does not need.
+                if content:
+                    input_items.append({
+                        "role": role,
+                        "content": content,
+                    })
+                # Assistant tool calls become SEPARATE `function_call` items.
+                # The engine stores them in the normalised chat-completions
+                # shape (`{"id", "function": {"name", "arguments"}}`) because
+                # that is what `_stream`/`_non_stream` emit for every wire, so
+                # the translation back out belongs here.
                 if m.tool_calls:
-                    item["tool_calls"] = m.tool_calls
-                input_items.append(item)
+                    for tc in m.tool_calls:
+                        fn = tc.get("function") or {}
+                        input_items.append({
+                            "type": "function_call",
+                            "call_id": tc.get("id") or "",
+                            "name": fn.get("name") or "",
+                            # `arguments` is a JSON STRING, not an object.
+                            "arguments": fn.get("arguments") or "{}",
+                        })
 
         instructions = "\n\n".join(instructions_parts) if instructions_parts else None
         return instructions, input_items

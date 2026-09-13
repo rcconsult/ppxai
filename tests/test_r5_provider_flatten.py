@@ -187,9 +187,17 @@ class TestOpenAINativeResponsesFlatten:
         _instructions, input_items = (
             ResponsesHandler.convert_messages(messages)
         )
-        content = input_items[0]["content"]
-        assert content[0]["type"] == "text"
-        assert content[0]["text"] == _expected_marker()
+        # A tool message becomes a `function_call_output` item on this wire
+        # (chat-completions `role: tool` + `tool_call_id` is rejected with
+        # 400 Unknown parameter). The FLATTEN contract is unchanged and is
+        # what this test exists for: `output` must carry the wire marker
+        # `<uploaded_file .../>`, NOT the human-readable `[File: name]` that
+        # `Message.text_content()` renders for logs.
+        item = input_items[0]
+        assert item["type"] == "function_call_output"
+        assert item["call_id"] == "call_1"
+        assert isinstance(item["output"], str)
+        assert item["output"] == _expected_marker()
 
 
 class TestTextContentRendersNewType:

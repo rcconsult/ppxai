@@ -207,3 +207,59 @@ class TestIndexHtmlScriptOrder:
         assert se_pos < dispatcher_pos, (
             "side-effects.js must load BEFORE command-dispatcher.js"
         )
+
+
+class TestPreviewUrlNormalisesWindowsPaths:
+    """`/preview` rendered "Internal Server Error" on Windows and nowhere else.
+
+    `openHtmlPreview` builds a RELATIVE iframe URL by stripping the
+    working-dir prefix, then percent-encoding each `/`-separated segment.
+    Both steps assumed POSIX separators. On Windows the server returns a
+    native path (`C:\\proj\\index.html`) while `working_dir` carries forward
+    slashes, so `startsWith` never matched, `split('/')` saw ONE segment, and
+    the whole path was encoded backslashes and all:
+
+        /preview/C%3A%5Cproj%5Cindex.html   -> HTTP 500
+        /preview/index.html                 -> HTTP 200
+
+    The command itself reported success (ok=True, side-effect dispatched), so
+    only the pane was broken -- which is why it read as "preview does not
+    work at all". Measured against the running server 2026-09-13.
+
+    Source-text assertions match this file's existing idiom: the web tree is
+    not executed under pytest, so the fence is that the normalisation is
+    PRESENT and that the raw un-normalised form has not come back.
+    """
+
+    def _preview_block(self) -> str:
+        app = (WEB_DIR / "app.js").read_text(encoding="utf-8")
+        start = app.find("openHtmlPreview(filepath")
+        assert start != -1, "openHtmlPreview not found in app.js"
+        end = app.find("const encodedPath", start)
+        assert end != -1, "encodedPath construction not found after openHtmlPreview"
+        return app[start:end]
+
+    def test_filepath_is_normalised_before_use(self):
+        block = self._preview_block()
+        assert "replace(/\\\\/g, '/')" in block, (
+            "openHtmlPreview must normalise backslashes to forward slashes "
+            "before comparing/splitting, or Windows paths produce a 500"
+        )
+
+    def test_working_dir_is_normalised_too(self):
+        """Normalising only one side still fails: the prefix never matches."""
+        block = self._preview_block()
+        wd_line = [ln for ln in block.splitlines() if "workingDir" in ln]
+        assert wd_line, "workingDir lookup missing from openHtmlPreview"
+        assert any("replace(" in ln for ln in wd_line), (
+            "the working-dir side must be normalised as well -- comparing a "
+            "normalised filepath against a raw working_dir still never matches"
+        )
+
+    def test_the_unnormalised_form_has_not_returned(self):
+        """Guards the exact pre-fix line, which looked correct on POSIX."""
+        block = self._preview_block()
+        assert "let pathForUrl = filepath;" not in block, (
+            "pathForUrl must not be assigned the raw filepath -- that is the "
+            "pre-2026-09-13 form that broke every Windows preview"
+        )

@@ -271,18 +271,40 @@ class TestOpenAINativeConvertMessagesForResponses:
 
         instructions, items = ResponsesHandler.convert_messages(messages)
         assert instructions == "You are helpful"
-        assert len(items) == 4  # user, assistant, tool, assistant
 
-        # Check tool item
-        tool_item = items[2]
-        assert tool_item["role"] == "tool"
-        assert tool_item["content"] == "file contents"
-        assert tool_item["tool_call_id"] == "call_1"
+        # This test used to assert the CHAT-COMPLETIONS shape here --
+        # `items[2]["role"] == "tool"` with a `tool_call_id`, and an assistant
+        # item carrying `tool_calls`. The Responses API accepts neither, so it
+        # answered `400 Unknown parameter: 'input[N].tool_calls'` and NO
+        # responses-wire model could complete a single tool round trip
+        # (gpt-5.6-terra, gpt-5.3-codex, gpt-5-pro). The test passed the whole
+        # time because it checked the conversion against itself rather than
+        # against the wire it feeds.
+        #
+        # Shapes below verified against the live API 2026-09-13: a full
+        # round trip on gpt-5.6-terra returns "Prague: 14C, clear skies".
+        #
+        # The assistant turn has EMPTY content and only tool calls, so it
+        # contributes one `function_call` item and no message item:
+        #   [0] user, [1] function_call, [2] function_call_output, [3] assistant
+        assert len(items) == 4
 
-        # Check assistant with tool_calls
-        assistant_item = items[1]
-        assert assistant_item["role"] == "assistant"
-        assert assistant_item["tool_calls"] is not None
+        call_items = [i for i in items if i.get("type") == "function_call"]
+        out_items = [i for i in items if i.get("type") == "function_call_output"]
+        assert len(call_items) == 1
+        assert len(out_items) == 1
+
+        assert call_items[0]["call_id"] == "call_1"
+        assert call_items[0]["name"] == "read_file"
+        # `arguments` is a JSON STRING on this wire, not a dict.
+        assert isinstance(call_items[0]["arguments"], str)
+
+        assert out_items[0]["call_id"] == "call_1"
+        assert out_items[0]["output"] == "file contents"
+
+        # The two keys that caused the 400 must not appear anywhere.
+        assert all("tool_calls" not in i for i in items)
+        assert all(i.get("role") != "tool" for i in items)
 
     def test_system_messages_become_instructions(self):
 
