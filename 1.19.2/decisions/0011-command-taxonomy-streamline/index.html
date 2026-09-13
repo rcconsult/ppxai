@@ -1,0 +1,1685 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.2/decisions/0011-command-taxonomy-streamline/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>ADR 0011 — Command taxonomy streamline (/auto · /run · /task) - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-0011-command-taxonomy-streamline-auto-run-task" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR 0011 — Command taxonomy streamline (/auto · /run · /task)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context-the-organically-grown-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context — the organically grown surface
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#semantic-ladder-vocabulary-this-adr-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic ladder (vocabulary this ADR fixes)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision-the-command-taxonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision — the command taxonomy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision — the command taxonomy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#kind-discriminator-on-runmeta" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kind discriminator on RunMeta
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#launch-grammar-direct-launch-no-startrun-subcommand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Launch grammar (direct launch — no start/run subcommand)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lifecycle-verbs-shared-implementation-per-family-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lifecycle verbs (shared implementation, per-family surface)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grants-per-surface-owner-decided-2026-08-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grants per surface (owner-decided, 2026-08-02)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#collect-semantics-per-surface-owner-decided-2026-08-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collect semantics per surface (owner-decided, 2026-08-02)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-mapping-wire-stays-put" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API mapping (wire stays put)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-owner-decided-clean-break-no-deprecation-aliases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration (owner-decided: clean break, NO deprecation aliases)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sign-off-record-all-questions-answered-by-owner-2026-08-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sign-off record (all questions answered by owner, 2026-08-02)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="adr-0011-command-taxonomy-streamline-auto-run-task">ADR 0011 — Command taxonomy streamline (<code>/auto</code> · <code>/run</code> · <code>/task</code>)<a class="headerlink" href="#adr-0011-command-taxonomy-streamline-auto-run-task" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-08-02
+<strong>Status:</strong> <strong>Accepted</strong> (2026-08-02 — semantics converged and all five
+sign-off questions answered by the owner in the same design session; the
+"no cutting until crystal clear" gate is now open. Amends ADR 0009's config
+key location — amendment note added there.) <strong>Implemented 2026-08-02/03</strong> —
+Phase F (oneshot facade): F1 <code>abf83868</code>, F2 <code>8bcd8109</code>, F3 <code>26c26a19</code>, F4
+<code>16b6091d</code>. Phase U (command surface rename): U1 <code>3fa55f3b</code>, U2 <code>e2690636</code>,
+U3 <code>89d5c95c</code>, U4 <code>8867bc5c</code>. Phase FU (follow-up): <code>0c997df8</code>. All landed
+on <code>bugfix/v1.19.1</code>.
+<strong>Related:</strong>
+- <a href="../0003-agent-platform-architecture/"><code>0003-agent-platform-architecture.md</code></a> — the run registry + <code>start_run</code> contract verb this taxonomy surfaces
+- <a href="../0009-task-execution-profiles/"><code>0009-task-execution-profiles.md</code></a> §4 — enriched oneshot; step ① makes oneshot a facade over the run tier, which is what makes this streamline possible
+- <a href="../0010-config-shape-review/"><code>0010-config-shape-review.md</code></a> — the <code>execution.*</code> axis where the collect config lives
+- <a href="../../archive/plan-adr0009-step1-oneshot-enrichment/"><code>docs/archive/plan-adr0009-step1-oneshot-enrichment.md</code></a> — the facade plan (oneshot = a registry run awaited server-side)</p>
+<hr />
+<h2 id="context-the-organically-grown-surface">Context — the organically grown surface<a class="headerlink" href="#context-the-organically-grown-surface" title="Permanent link">&para;</a></h2>
+<p>Five names cover three-and-a-half concepts, and the word <strong>"agent"</strong> is
+spread across three different things:</p>
+<table>
+<thead>
+<tr>
+<th>Today</th>
+<th>What it really is</th>
+<th>Clients</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/agent &lt;task&gt;</code> / <code>on\|off</code></td>
+<td><strong>in-session</strong> sync autonomous loop, checkpoint/undo, blocks chat (<code>commands/agent.py:767</code>)</td>
+<td>Rich/Textual</td>
+</tr>
+<tr>
+<td><code>/tools …</code> (incl. <code>tools agent</code> subcmd)</td>
+<td>chat-turn tool enablement + loop config</td>
+<td>all</td>
+</tr>
+<tr>
+<td><code>/agentrun</code>, <code>/agentruns</code></td>
+<td>fire-and-forget <strong>tool-free</strong> background run (→ <code>/v1/agent/run</code>)</td>
+<td>web</td>
+</tr>
+<tr>
+<td><code>/task run·ls·show·watch·cancel·respond·ack·resume</code></td>
+<td><strong>tool-capable sandboxed</strong> lifecycle runs (→ <code>/v1/agent/task</code>)</td>
+<td>web + VSCode</td>
+</tr>
+<tr>
+<td><code>POST /v1/oneshot</code></td>
+<td>stateless gateway call (becoming a run-tier facade, ADR 0009 step ①)</td>
+<td>API</td>
+</tr>
+</tbody>
+</table>
+<p>Evidence of drift: <code>task-controller.js:218</code> literally tells users <em>"A
+tool-free run belongs on /agentrun"</em> — a guard that exists only because two
+surfaces grew side by side. <code>/run X</code> vs <code>/task run X</code> would have been a fresh
+verb collision; <code>/agent</code> collides with the sub-agent tier, which is "more true
+agent than the sync session tools loop steered by the model" (owner).</p>
+<p><strong>The unlock:</strong> once ADR 0009 step ① lands, <em>everything that executes outside
+a chat turn is a registry run</em>, differing on two axes only — <strong>grant</strong> (none …
+sandboxed tool set) and <strong>ceremony</strong> (one-off prompt vs managed lifecycle).
+Oneshot, <code>/agentrun</code>, and <code>/task</code> are cells of one grid, not three mechanisms.
+Name the mechanism once; distinguish by intent.</p>
+<h2 id="semantic-ladder-vocabulary-this-adr-fixes">Semantic ladder (vocabulary this ADR fixes)<a class="headerlink" href="#semantic-ladder-vocabulary-this-adr-fixes" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>run</strong> — one execution instance in the registry (already the domain noun:
+  <code>run_id</code>, <code>~/.ppxai/runs/</code>, <code>RunMeta</code>).</li>
+<li><strong>task</strong> — a delegated work item (prompt + grant + spec/skill); its
+  execution is a run.</li>
+<li><strong>agent</strong> — the executor construct; "sub-agent" for spawned children.
+  <strong>Never a command name.</strong> Survives only as the API/platform namespace
+  (<code>/v1/agent/*</code>, "agent platform" in docs).</li>
+</ul>
+<h2 id="decision-the-command-taxonomy">Decision — the command taxonomy<a class="headerlink" href="#decision-the-command-taxonomy" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Context</th>
+<th>Mechanics</th>
+<th>Semantics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/auto &lt;task&gt;</code></td>
+<td>in-session, <strong>sync</strong></td>
+<td>today's <code>/agent</code> loop (checkpoint/undo), renamed</td>
+<td>autonomy <em>in your context</em>; result lands in-session — <strong>collect is implicit</strong></td>
+</tr>
+<tr>
+<td><code>/run &lt;prompt&gt;</code></td>
+<td>registry, <strong>async</strong></td>
+<td>full task gears, <code>kind=oneshot</code></td>
+<td>one-off: prompt-only ceremony, default grant, collect-back</td>
+</tr>
+<tr>
+<td><code>/task &lt;prompt&gt; [flags]</code></td>
+<td>registry, <strong>async</strong></td>
+<td>full task gears, <code>kind=task</code></td>
+<td>managed: specs/skills/grants, full lifecycle</td>
+</tr>
+<tr>
+<td><code>/tools …</code></td>
+<td>chat turns</td>
+<td>unchanged (subcmd <code>agent</code> → <code>auto</code>)</td>
+<td>tool enablement</td>
+</tr>
+</tbody>
+</table>
+<p><code>/run</code> vs <code>/task</code> is <strong>not a mechanics split</strong> — same registry, same
+<code>build_task_runner</code>, same events, same sandbox. It is a ceremony + intent
+split carried by a discriminator (below). Retired: <code>/agentrun</code> → <code>/run</code>,
+<code>/agentruns</code> → <code>/run ls</code> (deprecation aliases, one minor version).</p>
+<h3 id="kind-discriminator-on-runmeta"><code>kind</code> discriminator on <code>RunMeta</code><a class="headerlink" href="#kind-discriminator-on-runmeta" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>RunMeta.kind ∈ {"oneshot", "task"}</code> — additive field; legacy metas without
+  it read as <code>"task"</code>. Spawned children stay distinguished by
+  <code>parent_run_id</code> (display unchanged).</li>
+<li><code>/run ls</code> and <code>/task ls</code> are the same listing filtered by kind; additive
+  query param <code>?kind=</code> on <code>GET /v1/agent/runs</code>.</li>
+<li>API-facade oneshots (ADR 0009 step ①) are <code>kind=oneshot</code> too — debuggable
+  via <code>/run get &lt;id&gt;</code>, hidden from <code>/task ls</code> by construction.</li>
+</ul>
+<h3 id="launch-grammar-direct-launch-no-startrun-subcommand">Launch grammar (direct launch — no <code>start</code>/<code>run</code> subcommand)<a class="headerlink" href="#launch-grammar-direct-launch-no-startrun-subcommand" title="Permanent link">&para;</a></h3>
+<p><code>/task "migrate the docs" --tools shell,editor</code> launches; <code>/task ls</code> manages.
+Disambiguation rule: the first token is a <strong>lifecycle verb</strong> AND the remainder
+is <strong>id-shaped</strong> (<code>run_</code> + 12 hex) <strong>or empty</strong> → lifecycle op; anything else
+is a launch prompt. Run-id shape makes this collision-proof in practice;
+quoting the prompt stays recommended, never required. Same rule for <code>/run</code>.</p>
+<h3 id="lifecycle-verbs-shared-implementation-per-family-surface">Lifecycle verbs (shared implementation, per-family surface)<a class="headerlink" href="#lifecycle-verbs-shared-implementation-per-family-surface" title="Permanent link">&para;</a></h3>
+<p><code>ls · get · watch · cancel · collect · respond · resume · help</code></p>
+<ul>
+<li><strong><code>get</code> replaces <code>show</code></strong> (owner; also shrinks the verb-vs-prompt collision
+  surface — prompts rarely start with "get run_…"). <code>show</code> stays as alias.</li>
+<li><strong><code>collect</code> replaces <code>ack</code></strong> (T6): collect = finalize the held result
+  <strong>and merge it into the active session context</strong>. <code>ack</code> stays as alias.</li>
+<li><code>respond</code> (T5) and <code>resume</code> (T7) are shared dispatch; for <code>kind=oneshot</code>
+  runs <code>respond</code> is unreachable by construction (<code>allow_spawn=False</code>, no
+  consent path) and simply reports "not parked".</li>
+</ul>
+<h3 id="grants-per-surface-owner-decided-2026-08-02">Grants per surface (owner-decided, 2026-08-02)<a class="headerlink" href="#grants-per-surface-owner-decided-2026-08-02" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Grant</th>
+<th>Consent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/auto</code></td>
+<td><strong>tools on</strong> (session tool set)</td>
+<td><strong>ask per consent by default</strong>; each prompt offers "always allow" scoped to <em>this</em> auto run</td>
+</tr>
+<tr>
+<td><code>/run</code></td>
+<td><strong>no tools by design</strong>; <code>web_search</code> is the only tool that can appear in the allowed list, <strong>enabled/disabled by JSON config</strong></td>
+<td>n/a (no consentable tools; <code>allow_spawn=False</code>)</td>
+</tr>
+<tr>
+<td><code>/task</code></td>
+<td><strong>as working now</strong> — explicit <code>--tools</code> / spec / skill grant</td>
+<td>T5 respond/consent unchanged</td>
+</tr>
+</tbody>
+</table>
+<p><code>/run</code>'s grant is therefore <code>{}</code> or <code>{web_search}</code> — never anything else, no
+flag can widen it. This makes UX <code>/run</code> and the API oneshot facade
+(ADR 0009 step ①) literally one brain: same kind, same grant rule, same
+config gate.</p>
+<h3 id="collect-semantics-per-surface-owner-decided-2026-08-02">Collect semantics per surface (owner-decided, 2026-08-02)<a class="headerlink" href="#collect-semantics-per-surface-owner-decided-2026-08-02" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>GUI (web / VSCode)</th>
+<th>TUI (Rich / Textual)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/run</code></td>
+<td>rendered in <strong>side panel / split view</strong>; <strong>Collect button</strong> merges into active session</td>
+<td>JSON-config-driven: <code>auto</code> / <code>yes</code> / <code>no</code></td>
+</tr>
+<tr>
+<td><code>/task</code></td>
+<td><strong>Collect button</strong> merges into active session</td>
+<td>same config as <code>/run</code></td>
+</tr>
+<tr>
+<td><code>/auto</code></td>
+<td>n/a (in-session)</td>
+<td><strong>implicit</strong> — result is already in context</td>
+</tr>
+</tbody>
+</table>
+<p>Config key (ADR 0010 <code>execution.*</code> axis): <strong><code>execution.collect</code></strong> — one
+global key covering <code>/run</code> + <code>/task</code>. Value semantics (decided):</p>
+<ul>
+<li><strong><code>auto</code></strong> — the run <strong>always auto-merges</strong> into the active session on
+  completion; no user step.</li>
+<li><strong><code>yes</code></strong> — collect is <strong>enabled</strong>: the run holds its result and the user
+  collects it explicitly (button / <code>collect</code> verb), which merges it.</li>
+<li><strong><code>no</code></strong> — <strong>no collect possible at all</strong>: GUI renders the Collect button
+  <strong>greyed out/disabled</strong>; TUI issues a warning that collect is disabled and
+  tells the user the action to enable it (<code>execution.collect</code>) if desired.
+  The result stays on the run record only.</li>
+</ul>
+<p>Mechanically this rides the existing T6 machinery — no new lifecycle states:
+<code>auto</code> → complete + merge + finalize in one motion; <code>yes</code> →
+<code>hold_result=True</code>, collect = ack + merge; <code>no</code> → <code>hold_result=False</code>,
+auto-finalize, merge path never offered.</p>
+<p><strong>Merge payload (owner-decided): plain merge.</strong> The run's result text enters
+the active session as plain content — no provenance tagging, no special block
+type. What the run answered is what the conversation sees.</p>
+<h3 id="api-mapping-wire-stays-put">API mapping (wire stays put)<a class="headerlink" href="#api-mapping-wire-stays-put" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>UX intent</th>
+<th>API</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/run &lt;prompt&gt;</code></td>
+<td><code>POST /v1/agent/run</code> (or <code>/task</code> tier when a grant applies) with <code>kind=oneshot</code></td>
+</tr>
+<tr>
+<td><code>/task &lt;prompt&gt; …</code></td>
+<td><code>POST /v1/agent/task</code>, <code>kind=task</code></td>
+</tr>
+<tr>
+<td>external sync oneshot</td>
+<td><code>POST /v1/oneshot</code> — <strong>frozen contract</strong> (ppxai-sre byte-identical); the HTTP response <em>is</em> the collect; internally a <code>kind=oneshot</code> run (step ① facade)</td>
+</tr>
+</tbody>
+</table>
+<p>Principle: <strong>UX commands name user intent; API paths name the subsystem</strong>
+(same reason <code>git branch</code> doesn't say <code>refs/heads</code>). The skew is principled
+and documented, not accidental. No <code>/v1/*</code> path renames.</p>
+<h2 id="migration-owner-decided-clean-break-no-deprecation-aliases">Migration (owner-decided: clean break, NO deprecation aliases)<a class="headerlink" href="#migration-owner-decided-clean-break-no-deprecation-aliases" title="Permanent link">&para;</a></h2>
+<p>Hard rename in one coordinated sweep; <strong>breaking changes are published in the
+release notes</strong> of the version that ships them. No alias layer, no
+deprecation window — the old names simply stop existing:</p>
+<ul>
+<li><code>/agent</code> → <code>/auto</code> · <code>/agentrun</code> → <code>/run</code> · <code>/agentruns</code> → <code>/run ls</code> ·
+  <code>task show</code> → <code>task get</code> · <code>task ack</code> → <code>task collect</code> ·
+  <code>tools agent</code> → <code>tools auto</code>.</li>
+<li><strong>Scope of the break is UX-only.</strong> The API is untouched (<code>/v1/oneshot</code>
+  frozen, <code>/v1/agent/*</code> paths unchanged) — ppxai-sre and any gateway consumer
+  are unaffected. Only slash-command muscle memory breaks, and the release
+  notes say so explicitly.</li>
+<li>Cheap by construction: CommandFactory registry + command envelope
+  (<code>POST /command/&lt;name&gt;</code>) + single CompletionProvider mean the rename is a
+  registry-level sweep. Moves in lockstep, same commit: T8a <strong>parity
+  sentinels</strong> (VSCode↔web), completion data, <code>/task help</code> texts, docs.</li>
+<li><strong>Sequencing / T8b:</strong> <code>/auto</code> (rename of <code>/agent</code>) lands everywhere at once
+  — it's a commands/-layer rename shared by all clients. <code>/run</code> + the new
+  <code>/task</code> verbs reach the TUIs only with T8b (transport decision, parked at
+  the time of writing); until then the TUIs have <code>/auto</code> but no registry
+  commands, which is a feature gap, not a dialect mismatch. <em>(Resolved: T8b
+  shipped 2026-08-08 with the in-process embed, so the gap is closed.)</em></li>
+</ul>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<ul>
+<li>One mechanism, one vocabulary: every out-of-turn execution is a run;
+  "agent" stops being three things.</li>
+<li><code>/task ls</code> stops being polluted by one-offs; <code>/run ls</code> gives oneshots their
+  own list (<code>kind</code> filter).</li>
+<li>The <code>task-controller.js:218</code> guard ("tool-free belongs on /agentrun")
+  disappears — <code>/run</code> takes tool-free one-offs; <code>/task</code> accepts any grant.</li>
+<li>Collect gets a definition (finalize + merge-to-context) instead of the
+  protocol word <code>ack</code>; TUI behavior becomes a config, not a hardcode.</li>
+<li>Cost: muscle-memory retraining in web/VSCode; alias layer + parity
+  sentinels + completion data all need one coordinated sweep.</li>
+</ul>
+<h2 id="sign-off-record-all-questions-answered-by-owner-2026-08-02">Sign-off record (all questions answered by owner, 2026-08-02)<a class="headerlink" href="#sign-off-record-all-questions-answered-by-owner-2026-08-02" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong><code>/run</code> launch defaults</strong> — no tools by design; <code>web_search</code> the only
+   config-enableable tool (see "Grants per surface"). <code>/auto</code> = tools on with
+   per-consent ask + "always allow for this run"; <code>/task</code> = as working now.</li>
+<li><strong><code>execution.collect</code></strong> — global key; <code>auto</code> = always auto-merge, <code>yes</code> =
+   collectable, <code>no</code> = collect impossible (greyed button / TUI warning +
+   enable hint). See "Collect semantics".</li>
+<li><strong>Merge payload</strong> — <strong>plain merge</strong>: result text enters the session as
+   plain content, no provenance tagging.</li>
+<li><strong>Deprecation</strong> — <strong>none</strong>: hard rename, breaking changes published in the
+   release notes. See "Migration".</li>
+<li><strong>Config key location</strong> — <strong><code>execution.run.*</code></strong>: the enrichment gate is
+   <code>execution.run.web_search</code> (and the native-grounding switch migrates to
+   <code>execution.run.grounding</code>), superseding ADR 0009's planned
+   <code>execution.oneshot.*</code> names before anything was implemented (no
+   migration). Amendment note added to ADR 0009. <code>/run</code>'s default budget
+   (small iteration cap) is an implementation constant per ADR 0009 §4.</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

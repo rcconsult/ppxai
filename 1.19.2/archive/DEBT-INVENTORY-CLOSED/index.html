@@ -1,0 +1,3490 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.2/archive/DEBT-INVENTORY-CLOSED/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Debt Inventory — Closed-Item Archive (rolling) - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#debt-inventory-closed-item-archive-rolling" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Debt Inventory — Closed-Item Archive (rolling)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#closed-on-featurev1190-bugfixv1191-archived-2026-08-01" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Closed on feature/v1.19.0 / bugfix/v1.19.1 (archived 2026-08-01)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Closed on feature/v1.19.0 / bugfix/v1.19.1 (archived 2026-08-01)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#item-24-non-vision-image-attach-silently-degraded-to-a-hallucination-feeding-placeholder-resolved-v1190" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 24 — Non-vision image attach silently degraded to a hallucination-feeding placeholder ✅ RESOLVED (v1.19.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-24-historical-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 24 (historical) — VL sidecar auto_caption fallback silently no-ops on non-vision models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-40-web-vscode-clients-cannot-present-a-bearer-token-task-unusable-on-auth-enforcing-hosts-agent-platform-clients-fixed-2026-07-11-web-live-trialed-2026-07-12-under-an-enforcing-file-store-bearer-less-task-ls-401-token-mint-stored-task-lsshow-work-incl-status-aware-run-id-completion-vscode-set-api-token-path-unit-covered-not-yet-live-trialed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 40 — web + VSCode clients cannot present a bearer token; /task unusable on auth-enforcing hosts [agent platform / clients] — ✅ FIXED (2026-07-11; web live-trialed 2026-07-12 under an enforcing file store: bearer-less /task ls → 401, /token mint → stored, /task ls/show work incl. status-aware run-id completion. VSCode "Set API Token" path unit-covered, not yet live-trialed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-41-gemini-provider-tool-loop-fidelity-no-tool_call_id-threading-_filter_empty_parts-is-dead-code-providers-gemini-resolved-2026-07-12-same-day" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 41 — Gemini provider tool-loop fidelity: no tool_call_id threading; _filter_empty_parts is dead code [providers / gemini] — ✅ RESOLVED (2026-07-12, same-day)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-42-orphan-assistanttool_calls-ate-user-prompts-reached-strict-providers-session-chat-fixed-2026-07-13-bugfixv1191-46599e8f" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 42 — orphan assistant.tool_calls ate user prompts + reached strict providers [session / chat] — ✅ FIXED (2026-07-13, bugfix/v1.19.1 46599e8f)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-44-interactive-empty-response-retry-persists-an-empty-content-assistant-perplexity-400-chat-providers-fixed-2026-07-13-bugfixv1191" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 44 — interactive empty-response retry persists an empty-content assistant → Perplexity 400 [chat / providers] — ✅ FIXED (2026-07-13, bugfix/v1.19.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-45-gemini-3x-native-tool-round-trip-400s-thought_signature-never-preservedreplayed-providers-gemini-agent-platform-fixed-2026-07-22-bugfixv1191-edb74500" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 45 — Gemini 3.x native tool round-trip 400s: thought_signature never preserved/replayed [providers / gemini / agent platform] — ✅ FIXED (2026-07-22, bugfix/v1.19.1 edb74500)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-50-task-accepted-a-grant-naming-a-nonexistent-tool-agent-platform-validation-fixed-2026-07-22-bugfixv1191-edb74500" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 50 — /task accepted a grant naming a nonexistent tool [agent platform / validation] — ✅ FIXED (2026-07-22, bugfix/v1.19.1 edb74500)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-51-gemini-oneshot-returned-the-models-reasoning-as-the-answer-providers-gemini-fixed-2026-07-22-bugfixv1191-edb74500" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 51 — Gemini oneshot() returned the model's reasoning as the answer [providers / gemini] — ✅ FIXED (2026-07-22, bugfix/v1.19.1 edb74500)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-48-clear-leaves-the-status-bar-ctx-percentage-stale-appstate-context_percentage-never-refreshed-tui-rich-appstate-fixed-all-clients-step-1-e7b8f273-enginerich-step-2-112bc0a9-textual-step-3-2026-08-03-webvscode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 48 — /clear leaves the status-bar Ctx: percentage stale (AppState context_percentage never refreshed) [tui / rich / appstate] — ✅ FIXED all clients (step 1 e7b8f273 engine+Rich; step 2 112bc0a9 Textual; step 3 2026-08-03 Web+VSCode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-52-the-local-in-process-sealed-task-egress-gate-denies-a-fallback-chain-tool-wholesale-does-not-affect-the-k8scoder-tier-get_weather-unallowlistable-locally-agent-platform-egress-tools-fixed-2026-08-02-adr-0009-step-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 52 — the LOCAL in-process sealed /task egress gate denies a fallback-chain tool wholesale (does NOT affect the k8s/coder tier); get_weather unallowlistable locally [agent platform / egress / tools] — ✅ FIXED (2026-08-02, ADR 0009 step ②)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-53-task-execution-profiles-config-driven-named-grants-web_search-as-first-class-enrichment-agent-platform-config-egress-adr-0009-accepted-fixed-all-four-steps-implemented-2026-08-0203" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 53 — task execution profiles: config-driven named grants + web_search as first-class enrichment [agent platform / config / egress] → ADR 0009 ✅ ACCEPTED — ✅ FIXED (all four steps implemented 2026-08-02/03)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#former-closed-recent-section-verbatim-archived-2026-08-01" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Former "Closed (recent)" section (verbatim, archived 2026-08-01)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-0012-wave-closed-2026-08-31-bugfixv1191" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR 0012 wave (closed 2026-08-31, bugfix/v1.19.1)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR 0012 wave (closed 2026-08-31, bugfix/v1.19.1)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#item-61-api_path-is-declared-config-overridable-displayed-and-never-routed-on-providers-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 61 — api_path is declared, config-overridable, displayed — and never routed on [providers / config]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-62-adr-0006s-wire-validator-covers-only-one-of-three-protocols-_convert_messages-is-one-protocols-emitter-in-the-shared-base-providers-multimodal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 62 — ADR 0006's wire validator covers only ONE of three protocols; _convert_messages is one protocol's emitter in the shared base [providers / multimodal]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#closed-on-bugfixv1191-archived-2026-09-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Closed on bugfix/v1.19.1 (archived 2026-09-05)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Closed on bugfix/v1.19.1 (archived 2026-09-05)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#item-43-perplexity-task-never-calls-granted-tools-fixed-2026-08-24-plan-i3-providers-perplexity-agent-platform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 43 — Perplexity /task never calls granted tools → ✅ FIXED 2026-08-24 (plan I3) [providers / perplexity / agent platform]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-43-original-entry-providers-perplexity-agent-platform-premise-overturned-2026-08-13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 43 — original entry [providers / perplexity / agent platform] — ⚠️ PREMISE OVERTURNED 2026-08-13
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-68-eager-package-imports-forcing-lazy-imports-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 68 ✅ — eager package imports forcing lazy imports [architecture]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-70-a-test-run-rewrites-the-repos-own-tracked-ppxai-configjson-testing-fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 70 — a test run REWRITES the repo's own tracked ppxai-config.json [testing] ✅ FIXED
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-69-a-tests-verdict-depends-on-a-config-file-outside-the-repo-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 69 — a test's verdict depends on a config file OUTSIDE the repo [testing]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-49-cross-tier-cost-shared-resource-accounting-cost-under-reports-true-provider-spend-kv-cache-contention-unmodeled-engine-gateway-agent-platform-cost-adr-0008" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 49 — cross-tier cost + shared-resource accounting: /cost under-reports true provider spend; KV-cache contention unmodeled [engine / gateway / agent platform / cost] → ADR 0008
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-33-command-layer-consoleprint-sweep-agentutilityhandler-envelope-pattern-hygiene" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 33 — command-layer console.print sweep (agent/utility/handler) [envelope-pattern hygiene]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-64-re-probe-perplexitys-pro-line-on-the-responses-wire-before-2026-09-27-providers-deadline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 64 — ⏰ re-probe Perplexity's pro line on the Responses wire BEFORE 2026-09-27 [providers / deadline]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="debt-inventory-closed-item-archive-rolling">Debt Inventory — Closed-Item Archive (rolling)<a class="headerlink" href="#debt-inventory-closed-item-archive-rolling" title="Permanent link">&para;</a></h1>
+<p>Full bodies of closed debt items, moved here from
+<a href="../../debt-inventory/">docs/debt-inventory.md</a> to keep the rolling inventory
+scannable. <strong>Item numbers are never reused or renumbered</strong> — the sequence is
+global across the inventory and this archive. Per-version snapshots
+(v1.18.2/v1.18.3 pattern) remain in their own files; this file is the rolling
+archive for the branch-by-branch closes since then.</p>
+<hr />
+<h2 id="closed-on-featurev1190-bugfixv1191-archived-2026-08-01">Closed on <code>feature/v1.19.0</code> / <code>bugfix/v1.19.1</code> (archived 2026-08-01)<a class="headerlink" href="#closed-on-featurev1190-bugfixv1191-archived-2026-08-01" title="Permanent link">&para;</a></h2>
+<h3 id="item-24-non-vision-image-attach-silently-degraded-to-a-hallucination-feeding-placeholder-resolved-v1190">Item 24 — Non-vision image attach silently degraded to a hallucination-feeding placeholder  ✅ RESOLVED (v1.19.0)<a class="headerlink" href="#item-24-non-vision-image-attach-silently-degraded-to-a-hallucination-feeding-placeholder-resolved-v1190" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>Resolution (2026-06-23, <code>feature/v1.19.0</code>):</strong> both halves landed.</p>
+<p><strong>(1) Detection — already fixed earlier this cycle.</strong>
+<code>model_profiles.py</code> now carries <code>supports_vision=True</code> globs for
+<code>Qwen/Qwen3.[56]-27B-FP8*</code> (and <code>Qwen3.6-35B-A3B-FP8*</code>); this session
+also pinned the <code>-agent</code> suffix variant the codeai cluster serves
+(<code>Qwen/Qwen3.6-27B-FP8-agent</code>) in <code>test_model_profiles.py</code>. The
+originally-reported diagram now routes as a real <code>image_url</code> block.</p>
+<p><strong>(2) Fail-loud + tool route — this session.</strong> The secondary "fallback
+wired but doesn't run" class is closed by removing the silent
+placeholder entirely. <code>_preprocess_image</code> (<code>file_preprocessing.py</code>) now
+routes an image by a 4-way gate:
+  1. native vision (<code>supports_vision</code>) → <code>image_url</code> block;
+  2. VL sidecar caption (<code>vl_captioner</code>) → text caption;
+  3. <strong>NEW</strong> shell-CLI route — when the session has the shell tool
+     enabled (<code>EngineClient.can_shell_process_images()</code> →
+     <code>multimodal_ops.session_can_shell_process_images</code>), surface the
+     persisted on-disk path so the model can OCR/convert via a system
+     utility (ImageMagick/tesseract). No upfront utility probe — if none
+     is installed the model's shell call fails with a real, reportable
+     error (user decision: "permit + surface the path");
+  4. <strong>else → <code>ok=False</code> fail-loud</strong> with an actionable error (switch to
+     a vision model / restart with a reachable sidecar / enable the shell
+     tool). The bytes are still persisted and the <code>file_id</code> is surfaced on
+     the failure result so a retry can reach the same asset.</p>
+<p>Consumers: the server chat route (<code>server/routes/chat.py</code>) blocks the
+send on <code>ok=False</code> and emits a structured <code>vision_unsupported</code>
+(severity <strong>error</strong>) warning; on indirect success it emits
+<code>vision_via_tool</code> (shell route) or <code>vision_via_caption</code> (sidecar),
+distinguished by the route marker in <code>PreprocessResult.warnings</code> so the
+user notice matches the route actually taken. <code>commands/attach.py</code>
+(Rich/Textual <code>/attach</code>) surfaces the failure inline as
+<code>[Attachment error: …]</code> and never emits an <code>image_url</code>. Stale
+"sent as a text placeholder" copy removed from <code>web/app.js</code> (attach-time
+notice) and the VSCode <code>stream.ts</code> comment. All four call sites
+(<code>chat.py</code>, <code>attach.py</code>, <code>tui/app.py</code>, <code>rich/main.py</code>) compute and thread
+<code>shell_image_route</code>.</p>
+<p><strong>Tests:</strong> <code>test_file_preprocessing.py</code> (<code>TestImageTextOnlyFailLoud</code>,
+<code>TestImageShellRoute</code>, captioner-empty → fail-loud / shell-route),
+<code>test_vision_sidecar.py</code> (<code>TestCanShellProcessImages</code>,
+fail-loud + shell-route when sidecar unavailable),
+<code>test_attach_vision_warning.py</code> (severity escalated warning→error).
+319 passing across the vision/attach/multimodal suites; VSCode <code>tsc</code>
+clean.</p>
+<p><strong>Not addressed (intentional):</strong> the dead <code>tools.vision_model.auto_caption</code>
+config flag (read but never consulted) — superseded by the explicit
+<code>vl_captioner</code>-wired-when-<code>has_vision_sidecar()</code> path; filed separately if
+it ever needs removal. The original root-cause diagnosis (why the sidecar
+didn't fire on coder.internal) is moot now that there is no silent
+placeholder to fall into.</p>
+</blockquote>
+<hr />
+<hr />
+<h3 id="item-24-historical-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models">Item 24 (historical) — VL sidecar <code>auto_caption</code> fallback silently no-ops on non-vision models<a class="headerlink" href="#item-24-historical-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models" title="Permanent link">&para;</a></h3>
+<p><strong>Affected files:</strong> <code>ppxai/engine/multimodal_ops.py</code> (<code>auto_caption_image</code> and the
+<code>get_vision_model_config()</code> consumers around L575–640), <code>ppxai/engine/file_preprocessing.py</code>
+(L235–290, the <code>supports_vision(model)</code> routing branch), the chat-attachment path that
+delivers the "It was sent as a text placeholder" warning to the web UI.</p>
+<p><strong>What's wrong:</strong> when the active model is text-only AND <code>tools.vision_model.auto_caption: true</code>
+is configured with an enabled, reachable VL sidecar (the documented "Qwen3-VL caption
+gateway" pattern used by the coder cluster — <code>Qwen/Qwen3-VL-8B-Instruct</code> at
+<code>vllm-qwen3-vl-8b-fp8-lmcache-mig.vllm.svc</code>), the image-attach pipeline is
+<strong>expected</strong> to call the sidecar, get a caption back, and inline it into the user
+message so the text-only model receives describable content. Dogfooded on
+coder.internal 2026-06-08 with the Qwen/Qwen3.5-27B-FP8 vllm-qwen35 provider: an
+attached <code>.drawio.png</code> network diagram surfaced the <code>vision_unsupported</code> warning
+("sent as a text placeholder") and the model then <strong>hallucinated a fully
+fabricated description of "empty 35mm film reels"</strong> — the worst of both worlds.
+Detection was correct (<code>supports_vision('Qwen/Qwen3.5-27B-FP8') = False</code>,
+conservative default — no Qwen3.5-base profile entry); the auto-caption fallback
+just never fired. Why is unconfirmed — candidates: sidecar unreachable from this
+namespace, 30s timeout silently swallowed, the drag-drop UI path taking a
+branch that bypasses <code>multimodal_ops.auto_caption_image</code>, or <code>enabled: true</code>
+but the actual call erroring with no surfaced message.</p>
+<p><strong>Why deferred:</strong> detection logic is correct and the warning fires; the user
+sees "sent as a text placeholder", so the failure isn't silent at the UI layer.
+The downstream model hallucination is a model-quality issue, not a ppxai bug.
+Workaround: switch to a true VL provider (gemini-2.5-flash, gpt-5.5, dgx-cluster
+once the model swap lands), or check the VL sidecar health from the pod and
+attach again. The class of bug — "fallback that's wired but doesn't run" —
+deserves a sentinel; not a release blocker.</p>
+<p><strong>Planned:</strong> <code>bugfix/v1.18.8</code> or whichever v1.18.x branch follows. Trigger an
+investigation pass that probes the actual auto_caption code path end-to-end on
+the coder cluster (image attach → does the sidecar receive the POST?), surfaces
+the failure mode in the user warning (currently "sent as a text placeholder" is
+indistinguishable from "tried sidecar and it failed"), and adds an integration
+test that mocks a text-only active model + a reachable VL sidecar and asserts
+the caption is inlined into the message rather than the placeholder.</p>
+<p><strong>Branch when ready:</strong> <code>bugfix/v1.18.8</code> (open-items follow-up) or
+<code>fix/vl-sidecar-fallback</code> (focused).</p>
+<p><strong>Trigger to revisit:</strong> any second report of "I attached an image and the
+model made up a description" on the coder cluster, OR before the dgx-cluster
+model swap to confirm we're not stacking another fallback gap, OR if anyone
+adds a new modality (audio/video) — same pattern likely lurks for those too.</p>
+<p><strong>Effort:</strong>
+- Diagnose root cause (~1 hour): tail pod debug log on next image attach;
+  grep for <code>vision_model</code> / <code>caption</code> / <code>Qwen3-VL</code>; in-pod <code>curl</code> to the
+  sidecar to confirm reachability; check <code>multimodal_ops.auto_caption_image</code>
+  for swallowed exceptions.
+- Fix + surface (~half day): if cause is timeout or unreachability, distinguish
+  the warning text ("VL sidecar timed out (30s) — re-attach to retry" vs
+  "sent as text placeholder, active model is not vision-capable"); if cause
+  is a code-path bypass, route the drag-drop path through the same handler
+  as <code>/attach</code>.
+- Integration test (~1 hour): mock active=text-only model + mock vision_model
+  endpoint; assert caption inlined into user message.</p>
+<p><strong>Surfaced by:</strong> coder.internal dogfooding 2026-06-08, drawio.png attach to
+the vllm-qwen35 provider.</p>
+<blockquote>
+<p><strong>Update 2026-06-08 (same day):</strong> the user pushed back that they're sure
+they tested these 27B models and they support VL. Cross-repo search found
+two artifacts that prove the user was right and reframe this item:</p>
+<ol>
+<li><code>/path/to/trad-ai-chat/scripts/test-vl-capabilities.sh</code>
+   (commit <code>916772c</code>, 2026-04-23) — 9-test VL probe (Test 0 image accept,
+   Test 1 OCR, Test 2 tables, Test 3 charts). Baseline run against
+   <code>https://codeai.internal/qwen35/v1</code> model <code>Qwen/Qwen3.5-27B-FP8</code>
+   scored <strong>8/9 PASS</strong>. The one fail (Test 2b) was arithmetic-over-OCR'd-data
+   reasoning — NOT vision.</li>
+<li><code>/path/to/trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md</code>
+   (2026-04-30) — confirms Qwen3.6-27B-FP8 has an <strong>explicit vision
+   encoder</strong> added in the architecture ("Text + image + video"); Qwen3.5
+   is labeled "Text-only" on the HF card but empirically handles
+   <code>image_url</code> content through vLLM. Comparison doc recommends the
+   <code>test-vl-capabilities.sh</code> script as Gate A for the Qwen3-VL
+   decommission (CR-v4.0.0 Part 2 Phase 6).</li>
+</ol>
+<p><strong>Reframed root cause:</strong> ppxai's <code>model_profiles.py</code> has no entry for
+<code>Qwen/Qwen3.5-27B-FP8</code> or <code>Qwen/Qwen3.6-27B-FP8</code> (<code>supports_vision()</code>
+falls through to default <code>False</code>). The HF card "Text-only" label on 3.5
+is wrong for the model's behavior through vLLM, and 3.6's vision encoder
+is real. <strong>The detection is wrong; the model would have shown the diagram
+correctly if ppxai had sent the <code>image_url</code> block.</strong></p>
+<p><strong>Revised fix path (priority bump — Item 24 jumps above 21–23):</strong></p>
+<ol>
+<li>Add <code>model_profiles.py</code> entries with <code>supports_vision=True</code> for both
+   <code>Qwen/Qwen3.5-27B-FP8</code> and <code>Qwen/Qwen3.6-27B-FP8</code> (or a glob
+   <code>Qwen/Qwen3.[56]-27B-FP8</code>). Sentinel test in
+   <code>test_model_profiles.py</code>. <strong>5-minute change.</strong></li>
+<li>Re-run <code>test-vl-capabilities.sh</code> against the coder cluster's actual
+   endpoints to confirm both models still pass 8/9+; capture the run as a
+   memory snapshot. <strong>30 min.</strong></li>
+<li>The original sidecar-fallback diagnose (the "fallback wired but
+   doesn't run" class) is now SECONDARY but still real — it would fire
+   for genuinely text-only providers (e.g. <code>openai/gpt-5-nano</code>). Keep
+   the half-day estimate for that part as a separate concern.</li>
+</ol>
+<p>See [[reference-qwen-27b-vl-empirical]] (memory) +
+<code>docs/lessons/qwen-27b-vl-empirically-supported.md</code> (in-repo lesson, this
+commit) for the cross-host evidence trail so the next session doesn't
+have to re-derive.</p>
+</blockquote>
+<hr />
+<hr />
+<h3 id="item-40-web-vscode-clients-cannot-present-a-bearer-token-task-unusable-on-auth-enforcing-hosts-agent-platform-clients-fixed-2026-07-11-web-live-trialed-2026-07-12-under-an-enforcing-file-store-bearer-less-task-ls-401-token-mint-stored-task-lsshow-work-incl-status-aware-run-id-completion-vscode-set-api-token-path-unit-covered-not-yet-live-trialed">Item 40 — web + VSCode clients cannot present a bearer token; <code>/task</code> unusable on auth-enforcing hosts [agent platform / clients] — ✅ FIXED (2026-07-11; web live-trialed 2026-07-12 under an enforcing file store: bearer-less <code>/task ls</code> → 401, <code>/token mint</code> → stored, <code>/task ls</code>/<code>show</code> work incl. status-aware run-id completion. VSCode "Set API Token" path unit-covered, not yet live-trialed)<a class="headerlink" href="#item-40-web-vscode-clients-cannot-present-a-bearer-token-task-unusable-on-auth-enforcing-hosts-agent-platform-clients-fixed-2026-07-11-web-live-trialed-2026-07-12-under-an-enforcing-file-store-bearer-less-task-ls-401-token-mint-stored-task-lsshow-work-incl-status-aware-run-id-completion-vscode-set-api-token-path-unit-covered-not-yet-live-trialed" title="Permanent link">&para;</a></h3>
+<p><strong>Build (landed):</strong> both clients grew a /v1-scoped bearer seam — scoped to
+<code>/v1/*</code> ONLY because <code>server/auth.py</code> validates any presented bearer even on
+loopback-exempt UI routes (a stale token attached everywhere would 401 the
+whole client, not just the agent API).</p>
+<ul>
+<li><strong>web:</strong> <code>ApiClient.setApiToken()</code> + <code>headersFor(endpoint)</code> (get/post +
+  the <code>_tailEvents</code> live stream); token persisted in
+  <code>localStorage['ppxai-api-token']</code>, restored on app init. New client-side
+  <strong><code>/token status|set|mint|clear</code></strong> command (command-dispatcher):
+  <code>set</code> takes the value via <code>window.prompt()</code> — NEVER inline, every
+  dispatched command line is echoed into the server debug log; <code>mint</code>
+  self-provisions via the loopback bootstrap (<code>POST /v1/tokens</code>, sent
+  bare — a stale stored bearer would be validated and rejected even on
+  the exempt mint). <code>/token</code> registered in both web catalogs + the
+  engine completion builtins (<code>_TOKEN_SUBCOMMANDS</code>).</li>
+<li><strong>VSCode:</strong> <code>HttpClient.setApiToken()</code> + <code>v1Headers()</code> used by all 8
+  agent-slice call sites (task/runs/run/events/cancel/respond/ack/resume);
+  token in <code>SecretStorage</code> (<code>ppxai.apiToken</code>) — never settings.json (sync +
+  dotfile leak) — via the new <code>ppxai.setApiToken</code> command (masked input;
+  empty submit clears).</li>
+<li><strong>Follow-up (2026-07-12, from the VSCode trial leg):</strong> the palette-only
+  VSCode flow was undiscoverable — server-driven autocomplete offered
+  <code>/token</code> (engine builtin), dispatch answered "Unknown command", and the
+  <code>/task</code> 401 never named the fix. Landed: (1) the same in-chat
+  <strong><code>/token status|set|mint|clear</code></strong> family in VSCode (<code>chatPanel.ts</code>,
+  same SecretStorage key as the palette entry; bare <code>set</code> opens the
+  palette's masked input; <code>mint</code> self-provisions via
+  <code>HttpClient.mintApiToken('vscode-local')</code>, sent bare like web);
+  (2) per-client completion gating — <code>complete(..., client=)</code> +
+  <code>_CLIENT_GATES</code> in <code>engine/completion.py</code> hide client-side commands
+  (<code>/task</code>, <code>/token</code>, <code>/agentrun</code>, <code>/agentruns</code>) from clients that don't
+  implement them (TUIs now see none of them; fail-open for legacy
+  callers); (3) a 401 from any <code>/task</code>/<code>/agentrun</code> verb now appends
+  "run <code>/token mint</code> … or <code>/token set</code>" in BOTH clients
+  (<code>taskController.errText</code> / <code>agent-run-controller._errText</code>).
+  Fences: <code>TestTokenCommandParity</code> + <code>TestClientGating</code>.</li>
+<li><strong>Tests:</strong> <code>tests/test_api_client_auth_behavior.py</code> (Node harness — bearer
+  on /v1 GET+POST, absent on UI routes, headersFor seam, clear);
+  <code>tests/test_vscode_task_controller.py::TestBearerParity</code> (6 sentinels —
+  both seams exist, every VSCode agent call site uses <code>v1Headers</code>, secret
+  sources are the safe ones). Server side unchanged — already covered by
+  <code>test_auth_middleware.py</code> + <code>test_tokens_v1_route.py</code>.</li>
+</ul>
+<p><strong>Trial recipe:</strong> restore the file token store
+(<code>cp ~/.ppxai/ppxai-config.json.backup.tasktrials ~/.ppxai/ppxai-config.json</code>),
+restart the server, web UI: <code>/task ls</code> → expect 401 error; <code>/token mint</code> →
+minted+stored; <code>/task ls</code> again → works; <code>/task run …</code> full T5 flow under
+auth. VSCode: <code>/task ls</code> → expect 401 <strong>with the <code>/token</code> hint</strong> →
+<code>/token mint</code> → <code>/task ls</code> works (or: palette "ppxai: Set API Token" /
+<code>/token set</code> to paste one — both write the same SecretStorage key).</p>
+<p><strong>Original entry (for context):</strong> neither shipped client can authenticate to the v1 agent
+API. <code>ppxai/web/</code> has zero <code>Authorization</code> handling and so does
+<code>vscode-extension/src/</code> (verified by grep 2026-07-11). Meanwhile
+<code>/v1/agent/*</code> stays bearer-protected <strong>even from loopback</strong> (Inc 8b:
+<code>_LOOPBACK_PROTECTED_PREFIXES</code> in <code>server/auth.py</code>; only the tool-free
+<code>/v1/agent/run</code> + unowned-run reads are carved out), and auth is enforced
+whenever a mint-capable store is configured (<code>server.secrets.providers</code>
+containing <code>file</code> — presence ⇒ enforce, even with zero tokens). Net effect:
+on any host with a file token store, the ENTIRE <code>/task</code> family 401s from
+both shipped UIs. Caught live in the 2026-07-11 T5 trial on this host
+(file store left over from the Inc 8 <code>/v1/tokens</code> trial); worked around by
+temporarily removing the file provider from the user config.</p>
+<p><strong>Why it wasn't caught earlier:</strong> every T1–T8a live trial ran on auth-off
+hosts (no mint-capable store configured), which is the fresh-install
+default — the trial recipes never mention tokens because they never needed
+one.</p>
+<p><strong>What's needed:</strong> per-client token plumbing, not a server change:
+- <strong>web:</strong> a settings affordance to store a token (localStorage) +
+  <code>Authorization: Bearer</code> injection in <code>apiClient</code> and the SSE/event-tail
+  fetches; the loopback-exempt <code>POST /v1/tokens</code> bootstrap mint (Inc 8a)
+  already gives a local browser a way to acquire one.
+- <strong>VSCode:</strong> <code>ppxai.apiToken</code> via <code>SecretStorage</code> (not settings.json) +
+  the same header in <code>httpClient.ts</code> (incl. <code>agentRunEvents</code>).
+- Parity sentinels: extend <code>tests/test_vscode_task_controller.py</code> so the
+  header wiring can't drift between the two clients.</p>
+<p><strong>Release consideration:</strong> v1.19.0 ships <code>/task</code> in web + VSCode as a
+headline feature — "unusable the moment an operator configures the token
+store" is a real deployment cliff. Either land this before tagging or
+document the auth-off requirement loudly in the release notes.</p>
+<p><strong>Effort:</strong> ~half a day both clients + sentinels.</p>
+<hr />
+<hr />
+<h3 id="item-41-gemini-provider-tool-loop-fidelity-no-tool_call_id-threading-_filter_empty_parts-is-dead-code-providers-gemini-resolved-2026-07-12-same-day">Item 41 — Gemini provider tool-loop fidelity: no <code>tool_call_id</code> threading; <code>_filter_empty_parts</code> is dead code [providers / gemini] — ✅ RESOLVED (2026-07-12, same-day)<a class="headerlink" href="#item-41-gemini-provider-tool-loop-fidelity-no-tool_call_id-threading-_filter_empty_parts-is-dead-code-providers-gemini-resolved-2026-07-12-same-day" title="Permanent link">&para;</a></h3>
+<p>Found while diagnosing the deny-path empty-result bug (T5/T7 trials; the
+symptom fixes landed with §M — see
+<a href="agent-platform-call-graphs.md">agent-platform-call-graphs.md</a>). Two
+structural gaps, both verified by source read + grep, both fixed same day:</p>
+<ol>
+<li><strong><code>_convert_messages</code> (gemini.py) never threaded <code>Message.tool_calls</code> /
+   <code>tool_call_id</code></strong> (unlike <code>openai_native.py</code>), and <code>_parse_function_call</code>
+   never emitted a <code>tool_call_id</code> — so <code>engine/chat.py</code>'s native
+   tool-result pairing branch was <strong>dead for Gemini</strong>: every tool
+   round-trip flattened through the synthetic assistant/user text path,
+   an off-label transcript shape that plausibly drove the model quirks
+   observed live (the <code>default_api:</code> prefix echo, atypical continuations
+   after a denial). <strong>Fixed:</strong> <code>_parse_function_call</code> threads the SDK's
+   <code>FunctionCall.id</code>, synthesizing <code>gemini-fc-&lt;uuid12&gt;</code> when absent (the
+   engine's pairing branch requires an id per call; the id never goes
+   back on the Gemini wire), both TOOL_CALL emission sites carry it, and
+   <code>_convert_messages</code> maps the engine's native transcript shape onto
+   Gemini's wire format — assistant <code>tool_calls</code> → model <code>function_call</code>
+   parts, tool-role messages → user <code>function_response</code> parts paired by
+   function NAME via an id→name map built from the preceding model turn
+   (Gemini pairs responses by name, not id). Unpaired tool results
+   degrade to plain user text turns.</li>
+<li><strong><code>_filter_empty_parts</code> had zero call sites</strong> (the v1.15.3 call sites
+   were lost in a later refactor). <strong>Deleted</strong> — the response parse loops
+   already skip empty text parts inherently, and SDK 2.11.0 passed the
+   KI-001 gate with no filter in the path. A sentinel test pins the
+   deletion.</li>
+</ol>
+<p><strong>Verification (2026-07-12):</strong> <code>tests/test_gemini_native_tool_loop.py</code>
+(18 tests: id threading, TOOL_CALL event shape in both response modes,
+native transcript conversion incl. parallel calls / unpaired results /
+malformed args, deletion sentinel); full suite 4560 passed / 0 failed;
+benchmark gate 3× gemini-2.5-flash on SDK 2.11.0: overall
+80.7 / 72.6 / 73.8%, code editing 100/100/100 — at or above the
+pre-change 2.11.0 baseline (74.4/70.2/74.4), so the native transcript
+shape is benchmark-neutral-to-positive. <strong>Live-trial follow-up:</strong> watch
+whether the <code>default_api:</code> prefix echo and post-denial continuation
+quirks disappear in the next <code>/task</code> Gemini trials.</p>
+<hr />
+<hr />
+<h3 id="item-42-orphan-assistanttool_calls-ate-user-prompts-reached-strict-providers-session-chat-fixed-2026-07-13-bugfixv1191-46599e8f">Item 42 — orphan <code>assistant.tool_calls</code> ate user prompts + reached strict providers [session / chat] — ✅ FIXED (2026-07-13, <code>bugfix/v1.19.1</code> <code>46599e8f</code>)<a class="headerlink" href="#item-42-orphan-assistanttool_calls-ate-user-prompts-reached-strict-providers-session-chat-fixed-2026-07-13-bugfixv1191-46599e8f" title="Permanent link">&para;</a></h3>
+<p>Surfaced by a live VSCode tools-enabled trial (2026-07-12; logs
+<code>~/.ppxai/logs/chat-debug.log</code> 21:58–22:01 + <code>session-debug.log</code>). Two
+defects, both reproduced deterministically before fixing:</p>
+<ol>
+<li><strong>Data loss.</strong> <code>SessionManager.validate_and_fix_alternation</code> stripping a
+   tail orphan <code>assistant.tool_calls</code> (its <code>tool</code> replies missing — a
+   cancelled/interrupted tool) exposed a trailing user, which the
+   trailing-user drop then deleted as an "unsent draft" — the recurring
+   <code>DROPPED UNSENT USER PROMPT … 'What is the capital of France?'</code> (len=30)
+   log line was eating <strong>real</strong> prompts (the model had begun answering via
+   the removed <code>tool_calls</code>). <strong>Fixed:</strong> <code>orphan_exposed_trailing_user</code>
+   guard keeps it; a genuine mid-turn draft is still dropped.</li>
+<li><strong>Orphan on the wire mid-turn.</strong> The pre-flight runs once before the
+   <code>chat_with_tools</code> loop; iterations 2+ (and the empty-after-tools retry)
+   sent <code>get_messages()</code> raw, so a mid-turn orphan reached a strict provider
+   and 400'd (<code>"… tool_call_ids did not have response"</code>, observed live on
+   OpenAI <code>gpt-5.4-mini</code>). <strong>Fixed:</strong> orphan-strip extracted to module-level
+   pure <code>strip_orphan_tool_calls()</code>; applied to the <strong>outbound</strong> copy before
+   each in-loop send (session state untouched).</li>
+</ol>
+<p><strong>Verification:</strong> <code>tests/test_orphan_toolcalls_regression.py</code> (5). Regression
+sweep clean (307 across R15/agent-runs/session-schema/gemini-native-tool-loop;
+180 across session/streaming/tool/multimodal). Lesson:
+<code>docs/lessons/perplexity-alternation-retired-orphan-toolcalls-is-real.md</code>.</p>
+<hr />
+<h3 id="item-44-interactive-empty-response-retry-persists-an-empty-content-assistant-perplexity-400-chat-providers-fixed-2026-07-13-bugfixv1191">Item 44 — interactive empty-response retry persists an empty-content assistant → Perplexity 400 [chat / providers] — ✅ FIXED (2026-07-13, <code>bugfix/v1.19.1</code>)<a class="headerlink" href="#item-44-interactive-empty-response-retry-persists-an-empty-content-assistant-perplexity-400-chat-providers-fixed-2026-07-13-bugfixv1191" title="Permanent link">&para;</a></h3>
+<p><code>chat_simple</code> and <code>chat_with_tools</code> add a synthetic <code>Message("user", "Please
+proceed…")</code> on an empty response and retry. When retries exhausted, the loops
+fell through to <code>add_message(Message("assistant", full_response))</code> with
+<code>full_response == ""</code>, persisting an <strong>empty-content</strong> assistant AND leaving
+the synthetic nudge in history. On the next turn the empty assistant was
+resent; current Perplexity Sonar rejects it with
+<code>{'message':'Message content was empty','type':'invalid_message'}</code> (verified
+live 2026-07-13). Distinct from Item 42's orphan case. Root cause: nudge
+retries were treated as valid conversation turns instead of transient repair.</p>
+<p><strong>Fixed structurally (Option D — producer root-fix + outbound guard, mirroring
+Item 42's two-role pattern):</strong></p>
+<ol>
+<li><strong>Producer.</strong> <code>finalize_empty_response()</code> (module-level in <code>engine/chat.py</code>)
+   rolls back the transient <code>EMPTY_RESPONSE_NUDGE</code> user turn (via
+   <code>remove_last_message</code>, guarded on exact text) and coalesces empty content to
+   the <code>EMPTY_RESPONSE_SENTINEL</code> (<code>"[No response generated]"</code>). Applied on every
+   empty-exhaustion path in both loops, unifying them with the already-correct
+   <code>chat_with_tools</code> iteration&gt;1 path (which rolled back its own prompt +
+   coalesced to <code>"[Tool execution completed…]"</code>). The nudge text is now a single
+   <code>EMPTY_RESPONSE_NUDGE</code> constant, not open-coded in three places.</li>
+<li><strong>Repair-on-load.</strong> Pure <code>strip_empty_assistant()</code> in <code>engine/session.py</code>
+   (drops assistant turns with no <code>tool_calls</code> and no text; preserves native
+   tool-calling turns), wired into <code>validate_and_fix_alternation</code> right after
+   the orphan pass — heals sessions saved by ppxai ≤ 1.19.0 that already carry
+   an empty turn. The Bug-A <code>orphan_exposed_trailing_user</code> guard was widened to
+   also cover an empty-strip that exposes a genuinely-answered trailing user.</li>
+<li><strong>Outbound guard.</strong> New composed <code>sanitize_outbound()</code> chains
+   <code>strip_orphan_tool_calls</code> + <code>strip_empty_assistant</code> into one call, replacing
+   the two raw orphan-strip sites in the tool loop — so both malformations are
+   cleaned from the wire copy at a single entry point (session state untouched).</li>
+</ol>
+<p><strong>Verification:</strong> <code>tests/test_orphan_toolcalls_regression.py</code> (+8 → 13 total):
+pure strips + composition, self-heal on load, empty-strip-exposed trailing-user
+preservation, producer nudge-rollback + sentinel + narrow-guard. Session
+persistence/restore/migration sweep clean (121 pass / 6 Windows-symlink skips);
+chat-loop suites clean (74).</p>
+<hr />
+<hr />
+<h3 id="item-45-gemini-3x-native-tool-round-trip-400s-thought_signature-never-preservedreplayed-providers-gemini-agent-platform-fixed-2026-07-22-bugfixv1191-edb74500">Item 45 — Gemini 3.x native tool round-trip 400s: <code>thought_signature</code> never preserved/replayed [providers / gemini / agent platform] — ✅ FIXED (2026-07-22, <code>bugfix/v1.19.1</code> <code>edb74500</code>)<a class="headerlink" href="#item-45-gemini-3x-native-tool-round-trip-400s-thought_signature-never-preservedreplayed-providers-gemini-agent-platform-fixed-2026-07-22-bugfixv1191-edb74500" title="Permanent link">&para;</a></h3>
+<p><strong>Fixed:</strong> the signature is threaded along the full path it must survive —
+response part → <code>_parse_function_call(fc, part)</code> → <code>TOOL_CALL</code> event →
+session <code>tool_calls</code> entry (<code>chat.py</code>) → outbound <code>functionCall</code> part
+(<code>_convert_messages</code>). <code>_thought_signature_of()</code> reads the PART (documented
+location), probes the FunctionCall defensively, and base64-encodes bytes so
+the value survives the JSON round-trip through the session store. Gemini 2.5
+never sends the field → key absent → that path byte-identical to before.
+Tests: <code>tests/test_gemini_thought_signature.py</code> (11).
+<strong>Third reproduction before the fix (2026-07-22, desktop web):</strong> same 400 on
+<code>web_search</code> rather than <code>read_file</code>, confirming the bug was <strong>tool-agnostic</strong>
+— it broke <em>every</em> native tool round-trip on 3.x.</p>
+<p><strong>Planned:</strong> <code>v1.19.x</code> — <strong>higher priority than Item 43: this breaks the
+<em>working</em> native-tool path.</strong> Surfaced in the 2026-07-13 web-app trial. A
+<code>/task</code> "summarize docs/README.md" (<code>--tools read_file</code>) on
+<code>gemini-3.1-pro-preview</code> correctly enters native mode and emits a <strong>real</strong>
+<code>read_file</code> call (<code>events.jsonl</code> <code>tool_call read_file</code>; validator
+<code>Recorded tool call: read_file success=True</code>), then the follow-up turn 400s:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Gemini error (ClientError): 400 INVALID_ARGUMENT — Function call is missing a
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>thought_signature in functionCall parts. … function call `default_api:read_file`,
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>position 2. https://ai.google.dev/gemini-api/docs/thought-signatures
+</span></code></pre></div>
+<p>Reproduced twice: <code>run_b06fa96cf44f</code>, <code>run_1650174cfe2d</code>. <strong>Root cause
+(source-verified):</strong> <code>thought_signature</code> / <code>thoughtSignature</code> appears
+<strong>nowhere</strong> in the codebase (<code>grep -ri thought_signature ppxai/</code> → empty).
+Gemini 3.x requires each returned <code>functionCall</code> part to carry an opaque
+<code>thought_signature</code> that the client must <strong>echo back</strong> on the tool-response
+turn; our Gemini provider drops it. Blocks <strong>all</strong> native-tool <code>/task</code> runs
+on Gemini 3.x models.</p>
+<p><strong>Relationship to Item 41 (RESOLVED 2026-07-12).</strong> Item 41 fixed
+<code>tool_call_id</code> threading + native transcript conversion for the SDK's
+<code>FunctionCall.id</code>. It did <strong>not</strong> touch <code>thought_signature</code> (a distinct
+Gemini-3.x field) — that path was never exercised on a 3.x model in the
+Item 41 trials, so this is new, not a regression of that fix.</p>
+<p><strong>Fix direction (not yet built):</strong> in the Gemini provider, capture
+<code>part.thought_signature</code> from each returned <code>function_call</code> part into the
+engine's tool-call record, and re-attach it on the corresponding
+<code>function_response</code> part in <code>_convert_messages</code>. Mirrors the id→name pairing
+Item 41 added, but for the signature blob. <code>tests/test_gemini_native_tool_loop.py</code>
+is the natural home for the sentinel.</p>
+<hr />
+<h3 id="item-50-task-accepted-a-grant-naming-a-nonexistent-tool-agent-platform-validation-fixed-2026-07-22-bugfixv1191-edb74500">Item 50 — <code>/task</code> accepted a grant naming a nonexistent tool [agent platform / validation] — ✅ FIXED (2026-07-22, <code>bugfix/v1.19.1</code> <code>edb74500</code>)<a class="headerlink" href="#item-50-task-accepted-a-grant-naming-a-nonexistent-tool-agent-platform-validation-fixed-2026-07-22-bugfixv1191-edb74500" title="Permanent link">&para;</a></h3>
+<p>Observed live 2026-07-22 (desktop web): <code>/task run … --tools "weather,
+web_search"</code> was <strong>accepted and started</strong> although the tool is <code>get_weather</code>.
+The <code>ScopedToolManager</code> is only built inside the runner, so an unknown name
+sailed through run creation, the model was silently offered fewer tools than
+the caller believed it granted, and the run burned an LLM call before failing
+for a reason invisible to the caller.</p>
+<p><strong>Fixed</strong> with <code>ScopedToolManager.unresolved_grant()</code> /
+<code>unresolved_grant_message()</code> — that object already holds <strong>both</strong> halves of
+the question (the grant, and the base manager with every tool registered for
+the run), so no parallel registry is introduced. The message suggests the
+near-miss (<code>'weather' (did you mean 'get_weather'?)</code>) via difflib plus a
+substring fallback difflib's ratio misses on short needles.</p>
+<p><strong>Placement is load-bearing, not incidental.</strong> editor/shell/container/display
+tools register <strong>only when an engine is present</strong>, so a registry rebuilt
+without one reports a misleading subset — a first attempt at route-level
+validation saw <strong>9 of 44</strong> tools and <strong>falsely rejected <code>apply_patch</code></strong>. The
+check also degrades to a no-op when the base manager cannot enumerate tools
+(minimal/duck-typed managers in tests and embedders): grant <em>hygiene</em> must
+never be the reason a run fails to start; AC-1 <em>enforcement</em> is untouched.
+Tests: <code>tests/test_scoped_grant_validation.py</code> (9).</p>
+<hr />
+<h3 id="item-51-gemini-oneshot-returned-the-models-reasoning-as-the-answer-providers-gemini-fixed-2026-07-22-bugfixv1191-edb74500">Item 51 — Gemini <code>oneshot()</code> returned the model's reasoning as the answer [providers / gemini] — ✅ FIXED (2026-07-22, <code>bugfix/v1.19.1</code> <code>edb74500</code>)<a class="headerlink" href="#item-51-gemini-oneshot-returned-the-models-reasoning-as-the-answer-providers-gemini-fixed-2026-07-22-bugfixv1191-edb74500" title="Permanent link">&para;</a></h3>
+<p>Observed live 2026-07-22: an <code>/agentrun</code> weather query on
+<code>gemini-3.1-pro-preview</code> returned <em>"</em><em>My Thought Process: Weather Inquiry for
+Castelfranco Veneto</em><em> — Okay, the user wants weather information… I'll need to
+clean up that typo…"</em> as the <strong>result</strong>.</p>
+<p>Root cause: <code>chat()</code> has always split thinking parts out (<code>part.thought</code> →
+<code>REASONING_CHUNK</code>, kept out of <code>full_response</code>), but <code>oneshot()</code> concatenated
+<strong>every</strong> text part with no <code>thought</code> check — and <code>/agentrun</code> drives <code>oneshot</code>.
+<strong>Fixed</strong> by applying the same thought/answer rule in <code>oneshot()</code>, exposing the
+monologue additively as <code>result["reasoning"]</code> (callers reading only <code>content</code>
+are unaffected), and falling back to the reasoning text only when the model
+produced nothing else — so a thought-only response never looks like an empty
+completion. Tests: <code>tests/test_gemini_thought_signature.py::TestOneshotThoughtSplit</code> (4).</p>
+<h3 id="item-48-clear-leaves-the-status-bar-ctx-percentage-stale-appstate-context_percentage-never-refreshed-tui-rich-appstate-fixed-all-clients-step-1-e7b8f273-enginerich-step-2-112bc0a9-textual-step-3-2026-08-03-webvscode">Item 48 — <code>/clear</code> leaves the status-bar <code>Ctx:</code> percentage stale (AppState <code>context_percentage</code> never refreshed) [tui / rich / appstate] — ✅ FIXED all clients (step 1 <code>e7b8f273</code> engine+Rich; step 2 <code>112bc0a9</code> Textual; step 3 2026-08-03 Web+VSCode)<a class="headerlink" href="#item-48-clear-leaves-the-status-bar-ctx-percentage-stale-appstate-context_percentage-never-refreshed-tui-rich-appstate-fixed-all-clients-step-1-e7b8f273-enginerich-step-2-112bc0a9-textual-step-3-2026-08-03-webvscode" title="Permanent link">&para;</a></h3>
+<p><strong>Status:</strong> FIXED across all four clients. <strong>Step 1</strong> (engine + Rich):
+<code>context_percentage</code> registered in the <code>_on_messages_changed</code> fan-out
+(<code>EngineClient._refresh_context_percentage</code>), so <code>/clear</code>/<code>/compact</code>/
+load/rollback auto-refresh; Rich re-renders each REPL loop. <strong>Step 2</strong>
+(Textual): ppxaide's <code>StatusBar</code> gains a live <code>Ctx</code> badge — <code>on_mount</code>
+subscribes <code>_on_context_percentage_changed</code> to the AppState field,
+rendering <code>NN%</code> with Rich-parity thresholds (<code>~</code> yellow ≥80, <code>!</code> red
+≥100), hidden at 0%; badge id <code>ctx</code> (<code>context</code> was taken by the
+bootstrap-scopes badge; the widget's pre-existing <code>context_tokens</code>
+reactives were dead plumbing). <strong>Step 3</strong> (Web + VSCode, the owner-locked
+push design): the field stays OUT of <code>SSE_SYNC_FIELDS</code> (the fan-out fires
+per message — whitelisting would spam a state_sync per tool result).
+Instead, two push channels: (a) the engine facade stamps the fresh value
+onto terminal STREAM_END metadata (<code>_stamp_context_percentage</code> — the
+assistant message is committed before the event passes the facade, so
+the fan-out already refreshed it; VSCode <code>stream.ts</code> forwards it onto the
+existing <code>state:sync</code> bus, badge renders with NO <code>GET /context</code>); (b) when
+the value changes OUTSIDE a stream, <code>_refresh_context_percentage</code> enqueues
+ONE discrete <code>state_sync</code> — the envelope command routes drain it into
+<code>envelope.events</code> (<code>with_drained_events</code>), so a typed <code>/clear</code>/<code>/compact</code>/
+load resets the badge in both clients (web <code>handleStateSync</code> branch →
+<code>updateContextInfo</code>; VSCode <code>postContextBadge</code> extracted from
+<code>updateContextBadge</code>). The web Clear button and VSCode clear message
+bypass the envelope — both got a direct refresh at the call site (the
+same convention <code>clearConversation</code> already used for attachment state).
+Live-trialed: wire probe shows <code>stream_end.metadata.context_percentage</code>
+alongside preserved <code>usage</code>; Playwright typed-<code>/clear</code> leg saw the
+discrete push arrive (<code>{context_percentage: 0}</code> in envelope events) and
+the badge reset <code>(53/400K)</code> → <code>(0/400K)</code> without reload. <code>↓/↑</code> token
+counter stays session-lifetime (no change, by decision). Tests:
+<code>tests/test_context_percentage_state.py</code> (27) + state-sync/streaming
+battery 128 + <code>tsc --noEmit</code> clean.</p>
+<p><strong>Planned:</strong> <code>v1.19.x</code> (small fix). Observed live 2026-07-15 (Rich TUI,
+Qwen3.6 agent): after <code>/clear</code> wiped 26 messages, the <code>/context</code> command
+correctly reported <code>~0 / 131,072 (0.0%)</code>, but the <strong>status-bar <code>Ctx:</code> badge
+stayed frozen at <code>45%</code></strong> (its pre-clear value). The two context indicators
+read different sources; the status bar never re-anchored on <code>/clear</code>.</p>
+<p><strong>Root cause (source-verified).</strong> The Rich status bar renders
+<code>context_percent = state.get("context_percentage")</code> fresh each frame
+(<code>rich/main.py:105</code> → <code>ui_components.py:706</code>), so it faithfully shows whatever
+AppState holds. But <code>handle_clear</code> (<code>commands/session.py:211</code>) calls
+<code>session.clear()</code> and returns <strong>without refreshing <code>context_percentage</code></strong> —
+unlike the provider-switch path, which explicitly calls
+<code>_refresh_context_percentage(engine)</code> (<code>provider_ops.py:233</code>, which does
+<code>engine.state.set("context_percentage", get_context_info()[...])</code>).
+<code>session.clear()</code> empties the messages but leaves the stale AppState number,
+so the badge lags until the next event that recomputes it. Same class as the
+known "state_sync only drained during /chat — out-of-band engine state
+changes need direct AppState refresh" hazard; <code>/clear</code> is out-of-band.</p>
+<p><strong>Fix direction (not yet built):</strong> have <code>handle_clear</code> recompute + push
+<code>context_percentage</code> after <code>session.clear()</code> (call the same refresh helper the
+provider-switch path uses, or emit the <code>state_sync</code> that carries it). Audit
+sibling out-of-band mutators (<code>/compact</code>, session load/restore, checkpoint
+rollback) for the same stale-badge gap. The <code>↓/↑</code> cumulative token counter
+also does not reset on <code>/clear</code> — that is arguably <em>correct</em> (session-lifetime
+I/O, not per-conversation), so leave it unless product says otherwise; flag it
+in the same fix so the decision is explicit.</p>
+<p><strong>Also observed same session (NOT a status-bar bug — model behavior).</strong>
+Qwen3.6-27B <strong>confabulated evidence</strong> answering "can you use rtk?": it claimed
+a specific rtk-format output string (<code>* bugfix/v1.19.1…nothing to commit</code>) that
+<strong>never appeared</strong> in the transcript, and mislabeled the real assistant text as
+"rtk's compact format." The <em>conclusion</em> was correct — the engine shell-wrapper
+DID wrap the command (<code>engine-debug.log</code>: <code>Wrapper rtk: 'git status' -&gt; 'rtk
+git status'</code>, cross-platform v1.18.5 framework, not the bash hook) — but the
+supporting quote was fabricated. Same "right-ish answer, invented evidence"
+class as Item 43's confabulation mode; tracked there, noted here for the trail.</p>
+<h3 id="item-52-the-local-in-process-sealed-task-egress-gate-denies-a-fallback-chain-tool-wholesale-does-not-affect-the-k8scoder-tier-get_weather-unallowlistable-locally-agent-platform-egress-tools-fixed-2026-08-02-adr-0009-step-2">Item 52 — the LOCAL in-process sealed <code>/task</code> egress gate denies a fallback-chain tool wholesale (does NOT affect the k8s/coder tier); <code>get_weather</code> unallowlistable locally [agent platform / egress / tools] — ✅ FIXED (2026-08-02, ADR 0009 step ②)<a class="headerlink" href="#item-52-the-local-in-process-sealed-task-egress-gate-denies-a-fallback-chain-tool-wholesale-does-not-affect-the-k8scoder-tier-get_weather-unallowlistable-locally-agent-platform-egress-tools-fixed-2026-08-02-adr-0009-step-2" title="Permanent link">&para;</a></h3>
+<p><strong>FIXED 2026-08-02</strong> by ADR 0009 step ② exactly as planned — no
+weather-specific patch:
+- <code>_with_tool_egress_defaults</code> (agent_v1) generalizes the old
+  web_search-only <code>task_default_allow</code> to per-tool <strong><code>tools.&lt;tool&gt;.egress</code></strong>
+  baselines, unioned across a run's granted tools (legacy key dual-read);
+  shared by <code>/v1/agent/task</code> AND the oneshot facade.
+- <code>get_weather</code> is <strong>https-only</strong> (handler + <code>_NETWORK_TOOLS</code>): the
+  <code>http://wttr.in</code> scheme poison that made the tool un-allowlistable under
+  the all-or-nothing rule is removed; reliability fallback is Open-Meteo in
+  the tool chain, not a scheme downgrade.
+- Config templates (repo + this host's user config) ship
+  <code>tools.get_weather.egress</code> + <code>tools.web_search.egress</code> defaults.
+- <strong>Live-verified:</strong> local <code>/task</code> run granting <code>get_weather</code> with NO
+  <code>--allow</code> → allowlist auto-populated from config →
+  <code>network_policy_allowed</code> (wttr.in) → real Geneva weather answer
+  (<code>run_2bd9c64b939c</code>). 309 tests green.</p>
+<p><strong>Original resolution path (for the record):</strong> NOT spot-fixed. <code>get_weather</code>'s
+config-parity was <strong>subsumed by ADR 0009</strong> (task execution profiles,
+<strong>Accepted 2026-08-01</strong>), which generalizes the <code>web_search</code>-only
+<code>task_default_allow</code> mechanism to per-tool egress baselines
+(<code>tools.&lt;tool&gt;.egress</code>, ADR 0010 final name) read by the engine — one
+config-driven change working across local <code>/task</code>, coder, and future tiers.
+See <strong>Item 53</strong> /
+<a href="../../decisions/0009-task-execution-profiles/">decisions/0009-task-execution-profiles.md</a>.</p>
+<p><strong>Scope (important — corrected 2026-07-23):</strong> this is a defect of the
+<strong>app-layer <code>ScopedToolManager</code> superset gate</strong> used by the LOCAL in-process
+sealed <code>/task</code> tier ONLY. The <strong>k8s coder deployment is NOT affected</strong> and the
+Open-Meteo/weather fix that shipped there (<code>fd2d28eb</code> + the
+<code>deploy/examples/microk8s/networkpolicy.yaml</code> weather egress block, port 443 to
+wttr.in + both Open-Meteo IPs) <strong>works correctly</strong> — because egress there is
+enforced by <strong>Calico/pod NetworkPolicy at connection time</strong> (https succeeds, the
+tool's https-first chain flows), and the coder path runs the interactive
+server/chat tools, not the sealed <code>ScopedToolManager</code> superset (no
+<code>sandbox</code>/<code>enforcement</code> config exists anywhere under <code>deploy/</code>). Two enforcement
+layers, only the app-layer one has this bug.</p>
+<p><strong>This is a REGRESSIVE / INCOMPLETE follow-through of the config-driven egress
+design, not "two layers working as intended" (corrected 2026-07-23 on user
+feedback).</strong> The intended pattern — established by <code>27ea00d9</code> "operator config
+for task-tier web_search" — is <strong>operator config knobs, read by the engine,
+honored by the <code>/task</code> tier across the board.</strong> <code>web_search</code> got the full
+treatment: <code>preferred</code> (narrows the superset), <code>enabled</code> (kill-switch), and
+<strong><code>task_default_allow</code></strong> — a config-driven baseline allowlist merged into EVERY
+<code>/task</code> run's egress by <code>_with_task_default_allow</code> (<code>agent_v1.py:758-768</code>,
+applied at :907). <code>get_weather</code> was <strong>left behind on a hardcoded literal</strong>
+(<code>_NETWORK_TOOLS</code>, <code>network_policy.py:206-209</code>) with <strong>no</strong> equivalent config
+read — no <code>tools.get_weather.task_default_allow</code>, no weather-host config. So the
+coder JSON-schema expansion fixed <code>web_search</code> everywhere but <strong>does not cover
+weather</strong>, and the local <code>/task</code> weather egress reads no JSON at all
+(<code>tool_targets</code> sources only the literal; <code>get_tool_config</code> is read only for
+<code>web_search</code>). The http gap was even <strong>already flagged in-code</strong> —
+<code>network_policy.py:145</code>: <em>"get_weather is effectively un-allowlistable until the
+http fallback is…"</em> — and left as a comment instead of the global fix.
+Consequences: (a) the <code>http://wttr.in</code> poison entry is a <strong>code</strong> fix, not
+config; (b) weather egress and the k8s <code>networkpolicy.yaml</code> CIDRs are unlinked
+hand-maintained truths that can silently <strong>drift</strong>.</p>
+<p><strong>Corrected fix framing:</strong> the right fix is to bring <code>get_weather</code> up to the
+SAME config-driven, global mechanism <code>web_search</code> already has — a weather
+<code>task_default_allow</code> (or fold the always-reachable key-free hosts into the
+tier's baseline) read by the engine — so a single engine change works across
+local <code>/task</code>, coder, and any future tier, matching the design intent. Plus the
+contained <code>http://wttr.in</code> scheme-poison removal.</p>
+<p><strong>Planned:</strong> <code>v1.19.x</code>. Observed live 2026-07-23 on the <strong>local desktop</strong> <code>/task</code>
+tier (two runs, <code>gemini-3.1-pro-preview</code>, grant <code>get_weather,web_search</code>, runs
+<code>run_107ef9b2bc82</code> / <code>run_f398e0b86fb7</code>): both <strong>completed gracefully</strong>
+(confirming Item 45 — no <code>thought_signature</code> 400), but <strong>neither could answer</strong>,
+and the tool's documented fallbacks never fired. Three symptoms, one root
+cause + one poison entry.</p>
+<p><strong>Root cause — AC-2 all-or-nothing superset vs. internal fallback chains.</strong>
+<code>ScopedToolManager._check_network</code> authorizes a tool by the <strong>superset rule</strong>
+(<code>network_policy.py:29,123</code>: allowed ⟺ <strong>every</strong> candidate URL passes) and, on
+denial, returns the model-readable string <strong>before the tool runs</strong>
+(<code>agent_scoped_tools.py:~160</code>). So <code>get_weather</code>'s in-tool three-tier chain
+(wttr.in → Open-Meteo → premium, <code>web_premium.get_weather_premium</code>) and
+<code>web_search</code>'s premium/Gemini-grounding branch live <strong>downstream of the block</strong>
+and never execute. This is why the same tools work in interactive chat (no
+ScopedToolManager, no superset gate) but fail sealed. Explains all three live
+observations: no wttr→Open-Meteo fallback, no Open-Meteo despite it being in
+the superset, and no Gemini grounded search.</p>
+<p><strong>Poison entry — <code>get_weather</code> is unallowlistable.</strong> Its superset
+(<code>tool_targets</code>) includes <strong><code>http://wttr.in/</code></strong> (the handler's real
+https-then-http fallback loop, <code>web.py:23</code>), which the https-only policy
+<strong>always</strong> denies. Under all-or-nothing, that one always-denied URL blocks the
+whole tool for <strong>any</strong> allowlist. Verified: <code>--allow
+wttr.in,api.open-meteo.com,geocoding-api.open-meteo.com</code> → still
+<code>denied: scheme 'http' not allowed (https only)</code>. There is <strong>no</strong> operator
+allowlist that makes weather work on <code>/task</code> today.</p>
+<p><strong>Fix direction (two parts):</strong>
+1. <strong>Bug — drop always-denied schemes from the gating superset.</strong> A candidate
+   URL the policy categorically rejects (http under https-only) should not gate
+   the tool; the handler's http fallback simply won't fire sealed (https works,
+   or the chain advances to Open-Meteo). Then <code>--allow wttr.in</code> (or the
+   Open-Meteo hosts) actually permits the tool.
+2. <strong>Design tension (owner call) — fallback tools vs. confused-deputy rule.</strong>
+   All-or-nothing is correct for <code>web_search</code> (don't let it exfil via an
+   unpredicted backend), but wrong for a pure graceful-fallback tool whose
+   "branches" are equivalent public weather APIs. Options: (a) auto-include the
+   key-free public weather hosts (Open-Meteo — no exfil surface, always
+   reachable) in <code>get_weather</code>'s baseline allow so a granted weather tool works
+   out of the box; or (b) an "any-of" egress mode for declared fallback tools,
+   distinct from the "all-of" rule. Touches the AC-2 model — decide before
+   coding part 2.</p>
+<p><strong>Not a regression, and NOT the k8s fix being broken.</strong> Item 45 is confirmed
+FIXED by these very runs (both reached <code>completed_pending_ack</code>). The
+Linux/k8s weather work is fine (see Scope above). This is a pre-existing gap in
+the <strong>local app-layer</strong> superset gate that the now-working Gemini path merely
+made visible — the two layers gate differently: Calico authorizes the <em>actual
+runtime connection</em> (https ok), the local superset authorizes the <em>declared
+target set</em> up front (and that set carries the always-denied <code>http://wttr.in</code>).</p>
+<h3 id="item-53-task-execution-profiles-config-driven-named-grants-web_search-as-first-class-enrichment-agent-platform-config-egress-adr-0009-accepted-fixed-all-four-steps-implemented-2026-08-0203">Item 53 — task execution profiles: config-driven named grants + web_search as first-class enrichment [agent platform / config / egress] → ADR 0009 ✅ ACCEPTED — ✅ FIXED (all four steps implemented 2026-08-02/03)<a class="headerlink" href="#item-53-task-execution-profiles-config-driven-named-grants-web_search-as-first-class-enrichment-agent-platform-config-egress-adr-0009-accepted-fixed-all-four-steps-implemented-2026-08-0203" title="Permanent link">&para;</a></h3>
+<p><strong>Status:</strong> CLOSED. All four build-order steps shipped and live-verified —
+① oneshot search loop as the F1–F5 facade (<code>ad8edd8b</code> lineage), ② per-tool
+<code>tools.&lt;tool&gt;.egress</code> (retired Item 52), ③ <code>execution.profiles</code> +
+<code>enrichment</code> + <code>execution.egress_ceiling</code> (<code>ad8edd8b</code>), ④ shared backend
+resolver <code>engine/tools/search_backends.py</code> with the Q5 scoped tuple
+(<code>82dc7d34</code>). See ADR 0009's status line for the per-step detail. Remaining
+related work is tracked separately: ADR 0010's config-shape migration
+(dual-read helper + direct-read sweep + <code>/doctor</code> mapping) and Item 49 /
+ADR 0008 cost accounting.</p>
+<p><strong>Planned:</strong> <code>v1.19.x</code> — <strong>ADR 0009 Accepted 2026-08-01</strong> (all six sign-off
+questions settled; ADR 0010 config-shape review Accepted same day — new keys
+land at <code>execution.*</code> / <code>tools.&lt;tool&gt;.egress</code> from the start). Agreed build
+order: ① oneshot model-triggered search loop, ② per-tool egress (retires Item
+52), ③ <code>execution.profiles</code> + <code>enrichment</code> in <code>AgentSpec</code> (<code>_SPEC_FIELDS</code>
+blocker), ④ shared backend resolver. Filed 2026-07-23 from the Item 52
+root-cause discussion; design details below reflect the original filing — the
+ADR supersedes where they differ (notably: oneshot enrichment is
+model-triggered via the task-tier loop, NOT a server-side preflight).</p>
+<p><strong>Three gaps the design addresses:</strong>
+1. <strong>Config-driven egress is one-tool-wide.</strong> <code>27ea00d9</code> gave <code>web_search</code>
+   <code>preferred</code>/<code>enabled</code>/<code>task_default_allow</code> (a config baseline egress merged
+   into every run by <code>_with_task_default_allow</code>, <code>agent_v1.py:758-768</code>). No
+   other tool got it — <code>get_weather</code> is stranded on a hardcoded literal (Item
+   52). Generalize <code>task_default_allow</code> to <strong>per-tool</strong>.
+2. <strong>No reusable named grant.</strong> <code>AgentSpec</code> (<code>agent_spec.py</code>) is a real task-
+   profile primitive but is a per-run <code>--spec</code> FILE. There is no
+   <code>tools.agent.profiles.{name}</code> in <code>ppxai-config.json</code> a run selects by name;
+   operators hand-wire the same <code>{tools, network}</code> every task.
+3. <strong><code>web_search</code> is context enrichment, not just a tool.</strong> A local/self-hosted
+   LLM is <strong>closed-book</strong> on <code>/task</code> / <code>/v1/oneshot</code> unless <code>web_search</code> is
+   granted AND its egress allowed — no grounding, no current facts. Hosted
+   providers (Perplexity/Gemini) have native search; local vLLM has none. Make
+   "enable enrichment" a first-class, <strong>opt-in</strong> profile property
+   (<code>enrichment: true</code>) rather than a tool operators must remember to grant.</p>
+<p><strong>Fix direction:</strong> named <code>profiles</code> in config reusing <code>spec_from_mapping</code>
+(request &gt; spec &gt; profile &gt; default precedence); per-tool
+<code>task_default_allow</code>; <code>enrichment: true</code> auto-grants <code>web_search</code> + its egress
+baseline per-profile (opt-in, so a locked-down tenant profile stays no-egress —
+preserves AC-2 confused-deputy protection). <strong>Subsumes Item 52.</strong> All six
+sign-off questions (precedence, enrichment scope, egress ceiling, oneshot
+applicability, preferred-pin-vs-ordering, oneshot query origin) settled
+2026-08-01 — see the ADR's §"Sign-off".</p>
+<hr />
+<h2 id="former-closed-recent-section-verbatim-archived-2026-08-01">Former "Closed (recent)" section (verbatim, archived 2026-08-01)<a class="headerlink" href="#former-closed-recent-section-verbatim-archived-2026-08-01" title="Permanent link">&para;</a></h2>
+<p>For full closed-item rationale with commit references, see the per-version
+archived snapshots:</p>
+<ul>
+<li>
+<p><strong>Item 24 — non-vision image attach fail-loud + shell-CLI route (closed 2026-06-23, <code>feature/v1.19.0</code>):</strong>
+  removed the silent "text placeholder" that fed model hallucination on
+  text-only models. Detection fixed earlier this cycle (<code>Qwen3.[56]-27B-FP8*</code>
+  vision globs + <code>-agent</code> variant pinned); this session added the shell-CLI
+  consumption route (<code>can_shell_process_images()</code> → on-disk path surfaced for
+  OCR/convert) and made the no-path case fail loud (<code>ok=False</code>, send blocked,
+  actionable error). Structured warnings disambiguate route taken
+  (<code>vision_via_tool</code> / <code>vision_via_caption</code> / <code>vision_unsupported</code>@error).
+  319 vision/attach/multimodal tests green; VSCode <code>tsc</code> clean. Full
+  resolution detail still inline under the RESOLVED Item 24 entry above
+  (kept with its evidence trail until the next archive sweep).</p>
+</li>
+<li>
+<p><strong>Post-files-parity v1.18.8 review fixes (closed 2026-06-14):</strong> beyond the
+  <code>/files/*</code> items (25–28, 30–32), two parallel reviews + live desktop testing
+  surfaced and closed: <strong>cross-platform LibreOffice discovery</strong> (<code>9d1c7550</code> —
+  macOS <code>soffice</code>/<code>.app</code> was undetected, raster preview dead by default; +
+  formatted install card) and its CI-safe test fix (<code>4b60970f</code>); <strong>three
+  session save/load security findings</strong> (<code>de3b56d7</code> — path traversal in
+  names, stale attachment file_ids on load, corrupt-load file-store
+  corruption); and the <strong>session auto-restore-mode</strong> bug (<code>1fe60ea5</code> — web
+  client ignored <code>auto_restore</code> and used a fragile <code>confirm()</code>, so restore
+  landed on fresh defaults; <code>/status</code> now exposes the mode). All with
+  regression tests. See <a href="../CHANGELOG.md">CHANGELOG.md</a> <code>[1.18.8]</code>.</p>
+</li>
+<li>
+<p><strong>Item 28 — OfficeFileView blob-revoke race + attachment text_fallback (closed 2026-06-14):</strong>
+  <code>ef17f748</code> on <code>bugfix/v1.18.8</code>. The attachment renderers (<code>app.js</code>) gained an
+  <code>unmounted</code> flag so the async <code>.then()</code> no longer creates a leaked blob URL
+  into a detached container; the text-fallback sites now assert a string
+  <code>content</code> (surface <code>missing "content" key</code> instead of <code>'(empty)'</code>). Also
+  followed through on item 26: the attachment path now branches on
+  <code>libreoffice_available</code>/content-type and degrades to extracted text (via a
+  new shared <code>OfficeFileView.renderTextFallbackInto()</code>), so chat-bubble
+  attachments degrade like the file tree instead of rendering JSON as a slide
+  image / PDF. Web-only; <code>node --check</code> clean, DOM = manual-smoke. v1.18.8
+  Phase F (3/3). <strong>Follow-up (<code>84ee33c2</code>, post-review):</strong> (a) closed a residual
+  <code>renderSlideNavInto</code> leak — it created the object URL <em>after</em> <code>await
+  fetchSlideBlob</code>, so an unmount mid-fetch leaked the post-await URL; added a
+  <code>disposed</code> flag (fixes attachment <strong>and</strong> file-tree PPT previews). (b) Fixed
+  the <strong>VSCode</strong> twin of the web JSON-as-binary bug: <code>chatPanel.ts</code> wrote every
+  ok <code>/files/preview</code> response to <code>.png</code>/<code>.pdf</code>, so the item-26 200 JSON
+  text_fallback became a garbage image/PDF — now branches on
+  <code>libreoffice_available</code>/<code>type</code> + content-type and falls back to the raw file.</p>
+</li>
+<li>
+<p><strong>Item 26 — <code>/files/preview</code> route unification (closed 2026-06-14):</strong>
+  <code>579a2fe8</code> on <code>bugfix/v1.18.8</code>. Both preview routes (path-based in
+  <code>files.py</code>, id-based in <code>file_serve.py</code>) now delegate to one shared
+  <code>render_office_preview()</code> helper → ONE JSON shape (<code>type</code>, <code>kind</code>,
+  <code>libreoffice_available</code>, <code>total</code>, <code>name</code> always present) and ONE
+  failure mode (LibreOffice missing → <strong>200 text_fallback</strong>, never the
+  id-route's old 503; legacy <code>.ppt</code>/<code>.doc</code> → typed message, not a 500).
+  id route derives the office ext from <code>meta.name</code>/<code>media_type</code> (content-
+  addressed <code>meta.path</code> may lack one). Guard: <code>TestUnifiedPreviewContract</code>
+  in <code>test_files_preview_download.py</code> (runs without office libs via mocked
+  probe); 70 passed / 5 office-lib-skipped across preview suites. Unblocks
+  future VSCode office-preview delegation. v1.18.8 Phase F (2/3).</p>
+</li>
+<li>
+<p><strong>Item 25 — <code>/files/read</code> type-contract consumers (closed 2026-06-14):</strong>
+  <code>2a22807c</code> on <code>bugfix/v1.18.8</code>. Kept the typed server contract (option b);
+  fixed every consumer to branch on <code>type</code>: <code>CodeEditorView</code> refuses any
+  non-<code>text</code> type (no more base64-as-text / corrupt-on-save), RPF
+  save/restore gained the <code>office</code> viewType (round-trips <code>OfficeFileView</code>),
+  the <code>typeof OfficeFileView !== 'undefined'</code> deploy-skew guard was dropped
+  (errors visibly now), and VSCode <code>httpClient.readFile</code> got the real
+  <code>ReadFileResponse</code> union + branch-on-<code>type</code> warning (contract-only, zero
+  callers). Guard: <code>TestReadOfficeTypeContract</code> in <code>test_files_route.py</code>
+  (csv/xlsx→office_spreadsheet base64; txt→text+lines; pptx/docx→400 hint).
+  Web DOM = manual-smoke (no JS harness); <code>tsc</code>/<code>node --check</code> clean.
+  v1.18.8 Phase F (1/3).</p>
+</li>
+<li>
+<p><strong>Item 30 — coding auto-route notice lost cross-client (closed 2026-06-14):</strong>
+  <code>0f21cee1</code> on <code>bugfix/v1.18.8</code>. <code>_execute_ai_task</code> no longer <code>console.print</code>s
+  the "Auto-routed to <model>" notice (invisible to web/VSCode server-side);
+  it rides in <code>AIResponseResult.content</code> (the field those clients render —
+  they fall back to <code>message</code> only when content is empty). Code-block
+  extraction runs on the raw output first. Other <code>console.print</code> sites in
+  the function are live-TUI UX or already in the result. Guard:
+  <code>tests/test_coding_autoroute.py</code>. The broad agent/utility/handler sweep is
+  tracked separately as <strong>open Item 33</strong> (v1.19.x). v1.18.8 Phase E.</p>
+</li>
+<li>
+<p><strong>Item 31 — direct <code>session.messages</code> mutation bypasses AppState (closed 2026-06-14):</strong>
+  <code>44bb5dea</code> on <code>bugfix/v1.18.8</code>. Added <code>SessionManager.pop_orphan_trailing_users()</code>
+  (replaces the <code>streaming.py</code> orphan-cleanup loop — now fires the
+  <code>on_messages_changed</code> callback; the loop fired none before) and a
+  <code>preserve_trailing_user()</code> context manager (wraps the <code>chat.py</code> preflight
+  detach/restore — transient no-op, the inner <code>validate_and_fix_alternation</code>
+  notifies). chat.py post-tool prompt removal routed through the existing
+  <code>remove_last_message()</code> (also fixes a latent multimodal-cache miss).
+  Behaviour preserved (<code>chat.py:273</code> already netted to a no-op). Guard:
+  <code>TestMessageMutationHelpers</code> in <code>test_session_persistence.py</code>. v1.18.8 Phase C.</p>
+</li>
+<li>
+<p><strong>Item 32 — command envelope can carry non-JSON objects (closed 2026-06-14):</strong>
+  <code>439a0325</code> on <code>bugfix/v1.18.8</code>. <code>ConfirmationResult.to_dict()</code> now runs
+  <code>details</code> through a recursive <code>_jsonsafe()</code> (dataclass→<code>to_dict()</code>/<code>asdict</code>,
+  bytes→marker, unknown→<code>str</code>), so the HTTP envelope is always
+  <code>json.dumps</code>-able. The raw-<code>Message</code> <code>/load</code> key is preserved for the
+  in-process Textual renderer (which never calls <code>to_dict()</code>) — audit
+  correction: it was <strong>not</strong> consumer-free as first flagged. Guards:
+  <code>test_command_envelope_serialization.py</code> + parametrized
+  <code>test_to_dict_is_json_serializable</code> over every <code>CommandResult</code> subclass.
+  v1.18.8 Phase B.</p>
+</li>
+<li>
+<p><strong>Item 27 — <code>/files/image/</code> home-confinement (closed 2026-06-14):</strong>
+  <code>7fb83d8b</code> on <code>bugfix/v1.18.8</code>. <code>serve_image</code> swapped
+  <code>str(path).startswith(str(home_dir))</code> → <code>_within_tree(path, home_dir)</code> —
+  the third confinement site, which the v1.18.7 fix <code>09eae96e</code> had missed
+  (it migrated <code>read_file</code>/<code>write_file</code> only). <code>TestServeImageConfinement</code>
+  added (sibling-prefix path → 403 via <code>/files/image/</code>, verified to fail
+  404 against the old check; in-tree image → 200). v1.18.8 Phase A — see
+  <a href="archive/plan-v1.18.8-files-parity.md">archive/plan-v1.18.8-files-parity.md</a>.</p>
+</li>
+<li>
+<p><strong>Item 20 — v1.19.x alignment paperwork (closed 2026-05-24):</strong> merged to
+  master as <code>56bc2d38</code> (Stage-2 fold rebased from <code>42ed8f00</code>) + <code>7a2ea268</code>
+  (C5 §13 + <code>AGENT_SERVICE_DOWN</code>) + <code>45e352fe</code> (ROADMAP "Pending alignment
+  paperwork" subsection removal). Folds all consumer caveats C1–C5 and asks
+  A1–A3 into ADR 0003 §6–§13 with Phase 1/5/7 ROADMAP commitments inline.
+  <code>feat/agent-platform-stage-2</code> (Phase 1 implementation branch) is now
+  unblocked.</p>
+</li>
+<li>
+<p><strong>v1.18.3 branch (closed 2026-05-02):</strong> Items 12 (Node.js 20 → v5),
+  13 (release.py step 14 silent-failure), 15 (<code>deploy/shared/AGENTS.md</code>
+  stale copy), 16 (throttle counters in <code>/usage</code>), 17 (qwen3-coder-480b
+  excluded after rerun confirmed contamination), 18 (NIM probe rerun),
+  19 (Qwen3.5 <code>enable_thinking</code> config example), plus Tier 1 #1-3 and
+  Tier 2 #4-5 from the v1.18.3 NIM engine work. See
+  <a href="archive/DEBT-INVENTORY-v1.18.3.md">docs/archive/DEBT-INVENTORY-v1.18.3.md</a>.</p>
+</li>
+<li>
+<p><strong>v1.18.2 branch (closed 2026-04-29):</strong> Items 1 (god-node refactoring
+  narrowed to session_restore_ops), 2 (resolveWebviewView contract
+  refactor), 4 (focused-subtree graphify runs), 5 (esbuild VSIX bundle),
+  6 (Windows <code>code</code> CLI shim), 7-9 (Tier 1 observability), 10
+  (EngineClientProtocol), 11 (agent.py logger AttributeError). See
+  <a href="archive/DEBT-INVENTORY-v1.18.2.md">docs/archive/DEBT-INVENTORY-v1.18.2.md</a>.</p>
+</li>
+</ul>
+<hr />
+<hr />
+<h2 id="adr-0012-wave-closed-2026-08-31-bugfixv1191">ADR 0012 wave (closed 2026-08-31, <code>bugfix/v1.19.1</code>)<a class="headerlink" href="#adr-0012-wave-closed-2026-08-31-bugfixv1191" title="Permanent link">&para;</a></h2>
+<p>Items 61 and 62, in full. Both were filed <strong>while designing</strong> ADR 0012 and
+closed by implementing it — 61 in W2 (<code>1bf93de7</code>), 62 across W2 and W4
+(<code>1bf93de7</code>, <code>476fce89</code>). Kept whole here because the measurements in them
+(the drift table, the validator's single call site, the Liskov violation)
+are the evidence the ADR's decisions rest on, and a one-line summary in the
+rolling inventory cannot carry that.</p>
+<h3 id="item-61-api_path-is-declared-config-overridable-displayed-and-never-routed-on-providers-config">Item 61 — <code>api_path</code> is declared, config-overridable, displayed — and never routed on [providers / config]<a class="headerlink" href="#item-61-api_path-is-declared-config-overridable-displayed-and-never-routed-on-providers-config" title="Permanent link">&para;</a></h3>
+<p><strong>Filed 2026-08-30</strong> while designing
+<a href="decisions/0012-wire-protocol-as-per-model-capability.md">ADR 0012</a>.
+Independent of that ADR: this is a live defect today.</p>
+<p><code>ToolCallingProfile.api_path</code> (<code>model_profiles.py:43</code>) is set on built-in
+profiles, merged through the full precedence ladder (<code>chat.py:206</code>), exposed
+to operator override (<code>config/providers.py:385</code>) and displayed by <code>/provider</code>
+(<code>commands/provider.py:349</code>). <strong>Nothing reads it to route a request.</strong> Actual
+routing is <code>_is_responses_api_model()</code>, a hardcoded prefix tuple
+(<code>openai_native.py:45</code>).</p>
+<p>Measured (project venv, 2026-08-30) — the two sources disagree on three
+models, <strong>in both directions</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th><code>profile.api_path</code></th>
+<th>actual router</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gpt-5.3-codex</code></td>
+<td><code>responses</code></td>
+<td><code>chat</code></td>
+</tr>
+<tr>
+<td><code>gpt-5.2-pro</code></td>
+<td><code>chat</code></td>
+<td><code>responses</code></td>
+</tr>
+<tr>
+<td><code>gpt-5-pro</code></td>
+<td><code>chat</code></td>
+<td><code>responses</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>gpt-5.3-codex</code> is declared Responses-only and sent to Chat Completions:
+<code>"gpt-5.3-codex"</code> does not <em>start with</em> any tuple entry (<code>"codex"</code> is a
+prefix, not a substring). A sweep of all 65 built-in globs finds two drifting
+globs; <code>gpt-5.2-pro</code> drifts as a model but owns no glob.</p>
+<p><strong>Two harms.</strong> (1) The profile table is decorative for routing, which is how
+it drifted unnoticed. (2) <strong>An operator's <code>api_path</code> override is silently
+inert</strong> — it validates, merges and displays as though applied. Same shape as
+Item 43 and the same failure ADR 0010's config-shape file scan exists to
+catch: every upper layer resolves a confident answer, the wire never sees it.</p>
+<p><strong>Fix:</strong> ADR 0012 steps 1–2 (make <code>api_path</code> load-bearing; the prefix tuple
+becomes table seed data). Those two steps stand alone and are worth doing even
+if the rest of that ADR is not taken. Minimum fence: a test asserting
+declared-vs-routed agreement for <strong>every</strong> built-in profile, plus one proving
+an operator override changes the outgoing request.</p>
+<p><strong>Not yet established:</strong> whether either drift is user-visible today (does
+<code>gpt-5.2-pro</code> actually work over <code>/chat/completions</code>, or is the router right
+and the profile wrong?). Each row is a decision to make deliberately, not a
+value to copy from one side to the other.</p>
+<p><strong>W1 progress (2026-08-30) — STILL OPEN.</strong> ADR 0012's W1 replaced
+<code>api_path</code> with <code>ModelFacts.wire_protocol</code>, so the field is now resolved
+through one path and displayed by <code>/provider</code> from that same resolution
+(the display previously re-implemented the merge, which is how it came to
+show a value nothing routed on). <strong>Routing still does not read it</strong> —
+<code>openai_native</code> keeps its three <code>_is_responses_api_model()</code> branches. The
+item closes in <strong>W2</strong>, which moves those branches onto the resolved fact.
+One design correction landed on the way: an unlisted model on a provider
+that cannot speak <code>chat_completions</code> needed a provider-owned floor
+(<code>BaseProvider.unmeasured_facts</code>), or W2 would route unlisted Gemini models
+to a handler that does not exist.</p>
+<p><strong>CLOSED in W2 (2026-08-30).</strong> Routing now reads
+<code>get_facts_for_model(model).wire_protocol</code> through a single reader
+(<code>OpenAINativeProvider._wire_for</code>), consumed by all four dispatch sites
+(<code>chat</code>, <code>chat_sync_simple</code>, <code>oneshot</code>, and the 404 auto-fallback).
+<code>_is_responses_api_model()</code> survives only as seed data and for the
+fallback's log line; nothing routes on the prefix tuple.</p>
+<p>Both fences are in <code>tests/test_wire_responses_extraction.py</code>:
+declared-vs-routed agreement across every built-in profile, and an operator
+override proven to change the <strong>outgoing request</strong> in both directions
+(forced onto Responses, and a Responses model forced onto Chat Completions)
+— asserted at the client spy, not at the resolver, because resolving
+correctly is exactly what the old field also did.</p>
+<p><strong>The "not yet established" question above is now answered, per row:</strong></p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>resolution</th>
+<th>evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gpt-5.2-pro</code></td>
+<td><code>responses</code> — the ROUTER was right</td>
+<td>commit <code>5e1ace2f</code> <em>"Route gpt-5.2-pro to Responses API + add 404 auto-fallback"</em> added it after OpenAI returned <strong>"not a chat model"</strong>. The declared <code>chat</code> was never exercised, because nothing routed on <code>api_path</code>.</td>
+</tr>
+<tr>
+<td><code>gpt-5-pro</code></td>
+<td><code>responses</code> — same</td>
+<td>same commit, same measured 404</td>
+</tr>
+<tr>
+<td><code>gpt-5.3-codex</code></td>
+<td><code>responses</code> — the PROFILE was right</td>
+<td>codex models 404 on Chat Completions; registered by <code>c4b6f431</code> without the routing tuple being updated</td>
+</tr>
+</tbody>
+</table>
+<p><strong>A fourth drift, unfiled until now:</strong> <code>gpt-5.5-pro</code> was sent to Responses by
+<strong>neither</strong> mechanism — no prefix entry, and its profile declares <code>chat</code>. It
+was registered by the same <code>c4b6f431</code> as <code>gpt-5.3-codex</code>. Its row was filed
+by <strong>analogy</strong> with its siblings and then <strong>probed live 2026-08-31</strong>:
+<code>/v1/chat/completions</code> answers <code>404 "This is not a chat model and thus not
+supported in the v1/chat/completions endpoint"</code> — the same error, verbatim,
+that its siblings gave. The analogy is now a measurement, and every row in
+the resolved table rests on an observed response.</p>
+<hr />
+<h3 id="item-62-adr-0006s-wire-validator-covers-only-one-of-three-protocols-_convert_messages-is-one-protocols-emitter-in-the-shared-base-providers-multimodal">Item 62 — ADR 0006's wire validator covers only ONE of three protocols; <code>_convert_messages</code> is one protocol's emitter in the shared base [providers / multimodal]<a class="headerlink" href="#item-62-adr-0006s-wire-validator-covers-only-one-of-three-protocols-_convert_messages-is-one-protocols-emitter-in-the-shared-base-providers-multimodal" title="Permanent link">&para;</a></h3>
+<p><strong>Filed 2026-08-30</strong> while designing
+<a href="decisions/0012-wire-protocol-as-per-model-capability.md">ADR 0012</a>.
+Independent of that ADR; two coupled defects, both live.</p>
+<p><strong>(a) The ADR 0006 validator has exactly one call site.</strong>
+<code>assert_wire_blocks_clean</code> is called only at <code>base.py:384</code>, inside
+<code>BaseProvider._convert_messages</code> — the <strong>chat-completions</strong> emitter.
+(Verified: one call site in <code>ppxai/</code>; the only other grep hit is a comment
+in <code>file_preprocessing.py:299</code>.) <code>flatten_uploaded_file_blocks</code> <em>is</em> called
+by all three wire paths, but the validator is not — so
+<code>_convert_messages_for_responses</code> (<code>openai_native.py:863</code>) and
+<code>GeminiProvider._convert_messages</code> (<code>gemini.py:655</code>) reach the wire
+<strong>unchecked</strong>. ADR 0006's "spec-clean by construction" guarantee is in
+practice <strong>chat-completions-only</strong>, which is not what that ADR claims.</p>
+<p><strong>(b) The base emitter asserts one protocol's shape.</strong>
+<code>BaseProvider._convert_messages</code> (<code>base.py:346</code>) returns
+<code>{role, content, tool_calls, tool_call_id}</code> — the chat-completions wire
+shape, not a neutral utility. <code>GeminiProvider</code> <strong>overrides it with an
+incompatible return type</strong> (<code>tuple</code> vs <code>List[Dict[str, Any]]</code>) because it
+must. A Liskov violation in shipped code, caused by the base class
+asserting a shape only one of its subclasses' protocols uses.</p>
+<p><strong>Not yet established:</strong> whether (a) has produced a user-visible escape.
+The validator is <code>__debug__</code>-gated and was WARN-MODE by design during ADR
+0006's rollout, so the honest claim is "two paths are unguarded", not "bad
+blocks are reaching the wire". Worth a targeted check on the Responses
+path, which carries images.</p>
+<p><strong>Fix:</strong> ADR 0012 step 4 moves <code>convert_messages</code> into the protocol handlers
+and the validator travels with it, covering all protocols. If ADR 0012 is
+not taken, (a) is independently fixable by calling the validator in the
+other two converters — cheap, and worth doing regardless.</p>
+<p><strong>W1 progress (2026-08-30) — STILL OPEN, untouched.</strong> W1 unified the
+per-model <em>fact</em> system; it did not move any message conversion, so both
+(a) and (b) are exactly as filed. The item closes in <strong>W4</strong>, after W2
+establishes the <code>wire/</code> handler package the converters move into. W1 does
+supply the prerequisite: <code>wire_protocol</code> is now resolved per model, so a
+handler can be selected at all.</p>
+<p><strong>W2 progress (2026-08-30) — (a) HALF FIXED, (b) STILL OPEN.</strong> The <code>wire/</code>
+package now exists and the Responses converter lives in it, so
+<code>assert_wire_blocks_clean</code> gained its <strong>second</strong> call site:
+<code>ResponsesHandler.convert_messages</code> calls it right after
+<code>flatten_uploaded_file_blocks</code>, at both flatten points (tool results and
+user/assistant turns), matching <code>base.py</code>'s position exactly. Coverage is
+<strong>2 of 3 wires</strong>; <code>generate_content</code> remains unchecked until W4 moves
+Gemini's converter.</p>
+<p>Fenced by <code>TestValidatorCoversThisWire</code> in
+<code>tests/test_wire_responses_extraction.py</code> — parametrised over all three
+roles, and verified to actually trip (a polluted <code>image_url</code> block raises).
+Worth recording how that check nearly passed vacuously: the first fixture
+put the offending key <em>nested inside</em> <code>image_url</code>, where the validator does
+not look (it checks each block's <strong>top-level</strong> keys against
+<code>_WIRE_ALLOWED_BLOCK_KEYS</code>), so it reported "not caught" against correctly
+wired code. The wiring was right and the probe was wrong.</p>
+<p>(b) is untouched: <code>BaseProvider._convert_messages</code> is still the
+chat-completions emitter in the shared base, and <code>GeminiProvider</code> still
+overrides it with an incompatible return type. Both resolve in W4.</p>
+<p><strong>CLOSED in W4 (2026-08-31).</strong> Both halves.</p>
+<p><strong>(a)</strong> <code>assert_wire_blocks_clean</code> now has <strong>three</strong> call sites, one inside
+each handler's converter — <code>chat_completions</code>, <code>responses</code>,
+<code>generate_content</code>. Coverage is 3 of 3 wires. The fence
+(<code>tests/test_wire_handlers_complete.py</code>) parametrises over the handler
+<strong>registry</strong> rather than a hand-written list, so a fourth wire that forgets
+the validator fails on the day it is written; it also greps each handler's
+source, because Item 62 (a) was exactly a validator that existed and was not
+called. Mutation-tested: removing the call fails 2 tests.</p>
+<p><strong>(b)</strong> <code>GeminiProvider._convert_messages</code> is <strong>deleted</strong>, not narrowed —
+along with <code>_content_to_gemini_parts</code>, <code>_decode_thought_signature</code> and
+<code>_parse_tool_call_arguments</code>, which moved with it. Each wire owns its
+converter and declares its own return type (<code>List[Dict]</code>,
+<code>(instructions, input_items)</code>, <code>(contents, system_instruction)</code>), which is
+why <code>ProtocolHandler.convert_messages</code> is typed <code>-&gt; Any</code>: the Liskov
+violation came from one wire's shape being imposed on all of them by the
+base's annotation. <code>BaseProvider._convert_messages</code> survives as a
+<strong>delegation</strong> to the chat-completions handler — most providers speak that
+wire and call it directly — but the body is no longer one protocol's emitter
+installed as everyone's default.</p>
+<p>Verified byte-identical across all four role paths (system, user, assistant
+with tool_calls, tool result) before the override was removed, and the
+name-pairing hazard that makes this wire unshareable is pinned by its own
+tests.</p>
+<hr />
+<hr />
+<h2 id="closed-on-bugfixv1191-archived-2026-09-05">Closed on <code>bugfix/v1.19.1</code> (archived 2026-09-05)<a class="headerlink" href="#closed-on-bugfixv1191-archived-2026-09-05" title="Permanent link">&para;</a></h2>
+<h3 id="item-43-perplexity-task-never-calls-granted-tools-fixed-2026-08-24-plan-i3-providers-perplexity-agent-platform">Item 43 — Perplexity <code>/task</code> never calls granted tools → ✅ <strong>FIXED 2026-08-24</strong> (plan I3) [providers / perplexity / agent platform]<a class="headerlink" href="#item-43-perplexity-task-never-calls-granted-tools-fixed-2026-08-24-plan-i3-providers-perplexity-agent-platform" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>CLOSED.</strong> The cause was ours, not the model's. Fixed in three parts,
+because two of them were separately load-bearing:</p>
+<ol>
+<li><strong>Per-model capability table</strong> — <code>PERPLEXITY_NATIVE_TOOL_MODELS</code> in
+   <code>providers/perplexity.py</code>. <code>sonar-pro</code> and <code>sonar-reasoning-pro</code>
+   resolve <code>native_tool_calling=True</code>; everything else stays False, so an
+   unmeasured model degrades rather than 400ing.</li>
+<li><strong>Model profiles</strong> — <code>sonar-pro*</code> and <code>sonar-reasoning-pro*</code> were
+   pinned <code>mode="prompt_based"</code> in <code>model_profiles.py</code>. <code>chat.py:693</code>
+   checks the mode FIRST and short-circuits without consulting provider
+   capabilities, so <strong>the table alone would have been decorative</strong> —
+   measured: <code>profile.mode=prompt_based, caps.native=True → use_native=
+   False</code>. Both are now <code>"auto"</code>, which defers to the table. Same
+   "override exists but nothing reads it" shape as plan finding F1.</li>
+<li><strong>Admission guard</strong> — <code>_reject_tool_incapable_model</code> in
+   <code>task_authorizer.py</code>. <code>sonar</code> and <code>sonar-deep-research</code> answer a tools
+   array with HTTP 400 rather than degrading, and the engine's fallback
+   for a non-capable model is the prompt-based path that produced this
+   item's confabulations. A tool-carrying run on such a model is now
+   refused before it is minted, naming the capable models. Fails OPEN on
+   any unresolved lookup — it converts a KNOWN-bad combination into a
+   clear error, it is not a security boundary.</li>
+</ol>
+<p><code>sonar-deep-research</code> <strong>dropped from the shipped catalog</strong> (owner
+decision) — example config, <code>install.sh</code>, <code>scripts/install.ps1</code>,
+<code>vscode-extension/src/config.ts</code>, and their pricing tables. Note its 400
+is not a schema quirk: the example config's own comment records that it
+"uses Jobs API with reasoning_effort … not chat completions", so it was
+never reachable on the endpoint we call. Its <code>model_profiles.py</code> entry
+stays as a behavioural fallback for anyone who configures it by hand.</p>
+<p>Tests: <code>tests/test_perplexity_model_capabilities.py</code> (31), including an
+end-to-end mode-resolution check that replicates <code>chat.py</code>'s logic so the
+profile/table coupling cannot silently break again. Five mutations killed.</p>
+<p>Framework context: <code>docs/plan-per-model-capabilities.md</code> (I1 send-path
+wiring, I2 config layers, I3 this). Remaining: I4 roster probe, I4b the
+new Agent-API fleet, I5 other providers.</p>
+</blockquote>
+<hr />
+<p><strong>Historical (superseded) — the diagnosis arc, kept for the evidence.</strong></p>
+<h3 id="item-43-original-entry-providers-perplexity-agent-platform-premise-overturned-2026-08-13">Item 43 — original entry [providers / perplexity / agent platform] — ⚠️ <strong>PREMISE OVERTURNED 2026-08-13</strong><a class="headerlink" href="#item-43-original-entry-providers-perplexity-agent-platform-premise-overturned-2026-08-13" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>2026-08-13 — the diagnosis below is superseded; the fix is now a
+one-line capability correction, not a routing gate.</strong></p>
+<p>Perplexity <strong>added native tool calling</strong>. Verified live against
+<code>api.perplexity.ai</code> through our own provider client:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Native <code>tool_calls</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sonar</code></td>
+<td>❌ HTTP 400 <code>Tool calling is not supported for this model</code></td>
+</tr>
+<tr>
+<td><strong><code>sonar-pro</code></strong></td>
+<td>✅ <strong>emits <code>tool_calls</code></strong></td>
+</tr>
+<tr>
+<td><strong><code>sonar-reasoning-pro</code></strong></td>
+<td>✅ <strong>emits <code>tool_calls</code></strong></td>
+</tr>
+<tr>
+<td><code>sonar-deep-research</code></td>
+<td>❌ HTTP 400 <code>Tool parameters must be a JSON object</code></td>
+</tr>
+</tbody>
+</table>
+<p>Full round-trip confirmed on <code>sonar-pro</code>: emits
+<code>read_file{"path": ...}</code> → accepts the <code>tool</code> result message → answers
+from it (unguessable canary content returned verbatim, so a real loop,
+not inference).</p>
+<p><strong>So the failures below were caused by our own config.</strong>
+<code>ppxai/engine/providers/perplexity.py:63</code> hardcodes
+<code>native_tool_calling=False</code> on <code>default_capabilities</code> with the comment
+"Sonar models don't support native API tool_calls" — true when written,
+false now. That flag forces <code>profile.mode=prompt_based</code> and every
+symptom below follows from the prompt-based fallback, not from the API.</p>
+<p>A same-day direct-provider re-run (5 trials × <code>sonar</code>, <code>sonar-pro</code>,
+<code>sonar-reasoning-pro</code>) scored <strong>0/15 tool calls</strong> — but that measured
+the <em>prompt-based path</em>, i.e. the consequence of the flag. The earlier
+"1 success in 6" was the agent loop's text-extraction fallback getting
+lucky, not the model emitting a call.</p>
+<p><strong>Revised fix.</strong> Make the capability <strong>per-model</strong>, not per-provider —
+<code>openai_native.py:368</code> already implements exactly this via
+<code>get_capabilities_for_model</code>, so it is the established shape:
+<code>sonar-pro</code> / <code>sonar-reasoning-pro</code> → <code>True</code>; <code>sonar</code> /
+<code>sonar-deep-research</code> → <code>False</code> <strong>and</strong> reject tool-capable <code>/task</code>
+up front, since the API 400s rather than degrading.
+Options (a)/(b)/(c) below are moot — (a) and (b) would now <em>block or
+reroute working functionality</em>, and (c) was already low-confidence.</p>
+<p><strong>Open sub-question.</strong> <code>sonar-deep-research</code>'s 400 is a <em>schema-shape</em>
+complaint ("Tool parameters must be a JSON object"), not a flat refusal,
+so it may be usable with a stricter schema. Not chased.</p>
+<p><strong>API-surface note.</strong> Perplexity announced <em>"Sonar Chat Completions is
+now Agent API"</em> (July 2026). Chat completions still works — all the
+above ran through it — but the Agent API is the forward surface and uses
+<code>function_call</code> / <code>function_call_output</code> rather than OpenAI-style
+<code>tool_calls</code>. Official <code>perplexityai</code> SDK is at <strong>0.43.3</strong>; ppxai does
+not use it (we go through the OpenAI SDK), so no SDK bump is implied.
+The Agent API also fronts third-party models — see Item 38.</p>
+</blockquote>
+<p><strong>Historical diagnosis (2026-07-13, 8-run web-app trial) — kept for the
+symptom record; the root cause attribution is wrong, see above.</strong></p>
+<p><strong>Planned:</strong> <code>v1.19.x</code>. Originally filed 2026-07-12 from one run
+(<code>run_07c2f15936d3</code>, "summarize docs/README.md", perplexity/sonar-pro) that
+cited <code>https://www.paxerp.com/...</code> instead of the local file. A <strong>2026-07-13
+web-app trial (8 runs across 3 providers, same task)</strong> confirmed and
+widened the root cause — the wire evidence lives in <code>~/.ppxai/runs/&lt;id&gt;/agent-0/</code>
+(<code>meta.json</code> = finalized <code>result</code>, <code>events.jsonl</code> = tool-call trace) and
+<code>~/.ppxai/logs/{chat,engine,validator}-debug.log</code>.</p>
+<p><strong>Root cause (wire-verified).</strong> Perplexity config has
+<code>capabilities.native_tool_calling: false</code>, so every <code>/task</code> sonar-pro run
+resolves to <code>profile.mode=prompt_based, use_native=False</code> (chat-debug.log).
+sonar-pro <strong>does not honor the injected prompt-based tool contract</strong> —
+across <strong>6 perplexity runs, zero produced a real <code>read_file</code> call</strong>
+(no <code>tool_call</code> event in <code>events.jsonl</code>, no <code>Recorded tool call</code> in
+validator-debug.log, ~2–4s wall). The failure is <strong>nondeterministic</strong> —
+same task, three different wrong outcomes:
+- <strong>Refusal</strong> — "I do not have direct filesystem access… I cannot
+  summarize its contents" (the exact output <code>manager.py:457</code> instructs
+  against). Runs <code>run_315575932bc0</code>, <code>run_63374fabab34</code>.
+- <strong>Confabulation</strong> — "A child agent has been spawned, it read
+  docs/README.md…" then a <em>hallucinated</em> summary (release notes / roadmap /
+  debt-inventory — none of which are in the real file, a docs index).
+  Run <code>run_7984ebf09bba</code>.
+- <strong>External mis-grounding (the original Item 43 symptom)</strong> — a native
+  web search substitutes for the file, summarizing the unrelated
+  <code>github.com/steipete/summarize</code> repo (Chrome extension, cache/daemon)
+  and <strong>citing that external URL</strong>. Reproduced twice: <code>run_5ecb1da71dfb</code>,
+  <code>run_7c0fd9a357dd</code>.</p>
+<p><strong>Provider-isolation control (same task, native-tool providers).</strong> The bug
+is specific to Perplexity's prompt-based path, not the <code>/task</code> platform:
+- <code>nvidia/deepseek-ai/deepseek-v4-pro</code> → <code>profile.mode=native</code>, real
+  <code>tool_call read_file</code> (<code>Recorded tool call: read_file success=True</code>),
+  <strong>faithful</strong> summary of the actual file. Direct (<code>run_76f07756de42</code>) AND
+  full subagent chain (parent <code>run_f07d4f8c3209</code> → child <code>run_055a6b79d51e</code>)
+  both correct.
+- <code>gemini-3.1-pro-preview</code> → native, real tool call — but 400s (see Item 45).</p>
+<p><strong>The existing guard is insufficient.</strong> <code>chat.py:455–467</code> already suppresses
+the "Native Web Search Capability" prompt block when a <code>/task</code>
+<code>system_prompt_override</code> is active (and it <em>is</em> active — <code>agent_v1.py:915</code>
+sets <code>compose_agent_system_prompt</code>). sonar-pro web-searches anyway.</p>
+<p><strong>Fix direction (not yet built).</strong> This is a model-capability limitation of
+sonar-pro under prompt-based tools, not a ppxai logic bug. Options: (a) gate
+at run creation — warn/reject a tool-capable <code>/task</code> targeting a
+<code>native_tool_calling:false</code> provider; (b) auto-route tool-capable <code>/task</code> to
+a native-tool provider (deepseek/nvidia proven; Gemini once Item 45 lands);
+(c) stronger system-prompt guard (low confidence — <code>manager.py:457</code> already
+emphatically forbids the observed refusal and was ignored). Related to
+Item 37's <code>oneshot_grounding</code> Option-A work.</p>
+<p><strong>Caveat.</strong> "No tool call" is inferred from validator/event <strong>absence</strong> +
+duration (consistent across all 6 perplexity runs), not a captured HTTP
+response body. The native-provider tool executions ARE directly evidenced
+(both a <code>tool_call</code> event and a <code>Recorded tool call … success=True</code> line).</p>
+<h3 id="item-68-eager-package-imports-forcing-lazy-imports-architecture">Item 68 ✅ — eager package imports forcing lazy imports [architecture]<a class="headerlink" href="#item-68-eager-package-imports-forcing-lazy-imports-architecture" title="Permanent link">&para;</a></h3>
+<p><strong>Filed and closed 2026-09-01</strong>, from the lazy-import cleanup.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>fence rows</th>
+<th>tagged <code>cycle</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>filed</td>
+<td>31</td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>closed</strong></td>
+<td><strong>28</strong></td>
+<td><strong>1</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The surviving row is <code>config.tls → config.store</code> — B's <code>loader/tls/store</code>
+ring, measured irreducible (hoisting it re-closes the ring; moving the cut
+costs a row instead of saving one). Everything else is
+<code>patch-semantics</code> (25), <code>fallback-probe</code> (1) and <code>empty-block</code> (1), each with
+a reason a test re-derives from source.</p>
+<p><strong>The filing diagnosis was wrong in every section, and the corrections are
+the value here.</strong> It was filed as "three eager package imports"; only one of
+the four turned out to be that. A1 was a single misplaced function out of
+twelve, B had no engine involvement at all, and C was one call site with a
+live user-facing bug behind it. Each subsection below records what was tried,
+what was measured, and what the attempt disproved.</p>
+<p><strong>A. A <code>config</code> ↔ <code>engine</code> mutual dependency — 3 rows.</strong> ⚠️ <strong>This entry's
+first diagnosis was wrong and the attempt is recorded below</strong>, because the
+correction is the useful part.</p>
+<p><em>First diagnosis (incomplete):</em> <code>engine/__init__.py</code> eagerly imports
+<code>EngineClient</code>, so reaching anything under <code>engine.</code> runs
+<code>engine/__init__ → EngineClient → CheckpointManager → config.SESSIONS_DIR</code>
+back into a half-initialised <code>config</code>.</p>
+<p><em>Attempted 2026-09-01, then reverted.</em> Deferring <code>EngineClient</code> behind a
+PEP 562 <code>__getattr__</code> in BOTH <code>engine/__init__.py</code> and <code>ppxai/__init__.py</code>
+(line 41 is the real driver — <code>import ppxai</code> alone loaded <strong>50</strong> engine
+modules) cut a bare <code>import ppxai.engine.types</code> from <strong>72 ppxai modules to
+24</strong>, with <code>from ppxai import EngineClient</code> still working. It unblocked
+<strong>zero</strong> baseline rows.</p>
+<p><em>The actual blocker</em>, found by hoisting anyway and reading the new error:</p>
+<div class="language-text highlight"><pre><span></span><code>config/__init__ → execution → facts_resolver → providers → base
+                                                    → config.get_extra_body
+</code></pre></div>
+<p>and independently on another row, <code>engine.tools.wrappers →
+config.get_tool_description_overrides</code>. <code>config</code> needs provider facts;
+providers need config. <code>EngineClient</code> was never the constraint — it was one
+symptom of it, and the failure merely moved from <code>SESSIONS_DIR</code> to
+<code>get_extra_body</code>.</p>
+<p><em>Why the revert, beyond "it did not help":</em> <strong>two of the four PyInstaller
+specs would silently lose the module.</strong></p>
+<table>
+<thead>
+<tr>
+<th>spec</th>
+<th>lists <code>ppxai.engine.client</code>?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai.spec</code></td>
+<td>✅ line 67</td>
+</tr>
+<tr>
+<td><code>ppxai-server.spec</code></td>
+<td>✅ line 73</td>
+</tr>
+<tr>
+<td><code>ppxaide.spec</code></td>
+<td>❌</td>
+</tr>
+<tr>
+<td><code>ppxai-desktop.spec</code></td>
+<td>❌</td>
+</tr>
+</tbody>
+</table>
+<p>The two that do not list it rely on PyInstaller following the eager import to
+find it — and <code>ppxaide</code> <strong>does</strong> use it (<code>ppxai/tui/app.py:45</code>,
+<code>from ppxai.engine import EngineClient</code>). No spec has a <code>collect_submodules</code>
+catch-all; <code>ppxai-desktop.spec</code> names exactly one hidden import
+(<code>ppxai.version</code>). Behind <code>__getattr__</code> the analyser cannot see the import,
+so those two builds ship without the module — the silent-module-drop this
+project has already shipped once, and what <code>ppxai/__init__.py</code>'s docstring
+means by "no lazy loading is needed". A 48-module import saving is not worth
+two builds breaking where no test can see it.</p>
+<p>(⚠️ A first version of this entry claimed <em>no</em> spec listed it. Two do. The
+conclusion survives, but the corrected count is what makes the argument
+checkable — it names which builds break and the line that proves it.)</p>
+<p><strong>A1 ✅ IMPLEMENTED 2026-09-01 — and "config needs provider facts" was the
+wrong framing.</strong> It is not a package-level dependency. Measured:
+<code>config/execution.py</code> has <strong>twelve</strong> functions; eleven read config keys and
+<strong>one</strong> — <code>get_effective_oneshot_path</code> — resolved provider facts. That single
+function was the entire <code>config → providers</code> edge, and no config module
+called it: both callers (<code>commands/doctor.py</code>, <code>server/routes/oneshot.py</code>)
+sit above the engine layer.</p>
+<p>Moved to <code>engine/facts_resolver.py</code>, the composition module from step 3 that
+already imports both sides. <code>engine → config.execution</code> was already a live
+module-scope direction (<code>engine/task_authorizer.py:56</code>), so the destination
+was proven before the move.</p>
+<p><em>Result:</em> fence <strong>31 → 29</strong>, zero rows added; <code>config → engine</code> edges 4 → 2,
+and both survivors are data-only (<code>model_facts</code>, <code>types</code>) already importing
+at module scope. Six patch sites across <code>test_doctor.py</code> and
+<code>test_oneshot_grounding.py</code> were retargeted to wherever each name is now
+bound — the same seam correction as §B.</p>
+<p><strong>A2 ✅ IMPLEMENTED 2026-09-01 — and the <code>EngineClient</code> deferral was not the
+answer.</strong> Three options were measured:</p>
+<table>
+<thead>
+<tr>
+<th>option</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>point <code>checkpoint</code> at <code>config.loader</code> instead of the package</td>
+<td>❌ <code>import ppxai</code> still fails; the error just moves <code>SESSIONS_DIR</code> → <code>PROVIDERS</code> — the next consumer of the half-built package</td>
+</tr>
+<tr>
+<td><strong>stop <code>common/__init__</code> eagerly importing <code>consent</code></strong></td>
+<td>✅ <strong>chosen</strong> — two lines</td>
+</tr>
+<tr>
+<td>defer <code>EngineClient</code> behind <code>__getattr__</code></td>
+<td>❌ unblocks zero rows, and hides <code>ppxai.engine.client</code> from PyInstaller (see A's attempt above)</td>
+</tr>
+</tbody>
+</table>
+<p>The chosen fix is <strong>dead surface removal, not a deferral</strong>:
+<code>common/__init__.py</code> re-exported <code>ConsentManager</code>, which made importing
+<em>anything</em> from <code>ppxai.common</code> load <code>consent</code> → <code>engine.tools.wrappers</code> →
+back into a half-built <code>config</code>. <strong>Nothing used the package attribute</strong> —
+every consumer (<code>commands/handler.py</code>, <code>engine/consent_ops.py</code>,
+<code>tui/app.py</code>, <code>tests/test_common_consent.py</code>) imports from
+<code>ppxai.common.consent</code> directly. Deleting the import and its <code>__all__</code> entry
+let <code>consent → engine.tools.wrappers</code> hoist.</p>
+<p><em>Result:</em> fence <strong>29 → 28</strong>, zero rows added, ruff unchanged at 352.</p>
+<p>Option 1 is worth recording as the shape it is: a <strong>symptom queue</strong>. Fixing
+the named consumer moves the error to the next one, exactly as the original
+A diagnosis moved <code>SESSIONS_DIR</code> → <code>get_extra_body</code>. A package
+half-initialised has no single victim.</p>
+<p><strong>B. <code>config</code>'s loader/tls/store ring — 1 row.</strong> <code>loader → tls → store →
+loader</code>, entirely inside <code>config</code>. <code>tls.py:55</code> is <code>from .store import
+get_config</code>; <code>store.py:18</code> is <code>from .loader import load_config</code>.</p>
+<p><strong>✅ IMPLEMENTED 2026-09-01.</strong> The ring is cut at its narrowest edge —
+<code>tls → store</code> is one call site already inside a <code>try/except</code> — which lets the
+baselined <code>loader → tls</code> row hoist to module scope. B is genuinely distinct
+from A: no engine involvement at all, so the prior that "B is A from inside
+config" was wrong, and testing it rather than inheriting it is what showed
+that.</p>
+<p><em>Four tests were fixed rather than the change abandoned</em> (owner's call: "if
+tests break we fix the tests"). <code>tests/test_tls_config.py</code> patched
+<code>monkeypatch.setattr(tlsmod, "get_config", ...)</code>, which needs <code>get_config</code>
+to be a module ATTRIBUTE of <code>tls</code>; a lazy import removes it. Retargeted to
+<code>storemod</code> — the source module the call-time import now resolves through,
+which is the more honest seam anyway: it patches where the name LIVES rather
+than where it happened to be re-bound.</p>
+<p><em>What it costs, stated plainly:</em> the fence stays at 31. <code>loader → tls</code>
+leaves, <code>tls → store</code> arrives. The gain is not the count — it is that the
+remaining lazy import is a single guarded call site with a stated reason,
+rather than a module-scope edge closing a three-module ring.</p>
+<p><em>The trade is not avoidable, and both alternatives were measured.</em> A ring of
+three needs one edge cut; the only question is which:</p>
+<table>
+<thead>
+<tr>
+<th>cut at</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tls → store</code> (chosen)</td>
+<td><strong>31</strong> — trades <code>loader → tls</code> for <code>tls → store</code></td>
+</tr>
+<tr>
+<td><code>tls → store</code> AND hoist it too</td>
+<td>ImportError — closes the ring again</td>
+</tr>
+<tr>
+<td><code>store → loader</code> instead</td>
+<td><strong>32</strong> — adds a row, removes none (two call sites, not one)</td>
+</tr>
+</tbody>
+</table>
+<p>A prediction that the fence would drop to 30 was tested and is wrong in both
+directions: hoisting both edges re-closes the ring, and moving the cut costs
+a row rather than saving one.</p>
+<p><strong>Fully breaking the ring</strong> would mean giving <code>tls</code> its config values without
+importing <code>store</code> at all — a signature change (pass the block in), not an
+import move. Not attempted.</p>
+<p><strong>C. <code>rendering/__init__ → base → commands/__init__ → handler →
+rich_renderer → base</code>. ✅ IMPLEMENTED 2026-09-01.</strong></p>
+<p><code>import ppxai.rendering</code> had failed standalone for some time — the only one
+of the three with a live symptom. Nothing caught it because the app never
+imports <code>rendering</code> first; any new script or tool that did, broke.</p>
+<p><em>Cut at the narrowest edge</em>, same method as B: <code>handler.py:568</code> had ONE call
+site for <code>RichRenderer</code> (<code>handler.py:592</code>), so that import moved into
+<code>handle_command()</code>. Every package now imports standalone, and <strong>zero tests
+needed fixing</strong> — 1,145 passed unchanged.</p>
+<p><em>Two cheaper cuts were tried first and both failed</em>, which is why the fix is
+where it is:</p>
+<table>
+<thead>
+<tr>
+<th>attempt</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>base.py</code> imports <code>commands.results</code> directly</td>
+<td>still cycles — <code>import ppxai.commands.results</code> runs <code>commands/__init__</code> first</td>
+</tr>
+<tr>
+<td>hoist <code>handler → rich_renderer</code> (the mutation)</td>
+<td><code>ImportError: cannot import name 'Renderer'</code> — this IS the ring</td>
+</tr>
+</tbody>
+</table>
+<p><em>The public surface survives</em>, which is what separates C from A:
+<code>commands/__init__</code> re-exports 14 names from <code>handler</code> and all 14 still
+resolve as package attributes. A's <code>__getattr__</code> could not make that
+guarantee for PyInstaller.</p>
+<p><em>Now fenced.</em> <code>TestEveryPackageImportsStandalone</code> imports each top-level
+package in a FRESH subprocess — within one process an earlier import primes
+<code>sys.modules</code> and hides the cycle entirely. Mutation-verified: hoisting the
+import back fails exactly the <code>ppxai.rendering</code> case and nothing else.</p>
+<p>⚠️ <code>handler.py</code> now has TWO lazy imports of <code>rich_renderer</code> for two different
+reasons — <code>:568</code> cuts this ring, <code>:625</code> is the sole statement of a <code>try:</code>
+(optional inline image preview). The fence tags them together; the comment
+names both.</p>
+<p><strong>Why this is filed rather than fixed.</strong> Each is a deliberate architectural
+decision with a public surface behind it — not import hygiene. Fixing one by
+relocating a dependency would make a number smaller and the architecture
+worse, which is the trade the cleanup declined every time it came up. Sizing
+them is the owner's call; they may also be worth doing never.</p>
+<p><strong>Three tags expired during this work</strong>, which is the reason the fence
+records <em>why</em> a row is kept rather than just keeping it: two
+<code>markdown_links</code> rows tagged <code>cycle</code> were leftovers from before that helper
+was extracted to <code>common/</code> precisely to escape the cycle, and the
+<code>iterm2</code> row was a fallback probe. Every retained row now has a reason a
+test can re-derive from source.</p>
+<hr />
+<h3 id="item-70-a-test-run-rewrites-the-repos-own-tracked-ppxai-configjson-testing-fixed">Item 70 — a test run REWRITES the repo's own tracked <code>ppxai-config.json</code> [testing]  ✅ FIXED<a class="headerlink" href="#item-70-a-test-run-rewrites-the-repos-own-tracked-ppxai-configjson-testing-fixed" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>✅ FIXED 2026-09-05, same day it was filed.</strong> The owner's call settled the
+design question the item left open: <em>"it's a config to be read not modded."</em>
+A project-local <code>ppxai-config.json</code> is now READ-ONLY.</p>
+<p><code>loader.find_writable_config_file()</code> is the write path, and it drops
+<code>./ppxai-config.json</code> from the search order:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>read</td>
+<td><code>PPXAI_CONFIG_FILE</code> → <code>./ppxai-config.json</code> → user</td>
+</tr>
+<tr>
+<td><strong>write</strong></td>
+<td><code>PPXAI_CONFIG_FILE</code> → <strong>user</strong></td>
+</tr>
+</tbody>
+</table>
+<p><code>PPXAI_CONFIG_FILE</code> stays writable because pointing it at a file is an
+explicit act. <code>set_tui_config</code> — the only whole-config writer — uses it,
+and warns when the write target and the active read source diverge, because
+reads take the FIRST config found and do not merge: a setting persisted
+under a project config applies to the running session and is shadowed on
+the next start. Making <em>that</em> case persist means layering user preferences
+over a project config at read time, which is a feature, not a bug fix, and
+is deliberately not in this change.</p>
+<p>Proof the symptom is gone: a full suite run leaves
+<code>git status ppxai-config.json</code> clean, where it previously reported <code>M</code>
+every time. Fenced by <code>tests/test_config_write_target.py</code> (7 tests),
+mutation-verified — reverting <code>set_tui_config</code> to <code>find_config_file()</code>
+fails 4 of them.</p>
+</blockquote>
+<p><strong>Filed 2026-09-05.</strong> Measured, twice, on two independent full-suite runs:
+<code>git status</code> was clean before <code>uv run pytest tests/ -q --ignore=tests/e2e</code>
+and showed <code>M ppxai-config.json</code> after. Reverted both times.</p>
+<p><strong>The diff is an encoding round-trip, not a value change.</strong> Every
+<code>\uXXXX</code> escape in the tracked file comes back as raw UTF-8 —
+<code>\u2014</code> → <code>—</code>, <code>\u23f0</code> → <code>⏰</code> — with the JSON semantically identical.
+That signature names the writer: a <code>json.dump(..., ensure_ascii=False)</code> over
+the whole file.</p>
+<p><strong>Root cause is [[Item 69]]'s rule, pointed the other way.</strong>
+<code>config/features.py:51</code> <code>set_tui_config()</code> resolves its target with
+<code>find_config_file()</code>, which prefers <code>./ppxai-config.json</code> over
+<code>~/.ppxai/ppxai-config.json</code>. Under pytest the cwd is the repo root, so the
+"user's config" it rewrites at <code>features.py:71-73</code> is the <strong>repo's tracked
+example-adjacent config</strong>. <code>grep -rn ensure_ascii ppxai/</code> shows this is the
+only whole-config writer, and <code>server/secrets/file.py</code> writes a different
+file.</p>
+<p><strong>Why it is worth an item and not a shrug.</strong> The rewrite is currently
+harmless — same values, different escaping. Three ways that stops being
+true:</p>
+<ul>
+<li>A dirty tree after every suite run trains everyone to ignore
+  <code>M ppxai-config.json</code>, and <code>git add -A</code> then commits it. It has not
+  happened yet only because it is caught by eye.</li>
+<li>The same call path writes <strong>values</strong>, not just encoding. A test that sets a
+  different <code>tui.*</code> key mutates the tracked config for real, and the next
+  reader inherits it.</li>
+<li>It makes the suite non-hermetic in the direction Item 69 warns about, with
+  the repo's own file as the shared mutable state.</li>
+</ul>
+<p><strong>Isolated 2026-09-05. The whole chain, measured end to end:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>tests/test_server_smoke_e2e.py::TestServerSmoke
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    ::test_post_endpoint_does_not_crash[/debug-log-body8]
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  POST /debug-log {"enabled": false}
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  -&gt; server/routes/config.py:252  set_debug_log()
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  -&gt; server/routes/config.py:269  set_tui_config("debug_log", enabled)
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  -&gt; config/features.py:52        find_config_file() -&gt; ./ppxai-config.json
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  -&gt; config/features.py:76        json.dump(..., ensure_ascii=False)
+</span></code></pre></div>
+<p>The smoke suite POSTs a body to every route to prove none of them 500. One
+of those routes <strong>persists a setting</strong>, and under pytest the cwd is the repo
+root, so "persist" means the repo's own tracked file. Reproduces in 7
+seconds:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="s2">"tests/test_server_smoke_e2e.py::TestServerSmoke::test_post_endpoint_does_not_crash"</span><span class="w"> </span>-q
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>status<span class="w"> </span>--short<span class="w"> </span>ppxai-config.json<span class="w">    </span><span class="c1"># M ppxai-config.json</span>
+</span></code></pre></div>
+<p><strong>How it was found matters more than what was found.</strong> Two instrumented
+tripwires ran the full suite and reported nothing, and both silences were
+false:</p>
+<ul>
+<li>A guard <code>str(config_path).endswith("git/utils/ppxai/ppxai-config.json")</code>
+  could never match, because <code>find_config_file()</code> returns the <strong>relative</strong>
+  <code>Path("./ppxai-config.json")</code>.</li>
+<li>A <code>builtins.open</code> wrapper never sees <code>Path.write_text()</code> / <code>Path.open()</code>:
+  <code>pathlib</code> reaches <code>io.open</code> through its own reference, so patching
+  <code>builtins.open</code> misses it. (<code>io.open is builtins.open</code> is True, which is
+  exactly why the patch looks like it should work.)</li>
+</ul>
+<p>What worked was refusing to instrument the suspect at all: a
+<code>pytest_runtest_teardown</code> hook that SHA-256s the file after every test and
+prints the first <code>nodeid</code> whose digest moves. <strong>Writer-agnostic beats
+writer-specific</strong> — it cannot be defeated by guessing the wrong API, the
+wrong path form, or the wrong module. Reach for it first the next time a
+file changes and nobody admits to writing it.</p>
+<p><strong>Planned:</strong> <code>v1.19.x</code>, alongside [[Item 69]] — they share a fix. Options:
+point <code>set_tui_config</code> at <code>USER_CONFIG_FILE</code> unless <code>PPXAI_CONFIG_FILE</code> is
+set explicitly; or give the suite a session-scoped fixture that pins
+<code>PPXAI_CONFIG_FILE</code> to <code>tmp_path</code>, which closes both directions at once.</p>
+<p><strong>Effort:</strong> ~1 h to isolate + fix, plus whatever Item 69's audit costs.</p>
+<hr />
+<hr />
+<h3 id="item-69-a-tests-verdict-depends-on-a-config-file-outside-the-repo-testing">Item 69 — a test's verdict depends on a config file OUTSIDE the repo [testing]<a class="headerlink" href="#item-69-a-tests-verdict-depends-on-a-config-file-outside-the-repo-testing" title="Permanent link">&para;</a></h3>
+<p><strong>✅ CLOSED 2026-09-06 — options 1 + 3 implemented, as recommended.</strong></p>
+<ul>
+<li><strong>Pin (option 1).</strong> <code>tests/conftest.py::pytest_configure</code> sets
+  <code>PPXAI_CONFIG_FILE</code> to the repo's own <code>ppxai-config.json</code> before
+  <code>initialize()</code> runs. It has to be there rather than in a fixture: config is
+  read during collection, before any fixture executes. An explicit
+  <code>PPXAI_CONFIG_FILE</code> from the developer or CI still wins.</li>
+<li><strong>Fallback closed (option 3).</strong> A session-scoped autouse fixture redirects
+  <code>loader.USER_CONFIG_FILE</code> to a path that does not exist. The env pin alone
+  was not enough: <code>patch.dict(os.environ, {}, clear=True)</code> is common in this
+  suite, and combined with a cwd holding no project config it fell straight
+  through to the developer's file again. <code>find_config_file()</code> reads that
+  constant as a module global at CALL time, so patching it on the defining
+  module reaches every caller — including modules holding their own
+  <code>from .loader import ...</code> binding. Patching <code>HOME</code> would not work; the
+  constant is <code>PPXAI_HOME / "ppxai-config.json"</code> evaluated at import.
+  Writers are covered by the same redirect, since <code>find_writable_config_file</code>
+  reads it too.</li>
+<li><strong>Proven, not assumed.</strong> <code>tests/test_config_source_is_pinned.py</code> (6 tests)
+  asserts the pin is installed, that resolution lands on the shipped config,
+  that a cleared environment cannot reach the real <code>~/.ppxai</code> file in either
+  direction, and that the shipped config carries no retired Perplexity ids —
+  the concrete 2026-09-01 case. Verified by DELETING both halves of the pin:
+  4 of the 6 fail, including the cleared-environment one, which is direct
+  evidence the read-half defect was live rather than theoretical. A pin
+  without that test would be unverified state that a refactor could drop
+  silently — the same shape as a tripwire that passes while the bug is live.</li>
+</ul>
+<p><strong>Suite after: 5,747 passed, 1 skipped.</strong> No existing test changed verdict,
+which is the expected result rather than a disappointing one: runs from the
+repo root already resolved <code>./ppxai-config.json</code> first, so this host was
+never the exposed case. What the pin removes is the exposure of every OTHER
+cwd, machine, and worktree — the configuration that actually produced the
+09-01 divergence.</p>
+<p><strong>Residual, deliberately not fixed here.</strong> Option 2 (tests that care about
+config supply their own) still applies per test, and the second-order finding
+stands: a fence can lose its teeth to config <em>content</em> even when the source
+is pinned, because the four gateway models this repo ships all resolve
+<code>auto</code>. Pinning makes that failure identical on every machine instead of
+machine-specific, which is the difference between a bug you can find and one
+you cannot — but it does not make the fence stronger.</p>
+<p><strong>The write half is CLOSED — [[Item 70]], fixed 2026-09-05.</strong> Same root
+cause, opposite direction: <code>find_config_file()</code> prefers
+<code>./ppxai-config.json</code>, so a suite run from the repo root both <em>read</em> a
+config outside its control and <em>wrote</em> the repo's own tracked one. Writes
+now resolve through <code>find_writable_config_file()</code>, which never returns a
+discovered project config. <strong>This item is the read half and stays open:</strong>
+a test's verdict still depends on whichever config the cwd happens to
+offer, and no split fixes that — only pinning the suite's config source
+does.</p>
+<p><strong>Affected:</strong> <code>ppxai/config/loader.py:208-232</code> (<code>find_config_file</code>), every
+test that reaches provider config through the real loader — measured today in
+<code>tests/test_perplexity_model_capabilities.py</code>, but the mechanism is general.</p>
+<p><strong>What's wrong:</strong> <code>find_config_file()</code> resolves, in order,
+<code>PPXAI_CONFIG_FILE</code> -&gt; <code>./ppxai-config.json</code> (CWD-relative) -&gt;
+<code>~/.ppxai/ppxai-config.json</code>. Nothing in <code>tests/conftest.py</code> pins it. So a
+test that reads provider config gets <strong>whichever config the developer
+happens to have</strong>, and its verdict varies by machine, by CWD, and by the
+state of a file that is not under version control.</p>
+<p><strong>How it surfaced (2026-09-01), and note the direction:</strong>
+<code>test_the_message_names_the_capable_models</code> failed in an isolated worktree
+and passed in the main checkout, same commit, same code. The cause was not
+the worktree — it was that the developer's <code>~/.ppxai/ppxai-config.json</code>
+still carried <code>sonar-pro</code> / <code>sonar-reasoning-pro</code>, retired from both shipped
+configs in <code>e6c366b9</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>PPXAI_CONFIG_FILE=&lt;repo&gt;/ppxai-config.json    -&gt; 1 failed
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json  -&gt; 1 passed
+</span></code></pre></div>
+<p><strong>The stale personal config MASKED a real regression rather than causing a
+false one.</strong> That is the dangerous direction: a machine-specific green is
+indistinguishable from a correct green, and CI or a fresh checkout finds it
+later — or a user does. Two sessions ran the same commit and got opposite
+results, which is what made it visible at all.</p>
+<p><strong>Second-order finding, same day:</strong> even with the config pinned, a fence can
+lose its teeth to config <em>content</em>. Deleting the <code>!= "prompt_based"</code> filter
+in <code>_tool_capable_models_hint</code> is invisible against the four gateway models
+this repo ships (all resolve <code>auto</code>) and caught immediately against a config
+carrying <code>sonar</code>. Fixed for that one test by having it supply its own config
+(<code>test_the_hint_filters_prompt_based_models</code>), which is the pattern the rest
+should follow.</p>
+<p><strong>Options:</strong>
+1. An autouse fixture pinning <code>PPXAI_CONFIG_FILE</code> to the repo config, so
+   every test sees what we SHIP. Cheapest; makes the suite deterministic but
+   still couples verdicts to a real file.
+2. Tests that care about config supply their own (monkeypatch <code>load_config</code>),
+   as the new fence does. Correct but must be applied per test.
+3. A conftest guard that FAILS if <code>~/.ppxai/ppxai-config.json</code> would be
+   reached during a test run — turns a silent machine dependency into a loud
+   one. Complements 1 or 2 rather than replacing them.</p>
+<p>Recommend 1 + 3: pin it, and make the fallback an error rather than a quiet
+substitution.</p>
+<p><strong>Audit done (2026-09-01).</strong> 16 test files reach <code>load_config</code> /
+<code>find_config_file</code>; <strong>7 isolate nothing</strong> — no <code>monkeypatch</code> of
+<code>load_config</code>, no <code>PPXAI_CONFIG_FILE</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>tests/test_capability_resolution.py     tests/test_facts_doctor.py
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>tests/test_commands.py                  tests/test_server_routes.py
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>tests/test_doctor.py                    tests/test_server_state.py
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>tests/test_engine_client_protocol.py
+</span></code></pre></div>
+<p>Each is a candidate for a machine-dependent verdict. Being on this list is
+not proof of a live defect — several may never assert on config CONTENT —
+but each needs reading, and <code>test_doctor.py</code> is notable because it is where
+the config fences added on 2026-09-01 live.</p>
+<p><strong>Trigger to revisit:</strong> before any CI change that runs the suite in a fresh
+container, and before the next release — a machine-dependent green is worth
+least exactly when it is trusted most.</p>
+<p><strong>Effort:</strong> ~1-2 h for options 1 + 3 plus the audit; unknown for the per-test
+conversions if the audit finds many.</p>
+<hr />
+<h3 id="item-49-cross-tier-cost-shared-resource-accounting-cost-under-reports-true-provider-spend-kv-cache-contention-unmodeled-engine-gateway-agent-platform-cost-adr-0008">Item 49 — cross-tier cost + shared-resource accounting: <code>/cost</code> under-reports true provider spend; KV-cache contention unmodeled [engine / gateway / agent platform / cost] → ADR 0008<a class="headerlink" href="#item-49-cross-tier-cost-shared-resource-accounting-cost-under-reports-true-provider-spend-kv-cache-contention-unmodeled-engine-gateway-agent-platform-cost-adr-0008" title="Permanent link">&para;</a></h3>
+<p><strong>✅ CLOSED 2026-09-06 — ADR 0008 Accepted, Option A implemented.</strong></p>
+<p>Gap #1 is fixed. <code>ppxai/usage_events.py</code> is an append-only event log every
+token-spending path reports to, keyed by <code>(provider, model, tier, owner,
+run_id)</code>. Two taps feed it: the F4 usage block in
+<code>ppxai/engine/task_runner.py</code> (which covers <code>/v1/oneshot</code> AND
+<code>/v1/agent/task</code> in one call, since the FU unification routed both through
+<code>build_task_runner</code> — the tier tag reads <code>RunMeta.kind</code>), and
+<code>save_usage_to_persistent_storage</code> for the interactive tier. <code>/cost</code> folds
+the background tiers into its report.</p>
+<p><strong>The arithmetic trap, worth remembering:</strong> chat spend now lands in BOTH
+<code>usage.json</code> and the event log, so <code>/cost</code> adds the log's <em>background</em>
+buckets and deliberately excludes its <code>chat</code> bucket. Summing both totals
+would count every interactive token twice. <code>usage.json</code> stays the base
+because it holds pre-sink history the log cannot.</p>
+<p><strong>Storage decision (ADR question 4):</strong> JSONL append log, not SQLite, not
+locked <code>usage.json</code>. One <code>os.write()</code> per event to an <code>O_APPEND</code> descriptor
+makes concurrent cross-process writes interleave whole lines — the property
+a shared mutable counter lacks, and the reason this could not be fixed by
+just calling the existing writer from the other tiers. 4096-byte line
+ceiling enforced; unparseable rows are skipped AND counted, so a partial
+total is never shown as complete.</p>
+<p><strong>Contract limit, stated rather than buried:</strong> the sink is best-effort
+telemetry, not an audit trail. <code>record_usage</code> swallows every failure,
+because failing a chat turn or killing a running agent over a bookkeeping
+write trades a real operation for an accounting one. Anyone needing
+guaranteed capture must change that contract first.</p>
+<p><strong>Gap #2 (KV-cache contention) remains open by decision, not oversight</strong> —
+acknowledge-only, as the ADR proposed. No metric, no per-request accounting;
+the optional vLLM <code>/metrics</code> operator read is still available as a later
+addition and nothing in Option A depends on it.</p>
+<p>Tests: <code>tests/test_usage_events.py</code>, 16 — including a 16-thread concurrent
+write proving no line is corrupted, and two that assert the taps exist,
+because a sink nothing calls is the same bug with more code.</p>
+<p><strong>Planned:</strong> <code>v1.19.x</code>+ (<strong>needs an architecture decision, not a patch</strong> —
+design in <a href="decisions/0008-cross-tier-cost-and-resource-accounting.md">decisions/0008-cross-tier-cost-and-resource-accounting.md</a>,
+Status: Proposed). Surfaced 2026-07-15 while reviewing Item 48's engine
+isolation.</p>
+<p><strong>Gap #1 (verified) — local cost view under-reports true spend.</strong>
+<code>save_usage_to_persistent_storage</code> (sole writer of <code>usage.json</code>, backing
+<code>/cost</code>) is called <strong>only from interactive paths</strong> (<code>commands/handler.py:441</code>,
+<code>rich/main.py:623</code>, <code>tui/stream_handler.py:310</code>, <code>server/session_manager.py</code>,
+<code>server/streaming.py</code>). <strong>Neither <code>oneshot.py</code> nor <code>agent_v1.py</code> calls it.</strong>
+So for a user running chat + <code>/v1/oneshot</code> + <code>/v1/agent/task</code> on the <strong>same
+provider account</strong>: the provider bills for all three, but <code>/cost</code>/<code>usage.json</code>
+reflect <strong>only the interactive session</strong>. Oneshot usage is returned then
+dropped (stateless, no <code>EngineClient</code> by ADR 0004); task usage lives in the
+run's own per-run engine (ADR 0003 D1 isolation) and never aggregates.
+<code>/cost</code> silently under-reports whenever background runs are active. (Distinct
+from Item 48's <code>Ctx:</code> badge, which is <em>correctly</em> per-engine display-scoping —
+this is about the shared <strong>money</strong>.)</p>
+<p><strong>Gap #2 (verified absent) — no model of shared KV-cache contention.</strong> On a
+self-hosted vLLM/NIM endpoint the KV cache is a finite GPU resource shared
+across all concurrent requests (client-side <code>EngineClient</code> isolation has no
+effect — the cache is server-side). The three tiers send different system
+prompts → no prefix-cache reuse, only contention → preemption/recompute raises
+cost + latency for all three incl. interactive chat. ppxai models none of it
+(no cache-occupancy metric anywhere — correct, since hosted cache is invisible,
+but the cost model should at least acknowledge it for self-hosted users).</p>
+<p><strong>What exists:</strong> per-run task token budget caps an <em>individual</em> run
+(<code>agent_v1.py</code> ~L1045, <code>control.tokens_used = session.live_run_tokens</code>) — NOT
+account-wide, NOT fed into <code>usage.json</code>.</p>
+<p><strong>Fix direction:</strong> owner-signoff on ADR 0008. Recommended = Option A (a
+usage-recording sink keyed by <code>(provider, model, tier, owner)</code>; <code>/cost</code> becomes
+a tier/provider-filterable query over an append log — one truth without
+un-isolating the tiers; composes with Item 35). Naive "one global counter" is
+wrong: different providers = different pricing, cross-process concurrency, and
+legitimately separate per-tenant vs. operator views. KV-cache = acknowledge in
+docs (+ optional vLLM <code>/metrics</code> operator read), don't try to account
+per-request. <strong>Until decided, disclose:</strong> <code>/cost</code> = interactive session only.</p>
+<hr />
+<h3 id="item-33-command-layer-consoleprint-sweep-agentutilityhandler-envelope-pattern-hygiene">Item 33 — command-layer <code>console.print</code> sweep (agent/utility/handler) [envelope-pattern hygiene]<a class="headerlink" href="#item-33-command-layer-consoleprint-sweep-agentutilityhandler-envelope-pattern-hygiene" title="Permanent link">&para;</a></h3>
+<p><strong>✅ CLOSED 2026-09-09 — audited all 111 sites; the sweep was mostly a
+non-issue and hid a real bug.</strong></p>
+<p>The item said "verify before fixing" and that was right. Breakdown:</p>
+<table>
+<thead>
+<tr>
+<th>Cluster</th>
+<th>Sites</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>utility.py::_show_active_hints</code></td>
+<td>20</td>
+<td><strong>DEAD</strong> — removed</td>
+</tr>
+<tr>
+<td><code>utility.py::_show_bootstrap_hierarchy</code></td>
+<td>19</td>
+<td><strong>DEAD</strong> — removed</td>
+</tr>
+<tr>
+<td><code>agent.py::_handle_agent_interrupt</code></td>
+<td>30</td>
+<td>TUI-only — blocks on <code>pt_prompt</code>, cannot run under <code>ServerCommandContext</code></td>
+</tr>
+<tr>
+<td><code>agent.py::handle_agent</code></td>
+<td>7</td>
+<td>1 fixed, rest redundant or Rich-only chrome</td>
+</tr>
+<tr>
+<td><code>agent.py::run_agent_loop</code></td>
+<td>6</td>
+<td>redundant — banners are prefixed into <code>content</code>; completion/max-iteration notices ARE the returned <code>message</code> + status</td>
+</tr>
+<tr>
+<td><code>handler.py</code> (6 functions)</td>
+<td>29</td>
+<td>TUI-only — the module registers ZERO commands and is reached only from <code>rich/main.py:488</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>39 sites were dead code.</strong> Orphaned by <code>f7ebd004</code> (v1.15.0), which moved
+<code>/context hints</code> and <code>/context show</code> onto typed results. They sat in the tree
+for four minor versions being counted as outstanding debt — a third of this
+item's size was work that had already been done and never re-measured.</p>
+<p><strong>One print carried real information:</strong> "running without checkpoints (no git
+repo) — changes cannot be undone with <code>/undo</code>". That is a safety property of
+the run, it lived only on stdout, and a web/VSCode caller had no way to learn
+it. Now in the result's <code>message</code> and <code>metadata</code>.</p>
+<p><strong>The bug the framing would have missed.</strong>
+<code>server/routes/commands.py::execute_command</code> is an <code>async def</code> route that
+looks up ANY registered command and calls <code>spec.handler(...)</code> directly —
+nothing gates dispatch. <code>handle_agent</code> ran its loop with a bare
+<code>asyncio.run()</code>, which raises <code>RuntimeError: asyncio.run() cannot be called
+from a running event loop</code>. So <code>POST /command/auto</code> answered <strong>500</strong> for web
+and VSCode. Item 33's trigger was "a web/VSCode user reports missing output";
+the actual state was a crash. Fixed with the <code>is_event_loop_running()</code> +
+<code>ThreadPoolExecutor</code> guard already present in <code>commands/coding.py:109-118</code> —
+copied deliberately rather than invented, since the Textual TUI hits the same
+shape.</p>
+<p>Tests: <code>tests/test_auto_command_cross_client.py</code> (6). One pins the mechanism
+by forcing <code>is_event_loop_running()</code> False and asserting the original
+<code>RuntimeError</code>, so a refactor that drops the guard fails there rather than in
+production.</p>
+<p><strong>Not done, by design:</strong> the remaining 71 <code>console.print</code> sites stay. They
+are interactive TUI flows or restatements of the returned result, and
+converting them would be UI-purity refactor rather than bug-class work —
+which is exactly what the item said when it deferred them.</p>
+<p><strong>Affected files:</strong> <code>commands/agent.py</code> (~43 <code>console.print</code>),
+<code>commands/utility.py</code> (~39), <code>commands/handler.py</code> (~29).</p>
+<p><strong>What's wrong:</strong> these handlers write user-facing text directly to the Rich
+console instead of returning typed results / side-effects, so anything they
+print is invisible to web/VSCode (server-side stdout). The cross-client
+gap on the coding commands was the acute case — fixed as Item 30 (closed).</p>
+<p><strong>Why deferred (verify-before-fixing):</strong> the bulk of these are genuinely
+<strong>interactive TUI-only flows</strong> (<code>input()</code>-driven rollback / confirm prompts
+in <code>/agent</code>, <code>/undo</code>) that cannot run under <code>ServerCommandContext</code> anyway, so
+they are <em>not</em> a cross-client bug. The remainder must be audited
+case-by-case: only the ones on a cross-client command path (reachable via
+<code>POST /command/{name}</code> and emitting information not already in the returned
+result) need routing through <code>content</code>/<code>message</code>/side-effects. Bulk
+conversion is UI-purity refactor, not bug-class.</p>
+<p><strong>Planned:</strong> v1.19.x — audit each site; fix only the cross-client-reachable
+ones; leave interactive TUI prompts as-is. Pairs naturally with ADR 0002
+(CommandContext) work if the contexts gain a "can prompt interactively" flag.</p>
+<p><strong>Branch when ready:</strong> v1.19.x.</p>
+<p><strong>Trigger to revisit:</strong> a web/VSCode user reports missing output from a
+non-coding command, or the v1.19.x command-context work opens the file set.</p>
+<p><strong>Effort:</strong> ~0.5 d audit + targeted fixes (most sites confirmed TUI-only).</p>
+<hr />
+<hr />
+<h3 id="item-64-re-probe-perplexitys-pro-line-on-the-responses-wire-before-2026-09-27-providers-deadline">Item 64 — ⏰ re-probe Perplexity's pro line on the Responses wire BEFORE 2026-09-27 [providers / deadline]<a class="headerlink" href="#item-64-re-probe-perplexitys-pro-line-on-the-responses-wire-before-2026-09-27-providers-deadline" title="Permanent link">&para;</a></h3>
+<p><strong>✅ CLOSED 2026-09-10 — owner's direction, after a fourth probe.</strong></p>
+<div class="language-text highlight"><pre><span></span><code>perplexity/sonar-pro            ABSENT  (table says REJECTS)  ok
+perplexity/sonar-reasoning-pro  ABSENT  (table says REJECTS)  ok
+sonar-pro                       ABSENT  (table says NATIVE)   probe artifact
+</code></pre></div>
+<p>Four probes across ten days — 2026-08-31, 09-01, 09-06, 09-10 — returned
+byte-identical <code>400 validation failed: model "..." is not supported</code> on the
+Responses wire. Perplexity never moved the pro line. <strong>No code changed at
+any point:</strong> the shipped <code>PERPLEXITY_DEPRECATIONS</code> rows migrating every
+<code>sonar-pro</code> / <code>sonar-reasoning-pro</code> operator to <code>perplexity/sonar</code> were
+correct when written and are correct at close.</p>
+<p>The <code>sonar-pro</code> DRIFT row is the same probe artifact documented under probe
+2 — a chat-completions model asked about the Responses wire — not a defect.</p>
+<p><strong>What closing costs, recorded because the argument was made and overruled.</strong>
+The obligation's whole purpose was to catch a change in the window <em>before</em>
+the 09-27 cutover, and this closes 17 days early with those days
+unobserved. On 2026-09-06 I argued against closing on an early probe for
+exactly that reason and the owner extended the same reasoning on 09-10 to
+close it. That is a legitimate call on a favourable risk shape, not a
+disagreement worth relitigating:</p>
+<ul>
+<li><strong>If Perplexity ships the pro line on Responses before 09-27 and nobody
+  notices</strong>, ppxai advises a downgrade that is no longer necessary. Users
+  follow migration advice, so they land on the lighter <code>perplexity/sonar</code>
+  when they could have kept a pro model. <strong>Suboptimal advice, not an
+  outage</strong> — nothing breaks, nothing errors, no data is lost.</li>
+<li><strong>The deprecation rows still do their job at the cutover</strong> regardless of
+  this item: an operator on a dying id is still told to move.</li>
+<li>Four consecutive identical measurements over ten days is a strong prior
+  that a provider mid-retirement is not about to reverse course.</li>
+</ul>
+<p><strong>If it matters later</strong>, the probe is two minutes and unchanged:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/probe-perplexity-capabilities.py<span class="w"> </span>--api-path<span class="w"> </span>responses<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span>--model<span class="w"> </span>perplexity/sonar-pro<span class="w"> </span>--model<span class="w"> </span>perplexity/sonar-reasoning-pro<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>--model<span class="w"> </span>sonar-pro
+</span></code></pre></div>
+<p><code>tests/test_dated_obligations.py</code> keeps its Item 54 entry (Gemini,
+2026-10-10), so the file is still a live fence rather than an empty one.</p>
+<p><strong><code>/doctor</code> cannot discharge this item, and it is worth saying why.</strong> <code>/doctor</code>
+compares an operator's configured ids against the SHIPPED deprecation table
+(<code>audit_config_models</code> / <code>classify_model</code>) and separately asks each provider's
+<code>/models</code> what it advertises. Both directions assume the table is true. THIS
+item is the other direction: it asks whether the table itself still matches
+reality, which only a live call on the target wire can answer. The endpoint
+listing is not enough — <code>sonar-pro</code> is <em>listed</em> and still 400s on
+<code>/v1/responses</code>, the same "listed is not the same as usable" trap recorded
+against the NVIDIA deepseek ids in [[Item 38]]. So: <code>/doctor</code> validates configs
+against the table; this item validates the table against the provider. A green
+<code>/doctor</code> says nothing about whether probe 3 is still owed.</p>
+<p><strong>Status 2026-09-05 — 22 days out, and a live config was found pointing at
+the dying id.</strong> Probes 1 and 2 stand: the pro line still 400s on Responses,
+so the shipped <code>replacement</code> rows are still correct. What changed is the
+evidence that this matters beyond the table — an operator config audited
+today had <code>providers.perplexity.default_model</code> <strong>and</strong> <code>coding_model</code> set to
+<code>sonar-pro</code>, i.e. an id with no successor on the surviving wire, and
+ppxai-sre reported the same id reached through its own
+<code>get_provider_config()["default_model"]</code> fallback. Run the probe once more
+before the date; if it still 400s, nothing to change, and the deprecation
+rows do their job at the cutover.</p>
+<p><strong>Filed 2026-08-31.</strong> Deadline-carrying, and the shortest item here that can
+still break users.</p>
+<p><strong>Probe 1 of 2 — 2026-08-31: STILL 400.</strong> <code>perplexity/sonar-pro</code>,
+<code>perplexity/sonar-reasoning-pro</code> and bare <code>sonar-pro</code> all answer
+<code>400 validation failed: model "..." is not supported</code> on the Responses wire.
+The shipped deprecation rows are correct as written; no change needed.</p>
+<p><strong>✅ PROBE 2 — 2026-09-01: STILL 400. Run early, at the owner's direction.</strong>
+All three ids answer <code>400 validation failed: model "..." is not supported</code>
+on the Responses wire, unchanged from probe 1:</p>
+<div class="language-text highlight"><pre><span></span><code>perplexity/sonar-pro            ABSENT  (table says REJECTS)  ok
+perplexity/sonar-reasoning-pro  ABSENT  (table says REJECTS)  ok
+sonar-pro                       ABSENT  (table says NATIVE)   see below
+</code></pre></div>
+<p><strong>So the shipped rows are correct and final.</strong> Perplexity has not moved the
+pro line to Responses, <code>perplexity/sonar</code> remains the only survivor, and
+every <code>sonar-pro</code> / <code>sonar-reasoning-pro</code> operator is correctly told to
+migrate to it — a downgrade, but the only one available.</p>
+<p>The <code>sonar-pro</code> DRIFT line is a <strong>probe artifact, not a defect</strong>: it has no
+<code>AGENT_FLEET_FACTS</code> row, so it falls to the global <code>sonar-pro*</code> row which
+says <code>wire_protocol: chat_completions</code> — correct, and exactly why forcing
+<code>--api-path responses</code> on it reports ABSENT. Bare <code>sonar-pro</code> works on
+chat-completions and dies with that endpoint on 2026-09-27. Asking a
+chat-completions model about the Responses wire is a question with no
+bearing on the table.</p>
+<p><strong>✅ PROBE 3 — 2026-09-06: STILL 400.</strong> Run at the owner's direction, 20
+days before the obligation's date. All three ids answer
+<code>400 validation failed: model "..." is not supported</code> on the Responses wire,
+byte-identical to probes 1 and 2:</p>
+<div class="language-text highlight"><pre><span></span><code>perplexity/sonar-pro            ABSENT  (table says REJECTS)  ok
+perplexity/sonar-reasoning-pro  ABSENT  (table says REJECTS)  ok
+sonar-pro                       ABSENT  (table says NATIVE)   DRIFT
+</code></pre></div>
+<p>The <code>sonar-pro</code> DRIFT row is the same probe artifact documented under probe
+2 — a chat-completions model asked about the Responses wire — not a table
+defect. <strong>No code change: the shipped <code>replacement</code> rows remain correct.</strong></p>
+<p><strong>The 2026-09-26 obligation STAYS.</strong> Three probes agree, so the temptation is
+to delete the entry and close this item now. That would be wrong, and the
+reason is worth stating because it will come up again: probe 3 ran on
+<strong>09-06</strong>, and the obligation exists to catch a change <strong>before the 09-27
+cutover</strong>. Deleting it now converts a check dated one day before the cutover
+into one taken 21 days before it, and hands back the whole window in which
+Perplexity could still ship the pro line on Responses. The cost of keeping
+it is ~2 minutes on 09-26; the cost of dropping it is shipping a migration
+hint that steers every pro operator onto a lighter model they did not need,
+which the user WILL follow. Asymmetric, so keep the alarm.</p>
+<p><strong>This item closes on 2026-09-26</strong>, when the last probe runs, or when the
+endpoint dies — whichever the owner reaches first.</p>
+<p><strong>✅ 2026-08-31 — the date now ENFORCES ITSELF.</strong> The obligation was recorded
+in three places (a code comment, an untracked notes file, this entry) and
+none of them fires: all three are read by someone who has already decided to
+look. <code>tests/test_dated_obligations.py</code> now fails the suite on 2026-09-20 and
+prints the probe command plus both branches of what to do with the result.
+Verified by moving the date into the past — the failure text carries the full
+instruction. That converts "someone must remember" into "the suite will not
+go green until this is done", which is the only form of a dated commitment
+that survives a busy month.</p>
+<p><code>PERPLEXITY_DEPRECATIONS</code> tells every <code>sonar-pro</code> / <code>sonar-reasoning-pro</code>
+operator to migrate to <strong><code>perplexity/sonar</code></strong> — the <em>lighter</em> model — because
+that is the only Sonar id measured live on the Responses wire on 2026-08-31.
+Both pro ids answered <code>400 validation failed: model "..." is not supported</code>
+there, in bare and namespaced form (probe + a plain SDK call, no framing).</p>
+<p>That hint is correct only while it stays true. If Perplexity ships the pro
+line on Responses before the cutover, ppxai will be actively advising a
+downgrade nobody needs — a wrong migration hint the user <em>will</em> follow.</p>
+<p><strong>Action, ~2 minutes:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/probe-perplexity-capabilities.py<span class="w"> </span>--api-path<span class="w"> </span>responses<span class="w">   </span>--model<span class="w"> </span><span class="s2">"perplexity/sonar-pro"</span><span class="w"> </span>--model<span class="w"> </span><span class="s2">"perplexity/sonar-reasoning-pro"</span><span class="w">   </span>--model<span class="w"> </span><span class="s2">"sonar-pro"</span>
+</span></code></pre></div>
+<p>If any answers, update <code>replacement</code> in
+<a href="../ppxai/engine/model_deprecations.py"><code>ppxai/engine/model_deprecations.py</code></a>
+and re-add the entries to <code>ppxai-config.example.json</code> (with a pricing row and
+the migration fence's <code>RETIRED</code> set trimmed to match).</p>
+<p><strong>Why this is an inventory item and not just a code comment.</strong> It was one: a
+<code>Re-probe before the date</code> line in <code>model_deprecations.py</code> and a line in an
+untracked audit-notes file. Neither is a commitment anyone will find — the
+comment is only read by someone already editing that table, which is the
+person who least needs telling. A dated obligation belongs where dated
+obligations are tracked.</p>
+<hr />
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
