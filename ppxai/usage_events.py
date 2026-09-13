@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -61,6 +62,29 @@ from typing import Any
 from .common.logger import get_logger
 
 logger = get_logger("usage")
+
+#: Serialises the append below. POSIX makes `O_APPEND` offset-grab-and-write
+#: atomic, so on Linux/macOS concurrent writers interleave whole lines with no
+#: help from us. **Windows does not**: the CRT implements `O_APPEND` as a seek
+#: followed by a write, and the two are not one operation, so racing writers
+#: land on the same offset and overwrite each other.
+#:
+#: Measured 2026-09-13 on Windows, 16 threads x 200 events:
+#:   without this lock   121-171 of 200 lines survived
+#:   with this lock      200 of 200
+#:
+#: The loss is SILENT. Nothing raises, no line is malformed, and
+#: `skipped_lines` stays 0 because the surviving lines all parse -- the log
+#: simply contains fewer events than were recorded, so every total built on
+#: it under-reports. That is the exact failure this module exists to prevent,
+#: which is why the lock is here rather than left to the caller.
+#:
+#: Scope: this is a THREAD lock, so it covers concurrent writers inside one
+#: process -- the server, the TUIs, any async path. It does NOT serialise two
+#: separate ppxai processes writing the same log on Windows; that needs an OS
+#: file lock and is not attempted here. On POSIX the kernel already covers
+#: that case.
+_WRITE_LOCK = threading.Lock()
 
 #: Tier discriminators. `chat` is the interactive session; `oneshot` and
 #: `task` are the two background run kinds, which map 1:1 onto `RunMeta.kind`.
@@ -189,11 +213,12 @@ def record_usage(
 
         path = events_file(usage_dir)
         path.parent.mkdir(parents=True, exist_ok=True)
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-        try:
-            os.write(fd, raw)
-        finally:
-            os.close(fd)
+        with _WRITE_LOCK:
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            try:
+                os.write(fd, raw)
+            finally:
+                os.close(fd)
         return True
     except Exception as e:  # noqa: BLE001 — accounting must never break a turn
         logger.debug(f"record_usage noop: {e}")

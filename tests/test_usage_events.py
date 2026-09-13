@@ -105,10 +105,19 @@ class TestReadingIsDefensive:
 class TestConcurrentWritersDoNotCorruptTheLog:
     """The reason the record is flat and small.
 
-    Each event is one `os.write()` to an O_APPEND descriptor, so the kernel
-    makes offset-grab-and-write atomic and concurrent writers interleave
-    whole lines. A mutable shared counter would lose updates here; that is
-    the argument for an append log stated as a test.
+    Each event is one `os.write()` of one whole line, so concurrent writers
+    interleave complete records instead of shredding each other. A mutable
+    shared counter would lose updates here; that is the argument for an
+    append log stated as a test.
+
+    This docstring used to claim the kernel made that atomic by itself. It
+    does on POSIX -- `O_APPEND` grabs the offset and writes as one
+    operation. It does NOT on Windows, where the CRT implements `O_APPEND`
+    as a seek then a write, so racing threads land on the same offset and
+    overwrite. Measured 2026-09-13: 121-171 of 200 events survived, with
+    `skipped_lines` still 0 because every surviving line parsed -- a SILENT
+    under-count, which is the failure this module exists to prevent.
+    `usage_events._WRITE_LOCK` is what makes the claim true everywhere.
     """
 
     def test_parallel_writes_all_survive_and_parse(self, sink):
