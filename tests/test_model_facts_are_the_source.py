@@ -94,10 +94,23 @@ NON_DEFAULT_WIRES = {
 #: line is genuinely serial here. This is the second family where a blanket
 #: flip would have been wrong, after gemini-3.1-pro.
 #:
-#: Still UNMEASURED and left False: gpt-5-pro*, gpt-5.3-codex*,
-#: gpt-5.1-codex*, o1*, o1-mini*, o3-pro* (responses-wire or not configured
-#: on this host), plus the vLLM / NVIDIA rows. Absence here is a gap in the
-#: measurement, not a claim that those models cannot do parallel calls.
+#: Second OpenAI pass 2026-09-13 reached the responses-wire models the first
+#: pass could not: gpt-5.4-mini (chat/completions), gpt-5.3-codex and
+#: gpt-5-pro (both REJECT chat/completions with "only supported in
+#: v1/responses"). All three returned 2 calls.
+#:
+#: Still UNMEASURED and left False: gpt-5.1-codex*, o1*, o1-mini*, o3-pro*
+#: (not reachable from this host) plus the vLLM rows. Absence here is a gap
+#: in the measurement, not a claim that those models cannot do parallel
+#: calls.
+#:
+#: NOT IN THIS TABLE, fixed in operator config instead: gpt-5.6-terra,
+#: moonshotai/kimi-k3 and perplexity/sonar have no shipped row and take
+#: their facts from a config `facts` block. All three measured 2 calls.
+#: perplexity/sonar is the interesting one -- tool calling is REFUSED on
+#: chat/completions ("Tool calling is not supported for this model") and
+#: works on /v1/responses, so the wire decides whether it can use tools at
+#: all, not just how the request is shaped.
 PARALLEL_TOOL_CALL_ROWS = {
     "gemini-3.8-flash*",
     "gemini-3.7-flash*",
@@ -123,6 +136,9 @@ PARALLEL_TOOL_CALL_ROWS = {
     "gpt-4.1-nano*",
     "gpt-4o*",
     "gpt-4o-mini*",
+    "gpt-5.4-mini*",
+    "gpt-5.3-codex*",
+    "gpt-5-pro*",
 }
 
 

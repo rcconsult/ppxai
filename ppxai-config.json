@@ -79,7 +79,7 @@
             "fallback_on_failure": false,
             "max_tokens": 4096,
             "max_tool_iterations": 20,
-            "parallel_tool_calls": false,
+            "parallel_tool_calls": true,
             "restricted_params": [],
             "strip_json_from_text": false,
             "supports_reasoning": false,
@@ -294,7 +294,7 @@
             "fallback_on_empty": false,
             "fallback_on_failure": false,
             "strip_json_from_text": false,
-            "parallel_tool_calls": false
+            "parallel_tool_calls": true
           },
           "__comment_vision": "supports_vision is the conservative floor, NOT a measurement — the 2026-08-31 benchmark covered tool calling and quality only."
         },
@@ -396,7 +396,7 @@
             "fallback_on_failure": false,
             "max_tokens": 128000,
             "max_tool_iterations": 20,
-            "parallel_tool_calls": false,
+            "parallel_tool_calls": true,
             "restricted_params": [
               "temperature",
               "top_p"
@@ -551,7 +551,7 @@
             "fallback_on_empty": true,
             "fallback_on_failure": false,
             "strip_json_from_text": true,
-            "parallel_tool_calls": false
+            "parallel_tool_calls": true
           },
           "generation_params": {
             "top_p": 0.95,
