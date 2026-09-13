@@ -839,9 +839,41 @@ async def chat_with_tools(
                     entry["thought_signature"] = tc["thought_signature"]
                 parsed_calls.append(entry)
 
-            # Limit to first call unless parallel_tool_calls enabled
+            # Limit to first call unless parallel_tool_calls enabled.
+            #
+            # This branch DISCARDS work the model already did, and until
+            # v1.19.3 it did so silently — the one branch in this function
+            # that drops calls was also the only one with no logging, sitting
+            # directly beside the `fallback_on_empty` branch that does log.
+            # The v1.19.2 fact-row sweep found fifteen shipped rows pinned at
+            # the conservative floor while their models emit several calls per
+            # turn; every one of those turns lost calls here, and nothing in
+            # any log said so. An operator's only symptom was a tool loop that
+            # took twice the round trips it needed.
+            #
+            # `warning`, not `debug`: a dropped call is lost model output, and
+            # the message names the fix (the fact row) rather than just the
+            # symptom, because the row is what the reader has to change.
             if not facts.parallel_tool_calls:
+                dropped = parsed_calls[1:]
                 parsed_calls = parsed_calls[:1]
+                if dropped:
+                    # f-string, NOT %-args: `common.logger.Logger.warning` is
+                    # `(msg, exc_info=False)` and takes no format arguments, so
+                    # a lazy-formatting call raises TypeError right here — inside
+                    # the tool loop. Two logger populations live in this codebase
+                    # (54 modules on this wrapper, 17 on `logging.getLogger`), and
+                    # only the stdlib half accepts %-args.
+                    dropped_names = [d["tool"] for d in dropped]
+                    logger.warning(
+                        f"Dropped {len(dropped)} parallel tool call(s) from "
+                        f"{ctx.model}: its facts row says "
+                        f"parallel_tool_calls=False. Kept "
+                        f"{parsed_calls[0]['tool']!r}, dropped {dropped_names!r}. "
+                        f"If this model does emit parallel calls, set "
+                        f"parallel_tool_calls true in its facts row or in "
+                        f"ppxai-config.json."
+                    )
 
             # Fallback on failure: first tool call has unknown tool — try prompt-based parser
             # Must run BEFORE strip_tool_json so the parser can find JSON in response text
