@@ -33,8 +33,13 @@ two logger populations side by side, and only the `logging.getLogger` half
 takes %-args. The real call raised `TypeError` INSIDE the tool loop, these
 tests passed anyway, and an unrelated pre-existing test
 (`test_single_tool_when_parallel_false`) is what caught it. A mock that does
-not enforce the signature it stands in for is not a test of the call — and
-`spec=` is not enough for that, only `create_autospec` is.
+not enforce the signature it stands in for is not a test of the call.
+
+`spec=` is not a weaker `autospec` — it answers a DIFFERENT question. It
+constrains which attributes exist, not how they may be called, which is
+exactly why `MagicMock(spec=Logger)` fooled a correction to this file that
+was written to fix the first mistake. A reader who takes "use `spec=`" as
+the lesson here will hit this again; the lesson is `create_autospec`.
 """
 
 from unittest.mock import create_autospec, patch
