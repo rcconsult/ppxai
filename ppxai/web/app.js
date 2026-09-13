@@ -1924,6 +1924,9 @@ class PpxaiApp {
             // from the engine queue per the comment block above).
             await this._reanchorFromServer();
         } catch (error) {
+            // v1.19.2: the server refuses a switch while a response streams
+            // (409). Put the dropdown back on the provider actually in use.
+            this.elements.providerSelect.value = this.state.currentProvider;
             this.showError(`Failed to switch provider: ${error.message}`);
         }
     }
@@ -1945,6 +1948,8 @@ class PpxaiApp {
             // handleProviderChange for the rationale).
             await this._reanchorFromServer();
         } catch (error) {
+            // v1.19.2: see handleProviderChange — revert the dropdown.
+            this.elements.modelSelect.value = this.state.currentModel;
             this.showError(`Failed to switch model: ${error.message}`);
         }
     }

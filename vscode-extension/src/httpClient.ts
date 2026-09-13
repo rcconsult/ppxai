@@ -514,6 +514,15 @@ export class HttpClient {
      * Set active provider.
      * Returns the number of context messages cleared (0 if none).
      */
+    /** FastAPI puts the HTTPException reason in `detail`; fall back to the status text. */
+    private async readErrorDetail(response: Response): Promise<string> {
+        try {
+            const body = await response.json() as { detail?: unknown };
+            if (typeof body.detail === 'string') { return body.detail; }
+        } catch { /* not JSON */ }
+        return `${response.status} ${response.statusText}`;
+    }
+
     async setProvider(providerId: string, model?: string): Promise<{ ok: boolean; contextReset: number }> {
         const response = await fetch(`${this.baseUrl}/providers`, {
             method: 'POST',
@@ -521,7 +530,10 @@ export class HttpClient {
             body: JSON.stringify({ provider: providerId, model })
         });
         if (!response.ok) {
-            return { ok: false, contextReset: 0 };
+            // v1.19.2: 409 while a response streams — surface the server's
+            // reason (the caller's catch shows it) instead of a bare false
+            // that the command handler read as success.
+            throw new Error(await this.readErrorDetail(response));
         }
         const data = await response.json() as { provider: string; model: string; context_reset?: number };
         return { ok: true, contextReset: data.context_reset ?? 0 };
@@ -552,7 +564,7 @@ export class HttpClient {
             body: JSON.stringify({ model: modelId })
         });
         if (!response.ok) {
-            return { ok: false, contextReset: 0 };
+            throw new Error(await this.readErrorDetail(response)); // v1.19.2, see setProvider
         }
         const data = await response.json() as { model: string; provider: string; context_reset?: number };
         return { ok: true, contextReset: data.context_reset ?? 0 };

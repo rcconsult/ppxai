@@ -17,6 +17,7 @@ from ..config import (  # noqa: F401 — patched/read by tests
 )
 from ..config.facts_config import model_fact_overrides
 from ..engine.model_facts import apply_overrides, is_unmeasured, shipped_facts_for_model
+from ..engine.provider_ops import ModelSwitchInFlightError
 from ..engine.providers import get_provider_class
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
@@ -28,6 +29,18 @@ from .results import (
     ListResult,
     ResultStatus,
 )
+
+
+def _run_in_flight_error(exc: ModelSwitchInFlightError) -> ErrorResult:
+    """The engine refused a switch because a response is streaming (v1.19.2)."""
+    return ErrorResult(
+        status=ResultStatus.ERROR,
+        message=str(exc),
+        suggestions=[
+            "Wait for the current response to finish, then switch",
+            "Or stop the run first (Ctrl+C in the TUI, Stop in the web/VSCode UI)",
+        ],
+    )
 
 
 def handle_model(context: CommandContext, args: str) -> CommandResult:
@@ -92,7 +105,10 @@ def handle_model(context: CommandContext, args: str) -> CommandResult:
         for num, info in models.items():
             model_id = info.get("id", num)
             if model_id == args:
-                context.set_model(model_id)
+                try:
+                    context.set_model(model_id)
+                except ModelSwitchInFlightError as exc:
+                    return _run_in_flight_error(exc)
                 reset_count = context.engine_client.last_model_switch_reset
                 message = f"Switched to model: {model_id}"
                 if reset_count > 0:
@@ -195,11 +211,15 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
     # which internally sets session and default model.
     # context.set_model() updates both UI state and engine_client.set_model()
     # which internally sets session — no need for separate session/engine calls.
-    context.set_provider(new_provider)
-
-    # Auto-select default model for new provider
+    # Auto-select default model for new provider. set_provider() refuses
+    # BEFORE mutating anything while a response streams (v1.19.2), so a
+    # refusal here never leaves the provider switched with the model not.
     new_model = new_config.get("default_model", "")
-    context.set_model(new_model)
+    try:
+        context.set_provider(new_provider)
+        context.set_model(new_model)
+    except ModelSwitchInFlightError as exc:
+        return _run_in_flight_error(exc)
 
     reset_count = context.engine_client.last_model_switch_reset
     message = f"Switched to: {new_config['name']} (model: {new_model})"

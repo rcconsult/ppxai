@@ -29,6 +29,7 @@ from datetime import datetime
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from ..common.logger import get_logger
 from ..config import get_idle_timeout, initialize
@@ -299,6 +300,38 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(Exception)
+async def log_unhandled_route_error(request: Request, exc: Exception):
+    """Write every exception that escapes a route to ppxai's OWN log (v1.19.2).
+
+    Before this, such an exception reached only uvicorn's stderr. The debug
+    log at ~/.ppxai/logs showed the request line and then nothing, and the
+    client saw a bare "Internal Server Error" -- the Windows /preview 500
+    (a backslash path handed to FileResponse) had to be diagnosed from the
+    browser console instead of the log this project keeps for exactly that.
+
+    Starlette runs this inside its `except` block and RE-RAISES after the
+    response is sent, so uvicorn's own logging and TestClient's
+    `raise_server_exceptions` are unchanged. The traceback goes to the log;
+    the wire body stays generic -- a gateway deployment must not leak
+    internals to the client.
+    """
+    logger.error(
+        f"Unhandled {type(exc).__name__} on {request.method} {request.url.path}: {exc}",
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "internal_error",
+            "detail": (
+                "Internal server error. The traceback is in the ppxai log "
+                "(enable it with /debug-log on)."
+            ),
+        },
+    )
+
+
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
@@ -337,8 +370,7 @@ async def activity_tracking_middleware(request: Request, call_next):
     if response.status_code == 404:
         referer = request.headers.get("referer", "")
         if "/preview/" in referer:
-            from fastapi.responses import JSONResponse
-            return JSONResponse(
+                    return JSONResponse(
                 status_code = 404,
                 content = {
                     "error": "preview_only",
@@ -376,8 +408,7 @@ async def host_validation_middleware(request: Request, call_next):
                 host = host[1:host.index("]")]
             host = host.strip().lower()
             if host and host not in allowed:
-                from fastapi.responses import JSONResponse
-                return JSONResponse(
+                            return JSONResponse(
                     status_code=400,
                     content={
                         "error": "invalid_host",

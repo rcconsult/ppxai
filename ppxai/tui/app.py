@@ -43,6 +43,7 @@ from ppxai.constants import ConsentResponse
 
 # Engine integration (Phase 6.1)
 from ppxai.engine import EngineClient
+from ppxai.engine.provider_ops import ModelSwitchInFlightError
 from ppxai.rendering.textual_renderer import TextualRenderer
 from ppxai.tui import (commands as local_commands, stream_handler)
 from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard
@@ -817,7 +818,12 @@ class PPXAIDEApp(App):
     def set_model(self, model: str) -> None:
         """Switch to specified model (CommandContext protocol)."""
         if self._engine_client:
-            self._engine_client.set_model(model)
+            try:
+                self._engine_client.set_model(model)
+            except ModelSwitchInFlightError as exc:
+                # v1.19.2: never race a streaming run; tell the user to wait or stop.
+                self.notify(str(exc), title="Response in progress", severity="warning")
+                return
             # AppState observer updates status bar automatically
             # Notify user if context was reset (A3)
             reset_count = self._engine_client.last_model_switch_reset
@@ -827,7 +833,11 @@ class PPXAIDEApp(App):
     def set_provider(self, provider: str) -> None:
         """Switch to specified provider (CommandContext protocol)."""
         if self._engine_client:
-            self._engine_client.set_provider(provider)
+            try:
+                self._engine_client.set_provider(provider)
+            except ModelSwitchInFlightError as exc:
+                self.notify(str(exc), title="Response in progress", severity="warning")
+                return
             # AppState observer updates status bar automatically
 
     def get_provider(self) -> str:

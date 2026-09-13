@@ -16,6 +16,9 @@ Covers:
 - `list_models(engine)` — list models for the current provider
 - `get_current_model(engine)` — current model ID or None
 
+Both switch entry points refuse to run while a response is streaming
+(`ModelSwitchInFlightError`, v1.19.2) — see `_refuse_if_run_in_flight`.
+
 The two internal helpers `_apply_model_switch` and
 `_log_model_hints_transition` are also moved here as module-private
 functions because they're only called from `set_model` / `set_provider`.
@@ -31,6 +34,42 @@ from .tools.builtin import register_all_builtin_tools
 from .types import ModelInfo, ProviderCapabilities, ProviderInfo
 
 logger = get_logger("engine")
+
+
+class ModelSwitchInFlightError(RuntimeError):
+    """A provider/model switch was refused because a response is in flight.
+
+    v1.19.2: switching models while a tool loop was streaming stripped the
+    in-flight assistant turn (`reset_for_model_switch`) from under the loop;
+    the loop then appended its tool result to a history whose matching
+    assistant turn was gone, and Gemini answered 400 on its turn-ordering
+    rule. Measured 2026-09-13 on gemini-3.8-flash: the switch landed 1.2 s
+    before the loop's next tool call.
+
+    The owner's decision was not to race it: the switch is refused and the
+    user is told to wait for the run to finish, or stop it, first. Command
+    handlers turn this into an ErrorResult, the REST routes into HTTP 409,
+    the Textual TUI into a warning toast. `str(exc)` is the user-facing text.
+    """
+
+
+RUN_IN_FLIGHT_MESSAGE = (
+    "A response is still in progress. Wait for it to finish, or stop it, "
+    "before switching {what}."
+)
+
+
+def _refuse_if_run_in_flight(engine, what: str) -> None:
+    """Raise `ModelSwitchInFlightError` while `is_streaming` is set.
+
+    `is_streaming` is set by `EngineClient.chat()` for the whole run,
+    including every tool-loop iteration, and cleared in its `finally`.
+    Checked with `is True` on purpose: a mocked state object must not read
+    as "in flight".
+    """
+    if engine.state.get("is_streaming") is True:
+        logger.warning(f"Refused {what} switch: a response is still streaming")
+        raise ModelSwitchInFlightError(RUN_IN_FLIGHT_MESSAGE.format(what=what))
 
 
 # =============================================================================
@@ -54,7 +93,14 @@ def set_provider(engine, provider_name: str) -> bool:
     Returns:
         True if provider was set successfully, False if the provider
         isn't configured or has no API key.
+
+    Raises:
+        ModelSwitchInFlightError: a response is still streaming (v1.19.2).
+            Raised before anything is mutated, so a refused switch leaves
+            provider, model and history exactly as they were.
     """
+    _refuse_if_run_in_flight(engine, "the provider")
+
     if provider_name not in engine.providers_config:
         return False
 
@@ -190,9 +236,21 @@ def set_model(
 
     Returns:
         True if model was set successfully
+
+    Raises:
+        ModelSwitchInFlightError: `reset_context=True` while a response is
+            still streaming (v1.19.2). Only the context-resetting form is
+            refused: it is the one every user-facing switch takes, and the
+            strip is what raced the tool loop. The `reset_context=False`
+            callers (session restore, the `/chat` request's own model
+            field, the coding-mode toggle, provider default) run outside
+            or deliberately inside a run and must keep working.
     """
     if not engine.provider:
         return False
+
+    if reset_context:
+        _refuse_if_run_in_flight(engine, "the model")
 
     engine.last_model_switch_reset = 0
 
@@ -284,6 +342,8 @@ def get_current_model(engine) -> str | None:
 
 
 __all__ = [
+    "ModelSwitchInFlightError",
+    "RUN_IN_FLIGHT_MESSAGE",
     "set_provider",
     "list_providers",
     "get_current_provider",

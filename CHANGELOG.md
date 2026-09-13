@@ -5,6 +5,21 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.2] - Unreleased
+
+Branch: `feature/gemini-v1.19.2`. Gemini fleet refresh, plus the fixes from a live Windows web-UI trial of gemini-3.8-flash (2026-09-13). `/v1/oneshot` is untouched.
+
+### Fixed
+- **Responses-wire tool loops were entirely broken.** `convert_messages` emitted the chat-completions shape (`role: tool`, `assistant.tool_calls`) on the OpenAI Responses wire, so every tool round trip on gpt-5.6-terra / gpt-5.3-codex / gpt-5-pro answered `400 Unknown parameter: 'input[N].tool_calls'`. It now emits `function_call` / `function_call_output` items; verified end-to-end against the live API. The old unit test had encoded the bug.
+- **A model or provider switch during a streaming response is refused.** Switching mid-tool-loop stripped the in-flight assistant turn from under the loop, and Gemini answered 400 on its turn-ordering rule 1.2 s later. `set_model(reset_context=True)` and `set_provider` now raise `ModelSwitchInFlightError` before mutating anything: `/model` and `/provider` return an error result, `POST /models` and `POST /providers` answer **409**, the Textual TUI shows a warning toast, the web dropdown reverts, and the VSCode client surfaces the server's reason. Wait for the response to finish, or stop it, then switch. The `reset_context=False` callers (session restore, the chat request's own `model` field, the coding-mode toggle) are unaffected.
+- **Unhandled route errors now reach ppxai's own log.** An exception escaping a route went to uvicorn's stderr only; `~/.ppxai/logs` showed the request line and then nothing, which is why the `/preview` 500 below had to be diagnosed from the browser console. `log_unhandled_route_error` writes the traceback to the server log and answers a generic JSON 500 (`error: internal_error`) that points at `/debug-log on`; the exception text stays off the wire.
+- **`/preview` answered "Internal Server Error" on Windows.** The iframe URL was built from a backslash path against a forward-slash working dir, so the prefix never matched and the whole path was percent-encoded. Both sides are normalised now.
+- **The usage log silently lost events on Windows.** Concurrent appends were seek-then-write (the CRT's `O_APPEND`); 29–79 of 200 writes vanished with `skipped_lines == 0`. Appends are serialised behind a lock.
+- **Tool calls were being discarded on 15 shipped fact rows.** `parallel_tool_calls` was still at the conservative default, so `chat.py` executed one call per turn and dropped the rest. Every flip was measured live (each family with a control): the Gemini 3.x Flash line, Gemma 4, the GPT-5/4.1/4o lines, `gpt-5.3-codex*` and `gpt-5-pro*` on the Responses wire. `gemini-3.1-pro*` (malformed on 2 of 3 parallel attempts) and `o3*` / `o3-mini*` (genuinely serial) stay `False` behind dedicated guard tests. Perplexity's `sonar` only tool-calls on `/v1/responses`; its example-config facts block is now complete (ADR 0012 Q0d).
+
+### Added
+- Fact rows for **gemini-3.8-flash\***, **gemini-3.7-flash\***, **gemini-3.6-flash\*** — tier inherited from the 3.5 line, not benchmarked; documented as such.
+
 ## [1.19.1] - 2026-09-10
 
 Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — stop malformed assistant turns (orphan `assistant.tool_calls` and empty-content assistants) from eating user prompts and from reaching strict providers. Surfaced by a live VSCode tools-enabled trial (2026-07-12) whose chats 400'd repeatedly and whose prompts then silently vanished. The branch then grew two accepted ADRs: **ADR 0011** (command taxonomy — `/auto` · `/run` · `/task`) and **ADR 0009** (task execution profiles + oneshot enrichment).

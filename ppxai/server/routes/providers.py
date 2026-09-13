@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ...common.logger import get_logger
 from ...constants import Default
+from ...engine.provider_ops import ModelSwitchInFlightError
 from ..models import SetModelRequest, SetProviderRequest, ToolsConfigRequest, ToolsRequest
 from ..state import Session, get_session, with_drained_events
 
@@ -39,13 +40,20 @@ async def get_providers(s: Session = Depends(get_session)):
 
 @router.post("/providers")
 async def set_provider(request: SetProviderRequest, s: Session = Depends(get_session)):
-    """Set the active provider."""
-    success = s.engine.set_provider(request.provider)
-    if not success:
-        raise HTTPException(status_code=400, detail=f"Failed to set provider: {request.provider}")
+    """Set the active provider.
 
-    if request.model:
-        s.engine.set_model(request.model, reset_context=request.reset_context)
+    409 while a response is streaming (v1.19.2): the engine refuses the
+    switch before mutating anything; the detail is the user-facing text.
+    """
+    try:
+        success = s.engine.set_provider(request.provider)
+        if not success:
+            raise HTTPException(status_code=400, detail=f"Failed to set provider: {request.provider}")
+
+        if request.model:
+            s.engine.set_model(request.model, reset_context=request.reset_context)
+    except ModelSwitchInFlightError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     state = s.engine.state
     result = {
@@ -78,8 +86,14 @@ async def get_models(s: Session = Depends(get_session)):
 
 @router.post("/models")
 async def set_model(request: SetModelRequest, s: Session = Depends(get_session)):
-    """Set the active model."""
-    success = s.engine.set_model(request.model, reset_context=request.reset_context)
+    """Set the active model.
+
+    409 while a response is streaming (v1.19.2) — see set_provider.
+    """
+    try:
+        success = s.engine.set_model(request.model, reset_context=request.reset_context)
+    except ModelSwitchInFlightError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not success:
         raise HTTPException(status_code=400, detail=f"Failed to set model: {request.model}")
 
