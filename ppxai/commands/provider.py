@@ -16,7 +16,12 @@ from ..config import (  # noqa: F401 — patched/read by tests
     get_provider_config,
 )
 from ..config.facts_config import model_fact_overrides
-from ..engine.model_facts import apply_overrides, is_unmeasured, shipped_facts_for_model
+from ..engine.model_facts import (
+    UNMEASURED,
+    apply_overrides,
+    is_unmeasured,
+    shipped_facts_for_model,
+)
 from ..engine.provider_ops import ModelSwitchInFlightError
 from ..engine.providers import get_provider_class
 from .factory import CommandFactory, CommandSpec
@@ -323,10 +328,43 @@ def handle_model_info(context: CommandContext, provider: str, model_id: str) -> 
     effective = apply_overrides(shipped, config_overrides)
     unmeasured = is_unmeasured(model_id, provider_table)
 
+    # v1.19.3 — a provider row can itself BE the floor, field by field.
+    #
+    # `is_unmeasured()` answers "did a row match", and a matched row used to
+    # make every field print `(built-in)`. But `PerplexityProvider` seeds its
+    # gateway rows from `shipped_facts_for_model("openai/")` (and
+    # `"anthropic/"`, `"google/"`, `"xai/"`, `"perplexity/"`), none of which
+    # match anything — so the seed IS `UNMEASURED`, and only three fields
+    # (`wire_protocol`, `tool_mode`, `max_tokens`) are then deliberately set.
+    # The remaining nine arrived as floor values wearing a `(built-in)` label,
+    # across every model those five globs serve. Q0e requires the opposite:
+    # "an operator should be told which of their models those are rather than
+    # discovering it when a tool call silently degrades" — which is exactly
+    # how it was found.
+    #
+    # REPORTING ONLY. The vendor-agnostic floor is correct as *resolution*
+    # (one wire, four vendors, a roster that changes without notice); it was
+    # only ever wrong as a *label*. `is_unmeasured` and the send path are
+    # untouched.
+    #
+    # The guard is `has_global_row`: a model with a real row in
+    # `SHIPPED_MODEL_FACTS` keeps `(built-in)` for every field, so a MEASURED
+    # value that happens to equal the floor — `o3*`'s measured-serial
+    # `parallel_tool_calls=False`, `gemini-3.1-pro*`'s — is never relabelled
+    # as a guess. Only a model resolved SOLELY through a provider row is
+    # compared field-by-field.
+    has_global_row = not is_unmeasured(model_id)
+
     def _source(field: str) -> str:
         if field in config_overrides:
             return "config"
-        return "unmeasured" if unmeasured else "built-in"
+        if unmeasured:
+            return "unmeasured"
+        if has_global_row:
+            return "built-in"
+        if getattr(shipped, field) == getattr(UNMEASURED, field):
+            return "unmeasured"
+        return "built-in"
 
     def _row(field: str) -> str:
         return "{:<20s} ({})".format(str(getattr(effective, field)), _source(field))
@@ -354,7 +392,8 @@ def handle_model_info(context: CommandContext, provider: str, model_id: str) -> 
     # Format pairs
     pairs = {
         "Model": f"{model_id} ({provider})",
-        "Tier": effective.tier or ("(unmeasured)" if unmeasured else "(no tier)"),
+        "Tier": effective.tier
+        or ("(unmeasured)" if _source("tier") == "unmeasured" else "(no tier)"),
         "": "",  # separator
         "wire_protocol": _row("wire_protocol"),
         "tool_mode": _row("tool_mode"),
