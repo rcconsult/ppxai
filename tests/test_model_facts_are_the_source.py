@@ -38,7 +38,7 @@ GLOBS = sorted(SHIPPED_MODEL_FACTS)
 #: The count is a canary, not a target. It moves when a model is added or
 #: retired — both legitimate — but never silently: a diff that changes it
 #: has to say why.
-EXPECTED_ROWS = 65
+EXPECTED_ROWS = 68
 
 #: The rows whose wire is NOT the default. Before Item 65 these came from
 #: `_API_PATH_TO_WIRE` and `_WIRE_BY_GLOB`, outside the rows entirely; the
@@ -50,6 +50,9 @@ NON_DEFAULT_WIRES = {
     "gemini-2.5-pro*": "generate_content",
     "gemini-2.5-flash-lite*": "generate_content",
     "gemini-2.5-flash*": "generate_content",
+    "gemini-3.8-flash*": "generate_content",
+    "gemini-3.7-flash*": "generate_content",
+    "gemini-3.6-flash*": "generate_content",
     "gemini-3.5-flash*": "generate_content",
     "gemini-3-flash*": "generate_content",
     "gemini-3.1-flash-lite*": "generate_content",
@@ -62,6 +65,64 @@ NON_DEFAULT_WIRES = {
     "gpt-5.3-codex*": "responses",
     "gpt-5.1-codex-mini*": "responses",
     "gpt-5.1-codex*": "responses",
+}
+
+
+#: Rows that allow PARALLEL tool calls. This set is load-bearing, not
+#: cosmetic: `engine/chat.py` does
+#:
+#:     if not facts.parallel_tool_calls:
+#:         parsed_calls = parsed_calls[:1]
+#:
+#: so a row left at the dataclass default (False) makes ppxai **silently
+#: discard every tool call after the first**. The model emits two, one is
+#: executed, and nothing logs the loss — a multi-tool turn just takes twice
+#: the round trips.
+#:
+#: Measured 2026-09-13: the Gemini flash line and both Gemma rows emit two
+#: calls per turn reliably (3 trials each, finishReason STOP). The base
+#: `gemini-3.1-pro*` row is deliberately NOT here — it returned
+#: MALFORMED_FUNCTION_CALL on 2 of 3 parallel attempts, while its
+#: `*customtools*` sibling was clean 3/3. Same family, opposite answer, which
+#: is why this set is pinned per-row rather than inferred per-provider.
+#:
+#: OpenAI measured 2026-09-13 via /v1/chat/completions (control: gpt-5.2,
+#: already True, returned 2 calls — so a 1-call result is the model, not a
+#: malformed probe). gpt-5 / -mini / -nano and the gpt-4.1 / gpt-4o line all
+#: returned 2 calls. **o3 and o3-mini returned 1 call on 3 of 3 trials**, so
+#: their False is MEASURED-correct, not a leftover default — the reasoning
+#: line is genuinely serial here. This is the second family where a blanket
+#: flip would have been wrong, after gemini-3.1-pro.
+#:
+#: Still UNMEASURED and left False: gpt-5-pro*, gpt-5.3-codex*,
+#: gpt-5.1-codex*, o1*, o1-mini*, o3-pro* (responses-wire or not configured
+#: on this host), plus the vLLM / NVIDIA rows. Absence here is a gap in the
+#: measurement, not a claim that those models cannot do parallel calls.
+PARALLEL_TOOL_CALL_ROWS = {
+    "gemini-3.8-flash*",
+    "gemini-3.7-flash*",
+    "gemini-3.6-flash*",
+    "gemini-3.5-flash*",
+    "gemini-3-flash*",
+    "gemini-3.1-flash-lite*",
+    "gemini-3.1-pro*customtools*",
+    "gemma-4-31b*",
+    "gemma-4-26b*",
+    "gpt-5.5*",
+    "gpt-5.4*",
+    "gpt-5.2*",
+    "qwen3-coder*",
+    "*/qwen3-coder-30b*",
+    "*/qwen3-coder-next*",
+    "*/qwen3-coder-480b*",
+    "Qwen/Qwen3.6-35B-A3B-FP8*",
+    "gpt-5",
+    "gpt-5-mini*",
+    "gpt-5-nano*",
+    "gpt-4.1",
+    "gpt-4.1-nano*",
+    "gpt-4o*",
+    "gpt-4o-mini*",
 }
 
 
@@ -135,6 +196,36 @@ class TestTheShippedTableIsWellFormed:
             if v.wire_protocol != "chat_completions"
         }
         assert actual == NON_DEFAULT_WIRES
+
+    def test_the_parallel_tool_call_rows_are_exactly_these(self):
+        """A row that flips to False starts DISCARDING tool calls silently.
+
+        Nothing else in the suite covers `parallel_tool_calls`: reverting
+        `gemini-3.5-flash*` to False on 2026-09-13 left 1,199 tests green.
+        A stored capability with no check is how this table drifts from the
+        fleet it describes, so the set is pinned and a diff has to say why.
+        """
+        actual = {
+            k for k, v in SHIPPED_MODEL_FACTS.items() if v.parallel_tool_calls
+        }
+        assert actual == PARALLEL_TOOL_CALL_ROWS
+
+    def test_the_unreliable_pro_row_stays_serial(self):
+        """`gemini-3.1-pro*` measured MALFORMED_FUNCTION_CALL on 2 of 3
+        parallel attempts (2026-09-13) while `*customtools*` was clean 3/3.
+        Enabling parallel here re-opens a measured failure, so it is pinned
+        separately from the set above — the two must not be merged."""
+        assert SHIPPED_MODEL_FACTS["gemini-3.1-pro*"].parallel_tool_calls is False
+        assert SHIPPED_MODEL_FACTS["gemini-3.1-pro*customtools*"].parallel_tool_calls is True
+
+    def test_the_serial_reasoning_rows_stay_serial(self):
+        """o3 / o3-mini returned exactly ONE tool call on 3 of 3 trials
+        (2026-09-13), while the gpt-5 and gpt-4o lines returned two. Their
+        False is a measurement, not an unset default, so flipping them would
+        re-introduce the discard bug in reverse — asking for parallel from a
+        model that does not emit it."""
+        assert SHIPPED_MODEL_FACTS["o3*"].parallel_tool_calls is False
+        assert SHIPPED_MODEL_FACTS["o3-mini*"].parallel_tool_calls is False
 
     @pytest.mark.parametrize("glob", GLOBS)
     def test_every_row_is_internally_valid(self, glob):
