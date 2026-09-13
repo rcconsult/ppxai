@@ -5,6 +5,14 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Branch: `bugfix/v1.19.3`. Both entries make an existing silent degradation VISIBLE. Neither changes what the send path does, and neither changes a resolved fact value.
+
+### Fixed
+- **A discarded parallel tool call now says so in the log.** When a model's facts row says `parallel_tool_calls=False`, `chat_with_tools` keeps only the first native call — the one branch in that function that throws away model output, and until now the only one with no logging, sitting directly beside the `fallback_on_empty` branch that does log. The fifteen mis-pinned rows fixed in v1.19.2 had been losing calls there on every multi-call turn with nothing in `~/.ppxai/logs` to say so; the only symptom was a tool loop taking twice the round trips it needed. It now logs a warning naming the model, the call kept, the calls dropped, and the `parallel_tool_calls` row to change. Single-call turns stay silent (a warning that is always present is one nobody reads).
+- **`/model info` no longer reports a floor value as built-in knowledge.** The label came from `is_unmeasured(model, provider_table)`, which answers "did a row match" — and `PerplexityProvider` seeds its gateway rows from `shipped_facts_for_model("openai/")` (and `anthropic/`, `google/`, `xai/`, `perplexity/`), which match nothing. The seed IS `UNMEASURED`: three fields are then set deliberately (`wire_protocol`, `tool_mode`, `max_tokens`) and the other **nine print as `(built-in)` for every model those five globs serve**, across four vendors. ADR 0012 Q0e requires the floor to be visible — "an operator should be told which of their models those are rather than discovering it when a tool call silently degrades" — which is precisely how this was found. **Reporting only:** resolution, the send path and `is_unmeasured` are untouched; a model with its own row in `SHIPPED_MODEL_FACTS` keeps `(built-in)` on every field, so a measured-serial value (`o3*`, `gemini-3.1-pro*`) is never relabelled as a guess.
+
 ## [1.19.2] - 2026-09-14
 
 Branch: `feature/gemini-v1.19.2`. Gemini fleet refresh, plus the fixes from a live Windows web-UI trial of gemini-3.8-flash (2026-09-13). `/v1/oneshot` is untouched.
