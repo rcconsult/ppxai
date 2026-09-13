@@ -3148,10 +3148,21 @@ class PpxaiApp {
                         // → 404. When filepath is outside working_dir we leave
                         // the leading slash so the server treats it as absolute
                         // (path-traversal guard allows files under $HOME).
-                        let pathForUrl = filepath;
-                        const wd = app.state?.workingDir || '';
-                        if (wd && filepath.startsWith(wd + '/')) {
-                            pathForUrl = filepath.slice(wd.length + 1);
+                        // v1.19.2: normalise separators BEFORE comparing or
+                        // splitting. On Windows the server returns a native
+                        // path (`C:\\proj\\index.html`) while working_dir
+                        // carries forward slashes, so the startsWith below
+                        // never matched: the path stayed absolute, `split('/')`
+                        // saw ONE segment, and the whole thing was
+                        // percent-encoded backslashes and all
+                        // (`C%3A%5Cproj%5Cindex.html`). The server answered 500
+                        // and the split pane rendered an empty iframe while
+                        // `/preview` itself reported success -- the command
+                        // looked fine and only the view was broken.
+                        let pathForUrl = String(filepath).replace(/\\/g, '/');
+                        const wd = String(app.state?.workingDir || '').replace(/\\/g, '/');
+                        if (wd && pathForUrl.startsWith(wd + '/')) {
+                            pathForUrl = pathForUrl.slice(wd.length + 1);
                         }
                         const encodedPath = pathForUrl.split('/').map(encodeURIComponent).join('/');
                         src = `${this._serverUrl}/preview/${encodedPath}?session=${encodeURIComponent(this._sessionId)}`;
