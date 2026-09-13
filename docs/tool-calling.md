@@ -1,6 +1,6 @@
 # Tool Calling in ppxai
 
-**Version:** v1.19.1
+**Version:** v1.19.1+
 **Updated:** 2026-08-04
 
 > **Note (v1.19.x):** Web search backend selection now goes through
