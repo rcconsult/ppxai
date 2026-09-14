@@ -5,7 +5,7 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.19.3] - 2026-09-14
 
 Branch: `bugfix/v1.19.3`. Both entries make an existing silent degradation VISIBLE. Neither changes what the send path does, and neither changes a resolved fact value.
 
