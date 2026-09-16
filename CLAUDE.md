@@ -8,9 +8,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current version:** see [pyproject.toml](pyproject.toml) (single source of truth) or [the latest release](https://github.com/rcconsult/ppxai/releases/latest).
 
-**Release state:** **v1.19.0 is released** (2026-07-12) — agent platform Stage 2 as a PREVIEW surface. v1.18.8 (2026-06-14) and v1.18.7 (2026-06-13) precede it. The `POST /v1/oneshot` gateway shape (bearer auth) that ppxai-sre's outlook-monitor agent consumes stays **byte-identical** across all of these, including the unreleased work below. See [docs/release-notes-v1.19.0.md](docs/release-notes-v1.19.0.md).
+**Release state:** **v1.19.2 is released** (2026-09-14), preceded by v1.19.1 (2026-09-10) and v1.19.0 (2026-07-12, agent platform Stage 2 as a PREVIEW surface). The `POST /v1/oneshot` gateway shape (bearer auth) that ppxai-sre's outlook-monitor agent consumes stays **byte-identical** across all of these, including the unreleased work below. See [docs/release-notes-v1.19.2.md](docs/release-notes-v1.19.2.md) and [docs/release-notes-v1.19.1.md](docs/release-notes-v1.19.1.md) (the v1.19.1 notes carry the ADR 0009/0010/0011/0012 migration detail and the opt-in Anthropic provider).
 
-**Active branch:** `bugfix/v1.19.1` (**not yet released**). Opened for tool-loop transcript integrity; it now also carries four implemented ADRs (0008, 0009, 0010, 0011) plus ADR 0012 and an opt-in Anthropic provider. See [CHANGELOG.md](CHANGELOG.md) `[1.19.1]` for the full list and [docs/release-notes-v1.19.1.md](docs/release-notes-v1.19.1.md) for the migration detail.
+**Active branch:** `bugfix/v1.19.3` (**not yet released** — version bumped, [docs/release-notes-v1.19.3.md](docs/release-notes-v1.19.3.md) written, no tag yet). Two small fixes that make prior silent degradation visible: a discarded parallel tool call now logs a warning, and `/model info` no longer labels UNMEASURED floor values as built-in. See [CHANGELOG.md](CHANGELOG.md) `[1.19.3]`.
 
 ⚠️ **The command surface was renamed with NO aliases** (ADR 0011). If you see `/agent`, `/agentrun`, `/agentruns`, `/tools agent`, or `/task run` in older docs or comments, they are **gone**:
 

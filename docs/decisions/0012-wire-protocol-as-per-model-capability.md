@@ -12,15 +12,18 @@ defect class this record exists to remove)
 `ProtocolHandler` contract + Responses handler + `wire_protocol` routing
 (steps 1–2 / W2, `1bf93de7`), Perplexity over the Responses wire (step 3 /
 W3, `a0d924ea` + `b15dd1aa`), and all three wires as handlers (step 4 / W4).
-**Debt Items 61 and 62 are both closed.** §6 (Messages) remains designed but
-unbuilt, by construction — it ships with `feat/anthropic-provider` on that
-work's own schedule, and this record exists so it lands as a handler rather
-than a fifth bespoke provider.
+**Debt Items 61 and 62 are both closed.** §6 (Messages) shipped as the fourth
+handler (`wire/messages.py`) with `feat/anthropic-provider` in v1.19.1 —
+a handler, not a fifth bespoke provider, as this record intended.
 
-One user-facing item is deliberately **not** shipped and needs an owner
-decision before 2026-09-27: the `sonar` → `perplexity/sonar` ID rename and
-the `/v1` base-url suffix in the shipped install scripts and VSCode
-bootstrap config. The code supports both IDs today, so nothing is blocked.
+The `sonar` → `perplexity/sonar` ID rename **shipped in v1.19.1**
+(`066dc22b`): example config, both install scripts, the VSCode bootstrap,
+`CODING_MODEL` and `RECOMMENDED_DEFAULTS["perplexity"]` all point at the
+Responses-wire ID, and the three bare IDs carry `/doctor` deprecation rows
+dated 2026-09-27. The `/v1` base-url suffix needs no install-script change:
+`PerplexityProvider._responses_base_url()` appends it, tolerating a
+trailing slash or an existing `/v1`. Nothing about the cutover remains
+pending on the ppxai side.
 Supersedes the `api_path` routing sketch in
 [`../plan-per-model-capabilities.md`](../plan-per-model-capabilities.md) §I4b,
 which assumed the slot merely needed filling in.
