@@ -286,10 +286,17 @@ class TestBuiltinProfiles:
         # it today — pin it so a future pattern tightening can't silently
         # regress the actively-served model to supports_vision=False (the exact
         # failure class Item 24 exists to prevent).
+        # 2026-09-16: the same deployments were upgraded IN PLACE to Qwen3.8
+        # (vllm-qwen38-27b-fp8-{agent,mig}); the 3.6 ids are now served-name
+        # aliases and the coder config names the real 3.8 ids. Before the glob
+        # grew to `3.[568]`, those ids fell to the UNMEASURED floor —
+        # prompt_based tools, no vision — while the alias kept native tools.
         for model in [
             "Qwen/Qwen3.5-27B-FP8",
             "Qwen/Qwen3.6-27B-FP8",
             "Qwen/Qwen3.6-27B-FP8-agent",
+            "Qwen/Qwen3.8-27B-FP8",
+            "Qwen/Qwen3.8-27B-FP8-agent",
         ]:
             facts = shipped_facts_for_model(model)
             assert facts.supports_vision is True, \
@@ -297,6 +304,7 @@ class TestBuiltinProfiles:
             assert facts.tool_mode == "native", \
                 f"{model}: should use native tool calling"
             assert facts.max_tokens == 8_192
+            assert facts.tier == "A", f"{model}: landed on the unmeasured floor"
 
     def test_minimax_m27_profile_2026_06_09_dgx_cluster_swap(self):
         """MiniMax-M2.7 (dgx-cluster MoE, 230B/10B-active) facts.

@@ -28,7 +28,7 @@ data:
           "INSTRUCTIONS.md"
         ]
       },
-      "default_provider": "vllm-qwen36",
+      "default_provider": "vllm-qwen38",
       "providers": {
         "dgx-spark": {
           "api_key_env": "VLLM_API_KEY",
@@ -195,24 +195,24 @@ data:
           "name": "vLLM Qwen3.5 27B FP8 (fallback)",
           "system_prompt": "You are a helpful AI coding assistant. Be concise and direct.\n\nCRITICAL TOOL RULES:\n1. Call tools directly using native function calling - NEVER output XML like <tool_call>\n2. Read the COMPLETE tool result. If it contains 'FAILED' or 'Error:', say 'The operation failed: [error]' - do NOT claim success\n3. After repeated failure (2+ attempts), STOP and report the error\n4. For apply_patch: use unified diff with '--- a/path', '+++ b/path', @@ markers, 3+ context lines\n5. For multi-file tasks, read ALL files - not just the first 2\n6. Complete ALL steps in multi-step tasks - do not stop at 3/4\n7. For office-format files, PREFER native tools over shell+python: read_pdf / get_pdf_page_image for .pdf, list_pptx_slides / read_pptx_slide_text / render_pptx_slide / summarize_pptx_visual for .pptx, list_excel_sheets / read_excel_sheet for .xlsx, read_docx for .docx, read_csv / list_csv_columns for .csv. Only fall back to shell+python (e.g. python-pptx, openpyxl) when the native tool cannot do what's needed (e.g. style editing, chart creation)."
         },
-        "vllm-qwen36": {
+        "vllm-qwen38": {
           "api_key_env": "VLLM_API_KEY",
-          "base_url": "http://vllm-qwen36-27b-fp8-mig.vllm.svc.cluster.local/v1",
+          "base_url": "http://vllm-qwen38-27b-fp8-mig.vllm.svc.cluster.local/v1",
           "capabilities": {
             "realtime_info": true,
             "weather": true,
             "web_fetch": true,
             "web_search": true
           },
-          "coding_model": "Qwen/Qwen3.6-27B-FP8",
-          "default_model": "Qwen/Qwen3.6-27B-FP8",
+          "coding_model": "Qwen/Qwen3.8-27B-FP8",
+          "default_model": "Qwen/Qwen3.8-27B-FP8",
           "generation_params": {
             "frequency_penalty": 0,
             "temperature": 0.2,
             "top_p": 0.9
           },
           "models": {
-            "Qwen/Qwen3.6-27B-FP8": {
+            "Qwen/Qwen3.8-27B-FP8": {
               "context_limit": 32768,
               "description": "In-cluster vLLM (H100 NVL MIG), reasoning + qwen3_coder parser, 32K context",
               "max_tokens": 8192,
@@ -378,8 +378,8 @@ data:
           }
         },
         "default_subagent": {
-          "provider": "vllm-qwen36",
-          "model": "Qwen/Qwen3.6-27B-FP8"
+          "provider": "vllm-qwen38",
+          "model": "Qwen/Qwen3.8-27B-FP8"
         }
       }
     }

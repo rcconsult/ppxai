@@ -696,7 +696,14 @@ SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {
         restricted_params=(),
         tier='B',
     ),
-    "Qwen/Qwen3.[56]-27B-FP8*": ModelFacts(
+    # 3.8 added 2026-09-16: the codeai/in-cluster 27B-FP8 deployments were
+    # upgraded in place (vllm-qwen38-27b-fp8-{agent,mig}, the 3.6 ids kept as
+    # served-name aliases). Without this glob a config that names the real
+    # `Qwen/Qwen3.8-27B-FP8*` id lands on the UNMEASURED floor — tool_mode
+    # prompt_based, no vision — while the alias id keeps native tools. Same
+    # family, same parser, same endpoint; the row is inherited from 3.5/3.6
+    # pending its own benchmark run.
+    "Qwen/Qwen3.[568]-27B-FP8*": ModelFacts(
         wire_protocol='chat_completions',
         tool_mode='native',
         fallback_on_empty=False,
