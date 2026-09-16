@@ -152,6 +152,28 @@ PERPLEXITY_CHAT_BASE_URL = APIEndpoint.PERPLEXITY_API
 PERPLEXITY_RESPONSES_BASE_URL = APIEndpoint.PERPLEXITY_API.rstrip("/") + "/v1"
 
 
+def _output_item_url_rows(item: Any) -> list[Any]:
+    """Return the `results` rows of a `search_results` output item, if any.
+
+    Reads attributes directly off the SDK object instead of a dict — see
+    `_responses_answer_and_citations` for why `model_dump()` is avoided here.
+    Falls back to a dict-shaped item so a hand-built fake in tests still works.
+    """
+    if isinstance(item, dict):
+        if item.get("type") != "search_results":
+            return []
+        return list(item.get("results") or [])
+    if getattr(item, "type", None) != "search_results":
+        return []
+    return list(getattr(item, "results", None) or [])
+
+
+def _row_url(row: Any) -> str | None:
+    if isinstance(row, dict):
+        return row.get("url")
+    return getattr(row, "url", None)
+
+
 def _responses_answer_and_citations(response, num_results: int):
     """Pull answer text and citation URLs out of a Responses reply.
 
@@ -159,30 +181,39 @@ def _responses_answer_and_citations(response, num_results: int):
     `search_results` OUTPUT ITEM carrying `{id, snippet, date, url}` rows.
     The text block's `annotations` array stays **empty** on this wire, so
     reading annotations — the obvious guess — silently yields no citations.
-    """
-    payload = {}
-    try:
-        payload = response.model_dump()
-    except Exception:  # noqa: BLE001 - SDK shape varies; fall back below
-        payload = {}
 
-    citations = []
-    for item in payload.get("output", []) or []:
-        if isinstance(item, dict) and item.get("type") == "search_results":
-            for row in item.get("results") or []:
-                url = (row or {}).get("url")
-                if url and url not in citations:
-                    citations.append(url)
+    MEASURED 2026-09-16: Perplexity's `search_results` item type isn't in
+    the openai SDK's `Response.output` union (message / function_call /
+    reasoning / ...), so pydantic parses it via a best-effort fallback whose
+    declared `type` literal doesn't match the actual string. That's harmless
+    for reading attributes off the live object, but calling `.model_dump()`
+    (as this used to, to get a plain dict) makes pydantic re-validate the
+    mismatch and print a `PydanticSerializationUnexpectedValue` warning to
+    stderr on every call. Fix: walk `response.output` directly via getattr/
+    duck-typing instead of dumping the whole typed union to a dict.
+    """
+    output_items = list(getattr(response, "output", None) or [])
+
+    citations: list[str] = []
+    for item in output_items:
+        for row in _output_item_url_rows(item):
+            url = _row_url(row)
+            if url and url not in citations:
+                citations.append(url)
 
     content = getattr(response, "output_text", None) or ""
     if not content:
         parts = []
-        for item in payload.get("output", []) or []:
-            if not isinstance(item, dict) or item.get("type") != "message":
+        for item in output_items:
+            item_type = item.get("type") if isinstance(item, dict) else getattr(item, "type", None)
+            if item_type != "message":
                 continue
-            for part in item.get("content") or []:
-                if isinstance(part, dict) and part.get("type") == "output_text":
-                    parts.append(part.get("text") or "")
+            item_content = item.get("content") if isinstance(item, dict) else getattr(item, "content", None)
+            for part in item_content or []:
+                part_type = part.get("type") if isinstance(part, dict) else getattr(part, "type", None)
+                if part_type == "output_text":
+                    part_text = part.get("text") if isinstance(part, dict) else getattr(part, "text", None)
+                    parts.append(part_text or "")
         content = "".join(parts)
 
     return content, citations[:num_results]
@@ -207,9 +238,13 @@ async def web_search_perplexity(query: str, num_results: int = 5) -> tuple[str, 
     if not api_key:
         raise ValueError("PERPLEXITY_API_KEY not set")
 
-    # Get model from config, default to sonar
+    # Get model from config. Default is the Responses-wire id: the
+    # chat-completions `sonar` wire retires 2026-09-27, and a code default
+    # outlives every user's config (see TestCodeDefaultsAreNotDeprecatedModels
+    # in tests/test_web_premium_wire.py) — so the default must name the
+    # surviving wire, not the cheapest-looking legacy one.
     tool_config = get_tool_config("web_search")
-    perplexity_model = tool_config.get("perplexity_model", "sonar")
+    perplexity_model = tool_config.get("perplexity_model", "perplexity/sonar")
 
     # ADR 0012 W3: which wire this model speaks is a per-model FACT, resolved
     # from the same table `PerplexityProvider` uses. This tool used to build

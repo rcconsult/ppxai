@@ -1430,8 +1430,8 @@
         "duckduckgo"
       ],
       "__comment_order": "Fallback chain, tried in this sequence. `preferred` still names the first choice and folds into this order. Omitted backends are appended in the default order, so a short list is 'try these first', not 'only these' - use `strict: true` to pin a single backend. The egress allowlist is derived from this same list.",
-      "perplexity_model": "sonar",
-      "__comment_perplexity_model": "Model for Perplexity searches (sonar = cheapest)",
+      "perplexity_model": "perplexity/sonar",
+      "__comment_perplexity_model": "Model for Perplexity searches. `perplexity/sonar` speaks the Responses wire, which survives the 2026-09-27 retirement of the Sonar chat-completions wire; the bare `sonar` id (chat wire) is deprecated.",
       "gemini_model": "gemini-3.6-flash",
       "__comment_gemini_model": "Model for Gemini grounding searches. GA; the 2.5 line sunsets from 2026-10-16 (debt Item 54).",
       "pricing": {

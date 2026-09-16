@@ -77,16 +77,15 @@ class TestItFollowsTheConfiguredModelOntoItsWire:
             resp_resp = MagicMock()
             resp_resp.output_text = "responses answer"
             resp_resp.usage = MagicMock(input_tokens=11, output_tokens=22)
-            resp_resp.model_dump = MagicMock(
-                return_value={
-                    "output": [
-                        {
-                            "type": "search_results",
-                            "results": [{"url": "https://resp.example/1"}],
-                        }
-                    ]
+            # A plain list of dicts, not model_dump() — see
+            # TestCitationsComeFromSearchResultItems for why the real code
+            # under test never calls .model_dump() on the response.
+            resp_resp.output = [
+                {
+                    "type": "search_results",
+                    "results": [{"url": "https://resp.example/1"}],
                 }
-            )
+            ]
             client.responses.create = AsyncMock(return_value=resp_resp)
             capture["client"] = client
             return client
@@ -132,30 +131,38 @@ class TestItFollowsTheConfiguredModelOntoItsWire:
 
 
 class TestCitationsComeFromSearchResultItems:
-    """Not from `annotations` — measured empty on this wire."""
+    """Not from `annotations` — measured empty on this wire.
+
+    Fake responses set `.output` directly to a list, matching the real SDK
+    object's attribute (a list of typed items), rather than routing through
+    `.model_dump()`. `_responses_answer_and_citations` used to dump the whole
+    typed `Response.output` union to a dict to read it as JSON-shaped data;
+    that made pydantic re-validate Perplexity's `search_results` item (a type
+    the openai SDK's union doesn't know) and print a
+    `PydanticSerializationUnexpectedValue` warning to stderr on every live
+    call (measured 2026-09-16). The fix reads attributes off `response.output`
+    directly and never calls `.model_dump()` — see
+    `TestNoWarningOnResponseSerialization` below for the regression fence.
+    """
 
     def test_urls_are_read_out_of_the_search_results_item(self):
         response = MagicMock()
         response.output_text = "answer"
-        response.model_dump = MagicMock(
-            return_value={
-                "output": [
-                    {
-                        "type": "message",
-                        "content": [
-                            {"type": "output_text", "text": "answer", "annotations": []}
-                        ],
-                    },
-                    {
-                        "type": "search_results",
-                        "results": [
-                            {"url": "https://a.example", "snippet": "…"},
-                            {"url": "https://b.example", "snippet": "…"},
-                        ],
-                    },
-                ]
-            }
-        )
+        response.output = [
+            {
+                "type": "message",
+                "content": [
+                    {"type": "output_text", "text": "answer", "annotations": []}
+                ],
+            },
+            {
+                "type": "search_results",
+                "results": [
+                    {"url": "https://a.example", "snippet": "…"},
+                    {"url": "https://b.example", "snippet": "…"},
+                ],
+            },
+        ]
         content, citations = _responses_answer_and_citations(response, 5)
         assert content == "answer"
         assert citations == ["https://a.example", "https://b.example"]
@@ -163,35 +170,27 @@ class TestCitationsComeFromSearchResultItems:
     def test_num_results_caps_the_citation_list(self):
         response = MagicMock()
         response.output_text = "a"
-        response.model_dump = MagicMock(
-            return_value={
-                "output": [
-                    {
-                        "type": "search_results",
-                        "results": [{"url": f"https://x{i}.example"} for i in range(9)],
-                    }
-                ]
+        response.output = [
+            {
+                "type": "search_results",
+                "results": [{"url": f"https://x{i}.example"} for i in range(9)],
             }
-        )
+        ]
         _, citations = _responses_answer_and_citations(response, 3)
         assert len(citations) == 3
 
     def test_text_is_recovered_from_output_items_when_output_text_is_absent(self):
         response = MagicMock()
         response.output_text = None
-        response.model_dump = MagicMock(
-            return_value={
-                "output": [
-                    {
-                        "type": "message",
-                        "content": [
-                            {"type": "output_text", "text": "pieced "},
-                            {"type": "output_text", "text": "together"},
-                        ],
-                    }
-                ]
+        response.output = [
+            {
+                "type": "message",
+                "content": [
+                    {"type": "output_text", "text": "pieced "},
+                    {"type": "output_text", "text": "together"},
+                ],
             }
-        )
+        ]
         content, citations = _responses_answer_and_citations(response, 5)
         assert content == "pieced together"
         assert citations == []
@@ -199,10 +198,71 @@ class TestCitationsComeFromSearchResultItems:
     def test_no_search_results_item_yields_no_citations_rather_than_raising(self):
         response = MagicMock()
         response.output_text = "answer"
-        response.model_dump = MagicMock(return_value={"output": []})
+        response.output = []
         content, citations = _responses_answer_and_citations(response, 5)
         assert content == "answer"
         assert citations == []
+
+    def test_attribute_style_items_work_too(self):
+        """The real SDK hands back objects, not dicts — exercise that shape."""
+
+        class FakeRow:
+            def __init__(self, url):
+                self.url = url
+
+        class FakeItem:
+            def __init__(self, type_, **kw):
+                self.type = type_
+                for k, v in kw.items():
+                    setattr(self, k, v)
+
+        response = MagicMock()
+        response.output_text = "answer"
+        response.output = [
+            FakeItem("search_results", results=[FakeRow("https://c.example")]),
+        ]
+        content, citations = _responses_answer_and_citations(response, 5)
+        assert content == "answer"
+        assert citations == ["https://c.example"]
+
+
+class TestNoWarningOnResponseSerialization:
+    """Regression fence for the `PydanticSerializationUnexpectedValue` noise.
+
+    Measured live (2026-09-16) against `perplexity/sonar`: a query that
+    actually triggers a search returns a `search_results` output item whose
+    `type` doesn't match any literal in the openai SDK's `Response.output`
+    union. Calling `response.model_dump()` on that object makes pydantic
+    print a `PydanticSerializationUnexpectedValue` UserWarning to stderr.
+    `pytest.warns(None)` was removed in pytest 8, so this uses
+    `warnings.catch_warnings(record=True)` directly.
+    """
+
+    def test_no_warning_is_emitted_reading_a_response_with_a_search_results_item(self):
+        import warnings
+
+        # A MagicMock response whose `.model_dump` would raise if ever
+        # called — the point is the function under test must not call it.
+        response = MagicMock()
+        response.output_text = "answer"
+        response.output = [
+            {
+                "type": "search_results",
+                "results": [{"url": "https://a.example"}],
+            }
+        ]
+        response.model_dump.side_effect = AssertionError(
+            "model_dump() must not be called — it re-triggers the pydantic "
+            "serialization warning this test guards against"
+        )
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            content, citations = _responses_answer_and_citations(response, 5)
+
+        assert content == "answer"
+        assert citations == ["https://a.example"]
+        assert caught == []
 
 
 class TestCodeDefaultsAreNotDeprecatedModels:
@@ -240,11 +300,12 @@ class TestCodeDefaultsAreNotDeprecatedModels:
     def test_the_perplexity_web_search_default_is_not_deprecated(self):
         """Same rule, the other backend.
 
-        This one currently NAMES a deprecated model on purpose: `sonar` is
-        the chat-wire id, deprecated 2026-09-27 in favour of
-        `perplexity/sonar`. It is asserted as a KNOWN exception rather than
-        skipped, so the exception has to be re-argued if it survives the
-        cutover.
+        Flipped 2026-09-16 from `sonar` (the chat-wire id, deprecated
+        2026-09-27) to `perplexity/sonar` (the Responses-wire id, verified
+        live and not in the deprecation table). This now asserts the general
+        rule with no carve-out — if a future default regresses onto a
+        deprecated model, this fails loudly instead of needing the
+        "known exception" the old default required.
         """
         import inspect
         import re
@@ -256,11 +317,37 @@ class TestCodeDefaultsAreNotDeprecatedModels:
         assert m, "the perplexity_model default moved — update this fence"
         default = m.group(1)
         dep = ALL_DEPRECATIONS.get(default)
-        if dep is not None:
-            assert default == "sonar" and dep.shutdown_date == "2026-09-27", (
-                f"{default!r} is deprecated and is NOT the known 2026-09-27 "
-                "Sonar case — a code default must not name a sunset model"
-            )
+        assert dep is None, (
+            f"the web_search Perplexity default {default!r} is deprecated "
+            f"(shutdown {dep.shutdown_date}, use {dep.replacement!r}). A code "
+            "default outlives every user's config — it must not name a model "
+            "with a sunset date."
+        )
+
+    def test_the_perplexity_default_resolves_to_the_responses_wire(self):
+        """Regression fence for the 2026-09-27 Sonar chat-wire retirement.
+
+        The default itself (not just its deprecation status) must resolve to
+        the `responses` wire — asserted against the same fact table the tool
+        and the provider both read, so a future default change that quietly
+        reintroduces a chat-wire id fails here even if that id isn't (yet)
+        marked deprecated.
+        """
+        import inspect
+        import re
+
+        src = inspect.getsource(web_premium.web_search_perplexity)
+        m = re.search(r'tool_config\.get\("perplexity_model",\s*"([^"]+)"\)', src)
+        assert m, "the perplexity_model default moved — update this fence"
+        default = m.group(1)
+        wire = shipped_facts_for_model(
+            default, PerplexityProvider.shipped_model_facts
+        ).wire_protocol
+        assert wire == "responses", (
+            f"the web_search Perplexity default {default!r} resolves to the "
+            f"{wire!r} wire, not 'responses' — it will die on the "
+            "2026-09-27 Sonar chat-completions retirement"
+        )
 
 
 class TestEgressAllowlistCoversBothWires:
