@@ -96,6 +96,67 @@ class TestEngineRefreshWiring:
 
 
 # -----------------------------------------------------------------------------
+# v1.19.3: tool-loop context baseline. A tool loop calls update_usage() ONCE
+# with the ITERATION-SUMMED usage (correct for billing) but must pass
+# context_tokens = the LAST request's own prompt+completion size, or the
+# context badge overshoots by a factor of N (350%/410% observed for
+# 13/10-iteration loops whose real usage was 26%/41%).
+# -----------------------------------------------------------------------------
+
+
+class TestToolLoopContextBaseline:
+    def test_context_tokens_overrides_the_accumulated_delta(self, engine):
+        from ppxai.engine.types import UsageStats
+
+        engine.session.add_message(_big("user"))
+        engine.session.add_message(_big("assistant"))
+
+        # Simulate a multi-iteration tool loop: `usage` is the SUM across
+        # every iteration (what billing wants), but context_tokens is only
+        # the last request's own size (what the badge baseline wants).
+        engine.session.update_usage(
+            UsageStats(prompt_tokens=400_000, completion_tokens=5_000, total_tokens=405_000),
+            "p", "m",
+            context_tokens=45_000,
+        )
+
+        assert engine._last_known_message_tokens == 45_000
+        assert engine._last_known_message_count == len(engine.session.messages)
+
+        context_limit = engine.get_context_info()["context_limit"]
+        expected_pct = (45_000 / context_limit) * 100 if context_limit else 0.0
+        assert engine.state.get("context_percentage") == pytest.approx(expected_pct)
+
+    def test_without_context_tokens_keeps_the_old_delta_behavior(self, engine):
+        """Plain single-request turns (chat.py's non-tool-loop path) never
+        pass context_tokens — the pre-v1.19.3 delta-based baseline must be
+        unchanged."""
+        from ppxai.engine.types import UsageStats
+
+        engine.session.add_message(_big("user"))
+        engine.session.update_usage(
+            UsageStats(prompt_tokens=100, completion_tokens=20, total_tokens=120),
+            "p", "m",
+        )
+        assert engine._last_known_message_tokens == 120
+        assert engine._last_known_message_count == len(engine.session.messages)
+
+    def test_zero_context_tokens_falls_back_to_delta(self, engine):
+        """context_tokens=0 is not a usable baseline (e.g. a usage event with
+        no metadata) — must fall back to the usage_delta behavior rather than
+        zeroing the badge out."""
+        from ppxai.engine.types import UsageStats
+
+        engine.session.add_message(_big("user"))
+        engine.session.update_usage(
+            UsageStats(prompt_tokens=50, completion_tokens=10, total_tokens=60),
+            "p", "m",
+            context_tokens=0,
+        )
+        assert engine._last_known_message_tokens == 60
+
+
+# -----------------------------------------------------------------------------
 # Single-producer contract — the provider_ops shim delegates to the engine
 # method so there is exactly one place that computes the field.
 # -----------------------------------------------------------------------------

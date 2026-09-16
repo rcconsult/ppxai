@@ -375,6 +375,82 @@ class TestAgentLifecycleEmission:
 
 
 # ---------------------------------------------------------------------------
+# v1.19.3 — tool-loop context baseline (context-badge overshoot fix)
+#
+# chat_with_tools sums EVERY iteration's usage into accumulated_usage (right
+# for billing — each iteration is a real provider call that costs money) but
+# must tell session.update_usage() the LAST request's own prompt+completion
+# size via context_tokens=, since each iteration resends the whole history
+# and the summed total is not "tokens currently in session.messages".
+# ---------------------------------------------------------------------------
+
+
+class TestToolLoopContextTokenBaseline:
+    @pytest.mark.asyncio
+    async def test_context_tokens_is_last_request_not_accumulated_sum(self):
+        from ppxai.engine.types import UsageStats
+
+        provider = MockProvider(
+            capabilities=ProviderCapabilities(),
+            responses=[
+                # Iteration 1: tool call, prompt=1000 completion=100
+                [
+                    Event(EventType.TOOL_CALL, {
+                        "tool": "read_file",
+                        "arguments": {"path": "a"},
+                        "tool_call_id": "c1",
+                    }),
+                    Event(EventType.STREAM_END, "", {
+                        "usage": UsageStats(prompt_tokens=1000, completion_tokens=100, total_tokens=1100),
+                    }),
+                ],
+                # Iteration 2: tool call, prompt=2000 completion=100
+                [
+                    Event(EventType.TOOL_CALL, {
+                        "tool": "read_file",
+                        "arguments": {"path": "b"},
+                        "tool_call_id": "c2",
+                    }),
+                    Event(EventType.STREAM_END, "", {
+                        "usage": UsageStats(prompt_tokens=2000, completion_tokens=100, total_tokens=2100),
+                    }),
+                ],
+                # Iteration 3: final answer, prompt=3000 completion=100
+                [
+                    Event(EventType.STREAM_END, "Done.", {
+                        "usage": UsageStats(prompt_tokens=3000, completion_tokens=100, total_tokens=3100),
+                    }),
+                ],
+            ],
+        )
+        tm = MockToolManager(tools={"read_file": lambda path="": f"body of {path}"})
+        ctx = MockChatContext(provider=provider, model="t", tool_manager=tm)
+        ctx.session.add_message(Message("user", "read a and b"))
+        provider.facts = ModelFacts(tool_mode="native")
+
+        # Spy on session.update_usage to capture the context_tokens kwarg
+        # without disturbing the real accumulation/billing logic.
+        calls = []
+        orig_update_usage = ctx.session.update_usage
+
+        def spy_update_usage(usage, provider=None, model=None, context_tokens=None):
+            calls.append(context_tokens)
+            return orig_update_usage(usage, provider, model, context_tokens=context_tokens)
+
+        ctx.session.update_usage = spy_update_usage
+
+        await _collect(ctx)
+
+        # Billing: cumulative across all 3 iterations — unchanged by this fix.
+        assert ctx.session.usage.prompt_tokens == 6000
+        assert ctx.session.usage.completion_tokens == 300
+
+        # Context baseline: only the LAST request's own prompt+completion.
+        assert len(calls) == 1
+        assert calls[0] == 3100
+
+
+# ---------------------------------------------------------------------------
 # Stage 4 — AppState schema + EngineClient wiring
 # ---------------------------------------------------------------------------
 

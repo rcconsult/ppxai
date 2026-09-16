@@ -1152,13 +1152,33 @@ class SessionManager:
         """
         self.metadata["model"] = model
 
-    def update_usage(self, usage: UsageStats, provider: str = None, model: str = None):
+    def update_usage(
+        self,
+        usage: UsageStats,
+        provider: str = None,
+        model: str = None,
+        context_tokens: int | None = None,
+    ):
         """Update usage statistics.
 
         Args:
-            usage: UsageStats to add
+            usage: UsageStats to add. For a single-request turn this is the
+                whole delta; for a tool loop this is the SUM across every
+                iteration (accumulated_usage) — correct for billing, but its
+                prompt_tokens over-counts "tokens currently in
+                session.messages" by ~N for an N-iteration loop, since each
+                iteration resends the whole history.
             provider: Provider name (for per-model tracking)
             model: Model ID (for per-model tracking)
+            context_tokens: The token count of `session.messages` *after*
+                this turn, i.e. the LAST provider request's own
+                prompt_tokens + completion_tokens — NOT the accumulated
+                total. Pass this from a tool loop (v1.19.3) so the
+                context-window badge baseline reflects the actual history
+                size instead of the iteration-inflated sum. None (the
+                default) means "usage IS a single request" — the listener
+                falls back to using usage's own prompt+completion delta as
+                the baseline, matching the pre-v1.19.3 behavior.
         """
         # Update session totals
         self.usage.prompt_tokens += usage.prompt_tokens
@@ -1193,14 +1213,19 @@ class SessionManager:
         # delta as a second positional arg so the listener can tell
         # "tokens currently in session.messages" (= last delta) apart
         # from "tokens accumulated across all turns" (= cumulative).
-        # Older listeners that accept only one positional arg keep
-        # working — the call below uses a try/except shim to stay
-        # backwards-compatible.
+        # v1.19.3: pass context_tokens as a third positional arg — for a
+        # tool loop `usage` (the second arg) is the iteration-summed
+        # accumulated_usage, which is NOT the session.messages baseline;
+        # context_tokens is. Older listeners that accept fewer positional
+        # args keep working via the two-tier try/except shim below.
         if self.on_usage_updated:
             try:
-                self.on_usage_updated(self.usage, usage)
+                self.on_usage_updated(self.usage, usage, context_tokens)
             except TypeError:
-                self.on_usage_updated(self.usage)
+                try:
+                    self.on_usage_updated(self.usage, usage)
+                except TypeError:
+                    self.on_usage_updated(self.usage)
 
     def get_usage(self) -> dict[str, Any]:
         """Get usage statistics.

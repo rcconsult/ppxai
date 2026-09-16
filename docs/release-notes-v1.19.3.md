@@ -155,6 +155,35 @@ guesses. Tests pin both.
   unchanged — this is unrelated to, and does not close, the Item 69
   runtime debt below (`find_config_file()`'s own cwd-based search order).
 
+- **The context-window badge no longer overshoots 100% in tool loops.**
+  Measured on a live coder session (2026-09-16): a 13-request tool-loop
+  turn displayed roughly 350% while the model was actually at roughly
+  26%, and a separate 10-request turn displayed roughly 410% against an
+  actual roughly 41%. `chat_with_tools` accumulates usage across every
+  iteration of a tool loop into `accumulated_usage` — correct for
+  billing, since each iteration is a real, separately-billed provider
+  call — then calls `session.update_usage(accumulated_usage, ...)` once
+  at the end of the run. `_sync_usage_to_state` (the AppState listener
+  behind the badge) had no way to tell that delta apart from a
+  single-request turn's delta, so it treated the iteration-summed total
+  as "tokens currently in `session.messages`" — over-claiming by
+  roughly a factor of N for an N-iteration loop, since every iteration
+  resends the whole history rather than adding to it.
+
+  `SessionManager.update_usage()` gains an optional `context_tokens`
+  keyword: the token count of `session.messages` *after* the turn, as
+  opposed to `usage`'s cumulative-for-billing total. `chat_with_tools`
+  now tracks `last_request_tokens` — the most recent iteration's own
+  `prompt_tokens + completion_tokens` — alongside `accumulated_usage`,
+  and passes it as `context_tokens` at both `update_usage()` call sites
+  (normal completion and the max-iterations exit). `_sync_usage_to_state`
+  uses `context_tokens` as the context baseline whenever it is a
+  positive int, falling back to the pre-existing delta-based behaviour
+  otherwise. Session/cost totals (the usage badge, billing, per-model
+  tracking) are untouched — only the context-percentage baseline
+  changes. The plain single-request chat path never passes
+  `context_tokens`, so its behaviour (v1.18.4 Item A) is unchanged.
+
 ## Debt
 
 - **Item 69 wording sharpened — recorded, not reopened, at the owner's

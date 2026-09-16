@@ -613,6 +613,15 @@ async def chat_with_tools(
     # Track accumulated usage
     accumulated_usage = UsageStats()
 
+    # v1.19.3: track the LAST provider request's own size (prompt+completion),
+    # separate from accumulated_usage which sums every iteration. Each tool-loop
+    # iteration resends the whole history, so accumulated_usage.prompt_tokens
+    # over-counts "tokens currently in session.messages" by ~N for an N-iteration
+    # loop. last_request_tokens is passed as update_usage()'s context_tokens so
+    # the context-window badge uses the true baseline while billing totals
+    # (accumulated_usage) stay cumulative and correct.
+    last_request_tokens = 0
+
     # v1.19.0: reset the live in-flight token mirror for this run. We bump it in
     # lockstep with accumulated_usage.total_tokens below so the agent-platform
     # token budget can read a truthful running total at each tool-loop boundary
@@ -785,6 +794,7 @@ async def chat_with_tools(
                     accumulated_usage.prompt_tokens += usage.prompt_tokens
                     accumulated_usage.completion_tokens += usage.completion_tokens
                     accumulated_usage.total_tokens += usage.total_tokens
+                    last_request_tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0)
                     _bump_live_run_tokens(ctx, usage.total_tokens)
 
         # Check interrupt after provider returns (stream=False blocks until complete)
@@ -814,6 +824,7 @@ async def chat_with_tools(
                             accumulated_usage.prompt_tokens += usage.prompt_tokens
                             accumulated_usage.completion_tokens += usage.completion_tokens
                             accumulated_usage.total_tokens += usage.total_tokens
+                            last_request_tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0)
                             _bump_live_run_tokens(ctx, usage.total_tokens)
 
         # Build list of parsed tool calls
@@ -1202,6 +1213,7 @@ async def chat_with_tools(
                             accumulated_usage.prompt_tokens += usage.prompt_tokens
                             accumulated_usage.completion_tokens += usage.completion_tokens
                             accumulated_usage.total_tokens += usage.total_tokens
+                            last_request_tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0)
                             _bump_live_run_tokens(ctx, usage.total_tokens)
 
                 full_response = full_response.strip() or "[Tool execution completed but no summary generated]"
@@ -1298,7 +1310,10 @@ async def chat_with_tools(
                     ctx.model,
                     ctx.provider_name
                 )
-                ctx.session.update_usage(accumulated_usage, ctx.provider_name, ctx.model)
+                ctx.session.update_usage(
+                    accumulated_usage, ctx.provider_name, ctx.model,
+                    context_tokens=last_request_tokens,
+                )
                 metadata = {"usage": asdict(accumulated_usage)}
 
             yield Event(EventType.STREAM_END, full_response, metadata)
@@ -1323,7 +1338,10 @@ async def chat_with_tools(
             ctx.model,
             ctx.provider_name
         )
-        ctx.session.update_usage(accumulated_usage, ctx.provider_name, ctx.model)
+        ctx.session.update_usage(
+            accumulated_usage, ctx.provider_name, ctx.model,
+            context_tokens=last_request_tokens,
+        )
 
     yield Event(EventType.INFO, "Maximum tool iterations reached")
 

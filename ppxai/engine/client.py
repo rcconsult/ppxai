@@ -327,22 +327,34 @@ class EngineClient:
         self,
         usage: 'UsageStats',
         usage_delta: Optional['UsageStats'] = None,
+        context_tokens: int | None = None,
     ) -> None:
         """Callback from session.update_usage() — sync totals to AppState.
 
         ``usage`` is the cumulative session total (used for the usage
         badge). ``usage_delta`` is the per-turn delta added by this
-        call — its ``prompt_tokens`` is the BPE size of every message
-        sent on the latest provider request (= history that was on
-        the wire), and its ``completion_tokens`` is just the
-        assistant reply that was appended afterwards. Together they
-        equal the token count of ``session.messages`` *after* the
-        turn, which is what the context badge needs to display
-        ``X / context_limit`` honestly. (v1.18.4 Item A: prior code
-        used the cumulative numbers here, which over-claimed by a
-        factor of N for an N-turn session.)
+        call — for a SINGLE-REQUEST turn its ``prompt_tokens`` is the
+        BPE size of every message sent on the latest provider request
+        (= history that was on the wire), and its ``completion_tokens``
+        is just the assistant reply appended afterwards; together they
+        equal the token count of ``session.messages`` *after* the turn.
+        (v1.18.4 Item A: prior code used the cumulative numbers here,
+        which over-claimed by a factor of N for an N-turn session.)
+
+        That equivalence breaks for a TOOL LOOP: there, ``usage_delta``
+        is the SUM across every iteration (each iteration resends the
+        whole history), so its prompt_tokens over-claims by a factor of
+        N for an N-iteration loop (v1.19.3: 350%/410% observed vs the
+        model's actual 26%/41%). ``context_tokens`` is the fix — the
+        chat-loop tool path passes the LAST request's own
+        prompt+completion size there, and when it's a positive int we
+        use IT as the ``session.messages`` baseline instead of
+        ``usage_delta``.
         """
-        if usage_delta is not None:
+        if context_tokens is not None and isinstance(context_tokens, int) and context_tokens > 0:
+            self._last_known_message_tokens = context_tokens
+            self._last_known_message_count = len(self.session.messages)
+        elif usage_delta is not None:
             delta_total = (usage_delta.prompt_tokens or 0) + (usage_delta.completion_tokens or 0)
             if delta_total > 0:
                 self._last_known_message_tokens = delta_total
