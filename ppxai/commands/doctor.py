@@ -350,12 +350,14 @@ def _probe_provider_endpoint(
         # Lazy import — keeps /doctor importable when httpx is missing
         # (we only need it for the probe path, never the offline audit).
         import httpx
+
+        from ..config.tls import tls_verify
     except ImportError:
         result["error"] = "httpx not installed"
         return result
 
     try:
-        with httpx.Client(timeout=_PROBE_TIMEOUT_S) as client:
+        with httpx.Client(timeout=_PROBE_TIMEOUT_S, verify=tls_verify()) as client:
             response = client.get(url, headers=headers)
             response.raise_for_status()
             payload = response.json()
@@ -882,7 +884,7 @@ def _format_config_migration_section(config_data: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _format_facts_section() -> list[str]:
+def _format_facts_section(config_data: dict[str, Any] | None = None) -> list[str]:
     """Report `facts` blocks that are stale, partial, misplaced or mistyped.
 
     ADR 0012 section 2 Q0c/Q0d/Q0e. Four findings, all read from the config
@@ -896,12 +898,19 @@ def _format_facts_section() -> list[str]:
     to guess is how a provider-level statement came to speak for `sonar`.
     So `/doctor` carries the verbosity Q0e creates: it names every blank,
     and `complete_record_for()` supplies the value to fill it with.
+
+    `config_data`, when given, is the SAME raw config dict the ADR 0010
+    migration scan above audits — without it, the `facts_config` helpers
+    fall back to reading whatever config the process loaded globally, which
+    silently reports on the wrong file when /doctor is auditing a config at
+    a different path (headless `audit_user_config(Path(...))`, or a running
+    process that loaded config from elsewhere).
     """
 
     lines: list[str] = ["Per-model facts (ADR 0012, v1.19.1):"]
     found = False
 
-    plan = migration_plan()
+    plan = migration_plan(config_data)
     if plan:
         found = True
         lines.append(
@@ -911,7 +920,7 @@ def _format_facts_section() -> list[str]:
         for line in plan:
             lines.append(f"      {line}")
 
-    misplaced = misplaced_fields_in_config()
+    misplaced = misplaced_fields_in_config(config_data)
     if misplaced:
         found = True
         lines.append(
@@ -922,14 +931,14 @@ def _format_facts_section() -> list[str]:
         for path, fields in sorted(misplaced.items()):
             lines.append(f"      {path}: {', '.join(fields)}")
 
-    mistyped = wrong_typed_fields_in_config()
+    mistyped = wrong_typed_fields_in_config(config_data)
     if mistyped:
         found = True
         lines.append("   ⚠ value(s) that do not match the declared type:")
         for path, fields in sorted(mistyped.items()):
             lines.append(f"      {path}: {', '.join(fields)}")
 
-    incomplete = incomplete_blocks_in_config()
+    incomplete = incomplete_blocks_in_config(config_data)
     if incomplete:
         found = True
         lines.append(
@@ -975,6 +984,7 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     # ADR 0010 (v1.19.1): flag keys still at their pre-migration location.
     # Offline and always shown — a stale key is silently ignored under the
     # clean break, so this is the only surface that reveals it.
+    raw_config: dict[str, Any] | None = None
     if audit.get("config_path"):
         try:
             with open(audit["config_path"], "r", encoding="utf-8-sig") as f:
@@ -988,9 +998,13 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     # ADR 0012 (v1.19.1): legacy / misplaced / mistyped / partial facts
     # blocks. Offline and always shown, for the same reason as the section
     # above — under a clean break these are silently ignored, so this is the
-    # only surface that reveals them.
+    # only surface that reveals them. Pass the SAME `raw_config` the ADR 0010
+    # scan above just read, so the facts section audits the file /doctor
+    # named in its header rather than whatever config the process loaded
+    # globally (they can differ — headless audits, or a running process that
+    # loaded config from a different path).
     try:
-        report = report + "\n\n" + "\n".join(_format_facts_section())
+        report = report + "\n\n" + "\n".join(_format_facts_section(raw_config))
     except Exception:  # noqa: BLE001 — never fail /doctor over a scan
         pass
     probe_results: dict[str, dict[str, Any]] = {}

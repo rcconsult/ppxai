@@ -261,7 +261,18 @@ def resolve_model_facts(
 # ──────────────────────────────────────────────────────────────────────
 
 
-def _walk_config() -> dict[str, Any]:
+def _walk_config(config_data: dict[str, Any] | None = None) -> dict[str, Any]:
+    """`providers` from `config_data` if given, else the globally loaded file.
+
+    `config_data` lets a caller (namely `/doctor`) audit a SPECIFIC file
+    rather than whatever config the process happens to have loaded — the
+    same file-identity requirement `_format_config_migration_section`
+    already honours for the ADR 0010 scan. Default `None` preserves the
+    original global-file behaviour for every other caller.
+    """
+    if config_data is not None:
+        providers = config_data.get("providers")
+        return providers if isinstance(providers, dict) else {}
     try:
         path = find_config_file()
         if not path:
@@ -291,15 +302,18 @@ def _each_block(cfg_providers: dict[str, Any]):
                     )
 
 
-def legacy_blocks_in_config() -> dict[str, list[str]]:
+def legacy_blocks_in_config(
+    config_data: dict[str, Any] | None = None,
+) -> dict[str, list[str]]:
     """Every legacy key still in the config file, keyed by its dotted path.
 
     Feeds `/doctor`. Under a clean break these keys resolve to nothing, so
     only a check that reads the FILE can tell an operator their setting has
-    stopped applying.
+    stopped applying. `config_data`, when given, is audited in place of the
+    globally loaded config (see `_walk_config`).
     """
     found: dict[str, list[str]] = {}
-    for prefix, container, _allowed in _each_block(_walk_config()):
+    for prefix, container, _allowed in _each_block(_walk_config(config_data)):
         for bname in LEGACY_BLOCKS:
             block = container.get(bname)
             if not isinstance(block, dict):
@@ -310,7 +324,9 @@ def legacy_blocks_in_config() -> dict[str, list[str]]:
     return found
 
 
-def incomplete_blocks_in_config() -> dict[str, list[str]]:
+def incomplete_blocks_in_config(
+    config_data: dict[str, Any] | None = None,
+) -> dict[str, list[str]]:
     """Every `facts` block that does not state all of its record's fields.
 
     Returns dotted path -> the field names it leaves unstated (ADR 0012 §2
@@ -318,9 +334,11 @@ def incomplete_blocks_in_config() -> dict[str, list[str]]:
     models an operator cannot tell whether an absent field is an intention or
     an oversight. Code rows are exempt by construction — the dataclass
     guarantees them complete — which is the asymmetry Q0d rests on.
+    `config_data`, when given, is audited in place of the globally loaded
+    config (see `_walk_config`).
     """
     missing: dict[str, list[str]] = {}
-    for prefix, container, allowed in _each_block(_walk_config()):
+    for prefix, container, allowed in _each_block(_walk_config(config_data)):
         block = container.get(FACTS_BLOCK)
         if not isinstance(block, dict):
             continue
@@ -331,17 +349,20 @@ def incomplete_blocks_in_config() -> dict[str, list[str]]:
     return missing
 
 
-def misplaced_fields_in_config() -> dict[str, list[str]]:
+def misplaced_fields_in_config(
+    config_data: dict[str, Any] | None = None,
+) -> dict[str, list[str]]:
     """Fields stated against the wrong record (ADR 0012 §2 Q0e).
 
     A model fact in a provider block, or an endpoint fact in a model block,
     is silently ignored by the resolver — which is the correct behaviour
     (there is nothing to arbitrate) but a poor experience unless something
-    says so. This is what says so.
+    says so. This is what says so. `config_data`, when given, is audited in
+    place of the globally loaded config (see `_walk_config`).
     """
     wrong: dict[str, list[str]] = {}
     both = set(FACT_FIELDS) | set(PROVIDER_FACT_FIELDS)
-    for prefix, container, allowed in _each_block(_walk_config()):
+    for prefix, container, allowed in _each_block(_walk_config(config_data)):
         block = container.get(FACTS_BLOCK)
         if not isinstance(block, dict):
             continue
@@ -355,17 +376,20 @@ def misplaced_fields_in_config() -> dict[str, list[str]]:
     return wrong
 
 
-def wrong_typed_fields_in_config() -> dict[str, list[str]]:
+def wrong_typed_fields_in_config(
+    config_data: dict[str, Any] | None = None,
+) -> dict[str, list[str]]:
     """Fields whose value cannot be coerced to the declared type.
 
     The third `/doctor` finding, beside missing (Q0d) and misplaced (Q0e).
     :func:`coerce_field` rescues the common hand-edit cases (`"false"`,
     `"4096"`); what reaches here is a value no amount of coercion makes
     sense of, and the operator has to be told rather than have it silently
-    ignored or silently truthy.
+    ignored or silently truthy. `config_data`, when given, is audited in
+    place of the globally loaded config (see `_walk_config`).
     """
     wrong: dict[str, list[str]] = {}
-    for prefix, container, allowed in _each_block(_walk_config()):
+    for prefix, container, allowed in _each_block(_walk_config(config_data)):
         block = container.get(FACTS_BLOCK)
         if not isinstance(block, dict):
             continue
@@ -383,7 +407,7 @@ def wrong_typed_fields_in_config() -> dict[str, list[str]]:
 
 
 
-def migration_plan() -> list[str]:
+def migration_plan(config_data: dict[str, Any] | None = None) -> list[str]:
     """Human-readable `old -> new` lines for `/doctor`.
 
     **The target level is not always the source level**, and getting that
@@ -400,11 +424,15 @@ def migration_plan() -> list[str]:
     provider-level statements land on the models before anything else
     fills blanks. A legacy key holding an ENDPOINT fact keeps its
     provider-level target, and a model-level key maps in place.
+
+    `config_data`, when given, is audited in place of the globally loaded
+    config (see `_walk_config`) — both the model-name lookup below and the
+    `legacy_blocks_in_config` scan use the SAME file.
     """
     lines: list[str] = []
-    cfg_providers = _walk_config()
+    cfg_providers = _walk_config(config_data)
 
-    for path, keys in sorted(legacy_blocks_in_config().items()):
+    for path, keys in sorted(legacy_blocks_in_config(config_data).items()):
         base = path.rsplit(".", 1)[0]
         is_provider_level = ".models." not in base
         pname = base.split(".", 2)[1] if base.startswith("providers.") else ""

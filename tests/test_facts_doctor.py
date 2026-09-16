@@ -309,6 +309,75 @@ class TestDoctorSuppliesTheFix:
         assert record["tool_mode"] == "prompt_based"
 
 
+class TestExplicitConfigDataOverridesTheGlobalFile:
+    """`config_data` must be what the helpers audit, not whatever config the
+    process happens to have loaded globally.
+
+    Without this, `/doctor` (and a headless `audit_user_config(Path(...))`)
+    can name one file in its header while these findings silently describe
+    a DIFFERENT file — observed 2026-09-16, where the facts section listed
+    providers from the repo-root config while the header named
+    `~/.ppxai/ppxai-config.json`. Each test below sets up a global file WITH
+    a finding, then proves an explicit clean `config_data` suppresses it —
+    which is only possible if the helper looked at the argument.
+    """
+
+    def _clean(self):
+        return {
+            "providers": {
+                "other": {
+                    "name": "O",
+                    "base_url": "https://other.invalid",
+                    "api_key_env": "K",
+                }
+            }
+        }
+
+    def test_migration_plan_honors_the_explicit_argument(self, config_file):
+        config_file(_provider(capabilities={"native_tool_calling": True}))
+        assert fcmod.migration_plan(), "sanity: the global file has a finding"
+        assert fcmod.migration_plan(self._clean()) == []
+
+    def test_misplaced_fields_honors_the_explicit_argument(self, config_file):
+        config_file(_provider(facts={"tool_mode": "native"}))
+        assert fcmod.misplaced_fields_in_config(), "sanity: global file has a finding"
+        assert fcmod.misplaced_fields_in_config(self._clean()) == {}
+
+    def test_wrong_typed_fields_honors_the_explicit_argument(self, config_file):
+        config_file(_provider(models={"m1": {"facts": {"tier": 7}}}))
+        assert fcmod.wrong_typed_fields_in_config(), "sanity: global file has a finding"
+        assert fcmod.wrong_typed_fields_in_config(self._clean()) == {}
+
+    def test_incomplete_blocks_honors_the_explicit_argument(self, config_file):
+        config_file(_provider(models={"m1": {"facts": {"tool_mode": "native"}}}))
+        assert fcmod.incomplete_blocks_in_config(), "sanity: global file has a finding"
+        assert fcmod.incomplete_blocks_in_config(self._clean()) == {}
+
+    def test_the_facts_section_reports_on_the_passed_config_not_the_global_one(
+        self, config_file
+    ):
+        # The GLOBAL (process-loaded) config carries a legacy block that
+        # would surface as a finding if the section fell back to reading it.
+        config_file(_provider(capabilities={"native_tool_calling": True}))
+
+        different_but_complete = {
+            "providers": {
+                "p": {
+                    "name": "P",
+                    "base_url": "https://example.invalid",
+                    "api_key_env": "K",
+                    "facts": _complete_provider_facts(),
+                    "models": {"m1": {"facts": _complete_model_facts()}},
+                }
+            }
+        }
+        report = "\n".join(
+            doctor_mod._format_facts_section(different_but_complete)
+        )
+        assert "✓" in report
+        assert "IGNORED" not in report
+
+
 class TestCleanConfigReportsClean:
     def test_no_findings_on_a_fully_migrated_config(self, config_file):
         config_file(

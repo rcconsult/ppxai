@@ -488,6 +488,57 @@ class TestHandleDoctor:
         assert result.status == ResultStatus.ERROR
         assert "config file" in result.message.lower()
 
+    def test_facts_section_audits_the_named_file_not_a_different_global_one(
+        self, tmp_path, monkeypatch
+    ):
+        """Regression: the facts section (ADR 0012 scan) must describe the
+        SAME file `/doctor`'s header names, not whichever config
+        `facts_config`'s own `find_config_file()` happens to resolve to.
+
+        Observed 2026-09-16: the facts section listed providers from a
+        config different from the one the audit header named. Reproduced
+        here by pointing `doctor.find_config_file` (what the audit/header
+        use) and `facts_config.find_config_file` (what the old
+        un-parameterised helpers fell back to) at two DIFFERENT files —
+        one clean, one carrying a legacy block. The fix threads the
+        audited file's data through, so the stale file's finding must not
+        appear.
+        """
+        audited = _write_config(tmp_path, {
+            "providers": {
+                "clean": {
+                    "name": "C",
+                    "base_url": "https://example.invalid",
+                    "api_key_env": "K",
+                },
+            },
+        })
+        other_dir = tmp_path / "elsewhere"
+        other_dir.mkdir()
+        stale = other_dir / "ppxai-config.json"
+        stale.write_text(json.dumps({
+            "providers": {
+                "stale": {
+                    "name": "S",
+                    "base_url": "https://stale.invalid",
+                    "api_key_env": "K",
+                    "capabilities": {"native_tool_calling": True},
+                },
+            },
+        }), encoding="utf-8")
+
+        monkeypatch.setattr(
+            "ppxai.commands.doctor.find_config_file", lambda: audited
+        )
+        monkeypatch.setattr(
+            "ppxai.config.facts_config.find_config_file", lambda: stale
+        )
+
+        ctx = SimpleNamespace()
+        result = handle_doctor(ctx, "")
+        assert "stale" not in result.message
+        assert str(audited) in result.message
+
     def test_command_is_registered(self):
         # /doctor auto-registers via side-effect import.
         import ppxai.commands.handler  # noqa: F401
@@ -836,6 +887,79 @@ class TestDeprecationTableInvariants:
             "deprecated models kept with no explanation:\n  "
             + "\n  ".join(violations)
         )
+
+
+# -----------------------------------------------------------------------------
+# _probe_provider_endpoint — must route through the outbound TLS resolver
+# -----------------------------------------------------------------------------
+
+
+class TestProbeProviderEndpointUsesTheTLSResolver:
+    """Every other outbound client goes through `config.tls.tls_verify()`
+    (the v1.19.1 additive-CA resolver honouring SSL_VERIFY / SSL_CERT_FILE /
+    network.ssl.*). `_probe_provider_endpoint` built its `httpx.Client` with
+    no `verify=` at all, so `/doctor` reported CERTIFICATE_VERIFY_FAILED for
+    a corporate-CA endpoint the providers reached fine (measured
+    2026-09-16). This locks the client to the resolver's return value.
+    """
+
+    def test_the_client_is_constructed_with_verify_from_the_resolver(
+        self, monkeypatch
+    ):
+        from unittest.mock import MagicMock, patch
+
+        from ppxai.commands.doctor import _probe_provider_endpoint
+
+        sentinel = object()
+        monkeypatch.setattr(
+            "ppxai.config.tls.tls_verify", lambda: sentinel
+        )
+
+        mock_response = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"data": []}
+
+        mock_client = MagicMock()
+        mock_client.__enter__.return_value = mock_client
+        mock_client.__exit__.return_value = False
+        mock_client.get.return_value = mock_response
+
+        with patch("httpx.Client", return_value=mock_client) as mock_ctor:
+            result = _probe_provider_endpoint(
+                "p", {"base_url": "https://example.invalid"}
+            )
+
+        assert result["reachable"] is True
+        mock_ctor.assert_called_once()
+        _, kwargs = mock_ctor.call_args
+        assert kwargs.get("verify") is sentinel
+
+    def test_a_disabled_verification_setting_is_passed_through(self, monkeypatch):
+        """`tls_verify()` returns `False` outright when verification is off
+        (SSL_VERIFY=false) -- the probe must hand that straight to httpx
+        rather than defaulting to `True`."""
+        from unittest.mock import MagicMock, patch
+
+        from ppxai.commands.doctor import _probe_provider_endpoint
+
+        monkeypatch.setattr(
+            "ppxai.config.tls.tls_verify", lambda: False
+        )
+
+        mock_response = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"data": []}
+
+        mock_client = MagicMock()
+        mock_client.__enter__.return_value = mock_client
+        mock_client.__exit__.return_value = False
+        mock_client.get.return_value = mock_response
+
+        with patch("httpx.Client", return_value=mock_client) as mock_ctor:
+            _probe_provider_endpoint("p", {"base_url": "https://example.invalid"})
+
+        _, kwargs = mock_ctor.call_args
+        assert kwargs.get("verify") is False
 
 
 class TestGroundingSection:
