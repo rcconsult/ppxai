@@ -270,7 +270,12 @@ roster *through AppState*, pushed over `state_sync`. That is replaced:
   handler, present in the roster and carrying the `clients` gating that
   `_BUILTIN_SPECIAL_COMMANDS` holds informally today. Each declares
   `client_action: "<name>"` (e.g. `"token.manage"`) — a name from a fixed
-  vocabulary. **Python owns what exists, who gets it, its help, its
+  vocabulary held in Python — plus `client_action_clients`, the set of
+  clients that dispatch to it; any other client uses the server `handler`.
+  That pair is how HYBRID commands work too: `/task`, `/run` and `/auto`
+  have a real Python handler for the in-process TUIs and a client action
+  for web/VSCode, which drive `/v1/agent/*` and never call
+  `POST /command/task`. **Python owns what exists, who gets it, its help, its
   subcommands and which action it binds to; each client BUNDLES the
   implementation of the named action.** No executable code crosses the
   wire. This mirrors the envelope's existing `SideEffectKind` idiom — the

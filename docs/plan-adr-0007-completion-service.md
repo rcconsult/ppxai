@@ -67,10 +67,53 @@ shipping JS from the server was considered and rejected (ADR 0007,
 commands for the per-command contract. Widen (or replace)
 `CompletionCommandInfo` to carry `usage`, `category`, subcommands.
 
-**Open design questions** (settle before coding): the `client_action`
-vocabulary — its initial names and where the canonical list lives so both
-JS clients and the parity fence read the same one; the shape of `clients`
-on a spec (a set of client ids, absent = universal — matching what
+**Decided 2026-09-20 (owner):**
+
+- **`/exit` is an ALIAS of `/quit`** — one spec, `aliases=["exit"]`. Same
+  behaviour, and aliases are the registry's native form
+  (`CommandSpec.aliases`, collision-checked at `factory.py:149`).
+- **The canonical `client_action` vocabulary lives in PYTHON**, beside
+  `CommandSpec`. The parity fence reads that one list and checks each JS
+  client implements every name. A JS-side list would be a second source of
+  truth — the thing this whole record exists to remove.
+
+Initial vocabulary:
+
+| Command | `client_action` | `clients` |
+|---|---|---|
+| `/token` | `token.manage` | `{web, vscode}` |
+| `/quit` (alias `/exit`) | `app.quit` | universal |
+
+**Resolved by measurement:** hybrid commands (`/task`, `/run`, `/auto`,
+streaming, client-native UX) DO carry a `client_action`, scoped per client
+— see §Hybrid commands. Legacy intercepts do not.
+
+**Decided 2026-09-20 (owner): an action plus a client set**, not a
+`{client: action}` mapping:
+
+    client_action="task.controller",
+    client_action_clients={"web", "vscode"},
+
+It matches how `clients` gating already works in `completion.py`, and it is
+the more compact form. What it commits to: every client that takes the
+action takes the SAME named action — web's `RunController` and VSCode's
+`getRunController()` are separate implementations of one name. If two
+clients ever need different actions for one command, that is a schema
+change, made deliberately.
+
+Convention that makes the pair well-defined (proposed with the decision —
+correct it if wrong):
+
+- A client IN `client_action_clients` dispatches to the named action.
+- A client NOT in it uses the server `handler` — so Rich/Textual need no
+  entry and their behaviour is the default.
+- `client_action_clients` ABSENT means "every client that can see the
+  command" — the natural form for a spec with no handler at all
+  (`/quit`: universal; `/token`: bounded by `clients={"web","vscode"}`).
+- A spec with neither a `handler` nor a `client_action` is invalid and
+  should fail at registration, the way an alias collision does today.
+
+**Still open** (settle before coding): the shape of `clients` on a spec (a set of client ids, absent = universal — matching what
 `completion.py:70-78` already does informally); how argument kinds are
 expressed; whether subcommands are flat `(name, description)` pairs or
 nested specs.
@@ -122,7 +165,7 @@ Python command infrastructure **correctly**, not just be listed there.
 | Command | Today | Why it is client-handled | Must hold after migration |
 |---|---|---|---|
 | `/token` | JS dispatcher branch (`command-dispatcher.js:111`), VSCode branch (`chatPanel.ts:1185`); declared in `_BUILTIN_SPECIAL_COMMANDS` with `clients={web,vscode}` | its **state** is client-side: the credential store is the browser's `localStorage` + the in-memory `ApiClient`. NOT Python-free — `mint` calls `POST /v1/tokens` (`server/routes/tokens_v1.py`); `status`/`set`/`clear` are pure client. The server can mint a token but cannot attach it to the client's future requests, so the client must orchestrate | spec is `client_handled`; `clients={web,vscode}`; subcommands `status·set·mint·clear` on the spec; **Rich/Textual never see it** in completion or `/help`; `POST /command/token` refuses cleanly rather than 404-ing |
-| `/quit`, `/exit` | `_BUILTIN_SPECIAL_COMMANDS`, universal | ends the client process | spec is `client_handled`, no `clients` restriction; decide whether `/exit` is an ALIAS of `/quit` (one spec) or a second spec — aliases are the registry's native form |
+| `/quit`, `/exit` | `_BUILTIN_SPECIAL_COMMANDS`, universal | ends the client process | ONE spec: `/quit` with `aliases=["exit"]` (decided 2026-09-20), `client_action="app.quit"`, no `clients` restriction |
 | `/cat` | JS standalone entry "Alias for /show" | — it is NOT client-handled | **nothing to migrate**: already a registered alias. JS stops restating it; the endpoint serves aliases |
 | `/sh`, `/term` | JS standalone entries "Alias for /terminal" | — not client-handled | same: already registered aliases |
 
@@ -166,6 +209,39 @@ second roster still exists: `_BUILTIN_SPECIAL_COMMANDS` and `_CLIENT_GATES`
 (`engine/completion.py`), `_appendExperimentalHelp`
 (`command-dispatcher.js`), the inline fallback catalog (`app.js:199`), and
 the alias entries in `commands.js`.
+
+## Hybrid commands — dispatch routing becomes data
+
+Measured 2026-09-20. "Do I POST this to `/command/<name>` or handle it
+here?" is a hardcoded `if`-chain in each JS client, and the chains differ:
+**web intercepts 5 commands** (`command-dispatcher.js`), **VSCode 12**
+(`chatPanel.ts:1140-1220`). Nothing records which client handles what.
+
+    grep -nE "if \(cmd === '/[a-z-]+'" ppxai/web/shared/command-dispatcher.js
+    grep -nE "(^|[^a-zA-Z])command === '[a-z-]+'" vscode-extension/src/chatPanel.ts | grep -v subcommand
+
+(The `grep -v subcommand` matters: without it `subcommand === 'clear'`
+inflates VSCode's count to 16 — a mistake made and caught while writing this.)
+
+The VSCode block documents its own intercepts, and they are five kinds:
+
+| Kind | Commands | Gets a `client_action`? |
+|---|---|---|
+| Pure client | `/token`, `/quit` | **Yes**, and NO server handler |
+| Client-driven family | `/task`, `/run`, `/auto` — JS controllers drive `/v1/agent/*`; JS never calls `POST /command/task` | **Yes, per client** — `handler=` serves Rich/Textual in-process, `client_action` serves web/VSCode |
+| Streaming | `/convert`, coding tasks — the factory handler blocks on the LLM, so the client streams instead | **Yes, per client** |
+| Client-native UX | `/preview` (own WebviewPanel), `/help` (factory output + VSCode shortcuts) | **Yes** — `/help` wraps the factory rather than replacing it |
+| **Acknowledged legacy** | `/tools`, `/checkpoint`, `/context`, `/ls`, `/tree` — the code says *"These hit bespoke REST today; full factory routing is a later phase"* | **NO.** Do not bless debt. These migrate to factory routing; the fence carries them as a shrinking baseline |
+
+So `client_action` is **scoped by client** (via `client_action_clients`), not a boolean on the spec: a
+command may have a Python handler AND a client action, and which one runs
+depends on who is asking. `/token` is the degenerate case with no handler.
+
+**Consequence for the parity fence (step 5):** every command a client
+intercepts must be declared with a `client_action` for that client, or sit in
+an explicit legacy baseline. On day one that baseline is exactly the five
+legacy VSCode intercepts, and it may only shrink — the same discipline as
+`BASELINE` in `tests/test_no_new_lazy_imports.py`.
 
 ## Explicitly not in the path
 
