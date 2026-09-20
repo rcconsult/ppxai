@@ -28,6 +28,7 @@ import httpx
 import openai
 from openai import OpenAI
 
+from ... import usage as _usage
 from ...common.logger import get_logger
 from ...config.tls import tls_verify
 from ..model_facts import shipped_facts_for_model
@@ -429,8 +430,7 @@ class OpenAINativeProvider(BaseProvider):
             if throttle is not None:
                 throttle["model"] = model
                 try:
-                    from ...usage import record_provider_error
-                    record_provider_error(
+                    _usage.record_provider_error(
                         provider=throttle["provider"] or self.provider_id or "",
                         status_code=throttle["status_code"],
                         model=model,

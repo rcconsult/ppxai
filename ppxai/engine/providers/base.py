@@ -16,6 +16,7 @@ import openai
 from openai import OpenAI
 
 from ...common.logger import get_logger
+from ...config import facts_config as _facts_config
 from ...config import (
     get_extra_body,
     get_generation_params,
@@ -213,9 +214,9 @@ class BaseProvider(ABC):
         if not provider_key:
             return self.capabilities
         try:
-            from ...config.facts_config import apply_provider_overrides
-
-            return apply_provider_overrides(self.capabilities, provider_key)
+            return _facts_config.apply_provider_overrides(
+                self.capabilities, provider_key
+            )
         except Exception:  # noqa: BLE001 — config must never break a request
             return self.capabilities
 
@@ -263,9 +264,7 @@ class BaseProvider(ABC):
         if not provider_key:
             return shipped
         try:
-            from ...config.facts_config import resolve_model_facts
-
-            return resolve_model_facts(shipped, provider_key, model)
+            return _facts_config.resolve_model_facts(shipped, provider_key, model)
         except Exception:  # noqa: BLE001 — config must never break a request
             return shipped
 

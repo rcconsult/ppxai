@@ -18,6 +18,7 @@ import json
 from collections.abc import AsyncIterator
 from typing import Any
 
+from .... import usage as _usage
 from ....common.logger import get_logger
 from ...types import Event, EventType, Message, UsageStats
 from ...uploaded_file import assert_wire_blocks_clean, flatten_uploaded_file_blocks
@@ -329,8 +330,7 @@ class ResponsesHandler:
             if throttle is not None:
                 throttle["model"] = model
                 try:
-                    from ....usage import record_provider_error
-                    record_provider_error(
+                    _usage.record_provider_error(
                         provider=throttle["provider"] or ctx.provider_id or "",
                         status_code=throttle["status_code"],
                         model=model,

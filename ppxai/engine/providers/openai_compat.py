@@ -11,6 +11,7 @@ import re
 from collections.abc import AsyncIterator
 from typing import Any
 
+from ... import usage as _usage
 from ...config import (  # noqa: F401 — patched/read by tests
     get_context_warn_percent,
     get_default_provider,
@@ -467,8 +468,7 @@ class OpenAICompatibleProvider(BaseProvider):
                 # re-running benchmarks. Best-effort — never break chat on
                 # telemetry failure.
                 try:
-                    from ...usage import record_provider_error
-                    record_provider_error(
+                    _usage.record_provider_error(
                         provider=throttle["provider"] or self.provider_id or "",
                         status_code=throttle["status_code"],
                         model=model,
