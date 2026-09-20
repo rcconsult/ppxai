@@ -224,7 +224,17 @@ When auth is enforced:
   - The exact path `POST /v1/agent/run` (the tool-free oneshot run
     tier) — behaviorally identical to `/v1/oneshot`, so it's exempted
     the same way; the tool-capable `/v1/agent/task` tier and
-    `/runs/{id}/cancel` stay protected.
+    `/runs/{id}/cancel` stay protected. **This one is conditional
+    (ADR 0011 U3).** The carve-out's whole justification is "no tools,
+    no egress", so with **`execution.run.web_search` ON** the exemption
+    **closes** and the bearer rule applies — an enriched `/v1/agent/run`
+    launches a `web_search`-granted run, and that is a capability. A
+    config-read error also fails **closed**. See
+    `ppxai/server/auth.py:247-262`. So enabling oneshot web_search
+    changes who can reach this endpoint from the local browser: if your
+    desktop client stops being able to launch runs after you turn it on,
+    this is why, and the fix is to give the client a token rather than to
+    turn the enrichment back off.
   - Loopback `GET` of an **unowned** run's metadata or event stream
     (`/v1/agent/runs/{id}` and `/v1/agent/runs/{id}/events`) — i.e. a
     run the token-less local browser itself created via the exempt

@@ -79,7 +79,7 @@ ppxai/engine/chat.py::chat_with_tools()
   │              └─ apply_overrides(shipped, model_fact_overrides(...))
   │                   └─ reads providers.<p>.models.<m>.facts FROM THE FILE
   │
-  ├─ use_native_tools = facts.tool_mode != "prompt_based"       [chat.py:637]
+  ├─ use_native_tools = facts.tool_mode != "prompt_based"       [chat.py:646]
   │
   └─ facts.fallback_on_empty / .fallback_on_failure /
      .strip_json_from_text / .parallel_tool_calls / .max_tool_iterations
@@ -220,7 +220,7 @@ the wire never sees is *exactly* debt Item 61, reproduced inside the handler
 built to fix Item 61. Two sources for one value is the bug; `_budget_for`
 now reads config first, then the fact, in one place.
 
-## Graph 2d — the end state: 4 providers, 3 wires (ADR 0012 W4)
+## Graph 2d — the end state: 5 providers, 4 wires (ADR 0012 W4 + §6)
 
 Every wire is a handler. Conversion is protocol-owned, so there is no shared
 method left for two protocols to disagree about — the shape debt Item 62 (b)
@@ -248,7 +248,7 @@ described.
               └──────────────────────┴────────────────────────┘
                                      │
                         assert_wire_blocks_clean()
-                        ADR 0006 · 3 of 3 wires · was 1 of 3
+                        ADR 0006 · 4 of 4 wires · was 1 of 3
 ```
 
 **Three return types, deliberately.** `ProtocolHandler.convert_messages` is
@@ -420,10 +420,24 @@ The provider dimension at rung 2 is load-bearing, not decoration:
 
 ---
 
-## Not yet consumed
+## ~~Not yet consumed~~ — consumed since W2
 
-`wire_protocol` is **resolved but not yet routed on** — W2 makes
-`openai_native`'s three `_is_responses_api_model()` branches read it, which
-is what finally closes debt Item 61. Until then the field is data with one
-reader (`/provider`), and this doc should be updated the same day that
-changes.
+> This section described `wire_protocol` as resolved-but-not-routed-on. That
+> stopped being true when **W2 shipped and closed debt Item 61 on
+> 2026-08-31** (`1bf93de7`); the text survived as a leftover pre-W2 draft
+> until 2026-09-20, contradicting the W2–W4 sections above it in the same
+> file.
+
+`wire_protocol` **is** the routing key. `openai_native`'s three
+`_is_responses_api_model()` branches were replaced by one reader,
+`get_facts_for_model(model).wire_protocol`, consumed by all four dispatch
+sites; the prefix tuple that used to decide is now seed data only. The
+fences are declared-vs-routed across every built-in row, plus an operator
+override proven to change the **outgoing request** in both directions,
+asserted at the client spy rather than at the resolver.
+
+The fifth provider (Anthropic) and the fourth wire (`messages`) landed in
+v1.19.1 under ADR 0012 §6 — see `ppxai/engine/providers/anthropic.py` and
+`ppxai/engine/providers/wire/messages.py`. The Anthropic provider ships
+**opt-in and untested against the live API** (debt Item 71, an accepted
+limitation).

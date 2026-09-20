@@ -94,9 +94,13 @@ large: `rm ~/.ppxai/logs/*.log`.
 - **Flag lives in config**, not in `AppState` or session state, because
   it's a cross-session preference (like `tui.theme`), not per-session
   state.
-- **Restored in `ppxai/config/__init__.py::initialize()`** via a lazy
-  import of `common.logger.Logger.enable_all()`. Lazy to avoid a
-  circular dep with the logger module.
+- **Restored in `ppxai/config/__init__.py::initialize()`**, which calls
+  `common.logger.Logger.enable_all()`. `Logger` itself is imported
+  **top-level** (`ppxai/config/__init__.py:23`) — there is no circular
+  dependency with the logger module, contrary to what this doc said until
+  2026-09-20. The one deferred import inside `initialize()` is
+  `get_debug_log_enabled` from `.features`, and it defers to avoid a cycle
+  with `.features`, not with the logger.
 - **Every client calls `initialize()` first** — Rich
   (`ppxai/rich/main.py`), Textual (`ppxai/tui/__init__.py`), server
   (`ppxai/server/http.py`), benchmark runner

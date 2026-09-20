@@ -269,8 +269,8 @@ trust boundary; the assistant works your repo), **k8s coder pod = seal off**
 | `400 workdir does not exist` | `--work-dir` points at a missing directory. |
 | `⚠️ sandbox seal active — --work-dir ignored` | Expected on sealed hosts; the jail wins. |
 | Agent says a file "does not exist" | Check `wd:` in `/task get` — pass `--work-dir` or an absolute path. |
-| Perplexity `/task` refuses, confabulates, or summarizes an *external* URL | `sonar-pro` is prompt-based and does not reliably call granted tools on `/task` (**Item 43**). Use a native-tool provider (e.g. `nvidia/deepseek-v4-pro`) for tool-capable runs. |
-| Gemini 3.x `/task` fails with `400 … missing a thought_signature` | Known gap (**Item 45**): ppxai doesn't yet replay Gemini 3.x `thought_signature`. Use Gemini 2.5 or another native-tool provider for now. |
+| Perplexity `/task` refuses, confabulates, or summarizes an *external* URL | **Fixed — Item 43, closed 2026-08-24 (`0490ce87`).** The cause was ours, not Perplexity's: a hardcoded `native_tool_calling=False` gone stale plus a profile row pinning `prompt_based`. Sonar tool-calls on `/v1/responses`, which is where `ModelFacts` now routes it. If you still see this, check `/model info` for the resolved `tool_mode`. |
+| Gemini 3.x `/task` fails with `400 … missing a thought_signature` | **Fixed — Item 45, closed 2026-07-22 (`edb74500`).** ppxai preserves and replays the Gemini 3.x `thought_signature` on the tool-response turn. Native-tool `/task` runs on Gemini 3.x are supported. |
 | Run stuck `waiting` | Answer the card / `/task respond <id> …`, or let the TTL deny it. |
 | Result seems missing after finish | It's held — `/task collect <id>`. |
 | `409 cannot be resumed: …` | The refusal reason is verbatim (not resumable, in flight, tier off…). |

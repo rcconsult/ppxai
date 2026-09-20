@@ -38,7 +38,9 @@
 | [DGX Spark Setup](dgx-spark-setup.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
-| [Release Notes v1.19.0](release-notes-v1.19.0.md) | **Latest release** (2026-07-12) — agent platform (ADR 0003 Stage 2) durable `/v1/agent/*` run registry with tool-capable sandboxed tier, `/task` command family T1–T4. |
+| [Release Notes v1.19.2](release-notes-v1.19.2.md) | **Latest release** (2026-09-14) — Gemini fleet refresh; Responses-wire tool loops fixed; mid-stream model/provider switch refused (409); Windows `/preview` and usage-log fixes; 15 `parallel_tool_calls` rows corrected. |
+| [Release Notes v1.19.1](release-notes-v1.19.1.md) | (2026-09-10) — tool-loop transcript integrity; **ADR 0011** command taxonomy (`/auto` · `/run` · `/task`, breaking renames, no aliases); **ADR 0010** config-shape clean break (`tools.agent.*` → `execution.*`); **ADR 0012** per-model facts; opt-in Anthropic provider (untested against the live API). |
+| [Release Notes v1.19.0](release-notes-v1.19.0.md) | (2026-07-12) — agent platform (ADR 0003 Stage 2) durable `/v1/agent/*` run registry with tool-capable sandboxed tier, `/task` command family T1–T8a. |
 | [Release Notes v1.18.8](release-notes-v1.18.8.md) | (2026-06-14) |
 | [Release Notes v1.18.7](release-notes-v1.18.7.md) | (2026-06-13) — C1 cross-user pod-takeover auth fix + H2 hardening, workspace file upload, office-doc preview, model-catalog refresh. Earlier v1.18.x notes are archived under [archive/release-notes/](archive/release-notes/). |
 | [Stabilization v1.18.0](archive/STABILIZATION-v1.18.0.md) | **Landed** — five-phase cleanup pass: `GET /state` reconnect endpoint, AppState `last_message_role`, `format_tokens`/`format_usage_badge` cross-language helpers, `AutosaveFailureGuard`, public-API promotion of 8 helpers, removed `has_vision_model` alias |
@@ -122,6 +124,7 @@ ppxai includes built-in tools for AI-powered development:
 | `display_file` | AI proactively shows files after generating them |
 | `search_files` | Search for files by pattern |
 | `get_working_directory` | Get current working directory |
+| `set_working_directory` | Change the working directory for subsequent tool calls |
 
 **Office / document tools** (require the `[data]` extra):
 

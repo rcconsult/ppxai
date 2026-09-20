@@ -369,8 +369,9 @@ envelope.
 }
 ```
 
-**Side-effect kinds (v1.18.1)** — see `ppxai/commands/results.py::SideEffectKind`
-for the full taxonomy. Categories:
+**Side-effect kinds (v1.18.1; `prompt_text` added 2026-05-03)** — see
+`ppxai/commands/results.py::SideEffectKind` for the full taxonomy. All 16,
+by category:
 - File handling: `open_editor`, `open_viewer`, `show_image`,
   `show_pdf`, `reveal_in_explorer`
 - Terminals: `open_terminal`, `run_shell`
@@ -379,7 +380,7 @@ for the full taxonomy. Categories:
 - Preferences: `set_theme`
 - Clipboard: `copy_to_clipboard`
 - Session/engine: `attach_file`
-- Interactive: `prompt_quick_pick`
+- Interactive: `prompt_quick_pick`, `prompt_text`
 - Messages: `notify`
 - VSCode escape hatch: `vscode_delegate`
 
@@ -731,7 +732,7 @@ The web app (`ppxai/web/`) serves as the UI for `ppxai-desktop` and the browser-
 ```
 ppxai/web/
 ├── index.html                          # Single-page app shell
-├── app.js                              # PpxaiApp root class (~3,850 lines as of v1.18.8)
+├── app.js                              # PpxaiApp root class (~4,160 lines as of v1.19.3)
 ├── shared/                             # Framework-level modules (flat, not per-group folders)
 │   ├── api-client.js                   # ApiClient — all fetch() calls, timeout, error shape
 │   ├── app-state.js                    # AppState — centralised state with listener notifications

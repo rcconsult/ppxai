@@ -521,7 +521,7 @@ class TestToolIntegration:
         """Create engine with tools enabled."""
         engine = EngineClient()
         engine.set_provider("gemini")  # Or your preferred provider
-        engine.set_model("gemini-2.5-flash")
+        engine.set_model("gemini-3.6-flash")
         engine.enable_tools()
         return engine
 

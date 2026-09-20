@@ -359,4 +359,10 @@ Recording notes that outlive the fix:
 
 ## Open at time of writing
 
-- The ADR 0010 grep above has **never been run** against ppxai-sre.
+- ~~The ADR 0010 grep above has **never been run** against ppxai-sre.~~
+  **Run and clean, repeatedly.** ppxai-sre's own `AGENTS.md` and
+  `docs/cross-repo-dialog-log.md` record clean runs on 2026-08-15 and
+  2026-09-05, and it was re-run live on 2026-09-20 against
+  `~/git/utils/ppxai-sre` — zero hits. ppxai-sre never adopted the
+  `tools.agent.*` tier keys, so ADR 0010's clean break cost it nothing.
+  This line was the last "open at time of writing" item and is now closed.

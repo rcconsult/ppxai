@@ -60,8 +60,9 @@ ppxai-desktop      # Desktop web app
 ### Multi-Provider Support
 
 - **Perplexity AI** - Real-time web search with citations
-- **Google Gemini** - 1M token context, search grounding
-- **OpenAI** - GPT-4o, o1 reasoning models
+- **Google Gemini** - 1M token context, search grounding; 3.5 Flash by default
+- **OpenAI** - GPT-5.6-terra by default, plus the GPT-5.5/5.4 lines and GPT-5.3-codex
+- **Anthropic (Claude)** - opt-in via the `[anthropic]` extra; ships untested against the live API
 - **OpenRouter** - 100+ models including Claude
 - **Local Models** - Ollama, vLLM, LMStudio
 

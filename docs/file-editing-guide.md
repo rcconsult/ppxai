@@ -436,7 +436,15 @@ Validated by extension:
 | YAML | `.yaml`, `.yml` |
 | TOML | `.toml` |
 | JavaScript | `.js`, `.mjs`, `.cjs`, `.jsx` |
-| TypeScript | `.ts`, `.tsx` |
+| TypeScript | `.ts`, `.tsx` — **recognised but NOT validated**; see below |
+
+> ⚠️ **TypeScript is detected but never checked.**
+> `syntax_validator.py:157` returns early for `kind == "typescript"`
+> unconditionally — `tsc` integration is still TBD, and `node --check`
+> cannot parse TS. `.ts`/`.tsx` edits are written through with **no**
+> syntax validation, whether or not `node` is on PATH. The table above
+> listed them alongside JavaScript until 2026-09-20; the error came from
+> the module's own docstring table, which had the same mistake.
 
 Any other extension is written through unchecked — the validator is a
 safety net for the formats it knows, not a gate on every file. An error

@@ -1,5 +1,15 @@
 # Item 65 — implementation plan (auditor → builder)
 
+> ✅ **DONE — this plan was executed; it is a record, not outstanding work.**
+> Item 65 completed 2026-08-31: `BUILTIN_PROFILES` retired and
+> `ppxai/engine/model_profiles.py` **deleted entirely** (step 2, `ed3c069a`,
+> net −1,035 lines). `supports_vision()` moved to
+> `ppxai/engine/model_facts.py:1368` with the data it reads. Every
+> `model_profiles.py:NN` citation below is to a file that no longer exists,
+> and the §"are corrected there and here" note was never actually applied to
+> this file — `git log -- docs/handoff-item-65.md` shows only the original
+> commit. Marked 2026-09-20.
+
 **Written 2026-08-31 by the auditor session (ppxai-28) for the builder
 (ppxai-c7), against branch `bugfix/v1.19.1` @ `4b49e960`.**
 

@@ -34,10 +34,17 @@ This change lets incomplete responses (empty or whitespace-only text parts) pass
 ### Workarounds in place
 
 **1. Version pin (ceiling)** — `pyproject.toml` constrains both optional and
-dev dependencies to the last benchmark-verified version:
+dev dependencies. **The live pin is:**
 ```toml
-"google-genai>=1.0.0,<2.12.0"
+"google-genai>=1.0.0,<3.0.0"
 ```
+> ⚠️ **The ceiling was raised twice after the 2026-07-11 verdict below, and
+> this section said `<2.12.0` until 2026-09-20.** It went to `<2.20.0` on
+> 2026-08-31 (`9aee5f3d`, Item 54 B4) and then to `<3.0.0`. Neither raise
+> went through the 3×-benchmark gate this document defines, so **the gate
+> described below is no longer what actually guards this dependency** —
+> treat the review log as history, and re-run the gate before trusting the
+> current ceiling.
 
 **2. ~~Defensive filter~~ — dead code, DELETED (2026-07-12).**
 `_filter_empty_parts()` in `ppxai/engine/providers/gemini.py` was believed to

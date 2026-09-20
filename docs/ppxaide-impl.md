@@ -17,7 +17,17 @@ tree-sitter-html>=0.23.2
 tree-sitter-css>=0.25.0
 tree-sitter-markdown>=0.5.1
 tree-sitter-bash>=0.25.1
+tree-sitter-go>=0.23.0
+tree-sitter-rust>=0.23.0
+tree-sitter-java>=0.23.0
+tree-sitter-sql>=0.3.0
+tree-sitter-xml>=0.7.0
+tree-sitter-regex>=0.25.0
 ```
+
+Fifteen language grammars, all wired into `EXTENSION_TO_LANGUAGE`
+(`ppxai/tui/widgets/code_editor.py:69-104`). The last six (go, rust, java,
+sql, xml, regex) were missing from this list until 2026-09-20.
 
 Without these packages, TextArea shows plain text with no syntax colors.
 
@@ -121,7 +131,7 @@ ppxai supports high-resolution inline image display in terminals that support im
 | iTerm2 (macOS) | TGP/iTerm2 | ITerm2ImageWidget | ITerm2Image |
 | Kitty | TGP | textual-image | Fallback |
 
-**Textual TUI:** `image_handlers.py::get_image_widget_class()` selects on
+**Textual TUI:** `widgets/image_handlers.py::_get_image_widget_class()` (private) selects on
 `TERM_PROGRAM` — `wezterm` and `iterm.app` **both** get `ITerm2ImageWidget`
 (OSC 1337); everything else falls to `textual-image`. The widget uses a
 `render_lines()` override to inject escape sequences. Cannot use Rich renderables directly because Textual processes segments differently. See `ppxai/tui/widgets/iterm2_widget.py`.

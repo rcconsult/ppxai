@@ -1,6 +1,20 @@
 # Multimodal API Models Reference
 *Research date: April 3, 2026 — for ppxai provider integration*
 
+> ⚠️ **Model-catalog snapshot, ~6 months stale. Verified 2026-09-20.** The
+> *capability* research here (which modalities each API family accepts, how
+> PDFs and video are handled, the unified-architecture point) still holds.
+> The **model ids and tier claims do not**: this file presents `gpt-5.4` as
+> OpenAI's flagship and `gemini-3.1-*` as Gemini's newest line, while the
+> shipped defaults are **`gpt-5.6-terra`** and **`gemini-3.5-flash`**, with
+> measured `gemini-3.6/3.7/3.8-flash` rows in `ppxai/engine/model_facts.py`
+> and an Anthropic provider that did not exist when this was written.
+>
+> **For what a given model can actually do today, read
+> `ppxai/engine/model_facts.py` or run `/model info`** — those are the
+> resolution sources; this document is not, and nothing in the code reads
+> it. Treat the matrices below as a research record.
+
 ---
 
 ## Gemini API — Most Comprehensive Multimodal

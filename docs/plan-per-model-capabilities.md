@@ -1,6 +1,16 @@
 # Plan — per-model capabilities as a shared framework
 
-**Status:** proposed, not started. Written 2026-08-15 on `bugfix/v1.19.1`.
+**Status: ✅ SUPERSEDED — delivered as ADR 0012, shipped v1.19.1.** Written
+2026-08-15 on `bugfix/v1.19.1` and marked "proposed, not started" until
+2026-09-20, by which point the framework it argues for had shipped whole.
+The two functions it proposes fixing, `get_capabilities_for_model` and
+`get_tool_calling_config`, **no longer exist** —
+`grep -rn "def get_capabilities_for_model\|def get_tool_calling_config" ppxai/`
+returns nothing; ADR 0012 deleted them along with the parallel resolvers.
+Read this as the **argument** that produced ADR 0012, not as a plan with
+outstanding steps. Its per-claim verification commands are pinned to
+`fbb23225` and many no longer resolve at HEAD.
+
 Every claim below was verified against the tree at `fbb23225`; the
 verification command is given so a reader can re-check rather than trust.
 

@@ -1,6 +1,10 @@
 # Plan: ADR 0012 implementation — protocol handlers, under the Sonar deadline
 
-**Status: DRAFT — awaiting owner review. Nothing below is started.**
+**Status: ✅ COMPLETE — W0 through W5 all shipped in v1.19.1. ADR 0012 is
+Implemented.** This file is kept as the execution record; its header said
+"DRAFT — awaiting owner review, nothing below is started" until 2026-09-20,
+while every phase in its own body was already marked `✅ DONE`. Read the
+per-phase marks, not any forward-looking prose that survived from the draft.
 **Owner decisions 2026-08-30:** (1) capabilities + profiles **unify first**
 (W1); wire protocol lives in the unified model-facts system, not in a third
 parallel resolver. (2) That design is **folded into ADR 0012 in place** —
@@ -476,7 +480,7 @@ Audited 2026-08-30 by grep, not assumption. "User-side" = existing
 
 | # | Question | Default if confirmed |
 |---|---|---|
-| Q0a | Boolean-vs-mode: does `tool_calling.mode` subsume `native_tool_calling`, with the boolean derived, or the reverse? (decided in ADR 0013) | mode wins; boolean becomes derived |
+| Q0a | Boolean-vs-mode: does `tool_calling.mode` subsume `native_tool_calling`, with the boolean derived, or the reverse? (decided in ADR 0012 §2 — there is no ADR 0013; see the owner decision at the top of this file) | mode wins; boolean becomes derived |
 | Q0b | Config surface after unification: clean break on the two override key families (ADR-0010 style, with `/doctor` scan), or dual-read window? | clean break + scan, matching 0010 precedent |
 | Q1 | `WireContext` shape: plain dataclass carrying client + hooks, or does the handler receive the provider behind a narrow Protocol? | dataclass — keeps handlers ignorant of providers |
 | Q2 | Post-cutover, does `PerplexityProvider` keep a chat_completions path at all? **W0 (a) measured the opposite of this question's premise: the bare IDs are NOT served on Responses**, so the two wires serve *disjoint* model IDs until 09-27 | Responses-only after cutover (dead wire code is debt), with the ID rename carried by `/doctor` rows — but this is now an owner call, not a default |
@@ -497,10 +501,12 @@ Audited 2026-08-30 by grep, not assumption. "User-side" = existing
 
 ## Sequencing summary
 
-    W0 ✅ DONE → W1 ✅ DONE
-      → W2 (extract handler + routing from facts, ~1.5d)
-      → W3 (Perplexity Responses, ~2d, DONE BY 09-20)
-      → W4 (remaining handlers) → W5 (closeout)
+    W0 ✅ DONE → W1 ✅ DONE → W2 ✅ DONE
+      → W3 ✅ DONE (Perplexity Responses, ahead of the 09-27 cutover)
+      → W4 ✅ DONE (remaining handlers) → W5 ✅ DONE (closeout)
+
+    All shipped in v1.19.1. The estimates below are what was planned, kept
+    for calibration; they are not outstanding work.
 
 ~7 working days to deadline safety (W0–W3) against ~14 available before
 09-20 — buffer holds. Owner gate + green suite + call-graph refresh after

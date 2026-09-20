@@ -180,37 +180,52 @@ VLLM_API_KEY=dummy
 
 ### vLLM provider config (`ppxai-config.json`)
 
+> ⚠️ **The `"providers"` wrapper is required.** `ppxai/config/loader.py:412`
+> only reads provider definitions nested under a top-level `"providers"`
+> key. Until 2026-09-20 this snippet was a bare `{"asusai-vllm": {…}}`
+> object — pasted as-is it parses fine, loads nothing, and gives you no
+> error; the provider simply never appears. Note also that
+> `capabilities.native_tool_calling` below is a **dead key** since ADR 0012
+> (see [tool-calling.md](tool-calling.md#configuration-reference)); tool
+> mode is resolved per model from `ModelFacts` now, so it has been dropped
+> from the snippet. A real config may still carry it; it is simply
+> ignored.
+
 ```json
 {
-  "asusai-vllm": {
-    "name": "ASUS DGX Spark vLLM (GB10)",
-    "base_url": "http://<dgx-spark-ip>:8000/v1",
-    "api_key_env": "VLLM_API_KEY",
-    "default_model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-    "coding_model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-    "system_prompt": "You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
-    "generation_params": {
-      "temperature": 0.2,
-      "top_p": 0.9,
-      "frequency_penalty": 0.0
-    },
-    "models": {
-      "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": {
-        "name": "Qwen3 Coder 30B-A3B FP8 (MoE)",
-        "description": "Code-specialized MoE: 30.5B total / 3.3B active, FP8, native tool calling via qwen3_coder parser, 820K token KV cache",
-        "context_limit": 131072,
-        "max_tokens": 8192
+  "providers": {
+    "asusai-vllm": {
+      "name": "ASUS DGX Spark vLLM (GB10)",
+      "base_url": "http://<dgx-spark-ip>:8000/v1",
+      "api_key_env": "VLLM_API_KEY",
+      "default_model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "coding_model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "system_prompt": "You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "frequency_penalty": 0.0
+      },
+      "models": {
+        "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": {
+          "name": "Qwen3 Coder 30B-A3B FP8 (MoE)",
+          "description": "Code-specialized MoE: 30.5B total / 3.3B active, FP8, native tool calling via qwen3_coder parser, 820K token KV cache",
+          "context_limit": 131072,
+          "max_tokens": 8192
+        }
+      },
+      "pricing": {
+        "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": {
+          "input": 0.0,
+          "output": 0.0
+        }
+      },
+      "capabilities": {
+        "web_search": true,
+        "web_fetch": true,
+        "weather": true,
+        "realtime_info": true
       }
-    },
-    "pricing": {
-      "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": { "input": 0.0, "output": 0.0 }
-    },
-    "capabilities": {
-      "web_search": true,
-      "web_fetch": true,
-      "weather": true,
-      "realtime_info": true,
-      "native_tool_calling": true
     }
   }
 }
@@ -376,7 +391,6 @@ PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json SSL_VERIFY=false \
   uv run python benchmark.py \
     --provider asusai-vllm \
     --model "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8" \
-    --engine \
     --timeout 120 \
     -v
 ```

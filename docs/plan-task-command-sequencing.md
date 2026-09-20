@@ -7,6 +7,18 @@ Sequencing plan for the interactive **`/task`** command family (design:
 §8–§9). Same contract as the Stage-2 increment plan
 ([plan-v1.19.0-sequencing.md](archive/plan-v1.19.0-sequencing.md)):
 
+> ⚠️ **Syntax note (added 2026-09-20).** This plan was written before ADR
+> 0011 U2 fixed the grammar, and its trial commands originally read
+> `/task run "<desc>"`. **`run` is not a verb** in the shipped grammar
+> (`TASK_VERBS` in `ppxai/engine/task_grammar.py` — `help`, `ls`, `list`,
+> `get`, `show`, `open`, `watch`, `cancel`, `respond`, `collect`, `ack`,
+> `resume`). A line whose first token is not a recognised verb is
+> classified as **LAUNCH with the whole remainder as the prompt**, so
+> `/task run "summarize X"` silently launches a task whose description is
+> the literal string `run "summarize X"` — no error, just a wrong task.
+> The trial commands below have been rewritten to the shipped form
+> `/task "<desc>"`; the surrounding narrative is left as written.
+
 > **Build contract.** Each increment is a **vertical slice** that brings
 > exactly the server + client bits needed to **live-trial it end-to-end**,
 > nothing speculative. Bring a seam early only when it's the right shape
@@ -38,7 +50,7 @@ live-trial-verified in-browser (run/ls/cancel; pane with chips + live log +
 result). `TaskController extends AgentRunController`, `TaskRunView extends
 AgentRunView`; `/agentrun` unchanged.
 
-**Capability:** `/task run "<desc>" --tools …` mints a tool-capable run and
+**Capability:** `/task "<desc>" --tools …` mints a tool-capable run and
 renders it in a right-panel pane; `/task ls` lists runs; `show`/`watch` focus +
 live-tail a pane; `cancel` stops one. All over **existing** endpoints.
 
@@ -60,12 +72,12 @@ live-tail a pane; `cancel` stops one. All over **existing** endpoints.
 - Surface the tier errors verbatim: 403 (tier disabled + enable hint), 400
   (shell grant), 400 (missing provider/model).
 
-**Trial:** enable the tier; `/task run "list the files under docs and count the
+**Trial:** enable the tier; `/task "list the files under docs and count the
 markdown ones" --tools read_file,grep,list_directory`; watch the tool loop in
 the pane; `/task ls`; `/task cancel <id>` mid-run and confirm it stops.
 
 **Tests:** flag-parser unit tests (grant/allow/budget parsing, bad input);
-dispatcher routing test (`/task run|ls|cancel` → controller); a Node
+dispatcher routing test (`/task` launch | `ls` | `cancel` → controller); a Node
 behavioral test mirroring `test_agent_run_controller_behavior.py`.
 
 **Deliberately NOT yet:** spec/skill files, read-scope, `respond`/`ack`/`resume`.
@@ -104,8 +116,8 @@ Brought early so every later increment is trialed confined.
   seal is OFF — sealed runs keep their jail regardless, and the launch
   response flags `workdir_ignored` so the client can surface it.
 
-**Trial:** set `read_paths.allow: ["~/.ppxai/skills"]`; `/task run "read
-/etc/hosts" --tools read_file` → denied; `/task run "read the file
+**Trial:** set `read_paths.allow: ["~/.ppxai/skills"]`; `/task "read
+/etc/hosts" --tools read_file` → denied; `/task "read the file
 ~/.ppxai/skills/x.md" --tools read_file` → ok; a `write_file` outside
 `workdir` → denied.
 
@@ -155,7 +167,7 @@ body), `.json`/`.yaml`, or `.jsonl` (batch fan-out).
   grant · no-shell · `execution.task.enabled`).
 
 **Trial:** author `specs/triage.md` (front-matter grant+budget, body =
-instructions); `/task run --spec triage "the CI job is red"`; confirm the
+instructions); `/task --spec triage "the CI job is red"`; confirm the
 pane shows the grant/budget from the file. `--batch three.jsonl` mints 3 runs.
 
 **Trial-verified 2026-07-12 (macOS, auth-ON):** API trial against the installed
@@ -194,7 +206,7 @@ shell-reject/non-empty/provider guards run on the MERGED grant). Web client:
 `--skill` flag (repeatable + comma-split, de-duped) in `task-controller.js`.
 
 **Trial:** point `sandbox.skills_dir` at `examples/task-skills/` (with
-`enforcement:"in_process"`); `/task run --skill ci-triage`; confirm the agent
+`enforcement:"in_process"`); `/task --skill ci-triage`; confirm the agent
 reads `references/checklist.md` but a read of a sibling outside the skill dir is
 denied. `--skill needs-scripts` → 400 (scripts gate). Examples ship in
 [examples/task-skills/](../examples/task-skills/) (ci-triage, secrets-scan,
@@ -268,7 +280,7 @@ retires debt (r) as a standalone item.
    consent card): `PPXAI_WEB_DIR=$PWD/ppxai/web uv run ppxai-server`, then
    open the web UI. (Config/env shadowing gotchas: see the T1 "trialing from
    source" note in [agent-platform-call-graphs.md](agent-platform-call-graphs.md).)
-3. **Park:** `/task run "spawn a child to summarize docs/README.md" --tools
+3. **Park:** `/task "spawn a child to summarize docs/README.md" --tools
    read_file,spawn_subagent` → pane status flips to ✋ waiting and the consent
    card appears (prompt = the spawn summary); `/task ls` shows ✋.
 4. **Approve:** click Approve (or `/task respond <id> approve`) →
@@ -349,7 +361,7 @@ checkpoint (resume = reload `state.json`).
 `default_subagent` set); serve the checkout (`PPXAI_WEB_DIR=$PWD/ppxai/web
 uv run ppxai-server`).
 
-1. `/task run "summarize docs/README.md" --tools read_file` → on finish the
+1. `/task "summarize docs/README.md" --tools read_file` → on finish the
    pane shows 📬 result ready + the held result + a Collect button;
    `/task ls` shows 📬.
 2. **Close the pane, reopen via `/task ls`** — the result is still there
@@ -426,7 +438,7 @@ slot (the multi-slot/service Triplet remains (q)/`agent_n` nesting).
 
 **Trial (concrete recipe):** config as in T5/T6 (tier on, `default_subagent`).
 
-1. **Restart-interrupt:** start a run that stays busy (e.g. `/task run
+1. **Restart-interrupt:** start a run that stays busy (e.g. `/task
    "spawn a child to summarize docs/README.md" --tools
    read_file,spawn_subagent` and leave the consent card unanswered, or any
    long run), then kill the server mid-flight. Restart it → `/task ls` shows
@@ -436,7 +448,7 @@ slot (the multi-slot/service Triplet remains (q)/`agent_n` nesting).
    the run re-executes with the same grant/egress/budget/system and lands
    📬 result ready (T6 hold) — same run_id, same event log (`agent_run_resume`
    visible in it).
-3. **Budget-interrupt path:** `/task run "…" --tools read_file --budget
+3. **Budget-interrupt path:** `/task "…" --tools read_file --budget
    iters=1` → lands ⏸️ interrupted (resumable); `/task resume <id>` gives it a
    fresh budget window and it completes.
 4. **Refusals:** `/task resume` a completed/held run → 409 "not resumable";
@@ -542,10 +554,10 @@ consecutive GET failures); terminal renders include the 📬 `/task ack` and
 `default_subagent`); `code --install-extension` a fresh VSIX or F5 the
 extension; point `ppxai.serverUrl` at the server.
 
-1. In the VSCode chat panel: `/task run "summarize docs/README.md" --tools
+1. In the VSCode chat panel: `/task "summarize docs/README.md" --tools
    read_file` → launch line, then (poll) 📬 result ready + the result +
    the `/task ack` hint; `/task ack <id>` → ✅ collected.
-2. `/task run "spawn a child to summarize docs/README.md" --tools
+2. `/task "spawn a child to summarize docs/README.md" --tools
    read_file,spawn_subagent` → when the run parks, a **QuickPick pops**
    (✋ Agent run … needs consent) → Approve → child spawns, parent holds;
    Deny → refusal text; Escape → hint line + TTL backstop
@@ -587,7 +599,7 @@ resume need a live event loop; `ls`/`get`/`cancel`/`collect`/`respond` are
 synchronous registry operations. So Textual has the full set today, and Rich
 has everything except launch/resume — with a message naming the reason rather
 than the command being absent. Rich's remaining half is its blocking prompt
-(`main.py:477`) plus five `asyncio.run()` call sites; that is a main-loop
+(`ppxai/rich/main.py:475`) plus five `asyncio.run()` call sites; that is a main-loop
 decision, not a `/task` decision, and it is still open.
 
 Two things found while unparking, both fixed: the engine-level egress-ceiling

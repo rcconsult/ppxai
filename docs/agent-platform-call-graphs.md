@@ -1237,9 +1237,15 @@ inspectable, not a mid-conversation snapshot.
 Added: `vscode-extension/src/taskController.ts` (IoC controller, VSCode-free),
 `/v1/agent/*` typed slice in `httpClient.ts`, `/task` route + UI adapter in
 `chatPanel.ts`, `/task` in the completion catalog. **No server changes** — the
-whole increment is a second client over the T1–T7 surface. T8b (TUI) is split
-out pending the transport decision (in-process registry = debt (t) vs HTTP
-client in the TUIs) — see the plan doc §T8.
+whole increment is a second client over the T1–T7 surface. ~~T8b (TUI) is
+split out pending the transport decision (in-process registry = debt (t) vs
+HTTP client in the TUIs)~~ — **decided and shipped 2026-08-08: in-process.**
+`ppxai/engine/task_runner.py` builds the runner and the TUIs never grew an
+HTTP client. All four client families have `/task` and `/run`; the one
+nuance is that `launch` and `resume` need a live asyncio loop (`_NEEDS_LOOP`,
+`ppxai/commands/task.py:52`), so the Rich TUI rejects those two verbs with an
+actionable error while every read verb works everywhere. See the plan doc
+§T8b. (This paragraph said "pending" until 2026-09-20.)
 
 ```
 webview input "/task <verb> …"                    [chatPanel.handleSlashCommand]

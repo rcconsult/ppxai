@@ -69,18 +69,27 @@ ppxai searches for bootstrap files in **hierarchical order** (v1.14.2+):
 2. **Project scope** - `{git_root}/AGENTS.md` (repository-specific)
 3. **Subdirectory scope** - `{cwd}/AGENTS.md` (directory-specific overrides)
 
-Within each scope, it looks for these files in order:
+Within each scope, it looks for these files in order
+(`DEFAULT_BOOTSTRAP_FILES`, `ppxai/config/context.py:58` and
+`ppxai/engine/bootstrap.py:63`):
+
 1. `AGENTS.md` (default, compatible with Claude Code)
 2. `CLAUDE.md` (fallback)
+3. `INSTRUCTIONS.md` (fallback)
+
+All three are defaults — `INSTRUCTIONS.md` is **not** a customization you
+have to add, which is how this guide described it until 2026-09-20. The
+first file found in a scope wins for that scope.
 
 Files from all scopes are **merged** - hints are additive, base instructions concatenate with source markers.
 
-You can customize the file list via configuration:
+You can customize the file list via configuration — for example to add a
+fourth name, or to drop one:
 
 ```json
 {
   "bootstrap": {
-    "files": ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md"]
+    "files": ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md", "CONTRIBUTING.md"]
   }
 }
 ```
@@ -460,19 +469,38 @@ provider_hints:
 
 Bootstrap context works alongside `system_prompt` in `ppxai-config.json`:
 
-1. Bootstrap context is added first
-2. Config `system_prompt` is added according to `system_prompt_mode`:
-   - `prepend` (default): Config prompt before bootstrap
-   - `append`: Config prompt after bootstrap
-   - `replace`: Config prompt replaces bootstrap (not recommended)
+**Bootstrap is always first, and `system_prompt_mode` does not move it.**
+This is the opposite of what this guide said until 2026-09-20. Reading
+`ppxai/engine/chat.py:436-449`, the assembly is:
 
-For most cases, let bootstrap handle project-specific instructions and use config `system_prompt` only for global preferences.
+1. `system_prompt` and `tool_prompt` are combined **according to
+   `system_prompt_mode`** — that mode orders those two against each other,
+   and nothing else:
+   - `prepend` (default): `system_prompt` then `tool_prompt`
+   - `append`: `tool_prompt` then `system_prompt`
+   - `replace`: `system_prompt` only — the **tool prompt** is dropped
+2. The bootstrap prompt is then prepended to whatever step 1 produced,
+   **unconditionally**:
+
+   ```python
+   # Prepend bootstrap prompt if present (always first)
+   if bootstrap_prompt:
+       final_prompt = f"{bootstrap_prompt}\n\n---\n\n{final_prompt}"
+   ```
+
+So `replace` does **not** remove bootstrap context — it removes the tool
+prompt. If you set `replace` expecting to suppress project context, you did
+not; use `bootstrap.enabled: false` or an empty `bootstrap.files` list for
+that.
+
+For most cases, let bootstrap handle project-specific instructions and use
+config `system_prompt` only for global preferences.
 
 ## Troubleshooting
 
 ### "No bootstrap context loaded"
 
-**Cause:** No `AGENTS.md` or `CLAUDE.md` found in working directory.
+**Cause:** No `AGENTS.md`, `CLAUDE.md` or `INSTRUCTIONS.md` found in working directory.
 
 **Solution:**
 1. Create an `AGENTS.md` file in your project root

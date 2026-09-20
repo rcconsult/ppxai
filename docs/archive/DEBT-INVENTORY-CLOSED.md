@@ -2015,3 +2015,67 @@ person who least needs telling. A dated obligation belongs where dated
 obligations are tracked.
 
 ---
+
+### Item 34 ✅ CLOSED — office-preview deps; the `python-docx` half was obsolete [packaging]
+
+**Heading corrected 2026-09-06.** It described the whole original
+problem long after two thirds of it was fixed, and the index row
+inherited that — the same heading-vs-body drift that made Items 65, 67
+and 54 read as more open than they were. Re-verified today: all five
+`build.yml` PyInstaller jobs AND `tests.yml:61` run
+`uv sync --frozen --all-extras`. What is actually open is the last
+paragraph: `python-docx`.
+
+**Affected:** `.claude/skills/build-install/SKILL.md`, the release CI build
+step, `pyproject.toml [data]` extra (`pypdfium2`, `openpyxl`, `python-pptx`;
+NB **no `python-docx`** → Word *text* fallback can't extract).
+
+**What's wrong:** the office-preview pipeline needs `pypdfium2` (PDF→PNG) and
+`python-pptx`, which live in the `[data]` optional extra. The `/build-install`
+skill builds with `uv run --no-sync pyinstaller`, so if the venv lacks
+`[data]` the binaries ship **without** office support — LibreOffice is detected
+but `render_pptx_slides` returns `[]` ("No slides rendered"). Found live on a
+2026-06-14 local build. Also: `python-docx` is absent from `[data]`, and the
+frozen binary can't use a `pip install 'ppxai[data]'` hint.
+
+**Release CI verified SAFE (2026-06-14) — NOT a release blocker.**
+`.github/workflows/build.yml` runs `uv sync --frozen --all-extras` before
+**every** PyInstaller job (ppxai / ppxai-server / ppxaide / ppxai-desktop,
+lines 95/155/209/264); the server-job comment documents exactly this trap
+("Without `--all-extras`, PyInstaller silently drops … pypdfium2 … python-pptx
+… missing PDF rasterization"). So **released binaries bundle the office deps**.
+The gap is local-only: the `/build-install` SKILL uses `--no-sync`. (Local
+v1.18.8 build re-run WITH `[data]` synced renders previews correctly — verified
+HTTP 200 image/png.)
+
+**Release-script test step fixed (2026-06-14):** `scripts/release.py::run_tests`
+ran `uv run pytest` (no `--all-extras`), which synced to default deps and
+stripped the `[data]` extras → office/upload suites skipped → ~150-short count
+written into the README `tests-NNNN` badge (it had regressed to 3844). Now
+`uv run --all-extras pytest` so the count matches the all-extras suite (3989).
+
+**Build-install skill fixed (2026-06-14):** `.claude/skills/build-install/SKILL.md`
+Step 1 now runs `uv sync --all-extras` before PyInstaller (the per-build
+`--no-sync` reuses that env), with a precondition note and a Step-8
+office-preview acceptance check (curl `/files/preview` → expect `image/png`).
+
+**CLOSED 2026-09-20 — the remaining half was already solved, differently.**
+The open paragraph asked for `python-docx` in `[data]` "so the Word *text*
+fallback can extract without LibreOffice". That fallback does not use
+`python-docx` and never did: `ppxai/engine/tools/builtin/docx_tools.py`
+extracts with stdlib `zipfile` + `xml.etree` — its module docstring says so
+in those words — and `server/routes/files.py:868` calls that same
+`_extract_docx_text` for the `.docx` text fallback. Verified today: `grep -rn
+"import docx"` over `ppxai/` and `tests/` returns **nothing**, and the only
+two mentions of the name in the tree are that docstring and a comment about
+legacy `.doc`/`.ppt`. Adding the dependency would grow every binary by a
+package nothing imports.
+
+Word *raster* preview goes through LibreOffice (`convert_docx_to_pdf`), which
+is a host program, not a wheel — so no extra is involved there either.
+
+**Trigger to revisit:** only if a Word feature is added that genuinely needs
+`python-docx` (styles, tables-with-formatting, authoring) — text extraction
+and raster preview both already work without it.
+
+---

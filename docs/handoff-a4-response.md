@@ -1,5 +1,9 @@
 # Handoff — response to A4 (custom-tool registration) + the autonomy questions
 
+> ℹ️ **Still open as a design** (A4 custom-tool registration is genuinely
+> unimplemented), but one citation below has drifted: `handle_reload` is at
+> `ppxai/commands/utility.py:187`, not `:309`. Checked 2026-09-20.
+
 **Written:** 2026-08-09, from the Windows host, at `f3b42a63` on
 `bugfix/v1.19.1`.
 **For:** the ppxai-sre session.
@@ -252,7 +256,7 @@ reconcile them — better it is a documented property than a future bug report.
 
 ## Correction first: `/reload` is not the pattern you want
 
-`handle_reload` (`ppxai/commands/utility.py:309`) re-imports **user command
+`handle_reload` (`ppxai/commands/utility.py:187`) re-imports **user command
 modules** from `~/.ppxai/commands/*.py`. It has no config or steering
 semantics. Borrowing it gives you a command-module reloader.
 

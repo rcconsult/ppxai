@@ -25,9 +25,9 @@ Each provider has a pre-configured coding model optimized for development tasks:
 
 | Provider | Default Coding Model | Why This Model? |
 |----------|---------------------|-----------------|
-| **Perplexity** | `sonar-pro` | Advanced reasoning for complex coding tasks |
+| **Perplexity** | `perplexity/sonar` | The Responses-wire id; the bare `sonar` chat-wire id retires 2026-09-27 |
 | **Gemini** | `gemini-3.5-flash` | Fast model, current default in the shipped config |
-| **OpenAI** | `gpt-5.4-mini` | Balanced cost/performance, current default in the shipped config |
+| **OpenAI** | `gpt-5.6-terra` | Current default in the shipped config |
 | **Custom** | (user-configured) | Configure any OpenAI-compatible endpoint (OpenRouter, etc.) |
 | **Ollama** | `qwen2.5-coder:3b` | Specialized local coding model |
 
@@ -183,8 +183,8 @@ file is found at all. In practice, first-run seeding copies the bundled
 ```json
 {
   "perplexity": {
-    "default_model": "sonar-pro",
-    "coding_model": "sonar-pro"
+    "default_model": "perplexity/sonar",
+    "coding_model": "perplexity/sonar"
   },
   "gemini": {
     "default_model": "gemini-3.5-flash",

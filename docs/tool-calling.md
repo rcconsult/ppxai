@@ -28,14 +28,22 @@ This document explains which providers use which method and the implications for
 
 | Provider | Method | Native API Support | ppxai Implementation |
 |----------|--------|-------------------|---------------------|
-| **Gemini** | Native | ✅ Yes | Uses `function_declarations` API |
-| **Perplexity** | Prompt-Based | ❌ No | Injects tools in prompt, parses JSON |
-| **OpenAI** | Per-model | ✅ Yes | `OpenAINativeProvider` with model-specific routing (v1.15.6) |
-| **Custom** | Native | ✅ Yes | Uses standard `tools` parameter (OpenRouter, other OpenAI-compat) |
-| **vLLM** | Native | ✅ Yes (with --enable-auto-tool-choice) | Uses standard `tools` parameter |
-| **Ollama** | Native | ✅ Yes (Qwen models only) | Uses standard `tools` parameter |
+| **Gemini** | Native | ✅ Yes | `generate_content` wire, `function_declarations` |
+| **Perplexity** | **Per-model, per-wire** | ✅ on `/v1/responses` | **Not "no" any more.** Bare `sonar` on chat-completions is `prompt_based`; the namespaced `perplexity/sonar` on the Responses wire is `auto` and **measured calling the tool** (2026-08-31, `scripts/probe-perplexity-capabilities.py --api-path responses`). The gateway fleet (`anthropic/*`, `openai/*`, `google/*`, `xai/*`) is `auto` on Responses too. |
+| **Anthropic** | Native | ✅ Yes | `messages` wire (ADR 0012 §6). **Opt-in and untested against the live API** — debt Item 71 |
+| **OpenAI** | Per-model | ✅ Yes | `OpenAINativeProvider`; `chat_completions` or `responses` per `ModelFacts.wire_protocol` |
+| **Custom** | Native | ✅ Yes | Standard `tools` parameter (OpenRouter, other OpenAI-compat) |
+| **vLLM** | Per-model | ✅ Yes (with `--enable-auto-tool-choice`) | Standard `tools` parameter — but `openai/gpt-oss*` is pinned `prompt_based` in the facts table regardless of your vLLM version |
+| **Ollama** | Native | ✅ Yes (Qwen models only) | Standard `tools` parameter |
 
-**Note (v1.15.6):** The OpenAI provider now uses a dedicated `OpenAINativeProvider` that routes models to their optimal tool calling mode. Some models (o4-mini, gpt-4.1-mini) use prompt-based mode even though the provider supports native tool calling, because benchmarks showed significantly better results. See [model-behavior-analysis.md](model-behavior-analysis.md) for details.
+> This table is **per provider**, which is a simplification that ADR 0012
+> retired: tool mode is a property of the **model and the endpoint serving
+> it**, and the same model id reached through two providers can legitimately
+> differ. `/model info` is the authority for any specific model; the rows
+> above say what the provider's models typically do. Row-verified against
+> `SHIPPED_MODEL_FACTS` on 2026-09-20.
+
+**Note:** `OpenAINativeProvider` routes each model to its measured tool mode. Some models (o4-mini, gpt-4.1-mini) use prompt-based mode even though the provider supports native tool calling, because benchmarks showed significantly better results. Since ADR 0012 that decision is table data (`ModelFacts.tool_mode`), not a prefix branch. See [model-behavior-analysis.md](model-behavior-analysis.md) — note that file self-flags as stale on model ids.
 
 ---
 
@@ -58,8 +66,10 @@ This document explains which providers use which method and the implications for
 **Providers:**
 - Gemini (2.5+)
 - OpenAI (all models with function calling)
+- Anthropic (opt-in; untested against the live API — Item 71)
+- Perplexity, on `/v1/responses` only (`perplexity/sonar` and the gateway fleet)
 - OpenRouter (varies by model)
-- vLLM (requires `--enable-auto-tool-choice`)
+- vLLM (requires `--enable-auto-tool-choice`; `gpt-oss` is pinned prompt-based anyway)
 - Ollama (Qwen2.5 models only)
 
 ---
@@ -116,19 +126,20 @@ ppxai uses **prompt-based tool calling** for Perplexity:
 
 **This works reliably** for interactive chat and is transparent to users.
 
-> ⚠️ **Prompt-based tool calling is NOT reliable for the `/task` agent tier.**
-> A 2026-07-13 web-app trial (8 runs, same task `summarize docs/README.md`)
-> found that under a `/task` run, `sonar-pro` **never produced a real
-> tool call in 6 attempts** (no `tool_call` event, no validator
-> `Recorded tool call` line). It nondeterministically **refused**,
-> **confabulated** a summary, or ran an **intrinsic web search** and
-> summarized an *unrelated external repo* while citing its URL
-> (`github.com/steipete/summarize`) — never reading the granted local file.
-> The same task on native-tool providers (`deepseek-ai/deepseek-v4-pro` on the `nvidia` provider) worked
-> correctly. Do not grant tool-capable `/task` runs to Perplexity until this
-> is gated/routed. See **Item 43** in
-> [debt-inventory.md](debt-inventory.md) and
-> [task-agent-guide.md §10](task-agent-guide.md) for the wire evidence.
+> ℹ️ **Resolved — Item 43, closed 2026-08-24.** A 2026-07-13 web-app trial
+> (8 runs, `summarize docs/README.md`) found `sonar-pro` never produced a
+> real tool call under `/task` in 6 attempts — it refused, confabulated a
+> summary, or ran an intrinsic web search and summarized an unrelated repo
+> while citing its URL, never reading the granted local file. **The premise
+> was overturned twice, and the cause turned out to be ours, not
+> Perplexity's:** a hardcoded `native_tool_calling=False` that was true when
+> it was written and false by 2026-08-13, plus a `model_profiles` row
+> pinning `prompt_based` that would have made the capability table
+> decorative on its own. Fixed under ADR 0012 plan I3 (`0490ce87`).
+> Perplexity tool-capable `/task` runs are no longer discouraged; Sonar
+> tool-calls on `/v1/responses`, which is the wire `ModelFacts` now routes
+> it to. Kept here because the failure shape — a *model* blamed for a
+> *resolution* bug — is the reusable part.
 
 ---
 
@@ -146,81 +157,76 @@ Gemini models (2.5+) support native function calling via:
 - ✅ Reliable tool selection
 - ✅ Works with ppxai without modification
 
-> ⚠️ **Gemini 3.x (`gemini-3.1-pro-preview`) tool round-trips currently 400.**
-> A 2026-07-13 `/task` trial confirmed the model enters native mode and emits
-> a real `read_file` call, then the follow-up turn fails with
-> `400 INVALID_ARGUMENT — Function call is missing a thought_signature in
-> functionCall parts`. Gemini 3.x requires each returned `functionCall` part
-> to carry an opaque `thought_signature` that the client must echo back on
-> the tool-response turn; ppxai's Gemini provider does not yet preserve or
-> replay it (`grep -ri thought_signature ppxai/` → empty). Blocks all
-> native-tool `/task` runs on Gemini 3.x models. Gemini 2.5 is unaffected.
-> See **Item 45** in [debt-inventory.md](debt-inventory.md).
+> ℹ️ **Resolved — Item 45, closed 2026-07-22 (`edb74500`).** Gemini 3.x tool
+> round-trips used to fail with `400 INVALID_ARGUMENT — Function call is
+> missing a thought_signature in functionCall parts`: Gemini 3.x requires
+> each returned `functionCall` part to carry an opaque `thought_signature`
+> that the client echoes back on the tool-response turn, and ppxai's Gemini
+> provider did not preserve it. It does now. Native-tool `/task` runs on
+> Gemini 3.x are supported.
 
 ### Configuration
 
-```json
-"gemini": {
-  "capabilities": {
-    "native_tool_calling": true
-  },
-  "options": {
-    "native_tool_calling": true  // Enable in provider
-  }
-}
-```
+No per-provider flag turns this on any more — see the Configuration
+Reference below.
 
 ---
 
 ## Configuration Reference
 
-### Capability Flags
+> ⚠️ **`capabilities.native_tool_calling` and `tool_calling.mode` are dead
+> keys.** ADR 0012 replaced them with per-model facts, as a **clean break**:
+> `grep -rn "native_tool_calling" ppxai/ --include="*.py"` returns only
+> comments, docstrings and migration notes — **no live read**. A config that
+> still sets them is parsed and ignored, which is exactly the failure mode
+> that made Item 43 look like a Perplexity defect for six weeks. `/doctor`
+> reports them as migration keys. `ppxai-config.example.json` carried a
+> leftover `native_tool_calling` under `gemini` until 2026-09-20; if you
+> copied that file before then, delete the key.
 
-The `native_tool_calling` capability flag indicates whether a provider supports native tool calling:
+### Where the answer lives now
 
-```json
-"capabilities": {
-  "native_tool_calling": true   // Provider has native API support
-}
+Tool mode is resolved **per model**, not per provider, because it is a
+property of the model and the endpoint serving it — the same model id
+reached through two providers legitimately answers differently.
+
+| Question | Read from |
+|---|---|
+| Does this model tool-call natively? | `ModelFacts.tool_mode` (`"native"` / `"prompt_based"`) in `ppxai/engine/model_facts.py` |
+| Which wire does it speak? | `ModelFacts.wire_protocol` (`chat_completions` / `responses` / `generate_content` / `messages`) |
+| Can it emit several calls per turn? | `ModelFacts.parallel_tool_calls` |
+| What does the *account* support? | `ProviderCapabilities` — key, base URL, prices; no tool-mode opinion |
+
+The dispatch site is one line, `ppxai/engine/chat.py:646`:
+
+```python
+use_native_tools = facts.tool_mode != "prompt_based"
 ```
 
-### Provider-Specific Settings
+### Overriding a model's facts
 
-**Perplexity:**
+Put a `facts` block on the model, not a capability flag on the provider:
+
 ```json
-"perplexity": {
-  "capabilities": {
-    "native_tool_calling": false  // Uses prompt-based fallback
+"providers": {
+  "vllm-gpt-oss": {
+    "models": {
+      "openai/gpt-oss-120b": {
+        "facts": {
+          "wire_protocol": "chat_completions",
+          "tool_mode": "prompt_based",
+          "parallel_tool_calls": false
+        }
+      }
+    }
   }
 }
 ```
 
-**Gemini:**
-```json
-"gemini": {
-  "capabilities": {
-    "native_tool_calling": true   // Uses native function calling
-  }
-}
-```
-
-**vLLM:**
-```json
-"vllm-gpt-oss": {
-  "capabilities": {
-    "native_tool_calling": true   // Requires --enable-auto-tool-choice
-  }
-}
-```
-
-**Ollama:**
-```json
-"ollama": {
-  "capabilities": {
-    "native_tool_calling": true   // Qwen2.5 models only
-  }
-}
-```
+Run `/doctor` after editing: it validates facts blocks, names incomplete
+ones (ADR 0012 Q0d), and prints the old→new mapping for any dead key it
+still finds. `/model info` shows the resolved value per field and marks
+which came from a measurement rather than the unmeasured floor.
 
 ---
 
@@ -253,7 +259,11 @@ The gap is due to:
 
 ### Benchmark Metadata
 
-Starting with v1.15.3, benchmark results include tool calling method metadata:
+Starting with v1.15.3, benchmark results include tool calling method
+metadata. The `provider_capabilities.native_tool_calling` field below is the
+shape **as emitted then** — that key is dead in config since ADR 0012 (see
+the Configuration Reference above); this block records the historical
+benchmark payload, not a key you should set:
 
 ```json
 {
@@ -420,9 +430,14 @@ No. The Perplexity API does not return `tool_calls`, so native calling is not po
 
 Native tool calling is more reliable and faster, but prompt-based works well with proper hints in `AGENTS.md`.
 
-### Q: How do I know which method my provider uses?
+### Q: How do I know which method my model uses?
 
-Check the `native_tool_calling` capability flag in `ppxai-config.json` or see the table at the top of this document.
+Run **`/model info`** — it prints the resolved `tool_mode` for the current
+model and marks whether each field is a measurement or the unmeasured
+floor. It is per *model*, not per provider: the same model id reached
+through two providers can legitimately answer differently. (Do not look for
+a `native_tool_calling` flag in `ppxai-config.json` — it is a dead key, see
+the Configuration Reference above.)
 
 ---
 
