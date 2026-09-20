@@ -1,8 +1,8 @@
 # ADR 0007 — Completion as a first-class service; command roster via AppState
 
-**Date:** 2026-06-14 (revised 2026-08-15 — coupling re-measured on
-`bugfix/v1.19.1`; the SDK trigger below partially fired)
-**Status:** Proposed — step 1 shipped v1.18.8 (`CommandFactory.iter_completion_specs`, `commands/factory.py`); step 2 (extract `ppxai/completion/` package) open, target v1.19.x
+**Date:** 2026-06-14 (revised 2026-08-15, re-measured 2026-09-20 on
+`bugfix/v1.19.3` — the 08-15 evidence had decayed; see §Re-measured)
+**Status:** Proposed — step 1 shipped v1.18.8 (`CommandFactory.iter_completion_specs`, `commands/factory.py`); step 2 (extract `ppxai/completion/` package) **still open**. The "target v1.19.x" in the 08-15 revision has now been passed by v1.19.0, v1.19.1 and v1.19.2 without step 2 landing — it was a hope, not a plan, and is restated below as an explicit deferral with triggers rather than a date.
 **Related:**
 - `ppxai/engine/completion.py` — current home of `complete()`
 - `ppxai/commands/factory.py` — `CommandFactory`, `CompletionCommandInfo`, `iter_completion_specs()`
@@ -67,15 +67,20 @@ What step 1 actually fixed, and what is left:
   **only** `engine → commands` import in the entire engine package — the
   extraction stays a one-edge job.
 - 🔎 **It does not block SDK embedding — measured on the real consumer
-  surface.** ppxai-sre's actual integration surface is these eight symbols:
+  surface.** The 2026-08-15 measurement listed eight symbols, one of which
+  (`engine.model_profiles.get_profile`) **no longer exists** — Item 65
+  deleted that module. Re-read off ppxai-sre at HEAD (2026-09-20), the
+  surface is now eleven modules:
   `engine.client.EngineClient`, `engine.types.{Event, EventType}`,
   `engine.tools.base.FunctionTool`, `engine.tools.manager.ToolManager`,
-  `engine.bootstrap.BootstrapContext`, `config.loader.PPXAI_HOME`,
-  `config.providers.get_provider_config`, `engine.model_profiles.get_profile`.
-  Importing all eight loads 64 `ppxai.*` modules and **zero**
-  `ppxai.commands` modules; nothing matching `completion` is imported.
-  Reproduced independently in both repos' environments (2026-08-15). The
-  inversion is latent, traversed only when a caller imports completion
+  `engine.bootstrap.BootstrapContext`, `engine.session.SessionManager`,
+  `engine.provider_ops` (+ `ModelSwitchInFlightError`),
+  `engine.facts_resolver.facts_without_an_instance` (the replacement for the
+  deleted profile accessor), `config.loader.PPXAI_HOME`,
+  `config.providers.{get_provider_config, get_default_provider}`.
+  Importing all of them loads **77** `ppxai.*` modules (was 64) and **zero**
+  `ppxai.commands` modules; nothing under `ppxai.*completion` is imported.
+  The inversion is latent, traversed only when a caller imports completion
   explicitly, which today only the three client glue layers do.
 
   **Measured as three composable spans (2026-08-15).** A `sys.meta_path`
@@ -84,11 +89,20 @@ What step 1 actually fixed, and what is left:
   real execution was driven — not bare imports. Each span is independently
   re-runnable:
 
-  | Span | What was driven | `commands` / `completion` imports |
-  |---|---|---|
-  | Import time + full consumer package load | all 12 consumer modules | **0 / 0** (closure flat at 64) |
-  | Client + tool-manager construction (the provider-build path) | `EngineClient()`, `ToolManager()` | **0 / 0** (closure flat at 64) |
-  | Request-time loop + tool dispatch | `tests/test_tool_messages.py` in full — 41 tests, native branch, multi-tool batches, mid-batch error, interrupt, loop detection, session serialization | **0 / 0** (73 modules) |
+  | Span | What was driven | 2026-08-15 | 2026-09-20 |
+  |---|---|---|---|
+  | Import time + full consumer surface | every ppxai symbol the consumer imports | **0 / 0** (64) | **0 / 0** (77) |
+  | Client + tool-manager construction | `EngineClient()`, `ToolManager()` | **0 / 0** (64) | **0 / 0** (77) |
+  | Consumer-called symbols | `SessionManager()`, `facts_without_an_instance()`, `get_provider_config()`, `get_default_provider()` | not run | **0 / 0** (77) |
+  | Request-time loop + tool dispatch | `tests/test_tool_messages.py` in full — 41 tests, native branch, multi-tool batches, mid-batch error, interrupt, loop detection, session serialization | **0 / 0** (73) | **0 / 0** (90) |
+
+  A note on the observer's filter, because the first re-run got it wrong:
+  matching the bare substring `completion` produces 56 false hits from
+  `openai.types.completion` and from ppxai's own **`engine.providers.wire.
+  chat_completions`** — the ADR 0012 wire handler, an unrelated name that
+  did not exist when this was first measured. The filter must be
+  `ppxai.commands*` or `ppxai.*` ending in `completion`. With that filter
+  every span reports zero hits and zero stack frames.
 
   The third span injects a scripted `MockProvider` directly, so it exercises
   the *loop* rather than provider construction — which is precisely what the
@@ -110,11 +124,41 @@ What step 1 actually fixed, and what is left:
   `task_runner` — `build_task_runner`'s extraction (`eeb82076`) widened
   what an embedder *could* drive in-process, but ppxai-sre has not adopted
   it and reaches the engine through a single `engine.chat()` call today.
+- 🔁 **New in the 2026-09-20 pass: the edge closes a *package*-level
+  cycle, which the earlier measurements never stated.** Importing
+  `ppxai.commands.factory` pulls **52 `ppxai.engine` modules**. So the
+  direction of travel is `engine.completion → commands.factory →
+  engine.*`: the `engine` package depends on the `commands` package, which
+  depends back on `engine`.
+
+  The **module** graph stays acyclic, and this is why nothing breaks:
+  `commands.factory` does *not* pull `engine.completion` (verified), and no
+  module inside `engine` imports `engine.completion` either — it is a leaf
+  that only the three client glue layers reach. `import
+  ppxai.engine.completion` therefore succeeds standalone, and the
+  `tests/test_no_new_lazy_imports.py` sweep added in Item 73 passes it
+  without an exemption row.
+
+  That is a meaningful distinction, not a technicality: it means the
+  extraction is still a one-edge job with no cycle to untangle, **and** it
+  means the current arrangement is one import away from a genuine cycle.
+  Any future `engine` module that imports `engine.completion` — an obvious
+  thing to do, since the name suggests it is engine-owned — closes the loop
+  and turns this from a smell into an import error. The leaf status is
+  load-bearing and undefended; nothing in the test suite would stop that
+  import being added.
+
 - 📈 **Surface has grown since the ADR was written.** `/task` and `/run`
   are now factory-registered, so the roster completion depends on is
   broader; completion also gained client-specific gating (the `clients`
-  set, `engine/completion.py:73-75`) and dynamic run-id suggestions. None
-  of that isnew coupling, but it raises the cost of the eventual move.
+  set, `engine/completion.py:70-78`) and dynamic run-id suggestions. None
+  of that is new coupling, but it raises the cost of the eventual move:
+  `engine/completion.py` is **884 lines** now. The coupling itself has not
+  spread — it is still exactly **two call sites**,
+  `CommandFactory.iter_completion_specs()` at `engine/completion.py:353`
+  and `CommandFactory.get()` at `:412`, reached by **three** callers of
+  `complete()` (`rich/main.py:32`, `tui/completer.py:24`,
+  `server/routes/completion.py:18`).
 
 Nothing here changes the decision. It moves the *priority*: this is an
 architectural cleanup with no current correctness defect, not a
@@ -188,10 +232,31 @@ seed. Incremental path:
    `CompletionCommandInfo`; `engine.completion` stops reading factory
    privates. No cascade — the `complete()` seam is unchanged. (Debt 29
    privates-reach closed.)
-2. **v1.19.x:** define `CommandRegistryProtocol` + `CompletionContextProtocol`
-   (leaf modules); lift `complete()` into `ppxai/completion/CompletionService`;
-   wire it at each composition root (preloaded); collapse the three client
-   context-scrapers; publish the roster snapshot via AppState.
+2. **Deferred, no target release.** Define `CommandRegistryProtocol` +
+   `CompletionContextProtocol` (leaf modules); lift `complete()` into
+   `ppxai/completion/CompletionService`; wire it at each composition root
+   (preloaded); collapse the three client context-scrapers; publish the
+   roster snapshot via AppState.
+
+   **Scoped 2026-09-20.** The full step 2 is three separable pieces, and
+   they are worth costing separately because only the first is small:
+
+   | Piece | What it touches | Size |
+   |---|---|---|
+   | (a) Invert the edge | 2 call sites in `engine/completion.py`, 3 callers, 1 leaf Protocol | small — the edge, and nothing else |
+   | (b) Move to `ppxai/completion/` | relocate an 884-line module, retarget 3 imports | mechanical, but it is the piece that makes the layering claim true |
+   | (c) Collapse the 3 context-scrapers + publish the roster via AppState | `rich/main.py`, `tui/completer.py`, `server/routes/completion.py`, plus the AppState DTO and its 3 client mirrors and sentinel tests | the expensive piece, and the only one that pays a user-visible dividend (palettes / `/help` / menus update with no per-client code) |
+
+   (a) alone removes the `engine → commands` import and the package cycle
+   with it. (a)+(b) discharge the ADR's layering argument. (c) is a
+   separate feature wearing the same ADR's clothes, and is the reason this
+   record has looked too expensive to start three releases running.
+
+   **A cheap defence available today, independent of all three:** add a
+   test asserting that no module under `ppxai/engine/` imports
+   `engine.completion`. That is what currently keeps the module graph
+   acyclic, it is undefended, and it costs one test — see the leaf-status
+   note in §Re-measured.
 
 ## Triggers to revisit
 
