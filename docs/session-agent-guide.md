@@ -2,7 +2,14 @@
 
 **Applies to**: v1.14.2+ (agent mode introduced v1.13.0; this guide tracks the v1.14.2+ shape)
 **Status**: Production Ready
-**Last verified against**: v1.19.1 (command renamed `/agent` → `/auto` per ADR 0011 — **no alias**; behavior unchanged)
+**Last verified against**: 2026-09-20 on `bugfix/v1.19.3` — full
+re-check, not a date bump. Commands, context providers, config defaults
+(`max_iterations=10`, `context_char_limit=2000`, `min_task_words=3` —
+confirmed NOT among ADR 0010's moved keys), shell-safety defaults and
+the `/agent/*` HTTP endpoints all verified against source. **Three
+defects found and fixed:** `/auto continue` does not exist, the Ctrl-C
+double-tap belongs to the REPL rather than to `/auto`, and the VSCode
+badge has no purple state — its colour reports the checkpoint backend.
 **Renamed** from `agent-mode-guide.md` (v1.19.0) to disambiguate the three agent surfaces.
 
 > **⚠️ Three different "agents" — this guide covers only the first:**
@@ -270,12 +277,26 @@ The VSCode extension provides a graphical interface for agent mode.
 
 ### Agent Toggle Button
 
-In the ppxai chat panel, you'll see an **Agent** button next to the **Tools** button:
+In the ppxai chat panel, you'll see an **Agent** badge next to the
+**Tools** button, labelled `Agent: off` / `Agent: on`
+(`vscode-extension/src/chatPanel.ts:2927`).
 
-- **Gray (OFF)**: Agent mode disabled
-- **Purple (ON)**: Agent mode enabled
+**Corrected 2026-09-20 — there is no purple, and the colour is not a
+simple on/off.** When enabled, the badge colour reports the **checkpoint
+backend**, which makes it a safety indicator rather than a toggle state
+(`vscode-extension/media/webview/styles.css:159-181`):
 
-Click to toggle. When enabled, tools are automatically enabled.
+| Appearance | Meaning |
+|---|---|
+| Dimmed (`opacity: 0.6`) | Agent mode **off** |
+| Blue (`#3794ff`) | On, backend not yet resolved |
+| **Green** (`#89d185`) | On with **git** checkpoints — atomic `/undo` |
+| **Orange** (`#ff9800`) | On with **file** snapshots — weaker guarantee |
+| **Red** (`#f44336`) | On with **no** checkpoints — `/undo` will not save you |
+
+Click to toggle. When enabled, tools are automatically enabled. Treat red
+as a warning, not decoration: it means the task is about to run with no
+rollback.
 
 ### Using Agent Mode in VSCode
 
@@ -348,10 +369,21 @@ The agent requires consent for file edits:
 
 ### Handling Interrupts
 
-- **Ctrl-C (once)**: Gracefully stops the current iteration
-- **Ctrl-C (twice within 2s)**: Force stops immediately
+- **Ctrl-C (once)**: stops the run **immediately** and offers rollback.
 
-After interrupting, the agent will summarize progress made.
+**Corrected 2026-09-20.** This said one press "gracefully stops the
+current iteration" and that two presses within 2s "force stops" — that is
+not how `/auto` behaves. A single Ctrl-C raises `KeyboardInterrupt`,
+which `handle_agent` catches (`ppxai/commands/agent.py:788-799`) and
+takes straight to `_handle_agent_interrupt` — the rollback prompt — on
+the **first** press. There is no second-press escalation inside `/auto`
+(`grep -rn "force_stop\|double_interrupt\|interrupt_count" ppxai/`
+returns nothing).
+
+The 2-second double-tap is real but belongs to the **top-level chat
+REPL** — press Ctrl-C twice to exit the application
+(`ppxai/rich/main.py:452-483`, `ctrl_c_timeout = 2.0`). It is unrelated
+to agent iterations.
 
 ### Iteration Limits
 
@@ -359,7 +391,15 @@ The default max is 10 iterations (configurable via `tools.agent.max_iterations`)
 
 1. Let the agent complete its iterations
 2. Review the output
-3. Run `/auto continue` or issue a follow-up task
+3. Issue a follow-up task describing what still needs doing
+
+   > `/auto continue` does **not** work, despite appearing here until
+   > 2026-09-20. There is no `continue` special case
+   > (`grep -n '"continue"' ppxai/commands/agent.py` returns nothing), and
+   > the word is a single token, so `validate_agent_task()` rejects it
+   > against the `min_task_words` floor (default 3,
+   > `ppxai/commands/agent.py:185-210`). Restate the remaining work as a
+   > normal task instead.
 
 ---
 

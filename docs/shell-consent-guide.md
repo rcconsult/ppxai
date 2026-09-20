@@ -1,7 +1,16 @@
 # Shell Command Consent Guide
 
 **Version:** v1.11.2+
-**Last Updated:** 2025-12-22
+**Last verified:** 2026-09-20 against `bugfix/v1.19.3` — full re-check,
+not a date bump. `dangerous_commands` / `never_allow` defaults,
+`classify_shell_command`'s signature, `ConsentManager`'s constructor,
+the `EngineClient(shell_consent_callback=...)` signature, the inert
+`require_consent` / `sandboxed_paths` keys and the in-memory-only
+consent state all verified against source. **Three defects found and
+fixed:** the classifier checks DANGEROUS *before* the allow-list (this
+guide had it reversed), `allowed_commands` grew from 9 to 17 patterns in
+v1.18.5, and the VSCode prompt is a five-item QuickPick — including
+**Run in Terminal** — not a four-button modal.
 
 ## Overview
 
@@ -98,21 +107,30 @@ The AI tool system requests to execute a command:
 ppxai analyzes the command using regex patterns:
 
 ```python
-# Check never-allow patterns first
+# Real precedence, per classify_shell_command() in ppxai/common/consent.py:
+#   NEVER  ->  DANGEROUS  ->  SAFE  ->  DANGEROUS (default)
+# Note DANGEROUS is checked BEFORE the allow-list, not after.
+
 if matches_never_allow_pattern(command):
     return DENY, "Command is forbidden"
 
-# Check allowed patterns
+if matches_dangerous_pattern(command):          # <- before allowed
+    return REQUEST_CONSENT, "Command requires approval"
+
 if matches_allowed_pattern(command):
     return APPROVE, "Command is safe"
-
-# Check dangerous patterns
-if matches_dangerous_pattern(command):
-    return REQUEST_CONSENT, "Command requires approval"
 
 # Default: require consent for unknown commands
 return REQUEST_CONSENT, "Unknown command requires approval"
 ```
+
+> **Why the order matters.** `dangerous` wins over `allowed`, so you
+> cannot whitelist your way past a dangerous pattern — adding
+> `^rm\s+` to `allowed_commands` does **not** silence the prompt if a
+> `dangerous_commands` pattern also matches. With the shipped default
+> pattern sets the two never overlap, so this is invisible in practice;
+> it becomes visible the moment you edit either list. This block showed
+> allowed-before-dangerous until 2026-09-20.
 
 ### 3. User Consent (for Dangerous Commands)
 
@@ -135,24 +153,27 @@ Allow this command? (y/n/always/never):
 - `always` - Approve all future uses of this command pattern
 - `never` - Deny all future uses of this command pattern
 
-#### VSCode Extension Consent Modal
+#### VSCode Extension Consent Prompt
+
+Not a modal with buttons — it is a **VSCode QuickPick** with **five**
+items (`SHELL_CONSENT_OPTIONS`,
+`vscode-extension/src/handlers/consent.ts:74-100`):
 
 ```
-┌─────────────────────────────────────────┐
-│  Shell Command Consent Required         │
-├─────────────────────────────────────────┤
-│                                         │
-│  Command:  rm -f /tmp/test.txt         │
-│  Directory: /home/user/project          │
-│  Risk: DANGEROUS                        │
-│                                         │
-│  This command will delete files.        │
-│                                         │
-│  [ Yes, Once ]  [ Yes, Always ]         │
-│  [ No, Once  ]  [ No, Never   ]         │
-│                                         │
-└─────────────────────────────────────────┘
+> Shell command consent
+  ✓  Yes                 Allow this command (y)
+  ✗  No                  Deny this command (n)
+  >_ Run in Terminal     Open VSCode terminal and run interactively (t)
+  ✓✓ Always              Allow all shell commands this session (a)
+  ⊘  Never               Block all shell commands this session (v)
 ```
+
+**`Run in Terminal` has no equivalent in the TUIs** and was missing from
+this guide entirely until 2026-09-20 (which also drew a four-button
+modal that does not exist). It hands the command to a real VSCode
+terminal for interactive execution, which is the escape hatch for
+anything needing a TTY or live input — the engine does not capture its
+output.
 
 ### 4. Command Execution or Denial
 
@@ -170,6 +191,14 @@ ppxai includes sensible defaults in `ppxai-config.json`:
 ```json
 {
   "tools": {
+> **Defaults re-derived from `ppxai/config/defaults.py` on 2026-09-20.**
+> `allowed_commands` grew from 9 patterns to **17** in v1.18.5
+> (`ccaa1522`): read-only `git` verbs, read-only `gh` verbs, and `rtk`
+> meta-commands. This block showed only the original 9 until then, so it
+> understated what auto-approves without a prompt. Write verbs
+> (`commit`, `push`, `reset`, `rebase`, `checkout`, `merge`, `fetch`,
+> `pull`) are deliberately **not** on the list and still prompt.
+
     "shell": {
       "dangerous_commands": [
         "^rm\\s+",
@@ -194,7 +223,15 @@ ppxai includes sensible defaults in `ppxai-config.json`:
         "^which\\s+",
         "^whoami$",
         "^date$",
-        "^uname\\s+"
+        "^uname\\s+",
+        "^git\\s+(status|log|diff|show|branch|blame|describe|rev-parse|rev-list|ls-files|ls-tree|reflog|shortlog|cat-file|grep|whatchanged)(\\s+|$)",
+        "^git\\s+stash\\s+list(\\s+|$)",
+        "^git\\s+remote(\\s+-v|\\s+--verbose)?\\s*$",
+        "^git\\s+config\\s+(--get|--list|-l)(\\s+|$)",
+        "^git\\s+tag(\\s+-l|\\s+--list)?\\s*$",
+        "^gh\\s+auth\\s+status(\\s+|$)",
+        "^gh\\s+(repo|pr|issue|release|run|workflow|gist|api|browse|search|status|cache|ruleset|variable|secret|label|codespace|extension|alias|attestation|project)\\s+(view|list|status)(\\s+|$)",
+        "^rtk\\s+(--help|--version|gain|discover|hook\\s+check)(\\s+|$)"
       ],
       "never_allow": [
         "rm\\s+-rf\\s+/",

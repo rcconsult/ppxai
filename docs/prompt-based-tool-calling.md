@@ -12,7 +12,7 @@ When using vLLM with `--enable-auto-tool-choice` and GPT-OSS models, you may enc
 openai_harmony.HarmonyError: unexpected tokens remaining in message header
 ```
 
-This error occurs because GPT-OSS model outputs don't consistently follow the Harmony response format that vLLM attempts to parse. See [vLLM issue #23567](https://github.com/vllm-project/vllm/issues/23567).
+This error occurs because GPT-OSS model outputs don't consistently follow the Harmony response format that vLLM attempts to parse. See [vLLM issue #23567](https://github.com/vllm-project/vllm/issues/23567) — **closed as _not planned_** (staled out after 90 days, never fixed; checked 2026-09-20), which is why the prompt-based fallback is still the answer.
 
 **Related issues:**
 - [harmony issue #80](https://github.com/openai/harmony/issues/80) - Refusal parsing failures
@@ -330,6 +330,6 @@ def test_parser():
 
 ## References
 
-- [vLLM Issue #23567](https://github.com/vllm-project/vllm/issues/23567) - HarmonyError discussion
+- [vLLM Issue #23567](https://github.com/vllm-project/vllm/issues/23567) - HarmonyError discussion (closed as _not planned_ 2026; never resolved)
 - [vLLM GPT-OSS Recipe](https://github.com/vllm-project/recipes/blob/main/OpenAI/GPT-OSS.md) - Official guide
 - [OpenAI Harmony Library](https://github.com/openai/harmony) - Token format spec

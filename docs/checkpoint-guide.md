@@ -1,4 +1,15 @@
-# Checkpoint System User Guide (v1.12.4+, current through v1.19.0)
+# Checkpoint System User Guide (v1.12.4+)
+
+**Last verified:** 2026-09-20 against `bugfix/v1.19.3` — full re-check,
+not a date bump. Subcommands, the `/checkpoint clear` semantics, the
+dead `checkpoint_message` key, the hardcoded commit message, backend
+selection and the interrupt/rollback flow all verified against source.
+**Four defects found and fixed:** the file-snapshot path was wrong
+everywhere (it is `~/.ppxai/sessions/checkpoints/`, and the top-level
+`~/.ppxai/checkpoints/` is an empty directory nothing writes to), there
+is no `Confirm undo? (y/n)` prompt, the status line is a `↶` glyph
+rather than `Checkpoints: <backend>` text, and the two-commit mechanism
+(`ppxai checkpoint:` vs `ppxai agent:`) was undocumented.
 
 ## Overview
 
@@ -24,8 +35,10 @@ The checkpoint system provides **atomic multi-file rollback** for agent mode tas
 
 2. **Check status** (see checkpoint backend in status line):
    ```
-   [Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: git]
+   [Perplexity | sonar-pro | Tools: ON | Agent: ON | ↶]
    ```
+   The checkpoint indicator is the compact `↶` glyph, not the words
+   `Checkpoints: git` — see the table below.
 
 3. **Undo if needed**:
    ```
@@ -72,7 +85,7 @@ When your project has a git repository, the TUI uses **git-based checkpoints**:
 When git is not available, ppxai uses **file-based snapshots**:
 
 1. **Before Agent Task:**
-   - Copies all modified files to `~/.ppxai/checkpoints/{session_id}/cp-{timestamp}/`
+   - Copies all modified files to `~/.ppxai/sessions/checkpoints/{session_id}/cp-{timestamp}/`
    - Preserves directory structure
 
 2. **After /undo:**
@@ -156,11 +169,22 @@ Runs an autonomous agent loop with automatic checkpointing:
 
 **Status Line Indicators:**
 
-| Status | Meaning |
+**Corrected 2026-09-20.** The Rich TUI shows a compact glyph, not
+backend text, and it does **not** show a disabled state at all
+(`checkpoint_str`, `ppxai/rich/main.py:66-74`; rendered by
+`render_status_panel`, `ppxai/rich/ui_components.py:644-650`):
+
+| Indicator | Meaning |
 |--------|---------|
-| `Checkpoints: git` | Git backend active (green) |
-| `Checkpoints: file` | File backend active (yellow) |
-| `Checkpoints: OFF` | Disabled (red warning) |
+| `↶` | A checkpoint exists and is **valid** — `/undo` should work |
+| `↶!` | A checkpoint exists but is **stale/invalid** — `/undo` may not restore cleanly |
+| *(nothing)* | No checkpoint yet this session, checkpoints disabled, or agent mode off. **There is no `OFF` warning** — absence is the only signal. |
+
+The glyph appears only while agent mode is on and a checkpoint has
+actually been created. The backend in use is not encoded in the status
+line; run `/checkpoint backend` or `/checkpoint status` to see it.
+This table claimed `Checkpoints: git` / `file` / `OFF` text with colour
+coding until 2026-09-20 — none of those strings exist in the code.
 
 ---
 
@@ -172,14 +196,21 @@ Reverts all changes from the last agent task:
 /undo
 ```
 
-**Confirmation Prompt:**
-```
-⚠️  Undo Last Agent Task
-Backend: git
-Checkpoint: abc123de
-
-Confirm undo? (y/n):
-```
+> ⚠️ **There is no confirmation prompt. `/undo` acts immediately.**
+> Corrected 2026-09-20 — this section showed a `Confirm undo? (y/n):`
+> gate that does not exist. `handle_undo`
+> (`ppxai/commands/agent.py:254-343`) performs the undo directly; its own
+> comment says so: *"Interactive confirmation is handled by the old
+> handler for now… For now, perform the undo directly."*
+> `grep -rn "Confirm undo" ppxai/` returns nothing. What you see is a
+> **post-hoc** `ConfirmationResult` reporting what already happened, not
+> a prompt asking whether to proceed.
+>
+> **One pre-flight check does stand between you and a surprise**, and it
+> is not a consent gate: with the git backend, `/undo` refuses outright
+> if `git status --porcelain` is non-empty — *"Cannot undo: uncommitted
+> changes in working directory"* (`ppxai/commands/agent.py:298-316`).
+> Commit or stash first.
 
 **What happens:**
 - **Git backend:** Runs `git revert HEAD --no-edit`
@@ -374,12 +405,6 @@ You: /auto add user registration endpoint
 # Realize there's an issue
 You: /undo
 
-⚠️  Undo Last Agent Task
-Backend: git
-Checkpoint: f3a7b2c1
-
-Confirm undo? (y/n): y
-
 ✓ Changes reverted using git revert (checkpoint: f3a7b2c1)
 
 # All changes undone! Git history shows:
@@ -399,7 +424,7 @@ Confirm undo? (y/n): y
 You: /auto refactor config.py to use environment variables
 
 ⚠️  Agent Mode enabled with File checkpoints
-   • Snapshots will be saved to ~/.ppxai/checkpoints
+   • Snapshots will be saved to ~/.ppxai/sessions/checkpoints
    • Use /undo to restore from snapshot
    • Tip: Initialize git repo for atomic commits
 
@@ -413,7 +438,7 @@ You: /undo
 
 ✓ Changes restored from snapshot (checkpoint: cp-20251227-143022)
 
-# Files restored from ~/.ppxai/checkpoints/default/cp-20251227-143022/
+# Files restored from ~/.ppxai/sessions/checkpoints/default/cp-20251227-143022/
 ```
 
 ---
@@ -562,9 +587,35 @@ Rolling back changes...
      **no** automatic cleanup
    - `/checkpoint clear` deletes **all** file-based snapshots (not a
      keep-last-10 prune)
-   - Manual cleanup: `rm -rf ~/.ppxai/checkpoints/*`
+   - Manual cleanup: `rm -rf ~/.ppxai/sessions/checkpoints/*`
 
 ---
+
+## Two commits, not one (git backend)
+
+**Added 2026-09-20 — the one-commit mental model above is incomplete, and
+the difference decides what `/undo` actually reverts.**
+
+The git backend writes **two** kinds of commit, and both are revertible:
+
+| Commit | Prefix | When |
+|---|---|---|
+| Pre-task checkpoint | `ppxai checkpoint: <desc>` | Before the task — **but only if the tree is dirty** |
+| Post-task auto-commit | `ppxai agent: <desc>` | After the task completes, or on max-iterations |
+
+The catch is the pre-task one. `create_checkpoint()` is guarded by
+`_has_changes()` (`ppxai/checkpoint.py:132-136`) and returns an **empty
+checkpoint id** when the working tree is already clean — which is the
+normal case at the start of a task. So in ordinary use **no pre-task
+commit is created at all**, and what `/undo` reverts is the post-task
+`ppxai agent:` commit written by `commit_agent_changes()`
+(`ppxai/engine/checkpoint_ops.py:79-129`, called from
+`ppxai/engine/chat.py:1271` on completion and `:1349` on max-iterations).
+
+The feature works either way — `is_valid_checkpoint()` and the listing
+grep both accept **both** prefixes (`ppxai/checkpoint.py:163,178`) — but
+if you go looking in `git log` for a "checkpoint" commit that was never
+created, this is why.
 
 ## Troubleshooting
 
@@ -615,12 +666,12 @@ git commit -m "Initial commit"
 
 **Symptom:** Cannot create checkpoint directory
 
-**Cause:** `~/.ppxai/checkpoints/` not writable
+**Cause:** `~/.ppxai/sessions/checkpoints/` not writable
 
 **Solution:**
 ```bash
-mkdir -p ~/.ppxai/checkpoints
-chmod 755 ~/.ppxai/checkpoints
+mkdir -p ~/.ppxai/sessions/checkpoints
+chmod 755 ~/.ppxai/sessions/checkpoints
 ```
 
 ---
@@ -668,13 +719,13 @@ git revert <commit-hash> --no-edit
 **File Backend:**
 ```bash
 # List checkpoint snapshots
-ls -la ~/.ppxai/checkpoints/default/
+ls -la ~/.ppxai/sessions/checkpoints/default/
 
 # View checkpoint metadata
-cat ~/.ppxai/checkpoints/default/cp-20251227-143022/metadata.txt
+cat ~/.ppxai/sessions/checkpoints/default/cp-20251227-143022/metadata.txt
 
 # Manually restore file
-cp ~/.ppxai/checkpoints/default/cp-20251227-143022/config.py ./
+cp ~/.ppxai/sessions/checkpoints/default/cp-20251227-143022/config.py ./
 ```
 
 ---
@@ -754,7 +805,7 @@ A: ppxai does **not** auto-clean — file-based checkpoints accumulate
 indefinitely until you act. Run `/checkpoint clear` (deletes **all**
 file-based snapshots, not just old ones), or manually:
 ```bash
-rm -rf ~/.ppxai/checkpoints/*
+rm -rf ~/.ppxai/sessions/checkpoints/*
 ```
 
 **Q: Can I use checkpoints with remote git repos?**

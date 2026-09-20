@@ -1,7 +1,14 @@
 # Container & Kubernetes Tools User Guide
 
 **Version:** v1.13.10+
-**Last Updated:** 2026-01-14
+**Last verified:** 2026-09-20 against `bugfix/v1.19.3` — full re-check, not
+a date bump. All 16 tools, every parameter schema, both timeout tiers, the
+consent-gated set, and every quoted consent string were re-derived from
+`ppxai/engine/tools/builtin/container.py`. One defect found and fixed: the
+"consent cannot be disabled" claim (see
+[Bypassing consent](#bypassing-consent-three-ways)). `git log` shows no
+functional change to `container.py` since the v1.13.10 refactor — later
+touches are ruff and import-hoisting only.
 
 This guide covers ppxai's built-in tools for managing Docker, Podman, and Kubernetes resources through natural language commands.
 
@@ -153,8 +160,12 @@ is detected) and are **not** configurable via `ppxai-config.json` today:
   **60s** applies to the remaining consent-gated operations (start/stop,
   `kube apply`). The split is `CLITool` vs `ConsentCLITool` in
   `ppxai/engine/tools/builtin/container.py`, not read-vs-logs.
-- **Consent is always required** for destructive operations (start, stop,
-  restart, exec, `kubectl apply`, `pod_exec`) — it cannot be disabled.
+- **Consent is required by default** for destructive operations (start,
+  stop, restart, exec, `kubectl apply`, `pod_exec`) — but it is **not
+  unconditional**; see [Bypassing consent](#bypassing-consent-three-ways)
+  below. These tools do not implement their own gate: they delegate to the
+  **shared shell-consent classifier**, and anything that makes that
+  classifier say SAFE makes the container prompt disappear too.
 
 `ppxai-config.json` does accept a `tools.container` block with `enabled`,
 `require_consent`, `default_runtime`, and `timeout` keys, but these are
@@ -530,13 +541,44 @@ The following tools modify state and require explicit user approval:
 3. User can: **Allow**, **Deny**, **Always Allow**, or **Never Allow**
 4. Session-level preferences are remembered
 
-### Disabling Consent
+### Bypassing consent (three ways)
 
-Not currently possible. Consent for destructive operations
-(`container_start`, `container_stop`, `container_restart`, `container_exec`,
-`kubectl_apply`, `pod_exec`) is unconditional in code — the
-`tools.container.require_consent` config key is reserved but not read by
-`ppxai/engine/tools/builtin/container.py`. See [Configuration](#configuration).
+**Corrected 2026-09-20.** This section used to say disabling consent was
+"not currently possible" and that it is "unconditional in code". **That is
+wrong**, and it was wrong in a way that mattered: it described the
+*container-specific* key correctly and then generalised from it.
+
+The narrow part is true — `tools.container.require_consent` **is** inert,
+parsed by `get_container_config()` (`ppxai/config/tools.py:193`) and never
+called by anything. But the six consent-gated tools have no gate of their
+own. `ConsentCLITool.execute()`
+(`ppxai/engine/tools/builtin/container.py:129-142`) calls
+`engine.request_shell_consent()`, and `request_shell_consent`
+(`ppxai/engine/consent_ops.py:100-142`) returns **True with no prompt** in
+three cases:
+
+| # | Bypass | Where |
+|---|---|---|
+| 1 | The command classifies **SAFE** | `classify_command()` → `classify_shell_command()` (`ppxai/common/consent.py:92-157`). SAFE means "matched a regex in `tools.shell.allowed_commands`". |
+| 2 | Session shell-consent mode is **ALWAYS** | `consent_ops.py:131-132` — this is what the **"Always Allow"** button in the prompt above sets. |
+| 3 | The exact command string is already in the session's allowed set | `consent_ops.py:137-138` — set by a prior per-command approval. |
+
+**(1) is the one to know about**, because it is durable and silent.
+`tools.shell.allowed_commands` is a live, user-editable regex list
+(`ppxai/config/tools.py:86`; defaults at `ppxai/config/defaults.py:42-73`).
+The shipped defaults contain **no** docker, podman or kubectl pattern —
+verified 2026-09-20, so out of the box every destructive container
+operation does prompt. But adding, say, `^docker\s+(start|stop|restart)`
+to that list permanently silences the prompt for those operations, and
+**nothing validates or warns about it**: there is no container-specific
+check to fall back on. If you edit `allowed_commands`, you are editing
+container consent too, whether or not you meant to.
+
+Fail-safe directions still hold: a `NEVER`-classified command is refused
+outright, and with no consent callback registered the default is **deny**
+(`consent_ops.py:143-144`).
+
+See [Configuration](#configuration).
 
 ---
 

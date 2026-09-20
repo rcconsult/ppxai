@@ -46,7 +46,7 @@ When using vLLM with `--enable-auto-tool-choice` and GPT-OSS models, you may enc
 openai_harmony.HarmonyError: unexpected tokens remaining in message header
 ```
 
-This error occurs when Harmony control tokens aren't properly parsed. Since GPT-OSS was trained on Harmony format, the model always outputs these tokens. See [vLLM issue #23567](https://github.com/vllm-project/vllm/issues/23567).
+This error occurs when Harmony control tokens aren't properly parsed. Since GPT-OSS was trained on Harmony format, the model always outputs these tokens. See [vLLM issue #23567](https://github.com/vllm-project/vllm/issues/23567) — **closed as _not planned_**, not fixed (checked 2026-09-20).
 
 ## ppxai's Solution: Two Tool Calling Modes
 
@@ -456,9 +456,21 @@ Given that Harmony format is mandatory for GPT-OSS, here are the implications:
 | **Native** (`native_tool_calling: true`) | ✅ Works | Requires vLLM with Harmony fix (PR #30205) |
 | **Prompt-based** (`native_tool_calling: false`) | ✅ Works | Fallback for older vLLM versions |
 
-### vLLM Harmony Fix
+### vLLM Harmony Fix — read the fine print
 
-The Harmony parsing issue has been fixed in vLLM (PR #30205). Check your vLLM version to determine which mode to use.
+**Checked upstream 2026-09-20. Two different things get conflated here, and
+the difference decides whether upgrading vLLM helps you.**
+
+| Upstream | State | What it actually covers |
+|---|---|---|
+| [PR #30205](https://github.com/vllm-project/vllm/pull/30205) | **Merged** 2025-12-22 (`bd6d5a7`) | *"[gpt-oss] Fix harmony parser in streaming responses"* — final streaming tokens were being dropped under speculative decoding. A real fix, for **token loss in streaming**. |
+| [Issue #23567](https://github.com/vllm-project/vllm/issues/23567) | **Closed as _not planned_** — auto-staled after 90 days of inactivity | `HarmonyError: unexpected tokens remaining in message header` on multi-turn gpt-oss. **Nobody fixed this.** It was closed by the stale bot, not by a patch. |
+
+So: **a closed issue is not a fixed issue here.** #23567 going closed means
+the report went quiet, and #30205 fixes a *different* symptom. Do not read
+"upgrade past #30205" as "the HarmonyError is gone" — this guide said the
+Harmony parsing issue "has been fixed in vLLM (PR #30205)" until 2026-09-20,
+which overclaims on both counts.
 
 ### Recommended Configuration
 
@@ -469,12 +481,15 @@ The Harmony parsing issue has been fixed in vLLM (PR #30205). Check your vLLM ve
 > `use_native_tools = facts.tool_mode != "prompt_based"`) — so setting
 > `native_tool_calling: true` for a gpt-oss model is accepted by config and
 > then ignored. (This used to be a `model_profiles.py` profile; that module
-> was deleted in Item 65 and the pin moved to the facts table with it.) Upstream issue #23567 is still open. Treat the
-> block below as what to use *once that pin is lifted*, not as a working
-> configuration; the prompt-based block underneath is what actually runs.
+> was deleted in Item 65 and the pin moved to the facts table with it.)
+> Treat the block below as what to use *once that pin is lifted*, not as a
+> working configuration; the prompt-based block underneath is what actually
+> runs. On upstream state, see the table above — #23567 is closed **as not
+> planned**, which is not the same as fixed.
 
-**With fixed vLLM (PR #30205+), once the profile pin is lifted:** native
-tool calling gives the best performance:
+**With vLLM past PR #30205, once the facts-row pin is lifted:** native tool
+calling gives the best performance — but see the caveat above; #30205 is not
+a fix for #23567's HarmonyError:
 
 ```json
 {

@@ -2,8 +2,18 @@
 
 **Status:** Reference. Update when consent layer behavior changes.
 **Audience:** ppxai contributors and security reviewers.
-**Last verified:** 2026-04-26 (covered by `tests/test_tool_security.py` +
-`tests/test_file_editing_tools.py`).
+**Last verified:** 2026-09-20 against `bugfix/v1.19.3` — full re-check,
+not a date bump. Both consent flows were re-derived from
+`ppxai/engine/consent_ops.py`; enforcement files, the fail-safe
+asymmetry (file-edit allows without a callback, shell denies), the
+editor/shell/container caller sets, and the `execution.task.consent.*`
+defaults all verified. **Six defects found and fixed** — `ConsentMode`
+has no `NORMAL` member, the `AGENT_WAITING` field is `token` not
+`resume_token`, two named consent callbacks never existed, the
+`reload_config` claim held only for the server path, the MCP entry
+described a gap that cannot exist yet, and the timeout kill became a
+process-group kill in v1.18.3. Still covered by
+`tests/test_tool_security.py` + `tests/test_file_editing_tools.py`.
 
 This doc is the single source of truth for what triggers a consent
 prompt in ppxai, what the prompt covers, what bypasses it, and what
@@ -72,7 +82,7 @@ editor.execute(file_path, ...)
   user picks ALWAYS.
 - **Session-wide modes** — ALWAYS and NEVER persist across all
   subsequent file edits in the current session, but NOT across sessions
-  (the next ppxai run starts fresh in mode NORMAL).
+  (the next ppxai run starts fresh in mode `PROMPT`).
 - **Agent-mode checkpoint** — first file edit in agent_mode creates a
   recovery checkpoint before the change. `/undo` rolls back to the
   pre-edit state.
@@ -86,7 +96,7 @@ editor.execute(file_path, ...)
   what's accessible is controlled by the **OS-level permissions** of
   the user running ppxai, not the consent layer.
 - **Cross-session memory** — ALWAYS in session A does not affect
-  session B. Each new session boots into mode NORMAL.
+  session B. Each new session boots into mode `PROMPT`.
 - **Per-edit checkpoints in non-agent mode** — `/undo` works only
   inside agent_mode and only for the first edit per file. For
   long edit chains the user is expected to use git.
@@ -129,11 +139,15 @@ The contract is **deliberately asymmetric**:
 | File edit | Allow | Back-compat with pre-v1.11.0 — file edits had no consent layer at all and tests / scripts relied on it. |
 | Shell | **Deny** | New feature in v1.11.2; no back-compat surface. Shell can `rm -rf` or exfiltrate, the cost of a missed prompt is too high. |
 
-Shell-tool callers in production ALWAYS install a callback (Rich
-TUI's `console_consent_callback`, Textual TUI's
-`textual_consent_callback`, web's HTTP callback). The "no callback"
-branch is a safety net for embedding contexts where the host
-forgot to wire it.
+Shell-tool callers in production ALWAYS install a callback: the Rich
+TUI passes `tui_shell_consent_handler`
+(`ppxai/commands/handler.py:124`), the Textual TUI passes its own
+`_shell_consent_handler` method (`ppxai/tui/app.py:494`), and web /
+VSCode wire an HTTP callback. The "no callback" branch is a safety
+net for embedding contexts where the host forgot to wire it.
+(This paragraph named `console_consent_callback` and
+`textual_consent_callback` until 2026-09-20 — neither identifier has
+ever existed in the repo.)
 
 ### NEVER patterns (catastrophic — can't be overridden)
 
@@ -190,8 +204,15 @@ silently grant it free execution.
   in args are the user's risk surface**. Don't put broad regex
   patterns in `allowed_commands`.
 - **Process group escapes** — `nohup`, `setsid`, etc., backgrounded
-  processes outlive the timeout. Subprocess timeout (default 30s)
-  kills the immediate child, not detached descendants.
+  processes outlive the timeout. **The mechanism changed in v1.18.3:**
+  the timeout path now SIGTERMs (then SIGKILLs) the whole **process
+  group** via `os.killpg()`, not just the immediate child
+  (`ppxai/engine/tools/builtin/shell.py:54-83`; children are started
+  with `start_new_session=True`). The exposure is still real, but for a
+  different reason: `_is_backgrounded()` deliberately never waits for or
+  kills a trailing-`&` / `nohup` command, so those outlive the call by
+  design rather than by escaping the kill. This bullet described the
+  pre-v1.18.3 immediate-child kill until 2026-09-20.
 - **Working directory traversal** — the `working_dir` argument is
   not validated against the engine's tracked working directory.
   Tools can be invoked with any cwd; this is intentional (LLM might
@@ -232,7 +253,8 @@ Two distinct gates, separate from the file-edit/shell contract above:
   refusal. Setting `auto` approves without a human in the loop
   (delegated trust, not an unattended default).
 - **T5 run park:** a run needing a human decision emits `AGENT_WAITING`
-  (`resume_token`, `ttl_s`) and halts at `status=waiting`. The human answers
+  (`token`, `ttl_s` — the field is `token`, not `resume_token`; see
+  `ppxai/engine/agent_runs.py:769`) and halts at `status=waiting`. The human answers
   via `POST /v1/agent/runs/{id}/respond` (`RespondRequest{token, approved?,
   text?}`); a consent park requires `approved: true` to proceed — a
   text-only answer is a denial. If the TTL lapses before a response, the
@@ -251,25 +273,44 @@ separate review/hardening:
    to OpenAI/Perplexity/Gemini/etc. The user accepts this when
    they configure the provider.
 
-2. **Plugin/MCP tools** — third-party MCP servers register tools
-   with arbitrary semantics. The consent layer doesn't classify
-   them. Plugin authors are responsible for their own prompts.
-   (A dedicated `docs/mcp-trust-model.md` is planned but **not yet
-   written** — kept as plain text rather than a link so it doesn't
-   render as a dead reference. Tracks with the MCP Day-0 work in
-   `docs/mcp-integration-plan.md`.)
+2. **Plugin/MCP tools — a future gap, not a present one.** This entry
+   read as though third-party MCP servers are registering tools today.
+   **They are not: MCP is not integrated at all.** `grep -r "from mcp\|import mcp" ppxai/`
+   returns nothing, and `ppxai/engine/tools/manager.py:200` hardcodes
+   `"source": "engine"` with no extension point — there is no mechanism
+   for any external tool source to register with the engine. So the
+   consent layer not classifying MCP tools is not a live exposure; it is
+   a requirement for whoever wires MCP up. Planned for v1.20.x per
+   `docs/mcp-integration-plan.md`. (A dedicated `docs/mcp-trust-model.md`
+   is planned but **not yet written** — kept as plain text rather than a
+   link so it doesn't render as a dead reference.)
 
-3. **Engine reload of config** — `engine.reload_config()` re-reads
-   `ppxai-config.json` on every chat. A user-edited config takes
-   effect immediately, including changes to `never_allow` and
-   `allowed_commands`. There is no signature-checking — the user
-   is trusted to manage their own config file.
+3. **Engine reload of config — per request on the server, not in the
+   TUIs.** Refined 2026-09-20; this said "on every chat" without
+   qualification, which is true for only two of the four clients.
+
+   - **Web and VSCode:** every route taking `Depends(get_session)` —
+     `/chat` included (`ppxai/server/routes/chat.py:282,469`) — resolves
+     through `get_or_create_session()`, which calls
+     `engine.reload_config()` on **each call**
+     (`ppxai/server/state.py:290`, a v1.17.1 consolidation). So a
+     user-edited config does take effect on the next message, including
+     changes to `never_allow` and `allowed_commands`.
+   - **Rich and Textual TUIs:** no reload on the send path. Config is
+     re-read on session restore (`engine/session_ops.py:29`), on a
+     provider/model switch (`commands/provider.py:63,151`), and on an
+     explicit `/config reload` (`commands/utility.py:149`). Editing
+     `ppxai-config.json` mid-session does **not** change consent
+     behaviour in a running TUI until one of those fires.
+
+   Either way there is no signature-checking — the user is trusted to
+   manage their own config file.
 
 4. **Session restore** — loading a previously-saved session restores
    the message history but **not** `allowed_files` or
    `allowed_commands`. Restored sessions start with empty allow-lists
    so prior consent decisions don't silently carry forward into a
-   new working context. Session-wide mode (ALWAYS/NEVER/NORMAL) is
+   new working context. Session-wide mode (`ALWAYS`/`NEVER`/`PROMPT`) is
    also reset.
 
 5. **Tool argument logging** — full tool arguments are logged at
