@@ -91,10 +91,26 @@ class ServerCommandContext:
     no auto-route, no verbose, no config values. Typed against the
     Protocol (not the concrete `EngineClient`) so the
     commands→engine boundary stays nominally decoupled (Item 10, v1.18.2).
+
+    ADR 0007 step 2 adds an optional `client` id, threaded from
+    `CommandRequest.client` by `server/routes/commands.py`. It is the
+    ONLY per-request client signal that exists: this one adapter serves
+    both web and VSCode, so a handler that needs to gate (`/help` via
+    `commands/system.py::_help_client`) otherwise has to fall back to
+    the `SERVER_CLIENTS` candidate set and over-list. Deliberately added
+    to Pattern B alone — the Rich/Textual contexts already know their
+    own client id, so ADR 0002's "don't unify the three patterns on
+    speculation" stands.
     """
 
-    def __init__(self, engine: EngineClientProtocol):
+    def __init__(self, engine: EngineClientProtocol, client: str | None = None):
         self._engine = engine
+        self._client = client
+
+    @property
+    def client(self) -> str | None:
+        """The requesting client id ("web" | "vscode"), or None."""
+        return self._client
 
     @property
     def engine_client(self) -> Any:

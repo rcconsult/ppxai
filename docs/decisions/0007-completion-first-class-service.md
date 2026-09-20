@@ -434,6 +434,45 @@ seed. Incremental path:
 
    Plan: [plan-adr-0007-completion-service.md](../plan-adr-0007-completion-service.md).
 
+## Which mirrors can go, and which cannot
+
+Recorded 2026-09-20 (owner's question: "the mirrors go away and get
+populated via a GET call, correct?"). The answer is *yes for data, no for
+behaviour*, and the distinction is worth keeping because "mirror" names
+three different things in this codebase:
+
+| Mirror | What it is | Fate |
+|---|---|---|
+| `web/shared/commands.js`, the `web/app.js:199` fallback catalog, alias entries restated as standalone commands, `_appendExperimentalHelp()` | **Data** — names, descriptions, usage, subcommands | **Deleted** in step 3; populated from `GET /commands` |
+| `web/shared/side-effects.js` and the VSCode equivalent | **Behaviour** — 300 lines of handler implementations (`open_editor`, `copy_to_clipboard`, `prompt_text`, …) that *perform* an effect in the client | **Stays.** Not servable: this is the same line drawn when shipping client code from the server was rejected, and the same split as `client_action` — Python owns the NAME, the client bundles the IMPLEMENTATION |
+| `web/shared/app-state.js`, `vscode-extension/src/appState.ts` | **Data** — hand-written mirrors of `engine/app_state_schema.json` | **Could go, and is further along than the roster** — see below |
+
+**The rule:** a mirror of DATA can be replaced by a GET; a mirror of
+BEHAVIOUR cannot, and should instead be held in line by a parity fence that
+reads the Python-owned vocabulary.
+
+What *can* be served for the behaviour mirrors is the **vocabulary** — the
+list of `SideEffectKind` names and of `CLIENT_ACTIONS` — so a client can
+verify at startup that it implements every name the server may send, and
+warn on a gap. That is a parity check, not a replacement; it belongs with
+step 5's fence.
+
+### Follow-up, out of scope here: the AppState schema endpoint has no consumer
+
+`GET /schema/app-state` **already exists** (`ppxai/server/routes/schema.py:32`)
+and **neither JS client calls it** — `grep -rn "schema/app-state" ppxai/web/
+vscode-extension/src/` returns nothing (2026-09-20). The server offers the
+schema while both clients keep maintaining it by hand, pinned in lockstep by
+cross-language sentinel tests. It is the command-roster problem exactly, one
+stage further along: the endpoint is built and only the consuming half is
+missing.
+
+Deliberately NOT folded into this record's plan: it touches the sentinel
+tests and the `state_sync` contract, and deserves its own scoping. It is
+written down here because nothing else in the repo records that the endpoint
+is unconsumed, and because whoever finishes step 3 will have just built the
+fetch-at-startup machinery that this would reuse.
+
 ## Triggers to revisit
 
 - A "ship the engine as a standalone library" goal (makes the residual

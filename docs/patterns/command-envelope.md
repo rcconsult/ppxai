@@ -25,7 +25,7 @@ Pre-v1.18.1, the same slash command was implemented twice — once in the Python
    ```
    `result` is the rendered payload (TableResult, MarkdownResult, FileViewResult, etc.). `side_effects` are orthogonal UI directives. **`events`** carries any engine side-channel events the handler enqueued (`state_sync`, `working_dir_changed`, …), drained into the response by `with_drained_events()` — without that piggyback they would sit in `engine._event_queue` until the next SSE turn. It is part of the envelope, not an extra.
 
-3. **Side-effect kinds name the user's intent, not the rendering.** Web builds panels (xterm.js, CodeMirror, iframe); VSCode delegates to first-party APIs (`createTerminal`, `showTextDocument`, `executeCommand('vscode.open')`). The kind is the contract; the rendering is the client's choice. See `ppxai/commands/results.py::SideEffectKind` for the canonical list (**16 kinds** as of v1.19.1; 15 at v1.18.1).
+3. **Side-effect kinds name the user's intent, not the rendering.** Web builds panels (xterm.js, CodeMirror, iframe); VSCode delegates to first-party APIs (`createTerminal`, `showTextDocument`, `executeCommand('vscode.open')`). The kind is the contract; the rendering is the client's choice. See `ppxai/commands/results.py::SideEffectKind` for the canonical list (**17 kinds** as of v1.19.3; 16 at v1.19.1, 15 at v1.18.1).
 
 4. **Open-enum invariant.** Clients ignore unknown kinds gracefully. Adding a new kind is non-breaking. `vscode_delegate` is the escape hatch for VSCode-only features (e.g. `workbench.action.openGlobalKeybindings`); web ignores it.
 

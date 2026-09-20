@@ -109,6 +109,9 @@ class SideEffectKind:
     # File tree / workspace
     REFRESH_FILE_TREE = "refresh_file_tree"
 
+    # Command roster (ADR 0007 step 2)
+    REFRESH_COMMAND_ROSTER = "refresh_command_roster"
+
     # User preferences
     SET_THEME = "set_theme"
 
@@ -205,6 +208,17 @@ class SideEffect:
             The working tree changed; clients refresh their views.
             Web → FileTreeComponent.refresh(). VSCode → usually no-op
             (auto-watches), or workbench.files.action.refreshFilesExplorer.
+
+      - "refresh_command_roster" payload: {version}
+            The command registry changed (today: /reload re-imported
+            ~/.ppxai/commands/*.py), so a client that fetched
+            `GET /commands` at startup is holding a stale roster and
+            should refetch. `version` is the registry's new roster
+            version, so a client can skip the refetch when it already
+            holds that version. Web/VSCode → refetch the endpoint
+            (wired in ADR 0007 step 3; until then they ignore the kind,
+            as the open-enum contract allows). TUI → no-op, they read
+            the registry in-process.
 
       - "set_theme"          payload: {name}
             User picked a theme. Web → swap CSS class on body.

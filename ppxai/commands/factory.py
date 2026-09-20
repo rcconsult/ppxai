@@ -170,6 +170,30 @@ class CommandSpec:
         return self.clients is None or client in self.clients
 
 
+def dispatch_target(
+    spec: CommandSpec,
+    client: str | frozenset[str] | None,
+) -> str:
+    """Where `client` runs this command: ``"client"`` or ``"server"``.
+
+    Extends `CommandSpec.dispatches_in_client` (which understands a
+    single client id or None) to the CANDIDATE-SET shape `client_sees`
+    also accepts. Rule for a set, decided with ADR 0007 step 2: the
+    answer is ``"client"`` only when EVERY candidate dispatches in the
+    client. A candidate that still routes to the server `handler` must
+    not be told the command never reaches the server — over-reporting
+    ``"client"`` would break dispatch, while over-reporting ``"server"``
+    only costs a round trip the client-handled refusal answers. An empty
+    candidate set names no client to dispatch in, so it is ``"server"``.
+    """
+    if isinstance(client, frozenset):
+        if not client:
+            return "server"
+        return ("client" if all(spec.dispatches_in_client(c) for c in client)
+                else "server")
+    return "client" if spec.dispatches_in_client(client) else "server"
+
+
 @dataclass
 class CompletionCommandInfo:
     """Minimal, completion-oriented view of a registered command.
@@ -230,6 +254,15 @@ class CommandFactory:
     _registry: dict[str, CommandSpec] = {}
     _aliases: dict[str, str] = {}  # alias -> canonical name
     _loaded: bool = False
+    #: Monotonic counter bumped by every registry mutation (ADR 0007
+    #: step 2). It rides on the `GET /commands` payload so a fetch-once
+    #: client can tell a stale roster from a current one without
+    #: diffing it — `/reload` re-imports `~/.ppxai/commands/*.py` at
+    #: runtime, which is the one thing that changes the roster after
+    #: startup. Bumped in the three places the registry actually
+    #: changes (`register`, `unregister`, `clear`); every other mutating
+    #: path, `reload_user_commands` included, goes through those.
+    _roster_version: int = 0
 
     @classmethod
     def _ensure_loaded(cls) -> None:
@@ -323,6 +356,8 @@ class CommandFactory:
                 logger.warning(f"Alias '{alias}' conflicts with existing command/alias")
             cls._aliases[alias] = spec.name
 
+        cls._roster_version += 1
+
     @classmethod
     def unregister(cls, name: str) -> bool:
         """Unregister a command by name.
@@ -342,6 +377,7 @@ class CommandFactory:
             cls._aliases.pop(alias, None)
         # Remove command
         del cls._registry[name]
+        cls._roster_version += 1
         return True
 
     @classmethod
@@ -489,6 +525,63 @@ class CommandFactory:
         return infos
 
     @classmethod
+    def roster(cls, client: str | frozenset[str] | None = None) -> dict:
+        """JSON-able snapshot of the command roster (ADR 0007 step 2).
+
+        THE one serializer. `GET /commands` returns this verbatim for
+        web/VSCode; the in-process clients (Rich, Textual) can call it
+        directly, so there is no second shape to keep in sync — the
+        whole point of the record.
+
+        Shape::
+
+            {"version": <int>, "commands": [ {...}, ... ]}
+
+        One entry per CANONICAL command, with its aliases as a field
+        rather than as standalone entries — restating an alias as its
+        own row is exactly the `commands.js` duplication this removes.
+        Entries are sorted by name so the payload is diffable and
+        cacheable, and nothing callable is ever included: `handler` has
+        no representation here.
+
+        Args:
+            client: Client id, or a candidate set of client ids, or None
+                — the three shapes `client_sees` accepts. Commands the
+                audience cannot see are omitted, and `dispatch` is
+                computed for that same audience (see `dispatch_target`).
+
+        Returns:
+            A plain dict of plain data, ready for `json.dumps`.
+        """
+        cls._ensure_loaded()
+        commands = []
+        for name in sorted(cls._registry):
+            spec = cls._registry[name]
+            if not client_sees(spec.clients, client):
+                continue
+            commands.append({
+                "name": spec.name,
+                "aliases": sorted(spec.aliases),
+                "description": spec.description,
+                "usage": spec.usage,
+                "category": spec.category,
+                "hidden": spec.hidden,
+                "subcommands": [
+                    {"name": sub, "description": desc}
+                    for sub, desc in spec.subcommands
+                ],
+                "clients": sorted(spec.clients) if spec.clients is not None else None,
+                "client_action": spec.client_action,
+                "client_action_clients": (
+                    sorted(spec.client_action_clients)
+                    if spec.client_action_clients is not None else None
+                ),
+                "client_handled": spec.is_client_handled,
+                "dispatch": dispatch_target(spec, client),
+            })
+        return {"version": cls._roster_version, "commands": commands}
+
+    @classmethod
     def get_categories(cls) -> list[str]:
         """Get all unique category names.
 
@@ -506,6 +599,12 @@ class CommandFactory:
         cls._registry.clear()
         cls._aliases.clear()
         cls._loaded = False
+        cls._roster_version += 1
+
+    @classmethod
+    def roster_version(cls) -> int:
+        """Current roster version (see `_roster_version`)."""
+        return cls._roster_version
 
     @classmethod
     def generate_help(cls, client: str | frozenset[str] | None = None,

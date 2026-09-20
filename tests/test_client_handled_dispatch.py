@@ -421,12 +421,69 @@ class TestClientSeesCandidateSet:
         assert client_sees(frozenset({"rich"}), None) is True
 
     def test_a_command_gated_to_only_vscode_is_over_listed_for_the_server_set(self):
-        # Documented, known limitation (not a bug): SERVER_CLIENTS can't
-        # distinguish web from vscode, so a command gated to ONLY vscode
-        # is still visible to the server's candidate set. This is the
-        # remaining over-listing case called out in
-        # commands/system.py::_help_client's docstring.
+        # Inherent to the candidate set, by construction: SERVER_CLIENTS
+        # can't distinguish web from vscode, so a command gated to ONLY
+        # vscode is visible to it. That is the FALLBACK path — ADR 0007
+        # step 2 lets a request name itself instead, which is exact; see
+        # TestExplicitClientClosesTheOverListing below for both halves
+        # through the real route.
         assert client_sees(frozenset({"vscode"}), SERVER_CLIENTS) is True
+
+
+class TestExplicitClientClosesTheOverListing:
+    """The step-1b limitation and the step-2 closure, side by side.
+
+    Step 1b could only gate `/help` on the `SERVER_CLIENTS` candidate
+    set, so a command gated to ONLY vscode was listed for web too. ADR
+    0007 step 2 adds an optional `client` field to `CommandRequest`:
+
+    - absent (what every client shipped before step 3 sends) → the
+      candidate-set fallback, unchanged, still over-lists;
+    - `client="web"` → exact gating, the vscode-only command is hidden;
+    - `client="vscode"` → still listed, so the fix is not just "hide
+      more".
+    """
+
+    PROBE = "_roster_vscode_only_probe"
+
+    @pytest.fixture
+    def vscode_only_command(self):
+        def handler(ctx, args):
+            return NotificationResult(status=ResultStatus.SUCCESS, message="ok")
+
+        CommandFactory.register(CommandSpec(
+            name=self.PROBE,
+            description="vscode-only probe",
+            handler=handler,
+            clients=frozenset({"vscode"}),
+        ))
+        yield self.PROBE
+        CommandFactory.unregister(self.PROBE)
+
+    def _help_content(self, http_client, body):
+        resp = http_client.post("/command/help", json=body)
+        assert resp.status_code == 200, resp.text
+        return resp.json()["result"]["content"]
+
+    def test_absent_client_still_over_lists(self, http_client, vscode_only_command):
+        content = self._help_content(http_client, {"args": ""})
+        assert f"/{self.PROBE}" in content
+
+    def test_explicit_web_hides_the_vscode_only_command(
+        self, http_client, vscode_only_command
+    ):
+        content = self._help_content(http_client, {"args": "", "client": "web"})
+        assert f"/{self.PROBE}" not in content
+
+    def test_explicit_vscode_still_lists_it(self, http_client, vscode_only_command):
+        content = self._help_content(http_client, {"args": "", "client": "vscode"})
+        assert f"/{self.PROBE}" in content
+
+    def test_unknown_client_is_rejected(self, http_client):
+        resp = http_client.post("/command/help",
+                                json={"args": "", "client": "emacs"})
+        assert resp.status_code == 400
+        assert "emacs" in resp.json()["detail"]
 
 
 # ---------------------------------------------------------------------------

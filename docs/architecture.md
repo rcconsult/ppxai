@@ -315,6 +315,14 @@ TUIs call the factory in-process; web and VSCode call it over
 HTTP via `POST /command/<name>`, which wraps the result in a v1
 envelope.
 
+The READ half of the same resource is `GET /commands` (ADR 0007 step
+2): `CommandFactory.roster(client)` is the one serializer for the
+command roster, so web/VSCode fetch what commands exist instead of
+restating them in `web/shared/commands.js`. Its `version` moves only
+when the registry does, and `/reload` — the only thing that changes the
+roster at runtime — emits a `refresh_command_roster` side effect
+carrying that version.
+
 ```
                   ┌────────────────────────┐
                   │  CommandFactory         │  Single registry
@@ -370,13 +378,13 @@ envelope.
 ```
 
 **Side-effect kinds (v1.18.1; `prompt_text` added 2026-05-03)** — see
-`ppxai/commands/results.py::SideEffectKind` for the full taxonomy. All 16,
-by category:
+`ppxai/commands/results.py::SideEffectKind` for the full taxonomy. All 17
+(`refresh_command_roster` added by ADR 0007 step 2), by category:
 - File handling: `open_editor`, `open_viewer`, `show_image`,
   `show_pdf`, `reveal_in_explorer`
 - Terminals: `open_terminal`, `run_shell`
 - Live previews: `open_html_preview`
-- Workspace: `refresh_file_tree`
+- Workspace: `refresh_file_tree`, `refresh_command_roster`
 - Preferences: `set_theme`
 - Clipboard: `copy_to_clipboard`
 - Session/engine: `attach_file`
@@ -823,7 +831,8 @@ Internal endpoints (these keep evolving):
 | `/files/image/{path}` | GET | Serve image binary for inline display |
 | `/files/serve/{file_id}` | GET | Serve uploaded file by content-addressed ID |
 | `/files/preview/{file_id}` | GET | Preview rendering (PPTX slides, DOCX→PDF) |
-| `/command/{name}` | POST | CommandFactory server pattern (unified `/usage`, `/status`, etc.) |
+| `/command/{name}` | POST | CommandFactory server pattern (unified `/usage`, `/status`, etc.). Optional `client` body field (`rich`\|`textual`\|`web`\|`vscode`) gates per-client output exactly; absent = the `{web, vscode}` candidate set |
+| `/commands` | GET | Command roster snapshot — `{version, commands[]}` from `CommandFactory.roster()`, one entry per canonical command with aliases as a field. Optional `?client=` (400 if unknown); weak `ETag` + `If-None-Match` → 304 (ADR 0007 step 2) |
 | `/context/working_dir` | GET | Read the current working directory |
 | `/context/working_dir` | POST | Change working directory (REST, no SSE emitted) |
 | `/interrupt` | POST | Abort current streaming response |

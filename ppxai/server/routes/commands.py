@@ -27,6 +27,12 @@ A registered spec with no `handler` is CLIENT-HANDLED (ADR 0007 step
 with `metadata.client_handled` set, and neither runs nor logs
 anything derived from `args`.
 
+ADR 0007 step 2 adds the READ half of the same resource:
+``GET /commands`` serves the roster snapshot
+(`CommandFactory.roster()`) so web/VSCode stop hand-maintaining
+`web/shared/commands.js`. Same module on purpose — one resource, one
+route file, and no new entry for the PyInstaller hiddenimport lists.
+
 `events` carry any state_sync / working_dir_changed / etc. that
 the handler caused via `state.set(...)`. Without piggybacking
 them here, the events sit in `engine._event_queue` until the next
@@ -36,11 +42,12 @@ the web/VSCode AppState mirror until a chat happens. State-sync
 determinism Phase B (v1.18.1).
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 
 from ...commands.client_handled import client_handled_result
 from ...commands.context import ServerCommandContext
-from ...commands.factory import CommandFactory
+from ...commands.factory import KNOWN_CLIENTS, SERVER_CLIENTS, CommandFactory
 from ...common.logger import get_logger
 from ..models import CommandRequest
 from ..state import Session, get_session, with_drained_events
@@ -50,6 +57,69 @@ logger = get_logger("server")
 router = APIRouter()
 
 ENVELOPE_VERSION = 1
+
+
+def _validated_client(client: str | None) -> str | None:
+    """Return `client` if it names a known client, else raise 400.
+
+    Shared by both routes so the request-shape error reads the same
+    whether the id arrives as a query param (`GET /commands?client=web`)
+    or as a body field (`POST /command/{name}`). `None` (the legacy
+    caller that sends no id) is valid and means "unspecified".
+    """
+    if client is None or client in KNOWN_CLIENTS:
+        return client
+    # Echo the rejected value back TRUNCATED. It is a client id, not
+    # `args`, but this is a field a confused caller could stuff
+    # anything into and the detail reaches logs via the client.
+    raise HTTPException(
+        status_code=400,
+        detail=(
+            f"Unknown client {client[:40]!r}. Expected one of: "
+            f"{', '.join(sorted(KNOWN_CLIENTS))}"
+        ),
+    )
+
+
+def _roster_etag(version: int, client: str | None) -> str:
+    """Weak ETag for a roster response.
+
+    The payload is a pure function of (registry version, audience), so
+    those two are the whole cache key. Weak because the bytes are not
+    promised byte-identical across processes — only semantically equal.
+    """
+    return f'W/"commands-{version}-{client or "server"}"'
+
+
+@router.get("/commands")
+async def get_command_roster(request: Request, client: str | None = None):
+    """Serve the command roster snapshot (ADR 0007 step 2).
+
+    The read half of this resource: web/VSCode fetch it once at startup
+    instead of restating every command in `web/shared/commands.js`.
+    `CommandFactory.roster()` is the ONE serializer — the in-process
+    TUIs call the same method directly.
+
+    Args:
+        client: Optional client id (`rich` | `textual` | `web` |
+            `vscode`). Absent, the audience is the `SERVER_CLIENTS`
+            candidate set — the same fallback `commands/system.py::
+            _help_client` uses, because this one HTTP surface serves
+            both web and VSCode.
+
+    Returns:
+        `{"version": int, "commands": [...]}`, with a weak `ETag` so a
+        client can revalidate cheaply; `If-None-Match` gets a 304.
+    """
+    client = _validated_client(client)
+    payload = CommandFactory.roster(client if client is not None else SERVER_CLIENTS)
+    etag = _roster_etag(payload["version"], client)
+    headers = {"ETag": etag, "Cache-Control": "no-cache"}
+
+    inbound = request.headers.get("if-none-match", "")
+    if etag in {tag.strip() for tag in inbound.split(",") if tag.strip()}:
+        return Response(status_code=304, headers=headers)
+    return JSONResponse(payload, headers=headers)
 
 
 @router.post("/command/{name}")
@@ -65,7 +135,13 @@ async def execute_command(
 
     The factory does the lookup; the handler does the work; this
     route only wraps the result for the wire.
+
+    ADR 0007 step 2: the body may carry an optional `client` id. It is
+    validated FIRST — a request-shape error, and its message quotes only
+    the id, never `args`. Absent (which is what every client sends
+    today), behaviour is unchanged.
     """
+    client = _validated_client(request.client)
     spec = CommandFactory.get(name)
     if not spec:
         # Nothing of the body is logged for an unknown name either: a
@@ -97,7 +173,7 @@ async def execute_command(
     args_preview = (request.args or "")[:120]
     logger.info(f"HTTP POST /command/{name} from session={s.id} args={args_preview!r}")
 
-    context = ServerCommandContext(s.engine)
+    context = ServerCommandContext(s.engine, client=client)
     result = spec.handler(context, request.args)
     logger.debug(f"  /{name} ok={result.success} side_effects={len(result.side_effects)}")
 

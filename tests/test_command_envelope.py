@@ -68,6 +68,7 @@ class TestSideEffectKindTaxonomy:
         "run_shell",
         "open_html_preview",
         "refresh_file_tree",
+        "refresh_command_roster",   # added ADR 0007 step 2 — /reload signal
         "set_theme",
         "copy_to_clipboard",
         "attach_file",

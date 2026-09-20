@@ -134,8 +134,18 @@ class UsageDisplayModeRequest(BaseModel):
 
 
 class CommandRequest(BaseModel):
-    """Request body for command execution."""
+    """Request body for command execution.
+
+    ADR 0007 step 2: `client` is optional and additive. One HTTP surface
+    serves both web and VSCode, so without it a handler can only gate on
+    the `SERVER_CLIENTS` candidate set and over-lists a command gated to
+    just one of them (e.g. `/help`). A client that names itself gets the
+    exact gate. Omitting it is valid and keeps the pre-step-2 behaviour
+    — the same optional-`client` shape `POST /complete` already uses.
+    Validated against `KNOWN_CLIENTS` by the route (400 if unknown).
+    """
     args: str = ""
+    client: str | None = None
 
 
 class PreviewServeRequest(BaseModel):

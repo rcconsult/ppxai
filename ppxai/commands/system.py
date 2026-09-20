@@ -14,7 +14,13 @@ from ..config import get_provider_config, get_tui_config, set_tui_config
 from ..rich.themes import THEMES, get_theme
 from ..version import __version__
 from .context import RichCommandContext, ServerCommandContext
-from .factory import SERVER_CLIENTS, CommandFactory, CommandSpec, client_sees
+from .factory import (
+    KNOWN_CLIENTS,
+    SERVER_CLIENTS,
+    CommandFactory,
+    CommandSpec,
+    client_sees,
+)
 from .protocol import CommandContext
 from .results import (
     CommandResult,
@@ -43,21 +49,29 @@ def _help_client(context: CommandContext) -> str | frozenset[str] | None:
     adapter is the only signal:
 
     - `ServerCommandContext` serves BOTH web and VSCode over one HTTP
-      surface and cannot tell them apart, so this returns
-      `SERVER_CLIENTS` — the candidate set `{"web", "vscode"}` —
-      rather than `None`. `client_sees` then shows a command when it is
-      visible to EITHER candidate. This used to return `None` (fail
-      open, list everything), which was correct only while every gated
-      command was gated to exactly `{web, vscode}`; the `/quit` gating
+      surface. Since ADR 0007 step 2 a request MAY name itself
+      (`CommandRequest.client`, validated against `KNOWN_CLIENTS` by the
+      route), and a named client is used exactly. When it is absent —
+      every client shipped before step 3 — this falls back to
+      `SERVER_CLIENTS`, the candidate set `{"web", "vscode"}`, rather
+      than `None`. `client_sees` then shows a command visible to EITHER
+      candidate. That fallback used to be `None` (fail open, list
+      everything), which was correct only while every gated command was
+      gated to exactly `{web, vscode}`; the `/quit` gating
       (Rich/Textual-only) broke that assumption and leaked `/quit` into
-      web/VSCode help. The remaining, deliberate limitation: a command
-      gated to only ONE of web/vscode is still over-listed for the
-      other, until the roster endpoint (step 2) carries a real client
-      id.
+      web/VSCode help. The fallback's known cost — a command gated to
+      only ONE of web/vscode is over-listed for the other — is what the
+      explicit id closes; it remains for callers that send none.
     - `RichCommandContext` is Rich; any other in-process context is the
       Textual app, which passes itself as the context.
     """
     if isinstance(context, ServerCommandContext):
+        # Defensive: the route 400s an unknown id before we get here, but
+        # ServerCommandContext is constructible directly (tests, future
+        # embedders), so an unrecognized id falls back rather than
+        # silently gating everything away.
+        if context.client in KNOWN_CLIENTS:
+            return context.client
         return SERVER_CLIENTS
     if isinstance(context, RichCommandContext):
         return "rich"

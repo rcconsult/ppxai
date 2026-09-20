@@ -1,6 +1,7 @@
 # Plan — closing ADR 0007 (one command registry)
 
-**Status: step 1 (1a + 1b) IMPLEMENTED; steps 2-5 PROPOSED, not started.**
+**Status: steps 1 (1a + 1b) and 2 IMPLEMENTED; steps 3-5 PROPOSED, not
+started.**
 Written 2026-09-20 on `bugfix/v1.19.3`; **rewritten the same day** after
 the owner restated the goal. The first draft split the work (a) invert the
 edge / (b) relocate / (c) roster, called (c) "a feature wearing the ADR's
@@ -13,7 +14,8 @@ evidence decayed silently (it cited a module Item 65 had deleted), and this
 file is written not to repeat that.
 
 **Record:** [decisions/0007-completion-first-class-service.md](decisions/0007-completion-first-class-service.md)
-· step 1 shipped v1.18.8 · step 2 open, no target release.
+· step 1 shipped v1.18.8 · step 2 landed 2026-09-20 on `bugfix/v1.19.3`,
+no target release.
 
 ## The goal
 
@@ -50,8 +52,9 @@ are registered aliases):
 `CompletionCommandInfo` (the v1.18.8 seed) carries name / description /
 hidden / alias data only — no `usage`, `category` or subcommands — so it
 cannot replace `commands.js` as-is. The dispatch half of the server surface
-exists (`POST /command/{name}`); a roster read endpoint does not
-(`grep -n '@router' ppxai/server/routes/commands.py`).
+exists (`POST /command/{name}`); the roster read endpoint landed with
+step 2 in the SAME module
+(`grep -n '@router' ppxai/server/routes/commands.py` now shows both).
 
 ## Steps — each ships alone
 
@@ -191,7 +194,7 @@ surfaced a pre-existing bug rather than introducing one:
   direct-call `generate_help(client="web")` tests that stayed green
   through the whole regression) and `TestClientSeesCandidateSet`.
 
-### 2. `GET /commands`
+### 2. `GET /commands` — ✅ DONE (2026-09-20)
 
 Serves the full snapshot. A few KB — no pagination, no lazy loading.
 `/reload` (which re-imports `~/.ppxai/commands/` at runtime —
@@ -201,6 +204,90 @@ client refetches. **The payload stays on the endpoint; only the signal is
 pushed.** Deliberately NOT AppState: that would cost the schema DTO, two
 hand-written mirrors and the sentinel tests, for data that almost never
 changes — the cost that stalled this record for three releases.
+
+**Shipped shape.** `CommandFactory.roster(client=None) -> dict` in
+`commands/factory.py` is THE serializer — `GET /commands`
+(`server/routes/commands.py`, the same route module as
+`POST /command/{name}`, so no new PyInstaller hiddenimport) returns it
+verbatim, and Rich/Textual can call the same method in-process. Payload:
+`{"version": int, "commands": [...]}`, one entry per CANONICAL command
+sorted by name, aliases as a FIELD (`exit` appears only inside `/quit`'s
+`aliases`), never anything callable. Per entry: `name`, `aliases`,
+`description`, `usage`, `category`, `hidden`, `subcommands`
+(`[{name, description}]`), `clients`, `client_action`,
+`client_action_clients`, `client_handled`, `dispatch`. Fenced by
+`tests/test_command_roster_endpoint.py` (53 tests).
+
+**Decisions made while implementing (all four were coordinator calls;
+none turned out wrong against the code):**
+
+- **`dispatch` for a candidate SET is `"client"` only if EVERY candidate
+  dispatches in the client** (`factory.dispatch_target`). The asymmetry
+  is deliberate: over-reporting `"client"` breaks dispatch for a
+  candidate that really does route server-side, while over-reporting
+  `"server"` costs one round trip that the existing client-handled
+  refusal envelope already answers cleanly. An empty candidate set names
+  no client to dispatch in, so it is `"server"`. A single id and `None`
+  defer to `CommandSpec.dispatches_in_client`, which already defines
+  both.
+- **ETag: YES**, weak, `W/"commands-<version>-<client|server>"`, with
+  `If-None-Match` → 304 and `Cache-Control: no-cache`. The payload is a
+  pure function of (registry version, audience), so the cache key needs
+  nothing else, and FastAPI makes the 304 a three-line branch. Weak
+  because the bytes are only promised semantically equal.
+- **Auth posture: inherited, unchanged, and that is the correct
+  answer.** Auth is GLOBAL middleware (`server/http.py::auth_middleware`
+  → `server/auth.py::check_request`), not a per-route dependency, so
+  `GET /commands` sits in exactly the same class as `POST /complete` and
+  `POST /command/{name}` by virtue of its path: auth off when no
+  provider enforces; when enforced, loopback UI exemption applies
+  (`/commands` is under neither `/v1/agent` nor `/v1/tokens`, the two
+  prefixes that stay protected even locally) and a remote caller needs a
+  bearer. Nothing was opened or closed. Pinned by
+  `TestAuthPostureMatchesComplete`, which runs the identical request
+  against `/complete` under four auth conditions and compares status +
+  `WWW-Authenticate`.
+- **The step-1b over-listing limitation is CLOSED, additively.**
+  `CommandRequest` grew an optional `client` field (same shape
+  `POST /complete` already had), validated against `KNOWN_CLIENTS` by
+  the route (400 if unknown, and the rejection quotes only the id, never
+  `args`), threaded into `ServerCommandContext(engine, client=...)` —
+  Pattern B only, per ADR 0002 — and preferred by
+  `commands/system.py::_help_client`, which falls back to
+  `SERVER_CLIENTS` when absent. Every shipped client sends no `client`
+  field, so their behaviour is byte-identical; pinned both ways by
+  `TestExplicitClientClosesTheOverListing`
+  (tests/test_client_handled_dispatch.py) and
+  `TestCommandRequestClientField`.
+
+**The change signal.** `SideEffectKind.REFRESH_COMMAND_ROSTER`
+(`"refresh_command_roster"`, payload `{version}`), emitted by `/reload`
+on BOTH branches — a reload that finds no user directory still
+unregistered whatever custom commands were loaded before. Kinds are an
+open enum ("clients ignore unknown kinds"), so no JS/TS change is needed
+until step 3. **No cross-language sentinel forced a mirror edit**: the
+only sentinel deriving from `SideEffectKind.all_kinds()` is
+`tests/test_command_envelope.py::TestSideEffectKindTaxonomy` (Python,
+updated) plus the `SideEffect` docstring; the web/VSCode drift fences
+(`test_web_shared_modules.py`, `test_vscode_step5a_helpers.py`) hardcode
+their OWN expected sets and are not derived from Python, so
+`web/shared/side-effects.js` and
+`vscode-extension/src/sideEffectsHandler.ts` were left untouched.
+
+**Roster version.** `CommandFactory._roster_version`, bumped in the
+three places the registry actually changes — `register`, `unregister`,
+`clear`. `reload_user_commands` needs no bump of its own: it goes
+through both. Read via `CommandFactory.roster_version()`.
+
+**Finding.** The hybrid family (`/task`, `/run`, `/auto`) reports
+`dispatch == "server"` today, because step 1 defined `CLIENT_ACTIONS` as
+`{"token.manage", "app.quit"}` only — no hybrid command carries a
+`client_action` yet. That is correct-by-construction (the roster must
+not guess), but it means step 3's JS clients cannot yet use `dispatch`
+to replace their hardcoded intercept `if`-chains for those three; the
+chains stay until the hybrid actions are declared. Pinned by
+`TestClientGating::test_hybrid_family_still_dispatches_server_side` so
+the day they are declared, the test says so.
 
 ### 3. JS clients fetch at startup
 

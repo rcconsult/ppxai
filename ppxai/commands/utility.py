@@ -196,7 +196,9 @@ def handle_reload(context: CommandContext, args: str) -> CommandResult:
         args: Ignored — reload takes no arguments
 
     Returns:
-        ConfirmationResult with the module count, or ErrorResult on failure
+        ConfirmationResult with the module count (carrying a
+        `refresh_command_roster` side effect so roster consumers
+        refetch), or ErrorResult on failure
     """
     try:
         count = CommandFactory.reload_user_commands()
@@ -209,7 +211,7 @@ def handle_reload(context: CommandContext, args: str) -> CommandResult:
 
     user_commands_dir = Path.home() / ".ppxai" / "commands"
     if not user_commands_dir.exists():
-        return ConfirmationResult(
+        result = ConfirmationResult(
             status=ResultStatus.INFO,
             message=(
                 f"No user commands directory at {user_commands_dir} — "
@@ -217,12 +219,21 @@ def handle_reload(context: CommandContext, args: str) -> CommandResult:
             ),
             details={"modules_loaded": 0, "directory_exists": False}
         )
+    else:
+        result = ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message=f"User commands reloaded ({count} modules).",
+            details={"modules_loaded": count, "directory_exists": True}
+        )
 
-    return ConfirmationResult(
-        status=ResultStatus.SUCCESS,
-        message=f"User commands reloaded ({count} modules).",
-        details={"modules_loaded": count, "directory_exists": True}
-    )
+    # ADR 0007 step 2: this is the ONE thing that changes the roster
+    # after startup, so it is where a fetch-once client learns to
+    # refetch `GET /commands`. Emitted on both branches — a reload that
+    # found no directory still UNREGISTERED whatever custom commands
+    # were there before. The version lets a client skip a no-op refetch.
+    result.add_side_effect(SideEffectKind.REFRESH_COMMAND_ROSTER,
+                           version=CommandFactory.roster_version())
+    return result
 
 
 def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
