@@ -56,6 +56,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import ppxai.config.execution as _execution
+import ppxai.engine.facts_resolver as _facts_resolver
+import ppxai.engine.providers as _providers
+
 from ..config import execution as _execution_config
 from ..config import providers as _providers_config
 from ..config import tools as _tools_config
@@ -455,9 +459,8 @@ def resolve_named_profile(name: str) -> AgentSpec:
     # source attribute on every call, so a test (or a config reload) that
     # replaces `config.execution.get_execution_profiles` is honored. A
     # module-level binding would freeze whatever existed at import time.
-    from ..config.execution import get_execution_profiles
 
-    profiles = get_execution_profiles()
+    profiles = _execution.get_execution_profiles()
     if name not in profiles:
         available = ", ".join(sorted(profiles)) or "(none configured)"
         raise TaskAuthorizationError(
@@ -483,11 +486,10 @@ def _resolve_task_default_grant() -> AgentSpec:
     pre-start 400 — the same `spec_from_mapping` normalizer profiles use, so a
     bad default grant can never become an async run failure or a silent bypass.
     """
-    from ..config.execution import get_execution_task_allow_user_default, get_execution_task_default_grant
 
-    if not get_execution_task_allow_user_default():
+    if not _execution.get_execution_task_allow_user_default():
         return AgentSpec()
-    raw = get_execution_task_default_grant()
+    raw = _execution.get_execution_task_default_grant()
     if not raw:
         return AgentSpec()
     try:
@@ -902,9 +904,8 @@ def _config_flag(dotted_key: str) -> bool:
     False: a capability must never survive the failure of the config that
     governs it (the fail-safe-to-closed rule the getters already document).
     """
-    from ..config.execution import get_execution_run_config
 
-    readers = {"execution.run.web_search": lambda: get_execution_run_config()}
+    readers = {"execution.run.web_search": lambda: _execution.get_execution_run_config()}
     reader = readers.get(dotted_key)
     if reader is None:
         return False
@@ -939,16 +940,15 @@ def _reject_tool_incapable_model(
     KNOWN-bad combination into a clear error, never to block a combination
     it merely failed to look up.
     """
-    from .facts_resolver import FactsResolver
     if not tools or not provider or not model:
         return
     try:
 
-        resolver = FactsResolver(provider)
+        resolver = _facts_resolver.FactsResolver(provider)
         if not resolver.is_registered:
             # A name we do not recognise as a registered provider. The gate
             # declines to judge rather than guessing — but it asks the
-            # resolver, not `get_provider_class(...) is None`, because that
+            # resolver, not `_providers.get_provider_class(...) is None`, because that
             # comparison IS the openai_compat fallback rule spelled a fourth
             # time (ADR 0012 refactor (a)).
             return
@@ -997,8 +997,6 @@ def _tool_capable_models_hint(provider: str) -> str:
     the provider's own shipped rows answer instead, so the hint degrades to
     "generally capable here" rather than to silence.
     """
-    from .facts_resolver import facts_without_an_instance
-    from .providers import get_provider_class
     try:
 
         capable = []
@@ -1013,7 +1011,7 @@ def _tool_capable_models_hint(provider: str) -> str:
                 # called "1" and got the conservative floor for every model,
                 # which is why this hint went quiet for every provider.
                 model_id = info.get("id", key) if isinstance(info, dict) else key
-                facts = facts_without_an_instance(provider, model_id)
+                facts = _facts_resolver.facts_without_an_instance(provider, model_id)
                 if facts.tool_mode != "prompt_based":
                     capable.append(model_id)
 
@@ -1031,7 +1029,7 @@ def _tool_capable_models_hint(provider: str) -> str:
             # suffix, so a lone trailing `*` is dropped to give something
             # typeable; an interior wildcard is skipped, because naming a
             # pattern helps nobody.
-            cls = get_provider_class(provider)
+            cls = _providers.get_provider_class(provider)
             for pattern, facts in (
                 getattr(cls, "shipped_model_facts", {}) or {}
             ).items():

@@ -68,6 +68,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+import ppxai.server.routes.agent_v1 as _agent_v1
+
 from ...common.logger import get_logger
 from ...config import (
     get_api_key,
@@ -344,7 +346,6 @@ async def _oneshot_via_search_loop(
     """
     # Lazy: agent_v1 top-imports from this module (provider construction);
     # importing it at module level would be circular.
-    from .agent_v1 import _enriched_oneshot_egress_or_400
     # Through the module, never a from-import binding: the patch point
     # is task_runner.build_task_runner, and a bound reference captured
     # here would not see it (see that module's docstring).
@@ -363,7 +364,7 @@ async def _oneshot_via_search_loop(
     except TaskAuthorizationError as e:
         raise HTTPException(status_code=e.status, detail=e.detail) from e
 
-    egress_hosts = _enriched_oneshot_egress_or_400(provider_name)
+    egress_hosts = _agent_v1._enriched_oneshot_egress_or_400(provider_name)
     registry = get_agent_run_registry()
     meta = registry.start_run(
         task=req.prompt,
@@ -592,9 +593,8 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
         # F3: the enriched path executes as a real kind=oneshot registry run.
         owner = None
         try:
-            from .agent_v1 import _caller_owner  # lazy — see facade docstring
 
-            owner = _caller_owner(request)
+            owner = _agent_v1._caller_owner(request)
         except Exception:
             owner = None
         return await _oneshot_via_search_loop(req, provider_name, model, owner)
@@ -616,9 +616,8 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
     # _build_provider already 400s on unknown provider / missing key.
     owner = None
     try:
-        from .agent_v1 import _caller_owner  # lazy — circular at module level
 
-        owner = _caller_owner(request)
+        owner = _agent_v1._caller_owner(request)
     except Exception:
         owner = None
 

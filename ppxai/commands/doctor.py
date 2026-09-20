@@ -32,6 +32,9 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+import ppxai.config as _config
+
+from ..config import execution as _execution
 from ..config import find_config_file
 from ..config.facts_config import (
     incomplete_blocks_in_config,
@@ -149,7 +152,7 @@ def audit_user_config(
     result["config_path"] = str(config_path)
 
     try:
-        with open(config_path, "r", encoding="utf-8-sig") as f:
+        with open(config_path, encoding="utf-8-sig") as f:
             data = json.load(f)
     except FileNotFoundError:
         result["error"] = f"Config file missing at {config_path}"
@@ -620,13 +623,10 @@ def _format_grounding_section() -> list[str]:
     native (provider-side search) / search-loop (web_search tool via the
     run tier) / closed-book (pure LLM, no context enrichment).
     """
-    from ..config import get_available_providers, get_default_model
-    from ..config.execution import get_execution_run_config
-
     lines: list[str] = []
     lines.append("Oneshot grounding (execution.run):")
     try:
-        run_cfg = get_execution_run_config()
+        run_cfg = _execution.get_execution_run_config()
     except Exception:
         run_cfg = {"web_search": False, "grounding": False}
     lines.append(
@@ -635,7 +635,7 @@ def _format_grounding_section() -> list[str]:
         f"  (both off = pure LLM, air-gap-safe)"
     )
     try:
-        providers = get_available_providers()
+        providers = _config.get_available_providers()
     except Exception:
         providers = []
     if not providers:
@@ -649,7 +649,7 @@ def _format_grounding_section() -> list[str]:
     }
     for p in providers:
         try:
-            model = get_default_model(p)
+            model = _config.get_default_model(p)
         except Exception:
             model = None
         try:
@@ -679,7 +679,6 @@ def _format_web_search_backend_section() -> list[str]:
         but the run loses the fallback chain: one backend outage returns it
         to closed-book.
     """
-    from ..config import get_available_providers, get_provider_config, get_tool_config
 
     lines: list[str] = []
     lines.append(
@@ -694,7 +693,7 @@ def _format_web_search_backend_section() -> list[str]:
     warnings: list[str] = list(res.warnings)
 
     try:
-        g = get_tool_config("web_search") or {}
+        g = _config.get_tool_config("web_search") or {}
     except Exception:
         g = {}
     if g.get("preferred") and g.get("preferred") != "auto" and not g.get("strict"):
@@ -706,12 +705,12 @@ def _format_web_search_backend_section() -> list[str]:
         )
 
     try:
-        providers = get_available_providers()
+        providers = _config.get_available_providers()
     except Exception:
         providers = []
     for p in providers:
         try:
-            block = (get_provider_config(p) or {}).get("web_search", {}) or {}
+            block = (_config.get_provider_config(p) or {}).get("web_search", {}) or {}
         except Exception:
             block = {}
         if not block:
@@ -738,15 +737,11 @@ def _format_web_search_backend_section() -> list[str]:
     if strict_anywhere:
         enrichment_live: list[str] = []
         try:
-            from ..config.execution import (
-                get_execution_profiles,
-                get_execution_run_config,
-            )
-            if get_execution_run_config().get("web_search"):
+            if _execution.get_execution_run_config().get("web_search"):
                 enrichment_live.append("execution.run.web_search")
             enrichment_live.extend(
                 f"execution.profiles.{name}"
-                for name, prof in (get_execution_profiles() or {}).items()
+                for name, prof in (_execution.get_execution_profiles() or {}).items()
                 if isinstance(prof, dict) and prof.get("enrichment") is True
             )
         except Exception:
@@ -987,7 +982,7 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     raw_config: dict[str, Any] | None = None
     if audit.get("config_path"):
         try:
-            with open(audit["config_path"], "r", encoding="utf-8-sig") as f:
+            with open(audit["config_path"], encoding="utf-8-sig") as f:
                 raw_config = json.load(f)
             report = report + "\n\n" + "\n".join(
                 _format_config_migration_section(raw_config)
@@ -1012,7 +1007,7 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
 
     if do_probe and audit.get("config_path"):
         try:
-            with open(audit["config_path"], "r", encoding="utf-8-sig") as f:
+            with open(audit["config_path"], encoding="utf-8-sig") as f:
                 config_data = json.load(f)
             probe_results = probe_all_providers(config_data)
             drift = detect_context_limit_drift(config_data, probe_results)

@@ -9,6 +9,9 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException
 
+import ppxai.config as _config
+import ppxai.config.execution as _execution
+
 from ...common.logger import get_logger
 from ...config import (
     find_config_file,
@@ -202,9 +205,8 @@ async def get_execution_settings():
     `collect` drives the Collect affordances (auto = watcher auto-merges,
     yes = Collect button/verb, no = button disabled + verb warns).
     """
-    from ...config.execution import get_execution_collect
 
-    return {"collect": get_execution_collect()}
+    return {"collect": _execution.get_execution_collect()}
 
 
 @router.post("/config/reload")
@@ -265,8 +267,7 @@ async def set_debug_log(request: dict):
         logger.disable()
 
     # Persist so next startup restores state before session recovery
-    from ...config import set_tui_config
-    set_tui_config("debug_log", enabled)
+    _config.set_tui_config("debug_log", enabled)
 
     return {
         "enabled": logger.enabled,

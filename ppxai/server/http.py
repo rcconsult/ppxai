@@ -31,6 +31,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+import ppxai.config.loader as _loader
+
 from ..common.logger import get_logger
 from ..config import get_idle_timeout, initialize
 from ..version import __version__
@@ -550,9 +552,8 @@ def run_server():
     # (often set via ./.env) overrides ./ppxai-config.json, so editing
     # the obvious project file can silently have no effect. Print it.
     try:
-        from ..config.loader import find_config_file
 
-        _cfg_src = find_config_file()
+        _cfg_src = _loader.find_config_file()
         print(f"Config: {_cfg_src or '(builtin defaults — no config file found)'}")
         _names = [p.name for p in get_secret_provider().providers]
         print(f"Auth providers: {', '.join(_names) if _names else '(none)'}")

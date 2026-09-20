@@ -4,13 +4,17 @@ Session management endpoints (save, load, clear, restore, merge).
 
 
 
+from pathlib import Path  # noqa: F401 — patched by tests
+
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
+
+import ppxai.config.execution as _execution
+import ppxai.server.auth as _auth
 
 from ...engine.session import SessionManager as EngineSessionManager
 from ...engine.types import Message
 from ..state import Session, get_agent_run_registry, get_session, with_drained_events
 from .agent_v1 import _caller_owner
-from pathlib import Path  # noqa: F401 — patched by tests
 
 router = APIRouter()
 
@@ -44,10 +48,8 @@ async def merge_run_result(
     (the browser deliberately scopes its bearer to /v1/* and cannot
     present it here).
     """
-    from ...config.execution import get_execution_collect
-    from ..auth import _is_loopback
 
-    if get_execution_collect() == "no":
+    if _execution.get_execution_collect() == "no":
         raise HTTPException(
             status_code=403,
             detail=(
@@ -60,7 +62,7 @@ async def merge_run_result(
     if meta is None:
         raise HTTPException(status_code=404, detail=f"Unknown run: {run_id}")
     run_owner = getattr(meta, "owner", None)
-    if run_owner is not None and not _is_loopback(request):
+    if run_owner is not None and not _auth._is_loopback(request):
         if _caller_owner(request) != run_owner:
             raise HTTPException(
                 status_code=403,

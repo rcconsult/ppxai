@@ -12,6 +12,8 @@ names per ADR 0011 sign-off Q5 (superseding ADR 0009's planned
 
 from typing import Any
 
+import ppxai.config.tools as _tools
+
 from .store import get_config
 
 
@@ -75,10 +77,9 @@ def get_execution_run_config() -> dict[str, Any]:
         out["grounding"] = bool(run["grounding"])
     else:
         try:
-            from .tools import get_tool_config
 
             out["grounding"] = bool(
-                get_tool_config("web_search").get("oneshot_grounding", False)
+                _tools.get_tool_config("web_search").get("oneshot_grounding", False)
             )
         except Exception:
             out["grounding"] = False

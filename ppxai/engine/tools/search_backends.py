@@ -38,6 +38,8 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass
 
+import ppxai.config as _config
+
 # ---------------------------------------------------------------------------
 # Backend catalog — the single source for backend ids, hosts and key envs.
 # (network_policy re-exports these under its historical names.)
@@ -151,9 +153,8 @@ def _read_scope(
     # Provider block first — it owns the tuple ONLY if it states `preferred`.
     if provider_name:
         try:
-            from ...config import get_provider_config
 
-            block = (get_provider_config(provider_name) or {}).get(
+            block = (_config.get_provider_config(provider_name) or {}).get(
                 "web_search", {}
             ) or {}
         except Exception:
@@ -173,9 +174,8 @@ def _read_scope(
                 "without a per-provider `preferred` in the same block"
             )
     try:
-        from ...config import get_tool_config
 
-        g = get_tool_config("web_search") or {}
+        g = _config.get_tool_config("web_search") or {}
     except Exception:
         g = {}
     preferred = str(g.get("preferred", "auto") or "auto")

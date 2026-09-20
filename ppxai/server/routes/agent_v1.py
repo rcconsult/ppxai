@@ -85,12 +85,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path  # noqa: F401 — patched by tests
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from ...common.logger import get_logger
+
 # Config getters are called as ATTRIBUTES of their defining module, never
 # symbol-imported. A `from ...config.execution import get_execution_task_config`
 # here would be a second binding to the one the engine reads, so patching either
@@ -100,7 +102,8 @@ from ...common.logger import get_logger
 # here and never called: they were monkeypatch targets that the engine picked up
 # by rummaging in `sys.modules`. That path is gone, and so are they.
 from ...config import execution as _execution_config
-from ...engine import (task_authorizer as _authz, task_runner as _task_runner)
+from ...engine import task_authorizer as _authz
+from ...engine import task_runner as _task_runner
 from ...engine.agent_runs import RunMeta, resume_refusal
 from ...engine.task_authorizer import (
     TaskAuthorizationError,
@@ -128,7 +131,6 @@ from .oneshot import (  # noqa: F401 — ONESHOT_SEARCH_ITERATIONS read by tests
     _build_provider,
     _validate_provider_or_400,
 )
-from pathlib import Path  # noqa: F401 — patched by tests
 
 logger = get_logger("server")
 
@@ -288,7 +290,7 @@ class RunMetaResponse(BaseModel):
     workdir: str | None = None
 
     @classmethod
-    def from_meta(cls, m: RunMeta) -> "RunMetaResponse":
+    def from_meta(cls, m: RunMeta) -> RunMetaResponse:
         return cls(
             run_id=m.run_id,
             task=m.task,
@@ -469,7 +471,7 @@ class BudgetSpec(BaseModel):
     )
 
 
-def _budget_dict(spec: "BudgetSpec | None") -> dict:
+def _budget_dict(spec: BudgetSpec | None) -> dict:
     """Budget spec -> plain {axis: cap} dict, omitting unset axes. Built field
     by field so it works on Pydantic v1 and v2 (no model_dump/.dict coupling)."""
     if spec is None:
@@ -583,7 +585,7 @@ class AgentTaskRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _grant_required_without_spec(self) -> "AgentTaskRequest":
+    def _grant_required_without_spec(self) -> AgentTaskRequest:
         # Preserve the /task invariant "a tool-capable run can never go tool-free
         # by accident" (422) — but let a spec, skill, or profile supply the
         # grant (step ③ adds profile; enrichment:true also derives one). With
@@ -646,14 +648,9 @@ def _has_usable_task_default_grant() -> bool:
     validator must never fail open on an unreadable config.
     """
     try:
-        from ...config.execution import (
-            get_execution_task_allow_user_default,
-            get_execution_task_default_grant,
-        )
-
-        if not get_execution_task_allow_user_default():
+        if not _execution_config.get_execution_task_allow_user_default():
             return False
-        grant = get_execution_task_default_grant()
+        grant = _execution_config.get_execution_task_default_grant()
         return bool(grant.get("tools"))
     except Exception:
         return False
@@ -666,10 +663,9 @@ def _collect_holds() -> bool:
     hold_result=False (auto-finalize — on "auto" the watching client
     merges, on "no" no merge path exists). Config errors fall back to the
     shipped default ("yes" — hold)."""
-    from ...config.execution import get_execution_collect
 
     try:
-        return get_execution_collect() == "yes"
+        return _execution_config.get_execution_collect() == "yes"
     except Exception:
         return True
 
@@ -882,7 +878,7 @@ class RespondRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _answer_required(self) -> "RespondRequest":
+    def _answer_required(self) -> RespondRequest:
         if self.approved is None and self.text is None:
             raise ValueError("provide `approved` and/or `text`")
         return self

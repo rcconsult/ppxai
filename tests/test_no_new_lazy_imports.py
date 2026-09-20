@@ -67,30 +67,11 @@ RETAINED_ON_PURPOSE = {
     # Was 8 at the start of step 3. The other seven were not what their rows
     # named — two expired tags, one fallback probe, and four that traced to a
     # package __init__ doing eager work rather than to the modules involved.
-    ("ppxai.engine.facts_resolver", "ppxai.engine.providers"): "patch-semantics",
-    ("ppxai.engine.task_authorizer", "ppxai.engine.facts_resolver"): "patch-semantics",
-    ("ppxai.engine.task_authorizer", "ppxai.engine.providers"): "patch-semantics",
     ("ppxai.config.tls", "ppxai.config.store"): "cycle",
     # --- patch semantics (25) ------------------------------------------
     # Hoisting binds the name at import time, so a test patching it on the
     # source module stops reaching it. Grep the imported name in tests/ to
     # see which test.
-    ("ppxai.commands.doctor", "ppxai.config"): "patch-semantics",
-    ("ppxai.commands.doctor", "ppxai.config.execution"): "patch-semantics",
-    ("ppxai.config.execution", "ppxai.config.tools"): "patch-semantics",
-    ("ppxai.engine.task_authorizer", "ppxai.config.execution"): "patch-semantics",
-    ("ppxai.engine.task_backend", "ppxai.config.execution"): "patch-semantics",
-    ("ppxai.engine.tools.network_policy", "ppxai.config.execution"): "patch-semantics",
-    ("ppxai.engine.tools.search_backends", "ppxai.config"): "patch-semantics",
-    ("ppxai.server.auth", "ppxai.config.execution"): "patch-semantics",
-    ("ppxai.server.http", "ppxai.config.loader"): "patch-semantics",
-    ("ppxai.server.routes.agent_v1", "ppxai.config.execution"): "patch-semantics",
-    ("ppxai.server.routes.config", "ppxai.config"): "patch-semantics",
-    ("ppxai.server.routes.config", "ppxai.config.execution"): "patch-semantics",
-    ("ppxai.server.routes.files", "ppxai.engine.tools.builtin.pptx_tools"): "patch-semantics",
-    ("ppxai.server.routes.oneshot", "ppxai.server.routes.agent_v1"): "patch-semantics",
-    ("ppxai.server.routes.sessions", "ppxai.config.execution"): "patch-semantics",
-    ("ppxai.server.routes.sessions", "ppxai.server.auth"): "patch-semantics",
     # --- fallback probe (1) --------------------------------------------
     # Not a cycle: `tui/renderable/iterm2.py` imports stdlib + rich only and
     # loads standalone. It sits inside `_render_image_iterm2`, one of a family
@@ -117,27 +98,8 @@ RETAINED_ON_PURPOSE = {
 #: 2 and 3 — REMOVE rows as they are fixed; never add one.
 BASELINE = {
     ("ppxai.commands.handler", "ppxai.rendering.rich_renderer"),
-    ("ppxai.commands.doctor", "ppxai.config"),
-    ("ppxai.commands.doctor", "ppxai.config.execution"),
-    ("ppxai.engine.facts_resolver", "ppxai.engine.providers"),
-    ("ppxai.engine.task_authorizer", "ppxai.engine.facts_resolver"),
-    ("ppxai.engine.task_authorizer", "ppxai.engine.providers"),
     ("ppxai.config.tls", "ppxai.config.store"),
-    ("ppxai.config.execution", "ppxai.config.tools"),
-    ("ppxai.engine.task_authorizer", "ppxai.config.execution"),
-    ("ppxai.engine.task_backend", "ppxai.config.execution"),
-    ("ppxai.engine.tools.network_policy", "ppxai.config.execution"),
-    ("ppxai.engine.tools.search_backends", "ppxai.config"),
     ("ppxai.rendering.rich_renderer", "ppxai.tui.renderable.iterm2"),
-    ("ppxai.server.auth", "ppxai.config.execution"),
-    ("ppxai.server.http", "ppxai.config.loader"),
-    ("ppxai.server.routes.agent_v1", "ppxai.config.execution"),
-    ("ppxai.server.routes.config", "ppxai.config"),
-    ("ppxai.server.routes.config", "ppxai.config.execution"),
-    ("ppxai.server.routes.files", "ppxai.engine.tools.builtin.pptx_tools"),
-    ("ppxai.server.routes.oneshot", "ppxai.server.routes.agent_v1"),
-    ("ppxai.server.routes.sessions", "ppxai.config.execution"),
-    ("ppxai.server.routes.sessions", "ppxai.server.auth"),
 }
 
 

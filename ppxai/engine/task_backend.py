@@ -30,6 +30,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import ppxai.config.execution as _execution
+
 from ..common.logger import get_logger
 from .agent_runs import RunMeta, resume_refusal
 from .task_authorizer import (
@@ -54,10 +56,9 @@ def collect_holds() -> bool:
     the server layer — the same trap that made `get_default_working_dir` and
     `compose_agent_system_prompt` block the runner extraction.
     """
-    from ..config.execution import get_execution_collect
 
     try:
-        return get_execution_collect() == "yes"
+        return _execution.get_execution_collect() == "yes"
     except Exception:  # noqa: BLE001 — a config error must not block a launch
         # Deliberately broad: the fallback is the SHIPPED DEFAULT, so any
         # unreadable config degrades to the safe answer rather than failing a
@@ -69,7 +70,7 @@ def collect_holds() -> bool:
         return True
 
 
-_shared: "InProcessTaskBackend" | None = None
+_shared: InProcessTaskBackend | None = None
 
 
 def configure_task_backend(session_provider=None, on_change=None):
@@ -130,7 +131,7 @@ def configure_task_backend(session_provider=None, on_change=None):
     return backend
 
 
-def get_task_backend() -> "InProcessTaskBackend":
+def get_task_backend() -> InProcessTaskBackend:
     """Process-wide backend singleton.
 
     **Must be shared, not constructed per call.** `default_run_registry()`
@@ -307,10 +308,9 @@ class InProcessTaskBackend:
         clients surface, so a user who disabled collect is told, rather than
         watching a result disappear.
         """
-        from ..config.execution import get_execution_collect
 
         try:
-            if get_execution_collect() == "no":
+            if _execution.get_execution_collect() == "no":
                 return False, (
                     'Collect is disabled (execution.collect="no"). Set '
                     'execution.collect to "yes" or "auto" in '
@@ -387,10 +387,9 @@ class InProcessTaskBackend:
         change between polls, and classifying it by string-matching a message
         would break the moment that message is reworded.
         """
-        from ..config.execution import get_execution_collect
 
         try:
-            if get_execution_collect() != "auto":
+            if _execution.get_execution_collect() != "auto":
                 return False, "not in auto mode", False
         except Exception:  # noqa: BLE001
             # `retryable=True`: an unreadable config may be a half-written

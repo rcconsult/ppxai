@@ -13,6 +13,8 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 
+import ppxai.engine.tools.builtin.pptx_tools as _pptx_tools
+
 from ...common.docx_to_pdf import convert_docx_to_pdf
 from ...common.logger import get_logger
 from ...config import get_file_tree_ignore_dirs
@@ -832,8 +834,7 @@ def render_office_preview(
     is_word = ext in {'.docx', '.doc'}
     is_legacy = ext in _LEGACY_OFFICE_EXTENSIONS
 
-    from ...engine.tools.builtin.pptx_tools import _libreoffice_available
-    libreoffice_ok = _libreoffice_available()
+    libreoffice_ok = _pptx_tools._libreoffice_available()
 
     # ── Word document path ───────────────────────────────────────────
     if is_word:
@@ -873,9 +874,8 @@ def render_office_preview(
 
     # ── PPTX path ────────────────────────────────────────────────────
     if libreoffice_ok:
-        from ...engine.tools.builtin.pptx_tools import render_pptx_slides
         try:
-            pngs = render_pptx_slides(file_path, cache_dir)
+            pngs = _pptx_tools.render_pptx_slides(file_path, cache_dir)
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Render failed: {exc}")
         # A present LibreOffice that produces NO output is not a server fault —
@@ -913,7 +913,6 @@ def render_office_preview(
                      f"(install it for raster slide previews). The model can "
                      f"still use list_pptx_slides / read_pptx_slide_text."),
         )
-    from ...engine.tools.builtin.pptx_tools import extract_pptx_slide_text
     try:
         from pptx import Presentation
         slide_count = len(Presentation(str(file_path)).slides)
@@ -937,7 +936,7 @@ def render_office_preview(
             "total": slide_count, "name": name, "type": "pptx",
             "kind": "presentation", "libreoffice_available": False,
         })
-    text = extract_pptx_slide_text(file_path, slide)
+    text = _pptx_tools.extract_pptx_slide_text(file_path, slide)
     return _text_fallback(
         kind="presentation", name=name, total=slide_count,
         content=text, slide=slide,

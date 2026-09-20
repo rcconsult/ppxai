@@ -59,6 +59,12 @@ from urllib.parse import urlparse
 
 from ...common.logger import get_logger
 
+#: Module import, not `from ... import get_execution_task_config`: the
+#: attribute is resolved at CALL time so tests patching
+#: `config.execution.<name>` on the source module still take effect. That
+#: was the only reason this used to be a function-level import.
+from ...config import execution as _execution
+
 logger = get_logger("tui")
 
 # SSRF-guard DNS memoization (Gemini review #1). The guard re-resolves the same
@@ -174,6 +180,7 @@ def grant_has_shell(grant) -> bool:
 # backend, so the superset must be granted (confused-deputy defense); only an
 # explicit `strict: true` pins the chain to one backend and narrows the
 # egress set to its host(s).
+
 from .search_backends import (  # noqa: E402  (leaf module, no cycle)
     ALL_HOSTS as _WEB_SEARCH_ALL_HOSTS,
 )
@@ -435,7 +442,7 @@ class NetworkPolicy:
                 return Allow(rule.rule_id)
         return Deny(f"host {host!r} not in egress allowlist")
 
-    def authorize(self, name: str, kwargs: dict) -> "ToolDecision":
+    def authorize(self, name: str, kwargs: dict) -> ToolDecision:
         """Decide a network-capable tool call against the policy.
 
         The tool is ALLOWED only if EVERY URL it could reach (its full egress
@@ -521,9 +528,8 @@ def apply_egress_ceiling(network: list) -> tuple[list, list]:
     Raises ValueError on a malformed ceiling (a security cap must fail
     loud, never open) — callers at the trust boundary map it to a 4xx.
     """
-    from ...config.execution import get_execution_egress_ceiling
 
-    ceiling = get_execution_egress_ceiling()  # ValueError on malformed
+    ceiling = _execution.get_execution_egress_ceiling()  # ValueError on malformed
     if ceiling is None:
         return list(network or []), []
     policy = NetworkPolicy(ceiling)

@@ -32,6 +32,8 @@ import re
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+import ppxai.config.execution as _execution
+
 from .secrets import CAP_MINT, EnvSecretProvider
 from .state import get_agent_run_registry, get_secret_provider
 
@@ -251,9 +253,8 @@ def _is_loopback_ui_request(request: Request) -> bool:
         # exemption closes and the bearer rule applies. Config-read errors
         # fail CLOSED (protected).
         try:
-            from ..config.execution import get_execution_run_config
 
-            if get_execution_run_config().get("web_search"):
+            if _execution.get_execution_run_config().get("web_search"):
                 return False
         except Exception:
             return False

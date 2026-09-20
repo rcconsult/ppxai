@@ -19,6 +19,12 @@ from typing import Any
 
 from ..config.execution import get_execution_run_config
 from ..config.facts_config import apply_provider_overrides, resolve_model_facts
+
+#: Imported as a MODULE, not by name: `_providers.get_provider_class` resolves
+#: at CALL time, so a test patching `providers.get_provider_class` on the
+#: source module still takes effect. That is the only reason this pair used to
+#: be a function-level (lazy) import -- there is no cycle here.
+from . import providers as _providers
 from .model_facts import ModelFacts, can_drive_a_tool_loop, shipped_facts_for_model
 from .providers.openai_compat import OpenAICompatibleProvider
 
@@ -95,12 +101,8 @@ class FactsResolver:
         oneshot enrichment gate.
         """
 
-        # Lazy: tests patch `providers.get_provider_class` on the SOURCE
-        # module, and a module-scope binding here would not see the patch.
-        from .providers import get_provider_class
-
         try:
-            cls = get_provider_class(self.provider)
+            cls = _providers.get_provider_class(self.provider)
         except Exception:  # noqa: BLE001
             cls = None
         return cls if cls is not None else OpenAICompatibleProvider
@@ -115,12 +117,8 @@ class FactsResolver:
         does not mean unserviceable, only unregistered.
         """
 
-        # Lazy: tests patch `providers.get_provider_class` on the SOURCE
-        # module, and a module-scope binding here would not see the patch.
-        from .providers import get_provider_class
-
         try:
-            return get_provider_class(self.provider) is not None
+            return _providers.get_provider_class(self.provider) is not None
         except Exception:  # noqa: BLE001
             return False
 
