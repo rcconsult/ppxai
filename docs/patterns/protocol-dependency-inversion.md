@@ -42,7 +42,12 @@ class ReadFileTool(BaseTool):
 
 1. **NEVER use `TYPE_CHECKING`** — it's a lazy import in disguise
 
-   > Enforced by grep, not by a test. As of 2026-09-20 production code has
+   > **Enforced by a test since 2026-09-20** —
+   > `tests/test_no_new_lazy_imports.py::TestTypeCheckingIsBanned`. It is
+   > AST-based, so the two legitimate *prose* mentions of the identifier
+   > (this repo's fence module and `providers/wire/protocol.py`'s docstring)
+   > do not trip it, and `import typing; if typing.TYPE_CHECKING:` does.
+   > As of 2026-09-20 production code has
    > **zero** `if TYPE_CHECKING:` blocks: `grep -rn "TYPE_CHECKING" ppxai/`
    > returns two hits, both prose in docstrings explaining why the idiom is
    > *not* used. The last real one lived in

@@ -549,3 +549,250 @@ class TestEveryModuleImportsStandalone:
             "these modules now import standalone, so the cycle is fixed -- "
             f"delete them from KNOWN_IMPORT_CYCLES: {fixed}"
         )
+
+
+# ===========================================================================
+# Guard 1 — `if TYPE_CHECKING:` is banned outright
+# ===========================================================================
+#
+# `docs/patterns/protocol-dependency-inversion.md` rule 1 says "NEVER use
+# `TYPE_CHECKING` — it's a lazy import in disguise", and this module's own
+# docstring opens by quoting it. Nothing enforced it.
+#
+# The cost of that gap, measured: `ppxai/tui/session_restore_ops.py` imported
+# `PPXAIDEApp` under `if TYPE_CHECKING:` from 2026-06 until 2026-09-20 — three
+# months, inside the very layer the pattern doc governs, and it was the exact
+# circular-import case the pattern exists to solve. It was found by a docs
+# audit, not by the suite. A `SessionRestoreHost` Protocol replaced it.
+#
+# Why AST and not grep: the repo contains two legitimate *prose* mentions of
+# the identifier (this file, and `providers/wire/protocol.py`'s docstring
+# explaining why it is not needed). A grep fence would have to special-case
+# them and would still miss `import typing; if typing.TYPE_CHECKING:`.
+
+
+def _type_checking_hits(tree):
+    """`(kind, lineno)` for every real use of TYPE_CHECKING in one tree.
+
+    Two forms count, because either one reintroduces the hidden dependency:
+
+    - `if TYPE_CHECKING:` / `if typing.TYPE_CHECKING:` — the block itself.
+    - `from typing import TYPE_CHECKING` — importing the name at all. There
+      is no legitimate reason to bind it that does not end in the block
+      above, and catching the import keeps the failure message pointing at
+      the line a reader must delete.
+
+    String mentions are invisible to this: a docstring is not an `If` node.
+    """
+    hits = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.If):
+            test = node.test
+            name = None
+            if isinstance(test, ast.Name):
+                name = test.id
+            elif isinstance(test, ast.Attribute):
+                name = test.attr
+            if name == "TYPE_CHECKING":
+                hits.append(("if-block", node.lineno))
+        elif isinstance(node, ast.ImportFrom):
+            if any(a.name == "TYPE_CHECKING" for a in node.names):
+                hits.append(("import", node.lineno))
+    return hits
+
+
+def _sweep_type_checking():
+    """`(module, kind, lineno)` for every TYPE_CHECKING use under `ppxai/`."""
+    found = []
+    for path in sorted(PPXAI.rglob("*.py")):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        for kind, lineno in _type_checking_hits(tree):
+            found.append((_module_name(path), kind, lineno))
+    return found
+
+
+class TestTypeCheckingIsBanned:
+    """Guards FIRST — a detector that stopped matching would pass silently."""
+
+    def test_the_detector_sees_the_if_block_form(self):
+        tree = ast.parse(
+            "from typing import TYPE_CHECKING\n"
+            "if TYPE_CHECKING:\n"
+            "    from ppxai.tui.app import PPXAIDEApp\n"
+        )
+        kinds = {k for k, _ in _type_checking_hits(tree)}
+        assert kinds == {"import", "if-block"}, kinds
+
+    def test_the_detector_sees_the_attribute_form(self):
+        """`import typing` + `typing.TYPE_CHECKING` is the same evasion."""
+        tree = ast.parse("import typing\nif typing.TYPE_CHECKING:\n    import x\n")
+        assert ("if-block", 2) in _type_checking_hits(tree)
+
+    def test_the_detector_ignores_prose(self):
+        """Docstrings and comments naming it must NOT trip the fence.
+
+        Two files mention the identifier in prose on purpose — this module's
+        docstring and `providers/wire/protocol.py`'s. A grep-based fence
+        would have to carry an exclusion list for them; this one does not.
+        """
+        tree = ast.parse(
+            '"""We never use TYPE_CHECKING here."""\n'
+            "# if TYPE_CHECKING: would be wrong\n"
+            "x = 'TYPE_CHECKING'\n"
+        )
+        assert _type_checking_hits(tree) == []
+
+    def test_no_type_checking_anywhere_in_production_code(self):
+        found = _sweep_type_checking()
+        assert not found, (
+            "`TYPE_CHECKING` is banned in production code — "
+            "docs/patterns/protocol-dependency-inversion.md rule 1. It hides a "
+            "dependency from the module graph exactly like a function-level "
+            "import does, and the import it hides is almost always a cycle "
+            "that wants a Protocol instead.\n\n"
+            "Declare a structural `Protocol` in the leaf module that both "
+            "sides already depend on (see `SessionRestoreHost` in "
+            "ppxai/tui/session_restore_ops.py, or `ProtocolHandler` in "
+            "ppxai/engine/providers/wire/protocol.py) and annotate against "
+            "that:\n  "
+            + "\n  ".join(f"{m}:{line} ({kind})" for m, kind, line in found)
+        )
+
+
+# ===========================================================================
+# Guard 2 — `engine.completion` must stay a leaf of the engine package
+# ===========================================================================
+#
+# ADR 0007. `ppxai/engine/completion.py:48` does
+# `from ..commands.factory import CommandFactory` — the ONLY `engine ->
+# commands` import in the whole engine package, and step 2 of that ADR (lift
+# `complete()` into a `ppxai/completion/` package behind a Protocol) is still
+# open after v1.19.0, .1 and .2.
+#
+# Measured 2026-09-20 while re-verifying the ADR: importing
+# `ppxai.commands.factory` pulls **52** `ppxai.engine` modules. So the PACKAGE
+# graph already cycles — engine -> commands -> engine.
+#
+# The MODULE graph does not, and that is the only reason nothing breaks:
+# `engine.completion` is a leaf. `commands.factory` does not pull it, and no
+# module inside `engine` imports it either, so the cycle is never closed at
+# import time and `import ppxai.engine.completion` succeeds standalone.
+#
+# That leaf status is LOAD-BEARING AND UNDEFENDED. One `engine` module
+# importing `engine.completion` — an obvious thing to do, since the name
+# says it belongs to the engine — closes the loop and turns a dormant
+# layering smell into an ImportError at startup. Nothing in the suite would
+# have caught it. This is that check: one test, no refactor, and it can go
+# away the day ADR 0007 step 2 lands and the upward import with it.
+
+
+ENGINE_COMPLETION = "ppxai.engine.completion"
+
+
+def _engine_modules_importing(target):
+    """`(module, lineno)` for every module under `ppxai/engine/` importing
+    `target` — at module scope or inside a function, both count.
+
+    A function-level import closes the cycle just as hard; it only moves the
+    moment it fires from startup to first call.
+    """
+    engine_root = PPXAI / "engine"
+    found = []
+    for path in sorted(engine_root.rglob("*.py")):
+        module = _module_name(path)
+        if module == target:
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        is_init = path.name == "__init__.py"
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                if any(a.name == target for a in node.names):
+                    found.append((module, node.lineno))
+            elif isinstance(node, ast.ImportFrom):
+                resolved = _resolve(node, module, is_init)
+                if resolved == target:
+                    found.append((module, node.lineno))
+                elif resolved and any(
+                    f"{resolved}.{a.name}" == target for a in node.names
+                ):
+                    found.append((module, node.lineno))
+    return found
+
+
+class TestEngineCompletionStaysALeaf:
+    """Guards FIRST — see the module docstring's "the sweep must work" rule.
+
+    **Mutation-verified 2026-09-20, and the two cases behave differently —
+    which is the whole reason this guard is worth having.**
+
+    Adding `from .completion import complete` at MODULE scope in
+    `engine/client.py` does not fail this test. It fails the entire pytest
+    run at collection, before any test executes::
+
+        INTERNALERROR> ... ppxai/engine/client.py: from .completion import complete
+        INTERNALERROR> ... ppxai/engine/completion.py:48: from ..commands.factory import CommandFactory
+        INTERNALERROR> ... ppxai/commands/handler.py:29: from ..engine import EngineClient
+        INTERNALERROR> ImportError: cannot import name 'EngineClient' from
+                       partially initialized module 'ppxai.engine'
+                       (most likely due to a circular import)
+
+    That is loud, immediate, and needs no fence — but the traceback names
+    `handler.py` and `EngineClient`, and says nothing about ADR 0007, so a
+    reader can burn real time before finding the actual rule.
+
+    The case that DOES need the fence is a **function-level** import inside
+    an engine module. It defers the cycle to call time, so the package still
+    imports, the suite still runs, every other test still passes, and the
+    breakage surfaces only when that function is first called — possibly in
+    a client, possibly in production. `_engine_modules_importing` walks the
+    whole AST rather than just module scope for exactly that reason;
+    mutating one in produces this test's failure and nothing else's.
+    """
+
+    def test_the_detector_resolves_a_relative_import(self):
+        """`from .completion import complete` inside engine must be caught."""
+        tree = ast.parse("from .completion import complete\n")
+        node = next(n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom))
+        assert _resolve(node, "ppxai.engine.client", False) == ENGINE_COMPLETION
+
+    def test_the_detector_resolves_the_from_module_form(self):
+        """`from . import completion` resolves to the package, not the name.
+
+        This is the form the plain `_resolve` result misses, which is why the
+        sweep also checks `f"{resolved}.{alias}"` — without that branch this
+        guard would have a silent hole.
+        """
+        tree = ast.parse("from . import completion\n")
+        node = next(n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom))
+        resolved = _resolve(node, "ppxai.engine.client", False)
+        assert resolved == "ppxai.engine"
+        assert f"{resolved}.completion" == ENGINE_COMPLETION
+
+    def test_the_engine_root_is_where_we_think(self):
+        assert (PPXAI / "engine" / "completion.py").exists(), (
+            "ppxai/engine/completion.py is gone — if ADR 0007 step 2 landed "
+            "and it moved to ppxai/completion/, DELETE this whole guard "
+            "class; it has done its job."
+        )
+
+    def test_no_engine_module_imports_engine_completion(self):
+        offenders = _engine_modules_importing(ENGINE_COMPLETION)
+        assert not offenders, (
+            "a module under ppxai/engine/ now imports engine.completion, "
+            "which closes the engine -> commands -> engine package cycle "
+            "(ADR 0007).\n\n"
+            "engine/completion.py:48 imports CommandFactory, and "
+            "commands.factory pulls ~52 engine modules back. Today that is "
+            "harmless ONLY because completion is a leaf nothing in engine "
+            "reaches. Importing it from inside engine makes the cycle real.\n\n"
+            "Call `complete()` from a client (rich/main.py, tui/completer.py, "
+            "server/routes/completion.py all do), or land ADR 0007 step 2 and "
+            "delete this guard:\n  "
+            + "\n  ".join(f"{m}:{line}" for m, line in offenders)
+        )

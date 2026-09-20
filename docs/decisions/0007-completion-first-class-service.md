@@ -252,11 +252,25 @@ seed. Incremental path:
    separate feature wearing the same ADR's clothes, and is the reason this
    record has looked too expensive to start three releases running.
 
-   **A cheap defence available today, independent of all three:** add a
-   test asserting that no module under `ppxai/engine/` imports
-   `engine.completion`. That is what currently keeps the module graph
-   acyclic, it is undefended, and it costs one test — see the leaf-status
-   note in §Re-measured.
+   **The cheap defence is in place as of 2026-09-20**, independent of all
+   three pieces: `tests/test_no_new_lazy_imports.py::TestEngineCompletionStaysALeaf`
+   asserts that no module under `ppxai/engine/` imports
+   `engine.completion`, at module scope or inside a function.
+
+   Mutating one in **proved the cycle empirically**, which no previous pass
+   had done. A module-scope import in `engine/client.py` does not merely
+   fail a test — it takes the whole pytest run down at collection with
+   `ImportError: cannot import name 'EngineClient' from partially
+   initialized module 'ppxai.engine'`, via
+   `completion -> commands.factory -> commands.handler -> engine`. The
+   package cycle described above is therefore not theoretical; it is one
+   import away, and the guard exists because the *function-level* form of
+   that same import defers the failure to call time, where nothing else
+   would catch it.
+
+   The guard is disposable: when step 2 lands and `complete()` leaves
+   `ppxai/engine/`, delete the class. `test_the_engine_root_is_where_we_think`
+   says so in its own failure message.
 
 ## Triggers to revisit
 
