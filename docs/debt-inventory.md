@@ -49,6 +49,7 @@ quoting them** — this table is a map, not a source.
 | **71** | the Anthropic provider has never made a live API call | **accepted + documented, NO ACTION** — marked untested on all five surfaces; ships as a known limitation. Not a release blocker |
 | **72** | the additive-CA TLS guarantee is pinned only on cafile hosts | coverage ceiling; Linux CI cannot decide it offline |
 | **73** | `rendering.textual_renderer` ↔ `tui.app` import cycle, hidden by import order | **fenced 2026-09-20** — a module-wide standalone-import sweep now catches any NEW cycle; the cycle itself is still open |
+| **74** | `/preview --serve` cannot start ANY Node project on Windows | auto-detect returns `npm start`, which CreateProcess cannot launch because `npm` is a `.cmd`/`.ps1`, not an `.exe` |
 | **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
 | **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
 | **3** | k8s session-manager security tests | trigger-deferred; quick pass done, full suite postponed |
@@ -183,6 +184,76 @@ behaviour, or a report of a custom CA replacing the trust store in the
 field.
 
 **Effort:** ~1–2 h for option 2 or 3.
+
+---
+
+### Item 74 — `/preview --serve` cannot start ANY Node project on Windows [preview / windows]
+
+**Filed 2026-09-20.** Hit live in a web-app session on a project whose
+`package.json` declares `"start": "node server.js"`.
+
+**What's wrong:** `detect_command()` returns the STRING `"npm start"` whenever
+package.json has a start script (`ppxai/engine/preview_backend.py:128`). The
+launcher then splits that string and starts it directly, with no shell
+involved (`preview_backend.py:363`). On Windows `npm` is not an executable —
+it is `npm.cmd`, or a PowerShell script under a version manager — and the
+direct path cannot launch either:
+
+    14:28:49 | ERROR | CLIENT[web]: Failed to start backend:
+              Command not found: [WinError 2] The system cannot find the file specified
+
+Reproduced outside ppxai on the same host, to rule out our own resolution:
+`Get-Command npm` returns `C:\nvm4w\nodejs\npm.ps1`, and starting `npm`
+through the same OS call fails with the same WinError 2, while `node` (a real
+`.exe`) starts fine.
+
+**Blast radius is every non-`.exe` name the detector can emit**, which on
+Windows is most of them: `npm`, and by the same mechanism `npx`, `yarn`,
+`pnpm`, plus the `make run` branch (`preview_backend.py:147`). The Python
+branch survives only by accident — it resolves an absolute `python.exe` from a
+venv, or falls back to bare `python`, which IS an `.exe` when on PATH.
+
+**Why it went unnoticed:** POSIX has no equivalent failure (`npm` is a real
+executable there), the detector never runs on Windows in CI, and
+`grep -n "npm start\|detect_command" tests/test_preview.py` returns
+**nothing** — `detect_command` has no test at all, on any platform.
+
+**Workaround (verified working the same session):** name a real executable and
+skip the detector —
+
+    /preview frontend/index.html --serve "node server.js"
+
+Argument order matters: the command must FOLLOW `--serve`, and `--serve` only
+treats the next token as a command when it looks shell-like
+(`ppxai/commands/display.py:578-596`). Putting the filepath after `--serve`
+yields `Expected one filepath`.
+
+**Two candidate fixes, and the second is better:**
+
+1. Resolve before launching. `shutil.which("npm")` returns the full `npm.cmd`
+   path on Windows. Do it once at the launch site so every detector branch is
+   covered rather than patching each one — a detector that can emit a name the
+   platform cannot start is the defect. **Measure** what actually starts a
+   `.cmd`/`.ps1` on this platform rather than assuming the absolute path is
+   enough; that is the step this bug shows we skipped.
+2. **Prefer the runtime over the launcher.** We read `scripts.start` to decide
+   `npm start` is available, and then throw its VALUE away. `"node server.js"`
+   is already a directly-startable command with no launcher in the middle.
+   Using the script's value instead of `npm start` sidesteps the whole class on
+   every platform, and only falls back to the launcher when the value itself
+   references one (`npm-run-all`, `concurrently`).
+
+Whichever is chosen, ship it with the first test `detect_command` has ever
+had, including a Windows case asserting the returned command is actually
+startable — not merely that the string equals `"npm start"`, which is the
+assertion that would have passed while the feature was broken.
+
+**Planned:** v1.19.x — small, self-contained, and it makes an advertised
+feature work on a supported platform.
+
+**Trigger to revisit:** active.
+
+**Effort:** ~1 h including the tests.
 
 ---
 
