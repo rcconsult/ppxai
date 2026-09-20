@@ -1,25 +1,38 @@
 # Release Notes — v1.19.3
 
-> **Scope:** Started as a two-fix observability release; two more landed
-> on the same branch ahead of tagging. The first two entries make an
-> **existing silent degradation visible**; neither changes what the send
-> path does, and neither changes a resolved fact value. The other two
-> close out the 2026-09-27 Perplexity Sonar chat-completions retirement on
-> the web_search tool's own code path (the provider side was already
-> fixed under ADR 0012 W3) — one of them **does** change a code default.
-> No config-shape changes, no command renames, no model-catalog changes.
-> The v1 API gateway (`POST /v1/oneshot`, bearer auth) and the
-> `/v1/agent/*` surface are **byte-identical to v1.19.2** — ppxai-sre and
-> any other v1 consumer is unaffected.
+> **Scope:** Started as a two-fix observability release and grew to
+> **nine fixes and one transcript change** on the same branch ahead of
+> tagging. Two make an **existing silent degradation visible**; neither
+> changes what the send path does, and neither changes a resolved fact
+> value. Two close out the 2026-09-27 Perplexity Sonar chat-completions
+> retirement on the web_search tool's own code path (the provider side
+> was already fixed under ADR 0012 W3) — one of them **does** change a
+> code default. Two correct `/doctor`, which probed outside the TLS
+> resolver and whose facts scan could describe a different config file
+> than the one its own header named. Two are resolution and display: the
+> shipped Qwen 27B-FP8 row now covers the in-place 3.8 upgrade — **this
+> release does change the model catalog**, one glob, one family — and
+> the context-window badge stops multiplying its baseline by the
+> tool-loop iteration count. The last lands with the turn-level tool
+> strip in the web and VSCode transcripts, which also fixes a chevron
+> that could expand to nothing.
+>
+> No config-shape changes and no command renames. The shipped microk8s
+> coder template changes shape, but it is an example: nothing in an
+> existing install reads it. The v1 API gateway (`POST /v1/oneshot`,
+> bearer auth) and the `/v1/agent/*` surface are **byte-identical to
+> v1.19.2** — ppxai-sre and any other v1 consumer is unaffected.
 
 ## Branch
 
-`bugfix/v1.19.3` (from master @ v1.19.2). Five commits: two fixes, two
+`bugfix/v1.19.3` (from master @ v1.19.2). Seventeen commits: six fixes,
+one web/VSCode feature, one test sweep, two deploy-example updates, six
 docs, one version bump.
 
 Nothing in this release requires an upgrade step. If you run tool loops
 against models whose facts rows you have not checked, the first fix is
-the reason to take it.
+the reason to take it; if you serve the 27B-FP8 Qwen line, the catalog
+fix is.
 
 ## Fixed
 
@@ -109,17 +122,6 @@ the reason to take it.
   on the same query after the fix, with identical answer text and
   citations.
 
-### The guard against over-reach
-
-Comparing a value to `UNMEASURED` cannot by itself tell a guess from a
-measurement that happens to agree with the guess. So the second fix is
-gated on `has_global_row`: a model with its own row in
-`SHIPPED_MODEL_FACTS` keeps `(built-in)` on **every** field, and only a
-model resolved *solely* through a provider row is compared field by
-field. `o3*`'s measured-serial `parallel_tool_calls=False` and
-`gemini-3.1-pro*`'s are findings, not floors, and are never relabelled as
-guesses. Tests pin both.
-
 - **`/doctor`'s endpoint probe now goes through the outbound TLS
   resolver.** Every other outbound client in ppxai — provider SDK clients,
   the built-in web tools — obtains its verification setting from
@@ -155,6 +157,24 @@ guesses. Tests pin both.
   unchanged — this is unrelated to, and does not close, the Item 69
   runtime debt below (`find_config_file()`'s own cwd-based search order).
 
+- **The shipped facts row for the 27B-FP8 Qwen line now covers
+  Qwen3.8.** The codeai and in-cluster deployments were upgraded **in
+  place** to `Qwen/Qwen3.8-27B-FP8` and `-agent`, keeping the 3.6 ids
+  served as aliases and the `qwen36` ingress path for backward
+  compatibility. The shipped glob was `Qwen/Qwen3.[56]-27B-FP8*`, so the
+  two ids now behaved differently against the same served weights: a
+  config naming the **real** 3.8 id matched nothing and landed on the
+  UNMEASURED floor — `tool_mode` prompt-based, no vision — while a config
+  naming the alias kept native tools. An in-place upgrade is exactly the
+  case a glob is supposed to absorb, and this one did not.
+
+  The glob is now `Qwen/Qwen3.[568]-27B-FP8*`. The row is **inherited,
+  not measured**: same family, same parser, same endpoint as 3.5/3.6,
+  pending a 3.8 benchmark run of its own — the source comment says so,
+  so the next reader does not mistake inheritance for a measurement. The
+  existing vision/native test pins both 3.8 ids. This is the one
+  model-catalog change in the release. (`f5d2c078`)
+
 - **The context-window badge no longer overshoots 100% in tool loops.**
   Measured on a live coder session (2026-09-16): a 13-request tool-loop
   turn displayed roughly 350% while the model was actually at roughly
@@ -184,6 +204,85 @@ guesses. Tests pin both.
   changes. The plain single-request chat path never passes
   `context_tokens`, so its behaviour (v1.18.4 Item A) is unchanged.
 
+### The guard against over-reach
+
+Comparing a value to `UNMEASURED` cannot by itself tell a guess from a
+measurement that happens to agree with the guess. So the `/model info`
+fix above is gated on `has_global_row`: a model with its own row in
+`SHIPPED_MODEL_FACTS` keeps `(built-in)` on **every** field, and only a
+model resolved *solely* through a provider row is compared field by
+field. `o3*`'s measured-serial `parallel_tool_calls=False` and
+`gemini-3.1-pro*`'s are findings, not floors, and are never relabelled as
+guesses. Tests pin both.
+
+## Changed
+
+- **Tool calls collapse into one strip per assistant turn** (web and
+  VSCode). The transcript already grouped tool calls, but the engine
+  emits one `TOOL_GROUP_START` per tool-loop **iteration**, and an
+  agentic run is usually one or two tools per iteration. Measured in a
+  live session (2026-09-19): 221 group events, runs reaching iteration 7,
+  **every one with `count=1`** — so seven separate collapsed strips for a
+  single answer, each inserted *above* the assistant message and pushing
+  the answer further down the page. The grouping was never wrong; it sat
+  one level too low.
+
+  `.tool-turn` is that level: one strip per assistant turn holding every
+  iteration group, labelled from running counts (`14 tools · 8 steps ✓`)
+  with a status mark when it closes. Collapsed by default — expanding
+  the turn shows its steps, expanding a step shows its tool bubbles. It
+  is created lazily on the first group of a turn, closed in the
+  streaming `finally` so an aborted or errored turn cannot leak into the
+  next one, and dropped in `clearConversation`, which otherwise leaves
+  the following turn appending into detached DOM. `/auto`'s
+  per-iteration `━━━ Iteration n/m ━━━` system message folds into the
+  same strip instead of competing with it, and still prints on its own
+  when a run uses no tools.
+
+  Ported to the VSCode webview in the same change rather than left for
+  later — the two transcripts are line-for-line twins, which is the
+  subject of `docs/lessons/parity-harness-must-know-every-client.md`.
+  (`1c1beac4`)
+
+- **Also fixed in that change: a tool bubble's chevron could expand to
+  nothing.** The ▶ chevron rendered on **every** tool bubble, but
+  `.tool-details` was only built when verbose tool output was on — so
+  with verbose off, clicking a bubble toggled a class and revealed an
+  empty box. The VSCode webview never had this: it always renders the
+  details and treats verbose as "start expanded". The web side now
+  matches it, and a bubble with genuinely no payload renders no chevron
+  and takes no focus.
+
+- **Tool bubbles are keyboard-operable and announce their state.** These
+  disclosures were mouse-only, and there was no `aria-expanded` anywhere
+  in the web app. Headers are now `role="button"`, tab-reachable,
+  operable with Enter or Space, and carry `aria-expanded` plus
+  `aria-controls`. Bubbles are built with `createElement` /
+  `textContent` instead of `innerHTML` template strings — the old form
+  interpolated `escapeHtml()` correctly, but it put the safety on every
+  future editor rather than on the construction.
+
+- **The shipped microk8s coder template is v1.19.3-shaped**
+  (`deploy/examples/microk8s/server-config.yaml`). It predated ADR 0010
+  and ADR 0012: no `execution` block, no `network.ssl`, and tool
+  capability still declared per provider
+  (`capabilities.native_tool_calling` / `tool_calling.mode`) — keys
+  v1.19.1 **silently ignores**. Every model now carries a complete facts
+  block; `execution.{run,collect,task,default_subagent}` and
+  `network.ssl` are shown explicitly; Perplexity moves to the
+  Responses-wire ids (`perplexity/sonar` and the two gateway models)
+  ahead of the 09-27 retirement, `tools.web_search.perplexity_model`
+  included. Because the template enables the task tier with a default
+  `web_search` grant, it now also shows the matching posture instead of
+  the open default: `execution.task.sandbox.enforcement=in_process` with
+  `/workspace` as the readable root and the standard deny list, and
+  `execution.egress_ceiling=[api.perplexity.ai]` — the only host that
+  grant needs. Both are deployment decisions an operator should make
+  deliberately, and a template that leaves them at the default teaches
+  the default. `vllm-qwen36` is renamed `vllm-qwen38` with the 3.8 model
+  id, matching the deployed ConfigMap. **Example only** — nothing in an
+  existing install reads this file. (`9afc18fe`, `aa69e126`)
+
 ## Debt
 
 - **Item 69 wording sharpened — recorded, not reopened, at the owner's
@@ -201,14 +300,102 @@ guesses. Tests pin both.
   resolution should know the test-side pin did not cover them.
   (`8c95d999`)
 
+- **Item 73 — the `rendering.textual_renderer` ↔ `tui.app` import cycle
+  is now fenced, not fixed.** `TestEveryPackageImportsStandalone`
+  checked six *package* roots, which is exactly how this cycle got in:
+  `ppxai/rendering/__init__.py` does not pull `textual_renderer`, so the
+  package imported clean while the module did not. A new sweep imports
+  **every module** under `ppxai/` in one subprocess, purging every
+  `ppxai*` entry from `sys.modules` between imports so each internal
+  graph is rebuilt while third-party imports stay cached — roughly 30s
+  for ~180 modules, against ~5s × 180 for an interpreter apiece.
+  `ppxai.tui.*` is excluded because importing it sets up the terminal
+  and can hang; the Item 73 cycle is still caught, because the module
+  that starts it lives in `rendering`. The cycle is the single
+  `KNOWN_IMPORT_CYCLES` row, and a second test asserts that row **still
+  fails** — so fixing the cycle turns the exemption into a failure
+  telling you to delete it. The cycle itself stays open; the inventory
+  now records what a fix costs (both ends lead to
+  `ppxai/tui/__init__.py:22` importing `tui.app` eagerly, and nothing
+  outside that file does `from ppxai.tui import PPXAIDEApp`).
+  (`99ca13f7`)
+
+- **Item 34 — closed as obsolete, not implemented.** It asked for
+  `python-docx` in the `[data]` extra "so the Word text fallback can
+  extract without LibreOffice". That fallback never used python-docx:
+  `docx_tools.py` extracts with stdlib `zipfile` + `xml.etree` (its own
+  docstring says so) and `files.py:868` calls it for the `.docx`
+  fallback; `grep -rn "import docx"` over `ppxai/` and `tests/` returns
+  nothing. Adding the dependency would have grown every binary by a
+  package nothing imports. Its heading already carried a ✅ while the
+  body was half open — the same heading-versus-body drift the item's own
+  text complains about. (`99ca13f7`)
+
+- **Item 54 — re-probed early rather than waiting for its due date.** 58
+  Gemini models (was 52 on 09-01), still **no GA 3.x Pro**: only the two
+  `gemini-3.1-pro-preview` ids. The one new GA-looking id,
+  `gemini-3-pro-image`, is an image model and no target for a chat Pro.
+  The entry's own instruction is "still preview-only? move this date
+  past the sunset", so the due date moves 2026-10-10 → 2026-11-14 with
+  the probe recorded. (`99ca13f7`)
+
+- **Item 74 filed — `/preview --serve` cannot start ANY Node project on
+  Windows.** Found live on a project whose `package.json` declares
+  `"start": "node server.js"`. `detect_command()` returns the string
+  `"npm start"` (`preview_backend.py:128`) and the launcher splits it and
+  starts it directly **with no shell** (`preview_backend.py:363`). On
+  Windows `npm` is not an executable — it is `npm.cmd`, or a PowerShell
+  script under a version manager — so the OS call fails with
+  `Failed to start backend: Command not found: [WinError 2]`.
+  Reproduced outside ppxai on the same host to rule out our own
+  resolution. Every non-`.exe` name the detector can emit is affected:
+  `npm`, `npx`, `yarn`, `pnpm`, and the `make run` branch; the Python
+  branch survives by accident because it resolves an absolute
+  `python.exe`. It went unnoticed because POSIX has no equivalent
+  failure, the detector never runs on Windows in CI, and
+  `detect_command` has **no test at all on any platform**. The entry
+  records the verified workaround and two candidate fixes — the better
+  one being to stop throwing away the value we already read: we consult
+  `scripts.start` to decide `npm start` is available, and
+  `"node server.js"` is directly startable on every platform.
+  (`b067ce9c`)
+
+**Open items: 20** (re-derived from the "Open at a glance" table, not
+carried over — Items 73 and 74 filed, Item 34 closed).
+
 ## Known limitations
 
-- Both fixes are proven by unit tests and mutation checks, not by a live
-  tool loop on the installed binaries. The acceptance check for the first
-  is a multi-call turn against a model whose row is still `False` —
-  `~/.ppxai/logs` should now carry the warning; for the second, `/model
-  info` on any `openai/*`-style id served through the Perplexity gateway,
-  where nine fields should now read `(unmeasured)`.
+- **Not every fix here was confirmed live; the split is deliberate.**
+  Four were measured against a real endpoint on 2026-09-16 — the
+  `perplexity/sonar` default (a real search returning answer plus
+  citations), the Pydantic warning (fired before the change, silent
+  after, identical answer and citations), `/doctor`'s TLS probe (a
+  corporate-CA endpoint the same provider's chat client reached without
+  incident), and `/doctor`'s facts scan (the section listing providers
+  from a different config than the header named). The rest rely on
+  unit tests and mutation checks, **not** on a live tool loop against the
+  installed binaries. Their acceptance checks, if you want to close that
+  gap yourself: for the dropped-call warning, a multi-call turn against a
+  model whose row is still `False` — `~/.ppxai/logs` should now carry it;
+  for `/model info`, any `openai/*`-style id served through the
+  Perplexity gateway, where nine fields should now read `(unmeasured)`;
+  for the context badge, any multi-iteration tool loop, where the
+  percentage should stay under 100.
+- **The Qwen3.8 row is inherited, not benchmarked.** It is the 3.5/3.6
+  row — same family, same parser, same endpoint — and it is a far better
+  answer than the UNMEASURED floor the real 3.8 id was getting, but it
+  is not a measurement of 3.8. If 3.8 changed its tool-calling or vision
+  behaviour in the in-place upgrade, this row now states that change
+  confidently and wrongly. A 3.8 benchmark run is the close-out.
+- **The turn-level tool strip is covered by two partial suites, neither
+  of which alone claims tool rendering works.** The turn logic lives on
+  a class in a 3,700-line file that cannot be instantiated standalone,
+  so `tests/e2e/tool-turn.spec.ts` (9 tests) drives the real
+  `styles.css` for the CSS collapse contract while
+  `tests/test_web_shared_modules.py` (10 tests) covers the source
+  wiring — when a turn opens, nests and closes. The split is documented
+  in both files. Mutation-verified, each mutation failing exactly one
+  test.
 - Everything Item 46 covered in v1.19.1 still stands: `execution.task.*`
   has no dual-read from `tools.agent.*`, and `/doctor` prints what each
   stale key costs. Unchanged by this release.
@@ -217,9 +404,21 @@ guesses. Tests pin both.
 
 ## Verification
 
-Full suite at `bd687a15` on macOS with `uv sync --all-extras`: **5,882
-passed, 1 skipped, 0 failed**. Both fixes were mutation-tested — the
-first fails 2 guards without its change, the second fails 6.
+Full suite at `b067ce9c` (branch HEAD) on macOS with
+`uv sync --all-extras`: **5,909 passed, 1 skipped, 0 failed** in 535s.
+Windows at the same point in the branch, measured on the other host:
+**5,878 passed, 32 skipped, 0 failed** @ `1c1beac4`; the extra skips are
+the usual platform gates (PTY, symlink cases, POSIX signal semantics).
+The Playwright specs under `tests/e2e/` are not in either count —
+**209 passed** there, including the 9 new `tool-turn.spec.ts` tests.
+
+The first two fixes were mutation-tested — the dropped-call warning
+fails 2 guards without its change, `/model info` fails 6. The tool-strip
+change was mutation-tested too, each mutation failing exactly one test:
+groups re-appended to the container, `endToolTurn` dropped from the
+`finally`, the `clearConversation` reset removed, details re-gated on
+verbose, the VSCode wrapper renamed, and the collapse rule deleted from
+the stylesheet.
 
 `tests/test_parallel_tool_call_drop_logging.py` fences both halves of the
 first fix. Its logger double is `create_autospec`, **not**
