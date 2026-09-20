@@ -192,28 +192,6 @@ class BaseProvider(ABC):
             for model_key, info in self.models.items()
         ]
 
-    def validate_config(self) -> bool:
-        """Validate provider configuration.
-
-        Default: requires api_key. Providers that need base_url (e.g.,
-        OpenAICompatibleProvider) should override.
-
-        Returns:
-            True if configuration is valid
-        """
-        return bool(self.api_key)
-
-    def needs_tool(self, tool_category: str) -> bool:
-        """Check if provider needs a tool (doesn't have native capability).
-
-        Args:
-            tool_category: Category like 'web_search', 'weather', etc.
-
-        Returns:
-            True if provider needs this tool (doesn't have native capability)
-        """
-        return not getattr(self.capabilities, tool_category, False)
-
     def get_capabilities(self) -> ProviderCapabilities:
         """What this ENDPOINT can do, with operator config applied.
 

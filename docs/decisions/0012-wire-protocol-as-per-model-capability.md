@@ -972,6 +972,9 @@ gated on the owner's explicit go, per the arc's standing rule.
 2. ✅ **DONE** (W2, 2026-08-30) — **Make the protocol field load-bearing.**
    `_wire_for(model)` is the single reader; all four dispatch sites (`chat`,
    `chat_sync_simple`, `oneshot`, the 404 auto-fallback) consult it.
+   *(Three as of 2026-09-20: `chat_sync_simple` was deleted as dead code —
+   it had no caller anywhere in the repo's history, and its four provider
+   implementations had silently diverged. W2's claim was true when written.)*
    `RESPONSES_API_PREFIXES` is now seed data for `RESPONSES_WIRE_GLOBS`;
    `_is_responses_api_model` routes nothing. **Closes debt Item 61.**
 

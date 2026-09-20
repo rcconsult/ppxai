@@ -108,9 +108,9 @@ class OpenAINativeProvider(BaseProvider):
     - Native function calling with proper tool call streaming
     - Reasoning token extraction
 
-    Inherits from BaseProvider (v1.16.0) for shared interface: needs_tool(),
-    get_facts_for_model(), list_models(), validate_config(), _parse_usage(),
-    _convert_messages(), _get_generation_params(), _get_max_tokens().
+    Inherits from BaseProvider (v1.16.0): get_facts_for_model(),
+    get_capabilities(), list_models(), _parse_usage(), _convert_messages(),
+    _get_generation_params(), _get_max_tokens().
     """
 
     name = "openai"
@@ -283,46 +283,6 @@ class OpenAINativeProvider(BaseProvider):
         else:
             async for event in self._chat_completions_api(messages, model, stream, tools):
                 yield event
-
-    def chat_sync_simple(
-        self,
-        messages: list[Message],
-        model: str,
-    ) -> str:
-        """Simple synchronous chat that returns just the content.
-
-        Args:
-            messages: Conversation history
-            model: Model ID to use
-
-        Returns:
-            Assistant's response content
-        """
-        # Codex / Pro models 404 on Chat Completions — route them through the
-        # Responses API just like chat() / oneshot() do.
-        if self._wire_for(model) == "responses":
-            return get_handler("responses").oneshot(
-                self, messages, model, self._get_max_tokens(model)
-            ).get("content", "")
-
-        api_messages = self._convert_messages(messages)
-
-        request_kwargs = {
-            "model": model,
-            "messages": api_messages,
-            "stream": False,
-        }
-
-        # Use correct token parameter
-        max_tokens = self._get_max_tokens(model)
-        if max_tokens:
-            if self._needs_max_completion_tokens(model):
-                request_kwargs["max_completion_tokens"] = max_tokens
-            else:
-                request_kwargs["max_tokens"] = max_tokens
-
-        response = self.client.chat.completions.create(**request_kwargs)
-        return response.choices[0].message.content or ""
 
     def oneshot(
         self,

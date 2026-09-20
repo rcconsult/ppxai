@@ -223,9 +223,9 @@ class GeminiProvider(BaseProvider):
     tools are enabled, function calling takes priority and grounding is
     disabled for that request.
 
-    Inherits from BaseProvider (v1.16.0) for shared interface: needs_tool(),
-    list_models(), validate_config(), get_facts_for_model(),
-    _get_generation_params(), _get_max_tokens().
+    Inherits from BaseProvider (v1.16.0): list_models(),
+    get_facts_for_model(), get_capabilities(), _get_generation_params(),
+    _get_max_tokens().
     """
 
     name = "gemini"
@@ -530,43 +530,6 @@ class GeminiProvider(BaseProvider):
                 error_msg = self._format_error(e)
                 yield Event(EventType.ERROR, error_msg)
             self._log_error_traceback(e)
-
-    def chat_sync_simple(
-        self,
-        messages: list[Message],
-        model: str,
-    ) -> str:
-        """Simple synchronous chat that returns just the content.
-
-        Args:
-            messages: Conversation history
-            model: Model ID to use
-
-        Returns:
-            Assistant's response content
-        """
-        contents, system_instruction = get_handler("generate_content").convert_messages(messages)
-        generation_params = self._get_generation_params(model)
-        config = self._build_config(
-            model=model,
-            use_grounding=self.enable_grounding,
-            system_instruction=system_instruction,
-            generation_params=generation_params
-        )
-
-        response = self.client.models.generate_content(
-            model=model,
-            contents=contents,
-            config=config
-        )
-
-        content = ""
-        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
-            for part in response.candidates[0].content.parts:
-                if hasattr(part, 'text') and part.text:
-                    content += part.text
-
-        return content
 
     def oneshot(
         self,

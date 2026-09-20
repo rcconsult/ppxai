@@ -368,16 +368,3 @@ class TestOneshotResponsesRouting:
         assert provider.client.chat.completions.create.called
         assert not provider.client.responses.create.called
         assert result["content"] == "from-chat"
-
-    def test_chat_sync_simple_routes_pro_to_responses(self):
-        provider = _make_provider()
-        provider.client = MagicMock()
-        provider.client.responses.create.return_value = self._responses_reply(
-            "gpt-5-pro", "sync-out"
-        )
-        out = provider.chat_sync_simple(
-            messages=[Message(role="user", content="hi")], model="gpt-5-pro"
-        )
-        assert provider.client.responses.create.called
-        assert not provider.client.chat.completions.create.called
-        assert out == "sync-out"

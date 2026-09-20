@@ -115,18 +115,6 @@ class TestGeminiNullPartsRegression:
         errors = [e for e in events if e.type == EventType.ERROR]
         assert not errors, f"null content raised: {[e.data for e in errors]}"
 
-    def test_chat_sync_simple_null_parts_does_not_raise(self, provider):
-        """Same guard in the synchronous helper — captions / VL sidecar path."""
-        response = _make_response_with_null_parts()
-        provider.client.models.generate_content = MagicMock(return_value=response)
-
-        # chat_sync_simple returns a string; null parts → empty string, no raise
-        result = provider.chat_sync_simple(
-            [Message("user", "hello")], model="gemini-3-flash-preview"
-        )
-        assert result == ""
-
-
 class TestGeminiNoneIterableGuards:
     """Defensive guards against the broader 'NoneType is not iterable'
     class of bugs flagged in the gemini-3.1-pro benchmark debug logs.

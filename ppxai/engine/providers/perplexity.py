@@ -478,38 +478,6 @@ class PerplexityProvider(BaseProvider):
                 yield Event(EventType.ERROR, error_msg)
             self._log_error_traceback(e)
 
-    def chat_sync_simple(
-        self,
-        messages: list[Message],
-        model: str,
-    ) -> str:
-        """Simple synchronous chat that returns just the content.
-
-        Args:
-            messages: Conversation history
-            model: Model ID to use
-
-        Returns:
-            Assistant's response content
-        """
-        api_messages = self._convert_messages(messages)
-        generation_params = self._get_generation_params(model)
-        extra_body = self._get_extra_body(model)
-
-        request_kwargs = {
-            "model": model,
-            "messages": api_messages,
-            "stream": False
-        }
-        if generation_params:
-            request_kwargs.update(generation_params)
-        if extra_body:
-            request_kwargs["extra_body"] = extra_body
-
-        response = self.client.chat.completions.create(**request_kwargs)
-
-        return response.choices[0].message.content or ""
-
     def oneshot(
         self,
         prompt: str,

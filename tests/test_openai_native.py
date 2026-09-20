@@ -102,14 +102,6 @@ class TestInit:
             assert p.capabilities.web_search is True
             assert p.capabilities.citations is True
 
-    def test_validate_config(self):
-        with patch("ppxai.engine.providers.openai_native.OpenAI"):
-            p = OpenAINativeProvider(api_key="test-key")
-            assert p.validate_config() is True
-
-            p2 = OpenAINativeProvider(api_key="")
-            assert p2.validate_config() is False
-
     def test_kwargs_ignored(self):
         """base_url and other kwargs should not raise."""
         with patch("ppxai.engine.providers.openai_native.OpenAI"):
@@ -693,14 +685,6 @@ class TestResponsesAPI:
 class TestWebSearch:
     """Test web search integration."""
 
-    def test_needs_tool_without_web_search(self, provider):
-        assert provider.needs_tool("web_search") is True
-        assert provider.needs_tool("weather") is True
-
-    def test_needs_tool_with_web_search(self, provider_with_web_search):
-        assert provider_with_web_search.needs_tool("web_search") is False
-        assert provider_with_web_search.needs_tool("weather") is False
-
     @pytest.mark.asyncio
     async def test_web_search_tool_added_for_codex(self, provider_with_web_search):
         """Web search tool should be included in Responses API calls."""
@@ -809,38 +793,3 @@ class TestProviderRegistry:
         assert get_provider_class("local") is OpenAICompatibleProvider
         assert get_provider_class("custom") is OpenAICompatibleProvider
 
-
-# ---------------------------------------------------------------------------
-# chat_sync_simple test
-# ---------------------------------------------------------------------------
-
-class TestChatSyncSimple:
-    """Test synchronous chat method."""
-
-    def test_basic(self, provider):
-        mock_response = SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(content="Hello!"))]
-        )
-        provider.client.chat.completions.create.return_value = mock_response
-
-        result = provider.chat_sync_simple(
-            messages=[Message(role="user", content="Hi")],
-            model="gpt-4.1",
-        )
-        assert result == "Hello!"
-
-    def test_uses_max_completion_tokens_for_gpt5(self, provider):
-        mock_response = SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(content="Hello!"))]
-        )
-        provider.client.chat.completions.create.return_value = mock_response
-
-        with patch.object(provider, "_get_max_tokens", return_value=8192):
-            provider.chat_sync_simple(
-                messages=[Message(role="user", content="Hi")],
-                model="gpt-5.2",
-            )
-
-        call_kwargs = provider.client.chat.completions.create.call_args[1]
-        assert "max_completion_tokens" in call_kwargs
-        assert call_kwargs["max_completion_tokens"] == 8192

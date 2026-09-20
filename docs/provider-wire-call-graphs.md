@@ -124,9 +124,9 @@ override reach the wire at all (debt Item 61).
 
 ```
               ┌─ chat()                  ─┐
-              ├─ chat_sync_simple()       │   self._wire_for(model)
-call sites ───┤                           ├──   = get_facts_for_model(model)
-              ├─ oneshot()                │       .wire_protocol
+              │                           │   self._wire_for(model)
+call sites ───┤  oneshot()                ├──   = get_facts_for_model(model)
+              │                           │       .wire_protocol
               └─ 404 auto-fallback       ─┘            │
                                                        │
                         ┌──────────────────────────────┴───────────┐
@@ -142,9 +142,25 @@ call sites ───┤                           ├──   = get_facts_for_mo
                        └─ build_tool_hint()
 ```
 
-Four call sites, ONE resolver — that is the fix. The four branches themselves
-collapse in W4, when `chat_completions` becomes a handler and dispatch is a
-dict lookup with no `if` at all.
+Three call sites, ONE resolver — that is the fix. (It was four until
+2026-09-20; `chat_sync_simple` was deleted as dead code — never called
+anywhere in the repo's history. See the note below on what did NOT happen
+in W4.)
+
+> **This paragraph used to predict that the branches "collapse in W4, when
+> `chat_completions` becomes a handler and dispatch is a dict lookup with
+> no `if` at all". W4 shipped; that did not happen** (checked 2026-09-20).
+> Dispatch is still five explicit `if self._wire_for(model) == "responses"`
+> branches — `openai_native.py:278,303,355` and `perplexity.py:325,534`.
+>
+> The reason is deliberate and documented in
+> `wire/chat_completions.py`: only `ResponsesHandler` owns send paths
+> (7 methods); `ChatCompletionsHandler` and `MessagesHandler` implement
+> `convert_messages` **only** (1 method each), because *"the send paths
+> still live on their providers… Moving the send paths is a separate
+> change with its own risk, and pretending otherwise would make this
+> 'extraction' a rewrite."* The dict-lookup end state is still the right
+> target; it is simply not where the code is.
 
 `get_handler()` raises `KeyError` for an unregistered protocol rather than
 falling back to a default. A silent fallback is precisely how `api_path` sat
@@ -279,7 +295,7 @@ run and the message that suggests an alternative read the same resolution,
 so the suggestion cannot recommend a model the guard would reject.
 
 ```
-model_facts.provider_class_for(provider)          ← WHOSE class serves this?
+facts_resolver.provider_class_for(provider)       ← WHOSE class serves this?
   ├─ providers.get_provider_class(provider)
   └─ fallback: OpenAICompatibleProvider
        (get_provider_class() returns None for every openai_compat-TYPE
@@ -288,22 +304,34 @@ model_facts.provider_class_for(provider)          ← WHOSE class serves this?
         back the same way, so a caller that stops at None disagrees with
         the deployment about what a provider is.)
 
-model_facts.facts_without_an_instance(provider, model)   → ModelFacts
+facts_resolver.facts_without_an_instance(provider, model)  → ModelFacts
   ├─ provider_class_for(provider)
   ├─ shipped_facts_for_model(model, cls.shipped_model_facts,
   │                          cls.unmeasured_facts)
   └─ facts_config.resolve_model_facts(...)
 
-model_facts.capabilities_without_an_instance(provider)   → ProviderCapabilities
+facts_resolver.capabilities_without_an_instance(provider)  → ProviderCapabilities
   ├─ provider_class_for(provider).default_capabilities
   └─ facts_config.apply_provider_overrides(...)
 
   callers:
     task_authorizer._reject_tool_incapable_model()   ← the admission guard
     task_authorizer._tool_capable_models_hint()      ← its error message
-    config/execution.py::get_effective_oneshot_path()  ← both records
-    config/facts_config.py::complete_record_for()    ← /doctor's scaffold
+    facts_resolver.get_effective_oneshot_path()      ← both records
+    facts_resolver.complete_record_for()             ← /doctor's scaffold
 ```
+
+> **Module attribution corrected 2026-09-20.** This graph named all five
+> of these `model_facts.*` / `config.*`. They live in
+> **`ppxai/engine/facts_resolver.py`** (lines 26, 35, 43, 149, 184) and
+> `grep -c` finds none of them in `model_facts.py` or `facts_config.py`.
+> The split is deliberate and its own docstring explains why:
+> *"Split from `model_facts` to make the dependency point one way… This
+> module is the RESOLVER, which imports `providers`."* Same reason
+> `get_effective_oneshot_path` sits here rather than in `config.execution`
+> — *"that single edge was what forced every `config -> engine` import to
+> be lazy."* If you are looking for these by the old names, that is why
+> you cannot find them.
 
 Extracted in W1 because the same four-line sequence had been written out at
 each site, and *that repetition is the bug*: four copies of one ladder is how
@@ -360,7 +388,7 @@ commands/doctor.py::_format_facts_section()
   ├─ facts_config.wrong_typed_fields_in_config()→ values no coercion rescues
   └─ facts_config.incomplete_blocks_in_config() → Q0d: records must be complete
 
-commands/doctor.py  →  facts_config.complete_record_for(provider, model)
+commands/doctor.py  →  facts_resolver.complete_record_for(provider, model)
                           └─ facts_without_an_instance()   [Graph 3]
 ```
 
@@ -379,7 +407,11 @@ commands/provider.py::handle_model_info()
   ├─ shipped_facts_for_model(model_id, cls.shipped_model_facts)
   ├─ facts_config.model_fact_overrides(provider, model_id)
   ├─ apply_overrides(...)              → the effective record
-  └─ is_unmeasured(...)                → "(unmeasured)" rather than a false tier
+  ├─ is_unmeasured(model_id)           → has_global_row   [provider.py:356]
+  └─ _source(field)                    → per-field label  [provider.py:363]
+       ├─ has_global_row      → "(built-in)" on EVERY field, unconditionally
+       └─ provider-row only   → compare each field to UNMEASURED,
+                                label the matches "(unmeasured)"
 ```
 
 This display used to re-implement the merge a **third** time, with its own
@@ -387,6 +419,24 @@ layer order and field list — which is how `api_path` came to be shown here
 while nothing routed on it (debt Item 61). It now reports what the send path
 will actually do, and labels each field's source (`config` / `built-in` /
 `unmeasured`).
+
+> **Redrawn 2026-09-20 for the v1.19.3 fix (`6d29451b`).** The graph showed
+> a flat `is_unmeasured(...)` leaf, which was the pre-v1.19.3 shape: one
+> boolean deciding the label for all twelve fields at once. That answered
+> *"did a row match"*, not *"is this value measured"* — and
+> `PerplexityProvider` seeds its gateway rows from
+> `shipped_facts_for_model("openai/")` and four sibling globs that match
+> **nothing**, so the seed IS `UNMEASURED` with three fields then set
+> deliberately. The other nine printed `(built-in)` for every model those
+> globs serve, across four vendors.
+>
+> The `has_global_row` guard is what keeps the fix from over-reaching:
+> comparing a value to `UNMEASURED` cannot by itself tell a guess from a
+> measurement that happens to agree with the guess, so a model with its own
+> row in `SHIPPED_MODEL_FACTS` keeps `(built-in)` on every field. `o3*`'s
+> measured-serial `parallel_tool_calls=False` is a finding, not a floor,
+> and is never relabelled. **Reporting only** — resolution, the send path
+> and `is_unmeasured` itself are untouched.
 
 ---
 

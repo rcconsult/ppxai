@@ -118,13 +118,6 @@ class OpenAICompatibleProvider(BaseProvider):
         model_lower = model.lower()
         return any(model_lower.startswith(p) for p in self.MAX_COMPLETION_TOKENS_PREFIXES)
 
-    def validate_config(self) -> bool:
-        """Validate provider configuration.
-
-        OpenAI-compatible providers require both api_key and base_url.
-        """
-        return bool(self.api_key and self.base_url)
-
     def _estimate_tokens(self, messages: list[dict[str, Any]]) -> int:
         """Estimate token count for messages.
 
@@ -488,31 +481,6 @@ class OpenAICompatibleProvider(BaseProvider):
                 yield Event(EventType.ERROR, error_msg)
             # Log full traceback to debug log for troubleshooting
             self._log_error_traceback(e)
-
-    def chat_sync_simple(
-        self,
-        messages: list[Message],
-        model: str,
-    ) -> str:
-        """Simple synchronous chat that returns just the content.
-
-        Args:
-            messages: Conversation history
-            model: Model ID to use
-
-        Returns:
-            Assistant's response content
-        """
-        api_messages = self._convert_messages(messages)
-        api_messages = self._apply_reasoning_trigger(api_messages, model)
-
-        response = self.client.chat.completions.create(
-            model=model,
-            messages=api_messages,
-            stream=False
-        )
-
-        return response.choices[0].message.content or ""
 
     def oneshot(
         self,

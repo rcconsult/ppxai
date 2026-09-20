@@ -1,12 +1,59 @@
 # Agent platform — endpoint call graphs (per increment)
 
-> ⚠️ **Partially stale (flagged 2026-08-15).** These graphs predate the
-> admission-boundary unification (`135abf48`), so they do not show
-> `ppxai/engine/task_authorizer.py::authorize_task()` — today the single
-> admission point every client passes through, with the HTTP route reduced to
-> a thin adapter. The per-endpoint routing below is still accurate; the
-> authorization step drawn inside each route now lives in front of all of
-> them. Redrawing is open work.
+> ⚠️ **Partially stale — re-surveyed 2026-09-20, and the gap is now
+> itemised rather than gestured at.** The per-endpoint *routing* below is
+> still accurate and the endpoint set is complete (all 9 `/v1/agent/*` plus
+> the 3 `/v1/tokens` paths verified present). What has drifted is **where
+> the work happens inside a route**, plus two web-client sections that
+> describe commands which no longer exist.
+>
+> **1. Admission moved out of the routes (`135abf48`).**
+> `ppxai/engine/task_authorizer.py::authorize_task()` (`:1274`) is the
+> single admission point for the task tier, called from
+> `routes/agent_v1.py:714`. `authorize_oneshot()` is its `/run` sibling,
+> called at `:364`. These graphs draw those gates inline in the route.
+> Specifically superseded: **Increment 4** (provider/model resolution —
+> `create_agent_task` no longer calls `_v1_provider_or_400` at all; that
+> now happens inside `authorize()` via `validate_provider_or_error`),
+> **Increment 5** (the `grant_has_shell` reject, now at
+> `task_authorizer.py:1139`), and **§N** (the workdir/seal decision, now
+> gate 7 of `authorize()`, read back as `auth.workdir_ignored`).
+> **Increment 6 is NOT affected** — the budget dict is still built in the
+> route and passed through unchanged.
+>
+> **Worth knowing for the redraw:** the in-process TUI path does *not* call
+> `authorize_task`. `task_backend.py` requires an `AuthorizedTask` **as a
+> parameter**, so admission is enforced by the type rather than by a call —
+> "was this authorized?" is unanswerable-in-the-negative at that seam. That
+> is a genuinely different topology from the HTTP route and is why a
+> mechanical find-and-replace of the gate boxes would be wrong.
+>
+> **2. `build_task_runner` moved** to `ppxai/engine/task_runner.py:152`
+> (v1.19.1, for the T8b in-process port). Inc 7 and T2 still attribute it
+> to `routes/agent_v1.py`, which now only re-exports it — and its own
+> comment says *"NOT a patch point… Patch
+> `ppxai.engine.task_runner.build_task_runner` instead."*
+>
+> **3. Two web-client sections describe deleted code.** ADR 0011 hard-removed
+> `/agentrun` and `/agentruns` with no aliases; `_dispatchAgentRun`,
+> `_watchAgentRunDetached` and `_dispatchAgentRunsList` return **zero** hits
+> under `ppxai/web/`. The command is `/run`, handled by `RunController`
+> (`ppxai/web/shared/run-controller.js`, extends `TaskController`). Affects
+> the Inc 2 and Inc 3 web-client surfaces and **§K** in its entirety.
+>
+> **4. Undocumented branch:** `/v1/agent/run` has a U3 grant rule (ADR 0011)
+> — when `execution.run.web_search` is on, `auth.tools` is non-empty and the
+> run goes through the **full task-tier sandbox** with a hardwired
+> `{web_search}` grant, not the plain oneshot path Inc 1/2 draw
+> (`agent_v1.py:385-410`). No section covers this.
+>
+> **5. `NetworkPolicy` gained `provider_name`** (`network_policy.py:364`) and
+> `tool_targets()` now resolves web_search hosts per-provider via
+> `resolve_web_search_backend()` rather than the fixed four-host superset
+> Inc 5 shows. The allow-list is also passed through `apply_egress_ceiling()`
+> before construction (`task_runner.py:305-315`).
+>
+> Redrawing remains open work; this banner is the map of what to redraw.
 
 **Purpose:** a reference map of what each `/v1/agent/*` endpoint actually
 calls, traced from code, maintained **per increment**. Use it for
@@ -176,6 +223,16 @@ background execution begins.
 
 ### Web client surface (consumer of the above — no new endpoints)
 
+> 🚫 **Describes deleted code (marked 2026-09-20).** ADR 0011 hard-removed
+> `/agentrun` and `/agentruns` with **no aliases**, and the three functions
+> below went with them — `_dispatchAgentRun`, `_watchAgentRunDetached` and
+> `_dispatchAgentRunsList` return **zero** hits under `ppxai/web/`.
+> `command-dispatcher.js:93-94` carries the epitaph: *"Replaces the retired
+> /agentrun + /agentruns (hard removal)."* The command is now **`/run`**,
+> dispatched to `RunController` (`ppxai/web/shared/run-controller.js`,
+> which extends `TaskController`). Kept as the historical Inc-2/Inc-3 shape
+> per this doc's append-only rule; do not use it to find code.
+
 Added alongside Inc 2 so the live `running → completed` status is
 trialable in-app, not just via curl.
 
@@ -261,6 +318,17 @@ replay backlog and the live tail. Always-persist / filter-on-read: the
 file has everything; the endpoint subsets it.
 
 ### Web client (Inc 3 upgrade)
+
+> 🚫 **Describes deleted code (marked 2026-09-20).** ADR 0011 hard-removed
+> `/agentrun` and `/agentruns` with **no aliases**, and the three functions
+> below went with them — `_dispatchAgentRun`, `_watchAgentRunDetached` and
+> `_dispatchAgentRunsList` return **zero** hits under `ppxai/web/`.
+> `command-dispatcher.js:93-94` carries the epitaph: *"Replaces the retired
+> /agentrun + /agentruns (hard removal)."* The command is now **`/run`**,
+> dispatched to `RunController` (`ppxai/web/shared/run-controller.js`,
+> which extends `TaskController`). Kept as the historical Inc-2/Inc-3 shape
+> per this doc's append-only rule; do not use it to find code.
+
 
 `/agentrun` switches from poll-loop to the SSE tail: after POST, open
 `GET …/events?live=1` and render frames as they arrive; close on the
@@ -490,7 +558,7 @@ spawn tool for top-level granted runs). Execution model: a parent run's tool
 call mints + runs ONE child run (own run_id, linked by parent_run_id) and
 blocks on it.
 
-### tool registration (depth gate)  [routes/agent_v1.py build_task_runner]
+### tool registration (depth gate)  [engine/task_runner.py build_task_runner — moved there in v1.19.1; agent_v1 only re-exports]
 
 ```
 build_task_runner(registry, ..., tools, allow_outbound, allow_spawn):
@@ -694,8 +762,9 @@ call flow without adding endpoints; debt Item 37 a–j tracks the residue.
 `_build_provider` (400 only on unknown/no-key). The old
 `isinstance(provider, OpenAICompatibleProvider)` guard on `/run` + `/task` +
 `/v1/oneshot` is gone. `oneshot()` is now `@abstractmethod` on `BaseProvider`,
-implemented on all 4 providers (native ones compose their existing
-`chat_sync_simple` + per-vendor usage parser). `/task` uses `engine.chat`
+implemented on all 4 providers (native ones composed their then-existing
+`chat_sync_simple` + per-vendor usage parser; `chat_sync_simple` was
+deleted 2026-09-20 as dead code, and `oneshot` now stands on its own). `/task` uses `engine.chat`
 (abstract on all); `/run` + `/v1/oneshot` use `oneshot`. Any configured
 provider works. (commits 18373e31←removed, cbb8c536)
 
@@ -826,7 +895,10 @@ Verified live (rebuilt server): web launch→tail→read all succeed token-less;
 `/task`+`/runs`+`/cancel`+ghost-read all 401. Tests: 14 new in
 `test_tokens_v1_route.py::TestLoopbackUIExemption`.
 
-**§K — web `/agentrun` fire-and-forget (web client only).** `/agentrun`
+**§K — web `/agentrun` fire-and-forget (web client only).** 🚫 **Entire
+section describes deleted code** — `/agentrun` and both helper functions
+were hard-removed by ADR 0011 (marked 2026-09-20); the behaviour lives on
+in `RunController` under `/run`. `/agentrun`
 previously AWAITED its own SSE tail inline, blocking the chat prompt until the
 run completed — defeating the background run registry. `_dispatchAgentRun` now
 launches, prints `🤖 run_xxx — running… (chat stays usable…)`, and RETURNS
@@ -1045,7 +1117,7 @@ Added: `engine/tools/filesystem_policy.py` (`FilesystemPolicy`, mirror of
 unconfigured tool-capable run reads/writes as before (non-breaking).
 
 ```
-build_task_runner._runner(m):                         [routes/agent_v1.py]
+build_task_runner._runner(m):                   [engine/task_runner.py]
   sandbox = get_execution_task_config()["sandbox"]      [config/execution.py]
   if sandbox.enforcement == "in_process":
      workdir = <sandbox.workdir.root>/<run_id>/work    (mkdir)

@@ -78,9 +78,9 @@ DEFAULT_ONESHOT_MAX_TOKENS = 16000
 class AnthropicProvider(BaseProvider):
     """Claude over `POST /v1/messages`.
 
-    Inherits the shared surface from `BaseProvider` (`needs_tool`,
-    `list_models`, `validate_config`, `get_facts_for_model`,
-    `_get_generation_params`, `_get_max_tokens`).
+    Inherits the shared surface from `BaseProvider` (`list_models`,
+    `get_facts_for_model`, `get_capabilities`, `_get_generation_params`,
+    `_get_max_tokens`).
     """
 
     name = "anthropic"
