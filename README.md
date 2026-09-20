@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.19.3-blue) ![Tests](https://img.shields.io/badge/tests-5882%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.19.3-blue) ![Tests](https://img.shields.io/badge/tests-5909%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -162,7 +162,8 @@ Asset cache busting (`?_t=<mtime>`) ensures CSS/JS/JSON changes are immediately 
 ### Multi-Provider Support
 - **Perplexity AI** - Real-time search with citations
 - **Google Gemini** - 3.5 Flash (default), 3.1 Pro Preview with 1M context, 3.1 Flash Lite, Gemma 4 (31B / 26B-A4B), Google Search Grounding
-- **OpenAI** - GPT-5.4-mini (default), GPT-5.5, GPT-5.5-pro, GPT-5.4/-pro/-nano, GPT-5.3-codex (dedicated `OpenAINativeProvider` with profile-driven routing)
+- **OpenAI** - GPT-5.6-terra (default), GPT-5.5/-pro, GPT-5.4/-pro/-mini/-nano, GPT-5.3-codex (dedicated `OpenAINativeProvider`; wire and tool mode resolved per model from `ModelFacts`)
+- **Anthropic (Claude)** - opt-in via the `[anthropic]` extra; Claude Opus 5, Sonnet 5, Haiku 4.5. ⚠️ **ships untested against the live API** — see the v1.19.1 notes
 - **OpenRouter** - Claude, Llama, 100+ models
 - **Local** - Ollama, vLLM, llama.cpp
 

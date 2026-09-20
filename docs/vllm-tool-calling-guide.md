@@ -463,11 +463,13 @@ The Harmony parsing issue has been fixed in vLLM (PR #30205). Check your vLLM ve
 ### Recommended Configuration
 
 > ⚠️ **ppxai overrides this today, whatever your vLLM version.** The
-> `openai/gpt-oss*` model profile pins `mode="prompt_based"`
-> (`ppxai/engine/model_profiles.py`), and profile mode takes precedence
-> over provider capabilities in `ppxai/engine/chat.py` — setting
+> `openai/gpt-oss*` facts row pins `tool_mode='prompt_based'`
+> (`ppxai/engine/model_facts.py:944`), and since ADR 0012 that row answers
+> the whole question at dispatch (`ppxai/engine/chat.py:646`,
+> `use_native_tools = facts.tool_mode != "prompt_based"`) — so setting
 > `native_tool_calling: true` for a gpt-oss model is accepted by config and
-> then ignored at dispatch. Upstream issue #23567 is still open. Treat the
+> then ignored. (This used to be a `model_profiles.py` profile; that module
+> was deleted in Item 65 and the pin moved to the facts table with it.) Upstream issue #23567 is still open. Treat the
 > block below as what to use *once that pin is lifted*, not as a working
 > configuration; the prompt-based block underneath is what actually runs.
 

@@ -446,7 +446,7 @@ Check the `native_tool_calling` capability flag in `ppxai-config.json` or see th
   - Responses API for Codex and Pro models
   - 404 auto-fallback between API paths
   - `PROMPT_BASED_MODEL_PREFIXES` routes o4-mini, gpt-4.1-mini to prompt-based mode
-- ✅ **Model profiles** — `ModelProfile` dataclass in `model_profiles.py` with 37 profiles
+- ✅ **Per-model facts** — `ModelFacts` dataclass in `model_facts.py` with 68 shipped rows (ADR 0012; superseded the 37-profile `ModelProfile` table, deleted in Item 65)
   - Per-model `tool_calling.mode`, `fallback_on_empty`, `strip_json_from_text`
   - `max_tool_iterations` per model (gemini: 25, sonar/codex-mini: 20)
 - ✅ **Codex native tool calling** — belt-and-suspenders: native API tools + tool hints in `instructions`

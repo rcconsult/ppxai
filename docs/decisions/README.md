@@ -13,13 +13,13 @@ Status is summarised; the record itself is authoritative.
 | [0005](0005-inspection-triplet.md) | Inspection Triplet for runtime observability | ✅ Accepted — implemented |
 | [0006](0006-content-block-schema-separation.md) | Engine-internal vs wire content schema | ✅ Accepted — implemented |
 | [0007](0007-completion-first-class-service.md) | Completion as a first-class service | 🟡 Proposed — step 1 shipped v1.18.8; **step 2 open** (revised 2026-08-15: one residual import, not SDK-blocking) |
-| [0008](0008-cross-tier-cost-and-resource-accounting.md) | Cross-tier cost + shared-resource accounting | 🟡 Proposed — **not implemented** (debt Item 49); premise updated 2026-08-15, tiers 2+3 merged |
+| [0008](0008-cross-tier-cost-and-resource-accounting.md) | Cross-tier cost + shared-resource accounting | ✅ Accepted 2026-09-06 — Option A implemented (`ppxai/usage_events.py`, taps in `engine/task_runner.py` + `engine/session.py`, rollup in `/cost`). **Debt Item 49 closed.** |
 | [0009](0009-task-execution-profiles.md) | Task execution profiles + web_search enrichment | ✅ Accepted — all four steps implemented v1.19.1 |
 | [0010](0010-config-shape-review.md) | Config shape: three axes | ✅ Implemented v1.19.1 — **clean break**, one deviation from the planned migration |
 | [0011](0011-command-taxonomy-streamline.md) | Command taxonomy (`/auto` · `/run` · `/task`) | ✅ Accepted — implemented v1.19.1 |
 | [0012](0012-wire-protocol-as-per-model-capability.md) | Per-model facts: one resolution system, wire protocol included | ✅ Implemented v1.19.1 — all four migration steps: unified `ModelFacts`/`ProviderCapabilities` split, `ProtocolHandler` + three wire handlers, `wire_protocol` routing, Perplexity on two wires. **Items 61 + 62 closed.** §6 (Anthropic Messages) designed, ships with `feat/anthropic-provider` |
 
-The open records are **0007 step 2** and **0008**; everything else is
+The only open record is **0007 step 2**; everything else is
 implemented. Numbering is sequential — the next record is `0013`.
 
 ## About these records

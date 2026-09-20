@@ -140,9 +140,10 @@ discoverable later.
   environmental noise or keep passing against a renamed surface while
   guarding nothing. Invert, retarget, or delete — and mutation-test the fence
 - [qwen-27b-vl-empirically-supported.md](qwen-27b-vl-empirically-supported.md) —
-  Qwen3.5/3.6-27B-FP8 empirically accept `image_url` content via vLLM;
-  ppxai's `model_profiles.py` lacked `supports_vision=True` entries for them
-  (fixed 2026-06-08, `model_profiles.py:481-505`)
+  the 27B-FP8 Qwen line empirically accepts `image_url` content via vLLM;
+  the shipped facts table lacked `supports_vision=True` entries for them
+  (fixed 2026-06-08; now `model_facts.py:706-719`, glob widened to
+  `Qwen/Qwen3.[568]-27B-FP8*` when 3.8 replaced 3.6 in place)
 - [web-assets-served-from-ppxai-home.md](web-assets-served-from-ppxai-home.md) —
   clients serve the web UI from `~/.ppxai/web`, not the repo source tree;
   editing `web/` in-repo has no effect on a running server without

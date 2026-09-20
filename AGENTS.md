@@ -524,11 +524,11 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
   - `openai_native.py` - Native OpenAI (GPT-5.x, o-series, Codex via Responses API)
   - `gemini.py` - Native Gemini (google-genai SDK; native function_call/function_response tool threading)
   - `openai_compat.py` - OpenAI-compatible (Perplexity, local/vLLM, custom)
-- `ppxai/engine/model_profiles.py` - Per-model behavioral profiles (tool calling, API routing)
+- `ppxai/engine/model_facts.py` - per-model facts: wire protocol, tool mode, vision, tier (ADR 0012; replaced the deleted `model_profiles.py` in Item 65)
 - `ppxai/engine/tools/` - Tool system with builtins + brace-counting JSON parser
   - `network_policy.py` - AC-2 egress allowlist (fail-closed, https-only, SSRF guard)
   - `filesystem_policy.py` - filesystem seal (per-run read/write jail; `execution.task.sandbox`)
-  - `agent_scoped_tools.py` - AC-1 per-run tool allowlist (`ScopedToolManager` chokepoint)
+- `ppxai/engine/agent_scoped_tools.py` - AC-1 per-run tool allowlist (`ScopedToolManager` chokepoint)
 - `ppxai/engine/agent_runs.py` - agent-platform run registry (`AgentRunRegistry`: lifecycle, events.jsonl, budgets, consent/ack/resume)
 - `ppxai/engine/agent_spec.py` / `agent_skill.py` - `--spec` / `--skill` loaders for the `/task` tier
 - `ppxai/server/` - HTTP/SSE server for IDE integration
