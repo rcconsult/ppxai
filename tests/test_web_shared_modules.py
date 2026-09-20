@@ -263,3 +263,168 @@ class TestPreviewUrlNormalisesWindowsPaths:
             "pathForUrl must not be assigned the raw filepath -- that is the "
             "pre-2026-09-13 form that broke every Windows preview"
         )
+
+
+class TestToolTurnWrapper:
+    """The per-turn tool strip, and the two clients staying the same shape.
+
+    v1.19.3. The engine emits one TOOL_GROUP_START per tool-loop ITERATION
+    (`engine/chat.py`), and an agentic run is usually one or two tools per
+    iteration -- so a twelve-iteration run stacked twelve collapsed strips
+    between the prompt and the answer, each inserted BEFORE the assistant
+    message and so pushing the answer further down. `.tool-turn` is the level
+    above: one strip per assistant turn.
+
+    Source-text assertions, matching this file's existing idiom: the web tree
+    is not executed under pytest, and the logic lives on a class in a
+    3,700-line file that cannot be instantiated standalone. The CSS collapse
+    contract has real DOM coverage in `tests/e2e/tool-turn.spec.ts`; what is
+    fenced HERE is the JS wiring that Playwright harness deliberately does not
+    reimplement -- when a turn opens, where groups nest, and when it closes.
+    """
+
+    def _app_js(self) -> str:
+        return (WEB_DIR / "app.js").read_text(encoding="utf-8")
+
+    def _vscode_js(self) -> str:
+        return (
+            WEB_DIR.parent.parent
+            / "vscode-extension"
+            / "media"
+            / "webview"
+            / "main.js"
+        ).read_text(encoding="utf-8")
+
+    def test_the_group_nests_inside_the_turn(self):
+        """A group appended to the container instead is the original bug."""
+        app = self._app_js()
+        assert "_ensureToolTurn()" in app, "the per-turn wrapper is gone"
+        assert "querySelector('.tool-turn-body').appendChild(groupEl)" in app, (
+            "iteration groups must be appended INTO the turn wrapper; "
+            "appending them to the messages container is exactly the "
+            "pre-v1.19.3 behaviour that stacked a strip per iteration"
+        )
+
+    def test_the_turn_is_closed_in_the_streaming_finally(self):
+        """A turn left open leaks the next turn's tools into this strip."""
+        app = self._app_js()
+        start = app.find("} finally {", app.find("this.state.currentAssistantMessage = msgEl;"))
+        assert start != -1, "streaming finally block not found"
+        block = app[start:start + 1200]
+        assert "this.endToolTurn()" in block, (
+            "endToolTurn() must run in the streaming `finally` so an "
+            "interrupted or failed turn still closes its strip"
+        )
+        assert block.find("this.endToolTurn()") < block.find(
+            "this.state.currentAssistantMessage = null"
+        ), (
+            "endToolTurn() must run BEFORE currentAssistantMessage is "
+            "cleared -- that reference is the strip's insertion anchor"
+        )
+
+    def test_clearing_the_transcript_drops_the_wrapper(self):
+        """Otherwise the next turn appends into a detached node."""
+        app = self._app_js()
+        start = app.find("async clearConversation()")
+        assert start != -1, "clearConversation not found"
+        block = app[start:start + 900]
+        assert "this._toolTurn = null" in block and "this._currentToolGroup = null" in block, (
+            "clearConversation must drop both the turn and group references; "
+            "they point at DOM it is about to discard, and a stale one "
+            "silently swallows the next turn's tool bubbles"
+        )
+
+    def test_tool_details_are_always_rendered(self):
+        """Verbose means 'start expanded', never 'render at all'."""
+        app = self._app_js()
+        assert "_fillToolBubble(" in app, "the shared bubble builder is gone"
+        start = app.find("_fillToolBubble(msgEl, icon, name, payload) {")
+        assert start != -1, "_fillToolBubble definition not found"
+        block = app[start:app.find("showToolCall(data) {", start)]
+        assert "const hasPayload = Boolean(payload);" in block, (
+            "whether to render details must depend on the PAYLOAD, not on "
+            "toolsVerbose -- gating on verbose while rendering the chevron "
+            "unconditionally is what made a click reveal nothing"
+        )
+        assert "msgEl.classList.add('expanded')" in block, (
+            "verbose mode must pre-expand the bubble"
+        )
+
+    def test_the_verbose_gated_details_have_not_returned(self):
+        """Guards the exact pre-fix condition."""
+        app = self._app_js()
+        assert "if (this.state.toolsVerbose && data.arguments)" not in app, (
+            "this is the pre-v1.19.3 form: details built only in verbose "
+            "mode while the chevron rendered either way"
+        )
+        assert "if (this.state.toolsVerbose && data.result)" not in app, (
+            "same defect on the result bubble"
+        )
+
+    def test_the_disclosure_is_keyboard_reachable(self):
+        """New interactive UI does not get to be mouse-only."""
+        app = self._app_js()
+        assert "_wireDisclosure(header, target, collapsedClass)" in app, (
+            "the shared disclosure helper is gone"
+        )
+        start = app.find("_wireDisclosure(header, target, collapsedClass) {")
+        block = app[start:start + 900]
+        for needed in ("aria-expanded", "keydown", "'Enter'"):
+            assert needed in block, (
+                f"_wireDisclosure must set {needed!r}; there was no "
+                "aria-expanded anywhere in the web app before this, and "
+                "repeating that for new UI is the thing to avoid"
+            )
+
+    def test_the_inline_onclick_toggle_is_gone(self):
+        """The old bubbles carried behaviour inside an HTML string."""
+        app = self._app_js()
+        assert "onclick=\"this.parentElement.classList.toggle('expanded')\"" not in app, (
+            "inline onclick cannot set aria-expanded and cannot be reached "
+            "by keyboard; the listener in _wireDisclosure replaces it"
+        )
+
+    def test_vscode_has_the_same_wrapper(self):
+        """A capability in one client only is how three shipped half-missing.
+
+        `docs/lessons/parity-harness-must-know-every-client.md` -- the web and
+        VSCode transcripts are line-for-line twins, so the wrapper has to land
+        in both or they diverge on the next edit.
+        """
+        vs = self._vscode_js()
+        assert "function ensureToolTurn()" in vs, (
+            "the VSCode webview needs the same per-turn wrapper as the web app"
+        )
+        assert "function endToolTurn()" in vs
+        assert "querySelector('.tool-turn-body').appendChild(groupEl)" in vs, (
+            "VSCode must nest iteration groups into the turn wrapper too"
+        )
+
+    def test_vscode_closes_the_turn_on_both_exits(self):
+        """endResponse AND error -- a failed turn still has to close."""
+        vs = self._vscode_js()
+        for case in ("case 'endResponse':", "case 'error':"):
+            start = vs.find(case)
+            assert start != -1, f"{case} not found in the webview dispatcher"
+            assert "endToolTurn();" in vs[start:start + 400], (
+                f"{case} must close the tool turn, or an interrupted loop "
+                "leaves the strip open for the next turn to append into"
+            )
+
+    def test_both_clients_style_the_wrapper(self):
+        """Markup with no stylesheet collapses into an always-open list."""
+        web_css = (WEB_DIR / "styles.css").read_text(encoding="utf-8")
+        vs_css = (
+            WEB_DIR.parent.parent
+            / "vscode-extension"
+            / "media"
+            / "webview"
+            / "styles.css"
+        ).read_text(encoding="utf-8")
+        for name, css in (("web", web_css), ("vscode", vs_css)):
+            assert ".tool-turn.collapsed .tool-turn-body" in css, (
+                f"{name} stylesheet is missing the rule that actually hides a "
+                "collapsed turn -- without it the wrapper renders but never "
+                "collapses, and the transcript is as noisy as before"
+            )
+

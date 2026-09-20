@@ -2133,6 +2133,10 @@ class PpxaiApp {
             this.state.isSending = false;
             this.elements.streamingBadge.classList.add('hidden');
             this.state.currentAbortController = null;
+            // v1.19.3: close the per-turn tool strip BEFORE dropping the
+            // anchor it was inserted against. Runs on error and abort too, so
+            // an interrupted tool loop cannot leak into the next turn.
+            this.endToolTurn();
             this.state.currentAssistantMessage = null;
             // The usage badge shows the CUMULATIVE session total, so fetch it
             // via GET /usage (authoritative running total). STREAM_END metadata
@@ -2251,10 +2255,24 @@ class PpxaiApp {
                 }
                 break;
 
-            case 'agent_iteration':
+            case 'agent_iteration': {
+                // v1.19.3: this used to add its own system message per
+                // iteration, doubling the strips it was already competing
+                // with. Inside a tool turn it is progress on the strip; with
+                // no strip (no tools used) the old message is still the only
+                // signal the loop is advancing.
                 const iter = event.data;
-                this.showSystemMessage(`━━━ Iteration ${iter.iteration || 0}/${iter.max || 10} ━━━`);
+                const turnLabel = this._toolTurn
+                    ? this._toolTurn.el.querySelector('.tool-turn-label')
+                    : null;
+                if (turnLabel) {
+                    turnLabel.textContent =
+                        `Working… step ${iter.iteration || 0}/${iter.max || 10}`;
+                } else {
+                    this.showSystemMessage(`━━━ Iteration ${iter.iteration || 0}/${iter.max || 10} ━━━`);
+                }
                 break;
+            }
 
             case 'agent_complete':
                 this.showSystemMessage('✅ Task completed!');
@@ -2648,8 +2666,19 @@ class PpxaiApp {
         body.className = 'tool-group-body';
         groupEl.appendChild(body);
 
-        // Insert before current assistant message
-        if (this.state.currentAssistantMessage) {
+        // v1.19.3: nest inside the per-TURN wrapper. The engine emits one
+        // group per tool-loop ITERATION (engine/chat.py TOOL_GROUP_START), and
+        // an agentic run is usually one or two tools per iteration — so twelve
+        // iterations used to stack twelve strips between the prompt and the
+        // answer, each one pushing the answer further down. The wrapper is the
+        // missing level above that.
+        const turnEl = this._ensureToolTurn();
+        if (turnEl) {
+            turnEl.querySelector('.tool-turn-body').appendChild(groupEl);
+            this._toolTurn.groups += 1;
+            this._toolTurn.tools += count;
+            this._updateToolTurnHeader();
+        } else if (this.state.currentAssistantMessage) {
             this.elements.messagesContainer.insertBefore(groupEl, this.state.currentAssistantMessage);
         } else {
             this.elements.messagesContainer.appendChild(groupEl);
@@ -2676,27 +2705,185 @@ class PpxaiApp {
             statusEl.className = `tool-group-status ${statusClass}`;
         }
 
+        // v1.19.3: a single failed iteration marks the whole turn.
+        if (this._toolTurn) {
+            if (!allOk) this._toolTurn.failed = true;
+            if (tools.length) this._toolTurn.names.push(...tools);
+            this._updateToolTurnHeader();
+        }
+
         this._currentToolGroup = null;
         this.scrollToBottom();
+    }
+
+    /**
+     * Make one element with a class and optional text (v1.19.3 helper).
+     *
+     * `textContent`, never `innerHTML`: these strips carry tool names and
+     * arguments straight from the model, and a builder that cannot express
+     * markup cannot be turned into an injection by a later edit.
+     */
+    _el(tag, className, text) {
+        const el = document.createElement(tag);
+        if (className) el.className = className;
+        if (text !== undefined) el.textContent = text;
+        return el;
+    }
+
+    /**
+     * Click + Enter/Space toggling for a collapsible strip (v1.19.3).
+     *
+     * Everything collapsible in this transcript was mouse-only before, with
+     * no `aria-expanded` anywhere in the web app. New interactive UI does not
+     * get to repeat that.
+     */
+    _wireDisclosure(header, target, collapsedClass) {
+        const toggle = () => {
+            const collapsed = target.classList.toggle(collapsedClass);
+            const open = collapsedClass === 'collapsed' ? !collapsed : collapsed;
+            header.setAttribute('aria-expanded', String(open));
+        };
+        header.addEventListener('click', toggle);
+        header.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault();
+                toggle();
+            }
+        });
+    }
+
+    /**
+     * Per-turn tool wrapper (v1.19.3).
+     *
+     * One collapsed strip per assistant turn — `14 tools · 8 steps ✓` —
+     * holding every iteration group of that turn. Created lazily on the first
+     * `tool_group_start`, finalised by `endToolTurn()` in the streaming
+     * `finally`, so an interrupted or failed turn still closes cleanly.
+     *
+     * Returns null when there is no assistant message to anchor to (a tool
+     * event outside a chat turn); callers then fall back to the old ungrouped
+     * placement rather than dropping the bubble.
+     */
+    _ensureToolTurn() {
+        if (this._toolTurn) return this._toolTurn.el;
+        if (!this.state.currentAssistantMessage) return null;
+
+        const el = this._el('div', 'tool-turn collapsed');
+
+        const header = this._el('div', 'tool-turn-header');
+        header.setAttribute('role', 'button');
+        header.setAttribute('tabindex', '0');
+        header.setAttribute('aria-expanded', 'false');
+
+        const toggleIcon = this._el('span', 'tool-turn-toggle', '▶');
+        toggleIcon.setAttribute('aria-hidden', 'true');
+        header.appendChild(toggleIcon);
+        header.appendChild(this._el('span', 'tool-turn-label', 'Using tools…'));
+        header.appendChild(this._el('span', 'tool-turn-status'));
+
+        const body = this._el('div', 'tool-turn-body');
+        body.id = `tool-turn-body-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+        header.setAttribute('aria-controls', body.id);
+
+        this._wireDisclosure(header, el, 'collapsed');
+
+        el.appendChild(header);
+        el.appendChild(body);
+        this.elements.messagesContainer.insertBefore(el, this.state.currentAssistantMessage);
+
+        this._toolTurn = { el, groups: 0, tools: 0, names: [], failed: false };
+        return el;
+    }
+
+    /** Rewrite the strip's label from the running counts. */
+    _updateToolTurnHeader() {
+        if (!this._toolTurn) return;
+        const { el, groups, tools, names, failed } = this._toolTurn;
+        const label = el.querySelector('.tool-turn-label');
+        const statusEl = el.querySelector('.tool-turn-status');
+        if (label) {
+            const unique = [...new Set(names)];
+            // Name the tools while they still fit; past four the names stop
+            // being a summary and the counts carry it.
+            const detail = unique.length && unique.length <= 4 ? ` · ${unique.join(', ')}` : '';
+            label.textContent =
+                `${tools} tool${tools === 1 ? '' : 's'} · ` +
+                `${groups} step${groups === 1 ? '' : 's'}${detail}`;
+        }
+        if (statusEl && this._toolTurnClosed) {
+            statusEl.textContent = failed ? '✗' : '✓';
+            statusEl.className = `tool-turn-status ${failed ? 'failure' : 'success'}`;
+        }
+    }
+
+    /**
+     * Close the per-turn wrapper. Called from the streaming `finally`, so it
+     * runs on success, on error and on abort alike — a turn interrupted
+     * mid-loop must not leave the next turn appending into this strip.
+     */
+    endToolTurn() {
+        this._currentToolGroup = null;
+        if (!this._toolTurn) return;
+        this._toolTurnClosed = true;
+        this._updateToolTurnHeader();
+        this._toolTurnClosed = false;
+        this._toolTurn = null;
+    }
+
+    /**
+     * Fill one tool bubble: header + details, details ALWAYS built (v1.19.3).
+     *
+     * The old form emitted `.tool-details` only when `toolsVerbose` was on
+     * while the ▶ chevron rendered unconditionally — so with verbose off,
+     * clicking a bubble toggled `.expanded` and revealed nothing. The VSCode
+     * webview never had that bug (`media/webview/main.js`): it always renders
+     * the details and treats verbose as "start expanded". This matches it.
+     *
+     * A bubble with no payload at all gets no chevron and no keyboard focus,
+     * because there is genuinely nothing behind it.
+     */
+    _fillToolBubble(msgEl, icon, name, payload) {
+        const hasPayload = Boolean(payload);
+
+        const header = this._el('div', hasPayload ? 'tool-header' : 'tool-header is-static');
+        const iconEl = this._el('span', 'tool-icon', icon);
+        iconEl.setAttribute('aria-hidden', 'true');
+        header.appendChild(iconEl);
+        header.appendChild(this._el('span', 'tool-name', name));
+        msgEl.appendChild(header);
+
+        if (!hasPayload) return;
+
+        const chevron = this._el('span', 'tool-expand', '▶');
+        chevron.setAttribute('aria-hidden', 'true');
+        header.appendChild(chevron);
+
+        const details = this._el('div', 'tool-details');
+        details.id = `tool-details-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+        details.appendChild(this._el('pre', null, payload));
+        msgEl.appendChild(details);
+
+        header.setAttribute('role', 'button');
+        header.setAttribute('tabindex', '0');
+        header.setAttribute('aria-controls', details.id);
+        header.setAttribute('aria-expanded', 'false');
+
+        if (this.state.toolsVerbose) {
+            // Verbose means "start expanded", not "render at all".
+            msgEl.classList.add('expanded');
+            header.setAttribute('aria-expanded', 'true');
+        }
+        this._wireDisclosure(header, msgEl, 'expanded');
     }
 
     showToolCall(data) {
         const msgEl = document.createElement('div');
         msgEl.className = 'message tool-message';
 
-        let content = `<div class="tool-header" onclick="this.parentElement.classList.toggle('expanded')">
-            <span class="tool-icon">🔧</span>
-            <span class="tool-name">${escapeHtml(data.tool || 'Unknown tool')}</span>
-            <span class="tool-expand">▶</span>
-        </div>`;
-
-        if (this.state.toolsVerbose && data.arguments) {
-            content += `<div class="tool-details">
-                <pre>${escapeHtml(typeof data.arguments === 'string' ? data.arguments : JSON.stringify(data.arguments, null, 2))}</pre>
-            </div>`;
-        }
-
-        msgEl.innerHTML = content;
+        const args = data.arguments === undefined || data.arguments === null
+            ? ''
+            : (typeof data.arguments === 'string' ? data.arguments : JSON.stringify(data.arguments, null, 2));
+        this._fillToolBubble(msgEl, '🔧', data.tool || 'Unknown tool', args);
 
         // v1.16.0: Append inside tool group if active, otherwise insert before assistant message
         if (this._currentToolGroup) {
@@ -2717,20 +2904,12 @@ class PpxaiApp {
         const msgEl = document.createElement('div');
         msgEl.className = 'message tool-message tool-result';
 
-        let content = `<div class="tool-header" onclick="this.parentElement.classList.toggle('expanded')">
-            <span class="tool-icon">📋</span>
-            <span class="tool-name">${escapeHtml(data.tool || 'Result')}</span>
-            <span class="tool-expand">▶</span>
-        </div>`;
-
-        if (this.state.toolsVerbose && data.result) {
-            const result = typeof data.result === 'string' ? data.result : JSON.stringify(data.result, null, 2);
-            content += `<div class="tool-details">
-                <pre>${escapeHtml(result.slice(0, 2000))}${result.length > 2000 ? '\n...(truncated)' : ''}</pre>
-            </div>`;
+        let result = '';
+        if (data.result !== undefined && data.result !== null) {
+            result = typeof data.result === 'string' ? data.result : JSON.stringify(data.result, null, 2);
+            if (result.length > 2000) result = `${result.slice(0, 2000)}\n...(truncated)`;
         }
-
-        msgEl.innerHTML = content;
+        this._fillToolBubble(msgEl, '📋', data.tool || 'Result', result);
 
         // v1.16.0: Append inside tool group if active
         if (this._currentToolGroup) {
@@ -3011,6 +3190,11 @@ class PpxaiApp {
     async clearConversation() {
         try {
             await this.commandDispatcher._dispatchToFactory('clear', '');
+            // v1.19.3: the wrapper and group point at DOM we are about to
+            // discard; without this the next turn appends into a detached node
+            // and its tools vanish from the transcript.
+            this._toolTurn = null;
+            this._currentToolGroup = null;
             this.elements.messagesContainer.innerHTML = `
                 <div class="welcome-message">
                     <h2>Welcome to ppxai</h2>

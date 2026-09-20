@@ -566,6 +566,80 @@ body {
 }
 
 /* v1.16.0: Tool group */
+/* Tool turn — one strip per assistant turn (v1.19.3)
+ *
+ * The level above `.tool-group`: the engine emits one group per tool-loop
+ * ITERATION, so a long agentic run stacked a dozen strips between the prompt
+ * and the answer. Mirrors ppxai/web/styles.css so both clients read alike;
+ * colours come from the VS Code theme rather than ppxai's own variables.
+ */
+.tool-turn {
+    border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.35));
+    border-radius: 6px;
+    margin: 6px 0;
+    background: var(--vscode-textBlockQuote-background, rgba(127, 127, 127, 0.05));
+    overflow: hidden;
+}
+
+.tool-turn-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 11px;
+    opacity: 0.85;
+    user-select: none;
+}
+
+.tool-turn-header:hover {
+    opacity: 1;
+}
+
+.tool-turn-header:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder, #007acc);
+    outline-offset: -1px;
+    opacity: 1;
+}
+
+.tool-turn-toggle {
+    font-size: 9px;
+    transition: transform 0.2s;
+}
+
+.tool-turn:not(.collapsed) .tool-turn-toggle {
+    transform: rotate(90deg);
+}
+
+.tool-turn-label {
+    font-weight: 500;
+}
+
+.tool-turn-status {
+    margin-left: auto;
+}
+
+.tool-turn-status.success {
+    color: var(--vscode-testing-iconPassed, #388a34);
+}
+
+.tool-turn-status.failure {
+    color: var(--vscode-testing-iconFailed, #be1100);
+}
+
+.tool-turn-body {
+    padding: 0 6px 4px;
+}
+
+.tool-turn.collapsed .tool-turn-body {
+    display: none;
+}
+
+.tool-turn-body .tool-group {
+    margin: 2px 0;
+    background: transparent;
+}
+
 .tool-group {
     border-left: 2px solid var(--vscode-editorInfo-foreground, #007acc);
     margin: 4px 0;

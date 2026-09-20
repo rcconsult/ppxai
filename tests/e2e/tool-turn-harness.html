@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tool Turn CSS Harness</title>
+    <!-- The REAL stylesheet. This harness exists to test that file's collapse
+         contract, so loading a copy would defeat the point: a change to
+         styles.css must be able to fail these tests. -->
+    <link rel="stylesheet" href="../../ppxai/web/styles.css">
+</head>
+<body>
+<div id="messagesContainer"></div>
+<div id="status">Ready</div>
+
+<script>
+/**
+ * Build the exact DOM that `_ensureToolTurn()` / `_fillToolBubble()` emit in
+ * ppxai/web/app.js, so the stylesheet is exercised against the real markup.
+ *
+ * What this harness DOES cover: the CSS collapse contract -- which elements
+ * are visible in which state, for the turn wrapper, the iteration group and
+ * the individual bubble.
+ *
+ * What it does NOT cover: the JS that decides when to create, nest and close
+ * a turn. That logic lives on the app class in app.js, which cannot be
+ * instantiated outside the full page; it is fenced by the source-text
+ * assertions in tests/test_web_shared_modules.py instead. Keep that split in
+ * mind before reading a green run here as "tool rendering works".
+ *
+ * Built with createElement/textContent throughout, mirroring app.js -- the
+ * markup under test is the markup a reader can compare line for line.
+ */
+function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+}
+
+window.testHelpers = {
+    /** One turn wrapper containing `groups` groups of `perGroup` bubbles. */
+    buildTurn(groups = 2, perGroup = 2, { withPayload = true } = {}) {
+        const container = document.getElementById('messagesContainer');
+        container.textContent = '';
+
+        const turn = el('div', 'tool-turn collapsed');
+
+        const header = el('div', 'tool-turn-header');
+        header.setAttribute('role', 'button');
+        header.setAttribute('tabindex', '0');
+        header.setAttribute('aria-expanded', 'false');
+        header.appendChild(el('span', 'tool-turn-toggle', '▶'));
+        header.appendChild(el('span', 'tool-turn-label', '4 tools · 2 steps'));
+        header.appendChild(el('span', 'tool-turn-status'));
+
+        const body = el('div', 'tool-turn-body');
+        body.id = 'turn-body';
+        header.setAttribute('aria-controls', body.id);
+
+        header.addEventListener('click', () => {
+            const collapsed = turn.classList.toggle('collapsed');
+            header.setAttribute('aria-expanded', String(!collapsed));
+        });
+
+        for (let g = 0; g < groups; g++) {
+            const group = el('div', 'tool-group collapsed');
+            const gHeader = el('div', 'tool-group-header');
+            gHeader.appendChild(el('span', 'tool-group-toggle', '▶'));
+            gHeader.appendChild(el('span', 'tool-group-label', 'Iteration ' + (g + 1)));
+            gHeader.appendChild(el('span', 'tool-group-status'));
+            gHeader.addEventListener('click', () => group.classList.toggle('collapsed'));
+            group.appendChild(gHeader);
+
+            const gBody = el('div', 'tool-group-body');
+            for (let b = 0; b < perGroup; b++) {
+                gBody.appendChild(this.makeBubble(withPayload));
+            }
+            group.appendChild(gBody);
+            body.appendChild(group);
+        }
+
+        turn.appendChild(header);
+        turn.appendChild(body);
+        container.appendChild(turn);
+        return turn;
+    },
+
+    /** One tool bubble, with or without a payload to disclose. */
+    makeBubble(withPayload = true) {
+        const msg = el('div', 'message tool-message');
+
+        const header = el('div', withPayload ? 'tool-header' : 'tool-header is-static');
+        header.appendChild(el('span', 'tool-icon', '🔧'));
+        header.appendChild(el('span', 'tool-name', 'read_file'));
+        msg.appendChild(header);
+
+        if (withPayload) {
+            header.appendChild(el('span', 'tool-expand', '▶'));
+
+            const details = el('div', 'tool-details');
+            details.appendChild(el('pre', null, '{"path": "a.txt"}'));
+            msg.appendChild(details);
+
+            header.setAttribute('role', 'button');
+            header.setAttribute('tabindex', '0');
+            header.setAttribute('aria-expanded', 'false');
+            header.addEventListener('click', () => {
+                const expanded = msg.classList.toggle('expanded');
+                header.setAttribute('aria-expanded', String(expanded));
+            });
+        }
+        return msg;
+    },
+
+    /** A standalone bubble, appended to the transcript. */
+    buildBubble(withPayload = true) {
+        const container = document.getElementById('messagesContainer');
+        container.textContent = '';
+        const msg = this.makeBubble(withPayload);
+        container.appendChild(msg);
+        return msg;
+    },
+
+    isVisible(sel) {
+        const node = document.querySelector(sel);
+        if (!node) return null;
+        return getComputedStyle(node).display !== 'none';
+    },
+};
+</script>
+</body>
+</html>

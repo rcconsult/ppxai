@@ -1172,6 +1172,94 @@ body {
     margin: 2px 0;
     border-left: none;
 }
+/* Tool turn — one strip per assistant turn (v1.19.3)
+ *
+ * The level above `.tool-group`. The engine emits one group per tool-loop
+ * ITERATION, and an agentic run is usually one or two tools per iteration, so
+ * a long run stacked a dozen strips between the prompt and the answer. This
+ * wraps all of them in one collapsed row.
+ *
+ * Deliberately heavier than `.tool-group` (solid border, not a left rule) so
+ * the nesting reads at a glance: outer box = this turn's tool work, inner
+ * rules = the steps inside it.
+ */
+.tool-turn {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin: 6px 0;
+    background: var(--bg-secondary);
+    overflow: hidden;
+}
+
+.tool-turn-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-muted);
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.tool-turn-header:hover {
+    color: var(--text-primary);
+}
+
+/* Keyboard users get the same affordance as the pointer hover. */
+.tool-turn-header:focus-visible,
+.tool-header:focus-visible {
+    outline: 2px solid var(--info-color);
+    outline-offset: -2px;
+    color: var(--text-primary);
+}
+
+.tool-turn-toggle {
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+
+.tool-turn:not(.collapsed) .tool-turn-toggle {
+    transform: rotate(90deg);
+}
+
+.tool-turn-label {
+    font-weight: 500;
+}
+
+.tool-turn-status {
+    margin-left: auto;
+}
+
+.tool-turn-status.success {
+    color: var(--success-color);
+}
+
+.tool-turn-status.failure {
+    color: var(--error-color);
+}
+
+.tool-turn-body {
+    padding: 0 8px 6px;
+}
+
+.tool-turn.collapsed .tool-turn-body {
+    display: none;
+}
+
+/* Inside the wrapper the group's own left rule is the step marker, so drop
+ * the outer margin that separated free-standing groups. */
+.tool-turn-body .tool-group {
+    margin: 2px 0;
+    background: transparent;
+}
+
+/* A bubble with no payload has nothing to disclose: no pointer, no chevron. */
+.tool-header.is-static {
+    cursor: default;
+}
+
 
 /* Context message */
 .context-badge {

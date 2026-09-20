@@ -1055,6 +1055,7 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'endResponse':
+            endToolTurn();  // v1.19.3
             typingIndicator.classList.remove('visible');
             streamingBadge.style.display = 'none';  // Hide streaming indicator
             // v1.13.2: Reset flags after response (matches web app pattern)
@@ -1070,6 +1071,7 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'error':
+            endToolTurn();  // v1.19.3 — a failed turn still closes its strip
             typingIndicator.classList.remove('visible');
             streamingBadge.style.display = 'none';  // Hide streaming indicator
             addMessage('error', message.content, false);
@@ -1624,6 +1626,98 @@ function closeReasoningSection(messageEl) {
 
 // v1.16.0: Tool group state
 let currentToolGroup = null;
+// v1.19.3: per-TURN wrapper above the per-iteration group. The engine emits
+// one group per tool-loop ITERATION, and an agentic run is usually one or two
+// tools per iteration — so a long run stacked a dozen strips between the
+// prompt and the answer. Ported from the web app (ppxai/web/app.js) to keep
+// the two clients' transcripts the same shape.
+let currentToolTurn = null;
+
+/** One element with a class and optional text. textContent, never innerHTML. */
+function toolEl(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text !== undefined) el.textContent = text;
+    return el;
+}
+
+/**
+ * Create the per-turn strip on demand, or return the open one.
+ *
+ * Anchored before the typing indicator, exactly where the groups used to go,
+ * so ordering against the streaming answer is unchanged.
+ */
+function ensureToolTurn() {
+    if (currentToolTurn) return currentToolTurn.el;
+
+    const el = toolEl('div', 'tool-turn collapsed');
+
+    const header = toolEl('div', 'tool-turn-header');
+    header.setAttribute('role', 'button');
+    header.setAttribute('tabindex', '0');
+    header.setAttribute('aria-expanded', 'false');
+
+    const toggleIcon = toolEl('span', 'tool-turn-toggle', '\u25B6');
+    toggleIcon.setAttribute('aria-hidden', 'true');
+    header.appendChild(toggleIcon);
+    header.appendChild(toolEl('span', 'tool-turn-label', 'Using tools...'));
+    header.appendChild(toolEl('span', 'tool-turn-status'));
+
+    const body = toolEl('div', 'tool-turn-body');
+    body.id = 'tool-turn-body-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
+    header.setAttribute('aria-controls', body.id);
+
+    function toggle() {
+        const collapsed = el.classList.toggle('collapsed');
+        header.setAttribute('aria-expanded', String(!collapsed));
+    }
+    header.addEventListener('click', toggle);
+    header.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            toggle();
+        }
+    });
+
+    el.appendChild(header);
+    el.appendChild(body);
+    messagesContainer.insertBefore(el, typingIndicator);
+
+    currentToolTurn = { el: el, groups: 0, tools: 0, names: [], failed: false };
+    return el;
+}
+
+/** Rewrite the strip's label from the running counts. */
+function updateToolTurnHeader(closed) {
+    if (!currentToolTurn) return;
+    const label = currentToolTurn.el.querySelector('.tool-turn-label');
+    const statusEl = currentToolTurn.el.querySelector('.tool-turn-status');
+    if (label) {
+        const unique = currentToolTurn.names.filter(function (n, i, a) {
+            return a.indexOf(n) === i;
+        });
+        const detail = unique.length && unique.length <= 4 ? ' \u00B7 ' + unique.join(', ') : '';
+        label.textContent =
+            currentToolTurn.tools + ' tool' + (currentToolTurn.tools === 1 ? '' : 's') +
+            ' \u00B7 ' + currentToolTurn.groups + ' step' +
+            (currentToolTurn.groups === 1 ? '' : 's') + detail;
+    }
+    if (statusEl && closed) {
+        statusEl.textContent = currentToolTurn.failed ? '\u2717' : '\u2713';
+        statusEl.className = 'tool-turn-status ' + (currentToolTurn.failed ? 'failure' : 'success');
+    }
+}
+
+/**
+ * Close the strip. Called from `endResponse` AND `error`, so an interrupted
+ * tool loop cannot leave the next turn appending into this one.
+ */
+function endToolTurn() {
+    currentToolGroup = null;
+    if (!currentToolTurn) return;
+    updateToolTurnHeader(true);
+    currentToolTurn = null;
+}
 
 function onToolGroupStart(data) {
     const iteration = data?.iteration || 0;
@@ -1645,7 +1739,13 @@ function onToolGroupStart(data) {
     body.className = 'tool-group-body';
     groupEl.appendChild(body);
 
-    messagesContainer.insertBefore(groupEl, typingIndicator);
+    // v1.19.3: into the per-turn strip rather than straight into the transcript.
+    const turnEl = ensureToolTurn();
+    turnEl.querySelector('.tool-turn-body').appendChild(groupEl);
+    currentToolTurn.groups += 1;
+    currentToolTurn.tools += count;
+    updateToolTurnHeader(false);
+
     currentToolGroup = groupEl;
     scrollToBottom();
 }
@@ -1666,6 +1766,15 @@ function onToolGroupEnd(data) {
         statusEl.textContent = status;
         statusEl.className = 'tool-group-status ' + statusClass;
     }
+    // v1.19.3: one failed iteration marks the whole turn.
+    if (currentToolTurn) {
+        if (!allOk) currentToolTurn.failed = true;
+        if (tools.length) {
+            currentToolTurn.names = currentToolTurn.names.concat(tools);
+        }
+        updateToolTurnHeader(false);
+    }
+
     currentToolGroup = null;
     scrollToBottom();
 }
