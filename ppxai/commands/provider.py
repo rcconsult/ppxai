@@ -15,7 +15,7 @@ from ..config import (  # noqa: F401 — patched/read by tests
     get_coding_model,
     get_provider_config,
 )
-from ..config.facts_config import model_fact_overrides
+from ..engine.facts_config import model_fact_overrides
 from ..engine.model_facts import (
     UNMEASURED,
     apply_overrides,
@@ -367,7 +367,7 @@ def handle_model_info(context: CommandContext, provider: str, model_id: str) -> 
         return "built-in"
 
     def _row(field: str) -> str:
-        return "{:<20s} ({})".format(str(getattr(effective, field)), _source(field))
+        return f"{str(getattr(effective, field)):<20s} ({_source(field)})"
 
     # Count active hints.
     #

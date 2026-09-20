@@ -37,7 +37,7 @@ import json
 
 import pytest
 
-from ppxai.config import facts_config as fcmod
+from ppxai.engine import facts_config as fcmod
 from ppxai.engine.model_facts import shipped_facts_for_model
 from ppxai.engine.providers.openai_native import OpenAINativeProvider
 from ppxai.engine.providers.perplexity import PerplexityProvider

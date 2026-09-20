@@ -16,7 +16,6 @@ import openai
 from openai import OpenAI
 
 from ...common.logger import get_logger
-from ...config import facts_config as _facts_config
 from ...config import (
     get_extra_body,
     get_generation_params,
@@ -24,6 +23,7 @@ from ...config import (
     get_reasoning_trigger,
 )
 from ...config.tls import tls_verify
+from .. import facts_config as _facts_config
 from ..model_facts import ModelFacts, shipped_facts_for_model
 from ..types import Event, Message, ModelInfo, ProviderCapabilities, UsageStats
 from .wire import get_handler

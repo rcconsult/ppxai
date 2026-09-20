@@ -241,7 +241,7 @@ class TestOperatorOverrides:
     """
 
     def test_an_operator_can_declare_vision_for_an_unknown_model(self, monkeypatch):
-        import ppxai.config.facts_config as fc
+        import ppxai.engine.facts_config as fc
 
         monkeypatch.setattr(
             fc, "model_fact_overrides",
@@ -256,7 +256,7 @@ class TestOperatorOverrides:
     def test_an_operator_override_beats_the_shipped_row(self, monkeypatch):
         """The other direction, and the one with teeth: turning vision OFF
         for a model we ship as vision-capable."""
-        import ppxai.config.facts_config as fc
+        import ppxai.engine.facts_config as fc
 
         shipped = shipped_facts_for_model("gpt-5.2")
         assert shipped.supports_vision is True, "fixture drifted: gpt-5.2 was vision"

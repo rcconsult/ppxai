@@ -18,13 +18,13 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from ..config.execution import get_execution_run_config
-from ..config.facts_config import apply_provider_overrides, resolve_model_facts
 
 #: Imported as a MODULE, not by name: `_providers.get_provider_class` resolves
 #: at CALL time, so a test patching `providers.get_provider_class` on the
 #: source module still takes effect. That is the only reason this pair used to
 #: be a function-level (lazy) import -- there is no cycle here.
 from . import providers as _providers
+from .facts_config import apply_provider_overrides, resolve_model_facts
 from .model_facts import ModelFacts, can_drive_a_tool_loop, shipped_facts_for_model
 from .providers.openai_compat import OpenAICompatibleProvider
 

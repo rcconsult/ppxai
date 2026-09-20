@@ -342,7 +342,7 @@ class TestTypeBasedProviders:
     ):
         import json
 
-        import ppxai.config.facts_config as fc
+        import ppxai.engine.facts_config as fc
         from ppxai.config import execution as exec_mod
 
         cfg = tmp_path / "ppxai-config.json"

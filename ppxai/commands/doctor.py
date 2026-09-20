@@ -36,13 +36,13 @@ import ppxai.config as _config
 
 from ..config import execution as _execution
 from ..config import find_config_file
-from ..config.facts_config import (
+from ..config.tls import resolve_tls_verify
+from ..engine.facts_config import (
     incomplete_blocks_in_config,
     migration_plan,
     misplaced_fields_in_config,
     wrong_typed_fields_in_config,
 )
-from ..config.tls import resolve_tls_verify
 from ..engine.facts_resolver import get_effective_oneshot_path
 from ..engine.model_deprecations import (
     RECOMMENDED_DEFAULTS,

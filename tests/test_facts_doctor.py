@@ -29,7 +29,7 @@ import json
 import pytest
 
 from ppxai.commands import doctor as doctor_mod
-from ppxai.config import facts_config as fcmod
+from ppxai.engine import facts_config as fcmod
 from ppxai.engine import facts_resolver as frmod
 
 

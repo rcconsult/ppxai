@@ -52,7 +52,8 @@ from __future__ import annotations
 from dataclasses import fields as dataclass_fields
 from typing import Any
 
-from ..engine.model_facts import (
+from ..config.loader import _load_json_config, find_config_file
+from .model_facts import (
     FACT_FIELDS,
     LEGACY_KEY_TRANSLATIONS,
     PROVIDER_FACT_FIELDS,
@@ -61,8 +62,7 @@ from ..engine.model_facts import (
     ToolMode,
     apply_overrides,
 )
-from ..engine.types import ProviderCapabilities
-from .loader import _load_json_config, find_config_file
+from .types import ProviderCapabilities
 
 #: The one block the resolver reads. Legacy names are reported by `/doctor`,
 #: never resolved.
@@ -290,13 +290,13 @@ def _each_block(cfg_providers: dict[str, Any]):
     for pname, pblock in cfg_providers.items():
         if not isinstance(pblock, dict):
             continue
-        yield "providers.{}".format(pname), pblock, PROVIDER_FACT_FIELDS
+        yield f"providers.{pname}", pblock, PROVIDER_FACT_FIELDS
         models = pblock.get("models")
         if isinstance(models, dict):
             for mname, mblock in models.items():
                 if isinstance(mblock, dict):
                     yield (
-                        "providers.{}.models.{}".format(pname, mname),
+                        f"providers.{pname}.models.{mname}",
                         mblock,
                         FACT_FIELDS,
                     )
@@ -320,7 +320,7 @@ def legacy_blocks_in_config(
                 continue
             keys = [k for k in block if k in LEGACY_KEY_TRANSLATIONS]
             if keys:
-                found["{}.{}".format(prefix, bname)] = keys
+                found[f"{prefix}.{bname}"] = keys
     return found
 
 
@@ -345,7 +345,7 @@ def incomplete_blocks_in_config(
         stated = {k for k in block if not k.startswith("__comment")}
         unstated = [f for f in allowed if f not in stated]
         if unstated:
-            missing["{}.{}".format(prefix, FACTS_BLOCK)] = unstated
+            missing[f"{prefix}.{FACTS_BLOCK}"] = unstated
     return missing
 
 
@@ -372,7 +372,7 @@ def misplaced_fields_in_config(
             if not k.startswith("__comment") and k in both and k not in allowed
         ]
         if bad:
-            wrong["{}.{}".format(prefix, FACTS_BLOCK)] = bad
+            wrong[f"{prefix}.{FACTS_BLOCK}"] = bad
     return wrong
 
 
@@ -401,7 +401,7 @@ def wrong_typed_fields_in_config(
             and is_wrong_typed(k, v)
         ]
         if bad:
-            wrong["{}.{}".format(prefix, FACTS_BLOCK)] = bad
+            wrong[f"{prefix}.{FACTS_BLOCK}"] = bad
     return wrong
 
 
@@ -439,7 +439,7 @@ def migration_plan(config_data: dict[str, Any] | None = None) -> list[str]:
 
         for key in keys:
             new_key, _ = LEGACY_KEY_TRANSLATIONS[key]
-            src = "{}.{}".format(path, key)
+            src = f"{path}.{key}"
 
             if is_provider_level and new_key in FACT_FIELDS:
                 # A MODEL fact stated per provider: push it down.
@@ -449,19 +449,15 @@ def migration_plan(config_data: dict[str, Any] | None = None) -> list[str]:
                 if names:
                     for mname in names:
                         lines.append(
-                            "{}  ->  providers.{}.models.{}.{}.{}".format(
-                                src, pname, mname, FACTS_BLOCK, new_key
-                            )
+                            f"{src}  ->  providers.{pname}.models.{mname}.{FACTS_BLOCK}.{new_key}"
                         )
                 else:
                     lines.append(
-                        "{}  ->  providers.{}.models.<model>.{}.{}  "
-                        "(per model — this is a MODEL fact)".format(
-                            src, pname, FACTS_BLOCK, new_key
-                        )
+                        f"{src}  ->  providers.{pname}.models.<model>.{FACTS_BLOCK}.{new_key}  "
+                        "(per model — this is a MODEL fact)"
                     )
             else:
                 lines.append(
-                    "{}  ->  {}.{}.{}".format(src, base, FACTS_BLOCK, new_key)
+                    f"{src}  ->  {base}.{FACTS_BLOCK}.{new_key}"
                 )
     return lines

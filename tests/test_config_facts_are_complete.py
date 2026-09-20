@@ -35,7 +35,7 @@ import subprocess
 
 import pytest
 
-from ppxai.config.facts_config import FACT_FIELDS
+from ppxai.engine.facts_config import FACT_FIELDS
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 

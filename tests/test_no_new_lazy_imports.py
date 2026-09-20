@@ -746,3 +746,110 @@ class TestEngineCompletionStaysALeaf:
             "delete this guard:\n  "
             + "\n  ".join(f"{m}:{line}" for m, line in offenders)
         )
+
+
+# ===========================================================================
+# Guard 3 — `config/` must not import `engine/`
+# ===========================================================================
+#
+# The layering intent is that `config` READS settings and `engine` CONSUMES
+# them, so the dependency points one way: engine -> config. It did not.
+# `config/facts_config.py` imported `engine.model_facts` and `engine.types`
+# at module scope, which made the two packages mutually dependent and
+# produced a zigzag nobody could read off the imports:
+#
+#     engine.facts_resolver -> config.facts_config -> engine.model_facts
+#
+# It never deadlocked, because `model_facts` and `types` are leaves that
+# import no config — so the MODULE graph stayed acyclic while the PACKAGE
+# graph did not. That is the same undefended-leaf shape as ADR 0007's
+# `engine.completion`, and it is why this is a test and not a comment.
+#
+# Fixed 2026-09-20 by moving the module to `ppxai/engine/facts_config.py`,
+# where it sits beside the `model_facts` it resolves and the
+# `facts_resolver` that calls it. It keeps ONE outward edge —
+# `config.loader` for raw JSON reading — which is fine and one-way:
+# `config/loader.py` imports no engine.
+#
+# Those two import statements were the ONLY `config -> engine` edges in the
+# whole package, so after the move `config/` is engine-free and this guard
+# holds the line at zero rather than at a baseline.
+
+
+def _config_to_engine_edges():
+    """`(module, target, lineno)` for every `config -> engine` import."""
+    found = []
+    cfg = PPXAI / "config"
+    for path in sorted(cfg.rglob("*.py")):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        module = _module_name(path)
+        is_init = path.name == "__init__.py"
+        for node in ast.walk(tree):          # module scope AND function level
+            if isinstance(node, ast.Import):
+                for a in node.names:
+                    if a.name.startswith("ppxai.engine"):
+                        found.append((module, a.name, node.lineno))
+            elif isinstance(node, ast.ImportFrom):
+                target = _resolve(node, module, is_init)
+                if target and (target == "ppxai.engine"
+                               or target.startswith("ppxai.engine.")):
+                    found.append((module, target, node.lineno))
+    return found
+
+
+class TestConfigDoesNotImportEngine:
+    """Guards FIRST — a detector that stops matching would pass forever.
+
+    **Mutation-verified 2026-09-20, and as with the engine.completion guard
+    the two cases behave differently — which is why this test exists.**
+
+    A MODULE-scope `from ..engine.types import X` in `config/loader.py` does
+    not fail this test. It kills the whole pytest run at collection::
+
+        INTERNALERROR> ppxai/config/loader.py: from ..engine.types import ...
+        INTERNALERROR> ppxai/engine/__init__.py:14: from .client import EngineClient
+        INTERNALERROR> ppxai/engine/client.py:15: from ..checkpoint import CheckpointManager
+        INTERNALERROR> ppxai/checkpoint.py:25: from .config import SESSIONS_DIR
+        INTERNALERROR> ImportError: cannot import name 'SESSIONS_DIR' from
+                       partially initialized module 'ppxai.config'
+
+    That is loud — and it is also proof the layering is load-bearing rather
+    than tidy: `config -> engine -> checkpoint -> config` closes immediately.
+
+    The case that NEEDS the fence is a FUNCTION-level import, which defers
+    the cycle to call time: the package imports, the suite runs green, and
+    the breakage waits for whenever that function is first called. That is
+    precisely how `config/facts_config.py` survived — its edges were at
+    module scope but onto LEAVES (`model_facts`, `types`), so nothing ever
+    closed the loop and nothing complained. `_config_to_engine_edges` walks
+    the whole AST for that reason; mutating a lazy one in fails this test
+    and nothing else.
+    """
+
+    def test_the_detector_resolves_a_relative_engine_import(self):
+        """`from ..engine.model_facts import X` inside config must be caught."""
+        tree = ast.parse("from ..engine.model_facts import ModelFacts\n")
+        node = next(n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom))
+        assert _resolve(node, "ppxai.config.facts_config", False) == "ppxai.engine.model_facts"
+
+    def test_the_config_package_is_where_we_think(self):
+        assert (PPXAI / "config" / "loader.py").exists(), "wrong root?"
+
+    def test_config_imports_nothing_from_engine(self):
+        edges = _config_to_engine_edges()
+        assert not edges, (
+            "a module under ppxai/config/ now imports ppxai/engine/, which "
+            "makes the two packages mutually dependent.\n\n"
+            "`config` reads settings; `engine` consumes them. The edge points "
+            "engine -> config, never back. This held at zero from 2026-09-20, "
+            "when engine/facts_config.py moved out of config/ — it was the "
+            "last such edge.\n\n"
+            "If you need an engine DATA TYPE in config, that is the signal "
+            "that the code using it belongs in engine/ instead (which is "
+            "exactly what facts_config turned out to be — resolution logic, "
+            "not configuration):\n  "
+            + "\n  ".join(f"{m}:{line} -> {t}" for m, t, line in edges)
+        )

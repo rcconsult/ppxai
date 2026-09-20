@@ -81,7 +81,7 @@ Two consequences worth internalising:
 - **A red test can be your config, not the code.** Before debugging, check
   what the suite is actually reading:
   ```bash
-  python -c "from ppxai.config.facts_config import find_config_file; print(find_config_file())"
+  python -c "from ppxai.config.loader import find_config_file; print(find_config_file())"
   ```
   Run it *inside* pytest if the answer looks surprising — `initialize()` may
   not have run in your shell, so a bare invocation can report the

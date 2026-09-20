@@ -531,7 +531,7 @@ class TestHandleDoctor:
             "ppxai.commands.doctor.find_config_file", lambda: audited
         )
         monkeypatch.setattr(
-            "ppxai.config.facts_config.find_config_file", lambda: stale
+            "ppxai.engine.facts_config.find_config_file", lambda: stale
         )
 
         ctx = SimpleNamespace()

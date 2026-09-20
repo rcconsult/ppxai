@@ -1112,7 +1112,7 @@ class TestFactsConfig:
     """
 
     def test_empty_when_no_config(self, restore_config):
-        from ppxai.config.facts_config import model_fact_overrides
+        from ppxai.engine.facts_config import model_fact_overrides
 
         assert model_fact_overrides("perplexity", "sonar-pro") == {}
 
@@ -1124,7 +1124,7 @@ class TestFactsConfig:
             f.flush()
             with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
                 reload_config()
-                import ppxai.config.facts_config as fcmod
+                import ppxai.engine.facts_config as fcmod
 
                 with patch.object(
                     fcmod, "find_config_file", lambda: pathlib.Path(f.name)
@@ -1135,7 +1135,7 @@ class TestFactsConfig:
 
     def test_a_provider_block_cannot_state_a_model_fact(self, restore_config):
         """The INVERTED premise — this is the Item 43 fence."""
-        from ppxai.config.facts_config import model_fact_overrides
+        from ppxai.engine.facts_config import model_fact_overrides
 
         config_data = {
             "providers": {
@@ -1158,7 +1158,7 @@ class TestFactsConfig:
         )
 
     def test_a_model_block_states_model_facts(self, restore_config):
-        from ppxai.config.facts_config import model_fact_overrides
+        from ppxai.engine.facts_config import model_fact_overrides
 
         config_data = {
             "providers": {
@@ -1186,7 +1186,7 @@ class TestFactsConfig:
 
     def test_comment_keys_filtered(self, restore_config):
         """Hand-edited configs carry `__comment_*` keys throughout."""
-        from ppxai.config.facts_config import model_fact_overrides
+        from ppxai.engine.facts_config import model_fact_overrides
 
         config_data = {
             "providers": {

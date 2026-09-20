@@ -94,7 +94,7 @@ def resolved(monkeypatch):
     """Resolve every configured model through the CURRENT code."""
     from dataclasses import asdict
 
-    import ppxai.config.facts_config as fc
+    import ppxai.engine.facts_config as fc
     from ppxai.engine.model_facts import shipped_facts_for_model
     from ppxai.engine.providers import get_provider_class
     from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
@@ -323,7 +323,7 @@ class TestTheEndpointDefaultSemantic:
 
     def test_a_stated_endpoint_field_still_overrides(self, monkeypatch, tmp_path):
         """The override direction must not be lost to the new base."""
-        import ppxai.config.facts_config as fc
+        import ppxai.engine.facts_config as fc
         from ppxai.engine.providers.perplexity import PerplexityProvider
 
         cfg = tmp_path / "ppxai-config.json"
@@ -419,7 +419,7 @@ class TestTheExampleShipsMigrated:
         assert stale == [], f"legacy blocks left in the example: {stale}"
 
     def test_doctor_reports_it_clean(self, monkeypatch):
-        import ppxai.config.facts_config as fc
+        import ppxai.engine.facts_config as fc
         from ppxai.commands import doctor as doctor_mod
 
         monkeypatch.setattr(fc, "find_config_file", lambda: EXAMPLE)
@@ -430,7 +430,7 @@ class TestTheExampleShipsMigrated:
 
     def test_every_record_is_complete(self, monkeypatch):
         """Q0d: a config record states every field of its type."""
-        import ppxai.config.facts_config as fc
+        import ppxai.engine.facts_config as fc
 
         monkeypatch.setattr(fc, "find_config_file", lambda: EXAMPLE)
         assert fc.incomplete_blocks_in_config() == {}
