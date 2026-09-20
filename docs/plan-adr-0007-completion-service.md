@@ -1,6 +1,6 @@
 # Plan — closing ADR 0007 (one command registry)
 
-**Status: steps 1 (1a + 1b) and 2 IMPLEMENTED; steps 3-5 PROPOSED, not
+**Status: steps 1 (1a + 1b), 2 and 2.5 IMPLEMENTED; steps 3-5 PROPOSED, not
 started.**
 Written 2026-09-20 on `bugfix/v1.19.3`; **rewritten the same day** after
 the owner restated the goal. The first draft split the work (a) invert the
@@ -14,8 +14,8 @@ evidence decayed silently (it cited a module Item 65 had deleted), and this
 file is written not to repeat that.
 
 **Record:** [decisions/0007-completion-first-class-service.md](decisions/0007-completion-first-class-service.md)
-· step 1 shipped v1.18.8 · step 2 landed 2026-09-20 on `bugfix/v1.19.3`,
-no target release.
+· step 1 shipped v1.18.8 · step 2 and 2.5 landed 2026-09-20 on
+`bugfix/v1.19.3`, no target release.
 
 ## The goal
 
@@ -82,12 +82,20 @@ commands for the per-command contract. Widen (or replace)
   client implements every name. A JS-side list would be a second source of
   truth — the thing this whole record exists to remove.
 
-Initial vocabulary:
+Initial vocabulary (step 1; widened to all 9 approved names by step 2.5 —
+see that section for the seven hybrid rows):
 
 | Command | `client_action` | `clients` |
 |---|---|---|
 | `/token` | `token.manage` | `{web, vscode}` |
 | `/quit` (alias `/exit`) | `app.quit` | `{rich, textual}` (owner decision, 2026-09-20 — see below; was `universal` before that) |
+| `/task` | `task.controller` | universal (`client_action_clients={web, vscode}`) |
+| `/run` | `run.controller` | universal (`client_action_clients={web, vscode}`) |
+| `/auto` | `auto.loop` | universal (`client_action_clients={web, vscode}`) |
+| `/generate` `/explain` `/test` `/docs` `/debug` `/implement` | `coding.stream` | universal (`client_action_clients={vscode}`) |
+| `/convert` | `coding.convert` | universal (`client_action_clients={vscode}`) |
+| `/preview` | `preview.panel` | universal (`client_action_clients={vscode}`) |
+| `/help` | `help.augment` | universal (`client_action_clients={vscode}`) |
 
 **Decided 2026-09-20 (owner), REVERSES the initial vocabulary above:**
 `/quit` (alias `/exit`) is gated to `clients={"rich", "textual"}`, not
@@ -289,6 +297,68 @@ chains stay until the hybrid actions are declared. Pinned by
 `TestClientGating::test_hybrid_family_still_dispatches_server_side` so
 the day they are declared, the test says so.
 
+### 2.5 Declare the hybrid client actions — ✅ DONE (2026-09-20)
+
+Step 2's own finding: `GET /commands` reported `dispatch == "server"` for
+`/task`, `/run`, `/auto` because no hybrid command carried a
+`client_action` — false for web/VSCode, whose JS controllers actually run
+them. Left alone, step 3's JS clients could not use the roster's
+`dispatch` field to retire their hardcoded intercept `if`-chains for
+those commands, so this had to land BEFORE step 3. **Server-only**: no
+JS/TS changed, since the client implementations already exist (this step
+only declares what already runs).
+
+Owner-approved vocabulary (2026-09-20), added to `CLIENT_ACTIONS`
+alongside the existing `token.manage` and `app.quit`:
+
+| Command(s) | `client_action` | `client_action_clients` |
+|---|---|---|
+| `/task` | `task.controller` | `{"web", "vscode"}` |
+| `/run` | `run.controller` | `{"web", "vscode"}` |
+| `/auto` | `auto.loop` | `{"web", "vscode"}` |
+| `/generate` `/explain` `/test` `/docs` `/debug` `/implement` | `coding.stream` | `{"vscode"}` |
+| `/convert` | `coding.convert` | `{"vscode"}` |
+| `/preview` | `preview.panel` | `{"vscode"}` |
+| `/help` | `help.augment` | `{"vscode"}` |
+
+Each spec KEEPS its `handler` — these are hybrids, not client-handled:
+the Python handler still serves Rich/Textual in-process
+(`spec.handler is None` stays False, so `POST /command/<name>` still
+executes it, and `is_client_handled` stays False), while `client_action`
+serves the listed clients. The six coding commands deliberately share
+ONE action, `coding.stream`: the client implementation receives the
+command name as a parameter, mirroring VSCode's `CHAT_SHAPED_TASKS` map
+(`chatPanel.ts`), which already dispatches all six through one function.
+`/convert` is chat-shaped too but has distinct arg parsing
+(`handleConvertCommand`), so it keeps its own action name rather than
+folding into `coding.stream`. Web does not intercept the coding
+commands, `/convert` or `/preview` — their `client_action_clients` is
+`{"vscode"}` only, and web falls through to the server handler for all
+of them. Web's `/help` intercept exists only for a shim step 3 deletes
+(`_appendExperimentalHelp`), so `/help` is `{"vscode"}` only too, for
+VSCode's real keyboard-shortcut augmentation.
+
+Verified against the real client code before declaring, per
+`docs/plan-adr-0007-completion-service.md` §Hybrid commands:
+`command-dispatcher.js`'s five intercepts (`/auto`, `/run`, `/task`,
+`/token`, `/help`) and `chatPanel.ts`'s twelve (`CHAT_SHAPED_TASKS` six +
+`convert`, `auto`, `preview`, `task`, `run`, `token`, `help`) — the
+acknowledged-legacy five (`/tools`, `/checkpoint`, `/context`, `/ls`,
+`/tree`) were deliberately left undeclared, per the owner's "do not bless
+debt" instruction; they stay in step 5's shrinking baseline.
+
+Dispatch/`client_handled` decision points were checked for a
+`client_action`-keyed bug (the risk step 1's `is_client_handled` docstring
+calls out): `server/routes/commands.py::execute_command` keys on
+`spec.handler is None`; `ppxai/tui/app.py::_handle_command` and
+`ppxai/commands/handler.py` (Rich's dispatch path) both key on the same
+condition. None keyed on `client_action` presence — no bug found, no fix
+needed.
+
+`tests/test_command_roster_endpoint.py::TestClientGating::
+test_hybrid_family_still_dispatches_server_side` (written in step 2 to
+fail the day this landed) was replaced with tests for the table above.
+
 ### 3. JS clients fetch at startup
 
 Web and VSCode load the roster from `GET /commands`. `commands.js` becomes
@@ -397,10 +467,10 @@ The VSCode block documents its own intercepts, and they are five kinds:
 
 | Kind | Commands | Gets a `client_action`? |
 |---|---|---|
-| Pure client | `/token`, `/quit` | **Yes**, and NO server handler |
-| Client-driven family | `/task`, `/run`, `/auto` — JS controllers drive `/v1/agent/*`; JS never calls `POST /command/task` | **Yes, per client** — `handler=` serves Rich/Textual in-process, `client_action` serves web/VSCode |
-| Streaming | `/convert`, coding tasks — the factory handler blocks on the LLM, so the client streams instead | **Yes, per client** |
-| Client-native UX | `/preview` (own WebviewPanel), `/help` (factory output + VSCode shortcuts) | **Yes** — `/help` wraps the factory rather than replacing it |
+| Pure client | `/token` (`token.manage`), `/quit` (`app.quit`) | **Yes**, and NO server handler |
+| Client-driven family | `/task` (`task.controller`), `/run` (`run.controller`), `/auto` (`auto.loop`) — JS controllers drive `/v1/agent/*`; JS never calls `POST /command/task` | **Yes, per client** — `handler=` serves Rich/Textual in-process, `client_action` serves web/VSCode. Declared step 2.5 |
+| Streaming | `/convert` (`coding.convert`), coding tasks — `/generate` `/explain` `/test` `/docs` `/debug` `/implement` (`coding.stream`, one action shared by all six, VSCode-only) — the factory handler blocks on the LLM, so the client streams instead | **Yes, per client** — VSCode only. Declared step 2.5 |
+| Client-native UX | `/preview` (`preview.panel`, own WebviewPanel), `/help` (`help.augment`, factory output + VSCode shortcuts) — both VSCode-only | **Yes** — `/help` wraps the factory rather than replacing it. Declared step 2.5 |
 | **Acknowledged legacy** | `/tools`, `/checkpoint`, `/context`, `/ls`, `/tree` — the code says *"These hit bespoke REST today; full factory routing is a later phase"* | **NO.** Do not bless debt. These migrate to factory routing; the fence carries them as a shrinking baseline |
 
 So `client_action` is **scoped by client** (via `client_action_clients`), not a boolean on the spec: a

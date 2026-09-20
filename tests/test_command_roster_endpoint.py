@@ -275,24 +275,100 @@ class TestClientGating:
         assert_absent(payload, "token")
 
     def test_server_commands_dispatch_server_side(self, http_client):
-        # A plain registered command (handler, no client_action) always
-        # routes to the server, for every client.
+        # A plain registered command (handler, no client_action at all)
+        # always routes to the server, for every client. `/help` no
+        # longer qualifies as of step 2.5 (it carries `help.augment` for
+        # vscode) — `/theme` has neither a client_action nor a hybrid
+        # role and stands in for "plain" here.
         for client in sorted(KNOWN_CLIENTS):
-            help_entry = entry(fetch(http_client, client=client), "help")
-            assert help_entry["dispatch"] == "server", client
-            assert help_entry["client_handled"] is False, client
-            assert help_entry["client_action"] is None, client
+            theme_entry = entry(fetch(http_client, client=client), "theme")
+            assert theme_entry["dispatch"] == "server", client
+            assert theme_entry["client_handled"] is False, client
+            assert theme_entry["client_action"] is None, client
 
-    def test_hybrid_family_still_dispatches_server_side(self, http_client):
-        # /task and /run have a real Python handler and no client_action
-        # yet (their client actions arrive with the parity fence, step
-        # 5). Until then the roster must say "server" rather than
-        # guessing — a wrong "client" would break dispatch.
+    # ADR 0007 step 2.5 (owner-approved vocabulary, 2026-09-20): the
+    # hybrid family now declares client_action for web/vscode, so the
+    # roster's `dispatch` field for these commands flips from "server"
+    # (step 2's finding) to "client" for the clients that actually run
+    # them client-side, and stays "server" everywhere else. This
+    # replaces test_hybrid_family_still_dispatches_server_side, which
+    # was written in step 2 to fail the day this landed.
+    @pytest.mark.parametrize(
+        "name,action,client_action_clients",
+        [
+            ("task", "task.controller", frozenset({"web", "vscode"})),
+            ("run", "run.controller", frozenset({"web", "vscode"})),
+            ("auto", "auto.loop", frozenset({"web", "vscode"})),
+            ("generate", "coding.stream", frozenset({"vscode"})),
+            ("explain", "coding.stream", frozenset({"vscode"})),
+            ("test", "coding.stream", frozenset({"vscode"})),
+            ("docs", "coding.stream", frozenset({"vscode"})),
+            ("debug", "coding.stream", frozenset({"vscode"})),
+            ("implement", "coding.stream", frozenset({"vscode"})),
+            ("convert", "coding.convert", frozenset({"vscode"})),
+            ("preview", "preview.panel", frozenset({"vscode"})),
+            ("help", "help.augment", frozenset({"vscode"})),
+        ],
+    )
+    def test_hybrid_family_dispatches_in_the_client_action_clients(
+        self, http_client, name, action, client_action_clients
+    ):
+        for client in sorted(KNOWN_CLIENTS):
+            command = entry(fetch(http_client, client=client), name)
+            assert command is not None, (name, client)
+            assert command["client_action"] == action, (name, client)
+            assert command["client_handled"] is False, (name, client)
+            expected = "client" if client in client_action_clients else "server"
+            assert command["dispatch"] == expected, (name, client)
+
+    def test_web_dispatch_matches_the_approved_table(self, http_client):
         payload = fetch(http_client, client="web")
-        for name in ("task", "run"):
-            command = entry(payload, name)
-            assert command is not None, name
-            assert command["dispatch"] == "server", name
+        client_side = ("task", "run", "auto")
+        server_side = (
+            "generate", "explain", "test", "docs", "debug", "implement",
+            "convert", "preview", "help",
+        )
+        for name in client_side:
+            assert entry(payload, name)["dispatch"] == "client", name
+        for name in server_side:
+            assert entry(payload, name)["dispatch"] == "server", name
+
+    def test_vscode_dispatch_matches_the_approved_table(self, http_client):
+        payload = fetch(http_client, client="vscode")
+        for name in (
+            "task", "run", "auto", "generate", "explain", "test", "docs",
+            "debug", "implement", "convert", "preview", "help",
+        ):
+            assert entry(payload, name)["dispatch"] == "client", name
+
+    def test_rich_and_textual_dispatch_server_for_the_whole_hybrid_family(
+        self, http_client
+    ):
+        for client in ("rich", "textual"):
+            payload = fetch(http_client, client=client)
+            for name in (
+                "task", "run", "auto", "generate", "explain", "test",
+                "docs", "debug", "implement", "convert", "preview", "help",
+            ):
+                assert entry(payload, name)["dispatch"] == "server", (
+                    name, client
+                )
+
+    def test_absent_client_hybrid_dispatch_uses_the_every_candidate_rule(
+        self, http_client
+    ):
+        # Candidate set = SERVER_CLIENTS = {web, vscode}. dispatch_target
+        # says "client" only when EVERY candidate dispatches in the
+        # client. task/run/auto: both web and vscode do -> "client". The
+        # vscode-only nine: web does not -> "server".
+        payload = fetch(http_client)
+        for name in ("task", "run", "auto"):
+            assert entry(payload, name)["dispatch"] == "client", name
+        for name in (
+            "generate", "explain", "test", "docs", "debug", "implement",
+            "convert", "preview", "help",
+        ):
+            assert entry(payload, name)["dispatch"] == "server", name
 
 
 class TestAbsentClientUsesTheCandidateSet:

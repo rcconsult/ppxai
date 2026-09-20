@@ -434,6 +434,10 @@ CommandFactory.register(CommandSpec(
     category="agent",
     usage='/task "<desc>" --tools a,b | /task ls·get·watch·cancel·collect·'
           'respond·resume·help',
+    # ADR 0007 step 2.5: web/VSCode drive /v1/agent/* through a JS
+    # controller and never call this handler; Rich/Textual keep it.
+    client_action="task.controller",
+    client_action_clients=frozenset({"web", "vscode"}),
 ))
 
 CommandFactory.register(CommandSpec(
@@ -444,4 +448,7 @@ CommandFactory.register(CommandSpec(
     handler=handle_run,
     category="agent",
     usage="/run <prompt> | /run ls·get·watch·cancel·collect·help",
+    # ADR 0007 step 2.5: same client-driven family as /task.
+    client_action="run.controller",
+    client_action_clients=frozenset({"web", "vscode"}),
 ))

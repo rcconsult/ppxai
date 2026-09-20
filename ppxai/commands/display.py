@@ -766,7 +766,13 @@ CommandFactory.register(CommandSpec(
     description="Open live-reloading HTML preview",
     handler=handle_preview,
     category="display",
-    usage="/preview <file.html>"
+    usage="/preview <file.html>",
+    # ADR 0007 step 2.5: VSCode owns its own WebviewPanel
+    # (`handlePreviewCommand`) instead of the OPEN_HTML_PREVIEW side
+    # effect this handler emits. Web has no such panel and uses this
+    # handler.
+    client_action="preview.panel",
+    client_action_clients=frozenset({"vscode"}),
 ))
 
 

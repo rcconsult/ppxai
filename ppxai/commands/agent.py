@@ -808,7 +808,12 @@ CommandFactory.register(CommandSpec(
     description="Run autonomous agent task",
     handler=handle_agent,
     category="agent",
-    usage="/auto <task> | /auto on|off"
+    usage="/auto <task> | /auto on|off",
+    # ADR 0007 step 2.5: web/VSCode run the iteration loop client-side
+    # (handleAgentCommand / RunController-adjacent); Rich/Textual use
+    # this handler.
+    client_action="auto.loop",
+    client_action_clients=frozenset({"web", "vscode"}),
 ))
 
 CommandFactory.register(CommandSpec(

@@ -825,7 +825,13 @@ CommandFactory.register(CommandSpec(
     handler=handle_help,
     category="system",
     aliases=["h", "?"],
-    usage="/help"
+    usage="/help",
+    # ADR 0007 step 2.5: VSCode's /help wraps this handler's output with
+    # its own keyboard-shortcut augmentation (`showHelp`) — TUI/web have
+    # no such shortcuts, so only vscode carries the action. Web's /help
+    # intercept is a shim step 3 deletes, not a real client action.
+    client_action="help.augment",
+    client_action_clients=frozenset({"vscode"}),
 ))
 
 CommandFactory.register(CommandSpec(

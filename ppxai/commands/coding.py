@@ -362,13 +362,22 @@ def handle_convert(context: CommandContext, args: str) -> CommandResult:
 # Command Registration
 # =============================================================================
 
+# ADR 0007 step 2.5: these six share ONE client_action (`coding.stream`)
+# — VSCode's `CHAT_SHAPED_TASKS` map already dispatches all six through
+# one client-side path (`handleCodingTaskCommand(codingTaskType, ...)`),
+# keyed on the command name, so the declaration mirrors that shape
+# rather than inventing six names. The factory handler blocks on the
+# LLM; VSCode streams instead so the active editor's language/filename
+# ride along. Web does NOT intercept these — it uses this handler.
 CommandFactory.register(CommandSpec(
     name="generate",
     description="Generate code from description",
     handler=handle_generate,
     category="coding",
     aliases=["gen", "g"],
-    usage="/generate <description>"
+    usage="/generate <description>",
+    client_action="coding.stream",
+    client_action_clients=frozenset({"vscode"}),
 ))
 
 CommandFactory.register(CommandSpec(
@@ -377,7 +386,9 @@ CommandFactory.register(CommandSpec(
     handler=handle_test,
     category="coding",
     aliases=[],  # Removed "t" alias - conflicts with /tools
-    usage="/test <file>"
+    usage="/test <file>",
+    client_action="coding.stream",
+    client_action_clients=frozenset({"vscode"}),
 ))
 
 CommandFactory.register(CommandSpec(
@@ -386,7 +397,9 @@ CommandFactory.register(CommandSpec(
     handler=handle_docs,
     category="coding",
     aliases=["d"],
-    usage="/docs <file>"
+    usage="/docs <file>",
+    client_action="coding.stream",
+    client_action_clients=frozenset({"vscode"}),
 ))
 
 CommandFactory.register(CommandSpec(
@@ -395,7 +408,9 @@ CommandFactory.register(CommandSpec(
     handler=handle_implement,
     category="coding",
     aliases=["impl"],
-    usage="/implement <specification>"
+    usage="/implement <specification>",
+    client_action="coding.stream",
+    client_action_clients=frozenset({"vscode"}),
 ))
 
 CommandFactory.register(CommandSpec(
@@ -403,7 +418,9 @@ CommandFactory.register(CommandSpec(
     description="Analyze and debug error",
     handler=handle_debug,
     category="coding",
-    usage="/debug <error-details>"
+    usage="/debug <error-details>",
+    client_action="coding.stream",
+    client_action_clients=frozenset({"vscode"}),
 ))
 
 CommandFactory.register(CommandSpec(
@@ -411,7 +428,9 @@ CommandFactory.register(CommandSpec(
     description="Explain code in detail",
     handler=handle_explain,
     category="coding",
-    usage="/explain <file>"
+    usage="/explain <file>",
+    client_action="coding.stream",
+    client_action_clients=frozenset({"vscode"}),
 ))
 
 CommandFactory.register(CommandSpec(
@@ -419,5 +438,10 @@ CommandFactory.register(CommandSpec(
     description="Convert code between languages",
     handler=handle_convert,
     category="coding",
-    usage="/convert <source-lang> <target-lang> <file-or-code>"
+    usage="/convert <source-lang> <target-lang> <file-or-code>",
+    # /convert is chat-shaped too but has special arg parsing, handled
+    # separately in VSCode (`handleConvertCommand`) — its own action
+    # name rather than folding into `coding.stream`.
+    client_action="coding.convert",
+    client_action_clients=frozenset({"vscode"}),
 ))

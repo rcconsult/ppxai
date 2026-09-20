@@ -138,10 +138,41 @@ class TestRegistrationValidation:
 
     def test_known_clients_and_client_actions_are_as_measured(self):
         # These are the exact ids measured against callers of
-        # engine.completion.complete(client=...) and the fixed
-        # client_action vocabulary the ADR decided on.
+        # engine.completion.complete(client=...) and the owner-approved
+        # client_action vocabulary (2026-09-20): the pure client-handled
+        # pair from step 1 (`token.manage`, `app.quit`) plus the seven
+        # hybrid names declared in step 2.5.
         assert KNOWN_CLIENTS == frozenset({"rich", "textual", "web", "vscode"})
-        assert CLIENT_ACTIONS == frozenset({"token.manage", "app.quit"})
+        assert CLIENT_ACTIONS == frozenset({
+            "token.manage",
+            "app.quit",
+            "task.controller",
+            "run.controller",
+            "auto.loop",
+            "coding.stream",
+            "coding.convert",
+            "preview.panel",
+            "help.augment",
+        })
+
+    def test_every_client_action_is_used_by_at_least_one_registered_spec(self):
+        # No orphan names in CLIENT_ACTIONS: each one is bound to a real
+        # spec, not just declared in the vocabulary.
+        used = {
+            spec.client_action
+            for name in CommandFactory.list_all()
+            if (spec := CommandFactory.get(name)).client_action is not None
+        }
+        assert used == CLIENT_ACTIONS
+
+    def test_every_registered_client_action_is_in_the_vocabulary(self):
+        # No orphan names on specs either: a spec cannot bind to a
+        # client_action the vocabulary does not list (also enforced at
+        # registration — this re-asserts it against the live registry).
+        for name in CommandFactory.list_all():
+            spec = CommandFactory.get(name)
+            if spec.client_action is not None:
+                assert spec.client_action in CLIENT_ACTIONS, name
 
 
 # ---------------------------------------------------------------------------

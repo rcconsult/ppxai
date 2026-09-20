@@ -64,7 +64,28 @@ SERVER_CLIENTS = frozenset({"web", "vscode"})
 #: a JS-side copy would be a second source of truth for the exact thing
 #: this record exists to remove; each client bundles its own
 #: implementation of a name listed here.
-CLIENT_ACTIONS = frozenset({"token.manage", "app.quit"})
+#:
+#: `token.manage` and `app.quit` are the PURE client-handled pair (no
+#: server `handler`, step 1). The other seven are HYBRID (step 2.5,
+#: owner-approved vocabulary 2026-09-20): the spec keeps its `handler`
+#: for Rich/Textual, and `client_action` names the JS-side behaviour for
+#: the clients in `client_action_clients` — `task.controller` (/task),
+#: `run.controller` (/run), `auto.loop` (/auto), `coding.stream`
+#: (/generate, /explain, /test, /docs, /debug, /implement — one action,
+#: the client receives the command name, mirroring VSCode's
+#: `CHAT_SHAPED_TASKS`), `coding.convert` (/convert), `preview.panel`
+#: (/preview), `help.augment` (/help).
+CLIENT_ACTIONS = frozenset({
+    "token.manage",
+    "app.quit",
+    "task.controller",
+    "run.controller",
+    "auto.loop",
+    "coding.stream",
+    "coding.convert",
+    "preview.panel",
+    "help.augment",
+})
 
 
 def client_sees(
