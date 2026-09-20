@@ -42,6 +42,7 @@ clean tree as much as a modified one, so verify TUI modules with the suite.
 """
 
 import ast
+import json
 import pathlib
 import subprocess
 import sys
@@ -437,3 +438,114 @@ class TestTheBaselineIsShrinking:
             assert (root / (rel + ".py")).exists() or (root / rel / "__init__.py").exists(), (
                 f"baseline row names {dotted}, which is not a module"
             )
+
+
+#: Modules known to fail a standalone import, with the debt item that owns
+#: the fix. A row here is an EXEMPTION, not a pass: the test below asserts
+#: each one still fails, so fixing the cycle turns the row into a failure
+#: telling you to delete it. Never add a row to silence a NEW cycle -- that
+#: is the regression this fence exists to catch.
+KNOWN_IMPORT_CYCLES = {
+    "ppxai.rendering.textual_renderer": (
+        "debt Item 73 -- `rendering/textual_renderer.py:51` imports "
+        "`..tui.widgets.dialog`, which runs `ppxai/tui/__init__.py`, which "
+        "imports `tui.app`, which imports the renderer back while it is "
+        "still initialising. Importing `tui.app` FIRST primes sys.modules "
+        "and hides it, which is why the whole suite passes."
+    ),
+}
+
+#: Body of the subprocess that does the sweep. Kept as a module constant so
+#: the test reads as three assertions rather than a wall of nested source.
+_SWEEP = r"""
+import importlib, json, pathlib, sys
+
+root = pathlib.Path(sys.argv[1])
+mods = []
+for f in sorted((root / "ppxai").rglob("*.py")):
+    if {"graphify-out", "__pycache__", "tui"} & set(f.parts):
+        continue
+    parts = list(f.relative_to(root).with_suffix("").parts)
+    if parts[-1] == "__init__":
+        parts.pop()
+    if parts:
+        mods.append(".".join(parts))
+
+fails = {}
+for m in mods:
+    # Purge only ppxai itself: third-party modules stay cached (that is what
+    # makes this affordable), while every internal edge is rebuilt.
+    for k in [k for k in sys.modules if k == "ppxai" or k.startswith("ppxai.")]:
+        del sys.modules[k]
+    try:
+        importlib.import_module(m)
+    except Exception as e:
+        fails[m] = f"{type(e).__name__}: {e}"
+
+print(json.dumps({"count": len(mods), "fails": fails}))
+"""
+
+
+class TestEveryModuleImportsStandalone:
+    """Every module -- not just every package -- must import on its own.
+
+    `TestEveryPackageImportsStandalone` above checks six package roots, and
+    that is what let debt Item 73 through: `ppxai/rendering/__init__.py`
+    does not pull `textual_renderer`, so the package imported clean while
+    the module did not. The cycle surfaced only when something imported that
+    module FIRST -- a new script, a tool, or one test file run on its own.
+
+    Scope and method, both deliberate:
+
+    * **`ppxai.tui.*` is excluded.** Importing it sets up the terminal and
+      can hang -- the same reason this module's docstring already gives for
+      verifying TUI modules through the suite instead. The Item 73 cycle is
+      still caught, because the module that starts it lives in `rendering`.
+    * **One subprocess with `sys.modules` purged between imports**, not a
+      fresh interpreter per module. Per-module interpreters would be purer
+      isolation at ~5s x 180; purging every `ppxai*` entry rebuilds the
+      internal graph each time while third-party imports stay cached.
+      Measured: ~30s for ~180 modules, and it finds the cycle the
+      per-package test cannot.
+    """
+
+    def _failing_modules(self) -> dict[str, str]:
+        """{module: error} for every module that fails to import alone."""
+        proc = subprocess.run(
+            [sys.executable, "-c", _SWEEP, str(PPXAI.parent)],
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+        assert proc.returncode == 0, (
+            f"the sweep itself failed, so it proves nothing: {proc.stderr[-500:]}"
+        )
+        payload = json.loads(proc.stdout.strip().splitlines()[-1])
+        assert payload["count"] > 150, (
+            f"the sweep walked only {payload['count']} modules -- it is not "
+            "finding the tree, and a green result would mean nothing"
+        )
+        return payload["fails"]
+
+    def test_no_module_outside_the_known_cycles_fails_to_import(self):
+        unexpected = {
+            m: e
+            for m, e in self._failing_modules().items()
+            if m not in KNOWN_IMPORT_CYCLES
+        }
+        listing = "\n".join(f"  {m}\n      {e}" for m, e in sorted(unexpected.items()))
+        assert not unexpected, (
+            "these modules do not import standalone, which means an import "
+            "cycle the app happens to hide by importing something else "
+            f"first:\n{listing}\n\nFix the cycle. Do NOT add it to "
+            "KNOWN_IMPORT_CYCLES -- that set is for the one pre-existing "
+            "case, which has a debt item."
+        )
+
+    def test_every_known_cycle_is_still_broken(self):
+        """A fixed cycle must lose its exemption, or the fence rots."""
+        fixed = sorted(set(KNOWN_IMPORT_CYCLES) - set(self._failing_modules()))
+        assert not fixed, (
+            "these modules now import standalone, so the cycle is fixed -- "
+            f"delete them from KNOWN_IMPORT_CYCLES: {fixed}"
+        )

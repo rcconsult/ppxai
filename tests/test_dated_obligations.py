@@ -25,9 +25,18 @@ import pytest
 #: ship a fix.
 OBLIGATIONS = [
     (
-        date(2026, 10, 10),
+        date(2026, 11, 14),
         "debt Item 54 — re-probe Gemini's Pro tier for a GA successor",
         (
+            "RE-PROBED 2026-09-20 (58 models, was 52 on 09-01): STILL NO GA "
+            "3.x Pro. Only `gemini-3.1-pro-preview` and "
+            "`gemini-3.1-pro-preview-customtools`; the one new GA-looking id, "
+            "`gemini-3-pro-image`, is an IMAGE model and no migration target "
+            "for a chat Pro. The entry itself says `Still preview-only? Move "
+            "this date past the sunset`, so the due date moved 10-10 -> "
+            "11-14: probing again before a sunset that changes nothing would "
+            "spend an API call to re-learn today's answer.\n"
+            "\n"
             "Google sunsets the Gemini 2.5 line 2026-10-16 (earliest). "
             "GEMINI_DEPRECATIONS migrates `gemini-2.5-pro` to "
             "`gemini-3.1-pro-preview` — a PREVIEW, because a live ListModels "

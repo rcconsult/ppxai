@@ -48,14 +48,13 @@ quoting them** — this table is a map, not a source.
 |---|---|---|
 | **71** | the Anthropic provider has never made a live API call | **accepted + documented, NO ACTION** — marked untested on all five surfaces; ships as a known limitation. Not a release blocker |
 | **72** | the additive-CA TLS guarantee is pinned only on cafile hosts | coverage ceiling; Linux CI cannot decide it offline |
-| **73** | `rendering.textual_renderer` ↔ `tui.app` import cycle, hidden by import order | fails to collect standalone; passes in the full suite only because an earlier module imports `tui.app` first |
+| **73** | `rendering.textual_renderer` ↔ `tui.app` import cycle, hidden by import order | **fenced 2026-09-20** — a module-wide standalone-import sweep now catches any NEW cycle; the cycle itself is still open |
 | **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
 | **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
 | **3** | k8s session-manager security tests | trigger-deferred; quick pass done, full suite postponed |
 | **21** | `chat_with_tools` decomposition (673 LoC, fan-out 169) | v1.19.x+ |
 | **22** | `PpxaiApp` (web/app.js) decomposition (3,749 LoC) | trigger-deferred |
 | **29** | `engine.completion` imports `commands.factory` (layer inversion) | ~1–1.5 d remaining |
-| **34** | add `python-docx` to the `[data]` extra (Word text fallback) | ~1 h — the CI/build half closed 2026-06-14; verified again 2026-09-06 |
 | **35** | pluggable persistence channel abstraction | ~2–3 d, wants its own ADR |
 | **38** | model-catalog watch list | recurring sweep; last one found 4 dead NVIDIA ids shipping |
 | **55** | OpenAI fleet refresh (gpt-5.6 GA + price cuts) | cost-driven, no deadline |
@@ -230,7 +229,28 @@ them (Protocol-based inversion, `docs/patterns/protocol-dependency-inversion.md`
 fresh interpreter, so the next cycle of this shape fails the suite instead
 of waiting for an unlucky import order.
 
-**Planned:** v1.19.x cleanup — (3) first so the fence exists, then (1) or (2).
+**Option (3) DONE 2026-09-20 — the fence exists.**
+`TestEveryModuleImportsStandalone` in `tests/test_no_new_lazy_imports.py`
+imports every module under `ppxai/` (excluding `ppxai.tui.*`, which sets up
+the terminal and can hang — the exclusion this file's own docstring already
+documents) in one subprocess, purging every `ppxai*` entry from `sys.modules`
+between imports so each internal graph is rebuilt while third-party imports
+stay cached. ~30s for ~180 modules. This cycle is the single row in
+`KNOWN_IMPORT_CYCLES`, and a second test asserts that row still FAILS — so
+fixing the cycle turns the exemption into a failure telling you to delete it.
+Mutation-verified both ways: removing the row fails the sweep test, and a
+bogus row for a healthy module fails the rot guard.
+
+**Still open: (1) or (2), the cycle itself.** Note for whoever takes it —
+both ends lead to the same place. `rendering/textual_renderer.py:51` imports
+`..tui.widgets.dialog`, and importing ANY submodule of `ppxai.tui` runs
+`ppxai/tui/__init__.py:22`, which imports `tui.app` eagerly. Nothing outside
+that file does `from ppxai.tui import PPXAIDEApp` (verified by grep — every
+consumer imports `ppxai.tui.app` directly), so dropping the eager re-export
+is viable; it costs one function-level import in `main()`, which the lazy-import
+fence would require a `RETAINED_ON_PURPOSE` row for.
+
+**Planned:** v1.19.x cleanup — (1) or (2).
 
 **Trigger to revisit:** any standalone collection error mentioning
 `partially initialized module`, or a new module importing
@@ -492,7 +512,7 @@ package, composition-root wiring at 3 entry points, AppState roster field +
 
 ---
 
-### Item 34 — office-preview deps: build/CI half ✅ CLOSED — only the `python-docx` dep remains [packaging]
+### Item 34 ✅ CLOSED — office-preview deps; the `python-docx` half was obsolete [packaging]
 
 **Heading corrected 2026-09-06.** It described the whole original
 problem long after two thirds of it was fixed, and the index row
@@ -535,15 +555,24 @@ Step 1 now runs `uv sync --all-extras` before PyInstaller (the per-build
 `--no-sync` reuses that env), with a precondition note and a Step-8
 office-preview acceptance check (curl `/files/preview` → expect `image/png`).
 
-**Remaining (v1.19.x, non-blocking):** add `python-docx` to the `[data]` extra
-so the Word *text* fallback can extract without LibreOffice. (Word *raster*
-preview already works via LibreOffice.)
+**CLOSED 2026-09-20 — the remaining half was already solved, differently.**
+The open paragraph asked for `python-docx` in `[data]` "so the Word *text*
+fallback can extract without LibreOffice". That fallback does not use
+`python-docx` and never did: `ppxai/engine/tools/builtin/docx_tools.py`
+extracts with stdlib `zipfile` + `xml.etree` — its module docstring says so
+in those words — and `server/routes/files.py:868` calls that same
+`_extract_docx_text` for the `.docx` text fallback. Verified today: `grep -rn
+"import docx"` over `ppxai/` and `tests/` returns **nothing**, and the only
+two mentions of the name in the tree are that docstring and a comment about
+legacy `.doc`/`.ppt`. Adding the dependency would grow every binary by a
+package nothing imports.
 
-**Branch when ready:** `bugfix/v1.18.8` (skill) / v1.19.x (docx dep).
+Word *raster* preview goes through LibreOffice (`convert_docx_to_pdf`), which
+is a host program, not a wheel — so no extra is involved there either.
 
-**Trigger to revisit:** active for the skill edit; docx is v1.19.x.
-
-**Effort:** ~1 h (skill `uv sync --all-extras` + docx dep).
+**Trigger to revisit:** only if a Word feature is added that genuinely needs
+`python-docx` (styles, tables-with-formatting, authoring) — text extraction
+and raster preview both already work without it.
 
 ---
 
