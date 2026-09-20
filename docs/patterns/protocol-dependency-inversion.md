@@ -35,10 +35,23 @@ class ReadFileTool(BaseTool):
 | `ToolEngineProtocol` | `engine/types.py` | `EngineClient` | All tool modules |
 | `ToolManagerProtocol` | `engine/types.py` | `ToolManager` | All tool modules |
 | `EngineClientProtocol` | `engine/types.py` | `EngineClient` | All command modules |
+| `ProtocolHandler` | `engine/providers/wire/protocol.py` | the four wire handlers | `BaseProvider` + each provider |
+| `SessionRestoreHost` | `tui/session_restore_ops.py` | `PPXAIDEApp` | `tui/session_restore_ops.py` |
 
 ## Rules
 
 1. **NEVER use `TYPE_CHECKING`** — it's a lazy import in disguise
+
+   > Enforced by grep, not by a test. As of 2026-09-20 production code has
+   > **zero** `if TYPE_CHECKING:` blocks: `grep -rn "TYPE_CHECKING" ppxai/`
+   > returns two hits, both prose in docstrings explaining why the idiom is
+   > *not* used. The last real one lived in
+   > `ppxai/tui/session_restore_ops.py`, which imported `PPXAIDEApp` that
+   > way from 2026-06 until it was replaced with the `SessionRestoreHost`
+   > protocol above — the exact circular-import case this pattern exists to
+   > solve, sitting inside the layer the pattern was written for, unnoticed
+   > for three months. If you are adding one, you are one `Protocol` away
+   > from not needing it.
 2. **NEVER use `Any` to dodge a circular import** unless the parameter is truly duck-typed (e.g., thin adapter wrapping an opaque object)
 3. When a direct import would create a cycle, define a `Protocol` in a leaf module
 4. Protocols go in `engine/types.py` (for engine-layer types) or the appropriate leaf module

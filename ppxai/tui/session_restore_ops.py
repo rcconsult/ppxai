@@ -8,7 +8,7 @@ layered architecture that hadn't undergone the ops-decomposition
 pattern (engine 1058 + 6 ops modules; server 411 + 17 routes;
 config 262 + 6 submodules); this is the same shape applied to TUI.
 
-Functions take the `PPXAIDEApp` reference as the first parameter so
+Functions take the app (a `SessionRestoreHost`) as the first parameter so
 they retain access to the Textual app context — `push_screen_wait`
 for modal dialogs, `_log` for app-scoped logging, instance widgets
 like `_chat_view` / `_status_bar` / `_input_box`, and the
@@ -26,17 +26,56 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any, Protocol, runtime_checkable
 
 from ppxai.config import get_auto_restore_mode, get_tui_config
 from ppxai.engine.session import SessionManager
 from ppxai.tui.widgets.dialog import ConsentDialog
 
-if TYPE_CHECKING:
-    from ppxai.tui.app import PPXAIDEApp
+
+@runtime_checkable
+class SessionRestoreHost(Protocol):
+    """What these functions need from the Textual app, and nothing more.
+
+    Following `docs/patterns/protocol-dependency-inversion.md`: a structural
+    `Protocol` declared in the leaf module, so this module does not import
+    `tui.app` while `tui.app` keeps importing this one. `PPXAIDEApp`
+    satisfies it structurally — no registration, no base class.
+
+    This replaced an `if TYPE_CHECKING: from ppxai.tui.app import PPXAIDEApp`
+    block. That is the repo's one banned import idiom (the pattern doc above
+    says so at line 41), it was the last instance in production code, and it
+    was the exact circular-import case the pattern exists to solve. The
+    members below are the complete set this module touches, enumerated from
+    the call sites.
+    """
+
+    #: App-scoped logger.
+    _log: Any
+    #: Engine facade; None before bootstrap completes.
+    _engine_client: Any
+    #: Transcript, status and input widgets.
+    _chat_view: Any
+    _status_bar: Any
+    _input_box: Any
+    #: Restored session state mirrored onto the app.
+    _provider: Any
+    _model: Any
+    _working_dir: Any
+    _tools_enabled: Any
+    #: Textual `App.sub_title`.
+    sub_title: str
+
+    def _format_cwd_display(self) -> str:
+        """Working directory as the status bar should show it."""
+        ...
+
+    async def push_screen_wait(self, screen: Any) -> Any:
+        """Textual modal push; resolves with the dialog's result."""
+        ...
 
 
-async def check_session_restoration(app: "PPXAIDEApp") -> None:
+async def check_session_restoration(app: SessionRestoreHost) -> None:
     """Check for last session and offer to restore (Phase 7).
 
     Shows interactive modal dialog if `auto_restore` config is "prompt".
@@ -176,14 +215,14 @@ async def check_session_restoration(app: "PPXAIDEApp") -> None:
 
 
 async def restore_session(
-    app: "PPXAIDEApp",
+    app: SessionRestoreHost,
     session_name: str,
     session_state: dict,
 ) -> bool:
     """Restore a session with provider, model, tools, and working dir state.
 
     Args:
-        app: The PPXAIDEApp instance — provides engine_client, widgets,
+        app: The Textual app (satisfies `SessionRestoreHost`) — provides engine_client, widgets,
             log, and `sub_title` setter.
         session_name: Name of the session file to load.
         session_state: Persisted session metadata (used by callers for

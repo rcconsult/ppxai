@@ -193,8 +193,7 @@
       "system_prompt": "You are an expert AI coding assistant with web search capabilities. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices. Cite sources as markdown links when using web search.",
       "options": {
         "enable_grounding": true,
-        "__comment_enable_grounding": "Enable Google Search Grounding for native web search (default: true)",
-        "native_tool_calling": true
+        "__comment_enable_grounding": "Enable Google Search Grounding for native web search (default: true)"
       },
       "generation_params": {
         "temperature": 0.2,
