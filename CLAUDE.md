@@ -102,7 +102,7 @@ Owner rule (2026-08-30):
 
 **When deploying:** Windows uses `~/.ppxai/bin/` for binaries; Linux/macOS uses `~/.local/bin/`. The `AppData\Local\ppxai` path exists only as a **search path** for finding binaries, never as an install target.
 
-`~/.ppxai/` subdirs: `bin/` (Windows only), `web/` (with `lib/` and `shared/`), `sessions/`, `exports/`, `checkpoints/`, `logs/`, `usage/`.
+`~/.ppxai/` subdirs: `bin/` (Windows only), `web/` (with `lib/` and `shared/`), `sessions/` (file checkpoints live at `sessions/checkpoints/<session_id>/`, **not** at the top level), `exports/`, `logs/`, `usage/`.
 
 ## Architecture
 

@@ -212,7 +212,7 @@ export function formatCheckpointBackendHelp(): string {
 Usage: \`/checkpoint backend <git|file|auto|none>\`
 
 • \`git\`: Use git commits (recommended for git repos)
-• \`file\`: Use file snapshots (~/.ppxai/checkpoints/)
+• \`file\`: Use file snapshots (~/.ppxai/sessions/checkpoints/)
 • \`auto\`: Auto-detect best backend
 • \`none\`: Disable checkpoints`;
 }

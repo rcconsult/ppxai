@@ -801,7 +801,14 @@ class EngineClient:
                     "   • Use /undo to revert the last agent task atomically"
                 )
             elif backend == "file":
-                checkpoint_path = f"~/.ppxai/checkpoints/{self.session.session_name}"
+                # Ask the manager where it actually writes. The literal
+                # "~/.ppxai/checkpoints/<session>" this used to build was
+                # wrong: FileCheckpointManager writes under SESSIONS_DIR
+                # (`~/.ppxai/sessions/checkpoints/<session>`, checkpoint.py:212),
+                # so this told the user to look in an empty directory.
+                checkpoint_path = getattr(
+                    self._checkpoint_manager, "checkpoint_dir", None
+                ) or f"~/.ppxai/sessions/checkpoints/{self.session.session_name}"
                 notification = (
                     f"🔒 Agent Mode enabled with file snapshots\n"
                     f"   • File snapshots saved to {checkpoint_path}\n"
