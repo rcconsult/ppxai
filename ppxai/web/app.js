@@ -911,7 +911,10 @@ class PpxaiApp {
     }
 
     /**
-     * Handle Quit button - shutdown server and close tab (v1.13.6)
+     * Handle Leave button (id quitBtn, v1.13.6) - shutdown server and
+     * close tab. Label changed from "Quit" to "Leave" (owner decision,
+     * 2026-09-20) — id/class/handler name are unchanged, only the
+     * visible text and tooltip moved.
      * v1.17.0: In coder mode (path prefix /s/<user>), redirect to login
      * instead of killing the server — the pod must stay alive.
      */

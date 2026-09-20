@@ -25,6 +25,7 @@ from textual.widgets import Footer, Header
 # Command Factory integration (Phase 6.1.1 - Technical debt cleanup)
 from ppxai.commands import CommandFactory
 from ppxai.commands.attach import (_load_file as _attach_load_file, build_multimodal_content)
+from ppxai.commands.client_handled import client_handled_message
 from ppxai.commands.results import DirectoryListingResult, DirectoryTreeResult
 from ppxai.common.autosave_guard import AutosaveFailureGuard
 from ppxai.common.consent import normalize_consent_response
@@ -1053,8 +1054,19 @@ class PPXAIDEApp(App):
             args = cmd
             cmd = "help"
 
-        # Try Command Factory first
+        # ADR 0007 step 1b: a client-handled spec (`/token`) is registered
+        # so the roster is complete, but Textual bundles no implementation
+        # of its `client_action` — report that instead of calling None.
+        # (`/quit`, `/exit` and `/q` never get here; they are intercepted
+        # above.)
         spec = CommandFactory.get(cmd)
+        if spec and spec.handler is None:
+            chat_view.add_system_message(
+                f"[yellow]{client_handled_message(spec)}[/yellow]"
+            )
+            return
+
+        # Try Command Factory first
         if spec:
             try:
                 # Call command handler with context

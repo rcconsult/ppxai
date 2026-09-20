@@ -230,6 +230,7 @@ a = Analysis(
         'ppxai.commands.attach',
         'ppxai.commands.doctor',
         'ppxai.commands.task',    # T8b: /task + /run
+        'ppxai.commands.client_handled',  # ADR 0007 1b: /quit + /token
         # Tool modules (v1.17.4 — data file tools)
         'ppxai.engine.tools.builtin',
         'ppxai.engine.tools.builtin.pdf_tools',

@@ -64,6 +64,7 @@ a = Analysis(
         'ppxai.commands.attach',
         'ppxai.commands.doctor',
     'ppxai.commands.task',    # T8b: /task + /run
+        'ppxai.commands.client_handled',  # ADR 0007 1b: /quit + /token
         'tree_sitter',
         'tree_sitter_python',
         'tree_sitter_javascript',

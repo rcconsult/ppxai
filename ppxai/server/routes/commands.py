@@ -22,6 +22,11 @@ kind is non-breaking. In-process TUI callers go through
 `result.side_effects` from the result; this envelope shape exists
 solely for the HTTP wire.
 
+A registered spec with no `handler` is CLIENT-HANDLED (ADR 0007 step
+1b — `/token`, `/quit`): the route refuses it in the same envelope,
+with `metadata.client_handled` set, and neither runs nor logs
+anything derived from `args`.
+
 `events` carry any state_sync / working_dir_changed / etc. that
 the handler caused via `state.set(...)`. Without piggybacking
 them here, the events sit in `engine._event_queue` until the next
@@ -33,6 +38,7 @@ determinism Phase B (v1.18.1).
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from ...commands.client_handled import client_handled_result
 from ...commands.context import ServerCommandContext
 from ...commands.factory import CommandFactory
 from ...common.logger import get_logger
@@ -60,13 +66,36 @@ async def execute_command(
     The factory does the lookup; the handler does the work; this
     route only wraps the result for the wire.
     """
-    args_preview = (request.args or "")[:120]
-    logger.info(f"HTTP POST /command/{name} from session={s.id} args={args_preview!r}")
-
     spec = CommandFactory.get(name)
     if not spec:
-        logger.warning(f"  Unknown command: /{name}")
+        # Nothing of the body is logged for an unknown name either: a
+        # typo'd /token is still a typo'd secret.
+        logger.warning(f"HTTP POST /command/{name} from session={s.id}: Unknown command")
         raise HTTPException(status_code=404, detail=f"Unknown command: /{name}")
+
+    if spec.handler is None:
+        # ADR 0007 step 1b: a registered, client-handled spec (/token,
+        # /quit). It must not execute, must not 404 (it exists), and its
+        # ARGS MUST NOT BE LOGGED OR ECHOED — `/token set <value>` carries
+        # a bearer token, and a client reaching here already has a routing
+        # bug. The envelope carries `metadata.client_handled` + the
+        # `client_action` it should have dispatched to instead.
+        logger.warning(
+            f"HTTP POST /command/{name} from session={s.id}: client-handled "
+            f"(client_action={spec.client_action}), refusing to dispatch"
+        )
+        result = client_handled_result(spec)
+        return with_drained_events({
+            "ok": False,
+            "result": result.to_dict(),
+            "side_effects": [],
+            "version": ENVELOPE_VERSION,
+        }, s.engine)
+
+    # Logged only once the command is known to be server-dispatched, so a
+    # client-handled command's arguments never reach the log at all.
+    args_preview = (request.args or "")[:120]
+    logger.info(f"HTTP POST /command/{name} from session={s.id} args={args_preview!r}")
 
     context = ServerCommandContext(s.engine)
     result = spec.handler(context, request.args)

@@ -1,12 +1,12 @@
 # Plan — closing ADR 0007 (one command registry)
 
-**Status: PROPOSED, nothing started.** Written 2026-09-20 on
-`bugfix/v1.19.3`; **rewritten the same day** after the owner restated the
-goal. The first draft split the work (a) invert the edge / (b) relocate /
-(c) roster, called (c) "a feature wearing the ADR's clothes", and
-recommended carrying it under a separate record. **That was backwards** —
-the roster is the goal and the edge inversion is its side effect. This
-version is sequenced accordingly.
+**Status: step 1 (1a + 1b) IMPLEMENTED; steps 2-5 PROPOSED, not started.**
+Written 2026-09-20 on `bugfix/v1.19.3`; **rewritten the same day** after
+the owner restated the goal. The first draft split the work (a) invert the
+edge / (b) relocate / (c) roster, called (c) "a feature wearing the ADR's
+clothes", and recommended carrying it under a separate record. **That was
+backwards** — the roster is the goal and the edge inversion is its side
+effect. This version is sequenced accordingly.
 
 Every measured claim carries its verification command: the ADR's own 08-15
 evidence decayed silently (it cited a module Item 65 had deleted), and this
@@ -55,7 +55,7 @@ exists (`POST /command/{name}`); a roster read endpoint does not
 
 ## Steps — each ships alone
 
-### 1. Enrich `CommandSpec` (server-only, no client change)
+### 1. Enrich `CommandSpec` (server-only, no client change) — ✅ DONE (2026-09-20)
 
 Add `subcommands`, `clients` gating, argument kinds and `client_action`.
 Register client-handled specs for `token`, `quit`, `exit` — no server
@@ -71,7 +71,9 @@ commands for the per-command contract. Widen (or replace)
 
 - **`/exit` is an ALIAS of `/quit`** — one spec, `aliases=["exit"]`. Same
   behaviour, and aliases are the registry's native form
-  (`CommandSpec.aliases`, collision-checked at `factory.py:149`).
+  (`CommandSpec.aliases`). NB: a colliding alias is only WARNED about in
+  `CommandFactory.register` and then registered anyway — see the note under
+  the convention below.
 - **The canonical `client_action` vocabulary lives in PYTHON**, beside
   `CommandSpec`. The parity fence reads that one list and checks each JS
   client implements every name. A JS-side list would be a second source of
@@ -82,7 +84,17 @@ Initial vocabulary:
 | Command | `client_action` | `clients` |
 |---|---|---|
 | `/token` | `token.manage` | `{web, vscode}` |
-| `/quit` (alias `/exit`) | `app.quit` | universal |
+| `/quit` (alias `/exit`) | `app.quit` | `{rich, textual}` (owner decision, 2026-09-20 — see below; was `universal` before that) |
+
+**Decided 2026-09-20 (owner), REVERSES the initial vocabulary above:**
+`/quit` (alias `/exit`) is gated to `clients={"rich", "textual"}`, not
+universal. In a GUI, ending the session is a UI button workflow, not a
+command — the web app has a header button for it (relabelled "Leave"),
+and VSCode already has Disconnect. Web and VSCode must never see `/quit`
+or `/exit` in completion or `/help`. This also resolves a step 1b
+finding: `/quit` was declared universal but no JS client implemented the
+`app.quit` action — the hybrid-commands table's "Pure client" row above
+already needed the same fix.
 
 **Resolved by measurement:** hybrid commands (`/task`, `/run`, `/auto`,
 streaming, client-native UX) DO carry a `client_action`, scoped per client
@@ -111,7 +123,25 @@ correct it if wrong):
   command" — the natural form for a spec with no handler at all
   (`/quit`: universal; `/token`: bounded by `clients={"web","vscode"}`).
 - A spec with neither a `handler` nor a `client_action` is invalid and
-  should fail at registration, the way an alias collision does today.
+  raises `ValueError` at registration (implemented in step 1a).
+
+> **Correction (2026-09-20).** This plan said an invalid spec should fail
+> "the way an alias collision does today". Alias collisions do NOT fail:
+> `CommandFactory.register` logs a warning and then runs
+> `cls._aliases[alias] = spec.name` unconditionally, so the newcomer takes
+> the name. Because `get()` consults the alias map FIRST, an alias equal to
+> an existing COMMAND name silently shadows that command. The hand-written
+> note at `commands/coding.py:379` ("Removed \"t\" alias - conflicts with
+> /tools") is someone working around this.
+>
+> **Decided 2026-09-20 (owner): alias collisions are a RELEASE GATE.**
+> Aliases are code configuration, so a collision in the shipped roster must
+> fail the suite, and the suite gates release —
+> `tests/test_command_alias_collisions.py`. It reads the DECLARATIONS rather
+> than `_aliases`, because registration overwrites and destroys the evidence.
+> Runtime behaviour is deliberately unchanged: a user's
+> `~/.ppxai/commands/*.py` still loads with warn-and-overwrite, so a
+> collision there cannot stop the app from starting.
 
 **Still open** (settle before coding): the shape of `clients` on a spec (a set of client ids, absent = universal — matching what
 `completion.py:70-78` already does informally); how argument kinds are
@@ -120,6 +150,46 @@ nested specs.
 
 **Acceptance:** every entry in the six `_*_SUBCOMMANDS` tables and every
 `commands.js` field has a home on a spec. Nothing consumes them yet.
+
+**Step 1b findings (2026-09-20).** Registering `/token` and `/quit` as
+real specs made `POST /command/{name}` reachable for them, and doing that
+surfaced a pre-existing bug rather than introducing one:
+
+- The route logged `args_preview` from the request BEFORE looking the
+  command up, so `POST /command/token {"args":"set <bearer>"}` wrote the
+  secret to the server debug log — and a typo'd `POST /command/tokn
+  {"args":"set <secret>"}` leaked the same way via the 404 branch, since
+  that branch logged the raw args too. Fixed in
+  `ppxai/server/routes/commands.py::execute_command`: both the
+  unknown-command and the client-handled branches now log only a fixed,
+  args-free message, and `args_preview` is computed/logged only once the
+  command is confirmed server-dispatched. Pinned by
+  `tests/test_client_handled_dispatch.py::TestSecretNeverEchoed`.
+- `CommandFactory.generate_help(client=...)` had accepted a `client`
+  parameter it never used since v1.13.10 — dead plumbing from before the
+  registry had per-client gating. Step 1b is the first thing that makes
+  the parameter do something (it now filters by `spec.clients`).
+- `commands/system.py::_help_client` originally returned `None` for
+  `ServerCommandContext` — deliberately failing open — with a docstring
+  claiming that was correct "while every gated command is gated to
+  exactly {web, vscode}". Gating `/quit` to Rich/Textual only (owner
+  decision, same date) broke that assumption: `ServerCommandContext`
+  serves both web and VSCode over one HTTP surface with no per-request
+  client id, so failing open made `/quit` leak into web/VSCode `/help`
+  even though `generate_help(client="web")` correctly hid it. Fixed by
+  widening `client_sees` to accept a CANDIDATE SET (`frozenset[str]`) in
+  addition to a single client id or `None`: visible iff `clients`
+  intersects the candidate set. `_help_client` now returns the named
+  constant `SERVER_CLIENTS = frozenset({"web", "vscode"})`
+  (`commands/factory.py`) for the server context instead of `None`.
+  Fail-open for `client=None` is unchanged and still pinned by tests.
+  The remaining, deliberate limitation stands: a command gated to only
+  ONE of web/vscode is still over-listed for the other, until the
+  roster endpoint (step 2) carries a real client id. Pinned by
+  `tests/test_client_handled_dispatch.py::TestServerHelpUsesTheCandidateSet`
+  (exercises the real `POST /command/help` route, unlike the
+  direct-call `generate_help(client="web")` tests that stayed green
+  through the whole regression) and `TestClientSeesCandidateSet`.
 
 ### 2. `GET /commands`
 
@@ -165,7 +235,7 @@ Python command infrastructure **correctly**, not just be listed there.
 | Command | Today | Why it is client-handled | Must hold after migration |
 |---|---|---|---|
 | `/token` | JS dispatcher branch (`command-dispatcher.js:111`), VSCode branch (`chatPanel.ts:1185`); declared in `_BUILTIN_SPECIAL_COMMANDS` with `clients={web,vscode}` | its **state** is client-side: the credential store is the browser's `localStorage` + the in-memory `ApiClient`. NOT Python-free — `mint` calls `POST /v1/tokens` (`server/routes/tokens_v1.py`); `status`/`set`/`clear` are pure client. The server can mint a token but cannot attach it to the client's future requests, so the client must orchestrate | spec is `client_handled`; `clients={web,vscode}`; subcommands `status·set·mint·clear` on the spec; **Rich/Textual never see it** in completion or `/help`; `POST /command/token` refuses cleanly rather than 404-ing |
-| `/quit`, `/exit` | `_BUILTIN_SPECIAL_COMMANDS`, universal | ends the client process | ONE spec: `/quit` with `aliases=["exit"]` (decided 2026-09-20), `client_action="app.quit"`, no `clients` restriction |
+| `/quit`, `/exit` | `_BUILTIN_SPECIAL_COMMANDS`, universal | ends the client process | ONE spec: `/quit` with `aliases=["exit"]` (decided 2026-09-20), `client_action="app.quit"`, `clients={"rich","textual"}` (owner decision, 2026-09-20, reverses "universal" — ending a session is a GUI button workflow, not a command) |
 | `/cat` | JS standalone entry "Alias for /show" | — it is NOT client-handled | **nothing to migrate**: already a registered alias. JS stops restating it; the endpoint serves aliases |
 | `/sh`, `/term` | JS standalone entries "Alias for /terminal" | — not client-handled | same: already registered aliases |
 
@@ -188,6 +258,19 @@ move so the migration is verified rather than assumed:
    After migration `_appendExperimentalHelp` is deleted and `/help` comes
    from the registry alone, filtered by `clients`.
 
+   **Known-until-step-3 (confirmed by source reading, 2026-09-20, once
+   step 1b made `/token` a registered spec):** web `/help` now lists
+   `/token` **twice** — once from the server catalog (`_dispatchToFactory
+   ('help', '')`, which includes it since `clients={"web","vscode"}`) and
+   once from `_appendExperimentalHelp()` (`command-dispatcher.js`), which
+   still reads it from the JS-side `commands.js` catalog unconditionally.
+   And `commands.js`'s `/token` description ("Manage the bearer token
+   attached to /v1 API calls (status|set|mint|clear)") reads differently
+   from the Python spec's ("Manage the /v1 API bearer token
+   (status·set·mint·clear)", `ppxai/commands/client_handled.py`) — same
+   meaning, different wording, another second source of truth step 3
+   collapses.
+
 4. **`/token set` never transits the command-dispatch path.** The handler
    already treats the value as a secret: bare `/token set` uses
    `window.prompt` so the token is not echoed, and the inline form warns it
@@ -200,15 +283,15 @@ move so the migration is verified rather than assumed:
    never "forward to the server and let it refuse".
 
    Aliases need no schema work: `CommandSpec.aliases` exists, with
-   collision checks at registration (`factory.py:149`), resolution in
-   `get()` (`:186`) and publication via `iter_completion_specs()`
+   resolution in `CommandFactory.get()` and publication via `iter_completion_specs()`
    (`is_alias` / `canonical`). `/exit` as an alias of `/quit` is native.
 
 **Deletions that prove the migration is complete** — if any survives, a
 second roster still exists: `_BUILTIN_SPECIAL_COMMANDS` and `_CLIENT_GATES`
-(`engine/completion.py`), `_appendExperimentalHelp`
+(`engine/completion.py`) ✅ DONE (step 1b, 2026-09-20) — along with
+`_TOKEN_SUBCOMMANDS`, retired in the same step; `_appendExperimentalHelp`
 (`command-dispatcher.js`), the inline fallback catalog (`app.js:199`), and
-the alias entries in `commands.js`.
+the alias entries in `commands.js` remain — these three are step 2+ work.
 
 ## Hybrid commands — dispatch routing becomes data
 
@@ -242,6 +325,17 @@ intercepts must be declared with a `client_action` for that client, or sit in
 an explicit legacy baseline. On day one that baseline is exactly the five
 legacy VSCode intercepts, and it may only shrink — the same discipline as
 `BASELINE` in `tests/test_no_new_lazy_imports.py`.
+
+## Note for step 2+ — PyInstaller hiddenimports
+
+A new command module (like `ppxai/commands/client_handled.py` in step 1b)
+must also be added as a hiddenimport in **all three** of `ppxai.spec`,
+`ppxaide.spec` and `ppxai-server.spec`, or
+`tests/test_pyinstaller_spec_completeness.py` fails. Easy to miss because
+the module works fine in `uv run` (regular import machinery) and only
+breaks in a PyInstaller-built binary where nothing imports it directly —
+side-effect-only registration modules are exactly the shape PyInstaller's
+static analysis misses.
 
 ## Explicitly not in the path
 

@@ -62,6 +62,7 @@ a = Analysis(
         'ppxai.commands.attach',     # added v1.18.0 fix
         'ppxai.commands.doctor',     # added v1.18.0 fix
     'ppxai.commands.task',    # T8b: /task + /run
+        'ppxai.commands.client_handled',  # ADR 0007 1b: /quit + /token
         # Engine
         'ppxai.engine',
         'ppxai.engine.client',

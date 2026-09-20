@@ -13,8 +13,8 @@ from pathlib import Path
 from ..config import get_provider_config, get_tui_config, set_tui_config
 from ..rich.themes import THEMES, get_theme
 from ..version import __version__
-from .context import ServerCommandContext
-from .factory import CommandFactory, CommandSpec
+from .context import RichCommandContext, ServerCommandContext
+from .factory import SERVER_CLIENTS, CommandFactory, CommandSpec, client_sees
 from .protocol import CommandContext
 from .results import (
     CommandResult,
@@ -32,6 +32,37 @@ from .results import (
 # =============================================================================
 # Type-Based Result Handlers (v1.15.0)
 # =============================================================================
+
+def _help_client(context: CommandContext) -> str | frozenset[str] | None:
+    """Best-effort client id (or candidate set) for filtering `/help`.
+
+    ADR 0007 step 1b: `/help` must not advertise a command the reader's
+    client cannot run (`/token` in Rich/Textual; `/quit` in web/VSCode).
+    Nothing carries a client id today — `CommandContext` has no such
+    member and `CommandRequest` has no such field — so the context
+    adapter is the only signal:
+
+    - `ServerCommandContext` serves BOTH web and VSCode over one HTTP
+      surface and cannot tell them apart, so this returns
+      `SERVER_CLIENTS` — the candidate set `{"web", "vscode"}` —
+      rather than `None`. `client_sees` then shows a command when it is
+      visible to EITHER candidate. This used to return `None` (fail
+      open, list everything), which was correct only while every gated
+      command was gated to exactly `{web, vscode}`; the `/quit` gating
+      (Rich/Textual-only) broke that assumption and leaked `/quit` into
+      web/VSCode help. The remaining, deliberate limitation: a command
+      gated to only ONE of web/vscode is still over-listed for the
+      other, until the roster endpoint (step 2) carries a real client
+      id.
+    - `RichCommandContext` is Rich; any other in-process context is the
+      Textual app, which passes itself as the context.
+    """
+    if isinstance(context, ServerCommandContext):
+        return SERVER_CLIENTS
+    if isinstance(context, RichCommandContext):
+        return "rich"
+    return "textual"
+
 
 def handle_help(context: CommandContext, args: str) -> CommandResult:
     """Handle /help command - display help information.
@@ -64,12 +95,14 @@ def handle_help(context: CommandContext, args: str) -> CommandResult:
     # module load.
 
     is_http = isinstance(context, ServerCommandContext)
+    client = _help_client(context)
     args = args.strip().lower() if args else ""
 
     # /help <command> - detailed help for specific command
     if args:
         cmd_name = args.lstrip("/")
-        detailed_help = CommandFactory.get_command_help(cmd_name, markdown=is_http)
+        detailed_help = CommandFactory.get_command_help(
+            cmd_name, markdown=is_http, client=client)
 
         if detailed_help:
             if is_http:
@@ -84,7 +117,10 @@ def handle_help(context: CommandContext, args: str) -> CommandResult:
             )
 
         # Command not found - show error with suggestions
-        available = CommandFactory.list_all()
+        # Same gate as the listing above: never suggest a command this
+        # client cannot run (ADR 0007 step 1b).
+        available = [name for name in CommandFactory.list_all()
+                     if client_sees(CommandFactory.get(name).clients, client)]
         suggestions = [c for c in available if cmd_name in c or c in cmd_name][:3]
         suggestion_text = ""
         if suggestions:
@@ -98,7 +134,8 @@ def handle_help(context: CommandContext, args: str) -> CommandResult:
     # /help - show all commands
     if is_http:
         header = f"## ppxai v{__version__} — AI Chat Assistant\n\n"
-        help_text = header + CommandFactory.generate_help(markdown=True)
+        help_text = header + CommandFactory.generate_help(
+            client=client, markdown=True)
         return MarkdownResult(
             status=ResultStatus.INFO,
             message="Available commands",
@@ -106,7 +143,7 @@ def handle_help(context: CommandContext, args: str) -> CommandResult:
         )
 
     header = f"[bold]ppxai v{__version__} - AI Chat Assistant[/bold]\n\n"
-    help_text = header + CommandFactory.generate_help()
+    help_text = header + CommandFactory.generate_help(client=client)
     return TextResult(
         status=ResultStatus.INFO,
         message=help_text,

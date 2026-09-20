@@ -3,7 +3,10 @@
 **Date:** 2026-06-14 (revised 2026-08-15; re-measured 2026-09-20 on
 `bugfix/v1.19.3` — the 08-15 evidence had decayed, see §Re-measured;
 **revised 2026-09-20 — goal restated by the owner and the roster decision
-changed from AppState push to a pull endpoint, see §Goal and §Decision**.
+changed from AppState push to a pull endpoint, see §Goal and §Decision**;
+**revised again 2026-09-20 — `/quit` (alias `/exit`) gated to
+`{rich, textual}`, reversing the "universal" call in the same section
+below: ending a GUI session is a UI button workflow, not a command**.
 Originally titled "Completion as a first-class service; command roster via
 AppState".)
 **Status:** Proposed — step 1 shipped v1.18.8 (`CommandFactory.iter_completion_specs`, `commands/factory.py`); step 2 (extract `ppxai/completion/` package) **still open**. The "target v1.19.x" in the 08-15 revision has now been passed by v1.19.0, v1.19.1 and v1.19.2 without step 2 landing — it was a hope, not a plan, and is restated below as an explicit deferral with triggers rather than a date.
@@ -57,10 +60,14 @@ from JS: `attach`, `autoroute`, `copy`, `debug-log`, `doctor`, `keys`,
 
 **The client-handled commands are `/token`, `/quit`, `/exit`.** `/token`
 manages the bearer the *client* attaches, so it cannot run server-side and
-is gated to `{web, vscode}`; `/quit` and `/exit` end the client process.
-They are declared in `_BUILTIN_SPECIAL_COMMANDS` as loose dicts because the
-registry has no way to express a command with no server handler — which is
-why they sit outside it, and why web `/help` is stitched from two sources
+is gated to `{web, vscode}`; `/quit` and `/exit` end the client process
+and are gated to `{rich, textual}` (owner decision, 2026-09-20 —
+reverses an earlier "universal" call: ending a GUI session is a UI button
+workflow, not a command — the web app has a header button for it and
+VSCode already has Disconnect). They are declared in
+`_BUILTIN_SPECIAL_COMMANDS` as loose dicts because the registry has no way
+to express a command with no server handler — which is why they sit
+outside it, and why web `/help` is stitched from two sources
 (`command-dispatcher.js::_appendExperimentalHelp`).
 
 And the v1.18.8 seed is too thin to be the source: `CompletionCommandInfo`
@@ -290,8 +297,7 @@ roster *through AppState*, pushed over `state_sync`. That is replaced:
   of the PUBLISHED snapshot, so the client knows before dispatching.
 
   (`cat`, `sh`, `term` need no migration: they are already registered
-  aliases — `CommandSpec.aliases`, with collision checks and resolution in
-  the factory. JS must simply stop restating them.) Without this the registry can never
+  aliases — `CommandSpec.aliases`, resolved by the factory. JS must simply stop restating them.) Without this the registry can never
   be complete and JS keeps a private list forever.
 - **In-process clients (Rich, Textual) read the registry directly** — they
   hold `CommandFactory` already. Nothing new.

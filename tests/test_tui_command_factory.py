@@ -215,10 +215,19 @@ def test_iter_completion_specs_alias_points_to_canonical():
 
 
 def test_iter_completion_specs_exposes_no_handler():
-    """The completion view is decoupled from CommandSpec — narrow shape only,
-    no handler / internal storage leaks (the ADR 0007 seam contract)."""
+    """The completion view is decoupled from CommandSpec — no handler /
+    internal storage leaks (the ADR 0007 seam contract). Widened in step
+    1a to carry `usage`, `category`, `subcommands`, `clients`,
+    `client_action`, `client_action_clients` and `client_handled` — see
+    tests/test_command_spec_schema.py for the field-by-field contract;
+    this test only pins that `handler` itself never leaks."""
     info = CommandFactory.iter_completion_specs()[0]
-    assert set(vars(info)) == {"name", "description", "hidden", "is_alias", "canonical"}
+    assert set(vars(info)) == {
+        "name", "description", "hidden", "is_alias", "canonical",
+        "usage", "category", "subcommands", "clients",
+        "client_action", "client_action_clients", "client_handled",
+    }
+    assert "handler" not in vars(info)
 
 
 # =============================================================================

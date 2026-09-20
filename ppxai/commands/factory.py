@@ -39,7 +39,62 @@ _BUILTIN_COMMAND_MODULES = (
     # capability that decides availability is a live event loop, not which
     # client is running — see commands/task.py.
     "task",
+    # ADR 0007 step 1b: /quit and /token — registered specs with no server
+    # handler, bound to a named client action instead.
+    "client_handled",
 )
+
+
+#: Client ids recognized throughout the command registry — the exact
+#: strings passed as `client=` to `engine.completion.complete()` by
+#: `rich/main.py`, `tui/completer.py` and `server/routes/completion.py`
+#: (the latter forwarding the HTTP request's own `client` field, which
+#: carries "web" or "vscode"). ADR 0007 step 1a.
+KNOWN_CLIENTS = frozenset({"rich", "textual", "web", "vscode"})
+
+#: The two clients `ServerCommandContext` serves — it fields HTTP requests
+#: for BOTH web and VSCode and carries no per-request client id, so a
+#: caller that only knows "this is the server" gates on this whole set
+#: rather than a single client (see `client_sees` and
+#: `commands/system.py::_help_client`).
+SERVER_CLIENTS = frozenset({"web", "vscode"})
+
+#: Canonical vocabulary of named client-side actions a `CommandSpec` can
+#: bind to via `client_action` (ADR 0007). Deliberately Python, not JS —
+#: a JS-side copy would be a second source of truth for the exact thing
+#: this record exists to remove; each client bundles its own
+#: implementation of a name listed here.
+CLIENT_ACTIONS = frozenset({"token.manage", "app.quit"})
+
+
+def client_sees(
+    clients: frozenset[str] | None,
+    client: str | frozenset[str] | None,
+) -> bool:
+    """True when `client` may see a command gated to `clients`.
+
+    The single definition of the visibility gate, shared by completion
+    (`engine/completion.py::_client_allows`) and `/help`. `clients=None`
+    means universal. `client` accepts three shapes:
+
+    - `None` (a legacy or unknown caller) fails OPEN and sees everything
+      — the pre-gating behaviour, preserved deliberately (ADR 0007 plan,
+      behaviour 1).
+    - `str` — a single known client id (e.g. "rich"): visible iff it is
+      a member of `clients`.
+    - `frozenset[str]` — a CANDIDATE SET of client ids, for a caller that
+      knows the audience is one of several clients but not which one
+      (`ServerCommandContext`, which serves both web and VSCode over one
+      HTTP surface). Visible iff `clients` intersects the candidate set,
+      i.e. the command is visible to at least one candidate. This can
+      over-list a command gated to only SOME of the candidates — see
+      `commands/system.py::_help_client`.
+    """
+    if clients is None or client is None:
+        return True
+    if isinstance(client, frozenset):
+        return bool(clients & client)
+    return client in clients
 
 
 @dataclass
@@ -49,19 +104,70 @@ class CommandSpec:
     Attributes:
         name: Command name without the slash (e.g., "help", "save")
         description: Short description shown in /help
-        handler: Function that handles the command: fn(handler, args: str) -> Any
+        handler: Function that handles the command: fn(handler, args: str) -> Any.
+            Optional — a spec with no handler must instead declare
+            `client_action` (see below); `register()` rejects a spec with
+            neither.
         category: Category for grouping in help (e.g., "session", "model", "tools")
         aliases: Alternative names for the command
         usage: Usage string shown in help (e.g., "/save [name]")
         hidden: If True, command is not shown in /help
+        subcommands: (name, description) pairs, shown in completion/help.
+            Shape deliberately matches the `_*_SUBCOMMANDS: list[tuple[str,
+            str]]` tables in `engine/completion.py` (ADR 0007 step 1a).
+        clients: Which clients can SEE this command. None means universal.
+        client_action: Name from `CLIENT_ACTIONS` naming the client-side
+            behaviour this command binds to. None means the command has no
+            client-handled behaviour at all.
+        client_action_clients: Which clients dispatch to `client_action`
+            instead of `handler`. None means "every client that can see
+            the command" (see `dispatches_in_client`).
     """
     name: str
     description: str
-    handler: Callable
+    handler: Callable | None = None
     category: str = "general"
     aliases: list[str] = field(default_factory=list)
     usage: str = ""
     hidden: bool = False
+    subcommands: list[tuple[str, str]] = field(default_factory=list)
+    clients: frozenset[str] | None = None
+    client_action: str | None = None
+    client_action_clients: frozenset[str] | None = None
+
+    @property
+    def is_client_handled(self) -> bool:
+        """True when the command has no server handler at all.
+
+        Distinct from `dispatches_in_client()`: a hybrid command (e.g.
+        `/task`) has both a `handler` (for Rich/Textual) and a
+        `client_action` (for web/VSCode) — it is NOT client_handled by
+        this property, because a server handler exists. `/token` and
+        `/quit` (no `handler`) are.
+        """
+        return self.handler is None and self.client_action is not None
+
+    def dispatches_in_client(self, client: str | None) -> bool:
+        """True if `client` should invoke `client_action` rather than
+        `handler` for this command.
+
+        Convention (ADR 0007, decided 2026-09-20):
+        - No `client_action` -> False.
+        - `client_action_clients` is a set -> `client in` it.
+        - `client_action_clients` is None (absent) -> True for every
+          client that can see the command (`clients is None or client in
+          clients`).
+        - `client=None` with an absent set -> True only if the spec has
+          no handler (legacy/no-client callers get the client action only
+          when there is no server-side alternative).
+        """
+        if self.client_action is None:
+            return False
+        if self.client_action_clients is not None:
+            return client in self.client_action_clients
+        if client is None:
+            return self.handler is None
+        return self.clients is None or client in self.clients
 
 
 @dataclass
@@ -80,6 +186,18 @@ class CompletionCommandInfo:
     hidden: bool         # canonical command's hidden flag
     is_alias: bool       # True if `name` is an alias
     canonical: str       # canonical command name (== name when not an alias)
+    # ADR 0007 step 1a: widened so this snapshot can eventually replace
+    # commands.js and the `_*_SUBCOMMANDS` tables. All defaulted so
+    # existing call sites (which only ever use the fields above) are
+    # unaffected. Populated from the canonical spec — an alias entry
+    # inherits its canonical command's values.
+    usage: str = ""
+    category: str = "general"
+    subcommands: list[tuple[str, str]] = field(default_factory=list)
+    clients: frozenset[str] | None = None
+    client_action: str | None = None
+    client_action_clients: frozenset[str] | None = None
+    client_handled: bool = False
 
 
 class CommandFactory:
@@ -130,6 +248,57 @@ class CommandFactory:
                 logger.warning(f"Failed to load command module {module_name}: {e}")
 
     @classmethod
+    def _validate_spec(cls, spec: CommandSpec) -> None:
+        """Validate a spec's client-handling schema (ADR 0007 step 1a).
+
+        Raises:
+            ValueError: naming the command, for any of:
+                - neither `handler` nor `client_action` set
+                - `client_action` not a name in `CLIENT_ACTIONS`
+                - `client_action_clients` set while `client_action` is None
+                - `clients` or `client_action_clients` naming a client id
+                  outside `KNOWN_CLIENTS`
+                - both `clients` and `client_action_clients` given, and the
+                  latter is not a subset of the former
+        """
+        if spec.handler is None and spec.client_action is None:
+            raise ValueError(
+                f"Command '{spec.name}' has neither a handler nor a client_action"
+            )
+        if spec.client_action is not None and spec.client_action not in CLIENT_ACTIONS:
+            raise ValueError(
+                f"Command '{spec.name}' has unknown client_action "
+                f"'{spec.client_action}' (not in CLIENT_ACTIONS)"
+            )
+        if spec.client_action_clients is not None and spec.client_action is None:
+            raise ValueError(
+                f"Command '{spec.name}' sets client_action_clients without a client_action"
+            )
+        if spec.clients is not None:
+            unknown = spec.clients - KNOWN_CLIENTS
+            if unknown:
+                raise ValueError(
+                    f"Command '{spec.name}' has unknown clients {sorted(unknown)} "
+                    f"(not in KNOWN_CLIENTS)"
+                )
+        if spec.client_action_clients is not None:
+            unknown = spec.client_action_clients - KNOWN_CLIENTS
+            if unknown:
+                raise ValueError(
+                    f"Command '{spec.name}' has unknown client_action_clients "
+                    f"{sorted(unknown)} (not in KNOWN_CLIENTS)"
+                )
+        if (
+            spec.clients is not None
+            and spec.client_action_clients is not None
+            and not spec.client_action_clients.issubset(spec.clients)
+        ):
+            raise ValueError(
+                f"Command '{spec.name}' has client_action_clients that is not "
+                f"a subset of clients"
+            )
+
+    @classmethod
     def register(cls, spec: CommandSpec) -> None:
         """Register a command specification.
 
@@ -137,8 +306,12 @@ class CommandFactory:
             spec: CommandSpec to register
 
         Raises:
-            ValueError: If command name or alias already registered
+            ValueError: If the spec fails schema validation (ADR 0007 step
+                1a — see `_validate_spec`), or if command name or alias
+                already registered
         """
+        cls._validate_spec(spec)
+
         if spec.name in cls._registry:
             logger.warning(f"Command '{spec.name}' already registered, overwriting")
 
@@ -199,11 +372,19 @@ class CommandFactory:
             Result from command handler
 
         Raises:
-            ValueError: If command not found
+            ValueError: If command not found, or if it is client-handled
+                (no server handler — ADR 0007 step 1b)
         """
         spec = cls.get(name)
         if not spec:
             raise ValueError(f"Unknown command: /{name}")
+        if spec.handler is None:
+            # Deliberately says nothing about `args`: a client-handled
+            # command may carry a secret (/token set <value>).
+            raise ValueError(
+                f"Command /{name} is client-handled "
+                f"(client_action='{spec.client_action}') and has no server handler"
+            )
         return spec.handler(handler, args)
 
     @classmethod
@@ -237,18 +418,26 @@ class CommandFactory:
         return list(cls._registry.keys())
 
     @classmethod
-    def list_by_category(cls, category: str) -> list[CommandSpec]:
+    def list_by_category(cls, category: str,
+                         client: str | frozenset[str] | None = None
+                         ) -> list[CommandSpec]:
         """List commands in a category.
 
         Args:
             category: Category name
+            client: Optional client id, or a candidate set of client ids
+                for a caller that knows the audience is one of several
+                clients (e.g. `SERVER_CLIENTS`) — commands gated away
+                from all of them are omitted. None fails open (see
+                `client_sees`).
 
         Returns:
             List of CommandSpec in the category
         """
         cls._ensure_loaded()
         return [spec for spec in cls._registry.values()
-                if spec.category == category and not spec.hidden]
+                if spec.category == category and not spec.hidden
+                and client_sees(spec.clients, client)]
 
     @classmethod
     def iter_completion_specs(cls) -> list[CompletionCommandInfo]:
@@ -271,6 +460,13 @@ class CommandFactory:
                 hidden=spec.hidden,
                 is_alias=False,
                 canonical=name,
+                usage=spec.usage,
+                category=spec.category,
+                subcommands=spec.subcommands,
+                clients=spec.clients,
+                client_action=spec.client_action,
+                client_action_clients=spec.client_action_clients,
+                client_handled=spec.is_client_handled,
             ))
         for alias, canonical in cls._aliases.items():
             spec = cls._registry.get(canonical)
@@ -282,6 +478,13 @@ class CommandFactory:
                 hidden=spec.hidden,
                 is_alias=True,
                 canonical=canonical,
+                usage=spec.usage,
+                category=spec.category,
+                subcommands=spec.subcommands,
+                clients=spec.clients,
+                client_action=spec.client_action,
+                client_action_clients=spec.client_action_clients,
+                client_handled=spec.is_client_handled,
             ))
         return infos
 
@@ -305,13 +508,21 @@ class CommandFactory:
         cls._loaded = False
 
     @classmethod
-    def generate_help(cls, client: str | None = None, markdown: bool = False) -> str:
+    def generate_help(cls, client: str | frozenset[str] | None = None,
+                      markdown: bool = False) -> str:
         """Generate help text from registered commands.
 
         Dynamically builds help output grouped by category.
 
         Args:
-            client: Optional client filter ("rich", "textual", or None for all)
+            client: Client id, or a candidate set of client ids
+                (e.g. `SERVER_CLIENTS`, for a caller that serves several
+                clients over one surface and can't tell them apart), to
+                filter by — a command gated away from `client` entirely
+                (`CommandSpec.clients`) is omitted. None fails open and
+                lists everything (see `client_sees`). Declared since
+                v1.13.10 but only wired up in ADR 0007 step 1b, when
+                `/token` became a registered, web/VSCode-only spec.
             markdown: If True, output GitHub-flavored markdown (web,
                 VSCode). If False, Rich console markup (TUI).
                 Same content, two formatters.
@@ -327,7 +538,7 @@ class CommandFactory:
 
         # Group by category
         for category in cls.get_categories():
-            commands = cls.list_by_category(category)
+            commands = cls.list_by_category(category, client=client)
             if not commands:
                 continue
 
@@ -359,13 +570,19 @@ class CommandFactory:
         return "\n".join(lines)
 
     @classmethod
-    def get_command_help(cls, name: str, markdown: bool = False) -> str | None:
+    def get_command_help(cls, name: str, markdown: bool = False,
+                         client: str | frozenset[str] | None = None
+                         ) -> str | None:
         """Get detailed help for a specific command.
 
         Args:
             name: Command name or alias (without leading /)
             markdown: If True, output GitHub-flavored markdown.
                 If False, Rich console markup.
+            client: Optional client id, or a candidate set of client ids
+                (see `client_sees`) — a command gated away from all of
+                `client` reads as not found, matching what completion
+                and the `/help` listing show it (ADR 0007 step 1b).
 
         Returns:
             Formatted help text, or None if command not found
@@ -373,6 +590,8 @@ class CommandFactory:
         cls._ensure_loaded()
         spec = cls.get(name)
         if not spec:
+            return None
+        if not client_sees(spec.clients, client):
             return None
 
         lines = []

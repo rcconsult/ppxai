@@ -43,6 +43,7 @@ from ..rich.ui import (  # noqa: F401 — re-exported via commands/__init__.py
 )
 
 # Import command modules to trigger self-registration
+from .client_handled import client_handled_message
 from .context import RichCommandContext
 from .factory import CommandFactory
 from .results import CommandResult
@@ -586,6 +587,14 @@ class CommandHandler:
 
         # All commands use CommandFactory + CommandContext protocol
         spec = CommandFactory.get(cmd_name)
+        if spec and spec.handler is None:
+            # ADR 0007 step 1b: a client-handled spec (`/token`) is in the
+            # registry so the roster is complete, but Rich bundles no
+            # implementation of its `client_action`. Say so instead of
+            # calling None. (`/quit` and `/exit` never get here — they are
+            # intercepted above.)
+            console.print(f"[yellow]{client_handled_message(spec)}[/yellow]\n")
+            return False
         if spec:
             try:
                 context = RichCommandContext(self)

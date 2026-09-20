@@ -45,7 +45,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from ..commands.factory import CommandFactory
+from ..commands.factory import CommandFactory, client_sees
 from ..config import PROVIDERS, get_provider_config
 
 # Commands that accept path arguments, and what kinds of entries make
@@ -65,54 +65,29 @@ _IGNORE_DIRS = frozenset({
     ".tox", "dist", "build", ".eggs", ".mypy_cache",
 })
 
-# Commands the factory doesn't own (special-cased in CommandHandler).
-_BUILTIN_SPECIAL_COMMANDS: list[dict[str, Any]] = [
-    {"text": "/quit", "description": "Exit the application", "kind": "command"},
-    {"text": "/exit", "description": "Exit the application", "kind": "command"},
-    # v1.19.0 agent platform — client-side commands (handled in the web
-    # dispatcher / VSCode chatPanel, NOT the CommandFactory). Each entry's
-    # `clients` set names the clients that actually implement it, and the
-    # completion engine surfaces the entry only to those clients: an
-    # unfiltered list taught users to type commands that answered
-    # "Unknown command" everywhere else (Item 40 VSCode trial, 2026-07-12).
-    # Entries without a `clients` key are universal.
-    # /run and /task USED to be listed here, gated to {"web", "vscode"},
-    # because the in-process TUIs had no channel to the run registry. T8b
-    # (v1.19.1) embedded the runner, so both are now real `CommandFactory`
-    # commands — universal, and surfaced from the factory like every other
-    # command. Listing them here as well would double-list them AND re-apply
-    # a gate that no longer describes reality.
-    #
-    # Availability is now decided per VERB by a capability rather than per
-    # client by a name: launching and resuming need a live event loop, which
-    # Textual has and Rich does not yet, while ls/get/cancel/collect are
-    # synchronous registry reads that work anywhere. See commands/task.py.
-    #
-    # Item 40: /v1 bearer management (web command-dispatcher.js + VSCode
-    # chatPanel.ts; VSCode additionally has the ppxai.setApiToken
-    # command-palette entry for masked paste).
-    {"text": "/token", "display": "/token",
-     "description": "Manage the /v1 API bearer token (status·set·mint·clear)",
-     "kind": "command", "clients": {"web", "vscode"}},
-]
+def _gate_for(name: str) -> frozenset[str] | None:
+    """Clients that may SEE the command `name` (no slash), None = universal.
 
-# Command name (no slash) → clients that implement it. Derived once from
-# the entries above; commands without a `clients` tag never appear here.
-_CLIENT_GATES: dict[str, frozenset] = {
-    bi["text"].lstrip("/"): frozenset(bi["clients"])
-    for bi in _BUILTIN_SPECIAL_COMMANDS
-    if "clients" in bi
-}
+    Read off `CommandSpec.clients`; aliases resolve to their canonical
+    command's gate. `/token`, `/quit` and `/exit` used to be hand-written
+    entries here (`_BUILTIN_SPECIAL_COMMANDS` + the `_CLIENT_GATES` table
+    derived from them), because a command with no server handler could not
+    be expressed as a `CommandSpec`. It can since ADR 0007 step 1b, so the
+    second roster is gone.
+    """
+    spec = CommandFactory.get(name)
+    return spec.clients if spec is not None else None
 
 
 def _client_allows(name: str, client: str | None) -> bool:
-    """True when `client` may see the client-side command `name` (no slash).
+    """True when `client` may see the command `name` (no slash).
 
     `client=None` (legacy/unknown caller) fails open — the pre-gating
-    behaviour — so only callers that declare themselves get filtering.
+    behaviour — so only callers that declare themselves get filtering. An
+    unregistered name is ungated, for the same reason.
     """
-    gate = _CLIENT_GATES.get(name)
-    return gate is None or client is None or client in gate
+    return client_sees(_gate_for(name), client)
+
 
 # Context-provider shortcuts — handled by ContextInjector, not the
 # filesystem. They appear in the @ dropdown alongside file refs so
@@ -253,13 +228,6 @@ _RUN_SUBCOMMANDS: list[tuple[str, str]] = [
     ("help",    "Show /run help"),
 ]
 
-_TOKEN_SUBCOMMANDS: list[tuple[str, str]] = [
-    ("status", "Show whether a /v1 bearer token is stored (masked)"),
-    ("set",    "Store a token — prompts for the value; never type it inline"),
-    ("mint",   "Mint + store a token via the loopback bootstrap (local server)"),
-    ("clear",  "Remove the stored token"),
-]
-
 
 def complete(
     buffer: str,
@@ -356,6 +324,13 @@ def _complete_commands(
         candidate = f"/{info.name}"
         if not candidate.lower().startswith(prefix_lower):
             continue
+        # Client gating (ADR 0007 step 1b): a command gated to other
+        # clients is not offered here — an unfiltered list taught users
+        # to type commands that answered "Unknown command" everywhere
+        # else (Item 40 VSCode trial, 2026-07-12). Checked after the
+        # prefix so the registry lookup runs only for candidates.
+        if not _client_allows(info.name, client):
+            continue
         if info.is_alias:
             items.append({
                 "text": candidate,
@@ -372,18 +347,6 @@ def _complete_commands(
                 "kind": "command",
                 "replace_start": -len(prefix),
             })
-
-    # Builtins — client-side commands only for clients that implement
-    # them. The internal `clients` tag is stripped from the emitted item
-    # (it's a set, not part of the JSON schema).
-    for bi in _BUILTIN_SPECIAL_COMMANDS:
-        if not bi["text"].startswith(prefix_lower):
-            continue
-        if not _client_allows(bi["text"][1:], client):
-            continue
-        item = {k: v for k, v in bi.items() if k != "clients"}
-        item["replace_start"] = -len(prefix)
-        items.append(item)
 
     items.sort(key=lambda e: e["text"])
     return items
@@ -447,7 +410,11 @@ def _complete_slash_args(
             return []
         completed, token = _split_args(args_region)
         if not completed:
-            return _filter_table(token, _TOKEN_SUBCOMMANDS, "subcommand")
+            # Subcommands come off the spec (ADR 0007 step 1b) — the
+            # `_TOKEN_SUBCOMMANDS` table that used to live here was the
+            # same four rows written twice.
+            table = spec.subcommands if spec is not None else []
+            return _filter_table(token, table, "subcommand")
         return []
 
     # Path arg commands

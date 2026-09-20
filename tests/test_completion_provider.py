@@ -500,7 +500,8 @@ class TestClientGating:
         for client in ("rich", "textual"):
             names = self._names("/", client)
             assert not (self._GATED_WEB_VSCODE & names), client
-            # Universal builtins + factory commands stay visible.
+            # /quit is gated to {rich, textual} (owner decision,
+            # 2026-09-20) — factory commands stay visible here too.
             assert "/quit" in names
 
     def test_tuis_now_see_task_and_run(self):
