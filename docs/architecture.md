@@ -1122,14 +1122,40 @@ run-time layer was added. Five layers, in increasing severity:
      `AppState` exists before any server does, so there is nothing to
      withhold. `tests/test_vscode_schema_guard_behavior.py`.
 
-**Web has no connect-time equivalent to layer 5's VSCode half.** The
-web page gets the schema injected once at page load
-(`server/routes/static.py`); a tab that survives a server restart
-without a page reload (`app.js`'s heartbeat → `connectToServer(true)` /
-`_reanchorFromServer()`) keeps the OLD schema, and `_reanchorFromServer`
-only re-fetches `GET /state`, never the schema. Open owner decision —
-`docs/plan-adr-0007-completion-service.md` §"Open owner decisions"
-item 9.
+**Update (2026-09-21): web now has a connect-time equivalent too.**
+`docs/plan-adr-0007-completion-service.md` §"Open owner decisions" item
+9 is DECIDED and built. `_reanchorFromServer()` (`ppxai/web/app.js`)
+grew an opt-in `checkSchema` parameter, passed `true` only from the two
+RECONNECT-shaped boundaries — heartbeat recovery and
+`visibilitychange`→visible — never from first page load (same-process
+injected schema) or a plain provider/model switch. When true,
+`_checkSchemaDrift()` fetches `GET /schema/app-state` and classifies it
+with `ppxai/web/shared/app-state-schema-diff.js::compareSchemas`, a
+pure-JS re-implementation of `schemaGuard.ts`'s classifier (web loads
+no compiled TypeScript) held to identical verdicts by
+`tests/test_schema_diff_cross_language_parity.py` over 10 shared
+fixtures. `identical` is silent; `extra-only` adopts
+(`AppState.adoptSchema()` — unlike VSCode's add-only `adoptFields`,
+this fully re-derives the field map, since web has no compile-time
+types to protect) with one `console.info`; `incompatible` adopts and
+shows ONE chat notice; a fetch failure logs one `console.warn` and
+blocks nothing. Tests: `tests/test_web_schema_drift_behavior.py`,
+`tests/test_web_schema_drift_reanchor.py`. Full account:
+`docs/patterns/appstate.md` §"Run-time skew (VSCode)".
+
+**Version-history fence (layer 6, added 2026-09-21).** The schema's
+`"version"` field is now maintained — MAJOR for a field
+removed/renamed/retyped, MINOR for a field added or its `default`
+changed, starting at `"1.1"` (`"1.0"` never moved across five earlier
+field-adding commits, so it is an unmeasured historical marker, not a
+signal). `tests/test_app_state_schema_version.py` enforces it against
+an append-only `ppxai/engine/app_state_schema_history.json`, one row
+per version with pinned fingerprint hashes so a past row can't be
+silently edited. Neither run-time classifier above treats `version` as
+the verdict — both decide on FIELDS and report `version` only as
+context; a version pre-check ahead of the field diff was deliberately
+not added, since it would hide exactly the failure mode this fence
+exists to catch (a field change landing with no bump).
 
 ### Adding a new field
 

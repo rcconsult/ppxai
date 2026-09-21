@@ -140,11 +140,47 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   server with no `/schema/app-state` endpoint (pre-v1.17.4) changes
   nothing — one log line, chat keeps working; state deliberately does
   NOT fail closed the way the command roster does, because `AppState`
-  is constructed before any server exists. VSIX 138 KB. Not built: a
-  VSCode-side use of the now-typed `modelSupportsVision` (web already
-  gates its attach badge on it), and a web-side equivalent of the
-  connect-time check — both filed as open owner decisions in
-  [docs/plan-adr-0007-completion-service.md](plan-adr-0007-completion-service.md).
+  is constructed before any server exists. VSIX 138 KB.
+- **VSCode's vision badge now updates on a command-palette provider or
+  model switch, and the attach-time image warning's wording is
+  corrected** (2026-09-21, later the same day, closing open owner
+  decision 8 — whose own premise turned out wrong too: VSCode's webview
+  already had an untyped mirror of `modelSupportsVision` since v1.18.6,
+  so it never lost the badge, only the type). `ppxai.switchProvider` /
+  `ppxai.switchModel` now trigger a full AppState re-anchor
+  (`chatPanel.ts::reanchorState()`) that also forwards to the webview —
+  previously only `/status` refreshed, which doesn't carry
+  `model_supports_vision`, so the badge lagged a full chat turn behind
+  a switch. The attach-time warning no longer promises the image "will
+  be sent as a text placeholder" (web retracted that claim in v1.19.0);
+  it now matches web's wording — a vision sidecar or the shell tool may
+  handle it, or the send is blocked, never silently dropped. The gate
+  decision itself moved to a new pure module,
+  `vscode-extension/media/webview/visionGate.js`.
+- **Web now re-verifies the AppState schema on reconnect** (closing
+  open owner decision 9). `_reanchorFromServer()` takes an opt-in
+  schema check, run only at a reconnect boundary — heartbeat recovery
+  and a tab regaining visibility, never first load or a same-connection
+  provider/model switch. It fetches `GET /schema/app-state` and
+  classifies it with a new pure module,
+  `ppxai/web/shared/app-state-schema-diff.js` — a JS re-implementation
+  of `schemaGuard.ts`'s classifier, held to identical verdicts by a
+  cross-language parity test over 10 shared fixtures. A match is
+  silent; a newer server's extra fields adopt quietly; **a field this
+  tab expected going missing or changing shape produces one chat
+  notice** telling the user the page was refreshed and to reload for a
+  matching UI; an unreachable endpoint logs once and blocks nothing.
+- **SchemaGuard's log now reaches the extension's Output panel**
+  (`"ppxai HTTP"` channel), not only the Extension Host console
+  (closing open owner decision 10).
+- **The AppState schema's `"version"` field is maintained from `"1.1"`
+  on** (closing open owner decision 11). `"1.0"` sat unchanged across
+  five earlier field-adding commits, so it's an unmeasured historical
+  marker, not a real signal. MAJOR for a field removed/renamed/retyped,
+  MINOR for a field added or its default changed — enforced against a
+  new append-only `ppxai/engine/app_state_schema_history.json`. Neither
+  run-time schema check (VSCode's or web's) treats `version` as the
+  verdict; both still decide on the actual fields.
 
 ## Fixed
 
@@ -327,6 +363,36 @@ field. `o3*`'s measured-serial `parallel_tool_calls=False` and
 `gemini-3.1-pro*`'s are findings, not floors, and are never relabelled as
 guesses. Tests pin both.
 
+- **A session that never checkpoints no longer leaves an empty
+  directory behind.** `FileCheckpointBackend.__init__` used to
+  `mkdir(parents=True, exist_ok=True)` at construction — and a
+  `FileCheckpointBackend` is built for every session whose working
+  directory has no `.git`, which is ordinary session creation, not a
+  checkpoint operation. Found while auditing the checkpoint-clear
+  confirmation work above: on one developer host this had accumulated
+  roughly 14,900 `sessions/checkpoints/session_<timestamp>/`
+  directories, all but two of them empty. The directory now appears on
+  the first real snapshot instead; `list_checkpoints()` and
+  `cleanup_old_checkpoints()` both tolerate its absence. Nothing a user
+  can see changes.
+
+- **(Developer-facing) The test suite can no longer write into the
+  real `~/.ppxai`.** The empty-checkpoint-directory leak above turned
+  out to be one symptom of a broader gap: a full suite run was also
+  appending to the `/cost` usage-events sink, interleaving into real
+  debug logs, writing real PNGs into the preview cache, and — despite
+  an existing autouse guard meant to prevent exactly this — a spawned
+  `ppxai-server` smoke-test subprocess kept rewriting the real TUI
+  session-restore pointer, because that guard patches an attribute
+  inside the pytest process and cannot reach a child interpreter with
+  its own real `HOME`. `tests/conftest.py` now points `HOME` at a
+  throwaway directory in `pytest_configure`, before any `ppxai` module
+  is imported — the one point at which redirecting `HOME` actually
+  works, since every module-level `Path.home()` constant (and every
+  subprocess the suite spawns) resolves into the throwaway home from
+  then on. `PPXAI_TEST_KEEP_HOME=1` keeps it after the run for
+  inspection. No change for anyone who only runs `ppxai` normally.
+
 ## Changed
 
 - **Tool calls collapse into one strip per assistant turn** (web and
@@ -472,8 +538,36 @@ guesses. Tests pin both.
   `"node server.js"` is directly startable on every platform.
   (`b067ce9c`)
 
-**Open items: 20** (re-derived from the "Open at a glance" table, not
-carried over — Items 73 and 74 filed, Item 34 closed).
+- **Item 78 — closed, and it was bigger than filed.** Filed as "the
+  test suite leaks empty checkpoint directories into the real
+  `~/.ppxai`"; measured before the fix (one clean-tree run, marker-file
+  method): 214 entries created or modified in the developer's real
+  `~/.ppxai` — 111 empty `sessions/checkpoints/session_*` directories
+  (the filed leak), 8 real session files, 34 interleaved debug logs, 29
+  entries under `runs/`, 5 preview-cache PNGs, a staged upload, both
+  `/cost` sink files appended to, and the TUI session-restore pointer
+  rewritten by a spawned `ppxai-server` subprocess despite an existing
+  in-process guard against exactly that. After: 0. Both halves fixed —
+  `tests/conftest.py` points `HOME` at a throwaway directory before the
+  first `ppxai` import, and `FileCheckpointBackend` no longer creates
+  its directory at construction. Fenced by `tests/test_home_hermeticity.py`
+  and `tests/test_checkpoint.py::TestTheDirectoryIsCreatedLazily`. See
+  `docs/debt-inventory.md`'s closed-items note for the full account.
+  Existing empty directories on developer hosts were **not** deleted —
+  the cleanup command is recorded there, run at the owner's discretion.
+- **Item 79 filed — a `checkpoint_dir` fallback that always falls
+  back.** `EngineClient`'s Agent Mode notification
+  (`ppxai/engine/client.py` ~line 807) reads
+  `getattr(self._checkpoint_manager, "checkpoint_dir", None)`, but
+  `CheckpointManager` has no `checkpoint_dir` attribute — only its
+  `.backend` does — so the `getattr` always returns `None` and the
+  literal fallback path is always shown. Harmless today because the
+  literal is correct, but silently wrong if the two ever diverge.
+  Found, not fixed, while auditing Item 78.
+
+**Open items: 20** (re-derived from the "Open at a glance" table before
+this session's closes/filings — Items 73 and 74 filed, Item 34 closed;
+Item 78 closes and Item 79 files in this same session, net unchanged).
 
 ## Known limitations
 

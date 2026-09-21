@@ -69,7 +69,7 @@ quoting them** — this table is a map, not a source.
 | **75** | second-level "argument kinds" schema for command completion | debt item, not now — owner decision 2026-09-21 (ADR 0007 open decision #3) |
 | **76** | fold chat-shaped-ness into the command roster (`STREAMING_COMMANDS`) | debt item for now — owner decision 2026-09-21 (ADR 0007 open decision #4) |
 | **77** | dead client code left after the ADR 0007 step-5 VSCode migration | ~45min, verified by grep — no owner decision needed, extended 2026-09-21 with 4 more dead `httpClient.ts` methods |
-| **78** | the test suite leaks empty checkpoint directories into the real `~/.ppxai` | hermeticity gap, same class as the v1.19.0 retag cycle — NOT fixed, existing dirs NOT deleted |
+| **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
 
 ---
 
@@ -2465,105 +2465,64 @@ declarations if any), one function deletion in `ui.py` plus its
 
 ---
 
-### Item 78 — the test suite leaks empty checkpoint directories into the real `~/.ppxai` [testing / hermeticity]
+### Item 79 — `EngineClient`'s Agent Mode notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have [checkpoint / dead code]
 
-**Filed 2026-09-21.** Found while auditing the checkpoint-clear
-confirmation work above.
+**Filed 2026-09-21.** Found while auditing debt Item 78 (test-suite
+hermeticity, closed — see "Closed (recent)" below).
 
-**What's wrong, measured:** `~/.ppxai/sessions/checkpoints/` holds
-**14,782 entries** on this host (re-counted 2026-09-21, up from ~14,770
-a short time earlier the same day — the suite ran again in between).
-**14,780 of them are empty directories**; only 2 have any content.
-Names are `session_<YYYYMMDD_HHMMSS>`, grouped by date on days the
-suite ran (hundreds to ~1,450 per day, per the earlier per-day
-breakdown). Reproduced per-file by counting entries before/after a run:
-`tests/test_command_roster_endpoint.py` +9, `tests/test_checkpoint_envelope_parity.py`
-+3, `tests/test_tui_prompt_side_effects.py` +0, `tests/test_engine_context.py` +0
-— i.e. it is specifically the server/`TestClient` tests that create a
-session, not every test that touches sessions.
+**What's wrong, verified by reading the code:** `EngineClient`'s Agent
+Mode notification (`ppxai/engine/client.py`, inside the
+`backend == "file"` branch, ~line 807) does:
 
-**Mechanism, read and verified, not inferred:**
-- `ppxai/checkpoint.py:212-213`, `FileCheckpointBackend.__init__`:
-  ```python
-  self.checkpoint_dir = Path(SESSIONS_DIR) / "checkpoints" / session_id
-  self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
-  ```
-  The `mkdir` runs at **construction**, not on first actual checkpoint
-  write — so a `FileCheckpointBackend` that is built and never used
-  still leaves a directory on disk.
-- `CheckpointManager._initialize_backend()` (`ppxai/checkpoint.py:365-386`)
-  only builds a `FileCheckpointBackend` when
-  `GitCheckpointBackend(self.working_dir).is_available()` is `False` —
-  and `is_available()` (`ppxai/checkpoint.py:65-68`) checks for a `.git`
-  subdirectory of `working_dir` **directly**, no parent-directory
-  search. A `TestClient` session created against a `tmp_path` working
-  directory (no `.git` inside it) always falls to the file backend,
-  regardless of whether the test process itself happens to be running
-  inside this git repo.
-  `CheckpointManager` is constructed from `ppxai/engine/client.py:296`
-  (`EngineClient._init_checkpoint_manager`) and
-  `ppxai/engine/checkpoint_ops.py:205` — both reachable from ordinary
-  session-creation code, not just explicit checkpoint commands.
-- `session_id` defaults to `self.session.session_name or "default"`
-  (`ppxai/engine/client.py:295`), and `session_name`'s default is
-  `f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"`
-  (`ppxai/engine/session.py:327`) — this is where the
-  `session_<timestamp>` directory names come from.
-- `SESSIONS_DIR = PPXAI_HOME / "sessions"` is a **module-level constant**
-  in `ppxai/config/loader.py:33`, resolved from `Path.home()` at import
-  time — the same class of hazard as
-  `docs/lessons/module-level-home-paths-leak-into-user-state.md`.
-  `tests/conftest.py` has two autouse fixtures that redirect
-  module-level home-derived constants this same way
-  (`_the_developers_config_is_unreachable` → `loader.USER_CONFIG_FILE`;
-  `_isolate_session_state_pointer` → `engine.session.SESSION_STATE_FILE`),
-  but **neither, nor any other fixture, redirects `SESSIONS_DIR` or
-  `checkpoint.SESSIONS_DIR`** — verified: `grep -n "SESSIONS_DIR"
-  tests/conftest.py` returns nothing.
+```python
+checkpoint_path = getattr(
+    self._checkpoint_manager, "checkpoint_dir", None
+) or f"~/.ppxai/sessions/checkpoints/{self.session.session_name}"
+```
 
-**Blast radius:** no data loss, no secrets exposed (empty directories
-only). Unbounded inode/directory growth in the user's real data
-directory; slows anything that lists `~/.ppxai/sessions/checkpoints/`
-(already ~14.8k entries); it is the same hermeticity class — real user
-state mutated by a test run — that caused the v1.19.0 retag cycle
-(CLAUDE.md "Verify, Don't Assume").
+`self._checkpoint_manager` is a `CheckpointManager`
+(`ppxai/checkpoint.py:376`), and `CheckpointManager.__init__` sets
+`self.working_dir`, `self.session_id`, `self.backend_mode`, and
+`self.backend` — no `checkpoint_dir`. `checkpoint_dir` exists only on
+`FileCheckpointBackend`, one layer down, at
+`self._checkpoint_manager.backend.checkpoint_dir`. So the `getattr`
+always returns `None`, the `or` always falls through to the literal,
+and the literal branch is the ONLY branch that has ever run — a
+comment right above it already explains a previous, similar bug this
+literal replaced (it used to hardcode the wrong parent directory,
+`~/.ppxai/checkpoints/<session>` instead of
+`~/.ppxai/sessions/checkpoints/<session>`), which is presumably how a
+`getattr` that never resolves went unnoticed: the fallback was tested
+against the OLD wrong path being fixed, not against whether the
+`getattr` itself ever fires.
 
-**NOT fixed. Existing directories NOT deleted** — `~/.ppxai` is the
-owner's live data directory; cleanup is the owner's call, not something
-to do silently as a side effect of a docs pass.
+**Blast radius:** none today — the literal fallback happens to be
+correct, since it duplicates `FileCheckpointBackend.checkpoint_dir`'s
+own construction (`Path(SESSIONS_DIR) / "checkpoints" / session_id`).
+It becomes a real bug the moment the two expressions diverge (e.g. a
+future per-backend override, a session-id transform), because nothing
+would fail — the message shown to the user would just quietly start
+naming the wrong directory again, the exact failure class this code's
+own comment was written to prevent.
 
-**Fix options sketched from the code above, not yet chosen:**
-1. **Autouse conftest redirect** (matches the existing pattern for
-   `USER_CONFIG_FILE` / `SESSION_STATE_FILE`): monkeypatch
-   `ppxai.config.loader.SESSIONS_DIR` (and, since `checkpoint.py` does
-   `from .config import SESSIONS_DIR`, the name bound on
-   `ppxai.checkpoint` too — the same "patch the importing module's
-   namespace" lesson CLAUDE.md's pattern doc already states) to a
-   `tmp_path_factory` directory. Cheapest, most consistent with prior
-   art. ~30–45min, one fixture, no production code touched.
-2. **Lazy mkdir** — move
-   `self.checkpoint_dir.mkdir(parents=True, exist_ok=True)` out of
-   `FileCheckpointBackend.__init__` and into `create_checkpoint()` (the
-   method that actually writes a snapshot), so a backend that is built
-   and never used creates nothing. Fixes the leak at the root instead
-   of only in tests, but touches production code and needs a check
-   that every other method assuming the directory exists
-   (`cleanup_old_checkpoints`, the `iterdir()` call in it) still
-   degrades sensibly against a missing directory. ~1–2h with test
-   coverage.
-3. **Guard test** — a session-scoped fixture that snapshots
-   `~/.ppxai/sessions/checkpoints/`'s entry count before the suite and
-   fails if it grew after, so a future reintroduction is caught rather
-   than silently accumulating again. Cheap (~30min) but detects the
-   symptom, not the cause — pairs with option 1 or 2 rather than
-   replacing them.
+**Fix:** read the attribute off `self._checkpoint_manager.backend`
+instead of `self._checkpoint_manager` itself — e.g.
+`getattr(getattr(self._checkpoint_manager, "backend", None), "checkpoint_dir", None)`
+— or, more simply, drop the `getattr` entirely and read the string
+`self._checkpoint_manager.backend.checkpoint_dir` behind an
+`isinstance(self._checkpoint_manager.backend, FileCheckpointBackend)`
+guard, matching the `backend == "file"` check the branch is already
+inside.
 
-Option 1 is the lowest-risk fix and matches the two precedents already
-in `conftest.py`; option 2 is the more complete fix but has a larger
-review surface. Not sequenced or assigned — owner's call.
+**Trigger to revisit:** cheap, no urgency — next pass through
+`client.py`'s agent-mode notification code, or whenever this file is
+already open for something else.
+
+**Effort:** ~10min — one attribute path fix plus a regression test
+asserting the notification string names the backend's REAL
+`checkpoint_dir`, not just a plausible-looking literal.
 
 ---
-
 
 ## Closed (recent)
 
@@ -2571,6 +2530,7 @@ One-liners only — full bodies + evidence trails in
 [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md);
 older per-version detail in the v1.18.2/v1.18.3 snapshots.
 
+- **Item 78** — the test suite leaked into the real `~/.ppxai` — closed 2026-09-21, and it was much bigger than filed: not just empty checkpoint directories (the filed leak), but also real session files, interleaved debug logs, `.preview-cache` PNGs, a staged upload, `usage.json`/`usage-events.jsonl` (the `/cost` sink) appended to, and the TUI's `session-state.json` restore pointer rewritten by a spawned `ppxai-server` subprocess that a pre-existing in-process guard could not reach. One clean-tree marker-file run measured **214 → 0** entries touched in the developer's real `~/.ppxai`. Fixed on both ends: `tests/conftest.py` redirects `HOME` to a throwaway directory before the first `ppxai` import (the one point at which that works), and `FileCheckpointBackend` no longer creates its directory at construction — only on the first real snapshot, which also means a session that never checkpoints leaves nothing behind in production, not just in tests. Fenced by `tests/test_home_hermeticity.py` and `tests/test_checkpoint.py::TestTheDirectoryIsCreatedLazily`. Existing empty directories on developer hosts were **not** deleted — cleanup command recorded in the archived body, owner's call. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 34** — office-preview deps; the `python-docx` half was **obsolete**, not deferred — closed 2026-09-20 (`99ca13f7`). The Word text fallback never used python-docx: `docx_tools.py` extracts with stdlib `zipfile` + `xml.etree` and `files.py:868` calls it for the `.docx` path; `grep -rn "import docx"` over `ppxai/` and `tests/` returns nothing, so the dependency would have grown every binary by a package nothing imports. The other two thirds (release-CI `--all-extras`) were verified fixed on 2026-06-14. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 69** — a test's verdict depended on a config file OUTSIDE the repo — closed 2026-09-06. The READ half of the same resolution rule as Item 70: nothing pinned `find_config_file()`, so any test reaching provider config read whichever file the cwd offered, and a stale personal config had already MASKED a real regression (2026-09-01, `sonar-pro` retired in `e6c366b9`). Pinned `PPXAI_CONFIG_FILE` to the shipped config in `pytest_configure` (before `initialize()`, which reads config during collection) and redirected `loader.USER_CONFIG_FILE` out of the real home, closing the cleared-environment fallthrough. `tests/test_config_source_is_pinned.py` proves it: deleting both halves fails 4 of its 6 tests. **Sharpened 2026-09-14 — the RUNTIME half is still open, and it makes `/doctor` lie.** Item 69 pinned the config source for TESTS; nothing pinned it for the tool whose whole job is auditing the operator's config. `find_config_file()` prefers `./ppxai-config.json`, so `/doctor` run from the ppxai repo root audits ppxai's OWN project config and reports a clean bill of health on a file it never opened. Measured 2026-09-14, same tree, same code, opposite verdict — the only variable is cwd: `cwd=<repo root>` → `find_config_file()` = `ppxai-config.json`, `incomplete_blocks_in_config()` = `{}` (0 partial records); `cwd=/tmp` + `PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json` → `/Users/…/.ppxai/ppxai-config.json`, **1 partial record, 11 unstated fields named**. So the ADR 0012 Q0d enforcement path returns a FALSE NEGATIVE for anyone running `/doctor` from a checkout — the failure mode Item 69 closed for tests, reproduced in the enforcement tool itself. Found by the ppxai-sre session cross-checking a HOME-config edit; the `0` was only trustworthy because the identical command had returned `1` on the same file minutes earlier (an empty result is not a measurement). Not reopened and not scheduled: recorded here so the next person to touch `/doctor`'s file resolution knows the test-side pin did not cover them.
 - **Item 33** — command-layer `console.print` sweep — closed 2026-09-09. The audit is the result: of 111 sites, **39 were dead code** (`_show_active_hints` / `_show_bootstrap_hierarchy`, orphaned by `f7ebd004` in v1.15.0 when `/context` moved to typed results — removed), 65 are TUI-only by construction, and the rest restate what the result already carries. **One** carried information a non-Rich caller could not learn — the no-checkpoint warning, a safety property — now in `message` + `metadata`. The audit also found a REAL BUG the sweep framing would have missed: `POST /command/auto` answered **500**, not bad output, because `handle_agent` called a bare `asyncio.run()` from inside the server's running event loop. Guarded with the `is_event_loop_running()` + threadpool pattern already in `commands/coding.py`.

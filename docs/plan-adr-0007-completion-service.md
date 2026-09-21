@@ -833,6 +833,31 @@ verified:
 >    reconnect again — expect no stale field left adopted (adoption is
 >    per-connection and `reset()` clears it on disconnect).
 
+> **VSCode vision badge + web schema-drift manual smoke items — NOT
+> RUN, added 2026-09-21** alongside decisions 8 and 9's build above.
+>
+> **VSCode:**
+> 1. Switch to a non-vision model from the command palette
+>    (`ppxai.switchModel`) → the attach-button badge changes
+>    immediately, with no chat turn needed first.
+> 2. Attach an image while on that model → the warning reads the new
+>    wording (sidecar/shell-tool route or blocked send — never "sent as
+>    a text placeholder").
+> 3. Switch back to a vision-capable model → the badge flips back
+>    immediately.
+> 4. Skew scenario (reuse manual-smoke item 2's setup above: delete a
+>    field from the server-side schema without re-syncing the
+>    extension) → confirm the guard line now shows in the Output panel
+>    under **"ppxai HTTP"**, not only the Extension Host console.
+>
+> **Web:**
+> 1. Open the web UI, remove a field from the server-side schema,
+>    restart the server, switch tabs away and back → the chat notice
+>    appears ("The server changed while this tab was open … reload the
+>    page to get the matching UI.").
+> 2. Same setup but ADD a field instead of removing one → only a
+>    `console.info` line, no chat notice, no interruption.
+
 ### 4. Derive, don't restate — ✅ DONE (2026-09-21)
 
 Completion's subcommand tables read the spec, and `engine/completion.py`
@@ -1431,7 +1456,7 @@ behaviour or schema change that wants an owner, not a refactor.
    > legacy branch, `handlers/commands.ts`, `handlers/types.ts`) is
    > deleted, not emptied. `CLIENT_ROUND_TRIP_KINDS` in
    > `ppxai/commands/results.py` names the fenced contract.
-8. **VSCode vision badge / image gate using `modelSupportsVision`**
+8. ~~**VSCode vision badge / image gate using `modelSupportsVision`**~~
    (raised 2026-09-21, filed while closing decision 5). Web has gated
    its attach-button badge and blocked non-image-capable-model uploads
    on `state.modelSupportsVision` since v1.18.6
@@ -1441,7 +1466,37 @@ behaviour or schema change that wants an owner, not a refactor.
    image to a model that will reject it. Building the mirror behaviour
    is a UI change to a shipped surface, not a fence; owner's call
    whether it is worth VSCode-side parity now or later.
-9. **The web stale-schema-after-server-upgrade window** (found
+   > **DECIDED 2026-09-21, later the same day — this decision's own PREMISE
+   > was wrong.** VSCode has had the attach-button badge and an
+   > image-warning message since v1.18.6 in the raw webview script
+   > `vscode-extension/media/webview/main.js` (its own untyped mirror,
+   > `activeModelSupportsVision`) — the missing generated TS type never
+   > cost VSCode the feature; `stageFile()` read the field by its
+   > JavaScript name the whole time. What WAS actually broken, found while
+   > re-checking the premise, and fixed:
+   > 1. `chatPanel.ts::_reanchorFromServer` updated only the extension-host
+   >    `AppState` and never forwarded the change to the webview — so the
+   >    webview's OWN mirror (and anything gated on it, the badge included)
+   >    went stale until the next SSE push. It now `postMessage`s
+   >    `{type:'stateSync', changes}` to the webview; a new public
+   >    `reanchorState()` exposes the re-anchor to callers outside the class.
+   > 2. `ppxai.switchProvider` / `ppxai.switchModel` (`extension.ts`)
+   >    refreshed only `/status` (no `model_supports_vision` field), so the
+   >    badge kept showing the OLD model's vision support until the next
+   >    chat turn. Both now call the new `reanchorState()` — mirrors web's
+   >    `handleProviderChange`/`handleModelChange`, which already did this.
+   > 3. The attach-time warning still promised the image "will be sent as a
+   >    text placeholder" — wording web retracted back in v1.19.0 (Item 24):
+   >    the real outcome is a VL-sidecar/shell-tool route or a blocked send,
+   >    never a silent placeholder. VSCode's copy now matches web's.
+   > The gate decision itself moved into a pure, DOM-free module,
+   > `vscode-extension/media/webview/visionGate.js` (`shouldBlockImageAttach`;
+   > `isImage === true && modelSupportsVision === false` — only a KNOWN-false
+   > blocks), loaded before `main.js` and unit-testable under plain Node.
+   > Still advisory on both clients; the server is the actual enforcement
+   > point. Tests: `tests/test_vscode_vision_gate_behavior.py`,
+   > `tests/test_vscode_vision_badge_wiring.py`.
+9. ~~**The web stale-schema-after-server-upgrade window**~~ (found
    2026-09-21 while building the VSCode connect-time guard). Web's
    schema comes from `window.APP_STATE_SCHEMA`, injected once at page
    load (`server/routes/static.py`) — correct for that page load, but
@@ -1463,7 +1518,32 @@ behaviour or schema change that wants an owner, not a refactor.
    silent console line. Not filed as a debt item: it is presented here,
    undecided, rather than deferred — filing it too would double-track
    the same open question in two places.
-10. **Route `SchemaGuard` logs to the ppxai output channel** (found
+   > **DECIDED 2026-09-21, later the same day — option (B), built.**
+   > `_reanchorFromServer(checkSchema = false)` grew an opt-in parameter:
+   > `true` from the heartbeat-recovery and `visibilitychange`→visible
+   > paths (both reconnect boundaries), left at its default (no schema
+   > check) from `handleProviderChange`/`handleModelChange` (a
+   > same-connection value refresh, not a reconnect) and from first page
+   > load (the injected schema is from the same process, nothing to
+   > verify against). `_checkSchemaDrift()` fetches
+   > `GET /schema/app-state` and classifies with a new pure module,
+   > `ppxai/web/shared/app-state-schema-diff.js::compareSchemas` — a JS
+   > re-implementation of `schemaGuard.ts`'s classifier (web has no
+   > compiled TypeScript to import), held to identical verdicts and field
+   > lists by `tests/test_schema_diff_cross_language_parity.py` over 10
+   > shared fixtures. `identical` is silent; `extra-only` adopts
+   > (`AppState.adoptSchema()`, new — unlike VSCode's conservative
+   > add-only `adoptFields`, this fully re-derives the field map, since
+   > web has no compile-time types to protect) and logs one
+   > `console.info`; `incompatible` adopts and shows ONE chat notice
+   > ("The server changed while this tab was open … reload the page to
+   > get the matching UI."); a fetch failure (`unverified`) logs one
+   > `console.warn` and blocks nothing. Re-entrancy-guarded
+   > (`_schemaCheckInFlight`) so an overlapping heartbeat-recovery +
+   > visibility-change pair can't double-fire the notice. Tests:
+   > `tests/test_web_schema_drift_behavior.py`,
+   > `tests/test_web_schema_drift_reanchor.py`.
+10. ~~**Route `SchemaGuard` logs to the ppxai output channel**~~ (found
     2026-09-21). `schemaGuard.ts`'s `log()` callback is wired to
     `console.warn` in `chatPanel.ts` today (Extension Host console,
     which most users never open), the same place the roster's parity
@@ -1471,7 +1551,15 @@ behaviour or schema change that wants an owner, not a refactor.
     users do see. Low cost, cosmetic; bundling it with a broader
     "extension logging surface" pass may be worth more than a one-line
     fix done in isolation.
-11. **Start maintaining schema `"version"`, or delete the key.** The
+    > **DECIDED 2026-09-21, later the same day — done, in isolation.**
+    > `HttpClient.logToOutputChannel()` (`vscode-extension/src/httpClient.ts`)
+    > appends to the extension's one existing output channel — named
+    > `"ppxai HTTP"` (a semantic mismatch left as-is; no second channel
+    > invented for this). `chatPanel.ts`'s `SchemaGuard` construction now
+    > wires `log: (message) => this._backend.logToOutputChannel(message)`
+    > instead of `console.warn`; `schemaGuard.ts` itself is unchanged and
+    > stays vscode-free. Test: `tests/test_vscode_schema_guard_output_channel.py`.
+11. ~~**Start maintaining schema `"version"`, or delete the key.**~~ The
     canonical schema's `"version"` has read `"1.0"` since the file was
     created (`86adf127`) and none of the five field-changing commits
     since bumped it (verified: `git log -p --follow
@@ -1483,6 +1571,27 @@ behaviour or schema change that wants an owner, not a refactor.
     same commit that adds/renames/retypes a field, checked by a test
     the way `tests/test_version_consistency.py` checks the package
     version). Owner's call which.
+    > **DECIDED 2026-09-21, later the same day — maintain it, from `"1.1"`
+    > on.** `"1.0"` is kept as an unmeasured historical marker (it never
+    > moved across five field-adding commits, so it recorded nothing);
+    > `"1.1"` is the first value anyone should trust. Rule (in
+    > `app_state_schema.json`'s own `description` and
+    > `ppxai/engine/app_state.py`'s module docstring): bump MAJOR when a
+    > field is removed, or its Python name or `client` name is renamed, or
+    > its `type` changes; bump MINOR when a field is added, or only its
+    > `default` changes. Enforced, not just documented — new append-only
+    > `ppxai/engine/app_state_schema_history.json` (one row per version,
+    > `[python_name, client, type, default]` tuples) and
+    > `tests/test_app_state_schema_version.py`, which fails on a
+    > fields-changed-without-bump, a bump-without-a-new-row, a
+    > retroactively edited row (pinned fingerprint hashes), and a bump
+    > smaller than the field-shape change demands. A version pre-check
+    > was explicitly considered and NOT added ahead of the field-level
+    > comparison in either `schemaGuard.ts` or `compareSchemas` — both
+    > still decide compatibility on FIELDS and report `version` as
+    > context only, because a version check ahead of the field diff would
+    > have hidden exactly the failure mode this decision exists to fix
+    > (a field change landing with no bump).
 
 ## Step 5 follow-ups (2026-09-21, owner decisions)
 
@@ -1573,6 +1682,21 @@ threads, each with its own tests.
   `tests/test_vscode_schema_guard_behavior.py`. VSIX 138 KB. Full
   account: ADR 0007 §"Which mirrors can go, and which cannot", the
   "CORRECTION OF THE CORRECTION" block.
+- **H — open owner decisions 8, 9, 10, 11 all decided and built
+  (2026-09-21, later the same day).** Decision 8's own premise was
+  wrong a second time in one day: VSCode already had the vision badge
+  (an untyped webview mirror, `main.js`'s `activeModelSupportsVision`),
+  so the missing generated type never cost it the feature — what WAS
+  broken was `_reanchorFromServer` never forwarding to the webview and
+  a palette provider/model switch never re-anchoring at all, both
+  fixed (`chatPanel.ts::reanchorState()`, called from `extension.ts`).
+  Decision 9 gave web its own reconnect-time schema check, mirroring
+  VSCode's one stage further along a shared classifier
+  (`app-state-schema-diff.js` / `schemaGuard.ts`, parity-tested).
+  Decision 10 routed `SchemaGuard` logs to the one existing "ppxai
+  HTTP" output channel. Decision 11 put a real, enforced bump
+  discipline behind the schema's `"version"` field, starting at `"1.1"`.
+  See each decision's own `DECIDED` update above for tests and detail.
 
 ## Hybrid commands — dispatch routing becomes data
 

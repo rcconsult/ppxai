@@ -781,6 +781,25 @@ step 5's fence.
 > compares FIELDS; `version` is reported in the message only as context
 > for whoever has to fix a real mismatch, never as the verdict.
 
+> **Update (2026-09-21, later the same day again).** A THIRD premise
+> error surfaced the same day, this time in the open owner decision
+> that followed this one (plan doc, decision 8): VSCode was assumed to
+> have no vision-badge behaviour to protect, on the strength of "no
+> VSCode UI reads `modelSupportsVision`." It does — the webview's own
+> untyped mirror, `activeModelSupportsVision` in
+> `vscode-extension/media/webview/main.js`, has read that field by name
+> since v1.18.6. The TYPE drift this record fixed was real; it had not
+> cost VSCode the feature. What actually needed fixing (and now is):
+> `_reanchorFromServer` never forwarded a re-anchor to the webview, and
+> a palette provider/model switch never re-anchored at all — see
+> `docs/patterns/appstate.md` §"Run-time skew (VSCode)". Separately,
+> web also gained the reconnect-time schema check this section
+> describes as VSCode-only above — decision 9, DECIDED — closing the
+> asymmetry this record left open. `version` maintenance itself was
+> also decided (decision 11): starting at `"1.1"`, `schemaGuard.ts` and
+> its web counterpart both still decide on FIELDS, `version` stays
+> context only.
+
 `GET /schema/app-state` **already exists** (`ppxai/server/routes/schema.py:32`)
 and **neither JS client calls it** — `grep -rn "schema/app-state" ppxai/web/
 vscode-extension/src/` returns nothing (2026-09-20). The server offers the

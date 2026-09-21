@@ -2079,3 +2079,179 @@ is a host program, not a wheel — so no extra is involved there either.
 and raster preview both already work without it.
 
 ---
+
+## Closed on `bugfix/v1.19.3` (archived 2026-09-21)
+
+### Item 78 — the test suite leaked empty checkpoint directories into the real `~/.ppxai` → ✅ **CLOSED 2026-09-21**, scope much larger than filed [testing / hermeticity]
+
+**Filed 2026-09-21** as "the test suite leaks empty checkpoint
+directories into the real `~/.ppxai`", found while auditing the
+`/checkpoint clear` confirmation work. **Closed the same day**, after
+the audit that went into fixing it found the filed scope was one of
+**eight** things the suite was doing to the developer's real home
+directory, not the only one.
+
+#### What was wrong, measured over one clean-tree suite run
+
+A marker-file measurement (files/dirs present in the real `~/.ppxai`
+before the run, diffed against after, on a tree with no uncommitted
+changes so the count describes code a commit actually contains — see
+`docs/lessons/module-level-home-paths-leak-into-user-state.md` for why
+that distinction matters) found **214 entries** created or modified in
+one full run:
+
+1. **111 empty `sessions/checkpoints/session_<timestamp>/` directories**
+   — the filed leak. A cumulative count taken earlier the same day (not
+   a single-run delta, the whole accumulated history on this host) had
+   put the total at **14,782 entries, 14,780 of them empty** — this
+   item's original filing used that cumulative number; the 111-per-run
+   figure is what actually landed on the day of the fix.
+2. **8 real `sessions/*.json` files**, including a smoke-probe session.
+3. **34 `logs/*-debug.log` files** — test output interleaved into the
+   developer's own real debug logs.
+4. **29 entries under `runs/`**, including 7 agent-run directories with
+   real contents.
+5. **5 `.preview-cache` PNGs** — real rendered image content, not
+   placeholders.
+6. **1 staged upload.**
+7. **`usage/usage.json` and `usage/usage-events.jsonl` appended to** —
+   the `/cost` sink (ADR 0008 / Item 49) was receiving rows from test
+   runs, quietly inflating whatever number a developer trusted for
+   their own spend.
+8. **`session-state.json` (the TUI session-restore pointer) rewritten**
+   — the fourth recorded instance of the class in
+   `docs/lessons/module-level-home-paths-leak-into-user-state.md`, and
+   the most surprising one: an autouse fixture
+   (`_isolate_session_state_pointer`, in place since 2026-08-09)
+   already existed specifically to stop this file from being
+   rewritten. It kept happening anyway, because that fixture patches an
+   attribute inside the **pytest process**, and the actual writer this
+   time was a **spawned `ppxai-server` subprocess**
+   (`tests/test_server_smoke_e2e.py`) with its own real, unpatched
+   `HOME`. An in-process attribute patch cannot reach a child
+   interpreter — a corollary the lesson file now records.
+
+#### Mechanism (read and verified, not inferred)
+
+- `ppxai/checkpoint.py`, `FileCheckpointBackend.__init__`, used to
+  `mkdir(parents=True, exist_ok=True)` its `checkpoint_dir` at
+  **construction**. A `FileCheckpointBackend` is built for every
+  session whose working directory has no `.git`
+  (`CheckpointManager._initialize_backend`) — ordinary session
+  creation, not a checkpoint operation — so every such session left an
+  empty directory behind forever, whether or not it ever checkpointed.
+- `SESSIONS_DIR` (`ppxai/config/loader.py`) and its sibling
+  home-derived constants (`SESSION_STATE_FILE`, `_PREVIEW_CACHE_ROOT`,
+  `HINT_TEMPLATES_FILE`, `_DEFAULT_STAGING_DIR`, `PREVIEW_LOGS_DIR`, the
+  logger's `~/.ppxai/logs`) are resolved from `Path.home()` at **import
+  time**, and several call-time `Path.home()` sites exist too
+  (`SessionManager.__init__`'s defaults, `usage.py`, `usage_events.py`,
+  `server/routes/static.py`, `engine/bootstrap.py`). Two existing
+  autouse fixtures redirected two of these by name
+  (`USER_CONFIG_FILE`, `SESSION_STATE_FILE`); nothing redirected the
+  rest, and a by-name constant list can never see a call-time
+  `Path.home()` site or a spawned subprocess's own environment.
+
+#### Fix — both halves, not one
+
+**Fix 1 (suite-side, the actual root fix).** `tests/conftest.py`'s
+`pytest_configure` now points `HOME` (and `USERPROFILE` for Windows) at
+a fresh `mkdtemp` throwaway directory, asserted to run **before** any
+`ppxai` module has been imported — the one moment at which redirecting
+`HOME` actually works, since every module-level `Path.home()` constant
+resolves into the throwaway home from then on, and a spawned
+subprocess inherits the redirected environment too (closing the
+`session-state.json` gap the in-process guard could not). Belt-and-
+braces: a mechanical sweep (`rebind_home_derived_paths()`) corrects
+anything that could not have been caught by the ordering guard, and a
+fence in `tests/test_home_hermeticity.py` asserts it has **nothing** to
+rebind (an empty exemption list, not a growing allowlist). The real
+`.env` is deliberately **not** copied into the throwaway home — it is
+already loaded into `os.environ` before the redirect runs, and an
+on-disk copy would be a second, plaintext copy of the developer's
+provider keys sitting in a temp directory that can survive a crash or
+`PPXAI_TEST_KEEP_HOME=1`. `<throwaway>/.ppxai/web` is a **symlink** to
+the real installed web UI (read-only use, so the one deliberate thread
+back to the real home — without it, three `tests/test_schema_endpoint.py`
+tests would silently turn into skips). `PPXAI_TEST_KEEP_HOME=1` keeps
+the throwaway home after the run for inspection.
+
+**Fix 2 (production, user-visible in a small way).**
+`FileCheckpointBackend` no longer `mkdir`s at construction — the
+directory now appears on the first real snapshot, via
+`create_checkpoint()`'s own `mkdir`. `list_checkpoints()` and
+`cleanup_old_checkpoints()` both tolerate the directory's absence,
+treating "no directory" the same as "empty directory". A real session
+that never checkpoints anything no longer leaves an empty
+`~/.ppxai/sessions/checkpoints/<session>/` behind — in production, not
+just under test. Test: `tests/test_checkpoint.py::TestTheDirectoryIsCreatedLazily`.
+
+Both fixes were built and are complements, not alternatives: Fix 1
+stops the SUITE from touching the real home at all; Fix 2 stops the
+underlying PRODUCTION behaviour from leaking a directory even for a
+real user who never checkpoints. The filed item's own "Fix options"
+list (autouse conftest redirect / lazy mkdir / guard test) proposed
+these as three alternatives to choose between; the closure took two of
+the three as complements rather than picking one.
+
+#### Verification
+
+`tests/test_home_hermeticity.py`: an ordering guard (no `ppxai` module
+imported before the redirect), a positive control (nothing had to be
+rebound after the fact), a structural sweep over every known
+home-derived module attribute with an **empty** exemption list (a row
+here is a hard claim the path is read-only in every reachable code
+path — the same kind of claim that looked true for the checkpoint
+directory until someone read the constructor) plus a stale-row check,
+a by-name importer check (`ppxai.checkpoint.SESSIONS_DIR` specifically,
+since it is bound on the importing module, not just the defining one),
+and a behavioural test that drives a real `TestClient` session and
+asserts its checkpoint backend is aimed at the throwaway home by NAME-
+SET DIFFERENCE (not a count, which a coincidental match could satisfy).
+**Mutation-verified**: reverting the `HOME` redirect fails the
+structural test (naming `ppxai.checkpoint.SESSIONS_DIR` and its
+siblings) and the behavioural test (naming the real directory the
+backend was aimed at).
+
+Measured after the fix, same marker-file method, one full clean-tree
+run: **0** entries touched in the real `~/.ppxai`.
+
+#### NOT done — owner's call
+
+**Existing empty directories on developer hosts were not deleted.**
+`~/.ppxai` is the owner's live data directory; deleting from it is not
+something to do silently as a side effect of a docs/test-hermeticity
+pass. Commands, recorded here for whoever decides to run them:
+
+```bash
+# Dry run — count what WOULD be removed
+find ~/.ppxai/sessions/checkpoints -maxdepth 1 -type d -name 'session_*' -empty -print | wc -l
+
+# Actually remove them
+find ~/.ppxai/sessions/checkpoints -maxdepth 1 -type d -name 'session_*' -empty -delete
+```
+
+This cannot and does not touch the two non-empty entries under that
+directory (`test-session`, `test-session-cleanup-test` — themselves
+test residue from hard-coded session ids used elsewhere, out of this
+item's scope). The `~/.ppxai/web.backup.*` directories (one per
+`/build-install` run) are unrelated install-tool output and are
+untouched by anything in this item.
+
+**Verified macOS only.** The `USERPROFILE`/`HOMEDRIVE`/`HOMEPATH`
+handling in `_redirect_home_to_tmp()` is unverified on Windows and
+Linux.
+
+#### A latent bug spotted along the way, filed separately
+
+While reading `ppxai/checkpoint.py` and `ppxai/engine/client.py` for
+this item, `EngineClient`'s Agent Mode notification was found reading
+`getattr(self._checkpoint_manager, "checkpoint_dir", None)` — but
+`CheckpointManager` has no `checkpoint_dir` attribute (only its
+`.backend` does), so the `getattr` always returns `None` and the
+literal fallback path is always shown. Harmless today (the literal is
+correct), silently wrong if it and the real path ever diverge. Filed
+as **Item 79** rather than folded into this item's fix, since it is
+unrelated to test hermeticity.
+
+---

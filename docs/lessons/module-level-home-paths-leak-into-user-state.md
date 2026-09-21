@@ -128,10 +128,34 @@ recurred often enough to be a class rather than an incident. Tests that need
 their own pointer still patch it themselves — an inner patch wins and unwinds
 back to the tmp path.
 
-## Still unguarded — the same class
+## Update (2026-09-21): all of "still unguarded" is now guarded, suite-wide
 
-Only `SESSION_STATE_FILE` is protected today. These resolve `Path.home()` at
-import time too, and tests write through them:
+Debt Item 78 (`docs/debt-inventory.md`, closed 2026-09-21) measured what the
+table below only warned about: one clean-tree suite run touched **214
+entries** in a developer's real `~/.ppxai` — the logger's interleaved debug
+logs, `PPXAI_HOME`-rooted checkpoint directories, real session files, the
+`/cost` usage sink, `.preview-cache` PNGs, a staged upload, AND (see the
+fourth instance below) `session-state.json` again, despite the guard that
+was supposed to already cover it.
+
+The fix is not a longer list of by-name fixtures. `tests/conftest.py`'s
+`_redirect_home_to_tmp()` now moves `HOME` itself (and `USERPROFILE` for
+Windows) to a fresh throwaway directory in `pytest_configure`, asserted to
+run **before any `ppxai` module has been imported** — every constant in the
+table below, and every other module-level `Path.home()` site the table
+didn't get around to listing, resolves into the throwaway home from then on,
+with no per-constant patch required. `tests/test_home_hermeticity.py`
+fences it with an **empty** exemption list (a row there is a claim that a
+path is read-only everywhere a test can reach it — exactly the claim that
+looked true for the checkpoint directory below until someone read its
+constructor) and is mutation-verified: reverting the redirect fails it by
+naming the real path a component was still aimed at. Verified macOS only;
+the `USERPROFILE`/`HOMEDRIVE`/`HOMEPATH` handling is unverified on Windows
+and Linux.
+
+The original table is kept below for the historical record of what was
+unguarded and why each one mattered — every row is now covered by the
+`HOME`-at-configure redirect, not by an added fixture per row.
 
 | Constant | Consequence |
 |---|---|
@@ -141,9 +165,54 @@ import time too, and tests write through them:
 | `engine/session_store.py:55 _DEFAULT_STAGING_DIR` | upload staging |
 | `server/routes/files.py:38 _PREVIEW_CACHE_ROOT` | preview cache |
 
-The logs one is not hypothetical: it made monitoring a live trial nearly
+The logs one was not hypothetical: it made monitoring a live trial nearly
 useless, because fixture runs (`task='x'`, `task='secret'`) appeared in the
 same file as the user's session.
+
+## Corollary 3: an in-process patch does not survive a spawned subprocess
+
+The most surprising instance of the class. `_isolate_session_state_pointer`
+— an autouse fixture that has patched `engine.session.SESSION_STATE_FILE`
+since 2026-08-09, specifically to stop the exact regression the main lesson
+above describes — kept failing to stop it. `session-state.json` was still
+being rewritten by the suite as of 2026-09-21, a FOURTH instance of this
+same class found in the same repo.
+
+The reason: that fixture's patch lives inside the **pytest process**. The
+actual writer was a **spawned `ppxai-server` subprocess**
+(`tests/test_server_smoke_e2e.py`), which gets its own fresh interpreter and
+its own real, unpatched `HOME` — an in-process `monkeypatch.setattr` has no
+way to reach into a child process's module table. Fixed the same way as the
+rest of Item 78: moving `HOME` itself, in the environment, before any import
+— since environment variables ARE inherited by spawned subprocesses, unlike
+an in-process attribute patch.
+
+**The general form:** an autouse fixture that patches an attribute is
+isolation for the test process only. If anything under test spawns a real
+subprocess (a smoke test launching `ppxai-server`, an integration test
+shelling out), that subprocess re-resolves every module-level constant
+against its own inherited environment — so the fixture's protection ends at
+the process boundary, silently, with no error to say so.
+
+## Sharpened: what "monkeypatch HOME does nothing" actually means
+
+The main lesson's `env HOME=/scratch pytest ...` example and Item 78's fix
+are not in tension, and the distinction is worth stating precisely, because
+getting it backwards is how this class of bug recurs:
+
+- **Patching `HOME` (or the constant) AFTER a module has already imported
+  and resolved `Path.home()` does nothing.** The constant is a plain string
+  by then; nothing reads `HOME` again to produce it. This is what "monkeypatch
+  HOME does not work" has always meant in this file.
+- **Setting `HOME` in the environment BEFORE the first `ppxai` import is the
+  one case that does work** — and it is not a special case, it is the
+  general rule working normally: every module-level `Path.home()` site
+  resolves against whatever `HOME` says at THAT moment, so moving `HOME`
+  first means every one of them resolves into the throwaway home, including
+  ones nobody remembered to list. `tests/conftest.py::_redirect_home_to_tmp`
+  does exactly this, and asserts the ordering premise instead of trusting
+  it (`tests/test_home_hermeticity.py::TestTheRedirectIsInstalled::
+  test_no_ppxai_module_was_imported_before_the_redirect`).
 
 ## The rule
 
