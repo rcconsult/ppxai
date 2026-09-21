@@ -205,4 +205,17 @@ def clear_injected_contexts(engine) -> int:
 
     engine._injected_contexts.clear()
 
+    # The message LIST is unchanged here — only the text inside existing
+    # messages — so nothing fires `on_messages_changed` on its own, and
+    # every AppState field derived from the history (`context_percentage`
+    # above all) stayed at its pre-clear value until the next unrelated
+    # mutation. Same fix, same one line, as `multimodal_ops.
+    # remove_context_attachment`. Without it `/context clear` leaves a
+    # stale `Ctx:` badge in web and VSCode: the envelope carries no
+    # state_sync to drain, so the badge only corrects itself on the next
+    # chat turn. (VSCode did not show the bug before ADR 0007 step 5
+    # because its client-side `/context` intercept called `updateStatus()`
+    # by hand; moving that command to factory routing is what surfaced it.)
+    engine.session._notify_messages_changed()
+
     return removed_count

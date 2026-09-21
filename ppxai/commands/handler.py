@@ -35,7 +35,6 @@ from ..rich.themes import (
 )
 from ..rich.ui import (  # noqa: F401 — re-exported via commands/__init__.py
     console,
-    display_file_editing_help,
     display_sessions,
     display_welcome,
     select_model,
@@ -577,10 +576,10 @@ class CommandHandler:
 
         # Special case: the `app.quit` client action must return True.
         # ADR 0007 step 5: the names are DERIVED from the spec that
-        # declares `client_action="app.quit"` (`/quit`, alias `/exit`)
-        # instead of being spelled out here — a literal list was a
-        # seventh hand-written roster, and it is the reason `/q` exists
-        # in Textual and nowhere else. Rich adds no legacy extra.
+        # declares `client_action="app.quit"` (`/quit`, aliases `/exit`
+        # and, since the 2026-09-21 owner decision, `/q`) instead of
+        # being spelled out here — a literal list was a seventh
+        # hand-written roster.
         if command.startswith("/") and cmd_name in CommandFactory.names_for_client_action(
                 "app.quit"):
             return self.handle_quit()

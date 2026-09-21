@@ -175,7 +175,7 @@ class TestHandleSlashCommandShape:
         proves step 3b happened."""
         src = _read("chatPanel.ts")
         # `grep -v subcommand` in regex form: `subcommand === 'clear'`
-        # inside handleContextCommand is a different thing entirely.
+        # inside a handler body is a different thing entirely.
         found = sorted(set(re.findall(
             r"(?:^|[^A-Za-z])command === '([a-z?-]+)'", src, re.M)))
         assert found == [], (
@@ -427,4 +427,83 @@ class TestSizeReduction:
         assert line_count < 3000, (
             f"chatPanel.ts is {line_count} lines — 5b.2 was meant to "
             f"drop several hundred LoC. Has handler logic crept back?"
+        )
+
+
+# ---------------------------------------------------------------------------
+# ADR 0007 step 5 — the four migrated legacy intercepts
+# ---------------------------------------------------------------------------
+
+#: What step 5 moved off bespoke REST and onto `POST /command/<name>`.
+#: Kept as data so the three assertions below read the same list; it is
+#: NOT a command catalog (four names, and the parity fence's threshold for
+#: "this is a roster" is six).
+STEP5_MIGRATED = ("tools", "context", "ls", "tree")
+
+
+class TestStep5MigratedCommands:
+    """`/tools`, `/context`, `/ls`, `/tree` dispatch like any other
+    server command now — so their client-side machinery must be GONE,
+    not merely unreferenced.
+
+    The runtime half (they resolve to server dispatch and POST
+    `/command/<name>` with their args) is in
+    tests/test_vscode_command_roster_behavior.py, which drives the real
+    compiled router under Node. These are the deletion fences.
+    """
+
+    def test_panel_ops_no_longer_wires_them(self):
+        ops = _ops_body(_read("chatPanel.ts"))
+        for name in STEP5_MIGRATED:
+            member = "handle" + name.capitalize() + ":"
+            assert member not in ops, (
+                f"{member} is back in the PanelCommandOps literal — "
+                f"/{name} routes through POST /command/{name} since ADR 0007 "
+                "step 5. Re-wiring it is a re-intercept."
+            )
+        assert "handleCheckpoint:" in ops, (
+            "/checkpoint is the one acknowledged-legacy intercept left "
+            "(see LEGACY_INTERCEPTS in commandRouter.ts); its wiring must stay"
+        )
+
+    def test_the_bespoke_methods_are_deleted(self):
+        panel = _read("chatPanel.ts")
+        handlers = _read("handlers/commands.ts")
+        for name in STEP5_MIGRATED:
+            method = "handle" + name.capitalize() + "Command"
+            assert method not in panel, (
+                f"{method} reappeared in chatPanel.ts; the factory handles "
+                f"/{name} now"
+            )
+            assert method not in handlers, (
+                f"{method} reappeared in handlers/commands.ts; the factory "
+                f"handles /{name} now"
+            )
+        assert "handleCheckpointCommand" in handlers, (
+            "the /checkpoint handler must stay — it carries the modal "
+            "confirmation on `/checkpoint clear`, which is why that row did "
+            "not migrate"
+        )
+
+    def test_the_badges_reconcile_from_the_pushed_field(self):
+        """The state the deleted intercept used to refresh by hand.
+
+        `handleToolsCommand` called `updateStatus()` / `updateAgentStatus()`
+        directly. On the envelope path the engine pushes `tools_enabled`
+        and `agent_mode` (both in `SSE_SYNC_FIELDS`), so the hook has to
+        key on the FIELD — a per-COMMAND hook here would be the intercept
+        chain growing back.
+        """
+        src = _read("chatPanel.ts")
+        m = re.search(
+            r"this\._eventBus\.on\('state:sync',[\s\S]*?\n\s{8}\}\);", src)
+        assert m, "the state:sync subscription was not found in chatPanel.ts"
+        body = m.group(0)
+        assert "'tools_enabled' in changes" in body and "updateStatus()" in body, (
+            "a `/tools on` envelope no longer refreshes the Tools badge: the "
+            "state:sync handler must react to the pushed `tools_enabled` field"
+        )
+        assert "'agent_mode' in changes" in body and "updateAgentStatus()" in body, (
+            "a `/tools auto on` envelope no longer refreshes the Agent badge: "
+            "the state:sync handler must react to the pushed `agent_mode` field"
         )

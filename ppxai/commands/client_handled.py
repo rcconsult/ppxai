@@ -87,11 +87,18 @@ CommandFactory.register(CommandSpec(
     # gated to the terminal clients only. In a GUI, ending the session is
     # a UI button workflow, not a command — the web app has a header
     # button for it (labelled "Leave"), and VSCode already has
-    # Disconnect. Web and VSCode must never see /quit or /exit in
+    # Disconnect. Web and VSCode must never see /quit, /exit or /q in
     # completion or /help. This also resolves a step 1b finding: /quit
     # was declared universal but no JS client implemented `app.quit`.
+    #
+    # Owner decision (2026-09-21): `q` is now a REGISTERED alias, not a
+    # Textual-only literal (`TEXTUAL_LEGACY_QUIT_NAMES`, now deleted).
+    # Both TUIs and Rich derive their quit names from
+    # `CommandFactory.names_for_client_action("app.quit")`, so `/q` now
+    # appears in completion/`/help`/`GET /commands` for rich+textual,
+    # same as `/exit` already did.
     clients=frozenset({"rich", "textual"}),
-    aliases=["exit"],
+    aliases=["exit", "q"],
     usage="/quit",
     client_action="app.quit",
 ))

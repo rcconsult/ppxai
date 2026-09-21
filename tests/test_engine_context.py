@@ -143,6 +143,60 @@ print("hello")
         assert "```python" not in remaining
 
 
+    def test_clear_injected_contexts_pushes_a_context_percentage_sync(
+        self, engine_client
+    ):
+        """ADR 0007 step 5 regression.
+
+        `clear_injected_contexts` edits the text INSIDE existing messages;
+        the message list itself never changes, so nothing fired
+        `on_messages_changed` and `context_percentage` — the field the
+        `Ctx:` badge renders straight from — kept its pre-clear value.
+        Web and VSCode both drain `envelope.events`, so the badge simply
+        stayed stale until the next chat turn. VSCode used to hide the bug
+        by calling `updateStatus()` from its client-side `/context`
+        intercept; migrating that command to factory routing is what
+        surfaced it.
+
+        The fix is the same one line `multimodal_ops.
+        remove_context_attachment` already had. This test fails without
+        it — verified by deleting the call.
+        """
+        engine_client.session.messages = [
+            Message(role="user", content=(
+                "What is this file?\n\n---\n**`@file:big.py`**:\n"
+                "```python\n" + ("x = 1\n" * 2000) + "```\n"
+            )),
+        ]
+        engine_client._injected_contexts = [
+            {"source": "@file:big.py", "size": 12000, "truncated": False},
+        ]
+        engine_client._on_messages_changed()
+        before = engine_client.state.get("context_percentage")
+        assert before > 0, "fixture did not produce a measurable context"
+        engine_client.drain_events()
+
+        assert engine_client.clear_injected_contexts() == 1
+
+        after = engine_client.state.get("context_percentage")
+        assert after < before, (
+            "context_percentage did not fall after the injections were "
+            f"removed ({before} -> {after})"
+        )
+        synced = [
+            ev for ev in engine_client.drain_events()
+            if getattr(ev.type, "value", ev.type) == "state_sync"
+            and "context_percentage" in (ev.data or {})
+        ]
+        assert synced, (
+            "no state_sync carrying context_percentage was enqueued, so the "
+            "command envelope has nothing to drain and the Ctx: badge stays "
+            "stale in web and VSCode"
+        )
+        assert synced[-1].data["context_percentage"] == after
+
+
+
 class TestContextIntegration:
     """Integration tests for context workflow."""
 

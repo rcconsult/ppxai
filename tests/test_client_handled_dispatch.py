@@ -63,7 +63,7 @@ class TestSpecsAreRegistered:
         assert spec is not None
         assert spec.handler is None
         assert spec.client_action == "app.quit"
-        assert spec.aliases == ["exit"]
+        assert spec.aliases == ["exit", "q"]
         assert spec.description == "Exit the application"
         # Owner decision (2026-09-20, reverses the earlier "universal"
         # call): gated to the terminal clients. Ending a GUI session is a
@@ -91,6 +91,12 @@ class TestSpecsAreRegistered:
         """One spec, not two — `/exit` is an alias (owner decision)."""
         assert CommandFactory.get("exit") is CommandFactory.get("quit")
         assert "exit" not in CommandFactory.list_all()
+
+    def test_q_resolves_to_quit(self):
+        """`/q` is a REGISTERED alias (owner decision, 2026-09-21) — not
+        a Textual-only literal anymore."""
+        assert CommandFactory.get("q") is CommandFactory.get("quit")
+        assert "q" not in CommandFactory.list_all()
 
     def test_dispatches_in_client(self):
         """`client_action_clients` absent => every client that SEES it —
@@ -312,14 +318,21 @@ class TestCompletionListsEachCommandOnce:
         texts = [i["text"] for i in complete("/", client=client)]
         assert texts.count("/quit") == 1, (client, texts)
         assert texts.count("/exit") == 1, (client, texts)
+        # Owner decision (2026-09-21): `q` is now a registered alias, so
+        # it appears in completion exactly once too (previously it did
+        # not appear at all — TEXTUAL_LEGACY_QUIT_NAMES was not in the
+        # registry).
+        assert texts.count("/q") == 1, (client, texts)
 
     @pytest.mark.parametrize("client", ["web", "vscode"])
     def test_quit_and_exit_absent_from_gui_clients(self, client):
         # Owner decision (2026-09-20): ending a GUI session is a button
-        # workflow, not a command — /quit and /exit must not complete.
+        # workflow, not a command — /quit, /exit and /q must not
+        # complete.
         texts = [i["text"] for i in complete("/", client=client)]
         assert "/quit" not in texts, (client, texts)
         assert "/exit" not in texts, (client, texts)
+        assert "/q" not in texts, (client, texts)
 
     def test_token_surfaces_once_where_implemented(self):
         for client in ("web", "vscode", None):

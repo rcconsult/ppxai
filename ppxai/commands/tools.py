@@ -20,6 +20,7 @@ from .results import (
     ConfirmationResult,
     ErrorResult,
     KeyValueResult,
+    MarkdownResult,
     NotificationResult,
     ResultStatus,
     TableResult,
@@ -39,7 +40,8 @@ def handle_tools(context: CommandContext, args: str) -> CommandResult:
         /tools list      - List available tools
         /tools config    - Configure tool settings
         /tools set       - Set tool display options
-        /tools agent     - Control agent mode
+        /tools auto      - Control agent (auto) mode
+        /tools help      - Tool help (`editing` guide, or one tool)
 
     Args:
         context: Command context providing access to engine client
@@ -74,12 +76,15 @@ def handle_tools(context: CommandContext, args: str) -> CommandResult:
         return _tools_set(context, subargs)
     elif subcommand == "auto":
         return _tools_agent(context, subargs)
+    elif subcommand == "help":
+        return _tools_help(context, subargs)
     else:
         return ErrorResult(
             status=ResultStatus.ERROR,
             message=f"Unknown subcommand: {subcommand}",
             suggestions=[
-                "Available subcommands: on, off, list, status, config, set, auto"
+                "Available subcommands: on, off, list, status, config, set, "
+                "auto, help"
             ]
         )
 
@@ -365,7 +370,7 @@ def _tools_agent(context: CommandContext, args: list[str]) -> CommandResult:
         status = "ON" if context.engine_client.agent_mode else "OFF"
         return KeyValueResult(
             status=ResultStatus.INFO,
-            message="Agent Mode - Use /tools agent on|off",
+            message="Agent Mode - Use /tools auto on|off",
             pairs={
                 "Status": status,
                 "Usage": "'/auto <task>' to run autonomous task"
@@ -391,8 +396,125 @@ def _tools_agent(context: CommandContext, args: list[str]) -> CommandResult:
         return ErrorResult(
             status=ResultStatus.ERROR,
             message=f"Unknown action: {action}",
-            suggestions=["Usage: /tools agent on|off"]
+            suggestions=["Usage: /tools auto on|off"]
         )
+
+
+#: The `/tools help editing` guide.
+#:
+#: ADR 0007 step 5 (2026-09-21). `help` has been a DECLARED subcommand on
+#: the `/tools` CommandSpec since step 4 — completion has been offering it
+#: in every client — but `handle_tools` answered it with "Unknown
+#: subcommand", so it only ever worked in VSCode, which intercepted
+#: `/tools` client-side and rendered this guide from its own copy
+#: (`vscode-extension/src/handlers/commands.ts::getFileEditingHelp`, now
+#: deleted). Moving the intercept to factory routing would have DELETED
+#: the feature; moving the TEXT here gives it to all four clients instead
+#: and makes the declared subcommand true.
+#:
+#: A third, longer copy (`ppxai/rich/ui.py::display_file_editing_help`)
+#: had no production caller and was deleted in the same change.
+_FILE_EDITING_GUIDE = """# File Editing Tools
+
+ppxai can edit files directly during a conversation. Every edit needs
+your explicit consent before anything is written.
+
+## Quick start
+
+1. `/tools enable` - turn the tools on
+2. Ask for the change in plain language
+3. Answer the consent prompt: `y`, `n`, `always` or `never`
+
+## Consent
+
+| Answer | Effect |
+|--------|--------|
+| `y` | Allow this file, this session |
+| `n` | Deny this edit; the model carries on without it |
+| `always` | Auto-approve every file edit this session |
+| `never` | Block every file edit this session |
+
+Consent is session-scoped: it resets when you restart.
+
+## The editing tools
+
+- `apply_patch` - apply a unified diff
+- `replace_block` - replace an exact block of text
+- `insert_text` - insert at a line number
+- `delete_lines` - delete a line range
+
+## Safety
+
+- Every edit is consented; nothing is written silently
+- Edits roll back on failure
+- With agent mode on, a checkpoint is taken first - see
+  `/checkpoint status` and `/undo`
+
+## Related commands
+
+- `/tools status` - tools + consent mode
+- `/tools list` - every available tool
+- `/tools help <tool>` - one tool's description
+- `/tools disable` - turn the tools off
+"""
+
+
+def _tools_help(context: CommandContext, args: list[str]) -> CommandResult:
+    """`/tools help [editing|<tool>]`.
+
+    Three shapes, matching what the VSCode client did before its
+    `/tools` intercept was migrated to factory routing:
+      - bare `/tools help` -> usage
+      - `/tools help editing` -> the file-editing guide
+      - `/tools help <tool>` -> that tool's description
+    """
+    if not args:
+        return KeyValueResult(
+            status=ResultStatus.INFO,
+            message="Tool Help",
+            pairs={
+                "/tools help <tool>": "Show help for one tool",
+                "/tools help editing": "Show the file-editing guide",
+                "Hint": "Use '/tools list' to see available tool names",
+            }
+        )
+
+    topic = args[0]
+    if topic.lower() == "editing":
+        return MarkdownResult(
+            status=ResultStatus.SUCCESS,
+            message="File Editing Tools",
+            content=_FILE_EDITING_GUIDE,
+        )
+
+    if not context.engine_client or not context.engine_client.tool_manager:
+        return NotificationResult(
+            status=ResultStatus.WARNING,
+            message="Tool manager not available"
+        )
+
+    engine_tools = context.engine_client.tool_manager.list_tools()
+    match = next(
+        (t for t in engine_tools
+         if str(t.get("name", "")).lower() == topic.lower()),
+        None,
+    )
+    if match is None:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Tool not found: {topic}",
+            suggestions=["Use '/tools list' to see available tools"]
+        )
+
+    return MarkdownResult(
+        status=ResultStatus.SUCCESS,
+        message=f"Tool: {match.get('name', topic)}",
+        content=(
+            f"**{match.get('name', topic)}**\n\n"
+            f"{match.get('description', '(no description)')}"
+        ),
+    )
+
 
 
 def handle_usage(context: CommandContext, args: str) -> CommandResult:
@@ -760,7 +882,7 @@ CommandFactory.register(CommandSpec(
     handler=handle_tools,
     category="tools",
     aliases=["t"],
-    usage="/tools [on|off|list|status|config|set|help|agent]",
+    usage="/tools [on|off|list|status|config|set|help|auto]",
     # ADR 0007 step 4: completion reads these off the spec. They used to
     # be `_TOOLS_SUBCOMMANDS` in engine/completion.py — the last of the
     # hand-written rosters. Order and wording are the table's, verbatim.

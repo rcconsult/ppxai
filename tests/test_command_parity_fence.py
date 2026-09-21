@@ -22,8 +22,12 @@ The clients bundle the IMPLEMENTATIONS — behaviour mirrors that
 legitimately stay (ADR 0007 §Which mirrors can go). So every assertion
 below reads the Python declaration and compares it against what the REAL
 client source implements. Nothing here restates a list by hand except
-the two explicitly-named SHRINKING BASELINES, which exist so that a
-decision stays visible instead of hiding in a literal.
+the one explicitly-named SHRINKING BASELINE (`LEGACY_INTERCEPT_BASELINE`
+— VSCode's `LEGACY_INTERCEPTS`), which exists so that a decision stays
+visible instead of hiding in a literal. A second one,
+`TEXTUAL_LEGACY_QUIT_BASELINE`, was resolved and removed 2026-09-21 when
+`q` became a registered alias of `/quit`; see
+`TestNoUndeclaredIntercepts.test_the_textual_quit_legacy_extra_is_gone`.
 
 Five assertions:
 
@@ -128,14 +132,15 @@ TUI_ACTION_SITES = {
 }
 
 # ---------------------------------------------------------------------------
-# The two shrinking baselines
+# The shrinking baseline (was two; TEXTUAL_LEGACY_QUIT_BASELINE was
+# resolved and removed 2026-09-21 — see the module docstring)
 # ---------------------------------------------------------------------------
 
-#: VSCode intercepts these five client-side WITHOUT a declared
+#: VSCode intercepts these client-side WITHOUT a declared
 #: `client_action`, by explicit owner decision ("do not bless debt" —
 #: declaring an action for them would record the debt as architecture).
-#: They hit bespoke REST endpoints; the code has said *"full factory
-#: routing is a later phase"* since v1.18.1.
+#: They hit bespoke REST endpoints; the code said *"full factory routing
+#: is a later phase"* from v1.18.1 until ADR 0007 step 5.
 #:
 #: **It may only SHRINK, and only by migrating a command to factory
 #: routing.** Adding a name fails (declare a `client_action` instead);
@@ -143,28 +148,28 @@ TUI_ACTION_SITES = {
 #: ALSO fails, so this table keeps describing the tree rather than
 #: becoming a wish-list — the discipline `BASELINE` in
 #: tests/test_no_new_lazy_imports.py uses.
+#:
+#: SHRANK 2026-09-21 (ADR 0007 step 5, owner decision "move it"): was
+#: `{tools, checkpoint, context, ls, tree}`. `/tools`, `/context`, `/ls`
+#: and `/tree` route through `POST /command/<name>` now, exactly as web
+#: has always routed them. `/checkpoint` stays because `/checkpoint
+#: clear` irreversibly deletes every file-backend snapshot and VSCode's
+#: modal is the ONLY confirmation any client has — expressing it on the
+#: wire needs a cross-client confirmation design, not a routing change.
+#: `commandRouter.ts`'s LEGACY_INTERCEPTS comment carries the full
+#: reasoning.
 LEGACY_INTERCEPT_BASELINE = frozenset({
-    "tools",
     "checkpoint",
-    "context",
-    "ls",
-    "tree",
 })
 
-#: The ONE quit name that is not in the command registry:
-#: `ppxai/tui/app.py::TEXTUAL_LEGACY_QUIT_NAMES`. Textual has accepted
-#: `/q` since before the registry existed; it is not a declared alias of
-#: `/quit`, so completion, `/help` and `GET /commands` do not know it
-#: exists, and Rich does not accept it.
-#:
-#: **OPEN OWNER DECISION.** Registering `q` as an alias would make it
-#: appear in Rich's completion (a visible change there); removing it
-#: would break a shortcut Textual users have. Both are behaviour
-#: changes, so step 5 made the literal DERIVED-plus-one-named-extra
-#: instead of deciding. This row records it; shrink it by registering
-#: `q` as an alias of `/quit` (then this baseline is empty and the
-#: `TEXTUAL_LEGACY_QUIT_NAMES` constant goes with it).
-TEXTUAL_LEGACY_QUIT_BASELINE = frozenset({"q"})
+#: RESOLVED (owner decision, 2026-09-21): `q` is now a REGISTERED alias
+#: of `/quit` (`ppxai/commands/client_handled.py`), so the Textual-only
+#: legacy-extra baseline this used to be (`TEXTUAL_LEGACY_QUIT_BASELINE
+#: = frozenset({"q"})`) is gone, and `ppxai/tui/app.py::
+#: TEXTUAL_LEGACY_QUIT_NAMES` went with it.
+#: `TestNoUndeclaredIntercepts.test_the_textual_quit_legacy_extra_is_gone`
+#: asserts the constant stays gone, so nobody re-adds a Textual-only
+#: legacy extra without this file noticing.
 
 # ---------------------------------------------------------------------------
 # The generic catalog detector's tuning
@@ -1104,26 +1109,23 @@ class TestNoUndeclaredIntercepts:
             "from LEGACY_INTERCEPTS (and from the baseline here)."
         )
 
-    def test_the_textual_quit_baseline_matches_the_source(self):
-        """The `/q` row, both directions.
-
-        `ppxai/tui/app.py` derives its quit names from the spec plus ONE
-        named legacy extra. Growing that constant fails here; shrinking
-        it (by registering `q` as an alias of `/quit`) fails until this
-        baseline is emptied too."""
+    def test_the_textual_quit_legacy_extra_is_gone(self):
+        """RESOLVED (owner decision, 2026-09-21): `q` is a registered
+        alias of `/quit` now, so `ppxai/tui/app.py` must carry no
+        Textual-only legacy-extra constant at all — not an empty one, an
+        ABSENT one. Its reappearance (under this name or a new one)
+        means someone re-added a name that bypasses the registry."""
         src = _read(TUI_ACTION_SITES["textual"])
-        m = re.search(
-            r"TEXTUAL_LEGACY_QUIT_NAMES = frozenset\(\{([^}]*)\}\)", src)
-        assert m, (
-            "TEXTUAL_LEGACY_QUIT_NAMES is gone from ppxai/tui/app.py. If `/q` "
-            "became a registered alias of /quit, empty "
-            "TEXTUAL_LEGACY_QUIT_BASELINE in this file too."
-        )
-        names = set(re.findall(r"['\"]([a-z?-]+)['\"]", m.group(1)))
-        assert names == set(TEXTUAL_LEGACY_QUIT_BASELINE), (
-            f"the Textual legacy quit names changed: {sorted(names)} "
-            f"(baseline {sorted(TEXTUAL_LEGACY_QUIT_BASELINE)}). This is an "
-            "OPEN OWNER DECISION, not a free edit — see the baseline's comment."
+        # A regex for the ASSIGNMENT, not a plain substring — app.py's
+        # own comments legitimately name the retired constant for
+        # historical context; only a live `NAME = ...` is the regression.
+        assert not re.search(r"TEXTUAL_LEGACY_QUIT_NAMES\s*=", src), (
+            "TEXTUAL_LEGACY_QUIT_NAMES reappeared in ppxai/tui/app.py — "
+            "`/q` is a registered alias of `/quit` "
+            "(ppxai/commands/client_handled.py) now, so the quit "
+            "intercept must derive ALL its names from "
+            'CommandFactory.names_for_client_action("app.quit") with no '
+            "legacy extra."
         )
 
     def test_neither_tui_spells_the_quit_names_out(self):
@@ -1542,27 +1544,36 @@ class TestMutationLegacyBaseline:
 
     def test_a_grown_table_is_caught(self):
         src = _read(VSCODE_ROUTER).replace(
-            "    'tools',", "    'tools',\n    'newthing',", 1)
+            "    'checkpoint',", "    'checkpoint',\n    'newthing',", 1)
         listed = set(ts_array_strings(src, self._ANCHOR))
         assert listed - LEGACY_INTERCEPT_BASELINE == {"newthing"}
 
     def test_a_shrunk_table_is_caught_until_the_baseline_row_goes(self):
-        src = _read(VSCODE_ROUTER).replace("    'tree',\n", "", 1)
+        src = _read(VSCODE_ROUTER).replace("    'checkpoint',\n", "", 1)
         listed = set(ts_array_strings(src, self._ANCHOR))
-        assert LEGACY_INTERCEPT_BASELINE - listed == {"tree"}
+        assert LEGACY_INTERCEPT_BASELINE - listed == {"checkpoint"}
 
     def test_a_missing_table_raises_rather_than_passing_empty(self):
         src = _read(VSCODE_ROUTER).replace("export const LEGACY_INTERCEPTS", "const X")
         with pytest.raises(AssertionError, match="anchor not found"):
             ts_array_strings(src, self._ANCHOR)
 
-    def test_a_grown_textual_quit_literal_is_caught(self):
-        src = _read(TUI_ACTION_SITES["textual"]).replace(
-            'TEXTUAL_LEGACY_QUIT_NAMES = frozenset({"q"})',
-            'TEXTUAL_LEGACY_QUIT_NAMES = frozenset({"q", "bye"})', 1)
-        m = re.search(r"TEXTUAL_LEGACY_QUIT_NAMES = frozenset\(\{([^}]*)\}\)", src)
-        names = set(re.findall(r"['\"]([a-z?-]+)['\"]", m.group(1)))
-        assert names != set(TEXTUAL_LEGACY_QUIT_BASELINE)
+    def test_a_reintroduced_textual_quit_literal_is_caught(self):
+        """Prove the absence check
+        (`test_the_textual_quit_legacy_extra_is_gone`) can actually
+        fail: plant the retired constant's assignment back into the
+        source and assert the regex would flag it (a bare mention in a
+        comment, as this file's own docstrings carry, must NOT)."""
+        assignment = 'TEXTUAL_LEGACY_QUIT_NAMES = frozenset({"q", "bye"})'
+        src_with_assignment = _read(TUI_ACTION_SITES["textual"]) + f"\n{assignment}\n"
+        assert re.search(r"TEXTUAL_LEGACY_QUIT_NAMES\s*=", src_with_assignment)
+
+        src_with_comment_only = (
+            _read(TUI_ACTION_SITES["textual"])
+            + "\n# TEXTUAL_LEGACY_QUIT_NAMES is retired, see history\n"
+        )
+        assert not re.search(
+            r"TEXTUAL_LEGACY_QUIT_NAMES\s*=", src_with_comment_only)
 
 
 class TestMutationUndeclaredIntercepts:

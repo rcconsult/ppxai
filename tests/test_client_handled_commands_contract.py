@@ -75,11 +75,13 @@ invariant here — `command === 'token'` precedes `dispatchFactoryCommand`
 branches left at all. The VSCode assertions below are the same five,
 read off `vscode-extension/src/commandRouter.ts` (`route()`, the
 `CLIENT_ACTIONS` registry) and `chatPanel.ts` (`handleTokenCommand`),
-with ONE addition the web half does not need: the five
-**acknowledged-legacy** intercepts (`/tools`, `/checkpoint`, `/context`,
-`/ls`, `/tree`) have no `client_action` by owner decision ("do not bless
-debt"), so they are consulted from a NAMED table after the gate. That
-table is asserted to hold exactly those five and none of the declared
+with ONE addition the web half does not need: the
+**acknowledged-legacy** intercepts have no `client_action` by owner
+decision ("do not bless debt"), so they are consulted from a NAMED table
+after the gate. Step 3b listed five (`/tools`, `/checkpoint`,
+`/context`, `/ls`, `/tree`); **step 5 (2026-09-21) migrated four of them
+to factory routing and `/checkpoint` is the one left.** That table is
+asserted to hold exactly the baseline and none of the declared
 commands — it is step 5's shrinking baseline, and the assertion is what
 stops it growing. Runtime behaviour is in
 `tests/test_vscode_command_roster_behavior.py`, which compiles the real
@@ -120,12 +122,17 @@ VSCODE_CHATPANEL_PATH = REPO_ROOT / "vscode-extension" / "src" / "chatPanel.ts"
 VSCODE_ROUTER_PATH = REPO_ROOT / "vscode-extension" / "src" / "commandRouter.ts"
 VSCODE_ROSTER_PATH = REPO_ROOT / "vscode-extension" / "src" / "commandRoster.ts"
 
-#: The five commands ADR 0007 step 3b keeps intercepting WITHOUT a
-#: declared `client_action` ("do not bless debt"). Step 5's parity fence
-#: inherits this as its baseline; it may only shrink.
-LEGACY_INTERCEPT_BASELINE = frozenset(
-    {"tools", "checkpoint", "context", "ls", "tree"}
-)
+#: The commands intercepted WITHOUT a declared `client_action` ("do not
+#: bless debt"). Step 5's parity fence inherits this as its baseline; it
+#: may only shrink.
+#:
+#: SHRANK 2026-09-21 (step 5, owner decision "move it"): step 3b's five
+#: are down to one. `/tools`, `/context`, `/ls` and `/tree` go through
+#: `POST /command/<name>` now. `/checkpoint` stays — `/checkpoint clear`
+#: irreversibly deletes every file-backend snapshot and VSCode's modal is
+#: the only confirmation any client has; see the LEGACY_INTERCEPTS
+#: comment in commandRouter.ts.
+LEGACY_INTERCEPT_BASELINE = frozenset({"checkpoint"})
 
 
 def _read(path: Path) -> str:
@@ -734,7 +741,7 @@ class TestVscodeRosterDrivenDispatchOrder:
     def test_no_per_name_escape_hatch_remains(self):
         assert_vscode_has_no_per_name_escape_hatch(_read(VSCODE_CHATPANEL_PATH))
 
-    def test_legacy_table_holds_exactly_the_acknowledged_five(self):
+    def test_legacy_table_holds_exactly_the_acknowledged_baseline(self):
         assert_vscode_legacy_table_is_exactly(
             _read(VSCODE_ROUTER_PATH), set(LEGACY_INTERCEPT_BASELINE))
 
@@ -1146,9 +1153,11 @@ class TestMutationVscodeEscapeHatch:
             assert_vscode_has_no_per_name_escape_hatch(broken)
 
     def test_accepts_a_subcommand_comparison(self):
-        """`subcommand === 'clear'` inside handleContextCommand is not an
+        """`subcommand === 'clear'` inside a handler is not an
         intercept — excluding it is the same `grep -v subcommand` the
-        plan's own recipe uses."""
+        plan's own recipe uses. (The example used to be
+        `handleContextCommand`; step 5 deleted that method, so the string
+        below is synthetic — which is fine, the helper takes source TEXT.)"""
         ok = "if (subcommand === 'clear') { await this.clearContext(); }"
         assert_vscode_has_no_per_name_escape_hatch(ok)  # must not raise
 
@@ -1172,6 +1181,15 @@ class TestMutationVscodeLegacyTable:
     def test_accepts_the_baseline(self):
         ok = """
         export const LEGACY_INTERCEPTS: readonly string[] = [
+            'checkpoint',
+        ];
+        """
+        assert_vscode_legacy_table_is_exactly(ok, set(LEGACY_INTERCEPT_BASELINE))
+
+    def test_rejects_the_pre_step_5_five(self):
+        """The shrink is the point: the step-3b table must now FAIL."""
+        stale = """
+        export const LEGACY_INTERCEPTS: readonly string[] = [
             'tools',
             'checkpoint',
             'context',
@@ -1179,7 +1197,9 @@ class TestMutationVscodeLegacyTable:
             'tree',
         ];
         """
-        assert_vscode_legacy_table_is_exactly(ok, set(LEGACY_INTERCEPT_BASELINE))
+        with pytest.raises(AssertionError):
+            assert_vscode_legacy_table_is_exactly(
+                stale, set(LEGACY_INTERCEPT_BASELINE))
 
 
 class TestMutationVscodeActionRegistry:

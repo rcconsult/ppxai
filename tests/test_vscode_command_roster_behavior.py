@@ -29,8 +29,12 @@ What is pinned, and why a source read could not see it:
      the server stop over-listing `/help` for the web+vscode union.
   4. **An action the roster names that this client does not implement is
      an ERROR, never a silent forward.**
-  5. **The five acknowledged-legacy intercepts still work** — and only
-     after the fail-closed gate.
+  5. **The acknowledged-legacy intercept still works** — and only after
+     the fail-closed gate. Step 5 (2026-09-21) shrank that table from
+     five rows to one: `/tools`, `/context`, `/ls` and `/tree` resolve
+     to SERVER dispatch now and must POST `/command/<name>` with
+     `client: "vscode"` and their args intact, which is pinned here as a
+     positive control beside the `/checkpoint` row that stayed.
   6. **FAIL CLOSED.** With NO roster, `/token set <secret>` reaches no
      network call at all, the secret is in no payload, the echo is
      masked and the raw line is purged from the ↑ history. The extension
@@ -201,11 +205,7 @@ function makeOps(backend) {
         handleConvert(argv) { ops.ran.push(['coding.convert', argv.join(' ')]); },
         handlePreview(argv) { ops.ran.push(['preview.panel', argv.join(' ')]); },
         showHelp(args) { ops.ran.push(['help.augment', args]); },
-        handleTools(argv) { ops.ran.push(['legacy:tools', argv.join(' ')]); },
         handleCheckpoint(argv) { ops.ran.push(['legacy:checkpoint', argv.join(' ')]); },
-        handleContext(argv) { ops.ran.push(['legacy:context', argv.join(' ')]); },
-        handleLs(argv) { ops.ran.push(['legacy:ls', argv.join(' ')]); },
-        handleTree(argv) { ops.ran.push(['legacy:tree', argv.join(' ')]); },
         echo(text, sensitive, raw) {
             ops.echoes.push(text);
             if (sensitive) { ops.forgotten.push(raw); }
@@ -354,7 +354,7 @@ function ranNames(ops) { return ops.ran.map((r) => r[0]); }
       'no clear error naming the unimplemented action: ' + JSON.stringify(ops.errors));
   }
 
-  // --- 6: the five acknowledged-legacy intercepts still work ---
+  // --- 6: the acknowledged-legacy intercepts still work ---
   {
     const {backend, roster, ops} = make();
     await roster.load();
@@ -362,9 +362,68 @@ function ranNames(ops) { return ops.ran.map((r) => r[0]); }
     for (const name of LEGACY_INTERCEPTS) { await router.route('/' + name + ' status'); }
     assert(JSON.stringify(ranNames(ops)) ===
            JSON.stringify(LEGACY_INTERCEPTS.map((n) => 'legacy:' + n)),
-      'the legacy five were not intercepted: ' + JSON.stringify(ops.ran));
+      'the legacy row(s) were not intercepted: ' + JSON.stringify(ops.ran));
     assert(posts(backend).length === 0, 'a legacy command was POSTed to the factory');
     assert(ops.ran.every((r) => r[1] === 'status'), 'legacy argv mangled');
+  }
+
+  // --- 6b: ADR 0007 step 5 — the four MIGRATED commands ---
+  //
+  // The other half of the shrink, and the half a source read cannot
+  // see: /tools, /context, /ls and /tree must now resolve to SERVER
+  // dispatch, POST /command/<name> with client:"vscode", carry their
+  // args through unmangled, and run NO bundled implementation.
+  {
+    const MIGRATED = ['tools', 'context', 'ls', 'tree'];
+    const ARGS = {
+      tools: 'auto on',
+      context: 'clear',
+      ls: '-a src',
+      tree: 'src 2',
+    };
+    const {backend, roster, ops} = make();
+    await roster.load();
+    const router = buildCommandRouter(roster, ops);
+
+    for (const name of MIGRATED) {
+      assert(LEGACY_INTERCEPTS.indexOf(name) === -1,
+        '/' + name + ' is still in LEGACY_INTERCEPTS');
+      assert(LEGACY_HANDLERS[name] === undefined,
+        '/' + name + ' still has a LEGACY_HANDLERS row');
+      const entry = roster.resolve(name);
+      assert(entry, 'the server does not serve /' + name + ' to vscode');
+      assert(entry.dispatch === 'server',
+        '/' + name + ' is not server-dispatched: ' + entry.dispatch);
+      assert(!entry.client_action,
+        '/' + name + ' grew a client_action; step 5 migrated it, it did ' +
+        'not bless it: ' + entry.client_action);
+      await router.route('/' + name + ' ' + ARGS[name]);
+    }
+
+    assert(ops.ran.length === 0,
+      'a migrated command ran a bundled implementation: ' + JSON.stringify(ops.ran));
+    assert(ops.errors.length === 0,
+      'a migrated command errored: ' + JSON.stringify(ops.errors));
+    const sent = posts(backend);
+    assert(JSON.stringify(sent.map((c) => c.url)) ===
+           JSON.stringify(MIGRATED.map((n) => '/command/' + n)),
+      'the migrated four did not POST /command/<name>: ' +
+      JSON.stringify(sent.map((c) => c.url)));
+    for (let i = 0; i < MIGRATED.length; i++) {
+      assert(sent[i].body.client === 'vscode',
+        '/' + MIGRATED[i] + ' was POSTed without client:"vscode"');
+      assert(sent[i].body.args === ARGS[MIGRATED[i]],
+        '/' + MIGRATED[i] + ' args mangled: ' + JSON.stringify(sent[i].body.args));
+    }
+
+    // Aliases resolve to the CANONICAL name on the migrated path too:
+    // `/t` is a registered alias of `/tools`, and the POST must carry
+    // `tools`, not `t` (the server 404s an alias).
+    backend.calls.length = 0;
+    await router.route('/t list');
+    const aliased = posts(backend);
+    assert(aliased.length === 1 && aliased[0].url === '/command/tools',
+      '/t did not resolve to /command/tools: ' + JSON.stringify(aliased));
   }
 
   // --- 7: NO ROSTER -> fail closed, zero leakage, nothing remembered ---
@@ -401,6 +460,7 @@ function ranNames(ops) { return ops.ran.map((r) => r[0]); }
     // Fail closed means CLOSED: a plain server command, a legacy
     // intercept and a chat-shaped command are all refused too.
     await router.route('/status');
+    await router.route('/checkpoint status');
     await router.route('/tools status');
     await router.route('/explain this code');
     assert(posts(backend).length === 0, 'a command was forwarded with no roster');

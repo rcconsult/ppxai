@@ -31,7 +31,7 @@
  *   3. `dispatch === "client"` → the bundled implementation named by the
  *      entry's `client_action`. An action the roster names that this
  *      client does not implement is an ERROR, never a silent forward.
- *   4. **LEGACY INTERCEPTS** — see `LEGACY_INTERCEPTS` below.
+ *   4. **LEGACY INTERCEPT** — see `LEGACY_INTERCEPTS` below.
  *   5. Everything else → `POST /command/<name>` via the v1 envelope.
  *
  * **No `vscode` import**, by design (same IoC shape as
@@ -47,29 +47,45 @@ export const VSCODE_CLIENT_ID = 'vscode';
 
 
 /**
- * The five commands that are intercepted client-side WITHOUT a declared
- * `client_action`, by explicit owner decision ("do not bless debt").
+ * Commands intercepted client-side WITHOUT a declared `client_action`,
+ * by explicit owner decision ("do not bless debt").
  *
  * They hit bespoke REST endpoints through handlers extracted in the
- * v1.18.1 Phase-2 refactor; the code has said *"full factory routing is a
- * later phase"* ever since. Declaring a `client_action` for them would
- * record the debt as architecture. Instead they live here, named, so that
- * ADR 0007 step 5's parity fence can baseline this exact list and only
- * ever let it SHRINK — the same discipline as `BASELINE` in
- * tests/test_no_new_lazy_imports.py.
+ * v1.18.1 Phase-2 refactor; the code said *"full factory routing is a
+ * later phase"* from then until ADR 0007 step 5. Declaring a
+ * `client_action` for them would record the debt as architecture.
+ * Instead they live here, named, so that step 5's parity fence can
+ * baseline this exact list and only ever let it SHRINK — the same
+ * discipline as `BASELINE` in tests/test_no_new_lazy_imports.py.
  *
- * Consulted AFTER the fail-closed gate, so they are not an escape hatch:
- * with no roster they are refused like everything else.
+ * **Step 5 (2026-09-21) shrank it from five to one.** `/tools`,
+ * `/context`, `/ls` and `/tree` now route to `POST /command/<name>` like
+ * every other server command, rendered by `CommandRenderer` and
+ * reconciled by the envelope's `side_effects` + `events` — exactly what
+ * the web client has always done with them.
+ *
+ * `/checkpoint` STAYS, and the reason is one subcommand:
+ * `/checkpoint clear` irreversibly deletes every file-backend snapshot,
+ * and this client is the only one that asks first
+ * (`vscode.window.showWarningMessage(..., {modal: true})` in
+ * `handlers/commands.ts`). `ppxai/commands/agent.py::_checkpoint_clear`
+ * says so in a comment of its own — *"Interactive confirmation is handled
+ * by old handler for now"* — and deletes unconditionally. Routing
+ * `/checkpoint` through the envelope today would remove the only guard on
+ * a destructive, unrecoverable operation. Expressing that guard on the
+ * wire is possible in principle (`prompt_quick_pick` +
+ * `command_to_resume` is already in the vocabulary and already handled by
+ * `sideEffectsHandler.ts`), but neither TUI implements that side-effect,
+ * so emitting it from Python would turn `/checkpoint clear` into a silent
+ * no-op in Rich and Textual. That is a cross-client confirmation design,
+ * not a VSCode routing change — owner's call, and until it is made this
+ * row stays.
  *
  * DO NOT ADD TO THIS LIST. A new client-side command gets a
  * `client_action` in the Python registry.
  */
 export const LEGACY_INTERCEPTS: readonly string[] = [
-    'tools',
     'checkpoint',
-    'context',
-    'ls',
-    'tree',
 ];
 
 
@@ -135,12 +151,8 @@ export interface PanelCommandOps {
     handlePreview(argv: string[]): Promise<void> | void;
     showHelp(args: string): Promise<void> | void;
 
-    // --- the five acknowledged-legacy intercepts -----------------------
-    handleTools(argv: string[]): Promise<void> | void;
+    // --- the acknowledged-legacy intercept (see LEGACY_INTERCEPTS) -----
     handleCheckpoint(argv: string[]): Promise<void> | void;
-    handleContext(argv: string[]): Promise<void> | void;
-    handleLs(argv: string[]): Promise<void> | void;
-    handleTree(argv: string[]): Promise<void> | void;
 
     // --- transcript + dispatch -----------------------------------------
     echo(text: string, sensitive: boolean, raw: string): void;
@@ -205,14 +217,11 @@ export const CLIENT_ACTIONS: Record<string, OpsAction> = {
 
 /**
  * Implementations for `LEGACY_INTERCEPTS`. Keys must equal that list —
- * pinned by tests/test_client_handled_commands_contract.py.
+ * pinned by tests/test_client_handled_commands_contract.py and
+ * tests/test_command_parity_fence.py.
  */
 export const LEGACY_HANDLERS: Record<string, OpsAction> = {
-    tools: (ops, ctx) => ops.handleTools(ctx.argv),
     checkpoint: (ops, ctx) => ops.handleCheckpoint(ctx.argv),
-    context: (ops, ctx) => ops.handleContext(ctx.argv),
-    ls: (ops, ctx) => ops.handleLs(ctx.argv),
-    tree: (ops, ctx) => ops.handleTree(ctx.argv),
 };
 
 /** Build the router for a chat panel: registry + roster + panel ops. */

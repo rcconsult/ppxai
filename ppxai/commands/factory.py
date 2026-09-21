@@ -899,6 +899,42 @@ class CommandFactory:
                 lines.append(f"[cyan]Aliases:[/cyan] {aliases}")
             lines.append(f"[cyan]Category:[/cyan] {spec.category}")
 
+        # Owner decision (2026-09-21): `/help <cmd>` renders the spec's
+        # first-level `subcommands` too — eight specs declare them
+        # (`/token`, `/theme`, `/status`, `/checkpoint`, `/tools`,
+        # `/usage`, `/task`, `/run`) and neither this method nor
+        # `generate_help` (the full listing, deliberately untouched)
+        # rendered them before. A spec with no `subcommands` renders
+        # EXACTLY as above — no section is appended.
+        #
+        # `sensitive_subcommands` (ADR 0007 step 3a-sec, e.g. `/token
+        # set`) is a NAME-level flag: the subcommand's NAME is not a
+        # secret and is listed like any other, only its ARGUMENT VALUE
+        # is — and there is no value here to leak (`get_command_help`
+        # takes no user-typed argument). The marker below is consistent
+        # with the per-subcommand `sensitive` flag `roster()` publishes
+        # over `GET /commands` — same declaration, another sink.
+        if spec.subcommands:
+            lines.append("")
+            if markdown:
+                lines.append("**Subcommands:**")
+                for sub, desc in spec.subcommands:
+                    marker = (
+                        " _(value handled client-side, never sent to "
+                        "the server)_"
+                        if sub in spec.sensitive_subcommands else ""
+                    )
+                    lines.append(f"- `{sub}` — {desc}{marker}")
+            else:
+                lines.append("[cyan]Subcommands:[/cyan]")
+                for sub, desc in spec.subcommands:
+                    marker = (
+                        " [dim](value handled client-side, never sent "
+                        "to the server)[/dim]"
+                        if sub in spec.sensitive_subcommands else ""
+                    )
+                    lines.append(f"  {sub} - {desc}{marker}")
+
         return "\n".join(lines)
 
     @classmethod

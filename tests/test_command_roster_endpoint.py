@@ -203,7 +203,8 @@ class TestCanonicalEntriesOnly:
     def test_exit_appears_only_inside_quits_aliases(self, http_client):
         payload = fetch(http_client, client="rich")
         assert entry(payload, "exit") is None
-        assert entry(payload, "quit")["aliases"] == ["exit"]
+        assert entry(payload, "q") is None
+        assert entry(payload, "quit")["aliases"] == ["exit", "q"]
 
     def test_entries_match_the_registry_canonicals(self, http_client):
         listed = set(names(fetch(http_client, client="rich")))
@@ -236,6 +237,7 @@ class TestClientGating:
         payload = fetch(http_client, client="web")
         assert_absent(payload, "quit")
         assert_absent(payload, "exit")
+        assert_absent(payload, "q")
 
     def test_mutation_the_absence_assertion_can_fail(self, http_client):
         """Prove `assert_absent` fails for something that IS listed —

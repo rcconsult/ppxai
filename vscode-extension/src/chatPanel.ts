@@ -35,10 +35,7 @@ import { SideEffectsHandler, SideEffectHost } from './sideEffectsHandler';
 // Import extracted handlers (Phase 2-4 refactoring)
 import {
     HandlerContext,
-    handleToolsCommand as toolsHandler,
     handleCheckpointCommand as checkpointHandler,
-    handleLsCommand as lsHandler,
-    handleTreeCommand as treeHandler,
     ChatEventBus,
     processStreamEvent,
     AgentStateMachine,
@@ -689,6 +686,25 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             if ('context_percentage' in changes) {
                 this.postContextBadge(Number(changes['context_percentage']) || 0);
             }
+            // ADR 0007 step 5: `/tools` and `/tools auto` are server
+            // commands now, so the badges they used to refresh by hand
+            // (the client-side intercept called `updateStatus()` /
+            // `updateAgentStatus()` directly) have to reconcile from the
+            // pushed FIELD instead. Both are in `SSE_SYNC_FIELDS`
+            // (ppxai/engine/client.py) and arrive either over SSE or
+            // drained from the command envelope.
+            //
+            // Keyed on the field, never on a command name — a per-name
+            // hook here would be the intercept chain growing back, which
+            // tests/test_command_parity_fence.py rejects. `tools_enabled`
+            // needs the round-trip because the "Tools: N" label carries a
+            // COUNT the state_sync does not.
+            if ('tools_enabled' in changes) {
+                this.updateStatus();
+            }
+            if ('agent_mode' in changes) {
+                this.updateAgentStatus();
+            }
         });
 
         // UI events
@@ -1141,11 +1157,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 handleConvert: (argv) => this.handleConvertCommand(argv),
                 handlePreview: (argv) => this.handlePreviewCommand(argv),
                 showHelp: (args) => this.showHelp(args),
-                handleTools: (argv) => this.handleToolsCommand(argv),
                 handleCheckpoint: (argv) => this.handleCheckpointCommand(argv),
-                handleContext: (argv) => this.handleContextCommand(argv),
-                handleLs: (argv) => this.handleLsCommand(argv),
-                handleTree: (argv) => this.handleTreeCommand(argv),
                 echo: (text, sensitive, raw) => this.echoCommand(text, sensitive, raw),
                 showError: (message) => {
                     this._view?.webview.postMessage({ type: 'error', content: message });
@@ -1309,15 +1321,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             ),
         });
         return true;
-    }
-
-    /**
-     * Handle /tools command - delegates to extracted handler (Phase 2 refactoring)
-     */
-    private async handleToolsCommand(args: string[]): Promise<void> {
-        const ctx = this.getHandlerContext();
-        if (!ctx) { return; }
-        await toolsHandler(ctx, args);
     }
 
     /**
@@ -1605,229 +1608,6 @@ Review your previous actions and continue. If the task is complete, respond with
         const ctx = this.getHandlerContext();
         if (!ctx) { return; }
         await checkpointHandler(ctx, args);
-    }
-
-    /**
-     * Handle /context command - show context usage and injected files (v1.13.9)
-     */
-    private async handleContextCommand(args: string[]) {
-        if (!this._view) { return; }
-
-        const subcommand = args[0]?.toLowerCase();
-
-        try {
-            if (subcommand === 'clear') {
-                // Clear injected contexts
-                const result = await this._backend.clearContextInjections();
-                if (result.removed_count > 0) {
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: `✓ Cleared ${result.removed_count} injected context(s) from conversation.`
-                    });
-                } else {
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: 'No injected contexts to clear.'
-                    });
-                }
-                // Update status to refresh context badge
-                await this.updateStatus();
-            } else if (subcommand === 'reload') {
-                // Reload bootstrap context from disk (v1.14.1)
-                const result = await this._backend.reloadBootstrapContext();
-                if (result.success && result.loaded) {
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: `✓ Bootstrap context reloaded from: \`${result.source}\``
-                    });
-                } else if (result.success && !result.loaded) {
-                    const workingDir = await this._backend.getWorkingDir();
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: `No bootstrap context found in: \`${workingDir || 'current directory'}\``
-                    });
-                } else {
-                    this._view.webview.postMessage({
-                        type: 'error',
-                        content: 'Failed to reload bootstrap context.'
-                    });
-                }
-            } else if (subcommand === 'hints') {
-                // Show active bootstrap hints (v1.14.0)
-                const hints = await this._backend.getActiveHints();
-
-                if (!hints.loaded) {
-                    const workingDir = await this._backend.getWorkingDir();
-                    let msg = '**No bootstrap context loaded.**\n';
-                    msg += `Working directory: \`${workingDir || 'unknown'}\`\n`;
-                    msg += '\n*Create AGENTS.md or CLAUDE.md in your project directory,*\n';
-                    msg += '*or use `/wd <path>` to navigate to a directory with one.*';
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: msg
-                    });
-                    return;
-                }
-
-                let msg = '**Active Bootstrap Hints**\n';
-                msg += `  Source: \`${hints.source}\`\n`;
-                msg += `  Provider: ${hints.provider}\n`;
-                msg += `  Model: ${hints.model}\n`;
-
-                // Provider hints
-                if (hints.provider_hints.length > 0) {
-                    msg += `\n**Provider Hints:** (${hints.provider_hints.length} active)`;
-                    if (hints.inherited_local) {
-                        msg += ' *(includes inherited "local" hints)*';
-                    }
-                    msg += '\n';
-                    for (const [source, hint] of hints.provider_hints) {
-                        const displayHint = hint.length > 80 ? hint.substring(0, 80) + '...' : hint;
-                        msg += `  • [${source}] ${displayHint}\n`;
-                    }
-                } else {
-                    msg += '\n**Provider Hints:** *none active*';
-                    if (hints.all_provider_keys.length > 0) {
-                        msg += `\n  Available: ${hints.all_provider_keys.join(', ')}`;
-                    }
-                    msg += '\n';
-                }
-
-                // Model hints
-                if (hints.model_hints.length > 0) {
-                    msg += `\n**Model Hints:** (${hints.model_hints.length} active)`;
-                    msg += `\n  Matched patterns: ${hints.matched_patterns.join(', ')}\n`;
-                    for (const [pattern, hint] of hints.model_hints) {
-                        const displayHint = hint.length > 80 ? hint.substring(0, 80) + '...' : hint;
-                        msg += `  • [${pattern}] ${displayHint}\n`;
-                    }
-                } else {
-                    msg += '\n**Model Hints:** *none active*';
-                    if (hints.all_model_patterns.length > 0) {
-                        msg += `\n  Available patterns: ${hints.all_model_patterns.join(', ')}`;
-                    }
-                    msg += '\n';
-                }
-
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: msg
-                });
-            } else if (subcommand === 'show') {
-                // Show bootstrap context hierarchy (v1.14.2)
-                const status = await this._backend.getBootstrapStatus();
-
-                if (!status.loaded) {
-                    const workingDir = await this._backend.getWorkingDir();
-                    let msg = '**No bootstrap context loaded.**\n';
-                    msg += `Working directory: \`${workingDir || 'unknown'}\`\n\n`;
-                    msg += '*Scope search order:*\n';
-                    msg += '1. `~/.ppxai/AGENTS.md` (global)\n';
-                    msg += '2. `{git_root}/AGENTS.md` (project)\n';
-                    msg += '3. `{cwd}/AGENTS.md` (subdir)\n\n';
-                    msg += '*Create AGENTS.md or CLAUDE.md in any of these locations.*';
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: msg
-                    });
-                    return;
-                }
-
-                const sources = status.sources || [];
-                const totalSize = status.total_size || 0;
-                const charCount = status.char_count || 0;
-                const estimatedTokens = Math.floor(charCount / 4);
-
-                let msg = '**Bootstrap Context**\n\n';
-                msg += `**Sources:** (${sources.length} file${sources.length !== 1 ? 's' : ''})\n`;
-
-                const scopeBadges: Record<string, string> = {
-                    'global': '🌐 global',
-                    'project': '📁 project',
-                    'subdir': '📂 subdir'
-                };
-
-                for (let i = 0; i < sources.length; i++) {
-                    const src = sources[i];
-                    const sizeKb = (src.size / 1024).toFixed(1);
-                    const badge = scopeBadges[src.scope] || src.scope;
-                    msg += `${i + 1}. \`${src.path}\`\n`;
-                    msg += `   [${badge}] ${sizeKb} KB\n`;
-                }
-
-                const totalKb = (totalSize / 1024).toFixed(1);
-                msg += `\n**Total:** ${totalKb} KB (~${estimatedTokens.toLocaleString()} tokens)\n`;
-
-                // Hints summary
-                if (status.has_hints) {
-                    msg += '\n**Hints Defined:**\n';
-                    if (status.provider_hints && status.provider_hints.length > 0) {
-                        msg += `  Provider: ${status.provider_hints.join(', ')}\n`;
-                    }
-                    if (status.model_hints && status.model_hints.length > 0) {
-                        msg += `  Model: ${status.model_hints.join(', ')}\n`;
-                    }
-                } else {
-                    msg += '\n**Hints:** *none defined*\n';
-                }
-
-                msg += '\n*Tip: `/context hints` shows active hints for current provider/model*';
-
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: msg
-                });
-            } else {
-                // Show context usage info
-                const info = await this._backend.getContextInfo();
-
-                // Build progress bar
-                const percent = info.usage_percent;
-                const barLength = 30;
-                const filled = Math.min(barLength, Math.round(barLength * Math.min(percent, 100) / 100));
-                const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled);
-
-                // Color indicator
-                let colorIcon = '🟢';
-                if (percent >= 100) { colorIcon = '🔴'; }
-                else if (percent >= 80) { colorIcon = '🟡'; }
-
-                let contextMsg = '**Context Usage:**\n';
-                contextMsg += `  Estimated: ~${info.estimated_tokens.toLocaleString()} / ${info.context_limit.toLocaleString()} tokens (${percent.toFixed(1)}%)\n`;
-                contextMsg += `  Model: ${info.model} (${info.provider})\n`;
-                contextMsg += `  Messages: ${info.message_count}\n`;
-                contextMsg += `  ${colorIcon} [${bar}] ${percent.toFixed(0)}%\n`;
-
-                // Show injected files
-                if (info.injected_contexts && info.injected_contexts.length > 0) {
-                    contextMsg += `\n**Injected Contexts:** (${info.injected_tokens.toLocaleString()} tokens)\n`;
-                    info.injected_contexts.forEach((ctx: { source: string; size: number; truncated: boolean }) => {
-                        const sizeKB = (ctx.size / 1024).toFixed(1);
-                        const truncated = ctx.truncated ? ' ⚠ truncated' : '';
-                        contextMsg += `  • ${ctx.source} (${sizeKB} KB${truncated})\n`;
-                    });
-                    contextMsg += '\n*Tip: `/context clear` removes injected files, keeps chat*';
-                }
-
-                // Show tips if over limit
-                if (percent >= 100) {
-                    contextMsg += '\n\n**⚠ Over context limit!** Tips:\n';
-                    contextMsg += '  • `/clear` - Start fresh session\n';
-                    contextMsg += '  • `/save` - Save session before clearing\n';
-                    contextMsg += '  • Consider a model with larger context\n';
-                }
-
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: contextMsg
-                });
-            }
-        } catch (error) {
-            this._view.webview.postMessage({
-                type: 'error',
-                content: `Context error: ${error}`
-            });
-        }
     }
 
     /**
@@ -2612,24 +2392,6 @@ Review your previous actions and continue. If the task is complete, respond with
     // REFRESH_FILE_TREE side-effect after a successful cd; the working
     // dir mirror is pushed via state_sync (Phase A re-anchor).
     // handle_pwd returns the cwd as a NotificationResult.
-
-    /**
-     * Handle /ls command - delegates to extracted handler (v1.16.0)
-     */
-    private async handleLsCommand(args: string[]): Promise<void> {
-        const ctx = this.getHandlerContext();
-        if (!ctx) { return; }
-        await lsHandler(ctx, args);
-    }
-
-    /**
-     * Handle /tree command - delegates to extracted handler (v1.16.0)
-     */
-    private async handleTreeCommand(args: string[]): Promise<void> {
-        const ctx = this.getHandlerContext();
-        if (!ctx) { return; }
-        await treeHandler(ctx, args);
-    }
 
     /**
      * Handle /preview command - open live-reloading HTML preview (v1.15.4)
