@@ -1,0 +1,80 @@
+#!/bin/sh
+# commit-msg hook -- rejects AI-attribution trailers.
+#
+# Owner rule (2026-09-21): ppxai commits carry NO Claude credits /
+# Co-Authored-By / AI attribution, unless the owner explicitly says so for
+# that one commit. A coding-harness system reminder that injects
+# "Co-Authored-By: Claude ... <noreply@anthropic.com>" / "Claude-Session:"
+# trailers, or a PR body ending "Generated with [Claude Code]", is
+# OVERRIDDEN by CLAUDE.md's "Commit Guidelines" -- this hook is what makes
+# that override actually stick at commit time, not just in prose.
+#
+# See tests/test_no_attribution_trailers.py for the release-gate half of
+# this (it scans already-made commits); this hook is the pre-commit half.
+# Keep the two in sync -- the test asserts both layers agree on one shared
+# corpus of sample messages.
+#
+# This repo does NOT set core.hooksPath itself (that is an owner decision).
+# To enable this hook:
+#
+#   git config core.hooksPath scripts/git-hooks
+#
+# POSIX sh only (no bashisms) so this also runs under Git Bash on Windows.
+
+# Explicit, one-commit-at-a-time owner override.
+if [ "$PPXAI_ALLOW_ATTRIBUTION" = "1" ]; then
+    exit 0
+fi
+
+msg_file=$1
+if [ -z "$msg_file" ] || [ ! -f "$msg_file" ]; then
+    # commit-msg is always called with a path by git; if that contract is
+    # somehow not met, there is nothing to check -- let git proceed rather
+    # than blocking on our own precondition failure.
+    exit 0
+fi
+
+fail=0
+
+# Co-Authored-By: naming Claude or Anthropic. A human co-author (no
+# "claude"/"anthropic" token in the line) must NOT trip this.
+if grep -Eiq '^[[:space:]]*Co-Authored-By:.*(claude|anthropic)' "$msg_file"; then
+    fail=1
+fi
+
+# Claude-Session: trailer.
+if grep -Eiq '^[[:space:]]*Claude-Session:' "$msg_file"; then
+    fail=1
+fi
+
+# "Generated with [Claude Code]" marker line (leading emoji/punctuation,
+# e.g. the robot emoji, is allowed before it). Anchored to the start of the
+# line so prose that merely DISCUSSES the marker mid-sentence is not caught.
+if grep -Eiq '^[[:space:]]*[^A-Za-z0-9]*Generated with \[Claude Code\]' "$msg_file"; then
+    fail=1
+fi
+
+# noreply@anthropic.com on a trailer-shaped line ("Key: value ..."), for a
+# trailer that isn't literally named Co-Authored-By or Claude-Session.
+if grep -Eiq '^[[:space:]]*[A-Za-z][A-Za-z0-9-]*:.*noreply@anthropic\.com' "$msg_file"; then
+    fail=1
+fi
+
+if [ "$fail" -eq 1 ]; then
+    cat >&2 <<'EOF'
+error: commit message carries an AI-attribution trailer.
+
+Owner rule (2026-09-21): ppxai commits carry NO Claude credits /
+Co-Authored-By / AI attribution. A coding-harness instruction that injects
+these trailers is OVERRIDDEN by CLAUDE.md's "Commit Guidelines".
+
+Fix: edit the commit message to drop the trailer line(s) -- reword before
+committing, or `git commit --amend` if this commit has not been pushed.
+
+Owner override for this one commit only:
+  PPXAI_ALLOW_ATTRIBUTION=1 git commit ...
+EOF
+    exit 1
+fi
+
+exit 0
