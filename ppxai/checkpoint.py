@@ -209,8 +209,23 @@ class FileCheckpointBackend(CheckpointBackend):
     def __init__(self, working_dir: Path, session_id: str):
         self.working_dir = working_dir
         self.session_id = session_id
+        #: Where snapshots go. NOT created here -- see below.
         self.checkpoint_dir = Path(SESSIONS_DIR) / "checkpoints" / session_id
-        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+        # Debt Item 78. This used to `mkdir(parents=True, exist_ok=True)` at
+        # CONSTRUCTION. A manager is built for every session that lacks a
+        # `.git` in its working directory (CheckpointManager._initialize_backend
+        # below), which is ordinary session creation and not a checkpoint
+        # operation -- so every session that never checkpointed anything left
+        # an empty `sessions/checkpoints/session_<timestamp>/` behind, for
+        # good. Measured on a developer host: 14,900 such directories, of
+        # which exactly 2 had any content.
+        #
+        # `create_checkpoint()` below already does
+        # `snapshot_dir.mkdir(parents=True, exist_ok=True)`, so the parent is
+        # created by the first real write and nothing else needs to change.
+        # The two methods that enumerate the directory guard for its absence;
+        # every other reader already went through `.exists()`.
 
         # Track modified files
         self.modified_files: list[Path] = []
@@ -310,6 +325,11 @@ class FileCheckpointBackend(CheckpointBackend):
 
     def list_checkpoints(self) -> list[tuple[str, str, str]]:
         """List file-based checkpoints."""
+        # Absent until the first snapshot is written (Item 78) -- and "no
+        # directory" means the same thing to a caller as "empty directory".
+        if not self.checkpoint_dir.is_dir():
+            return []
+
         checkpoints = []
         for checkpoint_dir in sorted(self.checkpoint_dir.iterdir(), reverse=True):
             if not checkpoint_dir.is_dir():
@@ -340,6 +360,10 @@ class FileCheckpointBackend(CheckpointBackend):
 
     def cleanup_old_checkpoints(self, keep_last: int = 10):
         """Remove old checkpoints, keeping the most recent ones."""
+        # Absent until the first snapshot is written (Item 78); nothing to do.
+        if not self.checkpoint_dir.is_dir():
+            return
+
         checkpoints = sorted(self.checkpoint_dir.iterdir(), reverse=True)
         for checkpoint_dir in checkpoints[keep_last:]:
             if checkpoint_dir.is_dir():

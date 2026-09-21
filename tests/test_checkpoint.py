@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
+import ppxai.checkpoint as checkpoint_module
 from ppxai.checkpoint import (
     CheckpointManager,
     FileCheckpointBackend,
@@ -639,3 +640,67 @@ class TestCheckpointManager:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+class TestTheDirectoryIsCreatedLazily:
+    """Debt Item 78: constructing a backend must leave nothing on disk.
+
+    A `FileCheckpointBackend` is built for EVERY session whose working
+    directory has no `.git` — `CheckpointManager._initialize_backend` falls
+    through to it — which is ordinary session creation, not a checkpoint
+    operation. The eager `mkdir` in `__init__` therefore left one empty
+    `sessions/checkpoints/session_<timestamp>/` behind per session, forever.
+    Measured on a developer host before the fix: 14,900 such directories, of
+    which exactly 2 had any content.
+
+    Nothing a user can see changes: `create_checkpoint()` already created the
+    parent on its way to the snapshot directory, and "no directory" and "empty
+    directory" are the same answer for the two methods that enumerate it.
+    """
+
+    @pytest.fixture
+    def backend(self, tmp_path, monkeypatch):
+        """A backend rooted in tmp, with a session id unique to this test."""
+        monkeypatch.setattr(checkpoint_module, "SESSIONS_DIR", tmp_path / "sessions")
+        working_dir = tmp_path / "project"
+        working_dir.mkdir()
+        return FileCheckpointBackend(working_dir, "lazy-mkdir-session")
+
+    def test_construction_creates_nothing_on_disk(self, backend):
+        assert not backend.checkpoint_dir.exists(), (
+            f"constructing the backend created {backend.checkpoint_dir} — this "
+            "is the Item 78 leak: every session that never checkpoints leaves "
+            "an empty directory in the user's data directory"
+        )
+
+    def test_listing_a_backend_that_never_wrote_returns_empty(self, backend):
+        assert backend.list_checkpoints() == []
+
+    def test_cleanup_on_a_backend_that_never_wrote_is_a_no_op(self, backend):
+        backend.cleanup_old_checkpoints(keep_last=3)
+        assert not backend.checkpoint_dir.exists()
+
+    def test_validity_check_on_a_backend_that_never_wrote_is_false(self, backend):
+        is_valid, _ = backend.is_checkpoint_valid("cp-20260101-120000")
+        assert is_valid is False
+
+    def test_restore_on_a_backend_that_never_wrote_is_false(self, backend):
+        assert backend.restore_checkpoint("cp-20260101-120000") is False
+
+    def test_the_first_real_checkpoint_creates_the_directory(self, backend):
+        """The behaviour users can see is unchanged — only the timing moved."""
+        test_file = backend.working_dir / "test.txt"
+        test_file.write_text("Content\n", encoding="utf-8")
+        backend.register_file(test_file)
+
+        checkpoint_id = backend.create_checkpoint("First snapshot")
+
+        assert checkpoint_id.startswith("cp-")
+        assert backend.checkpoint_dir.is_dir()
+        assert (backend.checkpoint_dir / checkpoint_id / "test.txt").exists()
+        assert [c[0] for c in backend.list_checkpoints()] == [checkpoint_id]
+
+    def test_a_no_op_checkpoint_still_creates_nothing(self, backend):
+        """`create_checkpoint` with no registered files writes no snapshot."""
+        assert backend.create_checkpoint("Nothing registered") == ""
+        assert not backend.checkpoint_dir.exists()
