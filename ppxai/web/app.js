@@ -256,9 +256,15 @@ class PpxaiApp {
         // events fire during a backgrounded tab. The cost is one
         // cheap GET per visibility transition; the snapshot is
         // small (whitelisted SSE_SYNC_FIELDS only).
+        //
+        // v1.19.3 (Task 2): this is also a RECONNECT-shaped boundary
+        // (tab restored, possibly after the server was upgraded while
+        // it was backgrounded) — pass `true` so the AppState schema
+        // itself is re-verified, not just its values. See
+        // `_reanchorFromServer` / `_checkSchemaDrift` below.
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                this._reanchorFromServer();
+                this._reanchorFromServer(true);
             }
         });
     }
@@ -267,23 +273,117 @@ class PpxaiApp {
      * Pull the current AppState snapshot from the server and feed
      * it through the schema-driven facade.
      *
-     * Called from two places (v1.18.1):
+     * Called from several places:
      *   - Heartbeat reconnect after the watchdog sees the server
-     *     come back (lines ~234-251 below).
-     *   - `visibilitychange` → visible (state-sync Phase A) above.
+     *     come back (`_heartbeat` below) — a RECONNECT boundary.
+     *   - `visibilitychange` → visible (state-sync Phase A) above —
+     *     also a RECONNECT boundary (tab restored, possibly across a
+     *     server restart/upgrade while backgrounded).
+     *   - `handleProviderChange` / `handleModelChange` — NOT a
+     *     reconnect, just a same-connection value refresh (vision
+     *     badge). These call it with no argument.
      *
-     * Both paths use `apiClient.getState()` which returns the same
-     * shape as live SSE `state_sync` events. Errors are swallowed
-     * because a temporary `/state` failure shouldn't break the UI;
-     * the next visibility change or chat send will re-anchor.
+     * The state re-anchor itself (`apiClient.getState()` +
+     * `updateFromPython`) always runs and is unconditional. Errors are
+     * swallowed because a temporary `/state` failure shouldn't break
+     * the UI; the next visibility change or chat send will re-anchor.
+     *
+     * @param {boolean} checkSchema - v1.19.3 (Task 2, item 9,
+     *   docs/plan-adr-0007-completion-service.md): when true, ALSO
+     *   re-verify the AppState schema itself against the server's —
+     *   see `_checkSchemaDrift`. Deliberately opt-in rather than
+     *   unconditional: it is only meaningful at a reconnect boundary,
+     *   not on every value refresh a normal session already triggers
+     *   several times a minute (provider/model switches).
      */
-    async _reanchorFromServer() {
+    async _reanchorFromServer(checkSchema = false) {
         try {
             const state = await this.apiClient.getState();
             this.state.updateFromPython(state);
         } catch (e) {
             console.warn('[PpxaiApp] state re-anchor failed:', e);
         }
+        if (checkSchema) {
+            await this._checkSchemaDrift();
+        }
+    }
+
+    /**
+     * Task 2 (plan-adr-0007-completion-service.md open owner decision
+     * item 9, closed 2026-09-21 — "re-fetch if difference is spot").
+     *
+     * Re-fetch `GET /schema/app-state` and compare it with the schema
+     * this tab is currently running against (injected once at page
+     * load, `server/routes/static.py::serve_index`, and never
+     * re-verified before this). A tab left open across a server
+     * upgrade otherwise keeps the OLD schema against the NEW server's
+     * `state_sync` pushes — see `app-state-schema-diff.js`'s header
+     * for the full defect description.
+     *
+     * Mirrors `vscode-extension/src/schemaGuard.ts::SchemaGuard.check()`
+     * one stage further along the same idea, adapted for a client with
+     * no compile-time field types to protect: `AppState.adoptSchema`
+     * fully re-derives the field map from whatever the server
+     * declares, rather than only adding extras.
+     *
+     * Re-entrancy: `_reanchorFromServer(true)` is called from both the
+     * heartbeat-recovery path and the visibilitychange listener,
+     * either of which could overlap a slow request (e.g. the tab
+     * regains visibility right as a heartbeat recovery fires).
+     * `_schemaCheckInFlight` coalesces concurrent calls into the one
+     * already running, so a flaky connection cannot fire the
+     * incompatible-schema notice twice for the same drift.
+     */
+    async _checkSchemaDrift() {
+        if (this._schemaCheckInFlight) return this._schemaCheckInFlight;
+        this._schemaCheckInFlight = this._runSchemaDriftCheck();
+        try {
+            await this._schemaCheckInFlight;
+        } finally {
+            this._schemaCheckInFlight = null;
+        }
+    }
+
+    async _runSchemaDriftCheck() {
+        let served;
+        try {
+            served = await this.apiClient.getAppStateSchema();
+        } catch (e) {
+            // unverified — says nothing about compatibility either way.
+            // Never blocks: the tab keeps running on the schema it has.
+            console.warn(
+                '[PpxaiApp] could not verify the server AppState schema:',
+                e?.message || e,
+            );
+            return;
+        }
+
+        const diff = compareAppStateSchemas(this.state._schema, served);
+        if (diff.verdict === 'identical') return; // silent, no churn
+
+        // extra-only and incompatible both adopt — web has no
+        // compile-time types to lose by doing so (see adoptSchema's
+        // doc comment), and adopting is what lets the NEXT state_sync
+        // push land correctly even in the incompatible case, for
+        // whichever fields still line up.
+        this.state.adoptSchema(served);
+
+        if (diff.verdict === 'extra-only') {
+            console.info(
+                `[PpxaiApp] server declares ${diff.extra.length} AppState ` +
+                `field(s) this tab did not know: ${diff.extra.join(', ')}. Adopted.`
+            );
+            return;
+        }
+
+        // incompatible — one visible, non-blocking notice per
+        // reconnect, using the page's existing system-message idiom.
+        this.showSystemMessage(
+            'The server changed while this tab was open (its AppState shape ' +
+            'no longer matches what this page loaded). State was refreshed — ' +
+            'reload the page to get the matching UI.',
+            'warning',
+        );
     }
 
     /**
@@ -377,9 +477,13 @@ class PpxaiApp {
                     // field in one shot — feed straight through the
                     // schema-driven facade. Shared with the
                     // visibilitychange path (state-sync Phase A).
+                    //
+                    // v1.19.3 (Task 2): a server that just went away and
+                    // came back is exactly the "server restarted/upgraded
+                    // under this tab" scenario — check the schema too.
                     this.updateServerStatus('connected');
                     this.showSystemMessage('Server connection restored.');
-                    await this._reanchorFromServer();
+                    await this._reanchorFromServer(true);
                 }
                 this._heartbeatFailCount = 0;
                 return;

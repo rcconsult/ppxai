@@ -162,6 +162,87 @@ class AppState {
     }
 
     /**
+     * Rebuild this instance's field map, defaults, and data from a
+     * DIFFERENT schema — typically `GET /schema/app-state`, fetched on
+     * reconnect when it differs from the schema injected at page load
+     * (see `PpxaiApp._checkSchemaDrift` in `app.js`, and
+     * `docs/patterns/appstate.md`'s "Run-time skew (VSCode)" section
+     * for the run-time-skew problem this closes on the web side too).
+     *
+     * Unlike `vscode-extension/src/appState.ts::adoptFields` — which
+     * only ADDS fields a newer server declares, because its `_data` is
+     * typed against a compiled `AppStateFields` interface — this class
+     * has no compile-time field types to protect. Web's store is fully
+     * dynamic, so it can safely re-derive its ENTIRE canonical field
+     * map from whatever schema it is told to adopt:
+     *
+     *   - A canonical field whose PYTHON name exists in both the old
+     *     and new schema keeps its CURRENT value, carried over to the
+     *     new schema's `client` name (so a client-name rename does not
+     *     lose the value, only its old listeners — see below).
+     *   - A canonical field new to this schema gets its declared
+     *     default.
+     *   - A canonical field whose python name no longer exists is
+     *     dropped — its value and name-mapping are gone, though any
+     *     listener registered under its OLD client name is left
+     *     registered (harmless: nothing will ever call it again).
+     *   - Every NON-canonical key already in `_data` (this app's own
+     *     UI-only state — theme, isSending, command history, etc.,
+     *     none of which is in `_pythonToJs`) is left completely alone.
+     *
+     * A field whose CLIENT name is unchanged keeps working with its
+     * existing listeners with no re-registration needed, since
+     * `_listeners` is keyed by that name and this method never touches
+     * `_listeners`.
+     *
+     * Never fires listeners itself — this re-anchors the SCHEMA, it
+     * does not push a value change. (Values that are carried over are,
+     * by definition, unchanged; values that are new have no listener
+     * yet, since nothing could have subscribed to a field that didn't
+     * exist a moment ago.) A subsequent `updateFromPython` fires
+     * listeners normally for whatever the next push actually changes.
+     *
+     * @param {object} newSchema - `{version, description, fields}`,
+     *   shaped exactly like `window.APP_STATE_SCHEMA` /
+     *   `GET /schema/app-state`.
+     */
+    adoptSchema(newSchema) {
+        if (!newSchema || typeof newSchema !== 'object' || !newSchema.fields) return;
+
+        const oldData = this._data;
+        const oldPythonToJs = this._pythonToJs;
+        const oldClientNames = new Set(Object.values(oldPythonToJs));
+
+        const newPythonToJs = {};
+        const newClientValues = {};
+        for (const [pyName, spec] of Object.entries(newSchema.fields)) {
+            newPythonToJs[pyName] = spec.client;
+            const oldClientName = oldPythonToJs[pyName];
+            newClientValues[spec.client] = (
+                oldClientName !== undefined
+                && Object.prototype.hasOwnProperty.call(oldData, oldClientName)
+            ) ? oldData[oldClientName] : _cloneDefault(spec.default);
+        }
+        const newClientNames = new Set(Object.values(newPythonToJs));
+
+        // Start from everything currently held — this preserves every
+        // non-canonical, app-owned key untouched...
+        const newData = { ...oldData };
+        // ...drop canonical fields the new schema no longer declares...
+        for (const clientName of oldClientNames) {
+            if (!newClientNames.has(clientName)) delete newData[clientName];
+        }
+        // ...and (re)seed every canonical field the new schema DOES
+        // declare, from the computed carry-over-or-default map above.
+        Object.assign(newData, newClientValues);
+
+        this._schema = newSchema;
+        this._pythonToJs = Object.freeze(newPythonToJs);
+        this._jsToPython = null;
+        this._data = newData;
+    }
+
+    /**
      * Subscribe to changes on a state key.
      * The callback receives the new value.
      * Returns `this` for chaining.
@@ -198,4 +279,12 @@ function _cloneDefault(value) {
 // Browser global export
 if (typeof window !== 'undefined') {
     window.AppState = AppState;
+}
+
+// CommonJS export (for Node.js behavioral tests — mirrors api-client.js /
+// command-roster.js. Construction still requires `window.APP_STATE_SCHEMA`
+// to exist, so a Node harness sets `global.window = {APP_STATE_SCHEMA: ...}`
+// before requiring this module.)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { AppState };
 }

@@ -158,6 +158,16 @@ class ApiClient {
         return this.get('/state');
     }
 
+    // v1.19.3 (Task 2, plan-adr-0007-completion-service.md open owner
+    // decision item 9): the schema endpoint has existed since v1.17.4
+    // with no web consumer at all. `PpxaiApp._checkSchemaDrift` calls
+    // this on reconnect to detect a server upgrade that changed the
+    // AppState shape underneath an already-open tab — the injected
+    // `window.APP_STATE_SCHEMA` is only ever fetched once, at page load.
+    async getAppStateSchema() {
+        return this.get('/schema/app-state');
+    }
+
     // === Providers ===
 
     async getProviders() {

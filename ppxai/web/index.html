@@ -253,6 +253,10 @@
     <!-- These files export to window.SharedFormatters, window.ApiClient, ... -->
     <script src="shared/formatters.js"></script>
     <script src="shared/app-state.js"></script>
+    <!-- Task 2 (v1.19.3): pure AppState schema-drift classification,
+         used by app.js's reconnect-time schema re-verify. No
+         dependency on app-state.js; loaded near it for discoverability. -->
+    <script src="shared/app-state-schema-diff.js"></script>
     <script src="shared/api-client.js"></script>
     <!-- ADR 0007 step 3a: the command catalog is FETCHED (GET /commands),
          not restated here. The hand-written JS catalog was deleted. -->
