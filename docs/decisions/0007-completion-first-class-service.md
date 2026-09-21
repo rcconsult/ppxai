@@ -9,8 +9,8 @@ changed from AppState push to a pull endpoint, see §Goal and §Decision**;
 below: ending a GUI session is a UI button workflow, not a command**.
 Originally titled "Completion as a first-class service; command roster via
 AppState".)
-**Status:** Proposed — **IMPLEMENTATION COMPLETE; the status change
-awaits the owner.** All five steps are done: step 1 shipped v1.18.8;
+**Status:** **Accepted 2026-09-21 — implemented** (owner sign-off; on
+`bugfix/v1.19.3`, unreleased). All five steps are done: step 1 shipped v1.18.8;
 steps 2 + 2.5, **step 3a (web fetches the roster; `commands.js`
 deleted)**, **step 3a-sec (sensitive subcommands)**, **step 3b (VSCode
 fetches it; `commands.ts` deleted)**, **step 4 (completion is DERIVED
@@ -19,10 +19,10 @@ from the spec; the `engine → commands` import is GONE)** and **step 5
 all landed 2026-09-21 on `bugfix/v1.19.3`
 (`CommandFactory.iter_completion_specs`, `commands/factory.py`).
 `CommandSpec` is the only command declaration left in the tree, and the
-fence is what keeps it that way. This edit deliberately does NOT flip
-the status to Accepted/Implemented — that is the owner's call, and it is
-the last open item on this record (see the plan's §Open owner
-decisions). Extracting a `ppxai/completion/` package is now optional and
+fence is what keeps it that way. The status was held at Proposed until
+the owner flipped it; the remaining open questions (the plan's §Open
+owner decisions) are follow-ups to an accepted record, not conditions on
+it. Extracting a `ppxai/completion/` package is now optional and
 cosmetic (see §Future). The "target v1.19.x" in the 08-15 revision has now been passed by v1.19.0, v1.19.1 and v1.19.2 without step 2 landing — it was a hope, not a plan, and is restated below as an explicit deferral with triggers rather than a date.
 **Related:**
 - `ppxai/engine/completion.py` — current home of `complete()`

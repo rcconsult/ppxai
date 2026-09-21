@@ -13,7 +13,7 @@ rule makes in-place revision the way a design converges; the unification IS
 0012's core question converging, not a second decision. **ADR 0012 §2 now
 carries the full design (`ModelFacts`, Q0a–Q0c) and is what you sign off.**
 **Drives:** [ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md)
-(Proposed) · closes debt **Item 61** (W2) and **Item 62** (W4) · absorbs
+(Implemented v1.19.1; it was Proposed when this plan was written) · closes debt **Item 61** (W2) and **Item 62** (W4) · absorbs
 **I4b** from [plan-per-model-capabilities.md](plan-per-model-capabilities.md)
 as W3.
 

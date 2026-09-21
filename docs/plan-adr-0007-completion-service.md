@@ -1225,8 +1225,9 @@ behaviour or schema change that wants an owner, not a refactor.
    steps 3a/3b built exactly the fetch-at-startup machinery it would
    reuse. Deliberately not folded in: it touches the sentinel tests and
    the `state_sync` contract.
-6. **Flipping ADR 0007 to Accepted/Implemented.** All five steps are
-   done; the Status line is the owner's, not this work's.
+6. ~~**Flipping ADR 0007 to Accepted/Implemented.**~~ **DECIDED
+   2026-09-21 — the owner accepted the record.** Items 1–5 stay open as
+   follow-ups; none was a condition on acceptance.
 
 ## Hybrid commands — dispatch routing becomes data
 
