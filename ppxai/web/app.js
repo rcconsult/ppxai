@@ -26,7 +26,7 @@
  */
 
 // Import shared modules (loaded via script tags in index.html)
-// These are available as globals: SharedCommands, SharedFormatters
+// These are available as globals: CommandRoster, ApiClient, formatters
 // Or when using ES modules: import from './shared/index.js'
 
 // Cross-language state translation lives on the AppState class itself
@@ -191,43 +191,14 @@ class PpxaiApp {
         // DOM elements
         this.elements = {};
 
-        // Use shared slash commands if available, otherwise use local copy
-        // This ensures backwards compatibility while enabling shared definitions
-        this.slashCommands = (typeof SharedCommands !== 'undefined' && SharedCommands.SLASH_COMMANDS)
-            ? SharedCommands.SLASH_COMMANDS
-            : {
-                '/help': { description: 'Show available commands', usage: '/help' },
-                '/clear': { description: 'Clear conversation history', usage: '/clear' },
-                '/save': { description: 'Save session to JSON', usage: '/save' },
-                '/export': { description: 'Export last answer to markdown', usage: '/export [filename]' },
-                '/load': { description: 'Load a saved session', usage: '/load <session_name>' },
-                '/sessions': { description: 'List saved sessions', usage: '/sessions' },
-                '/model': { description: 'Switch model or list models', usage: '/model [model_id|list]' },
-                '/provider': { description: 'Switch provider or list providers', usage: '/provider [provider_id|list]' },
-                '/tools': { description: 'Manage AI tools', usage: '/tools [enable|disable|status|list|config|set|auto|help]' },
-                '/auto': { description: 'Run autonomous in-session task (was /agent)', usage: '/auto [on|off|<task description>]' },
-                '/run': { description: 'One-off background run (direct launch; ls|get|watch|collect|cancel)', usage: '/run <prompt>' },
-                '/task': { description: 'Tool-capable background runs — direct launch (ls|get|watch|respond|collect|resume|cancel)', usage: '/task "<desc>" --tools a,b,c' },
-                '/token': { description: 'Manage the /v1 API bearer token (Item 40)', usage: '/token [status|set|mint|clear]' },
-                '/checkpoint': { description: 'Manage checkpoints', usage: '/checkpoint [status|list|undo|backend|clear|info]' },
-                '/usage': { description: 'Show token usage stats', usage: '/usage [24h|week|month|all|show|reset]' },
-                '/status': { description: 'Show current status', usage: '/status' },
-                '/show': { description: 'Display file contents', usage: '/show <filepath>' },
-                '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
-                '/edit': { description: 'Edit file in CodeMirror editor', usage: '/edit <filepath[:line[:col]]>' },
-                '/context': { description: 'Manage context', usage: '/context [clear|hints|show|reload]' },
-                '/cd': { description: 'Change working directory', usage: '/cd <path>' },
-                '/pwd': { description: 'Print working directory', usage: '/pwd' },
-                '/generate': { description: 'Generate code from description', usage: '/generate <description>' },
-                '/explain': { description: 'Explain code or concept', usage: '/explain <code or question>' },
-                '/test': { description: 'Generate tests for code', usage: '/test <code or @file>' },
-                '/docs': { description: 'Generate documentation', usage: '/docs <code or @file>' },
-                '/debug': { description: 'Debug an error message', usage: '/debug <error message>' },
-                '/implement': { description: 'Implement from specification', usage: '/implement <specification>' },
-                '/convert': { description: 'Convert code between languages', usage: '/convert <src> <dest> <code>' },
-                '/spec': { description: 'Show specification templates', usage: '/spec [api|cli|lib|algo|ui]' },
-                '/theme': { description: 'Switch theme', usage: '/theme [dark|light]' },
-            };
+        // Command roster — the server-declared catalog (ADR 0007 step 3a).
+        // Replaces the old per-app command table: a hand-written shared
+        // catalog plus an inline fallback copy of the same 30 commands,
+        // both of which had drifted from Python. Fetched in init()
+        // from GET /commands?client=web and refetched on the
+        // `refresh_command_roster` side effect that /reload emits.
+        // CommandDispatcher routes from it and FAILS CLOSED without it.
+        this.commandRoster = new CommandRoster(this.apiClient, 'web');
 
         // Initialize
         this.init();
@@ -262,6 +233,15 @@ class PpxaiApp {
         this.state.on('workingDir', (cwd) => this._onWorkingDirChanged(cwd));
 
         await this.connectToServer();
+
+        // ADR 0007 step 3a: fetch the command roster once, now that the
+        // server URL is settled. Slash-command ROUTING reads it, so this
+        // is not a cosmetic catalog — a failure here leaves the dispatcher
+        // fail-closed (it refuses slash commands and says why, rather than
+        // forwarding `/token set <secret>` to POST /command/token). It
+        // never throws: `load()` swallows and reports, and the dispatcher
+        // retries on the next command.
+        await this.commandRoster.load();
 
         // v1.17.0: Start heartbeat watchdog
         this._heartbeatFailCount = 0;

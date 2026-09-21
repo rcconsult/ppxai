@@ -1053,7 +1053,8 @@ spawn ctor-contract updated.
 
 Added: `web/shared/task-controller.js` (`TaskController extends AgentRunController`),
 `web/components/views/task-run-view.js` (`TaskRunView extends AgentRunView`).
-Changed: `command-dispatcher.js` (route `/task`), `commands.js` + `app.js` (catalog),
+Changed: `command-dispatcher.js` (route `/task`), `commands.js` + `app.js` (catalog
+— both catalogs deleted by ADR 0007 step 3a; `/task` now routes off the fetched roster),
 `index.html` (script includes), `styles/right-panel-frame.css`. **No new endpoints** —
 the tool-capable tier's client, entirely over the Inc-4→9 `/v1/agent/*` routes.
 (build plan: `plan-task-command-sequencing.md`.)

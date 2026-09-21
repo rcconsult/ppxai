@@ -138,6 +138,9 @@ class TestSideEffectsHandler:
             "prompt_quick_pick",
             "notify",
             "vscode_delegate",
+            # ADR 0007 step 2 added this kind; step 3a is the first
+            # client to implement it (web refetches GET /commands).
+            "refresh_command_roster",
         }
         for kind in expected:
             assert kind in src, (
@@ -206,6 +209,20 @@ class TestIndexHtmlScriptOrder:
         assert se_pos != -1, "side-effects.js missing from index.html"
         assert se_pos < dispatcher_pos, (
             "side-effects.js must load BEFORE command-dispatcher.js"
+        )
+
+    def test_command_roster_loaded_before_dispatcher(self):
+        """ADR 0007 step 3a: routing reads `app.commandRoster`, which
+        app.js constructs from the CommandRoster global. Load it after
+        api-client.js (its only collaborator) and before the dispatcher."""
+        html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+        roster_pos = html.find("command-roster.js")
+        api_pos = html.find("api-client.js")
+        dispatcher_pos = html.find("command-dispatcher.js")
+        assert roster_pos != -1, "command-roster.js missing from index.html"
+        assert api_pos < roster_pos, "api-client.js must load BEFORE command-roster.js"
+        assert roster_pos < dispatcher_pos, (
+            "command-roster.js must load BEFORE command-dispatcher.js"
         )
 
 

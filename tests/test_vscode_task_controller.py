@@ -22,6 +22,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import ppxai.commands.handler  # noqa: F401  (populates CommandFactory)
+from ppxai.commands.factory import CommandFactory
+
 ROOT = Path(__file__).resolve().parents[1]
 TS_CONTROLLER = ROOT / "vscode-extension" / "src" / "taskController.ts"
 TS_CHAT_PANEL = ROOT / "vscode-extension" / "src" / "chatPanel.ts"
@@ -30,7 +33,12 @@ WEB_TASK = ROOT / "ppxai" / "web" / "shared" / "task-controller.js"
 WEB_BASE = ROOT / "ppxai" / "web" / "shared" / "agent-run-controller.js"
 WEB_RUN = ROOT / "ppxai" / "web" / "shared" / "run-controller.js"
 WEB_DISPATCHER = ROOT / "ppxai" / "web" / "shared" / "command-dispatcher.js"
-WEB_COMMANDS = ROOT / "ppxai" / "web" / "shared" / "commands.js"
+# ADR 0007 step 3a deleted the web-side catalog (ppxai/web/shared/
+# commands.js): web now fetches GET /commands. The VSCode roster is a
+# SEPARATE hand-written file and survives until step 3b, so the
+# "retired verbs" fence below reads it plus the Python registry (which
+# IS what web's roster now comes from) instead of the deleted file.
+TS_COMMANDS = ROOT / "vscode-extension" / "src" / "shared" / "commands.ts"
 ENGINE_COMPLETION = ROOT / "ppxai" / "engine" / "completion.py"
 
 
@@ -171,10 +179,14 @@ class TestRunFamilyParity:
         # no longer offers them.
         assert "cmd === '/agentrun'" not in _read(WEB_DISPATCHER)
         assert "cmd === '/agentruns'" not in _read(WEB_DISPATCHER)
-        assert "'/agentrun':" not in _read(WEB_COMMANDS)
-        assert "'/agentruns':" not in _read(WEB_COMMANDS)
+        assert "'/agentrun':" not in _read(TS_COMMANDS)
+        assert "'/agentruns':" not in _read(TS_COMMANDS)
         assert '"/agentrun"' not in _read(ENGINE_COMPLETION)
-        assert "'/run':" in _read(WEB_COMMANDS)
+        # Web's catalog is the Python registry now — check it directly
+        # rather than a JS copy of it.
+        assert CommandFactory.get("agentrun") is None
+        assert CommandFactory.get("agentruns") is None
+        assert CommandFactory.get("run") is not None
 
 
 class TestStatusParity:

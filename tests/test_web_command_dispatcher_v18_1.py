@@ -178,9 +178,16 @@ class TestNoBespokeBranches:
             (~70 lines, 334 total) — cohesive + security-commented, so it
             stayed. If /token grows further, extract it into a
             token-controller.js like the agent-run extraction above.
+          - <480 at v1.19.3 (ADR 0007 step 3a, ~458 total). The five-branch
+            `if (cmd === …)` chain became roster-driven routing: a
+            fail-closed gate, `_dispatchClientAction`, `_viaController`, and
+            the `CommandDispatcher.CLIENT_ACTIONS` registry. Net CODE is
+            roughly flat; the growth is the security rationale for failing
+            closed (see the module header) plus the registry's per-action
+            comments. Nothing bespoke came back — the fence's actual target.
         """
         line_count = len(_read().splitlines())
-        assert line_count < 340, (
+        assert line_count < 480, (
             f"command-dispatcher.js has grown to {line_count} lines. "
             f"That's a smell — a bespoke handler is probably creeping "
             f"back. Compare to the factory + side-effects pattern."
@@ -218,9 +225,19 @@ class TestOneOffRunFireAndForget:
         assert "new RunController" in src, (
             "dispatcher no longer constructs RunController"
         )
-        assert "this.runs?.handle(" in src, (
-            "dispatcher does not delegate the /run family to RunController"
-        )
+        # ADR 0007 step 3a: the `if (cmd === '/run')` branch is gone —
+        # the roster names the `run.controller` action and the registry
+        # binds it to the controller (via the _viaController guard, which
+        # reports a missing controller instead of silently no-op'ing the
+        # command the way `this.runs?.handle()` used to).
+        assert re.search(
+            r"'run\.controller'\([^)]*\)\s*\{[^}]*_viaController\(this\.runs",
+            src, re.S,
+        ), "dispatcher does not delegate the /run family to RunController"
+        assert re.search(
+            r"'task\.controller'\([^)]*\)\s*\{[^}]*_viaController\(this\.tasks",
+            src, re.S,
+        ), "dispatcher does not delegate the /task family to TaskController"
 
     def test_has_detached_watcher(self):
         src = _read_controller()

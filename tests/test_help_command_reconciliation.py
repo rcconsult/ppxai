@@ -1,17 +1,25 @@
 """Tests for /help reconciliation across TUI and HTTP clients (v1.18.1).
 
-Step 1g of v1.18.1 plan. The web app's `SharedCommands.generateHelpText`
-in `ppxai/web/shared/commands.js` was a parallel registry that drifted
-from the Python `CommandFactory`. The factory's `handle_help` now
-serves both paths:
+Step 1g of v1.18.1 plan. The web app's `generateHelpText` in the
+hand-written `ppxai/web/shared/commands.js` catalog was a parallel
+registry that drifted from the Python `CommandFactory`. The factory's
+`handle_help` now serves both paths:
 
   - TUI (Rich/Textual) in-process → TextResult with Rich markup
   - HTTP (web, VSCode)            → MarkdownResult with GFM markdown
 
 Same content, two formatters. The factory's `_registry` is the single
-source of truth; the JS-side `SLASH_COMMANDS` table can stay for
-client-side autocomplete (its real job) but help text comes from the
-server.
+source of truth.
+
+Postscript (ADR 0007 step 3a, 2026-09-21): the "the JS-side table can
+stay for client-side autocomplete" caveat this docstring used to carry
+has expired. `commands.js` is DELETED; web autocomplete already came
+from `POST /complete`, and the roster it routes on is fetched from
+`GET /commands`. Web `/help` is now the server's output alone — which
+also removed the confirmed double-listing of `/token`, `/run` and
+`/task` (server catalog + the `_appendExperimentalHelp` shim). The tests
+below are unchanged: they pin the SERVER side, which is what web now
+shows verbatim.
 
 Tests cover:
   - HTTP path returns MarkdownResult with no Rich markup leakage.

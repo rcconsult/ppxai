@@ -507,8 +507,31 @@ class ApiClient {
 
     // === Commands ===
 
-    async executeCommand(name, args = '') {
-        return this.post(`/command/${encodeURIComponent(name)}`, { args });
+    /**
+     * Fetch the command roster (ADR 0007 step 2/3a).
+     *
+     * `client` narrows the snapshot to what THAT client can see and sets
+     * each entry's `dispatch` for it, which is what lets the dispatcher
+     * route by data. Omitted, the server answers for the `{web, vscode}`
+     * candidate set (its legacy fallback).
+     */
+    async getCommandRoster(client = null) {
+        const query = client ? `?client=${encodeURIComponent(client)}` : '';
+        return this.get(`/commands${query}`);
+    }
+
+    /**
+     * Dispatch a command server-side.
+     *
+     * `client` is the optional client id the route validates against
+     * KNOWN_CLIENTS; sending it closes the `/help` over-listing (one HTTP
+     * surface serves both web and VSCode, so without an id the server has
+     * to answer for the union).
+     */
+    async executeCommand(name, args = '', client = null) {
+        const body = { args };
+        if (client) body.client = client;
+        return this.post(`/command/${encodeURIComponent(name)}`, body);
     }
 
     // === Consent ===

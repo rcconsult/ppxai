@@ -250,11 +250,13 @@
     </div>
 
     <!-- Shared modules (must load before app.js) -->
-    <!-- These files export to window.SharedCommands, window.SharedFormatters, window.ApiClient -->
-    <script src="shared/commands.js"></script>
+    <!-- These files export to window.SharedFormatters, window.ApiClient, ... -->
     <script src="shared/formatters.js"></script>
     <script src="shared/app-state.js"></script>
     <script src="shared/api-client.js"></script>
+    <!-- ADR 0007 step 3a: the command catalog is FETCHED (GET /commands),
+         not restated here. The hand-written JS catalog was deleted. -->
+    <script src="shared/command-roster.js"></script>
     <script src="shared/stream-handler.js"></script>
     <script src="shared/result-renderer.js"></script>
     <script src="shared/side-effects.js"></script>

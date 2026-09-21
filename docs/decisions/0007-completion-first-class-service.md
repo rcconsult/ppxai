@@ -9,7 +9,9 @@ changed from AppState push to a pull endpoint, see §Goal and §Decision**;
 below: ending a GUI session is a UI button workflow, not a command**.
 Originally titled "Completion as a first-class service; command roster via
 AppState".)
-**Status:** Proposed — step 1 shipped v1.18.8 (`CommandFactory.iter_completion_specs`, `commands/factory.py`); step 2 (extract `ppxai/completion/` package) **still open**. The "target v1.19.x" in the 08-15 revision has now been passed by v1.19.0, v1.19.1 and v1.19.2 without step 2 landing — it was a hope, not a plan, and is restated below as an explicit deferral with triggers rather than a date.
+**Status:** Proposed — step 1 shipped v1.18.8; steps 2 + 2.5 and **step
+3a (web clients fetch the roster; `commands.js` deleted)** landed
+2026-09-21 on `bugfix/v1.19.3` (`CommandFactory.iter_completion_specs`, `commands/factory.py`); step 2 (extract `ppxai/completion/` package) **still open**. The "target v1.19.x" in the 08-15 revision has now been passed by v1.19.0, v1.19.1 and v1.19.2 without step 2 landing — it was a hope, not a plan, and is restated below as an explicit deferral with triggers rather than a date.
 **Related:**
 - `ppxai/engine/completion.py` — current home of `complete()`
 - `ppxai/commands/factory.py` — `CommandFactory`, `CompletionCommandInfo`, `iter_completion_specs()`
@@ -35,13 +37,15 @@ fixing that.
 
 ### How far the system is from the goal (measured 2026-09-20)
 
-A command's metadata lives in **five places**, none complete:
+A command's metadata lives in **five places**, none complete (**six**, in
+fact — see the correction under the table: `vscode-extension/src/shared/
+commands.ts` is an independent copy, not a shared file):
 
 | # | Where | Carries |
 |---|---|---|
 | 1 | `CommandSpec` (`commands/factory.py`) | name, description, category, aliases, usage, hidden |
-| 2 | `web/shared/commands.js` (376 lines, hand-written) | description, usage, category, **subcommands** — restated in JS, **aliases restated as standalone entries** |
-| 3 | `web/app.js:199` inline fallback catalog | a second JS copy, used when `SharedCommands` fails to load |
+| 2 | `web/shared/commands.js` (376 lines, hand-written) | description, usage, category, **subcommands** — restated in JS, **aliases restated as standalone entries**. **DELETED by step 3a (2026-09-21)** |
+| 3 | `web/app.js:199` inline fallback catalog | a second JS copy, used when `SharedCommands` fails to load. **DELETED by step 3a** |
 | 4 | `engine/completion.py` `_*_SUBCOMMANDS` tables (six of them) | **subcommands** — a second hand-written set, in Python |
 | 5 | `engine/completion.py` `_BUILTIN_SPECIAL_COMMANDS` | the client-handled commands + their `clients` gating — in Python, but **outside the registry** |
 
@@ -49,6 +53,17 @@ The rosters disagree. Nine canonical non-hidden Python commands are missing
 from JS: `attach`, `autoroute`, `copy`, `debug-log`, `doctor`, `keys`,
 `preview-log`, `reload`, `undo`.
 
+> **Correction (2026-09-21).** The table above says "five places" and
+> counts only the WEB JS roster. There were **six**:
+> `vscode-extension/src/shared/commands.ts` is a SEPARATE hand-written
+> roster (31 entries) with its own drift — it lists neither `/run`,
+> `/task` nor `/token`, all three of which `chatPanel.ts` intercepts.
+> `commands.js`'s own header claimed it was "the single source of truth"
+> for both clients, which was never true. Step 3a deleted rows 2 and 3
+> (web fetches `GET /commands?client=web` now); `commands.ts` waits for
+> step 3b, and the two are independent precisely because they never
+> shared a file.
+>
 > **Correction (2026-09-20, same day).** The first version of this section
 > listed `cat`, `sh`, `term`, `token` as "in JS, missing from Python" and
 > built an argument on it. That diff compared Python CANONICAL names against
@@ -308,6 +323,12 @@ roster *through AppState*, pushed over `state_sync`. That is replaced:
   (`POST /command/{name}` + the envelope); the read half is what is missing.
 - **`commands.js` shrinks to a loader, then to nothing.** Completion's
   subcommand tables and `/help` are *derived* from the spec.
+  (**Done for web, step 3a, 2026-09-21** — and it never became a loader:
+  the fetch+cache landed in a new `web/shared/command-roster.js` and
+  `commands.js` was deleted outright. The client additionally **fails
+  closed** with no roster rather than forwarding what it cannot classify;
+  see the plan's step 3a for why that replaces the old
+  hardcoded-branch-order guarantee for `/token set <value>`.)
 - **A parity fence** fails when any client renders a command the registry
   does not declare, or the registry declares one a client does not render.
   The rosters drifted apart silently; only a test stops that.
@@ -404,7 +425,9 @@ seed. Incremental path:
    2. **`GET /commands`** serves the full snapshot; `/reload` signals
       roster-changed.
    3. **JS clients fetch at startup**; `commands.js` becomes a loader, then
-      is deleted.
+      is deleted. **Split: 3a (web) DONE 2026-09-21; 3b (VSCode) open** —
+      the two clients keep SEPARATE hand-written rosters, so they ship
+      separately.
    4. **Derive, don't restate** — completion's `_*_SUBCOMMANDS` tables and
       `/help` read the spec. At this point `engine/completion.py` stops
       importing `CommandFactory`, closing the layer inversion and the
@@ -443,7 +466,7 @@ three different things in this codebase:
 
 | Mirror | What it is | Fate |
 |---|---|---|
-| `web/shared/commands.js`, the `web/app.js:199` fallback catalog, alias entries restated as standalone commands, `_appendExperimentalHelp()` | **Data** — names, descriptions, usage, subcommands | **Deleted** in step 3; populated from `GET /commands` |
+| `web/shared/commands.js`, the `web/app.js:199` fallback catalog, alias entries restated as standalone commands, `_appendExperimentalHelp()` | **Data** — names, descriptions, usage, subcommands | ✅ **Deleted** in step 3a (2026-09-21); populated from `GET /commands?client=web` via `web/shared/command-roster.js`. `vscode-extension/src/shared/commands.ts` is the same class of mirror and goes in step 3b |
 | `web/shared/side-effects.js` and the VSCode equivalent | **Behaviour** — 300 lines of handler implementations (`open_editor`, `copy_to_clipboard`, `prompt_text`, …) that *perform* an effect in the client | **Stays.** Not servable: this is the same line drawn when shipping client code from the server was rejected, and the same split as `client_action` — Python owns the NAME, the client bundles the IMPLEMENTATION |
 | `web/shared/app-state.js`, `vscode-extension/src/appState.ts` | **Data** — hand-written mirrors of `engine/app_state_schema.json` | **Could go, and is further along than the roster** — see below |
 

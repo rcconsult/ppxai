@@ -1,7 +1,7 @@
 # Plan — closing ADR 0007 (one command registry)
 
-**Status: steps 1 (1a + 1b), 2 and 2.5 IMPLEMENTED; steps 3-5 PROPOSED, not
-started.**
+**Status: steps 1 (1a + 1b), 2, 2.5 and 3a (web) IMPLEMENTED; step 3b
+(VSCode) and steps 4-5 PROPOSED, not started.**
 Written 2026-09-20 on `bugfix/v1.19.3`; **rewritten the same day** after
 the owner restated the goal. The first draft split the work (a) invert the
 edge / (b) relocate / (c) roster, called (c) "a feature wearing the ADR's
@@ -14,8 +14,8 @@ evidence decayed silently (it cited a module Item 65 had deleted), and this
 file is written not to repeat that.
 
 **Record:** [decisions/0007-completion-first-class-service.md](decisions/0007-completion-first-class-service.md)
-· step 1 shipped v1.18.8 · step 2 and 2.5 landed 2026-09-20 on
-`bugfix/v1.19.3`, no target release.
+· step 1 shipped v1.18.8 · steps 2 and 2.5 landed 2026-09-20 and step 3a
+(web) on 2026-09-21, all on `bugfix/v1.19.3`, no target release.
 
 ## The goal
 
@@ -30,6 +30,14 @@ Command metadata lives in **five places**: `CommandSpec`;
 `web/shared/commands.js` (376 hand-written lines); an inline fallback
 catalog at `web/app.js:199`; six `_*_SUBCOMMANDS` tables in
 `engine/completion.py`; and `_BUILTIN_SPECIAL_COMMANDS` in the same file.
+
+> **Correction (2026-09-21): it was SIX.** `vscode-extension/src/shared/
+> commands.ts` is a second, independent hand-written roster (31 entries),
+> not a shared file — see step 3. **Three of the six are now gone:**
+> `_BUILTIN_SPECIAL_COMMANDS` + `_CLIENT_GATES` (step 1b),
+> `web/shared/commands.js` and the `app.js` fallback catalog (step 3a).
+> Remaining: `CommandSpec` (the intended single source), the six
+> `_*_SUBCOMMANDS` tables (step 4) and `commands.ts` (step 3b).
 
 **Diff the rosters against canonical names AND aliases** — comparing
 canonical-only produces false "JS-only" hits (the first draft of this plan
@@ -48,6 +56,11 @@ are registered aliases):
 
 - JS-only: **`token`** (one command).
 - Python-only: `attach autoroute copy debug-log doctor keys preview-log reload undo`
+
+(The script above no longer runs: step 3a deleted `commands.js`. Point it
+at `vscode-extension/src/shared/commands.ts` — regex
+`r"^    '/([a-z-]+)':"` matches there too — to diff the one JS roster that
+is left. Kept verbatim as the dated measurement it was.)
 
 `CompletionCommandInfo` (the v1.18.8 seed) carries name / description /
 hidden / alias data only — no `usage`, `category` or subcommands — so it
@@ -359,11 +372,127 @@ needed.
 test_hybrid_family_still_dispatches_server_side` (written in step 2 to
 fail the day this landed) was replaced with tests for the table above.
 
-### 3. JS clients fetch at startup
+### 3. JS clients fetch at startup — split into 3a (web) and 3b (VSCode)
 
-Web and VSCode load the roster from `GET /commands`. `commands.js` becomes
-a loader, then is deleted. `app.js:196` (`this.slashCommands`) is the
-current consumer.
+**Finding that forced the split (2026-09-21).** The two JS clients do NOT
+share one roster file. `ppxai/web/shared/commands.js` and
+`vscode-extension/src/shared/commands.ts` are **two independent
+hand-written copies** — the TS one has 31 entries and its own drift (it
+lists neither `/run`, `/task` nor `/token`, all three of which
+`chatPanel.ts` intercepts at runtime, so VSCode's autocomplete and help
+never offered them). `commands.js`'s header claims it is "the single
+source of truth across the Desktop Web App and the VSCode Extension",
+which was already false. Counting the TS copy, the ADR's "five places"
+is really **six**. Deleting the web copy therefore touches nothing under
+`vscode-extension/`, and the two halves ship separately.
+
+#### 3a. Web — ✅ DONE (2026-09-21)
+
+`ppxai/web/shared/command-roster.js` (`CommandRoster`) fetches
+`GET /commands?client=web` once from `app.init()` through the existing
+`ApiClient` (new `getCommandRoster(client)`), caches it, resolves
+canonical names AND aliases, and refetches on the
+`refresh_command_roster` side effect (handler added to
+`web/shared/side-effects.js`, which stays — it is a BEHAVIOUR mirror).
+`POST /command/{name}` bodies now carry `client: "web"`, which closes the
+`/help` over-listing for web.
+
+`CommandDispatcher.dispatch()` became data-driven: resolve the typed
+name through the roster, and if the entry's `dispatch === "client"` call
+the bundled implementation registered for its `client_action` —
+
+    CommandDispatcher.CLIENT_ACTIONS = {
+        'token.manage'   -> _handleTokenCommand
+        'task.controller'-> this.tasks.handle   (via _viaController)
+        'run.controller' -> this.runs.handle    (via _viaController)
+        'auto.loop'      -> _dispatchAgent
+    }
+
+— else POST to the factory. An action the roster names that web does not
+implement produces a clear error and is **never** forwarded. The
+VSCode-only actions (`coding.stream`, `coding.convert`, `preview.panel`,
+`help.augment`) never reach the table: the server reports
+`dispatch == "server"` for them when asked `?client=web`.
+
+**Decision (owner requirement): FAIL CLOSED.** The `/token set <value>`
+guarantee used to be structural — the hardcoded branch ran before the
+`_dispatchToFactory` fallthrough. With routing in data, an unavailable
+roster would otherwise mean "forward everything", i.e. exactly the leak
+step 1b fixed server-side. So the roster gate is the FIRST thing
+`dispatch()` can leave on: no roster → retry the fetch once inline
+(self-heal), and if that fails, refuse, explain, and return. The
+explanation names **version skew** explicitly, because the web assets are
+served from `~/.ppxai/web` and can be newer than the running server,
+which then 404s `/commands`
+(`docs/lessons/web-assets-served-from-ppxai-home.md`). Streaming
+(chat-shaped) commands are inside the gate too — fail closed means
+closed. Plain chat messages never touch `dispatch()` and are unaffected.
+**No hardcoded `/token` escape hatch**: a per-name special case would be
+a second roster again.
+
+**Deletions.** `web/shared/commands.js` (376 lines) and its `<script>`
+tag; the inline fallback catalog in `app.js` (`this.slashCommands`, ~30
+commands); `_appendExperimentalHelp()` and the `/help` intercept that
+existed only to call it. `web/shared/index.js` (an unimported ES-module
+barrel) re-exported `commands.js` and now re-exports `CommandRoster`.
+
+**Consumers found, and what replaced them.** Exactly two:
+`app.js:196` assigned `this.slashCommands`, and
+`command-dispatcher.js::_appendExperimentalHelp` read it. Nothing else.
+Autocomplete was already server-side (`POST /complete`), so
+`commands.js`'s `isSlashCommand` / `parseCommand` / `generateHelpText` /
+`getCommandsByCategory` / `AI_FORWARDED_COMMANDS` helpers had **no web
+consumer at all** — `generateHelpText` had been dead since v1.18.1
+(`test_help_command_reconciliation.py` retired it) and
+`AI_FORWARDED_COMMANDS` was superseded by the dispatcher's own
+`STREAMING_COMMANDS`. They needed no roster-backed replacement; they were
+deleted with the file.
+
+**Bug fixed in passing.** `_dispatchAgent` sent a bare `/auto` to
+`POST /command/agent`, but ADR 0011 renamed the command to `auto` with NO
+alias, so it had been 404-ing ("Unknown command: /agent"). Now posts
+`auto`.
+
+**Confirmed by running the real UI** (`PPXAI_WEB_DIR=$PWD/ppxai/web`,
+`ppxai-server` on a spare port, Playwright `live` project): web `/help`
+lists `/token`, `/run` and `/task` **once each** — the double-listing the
+plan flagged as "confirmed by source reading" is gone.
+
+**Tests.**
+
+| File | Disposition |
+|---|---|
+| `tests/test_client_handled_commands_contract.py` | Part B's WEB half rewritten (VSCode half untouched). The old invariant — `cmd === '/token'` precedes `_dispatchToFactory(` — deliberately no longer exists. New source-text helpers, each mutation-verified in the same file: the fail-closed gate precedes every dispatch path; the client-dispatch branch precedes (and returns before) the factory fallthrough; NO per-name escape hatch survives; the action registry implements every action Python declares for web (read off `iter_completion_specs()`, not a hand-copied list) |
+| `tests/test_web_command_roster_dispatch_behavior.py` | **New.** Drives the REAL dispatcher + roster under Node against a call-logging fake `ApiClient` (the `test_agent_run_controller_behavior.py` idiom): all four client actions; routing flips when the ROSTER flips; alias `/cat` → canonical `show`; server dispatch carries `client:"web"`; unknown action → error + no POST; **no roster → `/token set <secret>` issues nothing but the roster retry and the secret appears in no payload**; refetch on the side effect (and a same-version signal is a no-op); a failed refetch keeps the working roster. The two security scenarios are mutation-verified: a scratch copy of the dispatcher with the gate removed, and one with the client branch bypassed, must both FAIL the harness |
+| `tests/test_shared_commands.py` | Retargeted, not deleted. Its web half is inverted into deletion fences (`commands.js` stays gone; `index.html` stops loading it; `app.js` has no catalog) plus fences on the replacement module. Its VSCode **parity** half now compares `commands.ts` against the **Python registry** instead of against `commands.js` — the old comparison stayed green while both JS copies drifted from Python. The `/run`·`/task`·`/token` gap is pinned as an explicit known-gap test that fails the day step 3b (or a hand patch) closes it |
+| `tests/test_vscode_task_controller.py` | `WEB_COMMANDS` (deleted file) → `TS_COMMANDS` + direct `CommandFactory` checks, since web's catalog IS the registry now |
+| `tests/test_web_command_dispatcher_v18_1.py` | Size fence 340 → 480 lines with the reason recorded in its threshold history (net code is flat; the growth is the fail-closed rationale + the registry's comments). `this.runs?.handle(` assertion → the registry binding `'run.controller' … _viaController(this.runs` (plus the same for `/task`) |
+| `tests/test_web_shared_modules.py` | Added script-order fence (`api-client.js` < `command-roster.js` < `command-dispatcher.js`) and `refresh_command_roster` to the web side-effect kind set |
+| `tests/test_help_command_reconciliation.py`, `tests/test_preview.py` | Prose only — both merely NAMED `commands.js`. The former's "the JS-side table can stay for client-side autocomplete" caveat has expired and says so |
+| `tests/e2e/live-app.spec.ts` | New `command roster (ADR 0007 step 3a)` describe block against the real UI: roster fetched at boot with exactly the four client-dispatch entries, `/quit` invisible to web, `/cat` resolving to `show`; `/help` listing each of `/token`·`/run`·`/task` once and POSTing `client:"web"`; `/token status` with no `POST /command/token`; and the fail-closed path with the roster knocked out |
+
+`tests/e2e/*-harness.html` carried no `commands.js` script tag — checked,
+nothing to change.
+
+**Finding, recorded not fixed.** In a real browser the typed line leaves
+the client on two PRE-EXISTING paths before routing is even consulted:
+`showSystemMessage`'s `> <input>` chat echo is mirrored to
+`POST /client-log`, and the composer sends its buffer to `POST /complete`
+for autocomplete. So `/token set <secret>` **inline** still reaches the
+server debug log — which is precisely why bare `/token set` uses
+`window.prompt` and why the inline form answers with a "consider rotating
+this token" warning. Unchanged by this step and out of its contract
+(§correctness contract item 4 is about the command-dispatch path), but
+the live e2e test now pins the exact set of paths so it cannot grow
+silently.
+
+#### 3b. VSCode — not started
+
+`vscode-extension/src/shared/commands.ts` (31 entries) and
+`chatPanel.ts`'s twelve hardcoded intercepts. Independent of 3a per the
+finding above. Note VSCode needs the same fail-closed decision, and the
+extension host's stakes are higher (it runs with the user's full
+privileges — see ADR 0007 §Why this and not the alternatives).
 
 ### 4. Derive, don't restate
 
@@ -415,6 +544,12 @@ move so the migration is verified rather than assumed:
    After migration `_appendExperimentalHelp` is deleted and `/help` comes
    from the registry alone, filtered by `clients`.
 
+   **RESOLVED in step 3a (2026-09-21)** — `_appendExperimentalHelp` is
+   deleted and web `/help` comes from the registry alone, filtered by
+   the `client:"web"` the client now sends. Verified against a running
+   UI (Playwright `live` project): `/token`, `/run` and `/task` each
+   appear exactly once. The finding as it stood:
+
    **Known-until-step-3 (confirmed by source reading, 2026-09-20, once
    step 1b made `/token` a registered spec):** web `/help` now lists
    `/token` **twice** — once from the server catalog (`_dispatchToFactory
@@ -444,11 +579,21 @@ move so the migration is verified rather than assumed:
    (`is_alias` / `canonical`). `/exit` as an alias of `/quit` is native.
 
 **Deletions that prove the migration is complete** — if any survives, a
-second roster still exists: `_BUILTIN_SPECIAL_COMMANDS` and `_CLIENT_GATES`
-(`engine/completion.py`) ✅ DONE (step 1b, 2026-09-20) — along with
-`_TOKEN_SUBCOMMANDS`, retired in the same step; `_appendExperimentalHelp`
-(`command-dispatcher.js`), the inline fallback catalog (`app.js:199`), and
-the alias entries in `commands.js` remain — these three are step 2+ work.
+second roster still exists:
+
+| Deletion | Status |
+|---|---|
+| `_BUILTIN_SPECIAL_COMMANDS` + `_CLIENT_GATES` (`engine/completion.py`), and `_TOKEN_SUBCOMMANDS` with them | ✅ DONE — step 1b, 2026-09-20 |
+| `_appendExperimentalHelp()` (`command-dispatcher.js`) and the `/help` intercept that existed only to call it | ✅ DONE — step 3a, 2026-09-21 |
+| the inline fallback catalog (`app.js:199`, `this.slashCommands`) | ✅ DONE — step 3a |
+| `web/shared/commands.js` in full — including the alias entries restated as standalone commands (`/cat`, `/sh`, `/term`) | ✅ DONE — step 3a; `CommandRoster.resolve()` reads the `aliases` FIELD |
+| the five hardcoded `if (cmd === '/…')` intercepts in `command-dispatcher.js` | ✅ DONE — step 3a; routing is the roster's `dispatch` field. Fenced by `assert_web_has_no_per_name_escape_hatch` |
+| `vscode-extension/src/shared/commands.ts` and `chatPanel.ts`'s twelve intercepts | ⬜ step 3b |
+| the six `_*_SUBCOMMANDS` tables (`engine/completion.py`) | ⬜ step 4 |
+
+Not a deletion and deliberately so: `web/shared/side-effects.js` stays —
+it is a BEHAVIOUR mirror (ADR 0007 §Which mirrors can go), and step 3a
+ADDED a handler to it (`refresh_command_roster`).
 
 ## Hybrid commands — dispatch routing becomes data
 
@@ -456,6 +601,11 @@ Measured 2026-09-20. "Do I POST this to `/command/<name>` or handle it
 here?" is a hardcoded `if`-chain in each JS client, and the chains differ:
 **web intercepts 5 commands** (`command-dispatcher.js`), **VSCode 12**
 (`chatPanel.ts:1140-1220`). Nothing records which client handles what.
+
+> **Update (2026-09-21).** Web's five are gone — step 3a replaced the
+> chain with the roster's `dispatch` field plus a `client_action` →
+> implementation registry. VSCode's twelve remain until step 3b, so the
+> counts to re-measure are now `0` and `12`.
 
     grep -nE "if \(cmd === '/[a-z-]+'" ppxai/web/shared/command-dispatcher.js
     grep -nE "(^|[^a-zA-Z])command === '[a-z-]+'" vscode-extension/src/chatPanel.ts | grep -v subcommand

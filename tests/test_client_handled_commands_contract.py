@@ -34,6 +34,35 @@ let it refuse". Part B pins this as a SOURCE-TEXT contract against
 `tests/test_web_shared_modules.py` (plain `Path.read_text`, structural
 regex/substring assertions — no JS runtime).
 
+**The WEB half of Part B was rewritten for ADR 0007 step 3a
+(2026-09-21).** It used to pin `cmd === '/token'` appearing before the
+default `_dispatchToFactory(` fallthrough — i.e. the guarantee was BRANCH
+ORDER in a hardcoded `if`-chain. Step 3a deleted that chain: routing is
+now the fetched roster's `dispatch` field, so the same guarantee has a
+different shape and this file pins the new one:
+
+  1. the FAIL-CLOSED gate (no roster → refuse) precedes every dispatch
+     path in `dispatch()`, so with no roster NOTHING is POSTed;
+  2. the `entry.dispatch === 'client'` branch precedes (and returns
+     before) the default `_dispatchToFactory(`, so a command the roster
+     marks client-dispatched is never POSTed;
+  3. there is NO hardcoded `cmd === '/token'` escape hatch — a per-name
+     special case would be exactly the second roster the record removes;
+  4. the action registry implements every `client_action` web is
+     declared for; and
+  5. (unchanged) `_handleTokenCommand`'s only network path is still
+     `POST /v1/tokens`.
+
+Runtime behaviour of all of this — including "with no roster, `/token set
+SECRET` makes zero requests and SECRET appears in no outgoing body" — is
+exercised against the REAL dispatcher under Node in
+`tests/test_web_command_roster_dispatch_behavior.py`. Source text and
+runtime are deliberately both pinned: the source checks catch a
+refactor that keeps the behaviour but loses the ordering guarantee, the
+Node checks catch the reverse. The VSCode half is UNCHANGED — VSCode
+still has its own hand-written roster (`vscode-extension/src/shared/
+commands.ts`) and its own `if`-chain until ADR 0007 step 3b.
+
 Every Part B assertion is written as a small helper that takes SOURCE TEXT
 in and raises `AssertionError` on violation, then mutation-verified in this
 same file: each helper is fed a deliberately broken string modeled on the
@@ -58,6 +87,7 @@ import pytest
 # to end even though Part A's unit-level checks don't touch the factory.
 import ppxai.commands.handler  # noqa: F401
 import ppxai.engine.completion as completion_mod
+from ppxai.commands.factory import CommandFactory
 from ppxai.engine.completion import _client_allows, complete
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -242,26 +272,104 @@ def _extract_braced_body(src: str, signature_pattern: str) -> str:
     raise AssertionError(f"unbalanced braces: body for {signature_pattern!r} never closed")
 
 
-def assert_web_token_branch_precedes_factory_dispatch(dispatch_body: str) -> None:
-    """`cmd === '/token'` must appear (and return) before the default
-    `_dispatchToFactory(` fallthrough inside `dispatch()`."""
-    token_match = re.search(r"cmd === '/token'", dispatch_body)
+#: Every outbound path `dispatch()` can take. The fail-closed gate must
+#: precede all of them, so "no roster" means "nothing leaves the client".
+_WEB_DISPATCH_PATHS = (
+    r"_dispatchToFactory\(",
+    r"_dispatchClientAction\(",
+    r"streamChat\(",
+)
+
+
+def assert_web_fail_closed_gate_precedes_every_dispatch(dispatch_body: str) -> None:
+    """The roster gate must be the FIRST thing `dispatch()` can leave on.
+
+    ADR 0007 step 3a: routing is the fetched roster's `dispatch` field.
+    With no roster the client cannot tell a client-handled command from a
+    forwardable one, so it must refuse — not guess. Any dispatch path
+    reachable before the gate reopens the `/token set <value>` leak.
+    """
+    gate = re.search(r"_readyRoster\(\)", dispatch_body)
+    if not gate:
+        raise AssertionError(
+            "no _readyRoster() call found in dispatch() — the fail-closed gate is gone"
+        )
+    refusal = re.search(r"if \(!roster\)", dispatch_body[gate.end():])
+    if not refusal:
+        raise AssertionError(
+            "dispatch() never checks the gate's result (`if (!roster)`) — a failed "
+            "roster fetch would fall through to real dispatch"
+        )
+    refusal_end = gate.end() + refusal.end()
+    if "return" not in dispatch_body[refusal_end: refusal_end + 200]:
+        raise AssertionError(
+            "the no-roster branch does not return — it must refuse, not fall through"
+        )
+    for pattern in _WEB_DISPATCH_PATHS:
+        m = re.search(pattern, dispatch_body)
+        if m and m.start() < gate.start():
+            raise AssertionError(
+                f"dispatch path {pattern!r} is reachable BEFORE the _readyRoster() "
+                "gate; with no roster it would still send the command"
+            )
+
+
+def assert_web_client_dispatch_precedes_factory_dispatch(dispatch_body: str) -> None:
+    """A roster entry with `dispatch === 'client'` must be routed to the
+    bundled implementation (and returned from) BEFORE the default
+    `_dispatchToFactory(` fallthrough."""
+    client_match = re.search(r"entry\.dispatch === 'client'", dispatch_body)
     factory_match = re.search(r"_dispatchToFactory\(", dispatch_body)
-    if not token_match:
-        raise AssertionError("no \"cmd === '/token'\" branch found in dispatch()")
+    if not client_match:
+        raise AssertionError(
+            "no \"entry.dispatch === 'client'\" branch found in dispatch() — routing "
+            "is no longer roster-driven"
+        )
     if not factory_match:
         raise AssertionError("no _dispatchToFactory( call found in dispatch()")
-    if not token_match.start() < factory_match.start():
+    if not client_match.start() < factory_match.start():
         raise AssertionError(
-            "the /token branch must appear BEFORE the default _dispatchToFactory( "
-            "dispatch, or /token set <value> could be forwarded to "
-            "POST /command/token"
+            "the roster's client-dispatch branch must appear BEFORE the default "
+            "_dispatchToFactory(, or a client-handled command (e.g. /token set "
+            "<value>) could be forwarded to POST /command/<name>"
         )
-    between = dispatch_body[token_match.start() : factory_match.start()]
+    between = dispatch_body[client_match.start(): factory_match.start()]
     if "return" not in between:
         raise AssertionError(
-            "the /token branch does not return before falling through to "
+            "the client-dispatch branch does not return before falling through to "
             "_dispatchToFactory("
+        )
+
+
+def assert_web_has_no_per_name_escape_hatch(src: str) -> None:
+    """No hardcoded `cmd === '/<name>'` branch may survive in the
+    dispatcher.
+
+    A "just for /token" special case would be a second roster — one name
+    whose routing lives in JS again — which is the exact duplication ADR
+    0007 exists to remove. Fail-closed is what protects `/token` now.
+    """
+    found = sorted(set(re.findall(r"cmd === '(/[a-z-]+)'", src)))
+    if found:
+        raise AssertionError(
+            f"hardcoded per-command branches found in the dispatcher: {found}. "
+            "Routing must come from the roster; a per-name escape hatch is a "
+            "second source of truth."
+        )
+
+
+def assert_web_action_registry_implements(src: str, actions: set[str]) -> None:
+    """`CommandDispatcher.CLIENT_ACTIONS` must implement every named
+    `client_action` the server declares for web."""
+    m = re.search(r"CommandDispatcher\.CLIENT_ACTIONS = \{(.*?)\n\s*\};", src, re.S)
+    if not m:
+        raise AssertionError("CommandDispatcher.CLIENT_ACTIONS registry not found")
+    declared = set(re.findall(r"'([a-z]+\.[a-z]+)'\s*\(", m.group(1)))
+    missing = actions - declared
+    if missing:
+        raise AssertionError(
+            f"client actions declared in Python but not implemented by web: "
+            f"{sorted(missing)} (registry has {sorted(declared)})"
         )
 
 
@@ -338,11 +446,37 @@ class TestWebDispatcherSourceExists:
         assert WEB_DISPATCHER_PATH.exists()
 
 
-class TestWebTokenBranchOrder:
-    def test_token_branch_precedes_factory_dispatch(self):
+class TestWebRosterDrivenDispatchOrder:
+    """ADR 0007 step 3a replaced branch order with roster data; these pin
+    the two orderings that still carry the `/token` guarantee."""
+
+    def test_fail_closed_gate_precedes_every_dispatch_path(self):
         src = _read(WEB_DISPATCHER_PATH)
         dispatch_body = _extract_braced_body(src, r"async dispatch\(input\)\s*")
-        assert_web_token_branch_precedes_factory_dispatch(dispatch_body)
+        assert_web_fail_closed_gate_precedes_every_dispatch(dispatch_body)
+
+    def test_client_dispatch_precedes_factory_dispatch(self):
+        src = _read(WEB_DISPATCHER_PATH)
+        dispatch_body = _extract_braced_body(src, r"async dispatch\(input\)\s*")
+        assert_web_client_dispatch_precedes_factory_dispatch(dispatch_body)
+
+    def test_no_per_name_escape_hatch_remains(self):
+        assert_web_has_no_per_name_escape_hatch(_read(WEB_DISPATCHER_PATH))
+
+    def test_action_registry_implements_every_web_action(self):
+        """Read the Python declaration, not a hand-copied list: every spec
+        whose `client_action_clients` includes "web" must have a web
+        implementation. This is a miniature of step 5's parity fence."""
+        specs = CommandFactory.iter_completion_specs()
+        web_actions = {
+            info.client_action for info in specs
+            if info.client_action
+            and (info.client_action_clients is None
+                 or "web" in info.client_action_clients)
+            and (info.clients is None or "web" in info.clients)
+        }
+        assert web_actions, "no web client actions declared — declaration drift?"
+        assert_web_action_registry_implements(_read(WEB_DISPATCHER_PATH), web_actions)
 
     def test_extraction_stops_at_dispatch_method_end(self):
         """Sanity check on the extractor itself: the extracted dispatch()
@@ -400,52 +534,159 @@ class TestVscodeTokenHandlerNeverDispatchesToFactory:
 # only ever sees passing input is not a guard.
 
 
-class TestMutationWebTokenBranchOrder:
-    def test_rejects_branch_after_factory_dispatch(self):
-        broken = """
+_REAL_SHAPE = """
         async dispatch(input) {
-            await this._dispatchToFactory(cmd.slice(1), args);
-            if (cmd === '/token') {
-                await this._handleTokenCommand(args);
+            const roster = await this._readyRoster();
+            if (!roster) {
+                this._explainMissingRoster(cmd);
                 return;
             }
+            if (STREAMING_COMMANDS.has(cmd)) {
+                await this.app.streamChat(input);
+                return;
+            }
+            const entry = roster.resolve(cmd);
+            if (entry && entry.dispatch === 'client') {
+                await this._dispatchClientAction(entry, args, input);
+                return;
+            }
+            await this._dispatchToFactory(entry ? entry.name : cmd.slice(1), args);
+        }
+        """
+
+
+class TestMutationWebFailClosedGate:
+    def test_rejects_missing_gate(self):
+        broken = """
+        async dispatch(input) {
+            const entry = this.app.commandRoster.resolve(cmd);
+            await this._dispatchToFactory(cmd.slice(1), args);
         }
         """
         with pytest.raises(AssertionError):
-            assert_web_token_branch_precedes_factory_dispatch(broken)
+            assert_web_fail_closed_gate_precedes_every_dispatch(broken)
 
-    def test_rejects_branch_that_falls_through_without_return(self):
+    def test_rejects_gate_whose_result_is_never_checked(self):
         broken = """
         async dispatch(input) {
-            if (cmd === '/token') {
-                await this._handleTokenCommand(args);
+            const roster = await this._readyRoster();
+            await this._dispatchToFactory(cmd.slice(1), args);
+        }
+        """
+        with pytest.raises(AssertionError):
+            assert_web_fail_closed_gate_precedes_every_dispatch(broken)
+
+    def test_rejects_gate_that_falls_through_without_return(self):
+        broken = """
+        async dispatch(input) {
+            const roster = await this._readyRoster();
+            if (!roster) { this._explainMissingRoster(cmd); }
+            await this._dispatchToFactory(cmd.slice(1), args);
+        }
+        """
+        with pytest.raises(AssertionError):
+            assert_web_fail_closed_gate_precedes_every_dispatch(broken)
+
+    def test_rejects_a_dispatch_path_reachable_before_the_gate(self):
+        """The exact regression: streaming commands hoisted above the gate,
+        so a slash command still leaves the client with no roster."""
+        broken = """
+        async dispatch(input) {
+            if (STREAMING_COMMANDS.has(cmd)) {
+                await this.app.streamChat(input);
+                return;
+            }
+            const roster = await this._readyRoster();
+            if (!roster) {
+                this._explainMissingRoster(cmd);
+                return;
             }
             await this._dispatchToFactory(cmd.slice(1), args);
         }
         """
         with pytest.raises(AssertionError):
-            assert_web_token_branch_precedes_factory_dispatch(broken)
-
-    def test_rejects_missing_token_branch(self):
-        broken = """
-        async dispatch(input) {
-            await this._dispatchToFactory(cmd.slice(1), args);
-        }
-        """
-        with pytest.raises(AssertionError):
-            assert_web_token_branch_precedes_factory_dispatch(broken)
+            assert_web_fail_closed_gate_precedes_every_dispatch(broken)
 
     def test_accepts_the_real_shape(self):
-        ok = """
+        assert_web_fail_closed_gate_precedes_every_dispatch(_REAL_SHAPE)
+
+
+class TestMutationWebClientDispatchOrder:
+    def test_rejects_client_branch_after_factory_dispatch(self):
+        broken = """
         async dispatch(input) {
-            if (cmd === '/token') {
-                await this._handleTokenCommand(args);
+            await this._dispatchToFactory(cmd.slice(1), args);
+            if (entry && entry.dispatch === 'client') {
+                await this._dispatchClientAction(entry, args, input);
                 return;
+            }
+        }
+        """
+        with pytest.raises(AssertionError):
+            assert_web_client_dispatch_precedes_factory_dispatch(broken)
+
+    def test_rejects_client_branch_without_return(self):
+        broken = """
+        async dispatch(input) {
+            if (entry && entry.dispatch === 'client') {
+                await this._dispatchClientAction(entry, args, input);
             }
             await this._dispatchToFactory(cmd.slice(1), args);
         }
         """
-        assert_web_token_branch_precedes_factory_dispatch(ok)  # must not raise
+        with pytest.raises(AssertionError):
+            assert_web_client_dispatch_precedes_factory_dispatch(broken)
+
+    def test_rejects_routing_that_stopped_reading_the_roster(self):
+        broken = """
+        async dispatch(input) {
+            await this._dispatchToFactory(cmd.slice(1), args);
+        }
+        """
+        with pytest.raises(AssertionError):
+            assert_web_client_dispatch_precedes_factory_dispatch(broken)
+
+    def test_accepts_the_real_shape(self):
+        assert_web_client_dispatch_precedes_factory_dispatch(_REAL_SHAPE)
+
+
+class TestMutationWebEscapeHatch:
+    def test_rejects_a_reintroduced_token_branch(self):
+        broken = """
+        async dispatch(input) {
+            if (cmd === '/token') { await this._handleTokenCommand(args); return; }
+            await this._dispatchToFactory(cmd.slice(1), args);
+        }
+        """
+        with pytest.raises(AssertionError):
+            assert_web_has_no_per_name_escape_hatch(broken)
+
+    def test_accepts_the_real_shape(self):
+        assert_web_has_no_per_name_escape_hatch(_REAL_SHAPE)
+
+
+class TestMutationWebActionRegistry:
+    def test_rejects_a_registry_missing_an_action(self):
+        broken = """
+        CommandDispatcher.CLIENT_ACTIONS = {
+            'token.manage'({ args }) { return this._handleTokenCommand(args); },
+        };
+        """
+        with pytest.raises(AssertionError):
+            assert_web_action_registry_implements(broken, {"token.manage", "auto.loop"})
+
+    def test_rejects_a_missing_registry(self):
+        with pytest.raises(AssertionError):
+            assert_web_action_registry_implements("const x = 1;", {"token.manage"})
+
+    def test_accepts_a_complete_registry(self):
+        ok = """
+        CommandDispatcher.CLIENT_ACTIONS = {
+            'token.manage'({ args }) { return this._handleTokenCommand(args); },
+            'auto.loop'({ args, input }) { return this._dispatchAgent(args, input); },
+        };
+        """
+        assert_web_action_registry_implements(ok, {"token.manage", "auto.loop"})
 
 
 class TestMutationWebTokenHandlerNeverDispatches:

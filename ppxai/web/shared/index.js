@@ -4,26 +4,18 @@
  * Re-exports all shared modules for easy importing.
  *
  * Usage (ES Modules):
- *   import { SLASH_COMMANDS, ApiClient, formatToolsStatus } from './shared/index.js';
+ *   import { CommandRoster, ApiClient, formatToolsStatus } from './shared/index.js';
  *
  * Usage (CommonJS):
- *   const { SLASH_COMMANDS, ApiClient, formatToolsStatus } = require('./shared');
+ *   const { CommandRoster, ApiClient, formatToolsStatus } = require('./shared');
  *
  * @version 1.14.0
  */
 
-// Commands
-export {
-    CommandCategory,
-    SLASH_COMMANDS,
-    getCommandNames,
-    getCommandsByCategory,
-    isSlashCommand,
-    parseCommand,
-    generateHelpText,
-    AI_FORWARDED_COMMANDS,
-    isAIForwardedCommand
-} from './commands.js';
+// Command roster (ADR 0007 step 3a). `commands.js` — the hand-written
+// catalog this used to re-export — is gone: the roster is FETCHED from
+// `GET /commands?client=web` and cached by `CommandRoster`.
+export { CommandRoster } from './command-roster.js';
 
 // API Client
 export { ApiClient, getApiClient } from './api-client.js';
@@ -52,12 +44,12 @@ export {
 
 // CommonJS compatibility
 if (typeof module !== 'undefined' && module.exports) {
-    const commands = require('./commands.js');
+    const commandRoster = require('./command-roster.js');
     const apiClient = require('./api-client.js');
     const formatters = require('./formatters.js');
 
     module.exports = {
-        ...commands,
+        ...commandRoster,
         ...apiClient,
         ...formatters
     };

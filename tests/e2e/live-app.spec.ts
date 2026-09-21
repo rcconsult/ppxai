@@ -280,3 +280,153 @@ test.describe('live web app — chat + Ctx badge (needs a provider)', () => {
         expect((await spy(page)).clearSessionCalls).toBe(0);
     });
 });
+
+/**
+ * PRE-EXISTING paths that carry a typed slash-command line off the client,
+ * independent of dispatch. Recorded here so the fail-closed test below
+ * asserts an exact set instead of "nothing" (which was never true):
+ *   - POST /client-log — `app.showSystemMessage` mirrors the `> <input>`
+ *     chat echo to the server debug log. This is why `/token set` with no
+ *     value uses window.prompt, and why the inline form answers with a
+ *     "consider rotating this token" warning.
+ *   - POST /complete   — autocomplete sends the composer buffer as you type.
+ * Neither is command dispatch, and neither is what ADR 0007 step 3a changed;
+ * the day either is redacted, this list shrinks and the test says so.
+ */
+const EXPECTED_ECHO_PATHS = ['/client-log', '/complete'];
+
+test.describe('live web app — command roster (ADR 0007 step 3a)', () => {
+    /**
+     * Type a slash command into the composer and submit it.
+     *
+     * The dropdown matters: typing fires POST /complete, and Enter while
+     * the dropdown is OPEN selects a completion instead of submitting. So
+     * settle the completion round-trip, Escape, and only submit once the
+     * dropdown is actually hidden — a bare fill+Escape+Enter wins the race
+     * most of the time and then hangs for the full timeout when it loses.
+     */
+    async function typeCommand(page: Page, text: string) {
+        const input = page.locator('#messageInput');
+        await input.fill(text);
+        await expect(input).toHaveValue(text);
+        await page.waitForTimeout(400);
+        await input.press('Escape');
+        await expect(page.locator('#autocompleteDropdown')).toBeHidden();
+        await input.press('Enter');
+    }
+
+    /** Text of every system AND error message currently in the transcript. */
+    async function systemText(page: Page): Promise<string> {
+        const nodes = page.locator('.system-message, .error-message');
+        const n = await nodes.count();
+        const parts: string[] = [];
+        for (let i = 0; i < n; i++) parts.push((await nodes.nth(i).textContent()) || '');
+        return parts.join('\n');
+    }
+
+    /** Wait for the boot-time GET /commands to land (init() is async). */
+    async function rosterReady(page: Page) {
+        await expect
+            .poll(() => page.evaluate(() => !!(window as any).ppxai.commandRoster?.isLoaded()),
+                { timeout: 15_000 })
+            .toBe(true);
+    }
+
+    test('the roster is fetched at boot and drives routing', async ({ page }) => {
+        await rosterReady(page);
+        const roster = await page.evaluate(() => {
+            const r = (window as any).ppxai.commandRoster;
+            return {
+                loaded: r.isLoaded(),
+                version: r.version,
+                count: r.all().length,
+                clientDispatched: r.all()
+                    .filter((c: any) => c.dispatch === 'client')
+                    .map((c: any) => [c.name, c.client_action]),
+                aliasResolves: r.resolve('/cat')?.name,
+                quitVisible: !!r.resolve('/quit'),
+            };
+        });
+        expect(roster.loaded).toBe(true);
+        expect(roster.count).toBeGreaterThan(20);
+        // Exactly the four actions web bundles implementations for.
+        expect(new Map(roster.clientDispatched as [string, string][])).toEqual(new Map([
+            ['auto', 'auto.loop'],
+            ['run', 'run.controller'],
+            ['task', 'task.controller'],
+            ['token', 'token.manage'],
+        ]));
+        // Aliases are a FIELD, resolved client-side to the canonical entry.
+        expect(roster.aliasResolves).toBe('show');
+        // /quit is gated to {rich, textual} — web must not even see it.
+        expect(roster.quitVisible).toBe(false);
+    });
+
+    test('/help renders once and lists /token exactly once', async ({ page }) => {
+        // The pre-step-3a bug: the server catalog listed /token (it is
+        // clients={web,vscode}) AND `_appendExperimentalHelp()` appended it
+        // again from the JS catalog, mislabelled "web-only".
+        await rosterReady(page);
+        const posted = page.waitForResponse(
+            (r) => r.url().includes('/command/help') && r.request().method() === 'POST'
+        );
+        await typeCommand(page, '/help');
+        const response = await posted;
+        expect(JSON.parse(response.request().postData() || '{}').client).toBe('web');
+        await expect.poll(async () => (await systemText(page)).includes('/token'),
+            { timeout: 10_000 }).toBe(true);
+
+        const text = await systemText(page);
+        expect(text).not.toContain('Experimental (web-only)');
+        // One CATALOG ENTRY each. The entry form is "/name — description";
+        // a bare "/task" also occurs inside descriptions ("`/task help` for
+        // the full grammar"), so counting bare names would over-count.
+        expect((text.match(/\/token —/g) || []).length).toBe(1);
+        expect((text.match(/\/task —/g) || []).length).toBe(1);
+        expect((text.match(/\/run —/g) || []).length).toBe(1);
+    });
+
+    test('/token status is handled client-side — no POST to /command/token', async ({ page }) => {
+        await rosterReady(page);
+        const seen: string[] = [];
+        page.on('request', (r) => {
+            if (r.method() === 'POST') seen.push(new URL(r.url()).pathname);
+        });
+        await typeCommand(page, '/token status');
+        await expect.poll(async () => (await systemText(page)).includes('API token'),
+            { timeout: 10_000 }).toBe(true);
+        expect(seen.filter((p) => p.includes('/command/token'))).toEqual([]);
+    });
+
+    test('with no roster the dispatcher fails closed and leaks nothing', async ({ page }) => {
+        await rosterReady(page);
+        // Simulate the version-skew state: an installed ~/.ppxai/web newer
+        // than the running server, whose GET /commands 404s.
+        await page.evaluate(() => {
+            const r = (window as any).ppxai.commandRoster;
+            r._loaded = false;
+            r._byName = new Map();
+            r.apiClient.getCommandRoster = async () => { throw new Error('HTTP 404'); };
+        });
+        const bodies: string[] = [];
+        page.on('request', (r) => {
+            if (r.method() === 'POST') bodies.push(`${new URL(r.url()).pathname} ${r.postData() || ''}`);
+        });
+        await typeCommand(page, '/token set PLAYWRIGHT-SECRET-XYZ');
+        await expect.poll(async () => (await systemText(page)).toLowerCase().includes('skew'),
+            { timeout: 10_000 }).toBe(true);
+
+        // The step-3a guarantee: nothing was dispatched.
+        expect(bodies.filter((b) => b.includes('/command/'))).toEqual([]);
+        // ...and the one place the typed line DOES leave the browser is the
+        // PRE-EXISTING `> <input>` chat echo that app.showSystemMessage
+        // mirrors to POST /client-log. That is why `/token set` with no
+        // value uses window.prompt, and why the inline form answers with a
+        // "consider rotating this token" warning. Pinned rather than
+        // asserted-away so the day it is fixed (redact the echo), this test
+        // says so instead of silently passing.
+        const carrying = bodies.filter((b) => b.includes('PLAYWRIGHT-SECRET-XYZ'))
+            .map((b) => b.split(' ')[0]);
+        expect([...new Set(carrying)].sort()).toEqual(EXPECTED_ECHO_PATHS);
+    });
+});

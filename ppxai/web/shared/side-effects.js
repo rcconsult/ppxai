@@ -279,6 +279,19 @@ SideEffectsHandler._handlers = {
         }
     },
 
+    // ─── Command roster (ADR 0007 step 3a) ───────────────────────────────
+    refresh_command_roster({version}) {
+        // `/reload` re-imported ~/.ppxai/commands/*.py, so the roster this
+        // client fetched at startup is stale — and dispatch ROUTING reads
+        // it, not just autocomplete. Refetch; the roster keeps the old
+        // snapshot if the refetch fails, so a transient error can't wedge
+        // the dispatcher's fail-closed gate.
+        const roster = this.app.commandRoster;
+        if (!roster) return;
+        if (typeof version === 'number' && version === roster.version) return;
+        roster.load();
+    },
+
     // ─── VSCode-only escape hatch — web ignores ──────────────────────────
     vscode_delegate() {
         // Intentional no-op. VSCode's side-effect handler maps

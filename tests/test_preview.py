@@ -300,9 +300,10 @@ class TestPreviewServer:
 class TestPreviewArgsParser:
     """Coverage for `_parse_preview_args` (v1.18.3) — flag parsing for
     /preview's --serve / --proxy / --port. The flags were advertised in
-    web `commands.js` as far back as v1.17.1 but never reached the
-    handler, so /preview <file> --serve resolved as the literal filepath
-    `<file> --serve`."""
+    the web's hand-written command catalog (`web/shared/commands.js`,
+    deleted by ADR 0007 step 3a) as far back as v1.17.1 but never
+    reached the handler, so /preview <file> --serve resolved as the
+    literal filepath `<file> --serve`."""
 
     def _parse(self, args: str):
         from ppxai.commands.display import _parse_preview_args

@@ -318,10 +318,21 @@ envelope.
 The READ half of the same resource is `GET /commands` (ADR 0007 step
 2): `CommandFactory.roster(client)` is the one serializer for the
 command roster, so web/VSCode fetch what commands exist instead of
-restating them in `web/shared/commands.js`. Its `version` moves only
+restating them in a hand-written JS catalog. Its `version` moves only
 when the registry does, and `/reload` — the only thing that changes the
 roster at runtime — emits a `refresh_command_roster` side effect
 carrying that version.
+
+**Web consumes it (ADR 0007 step 3a).** `web/shared/command-roster.js`
+fetches `GET /commands?client=web` once at startup, refetches on the
+`refresh_command_roster` signal, and `CommandDispatcher` routes from the
+roster's per-command `dispatch` field rather than a hardcoded `if`-chain;
+`web/shared/commands.js` is deleted. With NO roster the dispatcher fails
+closed — it refuses slash commands instead of forwarding the ones it
+cannot classify, because a forwarded `/token set <value>` would put a
+secret in a request body and in the debug log. VSCode still carries its
+own hand-written roster (`vscode-extension/src/shared/commands.ts`)
+until step 3b.
 
 ```
                   ┌────────────────────────┐
@@ -745,8 +756,8 @@ ppxai/web/
 │   ├── api-client.js                   # ApiClient — all fetch() calls, timeout, error shape
 │   ├── app-state.js                    # AppState — centralised state with listener notifications
 │   ├── stream-handler.js               # StreamHandler — SSE buffer, RAF rendering, typed events
-│   ├── command-dispatcher.js           # CommandDispatcher — slash command routing
-│   ├── commands.js                     # Slash command handlers (flattened — no per-group commands/ folder)
+│   ├── command-dispatcher.js           # CommandDispatcher — roster-driven slash command routing
+│   ├── command-roster.js               # CommandRoster — cache over GET /commands (ADR 0007 step 3a)
 │   ├── formatters.js                   # Shared output/value formatters
 │   ├── result-renderer.js              # CommandResult → DOM rendering (incl. CompositeResult)
 │   ├── side-effects.js                 # SideEffectKind handlers (prompt_text, etc.)
