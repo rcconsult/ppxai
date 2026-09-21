@@ -1,7 +1,7 @@
 /**
  * AppStateFields — GENERATED FILE. DO NOT EDIT.
  *
- * Source:     ppxai/engine/app_state_schema.json (schema version 1.0)
+ * Source:     ppxai/engine/app_state_schema.json (schema version 1.1)
  * Generator:  vscode-extension/scripts/sync-schema.js
  * Regenerate: `npm run sync-schema` from vscode-extension/
  *             (also runs on precompile / prepackage / prewatch)

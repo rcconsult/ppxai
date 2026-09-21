@@ -22,6 +22,31 @@ The schema file is the **golden source of truth**. The server exposes
 it at `GET /schema/app-state` so any client (including diagnostic
 tooling) can fetch it at runtime.
 
+Versioning (maintained from 1.1 on, owner decision 2026-09-21)
+----------------------------------------------------------------
+`SCHEMA["version"]` is a `"MAJOR.MINOR"` string. It sat at `"1.0"`
+unchanged from this file's creation through five later commits that
+added fields (`last_message_role`, `agent_beat`, `model_supports_vision`,
+`background_agents`, `estimated_cost`'s rename) -- an unenforced rule is
+how that happened, so treat every "1.0" schema as unmeasured history,
+not a real signal. `"1.1"` is the first value anyone should trust.
+
+The rule a field-adder must follow:
+
+- **Bump MAJOR** when a field is removed, when its Python name or its
+  `client` (camelCase) name is renamed, or when its `type` changes.
+  Any of these breaks a consumer compiled/written against the old shape
+  (see `vscode-extension/src/schemaGuard.ts::compareSchemas`, which
+  calls exactly this combination "incompatible").
+- **Bump MINOR** when a field is added, or when only its `default`
+  value changes.
+
+This is **enforced**, not just documented: `tests/test_app_state_schema_version.py`
+checks the schema against the append-only, per-version field history at
+`ppxai/engine/app_state_schema_history.json`. Add a new history row and
+pin its fingerprint hash in that test file on every bump; a prior row
+must never be edited.
+
 Usage:
     state = AppState()
     state.on("provider", lambda v: print(f"Provider: {v}"))
