@@ -658,6 +658,20 @@ asserts the table holds **exactly** those five, that no command with a
 declared `client_action` appears in it, and that no legacy name leaked
 into the action registry — the shrinking baseline step 5 inherits.
 
+> **Update (2026-09-21, commit `beffa197`).** All five migrated;
+> `checkpoint` was the last (open owner decision 7 below). The baseline
+> is not "down to zero rows" — the mechanism itself is deleted:
+> `LEGACY_INTERCEPTS`, `LEGACY_HANDLERS`, the router's legacy branch,
+> `handlers/commands.ts` and `handlers/types.ts` are gone from
+> `vscode-extension/src/`. `tests/test_command_parity_fence.py` no
+> longer carries a shrinking-baseline test for this table; it asserts
+> ABSENCE (`test_the_legacy_mechanism_stays_deleted`,
+> `test_the_router_has_no_legacy_branch`,
+> `test_no_former_legacy_command_is_named_in_the_router`,
+> `test_a_reintroduced_legacy_branch_is_caught`), with
+> `FORMER_LEGACY_INTERCEPTS` kept only as a record of the five names a
+> reintroduced branch must not use.
+
 **FAIL CLOSED**, as web, and the stakes are higher: the extension host
 is a Node process with the developer's full privileges, and the VSIX
 versions independently of the `ppxai-server` binary, so "newer client,
@@ -754,7 +768,40 @@ verified:
    `/context hints`; `/context reload`.
 7. Attach a file, then `/context clear` → the Ctx% badge drops
    immediately, with no chat turn required.
-8. `/checkpoint clear` → the modal still appears and Cancel cancels.
+8. `/checkpoint clear` → **rewritten 2026-09-21 (commit `beffa197`)**
+   for the QuickPick behaviour, replacing the old "modal still appears"
+   item: a `prompt_quick_pick` list appears with Cancel as the first
+   (default-highlighted) row and the destructive row second; picking
+   Cancel dispatches `/checkpoint clear --no` and deletes nothing;
+   picking the second row dispatches `/checkpoint clear --yes` and
+   clears; Esc/dismiss also deletes nothing.
+
+> **Rich + Textual manual smoke items — NOT RUN, added 2026-09-21
+> (commit `beffa197`)** alongside the VSCode list above, since both
+> TUIs gained a real interactive surface (`consume_prompt_side_effects`
+> / `QuickPickDialog`) for the first time this commit:
+>
+> **Rich:**
+> 1. `/show @<term>` with 3+ matches → a numbered list prints; a bare
+>    Enter, `0`, a non-numeric reply, and Ctrl-C each cancel with no
+>    file opened; picking a number N opens that file.
+> 2. `/checkpoint clear` on a file backend → the numbered list's first
+>    row is Cancel; picking it clears nothing; picking the second row
+>    clears.
+> 3. `/auto fix` (or another `validate_agent_task` rejection) → a
+>    free-text prompt appears; an empty reply cancels instead of
+>    resuming `/auto`.
+>
+> **Textual:**
+> 1. Same three scenarios as Rich, presented as a `QuickPickDialog` /
+>    `PromptDialog` modal instead of inline numbered text.
+> 2. Escape dismisses `QuickPickDialog` and leaves no modal on the
+>    widget stack; selecting a row re-dispatches through the same path
+>    a typed command line takes.
+> 3. `PromptDialog` (the free-text prompt) has **no Escape binding**
+>    (Cancel button only) — this is pre-existing and untouched by this
+>    commit, not a new gap; note it during the smoke pass rather than
+>    treating it as a regression.
 
 ### 4. Derive, don't restate — ✅ DONE (2026-09-21)
 
@@ -1049,6 +1096,17 @@ covering one kind. Nothing was broken; the guard was.
 > of today there is **one** shrinking baseline row with live entries
 > (`LEGACY_INTERCEPT_BASELINE = {checkpoint}`), not two.
 
+> **Update (2026-09-21, commit `beffa197`, later same day).**
+> `checkpoint` migrated too — decision 7 is DONE, not open. There is
+> now **zero** shrinking-baseline rows with live entries for
+> `LEGACY_INTERCEPT_BASELINE`, and the table stopped being a baseline
+> at all: `tests/test_command_parity_fence.py` replaced it with
+> `FORMER_LEGACY_INTERCEPTS` (a record of the five deleted names) and
+> absence assertions (`test_the_legacy_mechanism_stays_deleted` et al.,
+> listed above). So the "one shrinking baseline row" fact this update
+> recorded a few hours earlier is itself superseded — read it as
+> history, not current state.
+
 Both directions fail. Adding to either fails with a message saying what
 to do instead ("declare a `client_action`"; "this is an open owner
 decision").
@@ -1309,9 +1367,26 @@ behaviour or schema change that wants an owner, not a refactor.
      intercept.
    **DECIDED 2026-09-21: option B.** Build a confirmation that works in
    all four clients, including both TUIs, then migrate `/checkpoint`
-   off `LEGACY_INTERCEPTS`. Implementation is in progress — until it
-   lands, the legacy table holds one row, `checkpoint`. Not filed as a
-   separate debt item; it is now planned work, not deferred work.
+   off `LEGACY_INTERCEPTS`. Not filed as a separate debt item; it was
+   planned work, not deferred work.
+
+   > **Update (2026-09-21, commit `beffa197`, later same day). DONE.**
+   > `/checkpoint clear` with no flag returns `prompt_quick_pick` —
+   > Cancel first, the destructive row second — and re-dispatches as
+   > `clear --no` or `clear --yes`; dismissing deletes nothing.
+   > `ppxai/commands/agent.py::_checkpoint_clear`. Both TUIs now read
+   > `CommandResult.side_effects` for the first time (Rich: numbered
+   > list in `ppxai/rendering/rich_renderer.py::
+   > consume_prompt_side_effects`; Textual: `QuickPickDialog` in
+   > `ppxai/tui/widgets/dialog.py` + `PPXAIDEApp::
+   > _consume_prompt_side_effects`), which incidentally also unblocked
+   > `/show @x` multi-match and `/edit <missing>`-create, which had been
+   > dead-ending in both TUIs for the same underlying reason. VSCode's
+   > `/checkpoint` now routes through the factory and the legacy
+   > mechanism (`LEGACY_INTERCEPTS`, `LEGACY_HANDLERS`, the router's
+   > legacy branch, `handlers/commands.ts`, `handlers/types.ts`) is
+   > deleted, not emptied. `CLIENT_ROUND_TRIP_KINDS` in
+   > `ppxai/commands/results.py` names the fenced contract.
 
 ## Step 5 follow-ups (2026-09-21, owner decisions)
 
@@ -1336,7 +1411,15 @@ threads, each with its own tests.
   TUI consumes command `side_effects` at all today (verified,
   `grep -rn side_effect ppxai/tui ppxai/rich ppxai/rendering` returns
   nothing), which is why a cross-client confirmation needs TUI-side
-  work, not just a new side-effect kind. Found and fixed along the way:
+  work, not just a new side-effect kind.
+
+  > **Update (2026-09-21, commit `beffa197`, later same day).** The
+  > fifth migrated too — see decision 7's update above. `checkpoint`
+  > is gone from `LEGACY_INTERCEPTS` because `LEGACY_INTERCEPTS` itself
+  > is gone; both TUIs consume `side_effects` now (the fact above that
+  > "shaped that build" no longer holds).
+
+  Found and fixed along the way:
   - `/tools help` (and `help editing`, `help <tool>`) existed only in
     VSCode's intercept, even though `help` is a declared subcommand
     offered by completion in all four clients. The guide text moved to
@@ -1428,6 +1511,17 @@ legacy VSCode intercepts, and it may only shrink — the same discipline as
 > leaked into `CLIENT_ACTIONS`. Step 5 inherits that list rather than
 > re-deriving it; it may only shrink, and only by migrating a command to
 > factory routing.
+
+> **Update (2026-09-21, commit `beffa197`).** The table shrank to
+> nothing and was deleted, not left empty: `LEGACY_INTERCEPTS` and
+> `LEGACY_HANDLERS` no longer exist in `commandRouter.ts`.
+> `TestVscodeRosterDrivenDispatchOrder`'s "pins it at exactly
+> `{tools, checkpoint, context, ls, tree}`" assertion above is
+> superseded by the absence tests in
+> `tests/test_command_parity_fence.py` (see the earlier 2026-09-21
+> updates in this file for the list). The "Acknowledged legacy" table
+> row above this note is kept as a record of what the five commands
+> used to be, not a live description of the fence.
 
 ## Note for step 2+ — PyInstaller hiddenimports
 

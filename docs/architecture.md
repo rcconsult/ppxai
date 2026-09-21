@@ -348,6 +348,15 @@ intercepted without a declared action, as the named, shrinking
 `vscode`-free by design (the `taskController.ts` idiom), so the
 behavioural tests compile and drive the real TypeScript under Node.
 
+> **Update (2026-09-21, commit `beffa197`).** The fifth command,
+> `checkpoint`, migrated too, and `LEGACY_INTERCEPTS` — along with
+> `LEGACY_HANDLERS`, the router's legacy branch, `handlers/commands.ts`
+> and `handlers/types.ts` — is deleted, not merely emptied. `/checkpoint
+> clear` now asks first via `prompt_quick_pick` in all four clients
+> (`ppxai/commands/agent.py::_checkpoint_clear`), and both TUIs consume
+> command `side_effects` for the first time. See
+> `docs/plan-adr-0007-completion-service.md` open owner decision 7.
+
 **Completion derives from the same declaration too (ADR 0007 step 4,
 2026-09-21).** The seven hand-written `_*_SUBCOMMANDS` tables in
 `engine/completion.py` — the LAST of the six hand-written rosters the

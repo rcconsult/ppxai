@@ -39,10 +39,23 @@ row, `checkpoint`. **DECIDED 2026-09-21: option B** for
 `/checkpoint clear` (an irreversible delete whose only confirmation
 today is VSCode's modal) — build a confirmation that works in all four
 clients, including both TUIs (neither consumes command `side_effects`
-today), then migrate `checkpoint` off this table. Implementation is in
-progress; until it lands the baseline holds its one row. Detail:
+today), then migrate `checkpoint` off this table. Detail:
 `docs/plan-adr-0007-completion-service.md` §"Step 5 follow-ups
 (2026-09-21, owner decisions)".
+
+> **Update (2026-09-21, commit `beffa197`, later the same day). DONE,
+> not in progress.** `checkpoint` migrated too. `LEGACY_INTERCEPTS`
+> is not "down to zero rows" — it and `LEGACY_HANDLERS`, the router's
+> legacy branch, `handlers/commands.ts` and `handlers/types.ts` are all
+> deleted from `vscode-extension/src/`. `/checkpoint clear` with no
+> flag now returns `prompt_quick_pick` (Cancel first, the destructive
+> row second) in all four clients, and both TUIs consume
+> `CommandResult.side_effects` for the first time — see
+> `ppxai/commands/agent.py::_checkpoint_clear`,
+> `ppxai/rendering/rich_renderer.py::consume_prompt_side_effects`, and
+> `ppxai/tui/widgets/dialog.py::QuickPickDialog`. The step-5 parity
+> fence no longer models this as a shrinking baseline;
+> `tests/test_command_parity_fence.py` asserts the mechanism's absence.
 
 **Related:**
 - `ppxai/engine/completion.py` — current home of `complete()`
@@ -540,8 +553,10 @@ seed. Incremental path:
       intercepts — zero per-name branches in either JS client, and
       `LEGACY_INTERCEPTS` as an explicit five-row SHRINKING baseline that
       fails when it grows AND when it shrinks without its baseline row
-      going too (**update, 2026-09-21: down to one row, `checkpoint`
-      — see §After acceptance**); (c) no surviving hand-written roster — every deletion in
+      going too (**update, 2026-09-21: the table emptied to zero rows
+      and was then deleted outright — see §After acceptance; the fence
+      now asserts its absence rather than tracking a shrinking
+      baseline**); (c) no surviving hand-written roster — every deletion in
       the plan's completeness table fenced as absent, plus a GENERIC
       detector (a literal naming ≥ 6 distinct registered commands, N
       measured against the real tree) with one named, self-fencing

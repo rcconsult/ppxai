@@ -68,7 +68,8 @@ quoting them** — this table is a map, not a source.
 | **47** | VSCode `/task` lacks the web split-pane | deliberate T8a scope |
 | **75** | second-level "argument kinds" schema for command completion | debt item, not now — owner decision 2026-09-21 (ADR 0007 open decision #3) |
 | **76** | fold chat-shaped-ness into the command roster (`STREAMING_COMMANDS`) | debt item for now — owner decision 2026-09-21 (ADR 0007 open decision #4) |
-| **77** | dead client code left after the ADR 0007 step-5 VSCode migration | ~30min, verified by grep — no owner decision needed |
+| **77** | dead client code left after the ADR 0007 step-5 VSCode migration | ~45min, verified by grep — no owner decision needed, extended 2026-09-21 with 4 more dead `httpClient.ts` methods |
+| **78** | the test suite leaks empty checkpoint directories into the real `~/.ppxai` | hermeticity gap, same class as the v1.19.0 retag cycle — NOT fixed, existing dirs NOT deleted |
 
 ---
 
@@ -2436,6 +2437,20 @@ exemption.
   own `def` line; every other hit is in `tests/test_ui.py` (7 test
   methods exercising it directly).
 
+**Update (2026-09-21, commit `beffa197`).** Four more `httpClient.ts`
+methods went dead the same way, this time from the `/checkpoint`
+migration (open owner decision 7): `getCheckpointStatus`,
+`listCheckpoints`, `setCheckpointBackend`, `clearFileCheckpoints`.
+Verified: `grep -rn "\.<method>(" vscode-extension/src ppxai tests`
+for each of the four returns nothing outside their own `def` in
+`httpClient.ts`. These were the HTTP-client half of the old
+`/checkpoint` modal/list/backend-switch flow that the deleted
+`LEGACY_INTERCEPTS` mechanism drove; the intercepts calling them
+(`handlers/commands.ts`) are gone, the client methods were not.
+`undoCheckpoint` is NOT dead — it still has real callers
+(`chatPanel.ts:2106`, `chatPanel.ts:2184`, `ppxai/web/app.js:651`,
+`ppxai/web/app.js:1981`) and stays out of this item.
+
 **Blast radius:** none — dead code, not reachable from any command path.
 
 **Trigger to revisit:** next pass through either file; cheap to delete
@@ -2443,9 +2458,109 @@ whenever someone is already editing nearby (same shape as the
 `display_file_editing_help` deletion in the step-5 follow-ups above,
 which removed a sibling dead function the same day this was found).
 
-**Effort:** ~30min — four method deletions in `httpClient.ts` (plus
-their TS type declarations if any), one function deletion in `ui.py`
-plus its `tests/test_ui.py::TestToolHelp` class.
+**Effort:** ~45min — eight method deletions in `httpClient.ts` (four
+original plus the four `/checkpoint` wrappers above, plus their TS type
+declarations if any), one function deletion in `ui.py` plus its
+`tests/test_ui.py::TestToolHelp` class.
+
+---
+
+### Item 78 — the test suite leaks empty checkpoint directories into the real `~/.ppxai` [testing / hermeticity]
+
+**Filed 2026-09-21.** Found while auditing the checkpoint-clear
+confirmation work above.
+
+**What's wrong, measured:** `~/.ppxai/sessions/checkpoints/` holds
+**14,782 entries** on this host (re-counted 2026-09-21, up from ~14,770
+a short time earlier the same day — the suite ran again in between).
+**14,780 of them are empty directories**; only 2 have any content.
+Names are `session_<YYYYMMDD_HHMMSS>`, grouped by date on days the
+suite ran (hundreds to ~1,450 per day, per the earlier per-day
+breakdown). Reproduced per-file by counting entries before/after a run:
+`tests/test_command_roster_endpoint.py` +9, `tests/test_checkpoint_envelope_parity.py`
++3, `tests/test_tui_prompt_side_effects.py` +0, `tests/test_engine_context.py` +0
+— i.e. it is specifically the server/`TestClient` tests that create a
+session, not every test that touches sessions.
+
+**Mechanism, read and verified, not inferred:**
+- `ppxai/checkpoint.py:212-213`, `FileCheckpointBackend.__init__`:
+  ```python
+  self.checkpoint_dir = Path(SESSIONS_DIR) / "checkpoints" / session_id
+  self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+  ```
+  The `mkdir` runs at **construction**, not on first actual checkpoint
+  write — so a `FileCheckpointBackend` that is built and never used
+  still leaves a directory on disk.
+- `CheckpointManager._initialize_backend()` (`ppxai/checkpoint.py:365-386`)
+  only builds a `FileCheckpointBackend` when
+  `GitCheckpointBackend(self.working_dir).is_available()` is `False` —
+  and `is_available()` (`ppxai/checkpoint.py:65-68`) checks for a `.git`
+  subdirectory of `working_dir` **directly**, no parent-directory
+  search. A `TestClient` session created against a `tmp_path` working
+  directory (no `.git` inside it) always falls to the file backend,
+  regardless of whether the test process itself happens to be running
+  inside this git repo.
+  `CheckpointManager` is constructed from `ppxai/engine/client.py:296`
+  (`EngineClient._init_checkpoint_manager`) and
+  `ppxai/engine/checkpoint_ops.py:205` — both reachable from ordinary
+  session-creation code, not just explicit checkpoint commands.
+- `session_id` defaults to `self.session.session_name or "default"`
+  (`ppxai/engine/client.py:295`), and `session_name`'s default is
+  `f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"`
+  (`ppxai/engine/session.py:327`) — this is where the
+  `session_<timestamp>` directory names come from.
+- `SESSIONS_DIR = PPXAI_HOME / "sessions"` is a **module-level constant**
+  in `ppxai/config/loader.py:33`, resolved from `Path.home()` at import
+  time — the same class of hazard as
+  `docs/lessons/module-level-home-paths-leak-into-user-state.md`.
+  `tests/conftest.py` has two autouse fixtures that redirect
+  module-level home-derived constants this same way
+  (`_the_developers_config_is_unreachable` → `loader.USER_CONFIG_FILE`;
+  `_isolate_session_state_pointer` → `engine.session.SESSION_STATE_FILE`),
+  but **neither, nor any other fixture, redirects `SESSIONS_DIR` or
+  `checkpoint.SESSIONS_DIR`** — verified: `grep -n "SESSIONS_DIR"
+  tests/conftest.py` returns nothing.
+
+**Blast radius:** no data loss, no secrets exposed (empty directories
+only). Unbounded inode/directory growth in the user's real data
+directory; slows anything that lists `~/.ppxai/sessions/checkpoints/`
+(already ~14.8k entries); it is the same hermeticity class — real user
+state mutated by a test run — that caused the v1.19.0 retag cycle
+(CLAUDE.md "Verify, Don't Assume").
+
+**NOT fixed. Existing directories NOT deleted** — `~/.ppxai` is the
+owner's live data directory; cleanup is the owner's call, not something
+to do silently as a side effect of a docs pass.
+
+**Fix options sketched from the code above, not yet chosen:**
+1. **Autouse conftest redirect** (matches the existing pattern for
+   `USER_CONFIG_FILE` / `SESSION_STATE_FILE`): monkeypatch
+   `ppxai.config.loader.SESSIONS_DIR` (and, since `checkpoint.py` does
+   `from .config import SESSIONS_DIR`, the name bound on
+   `ppxai.checkpoint` too — the same "patch the importing module's
+   namespace" lesson CLAUDE.md's pattern doc already states) to a
+   `tmp_path_factory` directory. Cheapest, most consistent with prior
+   art. ~30–45min, one fixture, no production code touched.
+2. **Lazy mkdir** — move
+   `self.checkpoint_dir.mkdir(parents=True, exist_ok=True)` out of
+   `FileCheckpointBackend.__init__` and into `create_checkpoint()` (the
+   method that actually writes a snapshot), so a backend that is built
+   and never used creates nothing. Fixes the leak at the root instead
+   of only in tests, but touches production code and needs a check
+   that every other method assuming the directory exists
+   (`cleanup_old_checkpoints`, the `iterdir()` call in it) still
+   degrades sensibly against a missing directory. ~1–2h with test
+   coverage.
+3. **Guard test** — a session-scoped fixture that snapshots
+   `~/.ppxai/sessions/checkpoints/`'s entry count before the suite and
+   fails if it grew after, so a future reintroduction is caught rather
+   than silently accumulating again. Cheap (~30min) but detects the
+   symptom, not the cause — pairs with option 1 or 2 rather than
+   replacing them.
+
+Option 1 is the lowest-risk fix and matches the two precedents already
+in `conftest.py`; option 2 is the more complete fix but has a larger
+review surface. Not sequenced or assigned — owner's call.
 
 ---
 

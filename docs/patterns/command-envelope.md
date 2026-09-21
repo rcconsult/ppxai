@@ -49,9 +49,24 @@ For free-text follow-ups (where the answer isn't from a finite set), engine emit
 
 - **Web** — renders an inline form below the notification; on submit, dispatches `/<command_to_resume> <args>`.
 - **VSCode** — `vscode.window.showInputBox({prompt: question, placeHolder})`; on non-empty reply, dispatches via `dispatchCommandFromSideEffect`.
-- **TUI** — ignores the kind (open-enum invariant). The notification message that accompanies the side-effect serves as the user-visible nudge; the user retypes `/auto` themselves with more detail.
+- **TUI** — as of v1.19.3 (commit `beffa197`) both Rich and Textual consume this kind too, they no longer ignore it. Rich uses `Prompt.ask`; Textual shows a `PromptDialog` modal. An empty reply cancels instead of resuming. See `prompt_quick_pick` below — `prompt_text` moved into `CLIENT_ROUND_TRIP_KINDS` alongside it, so this section is no longer the open-enum exception it used to be.
 
-First user: `validate_agent_task` rejection. `/auto fix` → engine returns `NotificationResult(WARNING)` + `prompt_text` side-effect → web/VSCode auto-resume the elaboration without the user retyping the slash command.
+First user: `validate_agent_task` rejection. `/auto fix` → engine returns `NotificationResult(WARNING)` + `prompt_text` side-effect → web/VSCode auto-resume the elaboration without the user retyping the slash command; Rich/Textual now show the free-text prompt in-place instead of leaving the user to retype `/auto` from scratch.
+
+## `CLIENT_ROUND_TRIP_KINDS` — kinds a client may not ignore (v1.19.3)
+
+The open-enum invariant (rule 4 above) says clients may ignore a kind they
+don't understand. `prompt_quick_pick` and `prompt_text` are the exception:
+dropping either dead-ends the command — the user sees a notification and
+nothing else ever happens, indistinguishable at runtime from a command that
+had nothing more to say. `ppxai/commands/results.py::CLIENT_ROUND_TRIP_KINDS`
+names the two kinds every client (rich, textual, web, vscode) must consume,
+and `tests/test_command_parity_fence.py::TestPromptKindsAreConsumedEverywhere`
+fails if any client stops. Until 2026-09-21 (commit `beffa197`) neither TUI
+read `CommandResult.side_effects` at all, so `prompt_quick_pick` and
+`prompt_text` dead-ended silently there — see the TUI bullet above and
+`docs/plan-adr-0007-completion-service.md` open owner decision 7 for the
+history.
 
 ## Buttons are command call sites too (v1.19.1)
 

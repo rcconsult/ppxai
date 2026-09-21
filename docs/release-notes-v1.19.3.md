@@ -26,9 +26,16 @@
 > existing connect/disconnect commands; `/quit`/`/exit` are unaffected
 > in the Rich and Textual TUIs. Both JS clients now fail CLOSED on slash
 > commands when the roster can't be fetched (e.g. newer web assets
-> against an older server). See "One command registry" below for the
-> rest — subcommand display in `/help`, `/tools help` reaching Rich and
-> Textual, VSCode's `/tools`/`/context`/`/ls`/`/tree` now server-rendered.
+> against an older server). **`/checkpoint clear` now asks first in
+> ALL four clients** (web, Rich, Textual, VSCode) instead of clearing
+> immediately — Cancel is the default-highlighted first choice, `--yes`
+> is there for scripted use — and both TUIs gained their first
+> interactive prompt UI along the way, which also fixes `/show @x`
+> multi-match and `/edit <missing>` dead-ending in Rich/Textual. See
+> "One command registry" below for the rest — subcommand display in
+> `/help`, `/tools help` reaching Rich and Textual, VSCode's
+> `/tools`/`/context`/`/ls`/`/tree`/`/checkpoint` now server-rendered
+> and VSCode's legacy intercept mechanism deleted entirely.
 >
 > No config-shape changes. The shipped microk8s
 > coder template changes shape, but it is an example: nothing in an
@@ -78,14 +85,33 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
 - Same-day follow-ups: `/help <cmd>` now lists a command's
   subcommands; `/tools help` / `/tools help editing` now work in Rich,
   Textual and web (previously VSCode-only); VSCode's `/tools`,
-  `/context`, `/ls` and `/tree` are now server-rendered via
-  `POST /command/<name>` (`/checkpoint` is the one VSCode command that
-  stays client-side for now: `/checkpoint clear`'s irreversible delete
-  needs a confirmation, and the owner decided 2026-09-21 to build one
-  that works in all four clients, including both TUIs, before
-  `/checkpoint` migrates — implementation in progress);
+  `/context`, `/ls`, `/tree` and (as of the follow-up below)
+  `/checkpoint` are now server-rendered via `POST /command/<name>`;
   `/context clear` no longer leaves a stale Ctx% badge; three stale
   `/tools agent` hint strings (retired by ADR 0011) are fixed.
+- **`/checkpoint clear` asks first, in all four clients, and both TUIs
+  gained their first interactive prompt UI.** `/checkpoint clear`
+  irreversibly deletes every file-backend snapshot; VSCode's modal used
+  to be the only confirmation any client had — web, Rich and Textual
+  cleared immediately. With no flag, `/checkpoint clear` now returns a
+  quick-pick list with **Cancel first** and the destructive row second,
+  so a bare Enter on the default-highlighted item can never destroy
+  anything; picking Cancel re-dispatches `clear --no` (deletes nothing),
+  picking the second row re-dispatches `clear --yes` (clears). Scripted
+  use needs `--yes` directly. Rich shows a numbered list (Enter, `0`, a
+  non-numeric reply, or Ctrl-C all cancel); Textual shows a
+  `QuickPickDialog` modal (Escape dismisses). Neither TUI previously
+  read `CommandResult.side_effects` at all, so this also fixes two
+  unrelated dead ends: `/show @<term>` with several matches used to
+  print a count and stop — it now shows the numbered/dialog pick and
+  opens the chosen file; `/edit <missing-file>` used to print "not
+  found" with no way to create it — it now offers to create the file.
+  VSCode's legacy intercept mechanism — the last row of
+  `LEGACY_INTERCEPTS`, plus `LEGACY_HANDLERS`, the router's legacy
+  branch, `handlers/commands.ts` and `handlers/types.ts` — is deleted
+  outright, not just emptied. See
+  [docs/decisions/0007-completion-first-class-service.md](decisions/0007-completion-first-class-service.md)
+  open owner decision 7. VSIX size: 136 KB.
 
 ## Fixed
 
@@ -457,13 +483,17 @@ carried over — Items 73 and 74 filed, Item 34 closed).
 
 ## Verification
 
-Full suite at `b067ce9c` (branch HEAD) on macOS with
-`uv sync --all-extras`: **5,909 passed, 1 skipped, 0 failed** in 535s.
-Windows at the same point in the branch, measured on the other host:
-**5,878 passed, 32 skipped, 0 failed** @ `1c1beac4`; the extra skips are
-the usual platform gates (PTY, symlink cases, POSIX signal semantics).
-The Playwright specs under `tests/e2e/` are not in either count —
-**209 passed** there, including the 9 new `tool-turn.spec.ts` tests.
+Full suite at `beffa197` (branch HEAD, 2026-09-21 — supersedes the
+`b067ce9c` figure below, taken before ADR 0007's steps landed) on macOS
+with `uv sync --all-extras`: **6,667 passed, 1 skipped, 0 failed** in
+531s. The `b067ce9c` measurement — **5,909 passed, 1 skipped, 0
+failed** in 535s — predates ADR 0007 entirely; kept for the record, not
+current. Windows at an earlier point in the branch, measured on the
+other host: **5,878 passed, 32 skipped, 0 failed** @ `1c1beac4`; the
+extra skips are the usual platform gates (PTY, symlink cases, POSIX
+signal semantics) — not re-run since ADR 0007 landed. The Playwright
+specs under `tests/e2e/` are not in either count — **209 passed**
+there at `beffa197`, including the 9 `tool-turn.spec.ts` tests.
 
 The first two fixes were mutation-tested — the dropped-call warning
 fails 2 guards without its change, `/model info` fails 6. The tool-strip
