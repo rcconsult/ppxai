@@ -40,6 +40,17 @@ Verified by hand against ppxai-sre's real imports on 2026-09-21 (grep of
 `libs/core/tests/test_ppxai_seam.py` for the seam-only tier): both pinned
 lists below match exactly, no drift found.
 
+**Which copy wins when the two disagree: theirs.** The pinned tiers below
+are a DATED SNAPSHOT (2026-09-21), copied by hand. ppxai-sre's copy is no
+longer hand-pinned: since their commit d7b2d86 it is DERIVED — an AST scan
+of their own source trees that fails in both directions (an import added
+without a pin, a pin no longer imported). This file cannot run that check,
+because the source of truth is in their tree and reading it is the
+coupling rejected above. So this copy can go stale GREEN: their surface
+changes, their derived check goes red and is fixed there, and nothing here
+signals it. If the tiers here ever differ from theirs, update THIS file
+and re-date the snapshot — do not "correct" theirs to match.
+
 ## The two tiers
 
 `PRODUCTION_IMPORTS` — what ppxai-sre's runtime imports.
