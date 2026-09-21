@@ -26,7 +26,16 @@ from textual.widgets import Footer, Header
 from ppxai.commands import CommandFactory
 from ppxai.commands.attach import (_load_file as _attach_load_file, build_multimodal_content)
 from ppxai.commands.client_handled import client_handled_message
-from ppxai.commands.results import DirectoryListingResult, DirectoryTreeResult
+from ppxai.commands.results import (
+    MAX_PROMPT_RESUME_DEPTH,
+    DirectoryListingResult,
+    DirectoryTreeResult,
+    SideEffectKind,
+    parse_prompt_text,
+    parse_quick_pick,
+    prompt_text_resume_args,
+    resume_command_line,
+)
 from ppxai.common.autosave_guard import AutosaveFailureGuard
 from ppxai.common.consent import normalize_consent_response
 from ppxai.common.logger import Logger, get_logger
@@ -55,7 +64,7 @@ from ppxai.tui.terminal import can_display_images
 from ppxai.tui.themes.themes import CUSTOM_THEMES, CYCLE_THEMES, DEFAULT_THEME
 from ppxai.tui.widgets.chat_view import ChatView
 from ppxai.tui.widgets.code_editor import CodeEditor, get_syntax_theme_for_app_theme
-from ppxai.tui.widgets.dialog import ConsentDialog
+from ppxai.tui.widgets.dialog import ConsentDialog, PromptDialog, QuickPickDialog
 from ppxai.tui.widgets.file_tree import FileTree
 from ppxai.tui.widgets.footer_status import FooterStatus
 from ppxai.tui.widgets.input_box import InputBox
@@ -745,6 +754,86 @@ class PPXAIDEApp(App):
         cwd_parts = Path(path).parts
         return "/".join(cwd_parts[-2:]) if len(cwd_parts) >= 2 else path
 
+    # ------------------------------------------------------------------
+    # Prompt side-effects — the Textual half of CLIENT_ROUND_TRIP_KINDS
+    # ------------------------------------------------------------------
+    #
+    # Each client owns its own consumer (ADR 0002's three-pattern split
+    # applies here too): web builds DOM buttons, VSCode calls
+    # `showQuickPick`, Rich prints a numbered list, and this one pushes a
+    # modal. The ONLY shared piece is the pure payload parsing in
+    # `ppxai/commands/results.py`, so no client re-derives the wire shape.
+
+    def _consume_prompt_side_effects(self, result, resume_depth: int) -> None:
+        """Raise a modal for the first prompt side-effect on `result`.
+
+        Non-blocking by construction: `push_screen_wait` needs an active
+        worker and `_handle_command` runs on the message pump, so this
+        uses the callback form (`push_screen(screen, cb)`) that
+        `run_consent.py` and `_show_consent_dialog` already use. The
+        callback re-dispatches through `_handle_command` in a worker.
+
+        Dismissing the modal does nothing at all, which is the safe
+        outcome: a handler that emitted a prompt has not performed its
+        action yet (see `CLIENT_ROUND_TRIP_KINDS`), so no second dispatch
+        means no deletion, no file created, nothing.
+        """
+        for effect in getattr(result, "side_effects", None) or []:
+            if effect.kind == SideEffectKind.PROMPT_QUICK_PICK:
+                parsed = parse_quick_pick(effect.payload)
+                if parsed is None:
+                    continue
+                title, command, items = parsed
+                self.push_screen(
+                    QuickPickDialog(title=title, items=items),
+                    lambda value, command=command, depth=resume_depth: (
+                        self._resume_after_prompt(
+                            resume_command_line(command, value), depth)
+                        if isinstance(value, str) and value
+                        else None
+                    ),
+                )
+                return
+            if effect.kind == SideEffectKind.PROMPT_TEXT:
+                parsed = parse_prompt_text(effect.payload)
+                if parsed is None:
+                    continue
+                question, command, original_args, placeholder = parsed
+                self.push_screen(
+                    PromptDialog(
+                        title="More detail needed",
+                        message=question,
+                        prompt="Your answer",
+                        placeholder=placeholder,
+                    ),
+                    lambda reply, command=command, original=original_args,
+                    depth=resume_depth: (
+                        self._resume_after_prompt(
+                            resume_command_line(
+                                command, prompt_text_resume_args(original, reply)),
+                            depth)
+                        if isinstance(reply, str) and reply.strip()
+                        else None
+                    ),
+                )
+                return
+
+    def _resume_after_prompt(self, line: str, resume_depth: int) -> None:
+        """Re-dispatch `line` after the user answered a prompt.
+
+        Bounded: a handler that always prompts would otherwise loop
+        forever against a client that always answers, since each hop is a
+        fresh stateless dispatch.
+        """
+        if resume_depth + 1 >= MAX_PROMPT_RESUME_DEPTH:
+            self._chat_view.add_system_message(
+                f"[yellow]Stopped after {MAX_PROMPT_RESUME_DEPTH} prompts in a "
+                "row — run the command again if that was not a loop.[/yellow]"
+            )
+            return
+        self.run_worker(
+            self._handle_command(line, _resume_depth=resume_depth + 1))
+
     def _update_checkpoint_badge(self, status_bar: "StatusBar") -> None:
         """Update checkpoint/undo badge based on current checkpoint status.
 
@@ -1040,8 +1129,16 @@ class PPXAIDEApp(App):
         """Handle stream event in main thread. Delegated to stream_handler."""
         stream_handler.handle_stream_event(self, event_type, event_data)
 
-    async def _handle_command(self, command: str) -> None:
-        """Handle slash commands using Command Factory pattern."""
+    async def _handle_command(self, command: str, _resume_depth: int = 0) -> None:
+        """Handle slash commands using Command Factory pattern.
+
+        `_resume_depth` counts how many prompt side-effects led here. A
+        handler that emits one of `CLIENT_ROUND_TRIP_KINDS` has not done
+        its work yet; the user's answer arrives as a fresh dispatch of
+        `/<command_to_resume> <value>` (ADR "Q3 (b)": stateless resume).
+        A resumed command may legitimately prompt again, so the chain is
+        BOUNDED rather than forbidden.
+        """
         chat_view = self._chat_view
         parts = command[1:].split(maxsplit=1)
         cmd = parts[0].lower()
@@ -1109,6 +1206,14 @@ class PPXAIDEApp(App):
                     bus_event = RESULT_EVENT_MAP.get(type(result))
                     if bus_event:
                         self._event_bus.emit(bus_event, data=result)
+
+                    # Prompt side-effects (CLIENT_ROUND_TRIP_KINDS).
+                    # Until 2026-09-21 this TUI ignored `side_effects`
+                    # entirely, so `/show @config` with three matches
+                    # printed "3 files match 'config'" and stopped — the
+                    # command never completed. Answering re-dispatches
+                    # through THIS method, the path a typed line takes.
+                    self._consume_prompt_side_effects(result, _resume_depth)
 
                 # T8b: once this session has touched a run surface, watch for
                 # parked runs so a spawn-consent request raises a dialog

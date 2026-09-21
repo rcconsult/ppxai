@@ -45,7 +45,7 @@ from ..rich.ui import (  # noqa: F401 — re-exported via commands/__init__.py
 from .client_handled import client_handled_message
 from .context import RichCommandContext
 from .factory import CommandFactory
-from .results import CommandResult
+from .results import MAX_PROMPT_RESUME_DEPTH, CommandResult
 
 logger = get_logger("tui")
 
@@ -555,9 +555,20 @@ class CommandHandler:
 
         return augmented_message, [{'name': f['name'], 'path': f['path']} for f in resolved_files]
 
-    def handle_command(self, user_input: str) -> bool | None:
+    def handle_command(self, user_input: str, _resume_depth: int = 0) -> bool | None:
         """
         Handle a slash command.
+
+        Args:
+            user_input: the typed line, including the leading slash.
+            _resume_depth: how many prompt resumes led here. A handler
+                that emits a `prompt_quick_pick` / `prompt_text`
+                side-effect has NOT done its work yet — the answer comes
+                back as a fresh dispatch of `/<command_to_resume>
+                <value>` (ADR "Q3 (b)": stateless resume). A resumed
+                command is allowed to prompt again (`/show @x` → a path →
+                nothing more; `/edit missing` → "create it?" → could ask
+                again), so the chain is bounded rather than forbidden.
 
         Returns:
             - True if should exit the application
@@ -565,7 +576,7 @@ class CommandHandler:
         """
         # Lazy by necessity: `rendering/__init__` -> `base` -> this
         # package's __init__ -> here. One call site.
-        from ..rendering.rich_renderer import RichRenderer
+        from ..rendering.rich_renderer import RichRenderer, consume_prompt_side_effects
 
         command_parts = user_input.split(maxsplit=1)
         command = command_parts[0].lower()
@@ -616,6 +627,25 @@ class CommandHandler:
                     attached_paths = (result.metadata or {}).get("attached_paths") if result.metadata else None
                     if attached_paths:
                         self._render_inline_image_previews(attached_paths)
+
+                    # Prompt side-effects (CLIENT_ROUND_TRIP_KINDS).
+                    # Until 2026-09-21 Rich ignored these entirely, so
+                    # `/show @config` with three matches printed
+                    # "3 files match 'config'" and stopped — the command
+                    # the user asked for never ran. The answer is
+                    # re-dispatched through THIS method, the same path a
+                    # typed line takes.
+                    resume_line = consume_prompt_side_effects(result)
+                    if resume_line:
+                        if _resume_depth + 1 >= MAX_PROMPT_RESUME_DEPTH:
+                            console.print(
+                                f"[yellow]Stopped after {MAX_PROMPT_RESUME_DEPTH} "
+                                "prompts in a row — run the command again if that "
+                                "was not a loop.[/yellow]\n"
+                            )
+                            return False
+                        return self.handle_command(
+                            resume_line, _resume_depth=_resume_depth + 1)
 
                 return False
             except Exception as e:

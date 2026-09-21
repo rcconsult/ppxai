@@ -352,7 +352,9 @@ def handle_checkpoint(context: CommandContext, args: str) -> CommandResult:
         /checkpoint status       - Show checkpoint status
         /checkpoint list         - List recent checkpoints
         /checkpoint backend <x>  - Set backend (git/file/auto/none)
-        /checkpoint clear        - Clear old file-based snapshots
+        /checkpoint clear        - Clear file-based snapshots (asks first)
+        /checkpoint clear --yes  - Clear them without the prompt
+        /checkpoint clear --no   - Cancel (what the prompt's Cancel sends)
         /checkpoint info <id>    - Show details about a checkpoint
         /checkpoint undo         - Alias for /undo
 
@@ -379,7 +381,9 @@ def handle_checkpoint(context: CommandContext, args: str) -> CommandResult:
         backend = parts[1] if len(parts) > 1 else None
         return _checkpoint_backend(context, backend)
     elif subcommand == "clear":
-        return _checkpoint_clear(context)
+        # The flag (`--yes` / `--no`) is the quick-pick resume value —
+        # see _checkpoint_clear for the three-pass confirmation.
+        return _checkpoint_clear(context, parts[1] if len(parts) > 1 else None)
     elif subcommand == "info":
         checkpoint_id = parts[1] if len(parts) > 1 else None
         return _checkpoint_info(context, checkpoint_id)
@@ -511,8 +515,43 @@ def _checkpoint_backend(context: CommandContext, backend: str | None) -> Command
             message="Failed to set checkpoint backend")
 
 
-def _checkpoint_clear(context: CommandContext) -> CommandResult:
-    """Clear old file-based checkpoint snapshots."""
+#: How many checkpoints `/checkpoint clear` will count before it stops
+#: caring about the exact number. The count only feeds the confirmation
+#: text ("Clear all N …"), so a ceiling is fine; it exists so a session
+#: with thousands of snapshots doesn't build a huge list to length it.
+_CLEAR_COUNT_CEILING = 1000
+
+
+def _checkpoint_clear(context: CommandContext, flag: str | None) -> CommandResult:
+    """Clear file-based checkpoint snapshots — behind a confirmation.
+
+    `clear_file_checkpoints(keep_last=0)` is irreversible: every
+    file-backend snapshot in `~/.ppxai/sessions/checkpoints/<session>/`
+    goes, and with it every `/undo` that could have used one. Until the
+    2026-09-21 owner decision the confirmation lived in ONE client — the
+    VSCode extension's modal (`vscode-extension/src/handlers/commands.ts`,
+    reached through that client's `LEGACY_INTERCEPTS` bypass) — so web,
+    Rich and Textual deleted everything with no question asked, and the
+    comment here said *"Interactive confirmation is handled by old handler
+    for now"*.
+
+    It is asked HERE now, on the wire, so every client gets it: a
+    `prompt_quick_pick` side-effect whose chosen value is the literal
+    next args (ADR "Q3 (b)" — stateless resume, no continuation state).
+    Three passes, and only the second one deletes:
+
+        /checkpoint clear            → ask (deletes NOTHING)
+        /checkpoint clear --yes      → delete
+        /checkpoint clear --no       → say so, delete nothing
+
+    **Cancel is the FIRST item, deliberately.** A picker whose first row
+    is highlighted by default (Textual's option list, VSCode's QuickPick,
+    Rich's "press Enter") must not destroy anything on a stray Enter.
+    Dismissing the picker — Escape, Ctrl-C, closing the panel — never
+    reaches a second pass at all, so it deletes nothing by construction.
+    """
+    flag = (flag or "").strip().lower()
+
     status = context.engine_client.get_checkpoint_status()
     backend = status.get("backend", "none")
 
@@ -523,15 +562,64 @@ def _checkpoint_clear(context: CommandContext) -> CommandResult:
             error_details=f"Current backend: {backend}"
         )
 
-    # Note: Interactive confirmation is handled by old handler for now
-    # Perform clear directly
-    removed = context.engine_client.clear_file_checkpoints(keep_last=0)
+    if flag == "--no":
+        return ConfirmationResult(
+            status=ResultStatus.INFO,
+            message="Cancelled — nothing deleted",
+            details={"removed": 0, "cancelled": True},
+        )
 
-    return ConfirmationResult(
-        status=ResultStatus.SUCCESS,
-        message=f"Cleared {removed} checkpoint(s)",
-        details={"removed": removed}
+    if flag == "--yes":
+        removed = context.engine_client.clear_file_checkpoints(keep_last=0)
+        return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Cleared {removed} checkpoint(s)",
+            details={"removed": removed}
+        )
+
+    if flag:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Unknown flag for /checkpoint clear: {flag}",
+            suggestions=[
+                "Run `/checkpoint clear` and confirm when asked",
+                "Or skip the prompt with `/checkpoint clear --yes`",
+            ],
+        )
+
+    # No flag → ask. NOTHING is deleted on this pass.
+    count = len(context.engine_client.list_checkpoints(limit=_CLEAR_COUNT_CEILING))
+    if count == 0:
+        return ConfirmationResult(
+            status=ResultStatus.INFO,
+            message="No file checkpoints to clear",
+            details={"removed": 0},
+        )
+
+    result = NotificationResult(
+        status=ResultStatus.WARNING,
+        message=(
+            f"{count} file checkpoint(s) would be deleted permanently. "
+            "Nothing has been deleted yet."
+        ),
+        metadata={"checkpoint_count": count, "awaiting_confirmation": True},
     )
+    result.add_side_effect(
+        SideEffectKind.PROMPT_QUICK_PICK,
+        title=f"Delete all {count} file checkpoint(s)? This cannot be undone.",
+        # ORDER IS LOAD-BEARING: Cancel first, so that Enter on a
+        # default-highlighted first row can never destroy anything.
+        # tests/test_checkpoint_clear_confirmation.py pins it.
+        items=[
+            {"label": "Cancel — keep all checkpoints", "value": "clear --no"},
+            {
+                "label": f"Clear all {count} file checkpoints (cannot be undone)",
+                "value": "clear --yes",
+            },
+        ],
+        command_to_resume="checkpoint",
+    )
+    return result
 
 
 def _checkpoint_info(context: CommandContext, checkpoint_id: str | None) -> CommandResult:
@@ -829,7 +917,7 @@ CommandFactory.register(CommandSpec(
     description="Manage checkpoints for undo functionality",
     handler=handle_checkpoint,
     category="agent",
-    usage="/checkpoint [status|list|backend|clear|info]",
+    usage="/checkpoint [status|list|backend|clear [--yes|--no]|info|undo]",
     # ADR 0007 step 4 (was `_CHECKPOINT_SUBCOMMANDS`). The backend names
     # offered for `/checkpoint backend <x>` are a second level and stay
     # in completion — the flat schema cannot express them.
@@ -837,7 +925,7 @@ CommandFactory.register(CommandSpec(
         ("status",  "Show checkpoint status"),
         ("list",    "List recent checkpoints"),
         ("backend", "Set checkpoint backend"),
-        ("clear",   "Clear old snapshots"),
+        ("clear",   "Clear file snapshots (asks first; --yes skips)"),
         ("info",    "Show checkpoint details"),
         ("undo",    "Revert last checkpoint"),
     ],

@@ -438,13 +438,21 @@ class TestSizeReduction:
 #: Kept as data so the three assertions below read the same list; it is
 #: NOT a command catalog (four names, and the parity fence's threshold for
 #: "this is a roster" is six).
-STEP5_MIGRATED = ("tools", "context", "ls", "tree")
+STEP5_MIGRATED = ("tools", "context", "ls", "tree", "checkpoint")
 
 
 class TestStep5MigratedCommands:
-    """`/tools`, `/context`, `/ls`, `/tree` dispatch like any other
-    server command now — so their client-side machinery must be GONE,
-    not merely unreferenced.
+    """`/tools`, `/context`, `/ls`, `/tree` and — since 2026-09-21 —
+    `/checkpoint` dispatch like any other server command now, so their
+    client-side machinery must be GONE, not merely unreferenced.
+
+    `/checkpoint` was the hold-out: `/checkpoint clear` irreversibly
+    deletes every file-backend snapshot and this client's modal was the
+    only confirmation any client had. That confirmation is on the wire
+    now (`prompt_quick_pick` + `command_to_resume`, emitted by
+    `ppxai/commands/agent.py::_checkpoint_clear` and consumed by all
+    four clients), so the last legacy row — and the whole intercept
+    mechanism with it — is deleted.
 
     The runtime half (they resolve to server dispatch and POST
     `/command/<name>` with their args) is in
@@ -461,29 +469,38 @@ class TestStep5MigratedCommands:
                 f"/{name} routes through POST /command/{name} since ADR 0007 "
                 "step 5. Re-wiring it is a re-intercept."
             )
-        assert "handleCheckpoint:" in ops, (
-            "/checkpoint is the one acknowledged-legacy intercept left "
-            "(see LEGACY_INTERCEPTS in commandRouter.ts); its wiring must stay"
-        )
 
     def test_the_bespoke_methods_are_deleted(self):
         panel = _read("chatPanel.ts")
-        handlers = _read("handlers/commands.ts")
         for name in STEP5_MIGRATED:
             method = "handle" + name.capitalize() + "Command"
-            assert method not in panel, (
+            # A DECLARATION or a CALL, not a bare mention: chatPanel.ts
+            # keeps a comment naming what was removed and why.
+            assert not re.search(rf"{method}\s*[(<]", panel), (
                 f"{method} reappeared in chatPanel.ts; the factory handles "
                 f"/{name} now"
             )
-            assert method not in handlers, (
-                f"{method} reappeared in handlers/commands.ts; the factory "
-                f"handles /{name} now"
+
+    def test_the_bespoke_rest_handler_module_is_deleted(self):
+        """`handlers/commands.ts` held ONLY the `/checkpoint` handler
+        after step 5, and `handlers/types.ts` held only the IoC types
+        that handler used. Both went with the last migration."""
+        for rel in ("handlers/commands.ts", "handlers/types.ts"):
+            assert not (EXT_SRC / rel).exists(), (
+                f"vscode-extension/src/{rel} is back. `/checkpoint`'s logic "
+                "lives in ppxai/commands/agent.py and reaches this client "
+                "through the envelope; the confirmation travels as a "
+                "prompt_quick_pick side-effect."
             )
-        assert "handleCheckpointCommand" in handlers, (
-            "the /checkpoint handler must stay — it carries the modal "
-            "confirmation on `/checkpoint clear`, which is why that row did "
-            "not migrate"
-        )
+
+    def test_the_barrel_no_longer_exports_the_deleted_module(self):
+        barrel = _read("handlers/index.ts")
+        for ident in ("handleCheckpointCommand", "HandlerContext",
+                      "HandlerResult", "DialogCallbacks"):
+            assert not re.search(rf"export .*\b{ident}\b", barrel), (
+                f"handlers/index.ts still exports {ident}, which no longer "
+                "exists — the barrel would not compile."
+            )
 
     def test_the_badges_reconcile_from_the_pushed_field(self):
         """The state the deleted intercept used to refresh by hand.

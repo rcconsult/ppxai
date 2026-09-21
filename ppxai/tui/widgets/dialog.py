@@ -5,13 +5,14 @@ Provides:
 - ConsentDialog - Yes/No/Cancel buttons
 - PromptDialog - Text input with OK/Cancel
 - MessageDialog - Simple OK acknowledgment
+- QuickPickDialog - Option list for a `prompt_quick_pick` side-effect
 """
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, Label, Static
+from textual.widgets import Button, Input, Label, OptionList, Static
 
 
 class ConsentDialog(ModalScreen):
@@ -210,3 +211,118 @@ class MessageDialog(ModalScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press."""
         self.dismiss(True)
+
+
+class QuickPickDialog(ModalScreen):
+    """Modal option list for a `prompt_quick_pick` side-effect.
+
+    The Textual half of `CLIENT_ROUND_TRIP_KINDS`
+    (`ppxai/commands/results.py`). A handler that emits that kind has
+    NOT done its work yet: the chosen item's `value` is the literal args
+    of a second dispatch, and no choice means no second dispatch and no
+    action (ADR "Q3 (b)" — stateless resume).
+
+    So dismissing is always the safe outcome, and it is easy to reach:
+    Escape, or the Cancel button. Selecting nothing is not a failure
+    state to recover from — `/checkpoint clear` simply deletes nothing.
+
+    House style follows `ConsentDialog` above; the difference is that the
+    options are DATA (any number of them, labels from the engine), which
+    is why this is an `OptionList` rather than a row of buttons.
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    DEFAULT_CSS = """
+    QuickPickDialog {
+        align: center middle;
+        background: rgba(0, 0, 0, 0.7);
+    }
+
+    QuickPickDialog #dialog-container {
+        width: 70;
+        height: auto;
+        min-height: 10;
+        max-height: 30;
+        background: $surface;
+        border: thick $primary;
+        padding: 1 2;
+    }
+
+    QuickPickDialog #dialog-title {
+        color: $primary;
+        text-style: bold;
+        text-align: center;
+        margin-bottom: 1;
+    }
+
+    QuickPickDialog #quick-pick-options {
+        height: auto;
+        max-height: 18;
+        margin-bottom: 1;
+    }
+
+    QuickPickDialog #dialog-buttons {
+        height: 3;
+        align: center middle;
+    }
+
+    QuickPickDialog Button {
+        min-width: 10;
+        margin: 0 1;
+    }
+    """
+
+    class Picked(Message):
+        """Posted when the user chooses an item."""
+        def __init__(self, value: str) -> None:
+            self.value = value
+            super().__init__()
+
+    def __init__(self, title: str, items: list[dict[str, str]]):
+        """Initialize the picker.
+
+        Args:
+            title: Dialog title (the engine's question).
+            items: `[{"label": ..., "value": ...}]`, already validated by
+                `ppxai.commands.results.parse_quick_pick` — the ORDER is
+                the engine's and must be preserved, because a destructive
+                option deliberately never sits first (see
+                `_checkpoint_clear`).
+        """
+        super().__init__()
+        self.dialog_title = title
+        self.items = list(items)
+
+    def compose(self) -> ComposeResult:
+        """Build dialog layout."""
+        with Vertical(id="dialog-container"):
+            yield Static(self.dialog_title, id="dialog-title")
+            yield OptionList(
+                *[item["label"] for item in self.items],
+                id="quick-pick-options",
+            )
+            with Horizontal(id="dialog-buttons"):
+                yield Button("Cancel", id="btn-cancel")
+
+    def on_mount(self) -> None:
+        """Focus the list so arrow keys work immediately."""
+        self.query_one("#quick-pick-options", OptionList).focus()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        """Resolve with the chosen item's `value`."""
+        index = event.option_index
+        if not 0 <= index < len(self.items):
+            self.dismiss(None)
+            return
+        value = self.items[index]["value"]
+        self.post_message(self.Picked(value))
+        self.dismiss(value)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Cancel button — same outcome as Escape."""
+        self.dismiss(None)
+
+    def action_cancel(self) -> None:
+        """Escape — dismiss without picking anything."""
+        self.dismiss(None)

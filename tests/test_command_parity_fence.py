@@ -63,6 +63,15 @@ Five assertions:
      the web set while web implements it. Both were retargeted onto
      `SideEffectKind.all_kinds()` in this step; this file owns the
      derivation.
+  4a. **Prompt kinds reach ALL FOUR clients.** Assertion 4 covers the
+     two JS clients, because until 2026-09-21 the TUIs consumed no
+     side-effects at all. `CLIENT_ROUND_TRIP_KINDS`
+     (`ppxai/commands/results.py`) names the subset that a client
+     cannot ignore without DEAD-ENDING the command — the handler asked
+     a question and did none of its work — and that set is fenced
+     across rich, textual, web and vscode. This is the assertion that
+     would have caught `/show @x` printing "3 files match" and stopping
+     in both TUIs for a year.
   5. **Roster self-consistency.** For every id in `KNOWN_CLIENTS`,
      `CommandFactory.roster(client)` names no `dispatch == "client"`
      action that client does not implement.
@@ -107,7 +116,7 @@ from ppxai.commands.factory import (
     KNOWN_CLIENTS,
     CommandFactory,
 )
-from ppxai.commands.results import SideEffectKind
+from ppxai.commands.results import CLIENT_ROUND_TRIP_KINDS, SideEffectKind
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PPXAI = REPO_ROOT / "ppxai"
@@ -136,31 +145,40 @@ TUI_ACTION_SITES = {
 # resolved and removed 2026-09-21 — see the module docstring)
 # ---------------------------------------------------------------------------
 
-#: VSCode intercepts these client-side WITHOUT a declared
-#: `client_action`, by explicit owner decision ("do not bless debt" —
-#: declaring an action for them would record the debt as architecture).
+#: RESOLVED, and the constant is kept ONLY as the record of what it
+#: used to hold — nothing reads it as a baseline any more.
+#:
+#: VSCode used to intercept these client-side WITHOUT a declared
+#: `client_action`, by explicit owner decision ("do not bless debt").
 #: They hit bespoke REST endpoints; the code said *"full factory routing
-#: is a later phase"* from v1.18.1 until ADR 0007 step 5.
+#: is a later phase"* from v1.18.1 until ADR 0007 step 5, which shrank
+#: the table from five rows (`tools`, `checkpoint`, `context`, `ls`,
+#: `tree`) to one.
 #:
-#: **It may only SHRINK, and only by migrating a command to factory
-#: routing.** Adding a name fails (declare a `client_action` instead);
-#: removing a name from `commandRouter.ts` without deleting its row here
-#: ALSO fails, so this table keeps describing the tree rather than
-#: becoming a wish-list — the discipline `BASELINE` in
-#: tests/test_no_new_lazy_imports.py uses.
-#:
-#: SHRANK 2026-09-21 (ADR 0007 step 5, owner decision "move it"): was
-#: `{tools, checkpoint, context, ls, tree}`. `/tools`, `/context`, `/ls`
-#: and `/tree` route through `POST /command/<name>` now, exactly as web
-#: has always routed them. `/checkpoint` stays because `/checkpoint
+#: **The last row went on 2026-09-21, and the MECHANISM went with it.**
+#: `/checkpoint` stayed as long as it did for one reason: `/checkpoint
 #: clear` irreversibly deletes every file-backend snapshot and VSCode's
-#: modal is the ONLY confirmation any client has — expressing it on the
-#: wire needs a cross-client confirmation design, not a routing change.
-#: `commandRouter.ts`'s LEGACY_INTERCEPTS comment carries the full
-#: reasoning.
-LEGACY_INTERCEPT_BASELINE = frozenset({
-    "checkpoint",
+#: modal was the ONLY confirmation any client had. The confirmation is
+#: on the wire now (`prompt_quick_pick` + `command_to_resume`, emitted
+#: by `ppxai/commands/agent.py::_checkpoint_clear`, consumed by all four
+#: clients and fenced by `TestPromptKindsAreConsumedEverywhere`), so
+#: `/checkpoint` routes through `POST /command/checkpoint` like
+#: everything else. `commandRouter.ts` has no `LEGACY_INTERCEPTS`, no
+#: `LEGACY_HANDLERS`, no `legacy` host member and no legacy branch;
+#: `handlers/commands.ts` and `handlers/types.ts` are deleted.
+#:
+#: The tests below now assert ABSENCE — a re-added table fails, and so
+#: does a per-name intercept by any other name.
+FORMER_LEGACY_INTERCEPTS = frozenset({
+    "tools", "checkpoint", "context", "ls", "tree",
 })
+
+#: The identifiers that made up the deleted mechanism. Each must stay
+#: absent from `commandRouter.ts`.
+DELETED_LEGACY_IDENTIFIERS = (
+    "LEGACY_INTERCEPTS",
+    "LEGACY_HANDLERS",
+)
 
 #: RESOLVED (owner decision, 2026-09-21): `q` is now a REGISTERED alias
 #: of `/quit` (`ppxai/commands/client_handled.py`), so the Textual-only
@@ -1041,73 +1059,81 @@ class TestNoUndeclaredIntercepts:
         )
 
     def test_the_router_has_exactly_one_name_keyed_table(self):
-        """Besides the action registry (keyed by ACTION, not by name),
-        `LEGACY_INTERCEPTS` must be the only table in `commandRouter.ts`
-        keyed by a command name — otherwise a second intercept list
-        could grow beside the baseline without tripping it."""
+        """The action registry (keyed by ACTION, not by name) is the ONLY
+        table `commandRouter.ts` exports besides the client id.
+
+        It used to be three: `LEGACY_INTERCEPTS` and `LEGACY_HANDLERS`
+        sat beside it, named so a shrinking baseline could watch them.
+        Both are deleted (2026-09-21), so the check is no longer "the
+        baseline has not grown" but "there is nothing to grow"."""
         clean = strip_js_comments(_read(VSCODE_ROUTER))
         declared = sorted(set(re.findall(
             r"export const ([A-Z][A-Z0-9_]*)", clean)))
-        assert declared == ["CLIENT_ACTIONS", "LEGACY_HANDLERS",
-                            "LEGACY_INTERCEPTS", "VSCODE_CLIENT_ID"], (
+        assert declared == ["CLIENT_ACTIONS", "VSCODE_CLIENT_ID"], (
             f"commandRouter.ts's exported tables changed: {declared}. A new "
-            "name-keyed table is a second roster; route through the action "
-            "registry instead."
+            "name-keyed table is a second roster — and re-adding the deleted "
+            "LEGACY_INTERCEPTS / LEGACY_HANDLERS is exactly that. Route "
+            "through the action registry instead."
         )
 
-    def test_the_legacy_handlers_match_the_legacy_list(self):
-        src = _read(VSCODE_ROUTER)
-        listed = set(ts_array_strings(
-            src, r"export const LEGACY_INTERCEPTS: readonly string\[\]\s*=\s*"))
-        handlers = set(js_object_keys(
-            src, r"export const LEGACY_HANDLERS: Record<string, OpsAction>\s*=\s*"))
-        assert listed == handlers, (
-            f"LEGACY_INTERCEPTS {sorted(listed)} and LEGACY_HANDLERS "
-            f"{sorted(handlers)} disagree — a handler with no list entry is "
-            "unreachable, a list entry with no handler falls through to the "
-            "factory silently."
+    @pytest.mark.parametrize("ident", DELETED_LEGACY_IDENTIFIERS)
+    def test_the_legacy_mechanism_stays_deleted(self, ident):
+        """Absence, not emptiness.
+
+        An EMPTY `LEGACY_INTERCEPTS = []` would pass a "has not grown"
+        check forever while leaving the bypass branch in `route()` ready
+        for the next row. The tables, the `legacy` member of
+        `RouterHost`, `PanelCommandOps.handleCheckpoint` and the branch
+        itself are gone; a regex for the ASSIGNMENT (the file's prose
+        legitimately names the retired constants for history) is what
+        holds that."""
+        clean = strip_js_comments(_read(VSCODE_ROUTER))
+        assert not re.search(rf"\b{ident}\b\s*[:=]", clean), (
+            f"{ident} is back in commandRouter.ts. The legacy-intercept "
+            "mechanism was DELETED on 2026-09-21 when its last row "
+            "(`/checkpoint`) migrated to factory routing — a client-side "
+            "command declares a `client_action` on its CommandSpec instead."
         )
 
-    def test_the_legacy_baseline_has_not_grown(self):
-        listed = set(ts_array_strings(
-            _read(VSCODE_ROUTER),
-            r"export const LEGACY_INTERCEPTS: readonly string\[\]\s*=\s*"))
-        added = sorted(listed - LEGACY_INTERCEPT_BASELINE)
-        assert not added, (
-            f"new legacy intercept(s): {added}. Do NOT add to this list — the "
-            "owner's instruction is 'do not bless debt'. A new client-side "
-            "command declares a `client_action` on its CommandSpec and lands in "
-            "commandRouter.ts's CLIENT_ACTIONS registry instead."
-        )
+    def test_the_router_has_no_legacy_branch(self):
+        """The `route()` bypass itself, not just its tables."""
+        clean = strip_js_comments(_read(VSCODE_ROUTER))
+        assert "this._host.legacy" not in clean, (
+            "commandRouter.ts's route() consults a `legacy` table again — that "
+            "is a per-name intercept path around the roster.")
+        assert not re.search(r"\blegacy\s*:", clean), (
+            "`RouterHost`/`buildCommandRouter` grew a `legacy` member again.")
 
-    def test_the_legacy_baseline_has_no_stale_rows(self):
-        """A MIGRATED command must be deleted from this baseline too.
+    def test_the_panel_ops_have_no_checkpoint_handler(self):
+        """`PanelCommandOps.handleCheckpoint` was the legacy row's only
+        reason to exist; its return would mean the bypass came back."""
+        for path in (VSCODE_ROUTER, VSCODE_CHATPANEL):
+            assert "handleCheckpoint" not in strip_js_comments(_read(path)), (
+                f"handleCheckpoint is back in {path.name} — `/checkpoint` "
+                "routes through POST /command/checkpoint now, confirmation "
+                "included (prompt_quick_pick from _checkpoint_clear).")
 
-        Same discipline as `BASELINE` in test_no_new_lazy_imports.py:
-        otherwise the baseline drifts into a wish-list and this file
-        stops being a record of what the cleanup actually did."""
-        listed = set(ts_array_strings(
-            _read(VSCODE_ROUTER),
-            r"export const LEGACY_INTERCEPTS: readonly string\[\]\s*=\s*"))
-        stale = sorted(LEGACY_INTERCEPT_BASELINE - listed)
-        assert not stale, (
-            f"{stale} no longer sit in commandRouter.ts's LEGACY_INTERCEPTS — "
-            "delete the row(s) from LEGACY_INTERCEPT_BASELINE in this file so "
-            "the baseline keeps describing the tree. That deletion IS the shrink."
-        )
+    @pytest.mark.parametrize("rel", (
+        "vscode-extension/src/handlers/commands.ts",
+        "vscode-extension/src/handlers/types.ts",
+    ))
+    def test_the_bespoke_rest_handler_files_stay_deleted(self, rel):
+        assert not (REPO_ROOT / rel).exists(), (
+            f"{rel} is back. It held the bespoke-REST `/checkpoint` handler "
+            "(and the IoC types only it used); the command's logic lives in "
+            "ppxai/commands/agent.py and reaches this client through the "
+            "envelope.")
 
-    def test_no_declared_command_sits_in_the_legacy_table(self):
-        declared = {info.canonical
-                    for info in CommandFactory.iter_completion_specs()
-                    if info.client_action
-                    and (info.client_action_clients is None
-                         or "vscode" in info.client_action_clients)}
-        overlap = sorted(declared & LEGACY_INTERCEPT_BASELINE)
-        assert not overlap, (
-            f"{overlap} have a `client_action` AND sit in the legacy table — "
-            "the legacy branch would shadow the declared action. Remove them "
-            "from LEGACY_INTERCEPTS (and from the baseline here)."
-        )
+    def test_no_former_legacy_command_is_named_in_the_router(self):
+        """None of the five ever comes back as a literal in the router."""
+        clean = strip_js_comments(_read(VSCODE_ROUTER))
+        resurrected = sorted(
+            name for name in FORMER_LEGACY_INTERCEPTS
+            if re.search(rf"['\"`]{name}['\"`]", clean))
+        assert not resurrected, (
+            f"commandRouter.ts names {resurrected} as a literal again. Every "
+            "one of them routes through POST /command/<name>; naming a command "
+            "in the router is how the legacy table started.")
 
     def test_the_textual_quit_legacy_extra_is_gone(self):
         """RESOLVED (owner decision, 2026-09-21): `q` is a registered
@@ -1356,6 +1382,203 @@ class TestSideEffectKindCoverage:
 
 
 # ===========================================================================
+# Assertion 4a — the prompt kinds reach ALL FOUR clients
+# ===========================================================================
+
+#: Where each client's consumer of the prompt kinds lives. The TUIs are
+#: here for the first time (2026-09-21): before that, `grep -rn
+#: side_effect ppxai/tui ppxai/rich ppxai/rendering` returned nothing, so
+#: `/show @config` with three matches printed "3 files match 'config'"
+#: and the command the user asked for never ran.
+TUI_SIDE_EFFECT_SITES = {
+    "rich": PPXAI / "rendering" / "rich_renderer.py",
+    "textual": PPXAI / "tui" / "app.py",
+}
+
+#: …and where each TUI's dispatch path CALLS that consumer. A consumer
+#: nobody calls satisfies a source scan while changing nothing at
+#: runtime, so both halves are fenced.
+TUI_SIDE_EFFECT_CALL_SITES = {
+    "rich": (PPXAI / "commands" / "handler.py", "consume_prompt_side_effects("),
+    "textual": (PPXAI / "tui" / "app.py", "self._consume_prompt_side_effects("),
+}
+
+#: Prompt kinds a given client deliberately does not consume, with the
+#: reason. **EMPTY, and it must stay honest**: a client listed here is a
+#: client where the command dead-ends, so a row is a bug report with a
+#: date on it, not an architecture decision. It may only SHRINK.
+PROMPT_KIND_EXEMPTIONS: dict[str, dict[str, str]] = {
+    "rich": {},
+    "textual": {},
+    "web": {},
+    "vscode": {},
+}
+
+
+def _kind_constant_names() -> list[str]:
+    """Every uppercase string constant on `SideEffectKind`, derived."""
+    return sorted(
+        name for name in vars(SideEffectKind)
+        if name.isupper() and isinstance(getattr(SideEffectKind, name), str)
+    )
+
+
+def prompt_kinds_in(src: str) -> set[str]:
+    """Kinds a Python client source references by CONSTANT.
+
+    Derived from `SideEffectKind`'s own attribute names, so this cannot
+    drift from the vocabulary. Constants rather than bare strings is the
+    house rule (command-envelope.md rule 2) precisely so a typo is an
+    `AttributeError`; it also makes the reference greppable from here.
+    """
+    return {
+        getattr(SideEffectKind, name)
+        for name in _kind_constant_names()
+        if re.search(rf"SideEffectKind\.{name}\b", src)
+    }
+
+
+def prompt_kinds_for(client: str) -> set[str]:
+    if client in TUI_SIDE_EFFECT_SITES:
+        return prompt_kinds_in(_read(TUI_SIDE_EFFECT_SITES[client]))
+    return side_effect_kinds_for(client)
+
+
+class TestPromptKindExtractorGuards:
+    """Guards + positive control FIRST: a broken extractor that returns
+    an empty set would make every coverage assertion below vacuously
+    true, which is the failure mode this whole file exists to avoid."""
+
+    def test_the_vocabulary_is_populated(self):
+        assert len(_kind_constant_names()) >= 15, _kind_constant_names()
+
+    def test_the_round_trip_set_is_a_subset_of_the_vocabulary(self):
+        stray = sorted(CLIENT_ROUND_TRIP_KINDS - set(SideEffectKind.all_kinds()))
+        assert not stray, (
+            f"CLIENT_ROUND_TRIP_KINDS names {stray}, which SideEffectKind does "
+            "not declare")
+
+    def test_the_round_trip_set_is_not_empty(self):
+        assert CLIENT_ROUND_TRIP_KINDS
+
+    def test_a_planted_reference_is_detected(self):
+        """Positive control for the TUI extractor."""
+        assert prompt_kinds_in(
+            "if effect.kind == SideEffectKind.PROMPT_QUICK_PICK: pass"
+        ) == {"prompt_quick_pick"}
+
+    def test_an_unrelated_source_yields_nothing(self):
+        assert prompt_kinds_in("x = 1  # prompt_quick_pick in a comment") == set()
+
+    def test_a_similar_name_is_not_a_false_positive(self):
+        assert prompt_kinds_in("SideEffectKind.PROMPT_QUICK_PICKLE") == set()
+
+    @pytest.mark.parametrize("client", sorted(TUI_SIDE_EFFECT_SITES))
+    def test_each_tui_site_exists_and_is_not_empty(self, client):
+        path = TUI_SIDE_EFFECT_SITES[client]
+        assert path.exists(), f"{client}'s side-effect site {path} is gone"
+        assert len(_read(path)) > 1000
+
+    @pytest.mark.parametrize("client", sorted(TUI_SIDE_EFFECT_SITES))
+    def test_each_tui_extractor_sees_something(self, client):
+        assert prompt_kinds_for(client), (
+            f"the {client} extractor found NO SideEffectKind reference at all "
+            f"in {TUI_SIDE_EFFECT_SITES[client]} — that is an extractor "
+            "failure, not coverage")
+
+
+class TestPromptKindsAreConsumedEverywhere:
+    """`CLIENT_ROUND_TRIP_KINDS` is the set a client cannot drop.
+
+    Every other kind degrades gracefully: ignore `open_editor` and the
+    rendered result is still on screen. Ignore one of these and the
+    command is DEAD — the handler returned a question and performed
+    none of its work — silently, because kinds are an open enum.
+    """
+
+    @pytest.mark.parametrize(
+        "client", ("rich", "textual", "web", "vscode"))
+    def test_every_prompt_kind_is_consumed(self, client):
+        consumed = prompt_kinds_for(client)
+        exempt = set(PROMPT_KIND_EXEMPTIONS[client])
+        missing = sorted(CLIENT_ROUND_TRIP_KINDS - consumed - exempt)
+        assert not missing, (
+            f"{client} does not consume {missing}. These kinds REQUIRE a "
+            "client round trip: the handler asked the user a question and did "
+            "nothing else, so a client that ignores one leaves the command "
+            "dead-ended with no error anywhere — `/checkpoint clear` would "
+            "silently never clear, `/show @x` would print the match count and "
+            "stop. Implement it in that client, or add it to "
+            f"PROMPT_KIND_EXEMPTIONS[{client!r}] with a reason and a date."
+        )
+
+    @pytest.mark.parametrize("client", sorted(TUI_SIDE_EFFECT_CALL_SITES))
+    def test_each_tui_dispatch_path_calls_its_consumer(self, client):
+        """A consumer nobody calls passes a source scan and does
+        nothing. This is the half that the source scan cannot see."""
+        path, needle = TUI_SIDE_EFFECT_CALL_SITES[client]
+        assert needle in _read(path), (
+            f"{client}'s command dispatch path ({path.name}) no longer calls "
+            f"`{needle}` — the consumer is dead code and every prompt kind "
+            "dead-ends again."
+        )
+
+    def test_the_two_tuis_consume_the_same_prompt_kinds(self):
+        rich = prompt_kinds_for("rich") & CLIENT_ROUND_TRIP_KINDS
+        textual = prompt_kinds_for("textual") & CLIENT_ROUND_TRIP_KINDS
+        assert rich == textual, (
+            f"the TUIs diverged: rich-only {sorted(rich - textual)}, "
+            f"textual-only {sorted(textual - rich)}")
+
+    def test_every_exemption_names_a_real_kind_and_a_reason(self):
+        for client, rows in PROMPT_KIND_EXEMPTIONS.items():
+            for kind, reason in rows.items():
+                assert kind in CLIENT_ROUND_TRIP_KINDS, (
+                    f"{client} exempts {kind!r}, which is not a round-trip kind")
+                assert reason.strip(), f"{client}'s {kind} exemption has no reason"
+
+    def test_no_exemption_is_stale(self):
+        for client, rows in PROMPT_KIND_EXEMPTIONS.items():
+            stale = sorted(set(rows) & prompt_kinds_for(client))
+            assert not stale, (
+                f"{client} now consumes {stale} — delete the row(s) from "
+                "PROMPT_KIND_EXEMPTIONS so the list keeps describing the tree.")
+
+    def test_the_exemption_table_covers_every_fenced_client(self):
+        assert set(PROMPT_KIND_EXEMPTIONS) == {"rich", "textual", "web", "vscode"}
+
+
+class TestMutationPromptKindCoverage:
+    """Break it, watch it fail — for the extractor, on synthetic source,
+    so the real tree is never touched."""
+
+    def test_a_tui_that_drops_a_kind_is_caught(self):
+        src = _read(TUI_SIDE_EFFECT_SITES["textual"]).replace(
+            "SideEffectKind.PROMPT_QUICK_PICK", "SideEffectKind.NOTIFY")
+        assert "prompt_quick_pick" not in prompt_kinds_in(src)
+
+    def test_a_tui_that_keeps_it_is_not_caught(self):
+        assert "prompt_quick_pick" in prompt_kinds_in(
+            _read(TUI_SIDE_EFFECT_SITES["textual"]))
+
+    def test_a_dropped_rich_call_site_is_caught(self):
+        path, needle = TUI_SIDE_EFFECT_CALL_SITES["rich"]
+        assert needle not in _read(path).replace(needle, "pass  # dropped")
+
+    def test_a_dropped_web_prompt_handler_is_caught(self):
+        broken = _read(WEB_SIDE_EFFECTS).replace(
+            "prompt_quick_pick({title", "disabled_quick_pick({title")
+        handled = set(js_object_keys(
+            broken, r"SideEffectsHandler\._handlers\s*=\s*"))
+        assert "prompt_quick_pick" not in handled
+
+    def test_a_dropped_vscode_prompt_case_is_caught(self):
+        broken = _read(VSCODE_SIDE_EFFECTS).replace(
+            "case KIND.PROMPT_QUICK_PICK:", "case KIND.NOTIFY:")
+        assert "prompt_quick_pick" not in ts_switch_case_kinds(broken)
+
+
+# ===========================================================================
 # Assertion 5 — roster self-consistency
 # ===========================================================================
 
@@ -1429,8 +1652,11 @@ _HARNESS = r"""
 const B = require(process.env.PPXAI_BUNDLE);
 console.log(JSON.stringify({
     actions: Object.keys(B.CLIENT_ACTIONS).sort(),
-    legacy: B.LEGACY_INTERCEPTS.slice().sort(),
-    legacyHandlers: Object.keys(B.LEGACY_HANDLERS).sort(),
+    // The compiled module must export NOTHING legacy. Reading the names
+    // (rather than asserting on the regex alone) is the point: a
+    // re-added table shows up here even if it is spelled differently in
+    // source than the regex expects.
+    exports: Object.keys(B).sort(),
 }));
 """
 
@@ -1469,12 +1695,21 @@ class TestRegexAgreesWithTheCompiledModule:
         assert compiled["actions"], "the compiled CLIENT_ACTIONS registry is empty"
         assert sorted(implemented_actions_for("vscode")) == compiled["actions"]
 
-    def test_legacy_table_agrees(self, tmp_path):
+    def test_the_compiled_module_exports_nothing_legacy(self, tmp_path):
+        """The regex above reads source; this reads the BUILT module, so
+        a legacy table re-added under any spelling is still caught."""
         compiled = _compiled_router_tables(tmp_path)
-        listed = sorted(ts_array_strings(
-            _read(VSCODE_ROUTER),
-            r"export const LEGACY_INTERCEPTS: readonly string\[\]\s*=\s*"))
-        assert listed == compiled["legacy"] == compiled["legacyHandlers"]
+        legacy = sorted(name for name in compiled["exports"]
+                        if "LEGACY" in name.upper())
+        assert not legacy, (
+            f"the compiled commandRouter still exports {legacy}. The "
+            "legacy-intercept mechanism was deleted on 2026-09-21.")
+
+    def test_the_compiled_module_exports_exactly_the_expected_names(self, tmp_path):
+        compiled = _compiled_router_tables(tmp_path)
+        assert "CLIENT_ACTIONS" in compiled["exports"], (
+            "the harness read no CLIENT_ACTIONS — the build or the bundle is "
+            "broken, so the absence check above would pass vacuously")
 
 
 @pytest.mark.skipif(NODE is None, reason="node not on PATH")
@@ -1539,24 +1774,49 @@ class TestMutationActionCoverage:
         assert "coding.stream" in declared_actions_for("vscode") - implemented
 
 
-class TestMutationLegacyBaseline:
-    _ANCHOR = r"export const LEGACY_INTERCEPTS: readonly string\[\]\s*=\s*"
+class TestMutationLegacyMechanismIsGone:
+    """The absence checks must be able to FAIL — an absence assertion
+    that cannot fail is the most comfortable kind of green."""
 
-    def test_a_grown_table_is_caught(self):
-        src = _read(VSCODE_ROUTER).replace(
-            "    'checkpoint',", "    'checkpoint',\n    'newthing',", 1)
-        listed = set(ts_array_strings(src, self._ANCHOR))
-        assert listed - LEGACY_INTERCEPT_BASELINE == {"newthing"}
+    def test_a_reintroduced_table_is_caught(self):
+        src = strip_js_comments(_read(VSCODE_ROUTER)) + (
+            "\nexport const LEGACY_INTERCEPTS: readonly string[] = ['checkpoint'];\n")
+        assert re.search(r"\bLEGACY_INTERCEPTS\b\s*[:=]", src)
 
-    def test_a_shrunk_table_is_caught_until_the_baseline_row_goes(self):
-        src = _read(VSCODE_ROUTER).replace("    'checkpoint',\n", "", 1)
-        listed = set(ts_array_strings(src, self._ANCHOR))
-        assert LEGACY_INTERCEPT_BASELINE - listed == {"checkpoint"}
+    def test_an_empty_reintroduced_table_is_caught_too(self):
+        """The comfortable version: a table with no rows still restores
+        the bypass branch for the next person."""
+        src = strip_js_comments(_read(VSCODE_ROUTER)) + (
+            "\nexport const LEGACY_INTERCEPTS: readonly string[] = [];\n")
+        assert re.search(r"\bLEGACY_INTERCEPTS\b\s*[:=]", src)
 
-    def test_a_missing_table_raises_rather_than_passing_empty(self):
-        src = _read(VSCODE_ROUTER).replace("export const LEGACY_INTERCEPTS", "const X")
-        with pytest.raises(AssertionError, match="anchor not found"):
-            ts_array_strings(src, self._ANCHOR)
+    def test_a_historical_mention_in_prose_is_not_caught(self):
+        """`commandRouter.ts` explains what was deleted and why; that
+        sentence must not read as a regression."""
+        clean = strip_js_comments(_read(VSCODE_ROUTER))
+        assert "LEGACY_INTERCEPTS" in _read(VSCODE_ROUTER), (
+            "the router no longer explains what was removed — keep the note")
+        assert not re.search(r"\bLEGACY_INTERCEPTS\b\s*[:=]", clean)
+
+    def test_a_reintroduced_legacy_branch_is_caught(self):
+        src = strip_js_comments(_read(VSCODE_ROUTER)).replace(
+            "await this._host.dispatchToFactory(name, args);",
+            "const l = this._host.legacy[name]; if (l) { await l(ctx); return; }",
+            1)
+        assert "this._host.legacy" in src
+
+    def test_a_reintroduced_ops_row_is_caught(self):
+        src = strip_js_comments(_read(VSCODE_ROUTER)).replace(
+            "    showHelp(args: string): Promise<void> | void;",
+            "    showHelp(args: string): Promise<void> | void;\n"
+            "    handleCheckpoint(argv: string[]): Promise<void> | void;", 1)
+        assert "handleCheckpoint" in src
+
+    def test_a_restored_handler_file_is_caught(self, tmp_path):
+        planted = tmp_path / "commands.ts"
+        planted.write_text("export function handleCheckpointCommand() {}\n",
+                           encoding="utf-8")
+        assert planted.exists()
 
     def test_a_reintroduced_textual_quit_literal_is_caught(self):
         """Prove the absence check

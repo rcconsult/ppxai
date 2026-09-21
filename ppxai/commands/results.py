@@ -148,6 +148,137 @@ class SideEffectKind:
         )
 
 
+#: The kinds that REQUIRE a client round trip before the command is done.
+#:
+#: Every other kind is a fire-and-forget directive: a client that ignores
+#: `open_editor` just doesn't open an editor, and the rendered result the
+#: user asked for is already on screen. These two are different. The
+#: handler returned *nothing but a question* — the work it was asked to do
+#: has NOT happened yet, and it only happens when the client asks the user,
+#: then re-issues the command with the answer as args (ADR 0001 / ADR
+#: "Q3 (b)": stateless resume, the args carry everything).
+#:
+#: So a client that drops one of these leaves the command DEAD-ENDED: the
+#: user sees a notification and nothing else ever happens. Because kinds
+#: are an OPEN enum, that failure is completely silent at runtime — it
+#: looks exactly like a command that had nothing more to say. Until
+#: 2026-09-21 that was literally true of `prompt_quick_pick` in both TUIs:
+#: `/show @foo` with three matches printed "3 files match 'foo'" and
+#: stopped.
+#:
+#: `tests/test_command_parity_fence.py::TestPromptKindsAreConsumedEverywhere`
+#: derives from this set and fails when ANY of the four clients (rich,
+#: textual, web, vscode) stops consuming one of them. Adding a kind here
+#: is therefore a commitment to implement it in all four.
+CLIENT_ROUND_TRIP_KINDS: frozenset[str] = frozenset({
+    SideEffectKind.PROMPT_QUICK_PICK,
+    SideEffectKind.PROMPT_TEXT,
+})
+
+
+#: Chain bound for prompt resumes. A resumed command may legitimately
+#: prompt again (`/edit` → "create it?" → a second question is allowed by
+#: the protocol), but each hop is a fresh dispatch with no server memory,
+#: so a handler that always prompts would loop forever in a client that
+#: always answers. Clients stop after this many consecutive resumes and
+#: tell the user.
+MAX_PROMPT_RESUME_DEPTH = 5
+
+
+def parse_quick_pick(payload: dict[str, Any]) -> tuple[str, str, list[dict[str, str]]] | None:
+    """Validate a `prompt_quick_pick` payload for an in-process client.
+
+    Pure: no I/O, no client objects. Both TUIs call it so neither
+    re-derives the shape (and neither crashes on a malformed one — the
+    web/VSCode handlers both bail quietly on an empty `items`, and this
+    keeps the TUIs to the same contract).
+
+    Returns `(title, command_to_resume, items)` with every item a
+    `{"label": str, "value": str}` dict, or `None` when the payload
+    cannot drive a resume (no command, no usable items).
+    """
+    command = payload.get("command_to_resume")
+    if not isinstance(command, str) or not command.strip():
+        return None
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, (list, tuple)):
+        return None
+    items: list[dict[str, str]] = []
+    for entry in raw_items:
+        if not isinstance(entry, dict):
+            continue
+        value = entry.get("value")
+        if not isinstance(value, str):
+            continue
+        label = entry.get("label")
+        items.append({
+            "label": str(label) if isinstance(label, str) and label else value,
+            "value": value,
+        })
+    if not items:
+        return None
+    title = payload.get("title")
+    return (
+        str(title) if isinstance(title, str) and title else "Pick one",
+        command.strip(),
+        items,
+    )
+
+
+def parse_prompt_text(payload: dict[str, Any]) -> tuple[str, str, str, str] | None:
+    """Validate a `prompt_text` payload for an in-process client.
+
+    Returns `(question, command_to_resume, original_args, placeholder)`
+    or `None` when the payload cannot drive a resume.
+    """
+    command = payload.get("command_to_resume")
+    if not isinstance(command, str) or not command.strip():
+        return None
+    title = payload.get("title")
+    question = payload.get("question")
+    prompt = (
+        (title if isinstance(title, str) and title else None)
+        or (question if isinstance(question, str) and question else None)
+        or "More detail needed"
+    )
+    original = payload.get("original_args")
+    placeholder = payload.get("placeholder")
+    return (
+        str(prompt),
+        command.strip(),
+        str(original) if isinstance(original, str) else "",
+        str(placeholder) if isinstance(placeholder, str) else "",
+    )
+
+
+def resume_command_line(command_to_resume: str, args: str) -> str:
+    """Build the line an in-process client re-dispatches after a prompt.
+
+    The shape the JS clients already use (`/<cmd> <value>`), so a TUI
+    resume goes down EXACTLY the path a typed slash command takes — no
+    second dispatch route, no second arg-parsing rule. `args` reaches the
+    handler verbatim, spaces and flags included (`/edit --create a b.txt`,
+    `/checkpoint clear --yes`), because handlers take the remainder of the
+    line as one string.
+    """
+    args = (args or "").strip()
+    return f"/{command_to_resume} {args}".rstrip()
+
+
+def prompt_text_resume_args(original_args: str, reply: str) -> str:
+    """Join a `prompt_text` reply onto the original args.
+
+    The em-dash separator is the wire contract (`side-effects.js`,
+    `sideEffectsHandler.ts`): handlers can split on it to tell the
+    original brief from the elaboration.
+    """
+    reply = (reply or "").strip()
+    original = (original_args or "").strip()
+    if not reply:
+        return original
+    return f"{original} — {reply}" if original else reply
+
+
 @dataclass
 class SideEffect:
     """A UI directive emitted alongside a CommandResult.
@@ -238,14 +369,21 @@ class SideEffect:
             path. TUI → uses the path directly.
 
       - "prompt_quick_pick"  payload: {title, items: [{label, value}],
-                                       request_id, command_to_resume,
-                                       resolved_arg_template}
+                                       command_to_resume}
             Engine needs the user to pick one of N options before
             the command can complete. Web → clickable list in chat.
-            VSCode → window.showQuickPick(items). Choice resumes by
-            issuing a fresh POST /command/<command_to_resume> with
-            args = resolved_arg_template.format(value=<choice>).
+            VSCode → window.showQuickPick(items). Rich → numbered
+            list + number prompt. Textual → QuickPickDialog modal.
+            **The chosen `value` IS the literal next args** — the
+            client re-dispatches `/<command_to_resume> <value>`
+            (`resume_command_line()` above builds that line for the
+            in-process clients). No server-side continuation state
+            and no template: an earlier draft of this docstring
+            named `request_id` and `resolved_arg_template` fields
+            that nothing has ever emitted or read.
             See ADR 0001 for the resume protocol decision.
+            This kind is in CLIENT_ROUND_TRIP_KINDS: a client that
+            ignores it dead-ends the command.
 
       - "prompt_text"        payload: {title, question, command_to_resume,
                                        original_args?, placeholder?}
@@ -258,7 +396,10 @@ class SideEffect:
             separator so handlers can distinguish the elaboration
             from the original brief). No server-side continuation
             state per the ADR 0001 resume protocol — the args
-            carry everything.
+            carry everything. Rich → Prompt.ask. Textual →
+            PromptDialog modal. This kind is in
+            CLIENT_ROUND_TRIP_KINDS: a client that ignores it
+            dead-ends the command.
 
       - "notify"             payload: {level: "info"|"warn"|"error",
                                        message}

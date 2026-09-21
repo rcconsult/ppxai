@@ -97,6 +97,7 @@ const ROSTER_PAYLOAD = {
         entry('future', {dispatch: 'client', client_action: 'future.thing'}),
         entry('show',  {aliases: ['cat']}),
         entry('status'),
+        entry('checkpoint'),
         entry('help',  {aliases: ['?', 'h'], client_action: 'help.augment'}),
     ],
 };
@@ -241,6 +242,33 @@ function leaks(api, needle) { return api.calls.some((c) => JSON.stringify(c).inc
     assert(helps.length === 1, '/help did not go to the server exactly once');
     assert(!app._msgs.some((m) => /Experimental \(web-only\)/.test(m)),
       'the deleted _appendExperimentalHelp shim still runs');
+  }
+
+  // --- Scenario 4b: a prompt RESUME line survives the dispatcher ---
+  //
+  // `/checkpoint clear` answers with a prompt_quick_pick whose chosen
+  // value is the literal next args — `clear --yes`, a string with a
+  // space AND a flag. `SideEffectsHandler.prompt_quick_pick` rebuilds
+  // it as `/checkpoint clear --yes` and hands it to THIS dispatcher,
+  // which splits on whitespace and rejoins; the args must arrive at the
+  // server byte-identical, or the resume silently becomes a different
+  // command (`clear` alone would re-prompt forever).
+  {
+    const api = makeApi();
+    const app = makeApp(api);
+    await app.commandRoster.load();
+    await app.commandDispatcher.dispatch('/checkpoint clear --yes');
+    await app.commandDispatcher.dispatch('/checkpoint clear --no');
+    const cmds = api.calls.filter((c) => c.kind === 'command');
+    assert(cmds.length === 2, 'the resume lines did not both dispatch: ' +
+      JSON.stringify(cmds));
+    assert(cmds.every((c) => c.url === '/command/checkpoint'),
+      '/checkpoint was routed somewhere else: ' +
+      JSON.stringify(cmds.map((c) => c.url)));
+    assert(cmds[0].body.args === 'clear --yes',
+      'the --yes resume args were mangled: ' + JSON.stringify(cmds[0].body.args));
+    assert(cmds[1].body.args === 'clear --no',
+      'the --no resume args were mangled: ' + JSON.stringify(cmds[1].body.args));
   }
 
   // --- Scenario 5: an action the roster names but web does not implement ---

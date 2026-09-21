@@ -6,7 +6,12 @@ from ppxai.tui.widgets.base import SafeQueryMixin
 from ppxai.tui.widgets.chat_view import ChatView
 from ppxai.tui.widgets.code_editor import CodeEditor
 from ppxai.tui.widgets.data_viewer import DataViewer
-from ppxai.tui.widgets.dialog import ConsentDialog, MessageDialog, PromptDialog
+from ppxai.tui.widgets.dialog import (
+    ConsentDialog,
+    MessageDialog,
+    PromptDialog,
+    QuickPickDialog,
+)
 from ppxai.tui.widgets.image_viewer import ImageViewer
 from ppxai.tui.widgets.input_box import InputBox
 from ppxai.tui.widgets.message_box import MessageBox
@@ -38,4 +43,5 @@ __all__ = [
     "ConsentDialog",
     "PromptDialog",
     "MessageDialog",
+    "QuickPickDialog",
 ]

@@ -75,15 +75,18 @@ invariant here — `command === 'token'` precedes `dispatchFactoryCommand`
 branches left at all. The VSCode assertions below are the same five,
 read off `vscode-extension/src/commandRouter.ts` (`route()`, the
 `CLIENT_ACTIONS` registry) and `chatPanel.ts` (`handleTokenCommand`),
-with ONE addition the web half does not need: the
-**acknowledged-legacy** intercepts have no `client_action` by owner
-decision ("do not bless debt"), so they are consulted from a NAMED table
-after the gate. Step 3b listed five (`/tools`, `/checkpoint`,
-`/context`, `/ls`, `/tree`); **step 5 (2026-09-21) migrated four of them
-to factory routing and `/checkpoint` is the one left.** That table is
-asserted to hold exactly the baseline and none of the declared
-commands — it is step 5's shrinking baseline, and the assertion is what
-stops it growing. Runtime behaviour is in
+— and WITHOUT the addition the web half never needed. VSCode used to
+consult a NAMED table of **acknowledged-legacy** intercepts (no
+`client_action`, by owner decision "do not bless debt") after the gate.
+Step 3b listed five (`/tools`, `/checkpoint`, `/context`, `/ls`,
+`/tree`); step 5 migrated four; and on **2026-09-21 the last row
+(`/checkpoint`) migrated too, so the MECHANISM was deleted** — table,
+handlers, host member and `route()` branch alike — once `/checkpoint
+clear` grew a confirmation that works in all four clients
+(`prompt_quick_pick` from `ppxai/commands/agent.py::_checkpoint_clear`).
+The assertion is therefore ABSENCE now, not a shrinking baseline: an
+empty table would be a regression, because it restores the bypass branch
+for the next row. Runtime behaviour is in
 `tests/test_vscode_command_roster_behavior.py`, which compiles the real
 TypeScript and drives it under Node.
 
@@ -122,17 +125,17 @@ VSCODE_CHATPANEL_PATH = REPO_ROOT / "vscode-extension" / "src" / "chatPanel.ts"
 VSCODE_ROUTER_PATH = REPO_ROOT / "vscode-extension" / "src" / "commandRouter.ts"
 VSCODE_ROSTER_PATH = REPO_ROOT / "vscode-extension" / "src" / "commandRoster.ts"
 
-#: The commands intercepted WITHOUT a declared `client_action` ("do not
-#: bless debt"). Step 5's parity fence inherits this as its baseline; it
-#: may only shrink.
+#: The commands VSCode once intercepted WITHOUT a declared
+#: `client_action` ("do not bless debt"). Kept as the RECORD of what the
+#: mechanism held; nothing reads it as a baseline any more.
 #:
-#: SHRANK 2026-09-21 (step 5, owner decision "move it"): step 3b's five
-#: are down to one. `/tools`, `/context`, `/ls` and `/tree` go through
-#: `POST /command/<name>` now. `/checkpoint` stays — `/checkpoint clear`
-#: irreversibly deletes every file-backend snapshot and VSCode's modal is
-#: the only confirmation any client has; see the LEGACY_INTERCEPTS
-#: comment in commandRouter.ts.
-LEGACY_INTERCEPT_BASELINE = frozenset({"checkpoint"})
+#: Step 3b listed five; step 5 migrated four; the last one
+#: (`/checkpoint`) migrated on 2026-09-21 and the mechanism was DELETED
+#: with it. `/checkpoint clear` now carries its confirmation on the wire
+#: (`prompt_quick_pick` + `command_to_resume`), which was the only thing
+#: keeping it client-side.
+FORMER_LEGACY_INTERCEPTS = frozenset(
+    {"tools", "checkpoint", "context", "ls", "tree"})
 
 
 def _read(path: Path) -> str:
@@ -588,25 +591,35 @@ def assert_vscode_has_no_per_name_escape_hatch(src: str) -> None:
         )
 
 
-def assert_vscode_legacy_table_is_exactly(src: str, expected: set[str]) -> None:
-    """The named legacy table must hold EXACTLY the acknowledged five.
+def assert_vscode_has_no_legacy_mechanism(src: str) -> None:
+    """The legacy-intercept mechanism must be ABSENT, not empty.
 
-    Growing it would launder a new client-side intercept as debt; the
-    owner's instruction was "do not bless debt", and step 5 inherits
-    this list as a baseline that may only shrink. A declared command
-    appearing here would also shadow its own `client_action`.
+    An empty `LEGACY_INTERCEPTS = []` satisfies every "may only shrink"
+    check ever written while leaving `route()`'s bypass branch in place,
+    ready for the next row — which is precisely how this table got to
+    five entries. So the assertion is that no part of it exists: no
+    table, no handler map, no `legacy` member on the host, no branch.
+
+    Takes source TEXT, like every helper in this file, so the mutation
+    tests below can feed it the exact regressions it must reject.
     """
-    m = re.search(
-        r"export const LEGACY_INTERCEPTS: readonly string\[\] = \[(.*?)\];",
-        src, re.S)
-    if not m:
-        raise AssertionError("LEGACY_INTERCEPTS table not found in commandRouter.ts")
-    names = set(re.findall(r"'([a-z-]+)'", m.group(1)))
-    if names != expected:
+    for ident in ("LEGACY_INTERCEPTS", "LEGACY_HANDLERS"):
+        if re.search(rf"\b{ident}\b\s*[:=]", src):
+            raise AssertionError(
+                f"{ident} is back in commandRouter.ts. The mechanism was "
+                "deleted on 2026-09-21 when its last row (`/checkpoint`) "
+                "migrated to factory routing — a client-side command declares "
+                "a `client_action` on its CommandSpec instead."
+            )
+    if "this._host.legacy" in src or re.search(r"\blegacy\s*:", src):
         raise AssertionError(
-            f"the legacy intercept table changed: {sorted(names)} "
-            f"(baseline {sorted(expected)}). It may only SHRINK, and only by "
-            "migrating a command to factory routing."
+            "route() consults a `legacy` table again — that is a per-name "
+            "intercept path around the roster."
+        )
+    if "handleCheckpoint" in src:
+        raise AssertionError(
+            "PanelCommandOps.handleCheckpoint is back — `/checkpoint` routes "
+            "through POST /command/checkpoint now, confirmation included."
         )
 
 
@@ -625,10 +638,12 @@ def assert_vscode_action_registry_implements(src: str, actions: set[str]) -> Non
             f"client actions declared in Python but not implemented by VSCode: "
             f"{sorted(missing)} (registry has {sorted(declared)})"
         )
-    overlap = declared & LEGACY_INTERCEPT_BASELINE
+    overlap = declared & FORMER_LEGACY_INTERCEPTS
     if overlap:
         raise AssertionError(
-            f"a legacy name leaked into the action registry: {sorted(overlap)}"
+            f"a command name leaked into the ACTION registry: {sorted(overlap)} "
+            "— its keys are `client_action` names (`token.manage`), never "
+            "command names."
         )
 
 
@@ -741,25 +756,33 @@ class TestVscodeRosterDrivenDispatchOrder:
     def test_no_per_name_escape_hatch_remains(self):
         assert_vscode_has_no_per_name_escape_hatch(_read(VSCODE_CHATPANEL_PATH))
 
-    def test_legacy_table_holds_exactly_the_acknowledged_baseline(self):
-        assert_vscode_legacy_table_is_exactly(
-            _read(VSCODE_ROUTER_PATH), set(LEGACY_INTERCEPT_BASELINE))
+    def test_the_legacy_mechanism_is_gone(self):
+        assert_vscode_has_no_legacy_mechanism(_read(VSCODE_ROUTER_PATH))
 
-    def test_no_declared_command_sits_in_the_legacy_table(self):
-        """The other direction: a command Python declares a
-        `client_action` for must be routed by the roster, never by the
-        legacy table."""
-        declared = {
-            info.canonical for info in CommandFactory.iter_completion_specs()
-            if info.client_action
-            and (info.client_action_clients is None
-                 or "vscode" in info.client_action_clients)
-        }
-        overlap = declared & LEGACY_INTERCEPT_BASELINE
-        assert not overlap, (
-            f"{sorted(overlap)} have a client_action AND sit in the legacy "
-            "table — remove them from the table, that is the shrink"
+    def test_the_panel_has_no_legacy_checkpoint_handler(self):
+        """The other half of the deletion, in the other file.
+
+        A regex for a DECLARATION or a CALL, not a bare mention:
+        chatPanel.ts keeps a comment naming what went and why, and that
+        sentence must not read as a regression (the same distinction
+        `test_the_textual_quit_legacy_extra_is_gone` draws)."""
+        src = _read(VSCODE_CHATPANEL_PATH)
+        assert not re.search(r"handleCheckpointCommand\s*[(<]", src), (
+            "chatPanel.ts's bespoke-REST `/checkpoint` handler is back; the "
+            "command's logic lives in ppxai/commands/agent.py and reaches this "
+            "client through the envelope."
         )
+
+    def test_the_fail_closed_gate_still_precedes_the_only_dispatch_paths(self):
+        """The deletion removed a branch from `route()`. The ordering
+        invariant is re-asserted against the file AS IT IS NOW, so the
+        edit cannot have moved the gate."""
+        body = self._route_body()
+        gate = body.index("_readyRoster")
+        assert gate < body.index("dispatchToFactory"), (
+            "the fail-closed roster gate must still precede factory dispatch")
+        assert gate < body.index("_dispatchClientAction"), (
+            "the fail-closed roster gate must still precede client dispatch")
 
     def test_action_registry_implements_every_vscode_action(self):
         """Read the Python declaration, not a hand-copied list: every spec
@@ -1162,44 +1185,52 @@ class TestMutationVscodeEscapeHatch:
         assert_vscode_has_no_per_name_escape_hatch(ok)  # must not raise
 
 
-class TestMutationVscodeLegacyTable:
-    def test_rejects_a_grown_table(self):
+class TestMutationVscodeLegacyMechanismIsGone:
+    """The helper asserts an ABSENCE, so its mutation tests matter more
+    than most: an absence check that cannot fail is permanent green."""
+
+    def test_rejects_a_reintroduced_table(self):
         broken = """
-        export const LEGACY_INTERCEPTS: readonly string[] = [
-            'tools', 'checkpoint', 'context', 'ls', 'tree', 'newthing',
-        ];
+        export const LEGACY_INTERCEPTS: readonly string[] = ['checkpoint'];
         """
-        with pytest.raises(AssertionError):
-            assert_vscode_legacy_table_is_exactly(
-                broken, set(LEGACY_INTERCEPT_BASELINE))
+        with pytest.raises(AssertionError, match="LEGACY_INTERCEPTS"):
+            assert_vscode_has_no_legacy_mechanism(broken)
 
-    def test_rejects_a_missing_table(self):
-        with pytest.raises(AssertionError):
-            assert_vscode_legacy_table_is_exactly(
-                "const x = 1;", set(LEGACY_INTERCEPT_BASELINE))
+    def test_rejects_an_empty_reintroduced_table(self):
+        """The comfortable regression: no rows, but the branch is back."""
+        with pytest.raises(AssertionError, match="LEGACY_INTERCEPTS"):
+            assert_vscode_has_no_legacy_mechanism(
+                "export const LEGACY_INTERCEPTS: readonly string[] = [];")
 
-    def test_accepts_the_baseline(self):
-        ok = """
-        export const LEGACY_INTERCEPTS: readonly string[] = [
-            'checkpoint',
-        ];
-        """
-        assert_vscode_legacy_table_is_exactly(ok, set(LEGACY_INTERCEPT_BASELINE))
+    def test_rejects_a_reintroduced_handler_map(self):
+        with pytest.raises(AssertionError, match="LEGACY_HANDLERS"):
+            assert_vscode_has_no_legacy_mechanism(
+                "export const LEGACY_HANDLERS: Record<string, OpsAction> = {};")
 
-    def test_rejects_the_pre_step_5_five(self):
-        """The shrink is the point: the step-3b table must now FAIL."""
-        stale = """
-        export const LEGACY_INTERCEPTS: readonly string[] = [
-            'tools',
-            'checkpoint',
-            'context',
-            'ls',
-            'tree',
-        ];
-        """
-        with pytest.raises(AssertionError):
-            assert_vscode_legacy_table_is_exactly(
-                stale, set(LEGACY_INTERCEPT_BASELINE))
+    def test_rejects_a_reintroduced_route_branch(self):
+        with pytest.raises(AssertionError, match="legacy"):
+            assert_vscode_has_no_legacy_mechanism(
+                "const l = this._host.legacy[name]; if (l) { await l(ctx); }")
+
+    def test_rejects_a_reintroduced_host_member(self):
+        with pytest.raises(AssertionError, match="legacy"):
+            assert_vscode_has_no_legacy_mechanism(
+                "    legacy: Record<string, ClientAction>;")
+
+    def test_rejects_a_reintroduced_ops_row(self):
+        with pytest.raises(AssertionError, match="handleCheckpoint"):
+            assert_vscode_has_no_legacy_mechanism(
+                "    handleCheckpoint(argv: string[]): Promise<void> | void;")
+
+    def test_accepts_prose_that_explains_the_deletion(self):
+        """`commandRouter.ts` keeps a note saying what was removed and
+        why; that sentence must not read as a regression."""
+        assert_vscode_has_no_legacy_mechanism(
+            "// There used to be a LEGACY_INTERCEPTS table here; it is gone.")
+
+    def test_accepts_the_real_router(self):
+        """The positive control — the live file must pass."""
+        assert_vscode_has_no_legacy_mechanism(_read(VSCODE_ROUTER_PATH))
 
 
 class TestMutationVscodeActionRegistry:

@@ -38,6 +38,11 @@ from ..engine.preview_backend import (
 )
 from ..commands.results import (
     ResultStatus,
+    SideEffectKind,
+    parse_prompt_text,
+    parse_quick_pick,
+    prompt_text_resume_args,
+    resume_command_line,
     NotificationResult,
     ErrorResult,
     ConfirmationResult,
@@ -639,5 +644,108 @@ def render_text(result: TextResult) -> None:
         console.print(result.message)
 
 
+# ============================================================================
+# Prompt side-effects — the Rich half of CLIENT_ROUND_TRIP_KINDS
+# ============================================================================
+#
+# Rich's consumer lives HERE, beside `render_consent` / `render_prompt`,
+# which already own "Rich asks the user something" (ADR 0002: the three
+# command-context patterns are deliberately not unified, and neither are
+# the clients' side-effect consumers — web builds DOM, VSCode calls
+# `showQuickPick`, Textual pushes a ModalScreen, Rich prints a numbered
+# list). The only shared piece is the PURE payload parsing in
+# `ppxai/commands/results.py`, so no two clients re-derive the wire shape.
+#
+# This function only ASKS. The caller
+# (`ppxai/commands/handler.py::handle_command`) re-dispatches the line it
+# returns down exactly the path a typed slash command takes — a resume
+# must not get a second dispatch route.
+
+
+def consume_prompt_side_effects(result) -> str | None:
+    """Ask the user about any prompt side-effect on `result`.
+
+    Returns the command line to re-dispatch (`/<cmd> <args>`), or None
+    when there was nothing to ask or the user declined to answer.
+
+    Declining is ALWAYS safe: empty input, `0`, an out-of-range number,
+    Ctrl-C and EOF all return None, and a handler that emitted a prompt
+    has by contract not performed its action yet (see
+    `CLIENT_ROUND_TRIP_KINDS`). `/checkpoint clear` deletes nothing until
+    a second dispatch arrives carrying `--yes`.
+    """
+    for effect in getattr(result, "side_effects", None) or []:
+        if effect.kind == SideEffectKind.PROMPT_QUICK_PICK:
+            line = _ask_quick_pick(effect.payload)
+            if line:
+                return line
+        elif effect.kind == SideEffectKind.PROMPT_TEXT:
+            line = _ask_prompt_text(effect.payload)
+            if line:
+                return line
+    return None
+
+
+def _ask_quick_pick(payload: dict) -> str | None:
+    """Numbered list + a number. Rich has no native picker widget."""
+    parsed = parse_quick_pick(payload)
+    if parsed is None:
+        return None
+    title, command, items = parsed
+
+    console.print(f"\n[bold]{title}[/bold]")
+    for i, item in enumerate(items, 1):
+        console.print(f"  [cyan]{i}[/cyan]. {item['label']}")
+    console.print("  [dim]Enter, or 0, to cancel[/dim]")
+
+    # No `choices=`/`default=`: Rich would then re-ask on bad input and
+    # treat a bare Enter as the default, and for a picker whose rows can
+    # be destructive the safe reading of "the user just pressed Enter"
+    # is "cancel", not "run row 1".
+    try:
+        raw = Prompt.ask("\n[bold]Choose[/bold]", default="", console=console)
+    except (KeyboardInterrupt, EOFError):
+        console.print("[dim]Cancelled.[/dim]")
+        return None
+
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    try:
+        index = int(raw)
+    except ValueError:
+        console.print(f"[yellow]Not a number: {raw!r} — cancelled.[/yellow]")
+        return None
+    if not 1 <= index <= len(items):
+        if index != 0:
+            console.print(f"[yellow]No option {index} — cancelled.[/yellow]")
+        return None
+
+    return resume_command_line(command, items[index - 1]["value"])
+
+
+def _ask_prompt_text(payload: dict) -> str | None:
+    """Free-text follow-up (`/auto <too brief>`)."""
+    parsed = parse_prompt_text(payload)
+    if parsed is None:
+        return None
+    question, command, original_args, placeholder = parsed
+
+    prompt = question
+    if placeholder:
+        prompt = f"{prompt} [dim](e.g. {placeholder})[/dim]"
+    try:
+        reply = Prompt.ask(f"\n{prompt}", default="", console=console)
+    except (KeyboardInterrupt, EOFError):
+        console.print("[dim]Cancelled.[/dim]")
+        return None
+
+    reply = (reply or "").strip()
+    if not reply:
+        return None
+    return resume_command_line(
+        command, prompt_text_resume_args(original_args, reply))
+
+
 # Export Rich renderer
-__all__ = ["RichRenderer"]
+__all__ = ["RichRenderer", "consume_prompt_side_effects"]

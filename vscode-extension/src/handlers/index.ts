@@ -1,20 +1,20 @@
 /**
  * Handlers module barrel export
  *
- * Phases 2-3 of chatPanel.ts refactoring - exports:
- * - HandlerContext interface for dependency injection (Phase 2)
- * - Command handler for /checkpoint (Phase 2)
+ * Phases 3-4 of chatPanel.ts refactoring - exports:
  * - EventBus for pub/sub communication (Phase 3a)
  * - Stream event processor (Phase 3b)
+ * - Agent state machine (Phase 4a) + consent handlers (Phase 4b)
+ *
+ * Phase 2's bespoke-REST command handlers are GONE (2026-09-21). ADR
+ * 0007 step 5 routed `/tools`, `/ls`, `/tree` and `/context` through
+ * `POST /command/<name>`; `/checkpoint` followed once `/checkpoint
+ * clear` grew a confirmation that works in all four clients, and with
+ * it went `commands.ts`, `types.ts` (`HandlerContext`,
+ * `HandlerResult`, `DialogCallbacks`, `CommandHandler` — nothing else
+ * used them) and the whole `LEGACY_INTERCEPTS` mechanism in
+ * ../commandRouter.ts.
  */
-
-// Phase 2: Command handlers with IoC pattern
-export { HandlerContext, HandlerResult, DialogCallbacks, CommandHandler } from './types';
-// ADR 0007 step 5 (2026-09-21): `/tools`, `/ls` and `/tree` route through
-// `POST /command/<name>` now, so their bespoke-REST handlers are deleted.
-// `/checkpoint` is the one acknowledged-legacy intercept left — see
-// LEGACY_INTERCEPTS in ../commandRouter.ts for why.
-export { handleCheckpointCommand } from './commands';
 
 // Phase 3b: Stream event processing
 export { processStreamEvent } from './stream';

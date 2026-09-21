@@ -29,12 +29,16 @@ What is pinned, and why a source read could not see it:
      the server stop over-listing `/help` for the web+vscode union.
   4. **An action the roster names that this client does not implement is
      an ERROR, never a silent forward.**
-  5. **The acknowledged-legacy intercept still works** — and only after
-     the fail-closed gate. Step 5 (2026-09-21) shrank that table from
-     five rows to one: `/tools`, `/context`, `/ls` and `/tree` resolve
-     to SERVER dispatch now and must POST `/command/<name>` with
-     `client: "vscode"` and their args intact, which is pinned here as a
-     positive control beside the `/checkpoint` row that stayed.
+  5. **The legacy-intercept mechanism is GONE, and every command it
+     held routes through the server.** Step 5 (2026-09-21) shrank the
+     table from five rows to one; the last row (`/checkpoint`) migrated
+     the same day, once `/checkpoint clear` grew a confirmation that
+     works in all four clients. All five — `/tools`, `/context`, `/ls`,
+     `/tree`, `/checkpoint` — must resolve to SERVER dispatch, POST
+     `/command/<name>` with `client: "vscode"` and their args intact,
+     and run NO bundled implementation. The bundle must export no
+     `LEGACY_*` table at all: an EMPTY one would be a regression, since
+     it restores the bypass branch for the next row.
   6. **FAIL CLOSED.** With NO roster, `/token set <secret>` reaches no
      network call at all, the secret is in no payload, the echo is
      masked and the raw line is purged from the ↑ history. The extension
@@ -152,13 +156,13 @@ def _bundle(tmp_path: Path, mutations: dict[str, tuple[str, str]] | None = None)
 
 
 # ---------------------------------------------------------------------------
-# Harness 1 — routing, fail-closed, legacy, side effect
+# Harness 1 — routing, fail-closed, migrated commands, side effect
 # ---------------------------------------------------------------------------
 
 _HARNESS = r"""
 const B = require(process.env.PPXAI_BUNDLE);
-const { CommandRoster, buildCommandRouter, CLIENT_ACTIONS, LEGACY_INTERCEPTS,
-        LEGACY_HANDLERS, SideEffectsHandler } = B;
+const { CommandRoster, buildCommandRouter, CLIENT_ACTIONS,
+        SideEffectsHandler } = B;
 const MASK = '••••';
 
 // The REAL CommandFactory.roster('vscode') payload, handed over by the
@@ -205,7 +209,6 @@ function makeOps(backend) {
         handleConvert(argv) { ops.ran.push(['coding.convert', argv.join(' ')]); },
         handlePreview(argv) { ops.ran.push(['preview.panel', argv.join(' ')]); },
         showHelp(args) { ops.ran.push(['help.augment', args]); },
-        handleCheckpoint(argv) { ops.ran.push(['legacy:checkpoint', argv.join(' ')]); },
         echo(text, sensitive, raw) {
             ops.echoes.push(text);
             if (sensitive) { ops.forgotten.push(raw); }
@@ -241,9 +244,11 @@ function ranNames(ops) { return ops.ran.map((r) => r[0]); }
     assert(JSON.stringify(impl) === JSON.stringify(declared.sort()),
       'CLIENT_ACTIONS != the actions Python declares for vscode: impl=' +
       JSON.stringify(impl) + ' declared=' + JSON.stringify(declared));
-    assert(JSON.stringify(Object.keys(LEGACY_HANDLERS).sort()) ===
-           JSON.stringify([...LEGACY_INTERCEPTS].sort()),
-      'LEGACY_HANDLERS keys != LEGACY_INTERCEPTS');
+    const legacyExports = Object.keys(B).filter((k) => /LEGACY/i.test(k));
+    assert(legacyExports.length === 0,
+      'the bundle still exports a legacy table: ' + JSON.stringify(legacyExports) +
+      ' — the mechanism was deleted on 2026-09-21; an EMPTY table is still a ' +
+      'regression because it restores the bypass branch in route()');
   }
 
   // --- 1: every declared client action is routed by the roster ---
@@ -354,42 +359,57 @@ function ranNames(ops) { return ops.ran.map((r) => r[0]); }
       'no clear error naming the unimplemented action: ' + JSON.stringify(ops.errors));
   }
 
-  // --- 6: the acknowledged-legacy intercepts still work ---
+  // --- 6: /checkpoint is intercepted by NOTHING ---
+  //
+  // It was the last legacy row, and the only reason it stayed was that
+  // `/checkpoint clear` irreversibly deletes every file-backend
+  // snapshot and this client's modal was the only confirmation anywhere.
+  // The confirmation is on the wire now (prompt_quick_pick from
+  // _checkpoint_clear, consumed by all four clients), so the command
+  // routes like any other — including the destructive subcommand, whose
+  // FIRST pass must reach the server rather than a local handler.
   {
     const {backend, roster, ops} = make();
     await roster.load();
     const router = buildCommandRouter(roster, ops);
-    for (const name of LEGACY_INTERCEPTS) { await router.route('/' + name + ' status'); }
-    assert(JSON.stringify(ranNames(ops)) ===
-           JSON.stringify(LEGACY_INTERCEPTS.map((n) => 'legacy:' + n)),
-      'the legacy row(s) were not intercepted: ' + JSON.stringify(ops.ran));
-    assert(posts(backend).length === 0, 'a legacy command was POSTed to the factory');
-    assert(ops.ran.every((r) => r[1] === 'status'), 'legacy argv mangled');
+    for (const args of ['status', 'clear', 'clear --yes', 'backend file']) {
+      await router.route('/checkpoint ' + args);
+    }
+    assert(ops.ran.length === 0,
+      '/checkpoint ran a bundled implementation: ' + JSON.stringify(ops.ran));
+    assert(ops.errors.length === 0,
+      '/checkpoint errored: ' + JSON.stringify(ops.errors));
+    const sent = posts(backend);
+    assert(sent.length === 4, '/checkpoint did not POST every subcommand: ' +
+      JSON.stringify(sent.map((c) => c.url)));
+    assert(sent.every((c) => c.url === '/command/checkpoint'),
+      '/checkpoint POSTed somewhere else: ' + JSON.stringify(sent.map((c) => c.url)));
+    assert(sent[2].body.args === 'clear --yes',
+      'the quick-pick resume args were mangled: ' + JSON.stringify(sent[2].body.args));
+    assert(sent.every((c) => c.body.client === 'vscode'),
+      '/checkpoint was POSTed without client:"vscode"');
   }
 
-  // --- 6b: ADR 0007 step 5 — the four MIGRATED commands ---
+  // --- 6b: ADR 0007 step 5 + the 2026-09-21 finish — ALL FIVE ---
   //
-  // The other half of the shrink, and the half a source read cannot
-  // see: /tools, /context, /ls and /tree must now resolve to SERVER
-  // dispatch, POST /command/<name> with client:"vscode", carry their
-  // args through unmangled, and run NO bundled implementation.
+  // The half a source read cannot see: every command the deleted table
+  // ever held must resolve to SERVER dispatch, POST /command/<name> with
+  // client:"vscode", carry its args through unmangled, and run NO
+  // bundled implementation.
   {
-    const MIGRATED = ['tools', 'context', 'ls', 'tree'];
+    const MIGRATED = ['tools', 'context', 'ls', 'tree', 'checkpoint'];
     const ARGS = {
       tools: 'auto on',
       context: 'clear',
       ls: '-a src',
       tree: 'src 2',
+      checkpoint: 'clear --yes',
     };
     const {backend, roster, ops} = make();
     await roster.load();
     const router = buildCommandRouter(roster, ops);
 
     for (const name of MIGRATED) {
-      assert(LEGACY_INTERCEPTS.indexOf(name) === -1,
-        '/' + name + ' is still in LEGACY_INTERCEPTS');
-      assert(LEGACY_HANDLERS[name] === undefined,
-        '/' + name + ' still has a LEGACY_HANDLERS row');
       const entry = roster.resolve(name);
       assert(entry, 'the server does not serve /' + name + ' to vscode');
       assert(entry.dispatch === 'server',
@@ -457,8 +477,9 @@ function ranNames(ops) { return ops.ran.map((r) => r[0]); }
     assert(/skew/i.test(err), 'the refusal does not name the version-skew possibility');
     assert(/ppxai-server/.test(err), 'the refusal does not name the server binary');
 
-    // Fail closed means CLOSED: a plain server command, a legacy
-    // intercept and a chat-shaped command are all refused too.
+    // Fail closed means CLOSED: plain server commands (including the
+    // destructive `/checkpoint clear`) and a chat-shaped command are all
+    // refused too.
     await router.route('/status');
     await router.route('/checkpoint status');
     await router.route('/tools status');
@@ -771,3 +792,40 @@ class TestMutationRedactionFailsClosed:
             f"open.\nSTDOUT: {proc.stdout}"
         )
         assert "FAIL" in proc.stderr, proc.stderr
+
+
+class TestMutationLegacyMechanismIsGone:
+    """The 2026-09-21 deletion, proved against the COMPILED bundle.
+
+    A source grep can be satisfied by a comment; this restores the real
+    mechanism into a scratch copy of the TypeScript, builds it, and the
+    harness must reject it. Both halves are exercised: a table with a row
+    (the obvious regression) and an EMPTY one (the comfortable one — no
+    rows, but `route()`'s bypass branch is back for the next person).
+    """
+
+    _ANCHOR = "export const CLIENT_ACTIONS: Record<string, OpsAction> = {"
+
+    def _restore(self, rows: str) -> tuple[str, str]:
+        return (
+            self._ANCHOR,
+            f"export const LEGACY_INTERCEPTS: readonly string[] = [{rows}];\n"
+            + self._ANCHOR,
+        )
+
+    def test_a_reintroduced_table_is_caught(self, tmp_path):
+        bundle = _bundle(tmp_path, {
+            "commandRouter.ts": self._restore("'checkpoint'")})
+        proc = _run(bundle)
+        assert proc.returncode != 0, (
+            "the harness PASSED against a router that re-exports "
+            f"LEGACY_INTERCEPTS — it proves nothing.\nSTDOUT: {proc.stdout}")
+        assert "legacy table" in proc.stderr, proc.stderr
+
+    def test_an_empty_reintroduced_table_is_caught_too(self, tmp_path):
+        bundle = _bundle(tmp_path, {"commandRouter.ts": self._restore("")})
+        proc = _run(bundle)
+        assert proc.returncode != 0, (
+            "an EMPTY LEGACY_INTERCEPTS passed — the check is only watching "
+            f"for rows, not for the mechanism.\nSTDOUT: {proc.stdout}")
+        assert "legacy table" in proc.stderr, proc.stderr

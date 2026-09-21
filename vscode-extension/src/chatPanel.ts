@@ -32,10 +32,11 @@ import { TaskController, RunController, ConsentAnswer } from './taskController';
 import { CommandRenderer, RendererHost } from './commandRenderer';
 import { SideEffectsHandler, SideEffectHost } from './sideEffectsHandler';
 
-// Import extracted handlers (Phase 2-4 refactoring)
+// Import extracted handlers (Phase 2-4 refactoring).
+// `HandlerContext` / `handleCheckpointCommand` went with the legacy
+// intercept mechanism on 2026-09-21 — `/checkpoint` routes through
+// `POST /command/checkpoint` like every other server command now.
 import {
-    HandlerContext,
-    handleCheckpointCommand as checkpointHandler,
     ChatEventBus,
     processStreamEvent,
     AgentStateMachine,
@@ -215,33 +216,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     ) {
         this._context = context;
         this._backend = backend;
-    }
-
-    /**
-     * Create handler context for dependency injection (IoC pattern).
-     * Provides extracted handlers with necessary dependencies without
-     * exposing ChatViewProvider internals.
-     */
-    private getHandlerContext(): HandlerContext | null {
-        if (!this._view) { return null; }
-
-        const view = this._view;
-        return {
-            postMessage: (msg) => {
-                view.webview.postMessage(msg);
-                if (msg?.content && (msg.type === 'systemMessage' || msg.type === 'error')) {
-                    const level = msg.type === 'error' ? 'error' : 'info';
-                    this._backend.logClientEvent(level, msg.content);
-                }
-            },
-            backend: this._backend,
-            updateStatus: () => this.updateStatus(),
-            updateAgentStatus: () => this.updateAgentStatus(),
-            dialogs: {
-                showWarningMessage: (message, options, ...actions) =>
-                    vscode.window.showWarningMessage(message, options, ...actions)
-            }
-        };
     }
 
     /**
@@ -1139,11 +1113,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
      * ADR 0007 step 3b: the roster-driven router, built once.
      *
      * The `client_action` → implementation registry lives in
-     * `commandRouter.ts` (`CLIENT_ACTIONS`), with the five
-     * acknowledged-legacy intercepts beside it (`LEGACY_HANDLERS` /
-     * `LEGACY_INTERCEPTS`). This method supplies only the panel
-     * operations those tables call — which is what keeps the registry in
-     * a `vscode`-free module the Node behavioural tests drive directly.
+     * `commandRouter.ts` (`CLIENT_ACTIONS`). It is the ONLY table there
+     * since 2026-09-21: the acknowledged-legacy intercepts
+     * (`LEGACY_HANDLERS` / `LEGACY_INTERCEPTS`) are gone, `/checkpoint`
+     * having been the last row. This method supplies only the panel
+     * operations that registry calls — which is what keeps the registry
+     * in a `vscode`-free module the Node behavioural tests drive
+     * directly.
      */
     private getCommandRouter(): CommandRouter {
         if (!this._commandRouter) {
@@ -1157,7 +1133,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 handleConvert: (argv) => this.handleConvertCommand(argv),
                 handlePreview: (argv) => this.handlePreviewCommand(argv),
                 showHelp: (args) => this.showHelp(args),
-                handleCheckpoint: (argv) => this.handleCheckpointCommand(argv),
                 echo: (text, sensitive, raw) => this.echoCommand(text, sensitive, raw),
                 showError: (message) => {
                     this._view?.webview.postMessage({ type: 'error', content: message });
@@ -1599,15 +1574,6 @@ Review your previous actions and continue. If the task is complete, respond with
 
         this._view.webview.postMessage({ type: 'endResponse' });
         await this.updateStatus();  // v1.12.0: Update usage badge after response
-    }
-
-    /**
-     * Handle /checkpoint command - delegates to extracted handler (Phase 2 refactoring)
-     */
-    private async handleCheckpointCommand(args: string[]): Promise<void> {
-        const ctx = this.getHandlerContext();
-        if (!ctx) { return; }
-        await checkpointHandler(ctx, args);
     }
 
     /**
