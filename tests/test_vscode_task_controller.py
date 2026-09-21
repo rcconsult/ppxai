@@ -33,12 +33,12 @@ WEB_TASK = ROOT / "ppxai" / "web" / "shared" / "task-controller.js"
 WEB_BASE = ROOT / "ppxai" / "web" / "shared" / "agent-run-controller.js"
 WEB_RUN = ROOT / "ppxai" / "web" / "shared" / "run-controller.js"
 WEB_DISPATCHER = ROOT / "ppxai" / "web" / "shared" / "command-dispatcher.js"
-# ADR 0007 step 3a deleted the web-side catalog (ppxai/web/shared/
-# commands.js): web now fetches GET /commands. The VSCode roster is a
-# SEPARATE hand-written file and survives until step 3b, so the
-# "retired verbs" fence below reads it plus the Python registry (which
-# IS what web's roster now comes from) instead of the deleted file.
-TS_COMMANDS = ROOT / "vscode-extension" / "src" / "shared" / "commands.ts"
+# ADR 0007 steps 3a + 3b deleted BOTH hand-written catalogs
+# (ppxai/web/shared/commands.js and vscode-extension/src/shared/
+# commands.ts): each client fetches GET /commands now. The "retired
+# verbs" fence below therefore reads the Python registry — which is what
+# both rosters come from — instead of a JS/TS copy of it.
+TS_ROUTER = ROOT / "vscode-extension" / "src" / "commandRouter.ts"
 ENGINE_COMPLETION = ROOT / "ppxai" / "engine" / "completion.py"
 
 
@@ -144,8 +144,17 @@ class TestRunFamilyParity:
         for src in (_read(WEB_RUN), _read(TS_CONTROLLER)):
             assert "takes no flags" in src
 
-    def test_run_routed_before_factory_dispatch_in_vscode(self):
-        assert "getRunController().handle(argsText)" in _read(TS_CHAT_PANEL)
+    def test_run_routed_client_side_in_vscode(self):
+        # ADR 0007 step 3b: the `command === 'run'` intercept is gone —
+        # Python declares `run.controller` for vscode and the roster's
+        # `dispatch` field routes it. The wiring is what must exist now.
+        assert "'run.controller': (ops, ctx) => ops.handleRun(ctx.args)" in \
+            _read(TS_ROUTER)
+        assert "handleRun: (args) => this.getRunController().handle(args)" in \
+            _read(TS_CHAT_PANEL)
+        info = {i.canonical: i for i in CommandFactory.iter_completion_specs()}["run"]
+        assert info.client_action == "run.controller"
+        assert "vscode" in (info.client_action_clients or ())
 
     def test_collect_semantics_parity(self):
         # U4 (ADR 0011): both clients drive the same collect machinery —
@@ -179,11 +188,10 @@ class TestRunFamilyParity:
         # no longer offers them.
         assert "cmd === '/agentrun'" not in _read(WEB_DISPATCHER)
         assert "cmd === '/agentruns'" not in _read(WEB_DISPATCHER)
-        assert "'/agentrun':" not in _read(TS_COMMANDS)
-        assert "'/agentruns':" not in _read(TS_COMMANDS)
+        assert "agentrun" not in _read(TS_ROUTER)
         assert '"/agentrun"' not in _read(ENGINE_COMPLETION)
-        # Web's catalog is the Python registry now — check it directly
-        # rather than a JS copy of it.
+        # BOTH catalogs are the Python registry now — check it directly
+        # rather than a JS/TS copy of it.
         assert CommandFactory.get("agentrun") is None
         assert CommandFactory.get("agentruns") is None
         assert CommandFactory.get("run") is not None
@@ -243,17 +251,19 @@ class TestStatusParity:
 
 
 class TestChatPanelWiring:
-    def test_task_routed_before_factory_dispatch(self):
-        src = _read(TS_CHAT_PANEL)
-        task_pos = src.find("command === 'task'")
-        factory_pos = src.find("await this.dispatchFactoryCommand(command, argsText)")
-        assert task_pos != -1, "chatPanel does not route /task"
-        assert factory_pos != -1, "factory dispatch anchor moved (test drift)"
-        assert task_pos < factory_pos, (
-            "/task must be intercepted BEFORE factory dispatch — the "
-            "CommandFactory has no /task handler and would 404 it"
-        )
-        assert "getTaskController().handle(argsText)" in src
+    def test_task_routed_client_side(self):
+        # ADR 0007 step 3b: routing is the roster's `dispatch` field, not
+        # branch order. The guarantee is unchanged (the factory has no
+        # /task handler and would 404 it) — what pins it moved: Python
+        # declares `task.controller` for vscode, the registry implements
+        # it, and chatPanel supplies the controller.
+        info = {i.canonical: i for i in CommandFactory.iter_completion_specs()}["task"]
+        assert info.client_action == "task.controller"
+        assert "vscode" in (info.client_action_clients or ())
+        assert "'task.controller': (ops, ctx) => ops.handleTask(ctx.args)" in \
+            _read(TS_ROUTER)
+        assert "handleTask: (args) => this.getTaskController().handle(args)" in \
+            _read(TS_CHAT_PANEL)
 
     def test_controller_constructed_with_backend_ui_defaults(self):
         # U3 refactor: both controllers share buildTaskUi()/buildTaskDefaults()
@@ -366,15 +376,20 @@ class TestTokenCommandParity:
 
     WEB_DISPATCH = ROOT / "ppxai" / "web" / "shared" / "command-dispatcher.js"
 
-    def test_token_routed_before_factory_dispatch_in_vscode(self):
-        src = _read(TS_CHAT_PANEL)
-        token_pos = src.find("command === 'token'")
-        factory_pos = src.find("await this.dispatchFactoryCommand(command, argsText)")
-        assert token_pos != -1, "chatPanel does not route /token"
-        assert token_pos < factory_pos, (
-            "/token must be intercepted BEFORE factory dispatch — the "
-            "CommandFactory has no /token handler and would 404 it"
-        )
+    def test_token_routed_client_side_in_vscode(self):
+        # ADR 0007 step 3b: same guarantee, now carried by the roster's
+        # `dispatch` field plus the FAIL-CLOSED gate (no roster, no
+        # dispatch — so `/token set <value>` is refused rather than
+        # forwarded). Ordering is pinned in
+        # tests/test_client_handled_commands_contract.py; behaviour in
+        # tests/test_vscode_command_roster_behavior.py.
+        info = {i.canonical: i for i in CommandFactory.iter_completion_specs()}["token"]
+        assert info.client_action == "token.manage"
+        assert info.client_handled, "/token must have no server handler"
+        assert "'token.manage': (ops, ctx) => ops.handleToken(ctx.args)" in \
+            _read(TS_ROUTER)
+        assert "handleToken: (args) => this.handleTokenCommand(args)" in \
+            _read(TS_CHAT_PANEL)
 
     def test_both_clients_implement_the_same_verb_set(self):
         for src in (_read(self.WEB_DISPATCH), _read(TS_CHAT_PANEL)):

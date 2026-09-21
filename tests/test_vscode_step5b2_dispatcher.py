@@ -7,18 +7,25 @@ logic now lives server-side in the factory.
 Pinning what 5b.2 must keep stable so that 5c (Phase B + D wiring)
 and Step 6 (end-to-end tests) can build on it without surprises.
 
-Specifically:
+**Retargeted 2026-09-21 by ADR 0007 step 3b.** 5b.2's intercept chain
+(twelve hardcoded `command === '…'` branches) and its `CHAT_SHAPED_TASKS`
+Map are GONE: routing is now the fetched roster's `dispatch` field, and
+the `client_action` → implementation registry lives in
+`src/commandRouter.ts`. The five 5b.2 behaviours below survive
+unchanged — they are just asserted against the registry instead of
+against a branch order:
   - Six chat-shaped commands stay client-side via _backend.codingTask
-    (CHAT_SHAPED_TASKS Map). VSCode's editor-context advantage
-    (active file's language + filename) is the reason — the factory
-    handlers don't have access.
-  - /agent loop stays client-side per
+    (now the shared `coding.stream` action). VSCode's editor-context
+    advantage (active file's language + filename) is the reason — the
+    factory handlers don't have access.
+  - /auto loop stays client-side per
     docs/TODO-v1.18.2-agent-loop-unification.md. Server-side
     validation (5b.1) gates short tasks before the loop runs, so the
     duplicate min-words check is gone.
   - /preview keeps its own previewPanel.ts WebviewPanel.
   - /help stays client-side because it appends VSCode-specific
-    keyboard shortcuts.
+    keyboard shortcuts (`help.augment` — and since step 3b it really
+    does wrap the factory; see chatPanel.ts::showHelp).
   - Everything else routes via dispatchFactoryCommand, which uses
     CommandRenderer + SideEffectsHandler from 5a.
 
@@ -35,6 +42,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import ppxai.commands.handler  # noqa: F401  (populates CommandFactory)
+from ppxai.commands.factory import CommandFactory
+
 EXT_SRC = Path(__file__).resolve().parents[1] / "vscode-extension" / "src"
 
 
@@ -43,138 +53,194 @@ def _read(rel: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# CHAT_SHAPED_TASKS — the six commands kept client-side
+# The six chat-shaped commands — now ONE declared action, not a Map
 # ---------------------------------------------------------------------------
 
-class TestChatShapedTasksMap:
-    def test_constant_is_a_map_of_six_entries(self):
+def _client_actions_body(src: str) -> str:
+    m = re.search(
+        r"export const CLIENT_ACTIONS: Record<string, OpsAction> = \{([\s\S]*?)\n\};",
+        src,
+    )
+    assert m, "CLIENT_ACTIONS registry not found in commandRouter.ts"
+    return m.group(1)
+
+
+class TestChatShapedTasksAction:
+    """ADR 0007 step 3b replaced `CHAT_SHAPED_TASKS` with a declaration.
+
+    The Map did two jobs. ROUTING moved to Python (`coding.stream`,
+    declared for all six in `ppxai/commands/coding.py`) and the
+    name→task_type MAPPING turned out to be the identity, so the
+    implementation passes the roster-resolved canonical name straight
+    through. Behaviour is pinned end-to-end in
+    tests/test_vscode_command_roster_behavior.py; these are the
+    structural fences.
+    """
+
+    def test_the_map_is_gone(self):
         src = _read("chatPanel.ts")
-        # Find the const definition
-        m = re.search(
-            r"const\s+CHAT_SHAPED_TASKS\s*=\s*new\s+Map<string,\s*string>\(\[([\s\S]*?)\]\)",
-            src,
+        assert "CHAT_SHAPED_TASKS" not in src or "deleted `CHAT_SHAPED_TASKS`" in src, (
+            "CHAT_SHAPED_TASKS is back — the six chat-shaped commands are "
+            "routed by the roster's coding.stream action now, and a local map "
+            "would be a second source of truth for routing"
         )
-        assert m, "CHAT_SHAPED_TASKS Map not found"
-        body = m.group(1)
-        # Each entry is ['name', 'name'] on one line
-        entries = re.findall(r"\['([\w-]+)'\s*,\s*'([\w-]+)'\]", body)
-        assert len(entries) == 6, (
-            f"CHAT_SHAPED_TASKS should have exactly 6 entries (the six "
-            f"chat-shaped commands with editor-context advantage); "
-            f"found {len(entries)}: {entries}"
+        assert "new Map<string, string>([" not in src, (
+            "a name→task_type Map came back in chatPanel.ts"
         )
 
-    def test_six_canonical_commands_present(self):
-        src = _read("chatPanel.ts")
-        m = re.search(
-            r"const\s+CHAT_SHAPED_TASKS\s*=\s*new\s+Map<string,\s*string>\(\[([\s\S]*?)\]\)",
-            src,
-        )
-        assert m
-        body = m.group(1)
+    def test_python_declares_one_action_for_all_six(self):
+        """The registry side of the same fact, read off Python."""
+        infos = {i.canonical: i for i in CommandFactory.iter_completion_specs()}
         for cmd in ("generate", "explain", "test", "docs", "debug", "implement"):
-            assert f"['{cmd}', '{cmd}']" in body, (
-                f"/{cmd} missing from CHAT_SHAPED_TASKS"
+            info = infos.get(cmd)
+            assert info is not None, f"/{cmd} is not registered"
+            assert info.client_action == "coding.stream", (
+                f"/{cmd} declares {info.client_action!r}, not the shared "
+                "coding.stream action"
             )
+            assert info.client_action_clients is not None
+            assert "vscode" in info.client_action_clients
 
-    def test_convert_NOT_in_map(self):
-        """`/convert` is chat-shaped but has special arg parsing — it
-        flows through handleConvertCommand, NOT the Map."""
-        src = _read("chatPanel.ts")
-        m = re.search(
-            r"const\s+CHAT_SHAPED_TASKS\s*=\s*new\s+Map<string,\s*string>\(\[([\s\S]*?)\]\)",
-            src,
-        )
-        assert m
-        body = m.group(1)
-        assert "convert" not in body, (
-            "/convert has bespoke arg parsing; it must not be in the "
-            "Map (handleSlashCommand handles it as a separate branch)"
+    def test_registry_passes_the_resolved_name_as_task_type(self):
+        body = _client_actions_body(_read("commandRouter.ts"))
+        assert re.search(
+            r"'coding\.stream':\s*\(ops, ctx\) =>\s*ops\.handleCodingTask\("
+            r"ctx\.name,\s*ctx\.args\)",
+            body,
+        ), (
+            "coding.stream must hand the CANONICAL command name the roster "
+            "resolved to handleCodingTask as the task_type — that is what "
+            "replaced CHAT_SHAPED_TASKS' mapping half"
         )
 
-    def test_agent_NOT_in_map(self):
-        """`/agent <task>` runs the iteration loop client-side
-        (loop unification deferred to v1.18.2)."""
-        src = _read("chatPanel.ts")
-        m = re.search(
-            r"const\s+CHAT_SHAPED_TASKS\s*=\s*new\s+Map<string,\s*string>\(\[([\s\S]*?)\]\)",
-            src,
-        )
-        assert m
-        body = m.group(1)
-        assert "'agent'" not in body, (
-            "/agent loop unification is deferred to v1.18.2 — must "
-            "not appear in CHAT_SHAPED_TASKS"
-        )
+    def test_convert_keeps_its_own_action(self):
+        """`/convert` is chat-shaped but has `<src> <dst> <code>` arg
+        parsing, so it declares `coding.convert`, not `coding.stream`."""
+        info = {i.canonical: i for i in CommandFactory.iter_completion_specs()}["convert"]
+        assert info.client_action == "coding.convert"
+        body = _client_actions_body(_read("commandRouter.ts"))
+        assert "'coding.convert'" in body
+        assert "handleConvert(ctx.argv)" in body
+
+    def test_auto_is_not_chat_shaped(self):
+        """`/auto <task>` runs the iteration loop client-side (loop
+        unification still deferred), under its own action."""
+        info = {i.canonical: i for i in CommandFactory.iter_completion_specs()}["auto"]
+        assert info.client_action == "auto.loop"
+        body = _client_actions_body(_read("commandRouter.ts"))
+        assert "handleCodingTask" not in body.split("'auto.loop'")[1].split("\n")[0]
 
 
 # ---------------------------------------------------------------------------
 # handleSlashCommand — thin dispatcher shape
 # ---------------------------------------------------------------------------
 
-def _slash_command_body(src: str) -> str:
-    """Extract the full `handleSlashCommand` method body."""
+def _ops_body(src: str) -> str:
+    """Extract the `PanelCommandOps` object literal `getCommandRouter`
+    builds — the wiring that replaced the intercept chain."""
     m = re.search(
-        r"private\s+async\s+handleSlashCommand\s*\([^\)]*\)\s*\{([\s\S]*?)\n\s{4}\}",
+        r"const ops: PanelCommandOps = \{([\s\S]*?)\n\s{12}\};",
         src,
     )
-    assert m, "handleSlashCommand not found"
+    assert m, "the PanelCommandOps literal was not found in chatPanel.ts"
     return m.group(1)
 
 
 class TestHandleSlashCommandShape:
+    """After step 3b `handleSlashCommand` is three lines: route, catch.
+
+    The 5b.2 invariant it used to carry (no 35-case switch, fallthrough
+    to the factory) is now structural — there are no branches left to
+    get wrong — so what these pin is that every implementation the old
+    chain reached is still WIRED, and that routing itself is data.
+    """
+
     def test_no_giant_switch(self):
-        """Pre-v1.18.1 had 35 case branches inside handleSlashCommand.
-        After 5b.2 there should be no `switch (command)` block — the
-        dispatcher is a series of early-return guards + fallthrough
-        to dispatchFactoryCommand."""
-        body = _slash_command_body(_read("chatPanel.ts"))
-        assert "switch (command)" not in body, (
-            "handleSlashCommand still contains a switch statement — "
-            "the 5b.2 rewrite was meant to replace it with the "
-            "Map + factory-dispatch fallthrough"
+        body = _read("chatPanel.ts")
+        m = re.search(
+            r"private\s+async\s+handleSlashCommand\s*\([^)]*\)\s*\{"
+            r"([\s\S]*?)\n\s{4}\}",
+            body,
         )
-        # Sanity: no `case '/help':` etc. either
-        assert not re.search(r"case\s+'/\w+'\s*:", body), (
-            "handleSlashCommand still has case branches"
+        assert m, "handleSlashCommand not found"
+        inner = m.group(1)
+        assert "switch (command)" not in inner
+        assert not re.search(r"case\s+'/?\w+'\s*:", inner)
+        assert "getCommandRouter().route(input)" in inner, (
+            "handleSlashCommand must delegate to the roster-driven router"
+        )
+
+    def test_no_hardcoded_command_branches_remain(self):
+        """The twelve `command === '…'` intercepts are the deletion that
+        proves step 3b happened."""
+        src = _read("chatPanel.ts")
+        # `grep -v subcommand` in regex form: `subcommand === 'clear'`
+        # inside handleContextCommand is a different thing entirely.
+        found = sorted(set(re.findall(
+            r"(?:^|[^A-Za-z])command === '([a-z?-]+)'", src, re.M)))
+        assert found == [], (
+            f"hardcoded per-command branches are back in chatPanel.ts: {found}. "
+            "Routing must come from the roster."
         )
 
     def test_dispatches_to_factory_by_default(self):
-        body = _slash_command_body(_read("chatPanel.ts"))
-        assert "dispatchFactoryCommand" in body, (
-            "handleSlashCommand must call dispatchFactoryCommand "
-            "for any command not in the client-side keep list"
-        )
+        assert "dispatchToFactory: (name, args) => this.dispatchFactoryCommand(" \
+            in _read("chatPanel.ts"), (
+                "the router's default path must still reach dispatchFactoryCommand"
+            )
 
-    def test_chat_shaped_uses_map(self):
-        body = _slash_command_body(_read("chatPanel.ts"))
-        assert "CHAT_SHAPED_TASKS.get" in body, (
-            "handleSlashCommand should look up the Map for chat-shaped "
-            "commands"
-        )
-        assert "handleCodingTaskCommand" in body, (
-            "Map hits should call handleCodingTaskCommand "
+    def test_chat_shaped_still_uses_coding_task(self):
+        ops = _ops_body(_read("chatPanel.ts"))
+        assert "handleCodingTask:" in ops and "handleCodingTaskCommand(" in ops, (
+            "coding.stream must still reach handleCodingTaskCommand "
             "(preserves _backend.codingTask path with editor context)"
         )
 
     def test_keeps_agent_loop(self):
-        body = _slash_command_body(_read("chatPanel.ts"))
-        assert "handleAgentCommand" in body, (
-            "/agent must still route to handleAgentCommand "
+        ops = _ops_body(_read("chatPanel.ts"))
+        assert "handleAgentCommand(" in ops, (
+            "/auto must still reach handleAgentCommand "
             "(loop unification deferred to v1.18.2)"
         )
 
     def test_keeps_preview_webview(self):
-        body = _slash_command_body(_read("chatPanel.ts"))
-        assert "handlePreviewCommand" in body, (
+        ops = _ops_body(_read("chatPanel.ts"))
+        assert "handlePreviewCommand(" in ops, (
             "/preview owns its own webview panel — must stay client-side"
         )
 
     def test_keeps_help_for_keyboard_shortcuts(self):
-        body = _slash_command_body(_read("chatPanel.ts"))
-        assert "showHelp" in body, (
-            "/help must call showHelp() to append VSCode-specific "
+        ops = _ops_body(_read("chatPanel.ts"))
+        assert "showHelp:" in ops, (
+            "/help must reach showHelp() to append VSCode-specific "
             "keyboard shortcuts to the factory output"
+        )
+
+    def test_help_now_actually_calls_the_factory(self):
+        """The reconciliation ADR 0007's contract item 3 asked for.
+
+        Before step 3b `showHelp` called `generateHelpText()` — the
+        hand-written `shared/commands.ts` catalog — and never touched the
+        factory, despite every comment saying "factory output + shortcuts".
+        """
+        src = _read("chatPanel.ts")
+        assert "private async showHelp(" in src, "showHelp not found"
+        assert "executeCommand('help', args, VSCODE_CLIENT_ID)" in src, (
+            "showHelp must render the SERVER's /help (with client:\"vscode\"), "
+            "not a client-side catalog"
+        )
+        # The name survives only in the tombstone comment on showHelp.
+        assert "generateHelpText()" not in src.replace(
+            "called `generateHelpText()`", ""), (
+            "generateHelpText is deleted with shared/commands.ts"
+        )
+        assert "from './shared/commands'" not in src, (
+            "chatPanel must not import the deleted catalog"
+        )
+        assert "helpText += '\\n**Agent platform (client-side, experimental):**" \
+            not in src, (
+            "the hardcoded experimental-help block must go with it — /run and "
+            "/task have been factory-registered since T8b"
         )
 
 
@@ -348,7 +414,14 @@ class TestSizeReduction:
     def test_chatpanel_smaller_than_3000_lines(self):
         """Pre-5b.2 chatPanel.ts was ~3055 LoC. After 5b.2 (the dead
         handlers + 35-case switch are gone) it should be well under
-        3000. Loose floor — guard against accidental regressions."""
+        3000. Loose floor — guard against accidental regressions.
+
+        Threshold history: 3000 (5b.2). ADR 0007 step 3b removed the
+        twelve-branch intercept chain and `CHAT_SHAPED_TASKS` and added
+        the router wiring + a real factory-backed `showHelp`; the
+        threshold was DELIBERATELY NOT raised — the `client_action`
+        registry and the legacy table live in `src/commandRouter.ts`,
+        which is where a parity fence needs to read them anyway."""
         src = _read("chatPanel.ts")
         line_count = src.count("\n") + 1
         assert line_count < 3000, (

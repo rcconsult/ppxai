@@ -330,9 +330,23 @@ roster's per-command `dispatch` field rather than a hardcoded `if`-chain;
 `web/shared/commands.js` is deleted. With NO roster the dispatcher fails
 closed — it refuses slash commands instead of forwarding the ones it
 cannot classify, because a forwarded `/token set <value>` would put a
-secret in a request body and in the debug log. VSCode still carries its
-own hand-written roster (`vscode-extension/src/shared/commands.ts`)
-until step 3b.
+secret in a request body and in the debug log.
+
+**VSCode consumes it the same way (ADR 0007 step 3b).**
+`vscode-extension/src/commandRoster.ts` fetches
+`GET /commands?client=vscode` as soon as the backend is reachable,
+drops the roster when the connection goes away, and refetches on the
+`refresh_command_roster` signal;
+`vscode-extension/src/commandRouter.ts` routes from the roster's
+`dispatch` field, with a `client_action` → implementation registry
+(`CLIENT_ACTIONS`) in place of `chatPanel.ts`'s twelve hardcoded
+intercepts, and the same fail-closed gate. `src/shared/commands.ts` —
+the SIXTH roster the record counts — is deleted. Five commands
+(`/tools`, `/checkpoint`, `/context`, `/ls`, `/tree`) are still
+intercepted without a declared action, as the named, shrinking
+`LEGACY_INTERCEPTS` baseline for step 5's parity fence. Both modules are
+`vscode`-free by design (the `taskController.ts` idiom), so the
+behavioural tests compile and drive the real TypeScript under Node.
 
 **Secrets ride the same declaration (ADR 0007 step 3a-sec).** A spec may
 mark subcommands whose ARGUMENT is a secret
@@ -344,9 +358,11 @@ one client-side implementation — so the web client masks the `> <input>`
 chat echo, skips `POST /complete` and keeps the line out of its input
 history WITHOUT hardcoding `/token` or `set`, and `POST /client-log`,
 `POST /complete` and `POST /command/<name>` redact again server-side for
-stale assets and for VSCode, whose client half waits for step 3b. With
-no roster the client fails closed: every slash command's args are
-treated as secret.
+stale assets. **Step 3b closed the VSCode client half**: the webview
+echo is masked, `POST /complete` is skipped, and the raw line is purged
+from the webview's ↑ history (the host tells it to forget, so the
+webview holds no copy of the rule). With no roster the client fails
+closed: every slash command's args are treated as secret.
 
 ```
                   ┌────────────────────────┐

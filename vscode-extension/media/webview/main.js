@@ -933,6 +933,25 @@ window.addEventListener('message', (event) => {
             addMessage('command', message.content, false);
             break;
 
+        // ADR 0007 step 3a-sec / step 3b: the extension host classified
+        // the line just sent as carrying a secret (the rule lives in
+        // CommandRoster, driven by the server's per-subcommand
+        // `sensitive` flag — this webview deliberately holds no copy of
+        // it). `sendMessage()` pushed the raw line into commandHistory
+        // before the host ever saw it, so forget it now: ↑ must not
+        // recall a bearer token.
+        case 'forgetHistory':
+            if (typeof message.content === 'string') {
+                for (let i = commandHistory.length - 1; i >= 0; i--) {
+                    if (commandHistory[i] === message.content) {
+                        commandHistory.splice(i, 1);
+                    }
+                }
+                historyIndex = -1;
+                currentInput = '';
+            }
+            break;
+
         case 'systemMessage':
             addMessage('system', message.content, true);
             // v1.13.2: Reset flags after system message (e.g., /help, /status)

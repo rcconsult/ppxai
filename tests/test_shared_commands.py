@@ -11,17 +11,20 @@ there is no JS-side catalog left to test for web.
 **Why this file was not deleted with it.** Two of its checks were real
 parity fences and are still live, just pointed at what remains:
 
-  - `vscode-extension/src/shared/commands.ts` is a SEPARATE hand-written
+  - `vscode-extension/src/shared/commands.ts` was a SEPARATE hand-written
     roster (31 entries) that step 3a deliberately did not touch — VSCode
-    is step 3b. The parity check now compares that TS copy against the
-    PYTHON registry, which is the drift that actually matters now (the
-    old web-vs-TS comparison could pass while both drifted from Python).
+    was step 3b. **Step 3b landed 2026-09-21 and deleted it**, so the
+    parity check inverted again: what is left is a DELETION fence plus
+    drift fences on its replacement (`src/commandRoster.ts`,
+    `src/commandRouter.ts`). The known-gap test that pinned VSCode's
+    missing `/run`·`/task`·`/token` was written to fail the day 3b
+    landed; it did, and is replaced by the positive assertion that the
+    roster serves all three to vscode.
   - The formatter inventory (`formatters.js`) is unrelated to the roster
     and is unchanged.
 
-Plus a new fence in the opposite direction: the web app must NOT carry a
-command catalog any more — `commands.js` stays deleted, `index.html`
-stops loading it, and `app.js` stops restating it.
+Plus fences in the opposite direction for both clients: neither app may
+carry a command catalog any more.
 """
 
 from __future__ import annotations
@@ -40,7 +43,10 @@ COMMAND_ROSTER_JS = SHARED_DIR / "command-roster.js"
 FORMATTERS_JS = SHARED_DIR / "formatters.js"
 INDEX_HTML = REPO_ROOT / "ppxai" / "web" / "index.html"
 APP_JS = REPO_ROOT / "ppxai" / "web" / "app.js"
-VSCODE_SHARED_DIR = REPO_ROOT / "vscode-extension" / "src" / "shared"
+VSCODE_SRC_DIR = REPO_ROOT / "vscode-extension" / "src"
+VSCODE_SHARED_DIR = VSCODE_SRC_DIR / "shared"
+VSCODE_ROSTER_TS = VSCODE_SRC_DIR / "commandRoster.ts"
+VSCODE_ROUTER_TS = VSCODE_SRC_DIR / "commandRouter.ts"
 
 
 def _read(path: Path) -> str:
@@ -155,90 +161,117 @@ class TestFormatterFunctions:
         assert "shared/formatters.js" in _read(INDEX_HTML)
 
 
-class TestVSCodeSharedModules:
-    """VSCode still ships its OWN hand-written roster (ADR 0007 step 3b).
+class TestVSCodeHasNoCommandCatalog:
+    """ADR 0007 step 3b (2026-09-21): the VSCode catalog is FETCHED too.
 
-    Finding recorded while doing step 3a: `commands.ts` is not a copy of
-    `commands.js` sharing one file — it is a SIXTH independent roster.
-    Deleting the web copy therefore did not touch VSCode at all, which is
-    why the two steps are independent.
+    `vscode-extension/src/shared/commands.ts` was a SEPARATE hand-written
+    roster — the SIXTH the record counts, not a copy of the web one. It
+    is now deleted; `src/commandRoster.ts` caches
+    `GET /commands?client=vscode` and `src/commandRouter.ts` routes on
+    its server-computed `dispatch` field.
+
+    These are the deletions that prove the migration happened. Inverted
+    from what this class used to assert — including the known-gap test
+    for `/run`·`/task`·`/token`, which was written to fail the day step
+    3b landed and has now done its job.
     """
 
-    def test_vscode_commands_ts_exists(self):
-        assert (VSCODE_SHARED_DIR / "commands.ts").exists()
+    def test_commands_ts_is_deleted(self):
+        assert not (VSCODE_SHARED_DIR / "commands.ts").exists(), (
+            "vscode-extension/src/shared/commands.ts is back. The VSCode "
+            "command catalog comes from GET /commands (CommandRoster); a "
+            "static TS copy is the duplication ADR 0007 removed."
+        )
+
+    def test_nothing_imports_the_deleted_module(self):
+        for path in sorted(VSCODE_SRC_DIR.rglob("*.ts")):
+            src = _read(path)
+            assert "from './shared/commands'" not in src, path
+            assert "from '../shared/commands'" not in src, path
+
+    def test_barrel_no_longer_reexports_it(self):
+        src = _read(VSCODE_SHARED_DIR / "index.ts")
+        assert "} from './commands';" not in src
+        for name in ("SLASH_COMMANDS", "generateHelpText", "AI_FORWARDED_COMMANDS",
+                     "isAIForwardedCommand", "getCommandNames",
+                     "getCommandsByCategory"):
+            assert f"    {name}," not in src, (
+                f"shared/index.ts still re-exports {name} from the deleted module"
+            )
 
     def test_vscode_formatters_ts_exists(self):
+        """Unrelated to the roster; unchanged."""
         assert (VSCODE_SHARED_DIR / "formatters.ts").exists()
 
     def test_vscode_index_ts_exists(self):
         assert (VSCODE_SHARED_DIR / "index.ts").exists()
 
-    def test_vscode_roster_matches_the_python_registry(self):
-        """Retargeted parity fence.
 
-        It used to compare the TS copy against the JS copy — a check that
-        stayed green while BOTH drifted from Python (they had, by nine
-        commands). Now the reference is the registry itself, which is the
-        single declaration ADR 0007 exists to establish. Until step 3b
-        deletes `commands.ts` too, this is what keeps it honest.
+class TestVSCodeCommandRosterModule:
+    """The replacement modules: a cache over GET /commands plus a router
+    that reads it — not a catalog."""
 
-        Scoped to a required core so an unmigrated VSCode roster does not
-        fail the suite for every command added server-side; step 3b
-        replaces this with the real fetch.
+    def test_modules_exist(self):
+        assert VSCODE_ROSTER_TS.exists()
+        assert VSCODE_ROUTER_TS.exists()
+
+    def test_neither_imports_vscode(self):
+        """What makes them testable under Node at all (the
+        `taskController.ts` idiom) — and what the behavioural tests in
+        tests/test_vscode_command_roster_behavior.py depend on."""
+        for path in (VSCODE_ROSTER_TS, VSCODE_ROUTER_TS):
+            src = _read(path)
+            assert "from 'vscode'" not in src, f"{path.name} imports vscode"
+            assert 'from "vscode"' not in src, f"{path.name} imports vscode"
+
+    def test_carries_no_command_names_of_its_own(self):
+        """A drift fence with teeth: neither module may contain a
+        hardcoded `'/<name>'` command literal. The moment one appears the
+        catalog has started growing back inside its own replacement.
+
+        `LEGACY_INTERCEPTS` deliberately names five commands WITHOUT the
+        slash — they are the acknowledged-debt baseline ADR 0007 step 5
+        inherits, pinned exactly in
+        tests/test_client_handled_commands_contract.py, and they carry no
+        description, usage or category (which is what a roster is).
         """
-        ts_content = _read(VSCODE_SHARED_DIR / "commands.ts")
-        registry = {info.name for info in CommandFactory.iter_completion_specs()}
-        required = {
-            "help", "clear", "save", "export", "load", "sessions",
-            "provider", "model", "tools", "auto", "checkpoint",
-            "usage", "status", "show", "cat",
-            "generate", "explain", "test", "docs", "debug", "implement",
-            "convert", "spec", "theme",
-        }
-        missing_from_python = sorted(required - registry)
-        assert not missing_from_python, (
-            f"commands the VSCode roster needs are absent from the Python "
-            f"registry: {missing_from_python}"
-        )
-        missing_from_ts = sorted(
-            name for name in required if f"'/{name}'" not in ts_content
-        )
-        assert not missing_from_ts, (
-            f"commands declared in Python but missing from the VSCode roster "
-            f"(vscode-extension/src/shared/commands.ts): {missing_from_ts}"
+        for path in (VSCODE_ROSTER_TS, VSCODE_ROUTER_TS):
+            literals = sorted(set(re.findall(r"'/[a-z][a-z-]+'", _read(path))))
+            assert literals == [], (
+                f"hardcoded command names in {path.name}: {literals}")
+
+    def test_resolves_aliases_from_the_aliases_field(self):
+        src = _read(VSCODE_ROSTER_TS)
+        assert "entry.aliases" in src, (
+            "aliases must resolve from the roster's `aliases` FIELD — restating "
+            "them as standalone entries is the commands.ts duplication"
         )
 
-    def test_known_vscode_roster_gap_until_step_3b(self):
-        """Finding, recorded not fixed (2026-09-21).
+    def test_client_id_is_vscode(self):
+        assert "VSCODE_CLIENT_ID = 'vscode'" in _read(VSCODE_ROUTER_TS)
 
-        `/run`, `/task` and `/token` are registered in Python and are
-        intercepted by `chatPanel.ts` at runtime, but the VSCode roster
-        does not list them — so VSCode's own autocomplete/help never
-        offered them. The deleted web `commands.js` DID list all three,
-        which is one more way the two JS rosters had silently diverged.
 
-        Deliberately not patched here: step 3a is web-only, and step 3b
-        deletes `commands.ts` outright rather than topping it up. This
-        test fails the day someone closes the gap either way, so the
-        finding cannot rot.
-        """
-        ts_content = _read(VSCODE_SHARED_DIR / "commands.ts")
-        still_missing = sorted(
-            name for name in ("run", "task", "token")
-            if f"'/{name}'" not in ts_content
-        )
-        assert still_missing == ["run", "task", "token"], (
-            "the VSCode roster gap changed — if step 3b landed, delete this "
-            f"test; if it was topped up by hand, update it. Missing now: {still_missing}"
-        )
+class TestRetiredCommandsAreGoneEverywhere:
+    """ADR 0011's hard removals, checked against the registry rather than
+    against a JS copy of it (both copies are gone now)."""
 
-    def test_vscode_roster_does_not_declare_commands_python_has_retired(self):
-        """The direction the old web-vs-TS check could never catch."""
-        ts_content = _read(VSCODE_SHARED_DIR / "commands.ts")
-        for retired in ("/agent", "/agentrun", "/agentruns"):
-            assert f"'{retired}':" not in ts_content, (
-                f"{retired} was retired by ADR 0011 but is still in commands.ts"
+    def test_agentrun_family_retired(self):
+        for retired in ("agent", "agentrun", "agentruns"):
+            assert CommandFactory.get(retired) is None, (
+                f"/{retired} was retired by ADR 0011 but is registered again"
             )
+        assert CommandFactory.get("run") is not None
+        assert CommandFactory.get("task") is not None
+        assert CommandFactory.get("auto") is not None
+
+    def test_the_three_commands_vscode_used_to_miss_are_served_to_it(self):
+        """The known gap this file pinned until step 3b: `/run`, `/task`
+        and `/token` were registered in Python and intercepted at runtime
+        by `chatPanel.ts`, but absent from the TS catalog — so VSCode's
+        own autocomplete and `/help` never offered them. Fetching the
+        roster closes it by construction."""
+        served = {c["name"] for c in CommandFactory.roster("vscode")["commands"]}
+        assert {"run", "task", "token"} <= served
 
 
 class TestDesktopSpecIncludesShared:

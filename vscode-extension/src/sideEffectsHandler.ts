@@ -37,6 +37,12 @@ export interface SideEffectHost {
     openHtmlPreviewFromSideEffect(filepath: string, url?: string): void;
     postToWebview(msg: Record<string, unknown>): void;
     dispatchCommandFromSideEffect(cmd: string, args: string): Promise<void>;
+    /**
+     * ADR 0007 step 3b: refetch `GET /commands` because `/reload`
+     * re-imported `~/.ppxai/commands/`. `version` is the server's new
+     * roster version, or undefined on an older payload.
+     */
+    refreshCommandRoster(version?: number): void;
 }
 
 /** Kind names — keep in sync with ppxai/commands/results.py::SideEffectKind. */
@@ -56,6 +62,7 @@ export const KIND = {
     PROMPT_QUICK_PICK: 'prompt_quick_pick',
     PROMPT_TEXT: 'prompt_text',
     NOTIFY: 'notify',
+    REFRESH_COMMAND_ROSTER: 'refresh_command_roster',
     VSCODE_DELEGATE: 'vscode_delegate',
 } as const;
 
@@ -300,6 +307,19 @@ export class SideEffectsHandler {
                 else if (level === 'warn' || level === 'warning')
                     vscode.window.showWarningMessage(message);
                 else vscode.window.showInformationMessage(message);
+                return;
+            }
+
+            case KIND.REFRESH_COMMAND_ROSTER: {
+                // `/reload` re-imported ~/.ppxai/commands/*.py, so the
+                // roster fetched at startup is stale — and dispatch
+                // ROUTING reads it, not just autocomplete. The host
+                // refetches; CommandRoster keeps the old snapshot if the
+                // refetch fails, so a transient error cannot wedge the
+                // router's fail-closed gate.
+                const version = typeof se.version === 'number'
+                    ? (se.version as number) : undefined;
+                this._provider.refreshCommandRoster(version);
                 return;
             }
 

@@ -59,9 +59,23 @@ exercised against the REAL dispatcher under Node in
 `tests/test_web_command_roster_dispatch_behavior.py`. Source text and
 runtime are deliberately both pinned: the source checks catch a
 refactor that keeps the behaviour but loses the ordering guarantee, the
-Node checks catch the reverse. The VSCode half is UNCHANGED — VSCode
-still has its own hand-written roster (`vscode-extension/src/shared/
-commands.ts`) and its own `if`-chain until ADR 0007 step 3b.
+Node checks catch the reverse.
+
+**Step 3b (2026-09-21) did the same to the VSCode half**, so the old
+invariant here — `command === 'token'` precedes `dispatchFactoryCommand`
+— deliberately no longer exists: `chatPanel.ts` has no per-command
+branches left at all. The VSCode assertions below are the same five,
+read off `vscode-extension/src/commandRouter.ts` (`route()`, the
+`CLIENT_ACTIONS` registry) and `chatPanel.ts` (`handleTokenCommand`),
+with ONE addition the web half does not need: the five
+**acknowledged-legacy** intercepts (`/tools`, `/checkpoint`, `/context`,
+`/ls`, `/tree`) have no `client_action` by owner decision ("do not bless
+debt"), so they are consulted from a NAMED table after the gate. That
+table is asserted to hold exactly those five and none of the declared
+commands — it is step 5's shrinking baseline, and the assertion is what
+stops it growing. Runtime behaviour is in
+`tests/test_vscode_command_roster_behavior.py`, which compiles the real
+TypeScript and drives it under Node.
 
 Every Part B assertion is written as a small helper that takes SOURCE TEXT
 in and raises `AssertionError` on violation, then mutation-verified in this
@@ -93,6 +107,15 @@ from ppxai.engine.completion import _client_allows, complete
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WEB_DISPATCHER_PATH = REPO_ROOT / "ppxai" / "web" / "shared" / "command-dispatcher.js"
 VSCODE_CHATPANEL_PATH = REPO_ROOT / "vscode-extension" / "src" / "chatPanel.ts"
+VSCODE_ROUTER_PATH = REPO_ROOT / "vscode-extension" / "src" / "commandRouter.ts"
+VSCODE_ROSTER_PATH = REPO_ROOT / "vscode-extension" / "src" / "commandRoster.ts"
+
+#: The five commands ADR 0007 step 3b keeps intercepting WITHOUT a
+#: declared `client_action` ("do not bless debt"). Step 5's parity fence
+#: inherits this as its baseline; it may only shrink.
+LEGACY_INTERCEPT_BASELINE = frozenset(
+    {"tools", "checkpoint", "context", "ls", "tree"}
+)
 
 
 def _read(path: Path) -> str:
@@ -403,30 +426,136 @@ def assert_web_token_handler_single_network_call(handler_body: str) -> None:
         )
 
 
-def assert_vscode_token_branch_precedes_factory_dispatch(method_body: str) -> None:
-    """`command === 'token'` must appear (and return) before
-    `dispatchFactoryCommand(command, argsText)` inside `handleSlashCommand`."""
-    token_match = re.search(r"command === 'token'", method_body)
-    factory_match = re.search(
-        r"dispatchFactoryCommand\(command, argsText\)", method_body
-    )
-    if not token_match:
-        raise AssertionError("no \"command === 'token'\" branch found in handleSlashCommand()")
+#: Every outbound path `CommandRouter.route()` can take. The fail-closed
+#: gate must precede all of them.
+_VSCODE_DISPATCH_PATHS = (
+    r"dispatchToFactory\(",
+    r"_dispatchClientAction\(",
+    r"this\._host\.legacy\[",
+)
+
+
+def assert_vscode_fail_closed_gate_precedes_every_dispatch(route_body: str) -> None:
+    """The roster gate must be the FIRST thing `route()` can leave on.
+
+    Same property step 3a gave web, and it matters MORE here: the
+    extension host is a Node process with the developer's full
+    privileges, and the extension versions independently of the server,
+    so "older server, newer client" is an everyday state rather than an
+    edge case.
+    """
+    gate = re.search(r"_readyRoster\(\)", route_body)
+    if not gate:
+        raise AssertionError(
+            "no _readyRoster() call found in route() — the fail-closed gate is gone"
+        )
+    refusal = re.search(r"if \(!roster\)", route_body[gate.end():])
+    if not refusal:
+        raise AssertionError(
+            "route() never checks the gate's result (`if (!roster)`) — a failed "
+            "roster fetch would fall through to real dispatch"
+        )
+    refusal_end = gate.end() + refusal.end()
+    if "return" not in route_body[refusal_end: refusal_end + 200]:
+        raise AssertionError(
+            "the no-roster branch does not return — it must refuse, not fall through"
+        )
+    for pattern in _VSCODE_DISPATCH_PATHS:
+        m = re.search(pattern, route_body)
+        if m and m.start() < gate.start():
+            raise AssertionError(
+                f"dispatch path {pattern!r} is reachable BEFORE the _readyRoster() "
+                "gate; with no roster it would still run the command"
+            )
+
+
+def assert_vscode_client_dispatch_precedes_factory_dispatch(route_body: str) -> None:
+    """A roster entry with `dispatch === 'client'` must be routed to the
+    bundled implementation (and returned from) BEFORE the default
+    `dispatchToFactory(` fallthrough."""
+    client_match = re.search(r"entry\.dispatch === 'client'", route_body)
+    factory_match = re.search(r"dispatchToFactory\(", route_body)
+    if not client_match:
+        raise AssertionError(
+            "no \"entry.dispatch === 'client'\" branch found in route() — routing "
+            "is no longer roster-driven"
+        )
     if not factory_match:
+        raise AssertionError("no dispatchToFactory( call found in route()")
+    if not client_match.start() < factory_match.start():
         raise AssertionError(
-            "no dispatchFactoryCommand(command, argsText) call found in handleSlashCommand()"
+            "the roster's client-dispatch branch must appear BEFORE the default "
+            "dispatchToFactory(, or a client-handled command (e.g. /token set "
+            "<value>) could be forwarded to POST /command/<name>"
         )
-    if not token_match.start() < factory_match.start():
-        raise AssertionError(
-            "the command === 'token' branch must appear BEFORE "
-            "dispatchFactoryCommand(command, argsText), or /token set <value> "
-            "could be forwarded to POST /command/token"
-        )
-    between = method_body[token_match.start() : factory_match.start()]
+    between = route_body[client_match.start(): factory_match.start()]
     if "return" not in between:
         raise AssertionError(
-            "the command === 'token' branch does not return before falling "
-            "through to dispatchFactoryCommand"
+            "the client-dispatch branch does not return before falling through to "
+            "dispatchToFactory("
+        )
+
+
+def assert_vscode_has_no_per_name_escape_hatch(src: str) -> None:
+    """No hardcoded `command === '<name>'` branch may survive in
+    `chatPanel.ts`.
+
+    A "just for /token" special case would be a second roster — one name
+    whose routing lives in TS again. Fail-closed is what protects
+    `/token` now. (`subcommand === '…'` inside a handler is a different
+    thing and is excluded, exactly as the plan's grep recipe does.)
+    """
+    found = sorted(set(re.findall(
+        r"(?:^|[^A-Za-z])command === '([a-z?-]+)'", src, re.M)))
+    if found:
+        raise AssertionError(
+            f"hardcoded per-command branches found in chatPanel.ts: {found}. "
+            "Routing must come from the roster; a per-name escape hatch is a "
+            "second source of truth."
+        )
+
+
+def assert_vscode_legacy_table_is_exactly(src: str, expected: set[str]) -> None:
+    """The named legacy table must hold EXACTLY the acknowledged five.
+
+    Growing it would launder a new client-side intercept as debt; the
+    owner's instruction was "do not bless debt", and step 5 inherits
+    this list as a baseline that may only shrink. A declared command
+    appearing here would also shadow its own `client_action`.
+    """
+    m = re.search(
+        r"export const LEGACY_INTERCEPTS: readonly string\[\] = \[(.*?)\];",
+        src, re.S)
+    if not m:
+        raise AssertionError("LEGACY_INTERCEPTS table not found in commandRouter.ts")
+    names = set(re.findall(r"'([a-z-]+)'", m.group(1)))
+    if names != expected:
+        raise AssertionError(
+            f"the legacy intercept table changed: {sorted(names)} "
+            f"(baseline {sorted(expected)}). It may only SHRINK, and only by "
+            "migrating a command to factory routing."
+        )
+
+
+def assert_vscode_action_registry_implements(src: str, actions: set[str]) -> None:
+    """`CLIENT_ACTIONS` must implement every named `client_action` the
+    server declares for vscode."""
+    m = re.search(
+        r"export const CLIENT_ACTIONS: Record<string, OpsAction> = \{(.*?)\n\s*\};",
+        src, re.S)
+    if not m:
+        raise AssertionError("the CLIENT_ACTIONS registry was not found")
+    declared = set(re.findall(r"'([a-z]+\.[a-z]+)':", m.group(1)))
+    missing = actions - declared
+    if missing:
+        raise AssertionError(
+            f"client actions declared in Python but not implemented by VSCode: "
+            f"{sorted(missing)} (registry has {sorted(declared)})"
+        )
+    overlap = declared & LEGACY_INTERCEPT_BASELINE
+    if overlap:
+        raise AssertionError(
+            f"a legacy name leaked into the action registry: {sorted(overlap)}"
         )
 
 
@@ -507,13 +636,78 @@ class TestVscodeChatPanelSourceExists:
         assert VSCODE_CHATPANEL_PATH.exists()
 
 
-class TestVscodeTokenBranchOrder:
-    def test_token_branch_precedes_factory_dispatch(self):
-        src = _read(VSCODE_CHATPANEL_PATH)
-        method_body = _extract_braced_body(
-            src, r"private async handleSlashCommand\(input: string\)\s*"
+class TestVscodeRouterSourceExists:
+    def test_router_and_roster_exist(self):
+        assert VSCODE_ROUTER_PATH.exists()
+        assert VSCODE_ROSTER_PATH.exists()
+
+    def test_the_hand_written_roster_is_deleted(self):
+        """ADR 0007 step 3b's headline deletion. `commands.ts` was the
+        SIXTH roster the record counts, and the one whose drift was
+        worst (no /run, /task or /token)."""
+        assert not (REPO_ROOT / "vscode-extension" / "src" / "shared"
+                    / "commands.ts").exists()
+
+
+class TestVscodeRosterDrivenDispatchOrder:
+    """Step 3b replaced branch order with roster data; these pin the two
+    orderings that still carry the `/token` guarantee, plus the legacy
+    table that must not grow."""
+
+    def _route_body(self) -> str:
+        return _extract_braced_body(
+            _read(VSCODE_ROUTER_PATH), r"async route\(input: string\): Promise<void>\s*"
         )
-        assert_vscode_token_branch_precedes_factory_dispatch(method_body)
+
+    def test_fail_closed_gate_precedes_every_dispatch_path(self):
+        assert_vscode_fail_closed_gate_precedes_every_dispatch(self._route_body())
+
+    def test_client_dispatch_precedes_factory_dispatch(self):
+        assert_vscode_client_dispatch_precedes_factory_dispatch(self._route_body())
+
+    def test_no_per_name_escape_hatch_remains(self):
+        assert_vscode_has_no_per_name_escape_hatch(_read(VSCODE_CHATPANEL_PATH))
+
+    def test_legacy_table_holds_exactly_the_acknowledged_five(self):
+        assert_vscode_legacy_table_is_exactly(
+            _read(VSCODE_ROUTER_PATH), set(LEGACY_INTERCEPT_BASELINE))
+
+    def test_no_declared_command_sits_in_the_legacy_table(self):
+        """The other direction: a command Python declares a
+        `client_action` for must be routed by the roster, never by the
+        legacy table."""
+        declared = {
+            info.canonical for info in CommandFactory.iter_completion_specs()
+            if info.client_action
+            and (info.client_action_clients is None
+                 or "vscode" in info.client_action_clients)
+        }
+        overlap = declared & LEGACY_INTERCEPT_BASELINE
+        assert not overlap, (
+            f"{sorted(overlap)} have a client_action AND sit in the legacy "
+            "table — remove them from the table, that is the shrink"
+        )
+
+    def test_action_registry_implements_every_vscode_action(self):
+        """Read the Python declaration, not a hand-copied list: every spec
+        whose `client_action_clients` includes "vscode" must have an
+        implementation. A miniature of step 5's parity fence."""
+        specs = CommandFactory.iter_completion_specs()
+        vscode_actions = {
+            info.client_action for info in specs
+            if info.client_action
+            and (info.client_action_clients is None
+                 or "vscode" in info.client_action_clients)
+            and (info.clients is None or "vscode" in info.clients)
+        }
+        assert vscode_actions, "no vscode client actions declared — declaration drift?"
+        assert_vscode_action_registry_implements(
+            _read(VSCODE_ROUTER_PATH), vscode_actions)
+
+    def test_extraction_stops_at_route_method_end(self):
+        """Sanity check on the extractor: the extracted route() body must
+        not bleed into the next method."""
+        assert "Return the loaded roster" not in self._route_body()
 
 
 class TestVscodeTokenHandlerNeverDispatchesToFactory:
@@ -760,43 +954,192 @@ class TestMutationWebTokenHandlerSingleNetworkCall:
         assert_web_token_handler_single_network_call(ok)  # must not raise
 
 
-class TestMutationVscodeTokenBranchOrder:
-    def test_rejects_branch_after_factory_dispatch(self):
-        broken = """
-        private async handleSlashCommand(input: string) {
-            await this.dispatchFactoryCommand(command, argsText);
-            if (command === 'token') {
-                await this.handleTokenCommand(argsText);
+_VSCODE_REAL_SHAPE = """
+        async route(input: string): Promise<void> {
+            this._host.echo(redacted, verdict.sensitive, input);
+            const roster = await this._readyRoster();
+            if (!roster) {
+                this._explainMissingRoster(typed);
                 return;
             }
-        }
-        """
-        with pytest.raises(AssertionError):
-            assert_vscode_token_branch_precedes_factory_dispatch(broken)
-
-    def test_rejects_branch_that_falls_through_without_return(self):
-        broken = """
-        private async handleSlashCommand(input: string) {
-            if (command === 'token') {
-                await this.handleTokenCommand(argsText);
+            const entry = roster.resolve(typed);
+            if (entry && entry.dispatch === 'client') {
+                await this._dispatchClientAction(entry, ctx);
+                return;
             }
-            await this.dispatchFactoryCommand(command, argsText);
+            const legacy = this._host.legacy[name];
+            if (legacy) { await legacy(ctx); return; }
+            await this._host.dispatchToFactory(name, args);
+        }
+        """
+
+
+class TestMutationVscodeFailClosedGate:
+    def test_rejects_missing_gate(self):
+        broken = """
+        async route(input: string): Promise<void> {
+            const entry = this._host.roster.resolve(typed);
+            await this._host.dispatchToFactory(name, args);
         }
         """
         with pytest.raises(AssertionError):
-            assert_vscode_token_branch_precedes_factory_dispatch(broken)
+            assert_vscode_fail_closed_gate_precedes_every_dispatch(broken)
+
+    def test_rejects_gate_whose_result_is_never_checked(self):
+        broken = """
+        async route(input: string): Promise<void> {
+            const roster = await this._readyRoster();
+            await this._host.dispatchToFactory(name, args);
+        }
+        """
+        with pytest.raises(AssertionError):
+            assert_vscode_fail_closed_gate_precedes_every_dispatch(broken)
+
+    def test_rejects_gate_that_falls_through_without_return(self):
+        broken = """
+        async route(input: string): Promise<void> {
+            const roster = await this._readyRoster();
+            if (!roster) { this._explainMissingRoster(typed); }
+            await this._host.dispatchToFactory(name, args);
+        }
+        """
+        with pytest.raises(AssertionError):
+            assert_vscode_fail_closed_gate_precedes_every_dispatch(broken)
+
+    def test_rejects_a_legacy_intercept_hoisted_above_the_gate(self):
+        """The exact regression to fear here: the five legacy intercepts
+        put back at the top, so `/tools` (and anything else) runs with no
+        roster — the escape-hatch shape step 3b removed."""
+        broken = """
+        async route(input: string): Promise<void> {
+            const legacy = this._host.legacy[typed];
+            if (legacy) { await legacy(ctx); return; }
+            const roster = await this._readyRoster();
+            if (!roster) {
+                this._explainMissingRoster(typed);
+                return;
+            }
+            await this._host.dispatchToFactory(name, args);
+        }
+        """
+        with pytest.raises(AssertionError):
+            assert_vscode_fail_closed_gate_precedes_every_dispatch(broken)
 
     def test_accepts_the_real_shape(self):
-        ok = """
-        private async handleSlashCommand(input: string) {
-            if (command === 'token') {
-                await this.handleTokenCommand(argsText);
+        assert_vscode_fail_closed_gate_precedes_every_dispatch(_VSCODE_REAL_SHAPE)
+
+
+class TestMutationVscodeClientDispatchOrder:
+    def test_rejects_client_branch_after_factory_dispatch(self):
+        broken = """
+        async route(input: string): Promise<void> {
+            await this._host.dispatchToFactory(name, args);
+            if (entry && entry.dispatch === 'client') {
+                await this._dispatchClientAction(entry, ctx);
                 return;
             }
-            await this.dispatchFactoryCommand(command, argsText);
         }
         """
-        assert_vscode_token_branch_precedes_factory_dispatch(ok)  # must not raise
+        with pytest.raises(AssertionError):
+            assert_vscode_client_dispatch_precedes_factory_dispatch(broken)
+
+    def test_rejects_client_branch_without_return(self):
+        broken = """
+        async route(input: string): Promise<void> {
+            if (entry && entry.dispatch === 'client') {
+                await this._dispatchClientAction(entry, ctx);
+            }
+            await this._host.dispatchToFactory(name, args);
+        }
+        """
+        with pytest.raises(AssertionError):
+            assert_vscode_client_dispatch_precedes_factory_dispatch(broken)
+
+    def test_rejects_routing_that_stopped_reading_the_roster(self):
+        broken = """
+        async route(input: string): Promise<void> {
+            await this._host.dispatchToFactory(name, args);
+        }
+        """
+        with pytest.raises(AssertionError):
+            assert_vscode_client_dispatch_precedes_factory_dispatch(broken)
+
+    def test_accepts_the_real_shape(self):
+        assert_vscode_client_dispatch_precedes_factory_dispatch(_VSCODE_REAL_SHAPE)
+
+
+class TestMutationVscodeEscapeHatch:
+    def test_rejects_a_reintroduced_token_branch(self):
+        broken = """
+        private async handleSlashCommand(input: string) {
+            if (command === 'token') { await this.handleTokenCommand(args); return; }
+            await this.getCommandRouter().route(input);
+        }
+        """
+        with pytest.raises(AssertionError):
+            assert_vscode_has_no_per_name_escape_hatch(broken)
+
+    def test_accepts_a_subcommand_comparison(self):
+        """`subcommand === 'clear'` inside handleContextCommand is not an
+        intercept — excluding it is the same `grep -v subcommand` the
+        plan's own recipe uses."""
+        ok = "if (subcommand === 'clear') { await this.clearContext(); }"
+        assert_vscode_has_no_per_name_escape_hatch(ok)  # must not raise
+
+
+class TestMutationVscodeLegacyTable:
+    def test_rejects_a_grown_table(self):
+        broken = """
+        export const LEGACY_INTERCEPTS: readonly string[] = [
+            'tools', 'checkpoint', 'context', 'ls', 'tree', 'newthing',
+        ];
+        """
+        with pytest.raises(AssertionError):
+            assert_vscode_legacy_table_is_exactly(
+                broken, set(LEGACY_INTERCEPT_BASELINE))
+
+    def test_rejects_a_missing_table(self):
+        with pytest.raises(AssertionError):
+            assert_vscode_legacy_table_is_exactly(
+                "const x = 1;", set(LEGACY_INTERCEPT_BASELINE))
+
+    def test_accepts_the_baseline(self):
+        ok = """
+        export const LEGACY_INTERCEPTS: readonly string[] = [
+            'tools',
+            'checkpoint',
+            'context',
+            'ls',
+            'tree',
+        ];
+        """
+        assert_vscode_legacy_table_is_exactly(ok, set(LEGACY_INTERCEPT_BASELINE))
+
+
+class TestMutationVscodeActionRegistry:
+    def test_rejects_a_registry_missing_an_action(self):
+        broken = """
+        export const CLIENT_ACTIONS: Record<string, OpsAction> = {
+            'token.manage': (ops, ctx) => ops.handleToken(ctx.args),
+        };
+        """
+        with pytest.raises(AssertionError):
+            assert_vscode_action_registry_implements(
+                broken, {"token.manage", "coding.stream"})
+
+    def test_rejects_a_missing_registry(self):
+        with pytest.raises(AssertionError):
+            assert_vscode_action_registry_implements("const x = 1;", {"token.manage"})
+
+    def test_accepts_a_complete_registry(self):
+        ok = """
+        export const CLIENT_ACTIONS: Record<string, OpsAction> = {
+            'token.manage': (ops, ctx) => ops.handleToken(ctx.args),
+            'coding.stream': (ops, ctx) => ops.handleCodingTask(ctx.name, ctx.args),
+        };
+        """
+        assert_vscode_action_registry_implements(
+            ok, {"token.manage", "coding.stream"})
 
 
 class TestMutationVscodeTokenHandlerNeverDispatches:

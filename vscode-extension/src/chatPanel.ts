@@ -13,13 +13,15 @@ import { HttpClient, StreamEvent, SsePiggybackEvent } from './httpClient';
 import { startServer, stopServer, onServerStatusChange } from './extension';
 import { openHtmlPreview, closeHtmlPreview } from './previewPanel';
 
-// Import shared modules for command definitions and formatters.
-// v1.18.1 5b.2: only generateHelpText is still used here (by showHelp,
-// which augments factory /help output with VSCode keyboard shortcuts).
-// The legacy result formatters were superseded by CommandRenderer; the
-// status/usage/provider/model/session formatters were used by handlers
-// removed in 5b.2.
-import { generateHelpText } from './shared/commands';
+// ADR 0007 step 3b: the command catalog is FETCHED, not restated.
+// `src/shared/commands.ts` (31 hand-written entries — the sixth roster
+// the ADR counts) is deleted; `CommandRoster` caches
+// GET /commands?client=vscode and `CommandRouter` routes on its
+// server-computed `dispatch` field.
+import { CommandRoster } from './commandRoster';
+import {
+    CommandRouter, PanelCommandOps, buildCommandRouter, VSCODE_CLIENT_ID,
+} from './commandRouter';
 
 import { AppState } from './appState';
 
@@ -51,24 +53,12 @@ import {
 // updateFromPython). This file only consumes AppState via
 // `this._appState.updateFromPython(pythonPayload)` — no keyMaps here.
 
-/**
- * v1.18.1 5b.2: commands that keep using `_backend.codingTask` so the
- * active editor's language + filename are sent along (the VSCode-only
- * context advantage). The factory has equivalents for all six, but
- * routing them through the envelope path would lose the editor
- * context. Map value is the `task_type` passed to `/coding_task`.
- *
- * /convert is chat-shaped too but has special arg parsing — handled
- * separately in `handleSlashCommand`.
- */
-const CHAT_SHAPED_TASKS = new Map<string, string>([
-    ['generate', 'generate'],
-    ['explain', 'explain'],
-    ['test', 'test'],
-    ['docs', 'docs'],
-    ['debug', 'debug'],
-    ['implement', 'implement'],
-]);
+// ADR 0007 step 3b deleted `CHAT_SHAPED_TASKS` (the six chat-shaped
+// commands' name→task_type Map). Both of its jobs moved: routing to the
+// roster's `coding.stream` action, and the mapping — which was the
+// identity — into that action's one line in commandRouter.ts. Why the six
+// stay client-side is unchanged: `_backend.codingTask` sends the active
+// editor's language + filename, which the factory handlers cannot see.
 
 // =====================================================================
 // Webview-setup contracts (Item 2 / v1.18.2)
@@ -212,6 +202,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     // U3 (ADR 0011): /run one-off family controller (same lazy wiring).
     private _runController?: RunController;
 
+    // ADR 0007 step 3b: the fetched command roster + the router reading
+    // it. Eager (not lazy) because the roster is also the SENSITIVITY
+    // oracle — `handleComplete` consults it on every keystroke, long
+    // before any command is dispatched.
+    private _commandRoster: CommandRoster = new CommandRoster(
+        { getCommandRoster: (client) => this._backend.getCommandRoster(client) },
+        VSCODE_CLIENT_ID,
+    );
+    private _commandRouter?: CommandRouter;
+
     constructor(
         context: vscode.ExtensionContext,
         backend: HttpClient
@@ -354,9 +354,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 }
                 await store(inline);
                 system(
-                    `🔑 Token stored (${masked(inline)}) — ⚠️ it was typed inline, so it was echoed ` +
-                    'into the chat + debug log. Prefer `/token set` without a value (masked input), ' +
-                    'and consider rotating this token.');
+                    `🔑 Token stored (${masked(inline)}) — typed inline. Since ADR 0007 step 3b ` +
+                    'the value no longer leaves this client: `set` is declared `sensitive` in ' +
+                    'Python, so the chat echo is masked, the composer buffer is never sent to ' +
+                    'POST /complete, and the line is dropped from the ↑ history. Still prefer ' +
+                    '`/token set` with no value (a masked input box): it never puts the token ' +
+                    'on screen at all.');
                 return;
             }
             case 'mint': {
@@ -482,6 +485,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     // args (per ADR Q3 (b)). Re-issue the command via
                     // the factory dispatcher; no continuation state.
                     await this.dispatchFactoryCommand(cmd, args);
+                },
+                refreshCommandRoster: (version) => {
+                    // ADR 0007 step 3b: /reload changed the registry.
+                    // Same-version signals are idempotent no-ops.
+                    if (typeof version === 'number'
+                        && version === this._commandRoster.version) { return; }
+                    void this._commandRoster.load();
                 },
             };
             this._sideEffectsHandler = new SideEffectsHandler(host);
@@ -841,6 +851,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
      */
     private async handleComplete(buffer: string, cursor: number) {
         if (!this._view) { return; }
+        // ADR 0007 step 3a-sec: the composer buffer is sent on every
+        // keystroke, so it reaches the server BEFORE any command is
+        // dispatched. Skip the call once the buffer carries a value after
+        // a subcommand Python declared sensitive — `/token se` still
+        // completes to `set`, because sensitivity needs content AFTER the
+        // flagged subcommand. FAIL CLOSED with no roster: every slash
+        // command's args are then treated as secret.
+        if (this._commandRoster.isSensitive(buffer)) {
+            this._view.webview.postMessage({ type: 'completionItems', items: [] });
+            return;
+        }
         try {
             const items = await this._backend.complete(buffer, cursor);
             this._view.webview.postMessage({
@@ -911,6 +932,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     connecting: false
                 });
             }
+
+            // ADR 0007 step 3b: fetch the roster now the backend is
+            // reachable — routing AND the secret-redaction rule read it,
+            // and until it lands the router fails closed. Awaited so a
+            // command typed right after connect does not race it; a
+            // failure is non-fatal (the router retries once, inline).
+            await this._commandRoster.load();
 
             // Set working directory for context injection
             const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -1092,139 +1120,76 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * v1.18.1 5b.2: thin dispatcher over POST /command/<name>.
+     * ADR 0007 step 3b: the roster-driven router, built once.
      *
-     * Pre-v1.18.1 this was a 35-case switch with ~15 bespoke handlers
-     * each duplicating the formatting + REST logic that the Python
-     * `CommandFactory` already implements. The factory and the TS list
-     * drifted; PyInstaller silently dropped 9 of 10 builtin command
-     * modules at v1.17.4 (only `/usage` actually exercised the factory
-     * path, so nobody noticed for six releases).
+     * The `client_action` → implementation registry lives in
+     * `commandRouter.ts` (`CLIENT_ACTIONS`), with the five
+     * acknowledged-legacy intercepts beside it (`LEGACY_HANDLERS` /
+     * `LEGACY_INTERCEPTS`). This method supplies only the panel
+     * operations those tables call — which is what keeps the registry in
+     * a `vscode`-free module the Node behavioural tests drive directly.
+     */
+    private getCommandRouter(): CommandRouter {
+        if (!this._commandRouter) {
+            const ops: PanelCommandOps = {
+                handleToken: (args) => this.handleTokenCommand(args),
+                handleTask: (args) => this.getTaskController().handle(args),
+                handleRun: (args) => this.getRunController().handle(args),
+                handleAuto: (argv) => this.handleAgentCommand(argv),
+                handleCodingTask: (taskType, content) =>
+                    this.handleCodingTaskCommand(taskType, content),
+                handleConvert: (argv) => this.handleConvertCommand(argv),
+                handlePreview: (argv) => this.handlePreviewCommand(argv),
+                showHelp: (args) => this.showHelp(args),
+                handleTools: (argv) => this.handleToolsCommand(argv),
+                handleCheckpoint: (argv) => this.handleCheckpointCommand(argv),
+                handleContext: (argv) => this.handleContextCommand(argv),
+                handleLs: (argv) => this.handleLsCommand(argv),
+                handleTree: (argv) => this.handleTreeCommand(argv),
+                echo: (text, sensitive, raw) => this.echoCommand(text, sensitive, raw),
+                showError: (message) => {
+                    this._view?.webview.postMessage({ type: 'error', content: message });
+                },
+                dispatchToFactory: (name, args) => this.dispatchFactoryCommand(name, args),
+            };
+            this._commandRouter = buildCommandRouter(this._commandRoster, ops);
+        }
+        return this._commandRouter;
+    }
+
+    /**
+     * Render the typed command in the transcript (ADR 0007 step 3a-sec).
      *
-     * v1.18.1 unifies dispatch:
-     *   - Chat-shaped (LLM-streamed) commands keep using
-     *     `_backend.codingTask` so the active editor's language +
-     *     filename ride along (VSCode-only context advantage).
-     *   - `/auto <task>` (was /agent) keeps its iteration loop here pending
-     *     loop unification (see docs/TODO-v1.18.2-agent-loop-unification.md).
-     *   - `/preview` keeps its own webview panel (VSCode-specific).
-     *   - `/help` augments factory output with VSCode keyboard shortcuts.
-     *   - `/checkpoint`, `/tools`, `/context` use already-extracted
-     *     handlers (they hit bespoke REST today; full factory routing
-     *     is deferred to a later phase).
-     *   - Everything else flows through `dispatchFactoryCommand`,
-     *     which unwraps the v1 envelope into rendered result + applied
-     *     side-effects.
+     * `text` arrives ALREADY redacted by `CommandRoster` — the ONE place
+     * the rule lives on this client. When something WAS masked, the raw
+     * line is also purged from the webview's ↑ history:
+     * `main.js::sendMessage` pushes every sent line into `commandHistory`
+     * before the host sees it, so the host tells it to forget that entry
+     * rather than the webview carrying a second copy of the rule.
+     */
+    private echoCommand(text: string, sensitive: boolean, raw: string): void {
+        this._view?.webview.postMessage({ type: 'commandMessage', content: text });
+        if (sensitive) {
+            this._view?.webview.postMessage({ type: 'forgetHistory', content: raw });
+        }
+    }
+
+    /**
+     * Route a slash command (ADR 0007 step 3b — routing is DATA).
+     *
+     * Pre-3b this method was a twelve-branch hardcoded intercept chain
+     * plus the `CHAT_SHAPED_TASKS` map, and nothing recorded which client
+     * handled what. Now `CommandRouter` resolves the typed name through
+     * the fetched roster and dispatches on the server-computed `dispatch`
+     * field; see commandRouter.ts for the order and the fail-closed rule.
      */
     private async handleSlashCommand(input: string) {
         if (!this._view) { return; }
-
-        const trimmed = input.trim();
-        const parts = trimmed.split(/\s+/);
-        // Strip leading slash for factory dispatch; case-insensitive.
-        const command = parts[0].replace(/^\//, '').toLowerCase();
-        const argsArr = parts.slice(1);
-        const argsText = argsArr.join(' ');
-
-        // Echo the user's command into the chat panel.
-        this._view.webview.postMessage({
-            type: 'commandMessage',
-            content: input
-        });
-
         try {
-            // Chat-shaped commands keep client-side path so the active
-            // editor's language + filename are sent along with the task.
-            const codingTaskType = CHAT_SHAPED_TASKS.get(command);
-            if (codingTaskType) {
-                await this.handleCodingTaskCommand(codingTaskType, argsText);
-                return;
-            }
-
-            // /convert is chat-shaped too (factory's handle_convert
-            // blocks on the LLM, so we keep streaming via codingTask).
-            if (command === 'convert') {
-                await this.handleConvertCommand(argsArr);
-                return;
-            }
-
-            // /auto (renamed from /agent in v1.19.1, ADR 0011): iteration
-            // loop runs client-side. Server gate (added in 5b.1) validates
-            // min-words; we no longer duplicate the check here.
-            if (command === 'auto') {
-                await this.handleAgentCommand(argsArr);
-                return;
-            }
-
-            // /preview owns its own previewPanel.ts WebviewPanel —
-            // VSCode-specific UX.
-            if (command === 'preview') {
-                await this.handlePreviewCommand(argsArr);
-                return;
-            }
-
-            // /task: the tool-capable agent-run tier (v1.19.x T8a) is a
-            // CLIENT-side family in every client (web dispatcher, VSCode
-            // here) — it drives /v1/agent/*, not the command factory.
-            if (command === 'task') {
-                await this.getTaskController().handle(argsText);
-                return;
-            }
-
-            // /run (U3, ADR 0011): the one-off family — kind=oneshot runs
-            // on the same gears; grant is server-config-decided.
-            if (command === 'run') {
-                await this.getRunController().handle(argsText);
-                return;
-            }
-
-            // Item 40: /token — manage the /v1 bearer in-chat (verb parity
-            // with the web dispatcher's _handleTokenCommand; persistence is
-            // SecretStorage, not localStorage). Must run BEFORE factory
-            // dispatch — the factory would 404 it.
-            if (command === 'token') {
-                await this.handleTokenCommand(argsText);
-                return;
-            }
-
-            // /help: factory output + VSCode-specific keyboard shortcut
-            // augmentation (TUI/web don't have these shortcuts).
-            if (command === 'help' || command === 'h' || command === '?') {
-                await this.showHelp();
-                return;
-            }
-
-            // Already-extracted client-side handlers (Phase 2 refactor).
-            // These hit bespoke REST today; full factory routing is a
-            // later phase.
-            if (command === 'tools') {
-                await this.handleToolsCommand(argsArr);
-                return;
-            }
-            if (command === 'checkpoint') {
-                await this.handleCheckpointCommand(argsArr);
-                return;
-            }
-            if (command === 'context') {
-                await this.handleContextCommand(argsArr);
-                return;
-            }
-            if (command === 'ls') {
-                await this.handleLsCommand(argsArr);
-                return;
-            }
-            if (command === 'tree') {
-                await this.handleTreeCommand(argsArr);
-                return;
-            }
-
-            // Everything else routes through the factory envelope.
-            await this.dispatchFactoryCommand(command, argsText);
+            await this.getCommandRouter().route(input);
         } catch (error: any) {
             this._view.webview.postMessage({
-                type: 'error',
-                content: `Command error: ${error?.message ?? error}`
-            });
+                type: 'error', content: `Command error: ${error?.message ?? error}` });
         }
     }
 
@@ -1243,7 +1208,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     private async dispatchFactoryCommand(command: string, args: string): Promise<void> {
         if (!this._view) { return; }
         try {
-            const envelope = await this._backend.executeCommand(command, args);
+            const envelope = await this._backend.executeCommand(
+                command, args, VSCODE_CLIENT_ID);
             this.getCommandRenderer().render(envelope.result);
             await this.getSideEffectsHandler().apply(envelope.side_effects);
             // v1.18.1 5c (Phase B): drain piggyback events from the
@@ -1864,32 +1830,54 @@ Review your previous actions and continue. If the task is complete, respond with
         }
     }
 
-    private async showHelp() {
+    /**
+     * `help.augment` — the SERVER's help, plus this client's shortcuts.
+     *
+     * What it did BEFORE step 3b, despite every comment on it (and the
+     * plan's "Client-native UX" row) saying "factory output + VSCode
+     * shortcuts": it called `generateHelpText()`, which rendered the
+     * hand-written 31-entry `src/shared/commands.ts` catalog. It never
+     * called the factory at all — so VSCode `/help` listed a stale roster
+     * missing `/run`, `/task`, `/token` and nine other registered
+     * commands, then appended a hardcoded "Agent platform (client-side,
+     * experimental)" block naming exactly those three and mislabelling
+     * `/run` + `/task` (factory-registered since T8b) as client shims.
+     *
+     * Now the body is `POST /command/help` with `client:"vscode"` — the
+     * registry, filtered to what this client can see — and only the
+     * keyboard-shortcut section is appended. That is what `help.augment`
+     * always meant: WRAP the factory, do not replace it.
+     */
+    private async showHelp(args: string = '') {
         if (!this._view) { return; }
+        const shortcuts =
+            '\n**Keyboard Shortcuts:**\n' +
+            '- `Esc` - Stop streaming\n' +
+            '- `↑/↓` - Command history\n' +
+            '- `@file` - Reference a file\n' +
+            '- `@git` - Include git diff\n' +
+            '- `@tree` - Include project structure\n';
 
-        // Use shared help generator for consistent output across Web App and VSCode
-        let helpText = generateHelpText();
+        let envelope;
+        try {
+            envelope = await this._backend.executeCommand('help', args, VSCODE_CLIENT_ID);
+        } catch (error: any) {
+            this._view.webview.postMessage({
+                type: 'error', content: `/help failed: ${error?.message ?? error}` });
+            return;
+        }
 
-        // Client-side agent-platform commands — the server's CommandFactory
-        // catalog doesn't know about these shims (mirrors the web
-        // dispatcher's _appendExperimentalHelp).
-        helpText += '\n**Agent platform (client-side, experimental):**\n';
-        helpText += '- `/task` - Tool-capable background agent runs — direct launch (ls·get·watch·respond·collect·resume·cancel)\n';
-        helpText += '- `/run` - One-off background run — direct launch, no flags (ls·get·watch·collect·cancel)\n';
-        helpText += '- `/token` - Manage the /v1 API bearer token (status·set·mint·clear)\n';
-
-        // Add VSCode-specific keyboard shortcuts
-        helpText += '\n**Keyboard Shortcuts:**\n';
-        helpText += '- `Esc` - Stop streaming\n';
-        helpText += '- `↑/↓` - Command history\n';
-        helpText += '- `@file` - Reference a file\n';
-        helpText += '- `@git` - Include git diff\n';
-        helpText += '- `@tree` - Include project structure\n';
-
-        this._view.webview.postMessage({
-            type: 'systemMessage',
-            content: helpText
-        });
+        const result = envelope.result as { content?: string; message?: string } | undefined;
+        const body = (result && (result.content || result.message)) || '';
+        if (body) {
+            this._view.webview.postMessage({
+                type: 'systemMessage', content: body + shortcuts });
+            return;
+        }
+        // Unexpected result shape (a future non-text type): render it,
+        // then append the shortcuts rather than dropping either half.
+        this.getCommandRenderer().render(envelope.result);
+        this._view.webview.postMessage({ type: 'systemMessage', content: shortcuts });
     }
 
     private async handleToggleTools(enable: boolean) {
@@ -2176,6 +2164,10 @@ Review your previous actions and continue. If the task is complete, respond with
         try {
             if (stop) {
                 await stopServer();
+                // ADR 0007 step 3b: the roster belongs to the server we
+                // just stopped. Drop it here too — `stopServer()` does
+                // not necessarily fire onServerStatusChange in this path.
+                this._commandRoster.unload();
                 this._view.webview.postMessage({
                     type: 'serverStatus',
                     connected: false,
@@ -2218,6 +2210,13 @@ Review your previous actions and continue. If the task is complete, respond with
      * Update server status in webview (v1.13.1)
      */
     public updateServerStatus(connected: boolean) {
+        // ADR 0007 step 3b: the roster describes a SERVER. When the
+        // connection goes away, drop it — a reconnect may reach a
+        // different server (or a different version), and routing by a
+        // snapshot nobody promised is still true is exactly what the
+        // fail-closed rule exists to prevent. `initializeBackend()`
+        // refetches on the way back up.
+        if (!connected) { this._commandRoster.unload(); }
         if (!this._view) { return; }
         this._view.webview.postMessage({
             type: 'serverStatus',

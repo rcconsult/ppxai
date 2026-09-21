@@ -8,6 +8,10 @@
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 
+// ADR 0007 step 3b: the wire shape of GET /commands. Declared in the
+// VSCode-free roster module so the client and the roster cannot drift.
+import { RosterPayload } from './commandRoster';
+
 // === Types matching PythonBackend interface ===
 
 // === Consent Request Types ===
@@ -1626,11 +1630,20 @@ export class HttpClient {
      * @param name - Command name without slash (e.g., "usage", "tools")
      * @param args - Command arguments string
      */
-    async executeCommand(name: string, args: string = ''): Promise<CommandEnvelope> {
+    async executeCommand(
+        name: string, args: string = '', client?: string,
+    ): Promise<CommandEnvelope> {
+        // ADR 0007 step 3b: `client` lets the server gate `/help` (and any
+        // other client-filtered output) to what VSCODE can actually see.
+        // Without it one HTTP surface serves both web and VSCode and has
+        // to over-list for the union — the step-1b limitation step 2
+        // closed additively. Optional so older servers keep working.
+        const body: Record<string, unknown> = { args };
+        if (client) { body.client = client; }
         const response = await fetch(`${this.baseUrl}/command/${encodeURIComponent(name)}`, {
             method: 'POST',
             headers: this.getHeaders(true),
-            body: JSON.stringify({ args })
+            body: JSON.stringify(body)
         });
         if (!response.ok) {
             // 404 is "unknown command" — surface it specifically so
@@ -1645,6 +1658,34 @@ export class HttpClient {
             throw err;
         }
         return response.json() as Promise<CommandEnvelope>;
+    }
+
+    /**
+     * Fetch the server-declared command roster (ADR 0007 step 3b).
+     *
+     * `GET /commands?client=vscode` returns
+     * `{version, commands: [...]}` with `dispatch` precomputed for this
+     * client — the data `CommandRouter` routes on, replacing the
+     * hand-written `src/shared/commands.ts` catalog.
+     *
+     * Errors are thrown, not swallowed: the caller (`CommandRoster`)
+     * must know the fetch failed so the router can FAIL CLOSED. A 404
+     * here is the version-skew case — the extension and `ppxai-server`
+     * upgrade independently, and servers before v1.19.3 have no such
+     * endpoint.
+     */
+    async getCommandRoster(client: string = 'vscode'): Promise<RosterPayload> {
+        const response = await fetch(
+            `${this.baseUrl}/commands?client=${encodeURIComponent(client)}`,
+            { headers: this.getHeaders() },
+        );
+        if (!response.ok) {
+            const err: any = new Error(
+                `GET /commands failed: ${response.status} ${response.statusText}`);
+            err.status = response.status;
+            throw err;
+        }
+        return response.json() as Promise<RosterPayload>;
     }
 
     /**

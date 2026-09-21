@@ -1,7 +1,7 @@
 # Plan — closing ADR 0007 (one command registry)
 
-**Status: steps 1 (1a + 1b), 2, 2.5, 3a (web) and 3a-sec (sensitive
-subcommands) IMPLEMENTED; step 3b (VSCode) and steps 4-5 PROPOSED, not
+**Status: steps 1 (1a + 1b), 2, 2.5, 3a (web), 3a-sec (sensitive
+subcommands) and 3b (VSCode) IMPLEMENTED; steps 4-5 PROPOSED, not
 started.**
 Written 2026-09-20 on `bugfix/v1.19.3`; **rewritten the same day** after
 the owner restated the goal. The first draft split the work (a) invert the
@@ -15,9 +15,9 @@ evidence decayed silently (it cited a module Item 65 had deleted), and this
 file is written not to repeat that.
 
 **Record:** [decisions/0007-completion-first-class-service.md](decisions/0007-completion-first-class-service.md)
-· step 1 shipped v1.18.8 · steps 2 and 2.5 landed 2026-09-20, step 3a
-(web) and 3a-sec on 2026-09-21, all on `bugfix/v1.19.3`, no target
-release.
+· step 1 shipped v1.18.8 · steps 2 and 2.5 landed 2026-09-20, steps 3a
+(web), 3a-sec and 3b (VSCode) on 2026-09-21, all on `bugfix/v1.19.3`, no
+target release.
 
 ## The goal
 
@@ -35,11 +35,11 @@ catalog at `web/app.js:199`; six `_*_SUBCOMMANDS` tables in
 
 > **Correction (2026-09-21): it was SIX.** `vscode-extension/src/shared/
 > commands.ts` is a second, independent hand-written roster (31 entries),
-> not a shared file — see step 3. **Three of the six are now gone:**
+> not a shared file — see step 3. **Five of the six are now gone:**
 > `_BUILTIN_SPECIAL_COMMANDS` + `_CLIENT_GATES` (step 1b),
-> `web/shared/commands.js` and the `app.js` fallback catalog (step 3a).
-> Remaining: `CommandSpec` (the intended single source), the six
-> `_*_SUBCOMMANDS` tables (step 4) and `commands.ts` (step 3b).
+> `web/shared/commands.js` and the `app.js` fallback catalog (step 3a),
+> and `commands.ts` (step 3b, same day). Remaining: `CommandSpec` (the
+> intended single source) and the six `_*_SUBCOMMANDS` tables (step 4).
 
 **Diff the rosters against canonical names AND aliases** — comparing
 canonical-only produces false "JS-only" hits (the first draft of this plan
@@ -59,10 +59,10 @@ are registered aliases):
 - JS-only: **`token`** (one command).
 - Python-only: `attach autoroute copy debug-log doctor keys preview-log reload undo`
 
-(The script above no longer runs: step 3a deleted `commands.js`. Point it
-at `vscode-extension/src/shared/commands.ts` — regex
-`r"^    '/([a-z-]+)':"` matches there too — to diff the one JS roster that
-is left. Kept verbatim as the dated measurement it was.)
+(The script above no longer runs: step 3a deleted `commands.js` and step
+3b deleted `commands.ts`. There is no JS/TS roster left to diff — both
+clients fetch `GET /commands`, so the only drift left to measure is
+inside Python. Kept verbatim as the dated measurement it was.)
 
 `CompletionCommandInfo` (the v1.18.8 seed) carries name / description /
 hidden / alias data only — no `usage`, `category` or subcommands — so it
@@ -374,7 +374,7 @@ needed.
 test_hybrid_family_still_dispatches_server_side` (written in step 2 to
 fail the day this landed) was replaced with tests for the table above.
 
-### 3. JS clients fetch at startup — split into 3a (web) and 3b (VSCode)
+### 3. JS clients fetch at startup — split into 3a (web) and 3b (VSCode) — ✅ BOTH DONE (2026-09-21)
 
 **Finding that forced the split (2026-09-21).** The two JS clients do NOT
 share one roster file. `ppxai/web/shared/commands.js` and
@@ -466,7 +466,7 @@ plan flagged as "confirmed by source reading" is gone.
 |---|---|
 | `tests/test_client_handled_commands_contract.py` | Part B's WEB half rewritten (VSCode half untouched). The old invariant — `cmd === '/token'` precedes `_dispatchToFactory(` — deliberately no longer exists. New source-text helpers, each mutation-verified in the same file: the fail-closed gate precedes every dispatch path; the client-dispatch branch precedes (and returns before) the factory fallthrough; NO per-name escape hatch survives; the action registry implements every action Python declares for web (read off `iter_completion_specs()`, not a hand-copied list) |
 | `tests/test_web_command_roster_dispatch_behavior.py` | **New.** Drives the REAL dispatcher + roster under Node against a call-logging fake `ApiClient` (the `test_agent_run_controller_behavior.py` idiom): all four client actions; routing flips when the ROSTER flips; alias `/cat` → canonical `show`; server dispatch carries `client:"web"`; unknown action → error + no POST; **no roster → `/token set <secret>` issues nothing but the roster retry and the secret appears in no payload**; refetch on the side effect (and a same-version signal is a no-op); a failed refetch keeps the working roster. The two security scenarios are mutation-verified: a scratch copy of the dispatcher with the gate removed, and one with the client branch bypassed, must both FAIL the harness |
-| `tests/test_shared_commands.py` | Retargeted, not deleted. Its web half is inverted into deletion fences (`commands.js` stays gone; `index.html` stops loading it; `app.js` has no catalog) plus fences on the replacement module. Its VSCode **parity** half now compares `commands.ts` against the **Python registry** instead of against `commands.js` — the old comparison stayed green while both JS copies drifted from Python. The `/run`·`/task`·`/token` gap is pinned as an explicit known-gap test that fails the day step 3b (or a hand patch) closes it |
+| `tests/test_shared_commands.py` | Retargeted, not deleted. Its web half is inverted into deletion fences (`commands.js` stays gone; `index.html` stops loading it; `app.js` has no catalog) plus fences on the replacement module. Its VSCode **parity** half now compares `commands.ts` against the **Python registry** instead of against `commands.js` — the old comparison stayed green while both JS copies drifted from Python. The `/run`·`/task`·`/token` gap is pinned as an explicit known-gap test that fails the day step 3b (or a hand patch) closes it — **it did, the same day; see §3b** |
 | `tests/test_vscode_task_controller.py` | `WEB_COMMANDS` (deleted file) → `TS_COMMANDS` + direct `CommandFactory` checks, since web's catalog IS the registry now |
 | `tests/test_web_command_dispatcher_v18_1.py` | Size fence 340 → 480 lines with the reason recorded in its threshold history (net code is flat; the growth is the fail-closed rationale + the registry's comments). `this.runs?.handle(` assertion → the registry binding `'run.controller' … _viaController(this.runs` (plus the same for `/task`) |
 | `tests/test_web_shared_modules.py` | Added script-order fence (`api-client.js` < `command-roster.js` < `command-dispatcher.js`) and `refresh_command_roster` to the web side-effect kind set |
@@ -544,7 +544,8 @@ whose client half waits for 3b):
 | `POST /command/{name}` (`routes/commands.py`) — `args_preview` | Already argument-free for a client-handled command (step 1b). Now redacted through the same helper for a SERVER-dispatched command that declares a sensitive subcommand — none exists today, which is exactly why the guard belongs here rather than being remembered later |
 | `http.py` middleware (auth, activity, host validation) + the unhandled-exception handler | **Checked, no change needed.** None logs a request BODY; the exception handler logs `method + path` only. There is no generic body logger, so nothing captures these before the route runs |
 
-Client (`ppxai/web/` only — `vscode-extension/` is untouched, step 3b):
+Client (`ppxai/web/` only — `vscode-extension/` was untouched here; its
+own sink table is in §3b):
 
 | Sink | Disposition |
 |---|---|
@@ -588,15 +589,141 @@ echoes and dispatches `/token` itself and is not roster-driven until
 step 3b, so an inline `/token set` typed in the VSCode panel can still
 be echoed client-side. The SERVER-side redaction above already covers
 its `/client-log` and `/complete` paths, which is the half that reaches
-disk.
+disk. **CLOSED by step 3b, same day** — see the sink table there.
 
-#### 3b. VSCode — not started
+#### 3b. VSCode — ✅ DONE (2026-09-21)
 
-`vscode-extension/src/shared/commands.ts` (31 entries) and
-`chatPanel.ts`'s twelve hardcoded intercepts. Independent of 3a per the
-finding above. Note VSCode needs the same fail-closed decision, and the
-extension host's stakes are higher (it runs with the user's full
-privileges — see ADR 0007 §Why this and not the alternatives).
+`vscode-extension/src/commandRoster.ts` (`CommandRoster`) fetches
+`GET /commands?client=vscode` through a new
+`HttpClient.getCommandRoster()`, caches it, resolves canonical names AND
+aliases, and exposes the `classify/isSensitive/redact` rule — semantics
+identical to web's `CommandRoster`, pinned against
+`CommandFactory.redact_sensitive` case by case rather than restated.
+`vscode-extension/src/commandRouter.ts` (`CommandRouter` +
+`CLIENT_ACTIONS` + `LEGACY_INTERCEPTS`) routes on the roster's
+`dispatch` field. **Neither module imports `vscode`** — the
+`taskController.ts` IoC idiom — which is what lets the behavioural tests
+compile the real TypeScript with the extension's own `esbuild` and drive
+it under Node. `POST /command/{name}` bodies now carry
+`client: "vscode"`.
+
+`chatPanel.ts::handleSlashCommand` is three lines (route, catch). The
+twelve-branch intercept chain and the `CHAT_SHAPED_TASKS` map are gone:
+
+    CLIENT_ACTIONS = {
+        'token.manage'   -> handleTokenCommand
+        'task.controller'-> getTaskController().handle
+        'run.controller' -> getRunController().handle
+        'auto.loop'      -> handleAgentCommand
+        'coding.stream'  -> handleCodingTaskCommand(ctx.name, ctx.args)
+        'coding.convert' -> handleConvertCommand
+        'preview.panel'  -> handlePreviewCommand
+        'help.augment'   -> showHelp
+    }
+
+`coding.stream` is ONE action shared by six commands: the implementation
+receives the CANONICAL name the roster resolved and passes it straight
+through as the `task_type`. **`CHAT_SHAPED_TASKS`' mapping half turned
+out to be the identity** — every entry was `['x', 'x']` — so nothing
+had to be kept as local data. A side effect: the registered aliases
+`/g`, `/gen`, `/d`, `/impl` reach the coding path for the first time;
+the Map keyed on canonical names only and silently forwarded them to the
+factory. An action the roster names with no implementation produces a
+clear error and is **never** forwarded. `app.quit` never reaches the
+table — `/quit` is gated to `clients={rich, textual}`, so it is not in
+the 44 commands the server serves at `?client=vscode` at all.
+
+**One deliberate behaviour change to know about:** `/help` now needs the
+server. It used to render from the bundled catalog, so it worked with
+the backend down; it is now `POST /command/help` behind the fail-closed
+gate, like every other slash command. Plain chat is unaffected, and the
+refusal names the likely cause.
+
+**The five acknowledged-legacy intercepts stay, as an explicit named
+baseline.** `LEGACY_INTERCEPTS = ['tools', 'checkpoint', 'context',
+'ls', 'tree']` in `commandRouter.ts`, consulted AFTER the fail-closed
+gate (so they are not an escape hatch), with a `DO NOT ADD TO THIS LIST`
+comment. Per the owner's "do not bless debt" they get no
+`client_action`. `tests/test_client_handled_commands_contract.py`
+asserts the table holds **exactly** those five, that no command with a
+declared `client_action` appears in it, and that no legacy name leaked
+into the action registry — the shrinking baseline step 5 inherits.
+
+**FAIL CLOSED**, as web, and the stakes are higher: the extension host
+is a Node process with the developer's full privileges, and the VSIX
+versions independently of the `ppxai-server` binary, so "newer client,
+older server that 404s `/commands`" is an everyday state rather than an
+edge case. No roster → retry once inline → refuse, naming version skew.
+No hardcoded `/token` escape hatch. Plain chat is unaffected.
+
+**Fetch lifecycle.** `initializeBackend()` awaits `roster.load()` as the
+first thing after the connection is confirmed (before `setWorkingDir`),
+so a command typed straight after connect cannot race it.
+`updateServerStatus(false)` and the `stop` branch of
+`handleToggleServer` call `roster.unload()` — the roster describes a
+SERVER, and a reconnect may reach a different one. `/reload` refetches
+via the `refresh_command_roster` side effect, added to
+`sideEffectsHandler.ts` (which stays — it is a BEHAVIOUR mirror) as a
+`refreshCommandRoster(version)` host call; the same version is a no-op.
+`tests/test_session_end_workflows.py`'s connect/disconnect chain is
+untouched.
+
+**Sinks of the raw composer input, and the disposition of each**
+(3a-sec's VSCode half, now closed). Enumerated across the extension
+host, the webview and everything between them:
+
+| Sink | Disposition |
+|---|---|
+| The webview transcript echo (`commandMessage`, posted by what is now `echoCommand`) | **Redacted** — `CommandRouter.route()` masks via the roster before the echo, fail-closed with none |
+| `POST /complete` (`handleComplete`, one call per keystroke) | **Skipped** once the buffer carries a value after a sensitive subcommand. `/token se` still completes to `set` |
+| The webview's ↑ history (`commandHistory` in `media/webview/main.js`) | **Purged.** `sendMessage()` pushes the raw line before the host sees it, so the host posts `forgetHistory` with that line and the webview drops matching entries. The webview holds NO copy of the rule — deliberately, so there is still one implementation |
+| `vscode.setState` / `getState` (persisted webview state) | **None exist** — grepped; the history is an in-memory array that dies with the webview |
+| `globalState` / `workspaceState` | **Checked, clean.** The only writer is `sessionsProvider.ts` (`ppxai.sessions`), which stores server-side session metadata, never composer input |
+| `POST /client-log` | **Never receives raw input.** Every `logClientEvent` call site forwards a `systemMessage`/`error` the client PRODUCED (`getHandlerContext`, `wireUISubscriptions`, `CommandRenderer`'s host). The command echo is posted straight to the webview and is not mirrored. The server-side redaction from 3a-sec stays as defence in depth |
+| The `ppxai HTTP` OutputChannel (`httpClient.ts`) | **Checked, clean.** It logs connection state, SSE event JSON, consent answers and agent lifecycle; `executeCommand` and `complete` log nothing |
+| `console.*` in the extension host | **Checked, clean.** `commandRenderer.ts` warns with the result TYPE, `sideEffectsHandler.ts` with the KIND; no call carries user input |
+| webview → host `postMessage` (`chat`, `complete`) | **Enumerated, unchanged.** In-process IPC inside the extension: not logged, not persisted, never networked, and the value is already in the composer DOM the message came from. Gating it would need the webview to carry the rule — a second roster |
+| `POST /command/{name}` args | A client-dispatched command is never POSTed, and with no roster nothing is |
+| SecretStorage `ppxai.apiToken` | **Kept** — that IS the token store, shared with the `ppxai.setApiToken` palette command |
+
+`handleTokenCommand`'s inline warning is reworded to the new reality
+(the value no longer leaves the client) while still recommending the
+bare `/token set`, whose masked input box never puts the token on screen.
+
+**`showHelp` now renders the SERVER's `/help`** and appends only the
+keyboard shortcuts — see the correctness contract's item 3 above for
+what it really did before, which was not what any comment claimed.
+
+**The `/auto` bug web had is NOT present here.** Web's `_dispatchAgent`
+POSTed a bare `/auto` to `/command/agent` (ADR 0011 renamed it with no
+alias). VSCode's `handleAgentCommand` answers a bare `/auto` with a
+usage error and never dispatches, so there was nothing to fix; the
+behaviour is deliberately unchanged.
+
+**No seventh roster.** `vscode-extension/media/webview/main.js` and
+`styles.css` were checked for a command list of their own: the only
+command literal in the webview is `'/context'`, a badge click that sends
+that one command as chat. Autocomplete has been server-side since
+v1.17.4.
+
+**Tests.**
+
+| File | Disposition |
+|---|---|
+| `tests/test_vscode_command_roster_behavior.py` | **New.** Compiles the REAL `commandRoster.ts` + `commandRouter.ts` + `sideEffectsHandler.ts` (its one `vscode` import aliased to a stub) with the extension's own esbuild into pytest's `tmp_path`, then drives them under Node against a call-logging fake backend and the REAL `CommandFactory.roster("vscode")` payload: all eight actions; six commands → one `coding.stream` with the resolved name; aliases (`/gen`→`generate`, `/cat`→`show`); routing flips when the ROSTER flips; server dispatch carries `client:"vscode"`; unknown action → error + no POST; the legacy five still intercepted; **no roster → `/token set <secret>` issues nothing but the roster retry, stores nothing, masks the echo and purges the history**; `unload()` reverts to fail-closed; `refresh_command_roster` reaches the host; a failed refresh keeps the working roster. The redaction truth table is compared case by case against `CommandFactory.redact_sensitive` rather than restated. Three mutants (gate removed, client branch bypassed, `classify` failing open) must all FAIL the harness |
+| `tests/test_client_handled_commands_contract.py` | Part B's VSCODE half rewritten (web half untouched). The old invariant — `command === 'token'` precedes `dispatchFactoryCommand(` — deliberately no longer exists. New helpers, each mutation-verified in the same file: the fail-closed gate precedes every dispatch path in `route()`; the client-dispatch branch precedes (and returns before) the factory fallthrough; no per-name escape hatch survives in `chatPanel.ts` (with the plan's own `grep -v subcommand` exclusion); the action registry implements every action Python declares for vscode (read off `iter_completion_specs()`); and `LEGACY_INTERCEPTS` holds exactly the five |
+| `tests/test_shared_commands.py` | Retargeted again. Its VSCode half inverts into deletion fences (`commands.ts` stays gone, nothing imports it, the barrel stops re-exporting it) plus drift fences on the replacement (no hardcoded `'/name'` literals in either new module, no `vscode` import, aliases resolved from the `aliases` FIELD). The known-gap test for `/run`·`/task`·`/token` — written in 3a to fail the day 3b landed — did exactly that and is replaced by the positive assertion that the roster serves all three to vscode |
+| `tests/test_vscode_step5b2_dispatcher.py` | Retargeted. `CHAT_SHAPED_TASKS` fences → the Python declaration (`coding.stream` on all six, `coding.convert` on `/convert`, `auto.loop` on `/auto`) plus the registry line that passes `ctx.name`. `handleSlashCommand` shape fences → the `PanelCommandOps` wiring. New: `/help` must now actually call the factory. The <3000-line fence was DELIBERATELY NOT raised (the registry lives in `commandRouter.ts`); the threshold history says so |
+| `tests/test_vscode_task_controller.py` | `TS_COMMANDS` (deleted file) → `TS_ROUTER`; the three "routed before factory dispatch" fences → the registry binding + the Python declaration, since branch order is no longer what carries the guarantee |
+| `tests/test_vscode_step5a_helpers.py` | `refresh_command_roster` added to both side-effect kind sets (the VSCode dispatcher's, and the web↔VSCode parity set) |
+| `tests/test_session_end_workflows.py`, `tests/test_vscode_step5c_state_sync.py`, `tests/test_vscode_visibility_reanchor.py`, `tests/test_help_command_reconciliation.py`, `tests/test_preview.py` | **Assessed, unchanged** — none reads the deleted catalog or the intercept chain. The connect/disconnect workflow (`ppxai.startServer`/`stopServer`/`toggleServer`/`serverStatus`) is untouched by design |
+
+**Not verified, and honestly so:** no real VSCode extension host ran.
+What IS verified is `npm run compile` (tsc + esbuild), the Node
+behavioural tests against the real compiled modules, the source-text
+fences, and the full Python suite. What is NOT is real webview
+interaction, SecretStorage, and the side-effect refetch in a live host.
+The manual smoke list is in the step-3b report.
 
 ### 4. Derive, don't restate
 
@@ -652,7 +779,23 @@ move so the migration is verified rather than assumed:
    deleted and web `/help` comes from the registry alone, filtered by
    the `client:"web"` the client now sends. Verified against a running
    UI (Playwright `live` project): `/token`, `/run` and `/task` each
-   appear exactly once. The finding as it stood:
+   appear exactly once.
+
+   **AND IN VSCODE, step 3b (2026-09-21) — where it was WORSE than this
+   item described.** The row above (and every comment in `chatPanel.ts`)
+   said VSCode's `showHelp` was "factory output + VSCode shortcuts". It
+   was not: it called `generateHelpText()`, which rendered the
+   hand-written 31-entry `shared/commands.ts` catalog, and **never called
+   the factory at all**. So VSCode `/help` showed a roster missing
+   `/run`, `/task`, `/token` and the nine commands the ADR's own table
+   lists, then appended a hardcoded "Agent platform (client-side,
+   experimental)" block naming exactly the three the catalog lacked —
+   mislabelling `/run` and `/task`, factory-registered since T8b, as
+   client-side shims. `showHelp` now renders
+   `POST /command/help` with `client:"vscode"` and appends only the
+   keyboard-shortcut section. Pinned by
+   `tests/test_vscode_step5b2_dispatcher.py::TestHandleSlashCommandShape::
+   test_help_now_actually_calls_the_factory`. The finding as it stood:
 
    **Known-until-step-3 (confirmed by source reading, 2026-09-20, once
    step 1b made `/token` a registered spec):** web `/help` now lists
@@ -678,7 +821,8 @@ move so the migration is verified rather than assumed:
    client** — not "no server involvement" (`mint` is server-backed) and
    never "forward to the server and let it refuse".
 
-   **EXTENDED AND CLOSED FOR WEB in step 3a-sec (2026-09-21).** The
+   **EXTENDED AND CLOSED FOR WEB in step 3a-sec, AND FOR VSCODE in step
+   3b (both 2026-09-21).** The
    contract above was only ever about the DISPATCH path; the inline form
    leaked on two paths that run before dispatch is consulted (the
    `> <input>` echo -> `POST /client-log` -> `~/.ppxai/logs`, and the
@@ -690,10 +834,15 @@ move so the migration is verified rather than assumed:
    echo, suppresses the `/complete` call and keeps the line out of the
    input history; and `CommandFactory.redact_sensitive` re-redacts at
    every server sink. The warning is reworded accordingly and still
-   recommends the prompt form. **The VSCode CLIENT half stays open until
-   step 3b** — its echo/dispatch is not roster-driven yet; the
-   server-side redaction already covers its `/client-log` and `/complete`
-   paths. See §3a-sec for the sink table and the fail-closed rule.
+   recommends the prompt form. **The VSCode CLIENT half was CLOSED by
+   step 3b the same day** — `CommandRoster` (the TypeScript port of the
+   same rule, pinned case by case against `redact_sensitive`) masks the
+   webview echo, skips `POST /complete`, and purges the raw line from
+   the webview's ↑ history; the full sink enumeration, including the
+   sinks that turned out to be clean already (`/client-log`, the
+   OutputChannel, `globalState`, and the absence of any
+   `vscode.setState`), is in §3b. See §3a-sec for the web sink table and
+   the shared fail-closed rule.
 
    Aliases need no schema work: `CommandSpec.aliases` exists, with
    resolution in `CommandFactory.get()` and publication via `iter_completion_specs()`
@@ -709,7 +858,7 @@ second roster still exists:
 | the inline fallback catalog (`app.js:199`, `this.slashCommands`) | ✅ DONE — step 3a |
 | `web/shared/commands.js` in full — including the alias entries restated as standalone commands (`/cat`, `/sh`, `/term`) | ✅ DONE — step 3a; `CommandRoster.resolve()` reads the `aliases` FIELD |
 | the five hardcoded `if (cmd === '/…')` intercepts in `command-dispatcher.js` | ✅ DONE — step 3a; routing is the roster's `dispatch` field. Fenced by `assert_web_has_no_per_name_escape_hatch` |
-| `vscode-extension/src/shared/commands.ts` and `chatPanel.ts`'s twelve intercepts | ⬜ step 3b |
+| `vscode-extension/src/shared/commands.ts` in full — 31 entries, plus `generateHelpText`, `SLASH_COMMANDS`, `parseCommand`, `isSlashCommand`, `AI_FORWARDED_COMMANDS` — and `chatPanel.ts`'s twelve intercepts + the `CHAT_SHAPED_TASKS` map | ✅ DONE — step 3b, 2026-09-21; routing is the roster's `dispatch` field. Fenced by `assert_vscode_has_no_per_name_escape_hatch` |
 | the six `_*_SUBCOMMANDS` tables (`engine/completion.py`) | ⬜ step 4 |
 
 Not a deletion and deliberately so: `web/shared/side-effects.js` stays —
@@ -723,10 +872,13 @@ here?" is a hardcoded `if`-chain in each JS client, and the chains differ:
 **web intercepts 5 commands** (`command-dispatcher.js`), **VSCode 12**
 (`chatPanel.ts:1140-1220`). Nothing records which client handles what.
 
-> **Update (2026-09-21).** Web's five are gone — step 3a replaced the
-> chain with the roster's `dispatch` field plus a `client_action` →
-> implementation registry. VSCode's twelve remain until step 3b, so the
-> counts to re-measure are now `0` and `12`.
+> **Update (2026-09-21).** Both chains are gone — step 3a for web, step
+> 3b for VSCode, each replaced by the roster's `dispatch` field plus a
+> `client_action` → implementation registry. The counts to re-measure
+> are now `0` and `0`; the second grep's target moved (`chatPanel.ts` has
+> no `command === '…'` left, and the five acknowledged-legacy intercepts
+> live in the named `LEGACY_INTERCEPTS` table in
+> `vscode-extension/src/commandRouter.ts`).
 
     grep -nE "if \(cmd === '/[a-z-]+'" ppxai/web/shared/command-dispatcher.js
     grep -nE "(^|[^a-zA-Z])command === '[a-z-]+'" vscode-extension/src/chatPanel.ts | grep -v subcommand
@@ -753,6 +905,17 @@ intercepts must be declared with a `client_action` for that client, or sit in
 an explicit legacy baseline. On day one that baseline is exactly the five
 legacy VSCode intercepts, and it may only shrink — the same discipline as
 `BASELINE` in `tests/test_no_new_lazy_imports.py`.
+
+> **The baseline now EXISTS, in code (step 3b, 2026-09-21).**
+> `LEGACY_INTERCEPTS` in `vscode-extension/src/commandRouter.ts`, with
+> `LEGACY_HANDLERS` beside it, consulted only after the fail-closed
+> gate. `tests/test_client_handled_commands_contract.py::
+> TestVscodeRosterDrivenDispatchOrder` pins it at exactly
+> `{tools, checkpoint, context, ls, tree}`, pins that no command with a
+> declared `client_action` appears in it, and pins that no legacy name
+> leaked into `CLIENT_ACTIONS`. Step 5 inherits that list rather than
+> re-deriving it; it may only shrink, and only by migrating a command to
+> factory routing.
 
 ## Note for step 2+ — PyInstaller hiddenimports
 

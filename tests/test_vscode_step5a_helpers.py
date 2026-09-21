@@ -127,6 +127,9 @@ class TestSideEffectsHandlerModule:
             "prompt_quick_pick",
             "prompt_text",
             "notify",
+            # ADR 0007 step 3b: /reload's roster-changed signal. Web
+            # grew its handler in step 3a; this is the VSCode half.
+            "refresh_command_roster",
             "vscode_delegate",
         ):
             assert kind in src, (
@@ -341,7 +344,8 @@ class TestCrossClientParity:
             "reveal_in_explorer", "open_terminal", "run_shell",
             "open_html_preview", "refresh_file_tree", "set_theme",
             "copy_to_clipboard", "attach_file", "prompt_quick_pick",
-            "prompt_text", "notify", "vscode_delegate",
+            "prompt_text", "notify", "refresh_command_roster",
+            "vscode_delegate",
         ):
             assert kind in web_src, f"web missing kind: {kind}"
             assert kind in vscode_src, f"VSCode missing kind: {kind}"
