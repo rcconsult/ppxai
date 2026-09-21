@@ -396,6 +396,14 @@ export async function activate(context: vscode.ExtensionContext) {
                     const success = await backend.setProvider((selected as any).id);
                     if (success) {
                         chatViewProvider.updateStatus();
+                        // 2026-09-21 (owner decision 8): re-anchor the full
+                        // AppState (including modelSupportsVision) so the
+                        // attach-button badge reflects the new provider's
+                        // default model immediately. Mirrors web's
+                        // handleProviderChange — see chatPanel.ts's
+                        // `reanchorState()` doc comment for why updateStatus()
+                        // alone does not cover this field.
+                        void chatViewProvider.reanchorState();
                         vscode.window.showInformationMessage(`Switched to ${selected.label}`);
                     } else {
                         vscode.window.showErrorMessage(`Failed to switch to ${selected.label}`);
@@ -438,6 +446,9 @@ export async function activate(context: vscode.ExtensionContext) {
                 if (selected) {
                     await backend.setModel((selected as any).id);
                     chatViewProvider.updateStatus();
+                    // 2026-09-21 (owner decision 8): see the matching
+                    // comment in ppxai.switchProvider above.
+                    void chatViewProvider.reanchorState();
                     vscode.window.showInformationMessage(`Switched to ${selected.label}`);
                 }
             } catch (error) {

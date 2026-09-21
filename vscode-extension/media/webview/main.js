@@ -507,15 +507,29 @@ function stageFile(file) {
         // Uses the same 'warning' role as the engine WARNING SSE event
         // handler above so both sites render with identical orange
         // treatment — visual consistency within the client.
+        //
+        // The gate decision itself lives in the pure, DOM-free
+        // visionGate.js (loaded before this file) so it can be
+        // unit-tested under Node without a webview/DOM — see
+        // tests/test_vscode_vision_gate_behavior.py.
         const isImage = mediaType.startsWith('image/');
-        if (isImage && activeModelSupportsVision === false) {
+        if (shouldBlockImageAttach(isImage, activeModelSupportsVision)) {
             const activeModel = (modelSpan && modelSpan.textContent) || 'unknown';
+            // v1.19.0 (Item 24), ported from web's ppxai/web/app.js
+            // `_stageFile` 2026-09-21 (owner decision 8): we no longer
+            // promise a "text placeholder" — at send time the server
+            // either routes the image through a VL sidecar / the shell
+            // tool (if available) or BLOCKS the send entirely. Keep this
+            // attach-time notice honest about both outcomes.
             addMessage(
                 'warning',
                 `⚠ ${file.name} is an image, but the active model ` +
-                `(${activeModel}) does not accept images. It will be sent ` +
-                `as a text placeholder. Switch to a vision-capable model ` +
-                `(e.g. gpt-5.5, gemini-3-flash) before sending.`,
+                `(${activeModel}) can't view images. Unless a vision ` +
+                `sidecar or the shell tool is available to inspect it, ` +
+                `the send will be blocked — the image is never silently ` +
+                `dropped or described from a placeholder. Switch to a ` +
+                `vision-capable model (e.g. gpt-5.5, gemini-3-flash) ` +
+                `before sending.`,
                 false
             );
         }

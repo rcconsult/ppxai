@@ -233,7 +233,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             {
                 adopt: (fields) => this._appState.adoptFields(fields),
                 resetAdopted: () => this._appState.resetAdoptedFields(),
-                log: (message) => console.warn(message),
+                // 2026-09-21 (owner decision 10, docs/plan-adr-0007-completion-
+                // service.md): route through the extension's existing output
+                // channel instead of the Extension Host console, which most
+                // users never open. `schemaGuard.ts` itself stays vscode-free
+                // (tests/test_app_state_generated_types.py pins that) — the
+                // channel lives on `HttpClient` and is reached through this
+                // injected callback, same IoC shape as `adopt`/`resetAdopted`.
+                log: (message) => this._backend.logToOutputChannel(message),
                 warnUser: (message) => {
                     void vscode.window.showWarningMessage(message);
                 },
@@ -841,19 +848,48 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
      * it through the schema-driven facade.
      *
      * Called on `onDidChangeWindowState` → focused (v1.18.1
-     * state-sync Phase A). Mirrors the web app's
-     * `_reanchorFromServer` in ppxai/web/app.js — same shape, same
-     * helper boundary, so the two clients can't drift in their
-     * re-anchor behavior. Errors are swallowed because a transient
-     * /state failure shouldn't break the chat panel.
+     * state-sync Phase A) and, since 2026-09-21 (owner decision 8,
+     * `docs/plan-adr-0007-completion-service.md`), after a
+     * command-palette provider/model switch — see `reanchorState()`.
+     * Mirrors the web app's `_reanchorFromServer` in ppxai/web/app.js
+     * — same shape, same helper boundary, so the two clients can't
+     * drift in their re-anchor behavior. Errors are swallowed because
+     * a transient /state failure shouldn't break the chat panel.
+     *
+     * Unlike the SSE `state:sync` eventBus handler above, this method
+     * updates `this._appState` directly rather than going through
+     * that handler — so it must ALSO forward the mapped changes to
+     * the webview itself (the `stateSync` postMessage below). Without
+     * that forward, the extension-host AppState re-anchors correctly
+     * but the webview's own mirror (e.g. `activeModelSupportsVision`
+     * in `main.js`) never learns about it, and badges depending on it
+     * stay stale until the next SSE push.
      */
     private async _reanchorFromServer(): Promise<void> {
         try {
             const snapshot = await this._backend.fetchState();
-            this._appState.updateFromPython(snapshot);
+            const mapped = this._appState.updateFromPython(snapshot);
+            this._view?.webview.postMessage({ type: 'stateSync', changes: mapped });
         } catch (e) {
             console.warn('[ppxai] state re-anchor failed:', e);
         }
+    }
+
+    /**
+     * Public entry point for callers outside this class (today:
+     * `extension.ts`'s `ppxai.switchProvider` / `ppxai.switchModel`
+     * command-palette handlers) that need a full AppState re-anchor
+     * after an out-of-band REST call — the same reason web's
+     * `handleProviderChange`/`handleModelChange` call
+     * `_reanchorFromServer()` directly instead of waiting for the
+     * next SSE `state_sync` to drain from the engine queue. Covers
+     * `modelSupportsVision` in particular: without this, the VSCode
+     * attach-button badge and per-file warning keep reflecting the
+     * PREVIOUS model's vision capability until the user sends a chat
+     * message.
+     */
+    public async reanchorState(): Promise<void> {
+        await this._reanchorFromServer();
     }
 
     /**
@@ -2664,6 +2700,10 @@ Review your previous actions and continue. If the task is complete, respond with
         const highlightJsUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaPath, 'highlight.min.js'));
         const markedJsUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaPath, 'marked.min.js'));
         const webviewCssUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewPath, 'styles.css'));
+        // Pure, DOM-free decision module — see visionGate.js's own header.
+        // Loaded before main.js so `shouldBlockImageAttach` is a global by
+        // the time `stageFile()` calls it.
+        const visionGateJsUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewPath, 'visionGate.js'));
         const webviewJsUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewPath, 'main.js'));
 
         // Generate nonce for CSP
@@ -2762,6 +2802,7 @@ Review your previous actions and continue. If the task is complete, respond with
     </div>
 
     <!-- Webview JavaScript -->
+    <script nonce="${nonce}" src="${visionGateJsUri}"></script>
     <script nonce="${nonce}" src="${webviewJsUri}"></script>
 </body>
 </html>`;
