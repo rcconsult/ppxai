@@ -734,6 +734,28 @@ fences, and the full Python suite. What is NOT is real webview
 interaction, SecretStorage, and the side-effect refetch in a live host.
 The manual smoke list is in the step-3b report.
 
+**VSCode manual smoke checklist — NOT RUN.** No real VSCode extension
+host was available during step C's `/tools`/`/context`/`/ls`/`/tree`
+migration (2026-09-21) either, so this list carries eight more items
+that also need a real extension host before they can be marked
+verified:
+
+1. `/tools` → status renders as a key/value block.
+2. `/tools on` → confirmation AND the Tools badge turns on and shows
+   the tool count; `/tools off` → "Tools: off".
+3. `/tools auto on` → the Agent badge flips on; `/tools auto off` →
+   off.
+4. `/tools help editing` renders the guide; `/tools help <tool>`
+   renders that tool's description; `/tools help nope` renders the
+   error.
+5. `/ls`, `/ls -a`, `/ls <subdir>` → a readable table; `/tree`,
+   `/tree 2` → a readable tree.
+6. `/context` → usage block; `/context show` → bootstrap tree;
+   `/context hints`; `/context reload`.
+7. Attach a file, then `/context clear` → the Ctx% badge drops
+   immediately, with no chat turn required.
+8. `/checkpoint clear` → the modal still appears and Cancel cancels.
+
 ### 4. Derive, don't restate — ✅ DONE (2026-09-21)
 
 Completion's subcommand tables read the spec, and `engine/completion.py`
@@ -1016,6 +1038,17 @@ covering one kind. Nothing was broken; the guard was.
 | `LEGACY_INTERCEPT_BASELINE` | `tools`, `checkpoint`, `context`, `ls`, `tree` | migrating the command to factory routing, deleting its row from `LEGACY_INTERCEPTS` + `LEGACY_HANDLERS` in `commandRouter.ts`, **and** deleting the row here. A removed entry FAILS until the baseline row goes too, so this file stays a record of the cleanup rather than a wish-list |
 | `TEXTUAL_LEGACY_QUIT_BASELINE` | `q` | registering `q` as an alias of `/quit` (owner decision — see below), deleting `TEXTUAL_LEGACY_QUIT_NAMES` from `ppxai/tui/app.py`, and emptying this baseline |
 
+> **Update (2026-09-21).** Both rows shrank. `LEGACY_INTERCEPT_BASELINE`
+> is now `{checkpoint}` only — `tools`, `context`, `ls` and `tree`
+> migrated to factory routing (§Step 5 follow-ups, item C); `checkpoint`
+> stays on the `/checkpoint clear` confirmation question (open owner
+> decision 7). `TEXTUAL_LEGACY_QUIT_BASELINE` is now empty — `q` was
+> registered as a `/quit` alias (open owner decision 1, resolved) — and
+> a dedicated test (`test_the_textual_quit_legacy_extra_is_gone`) pins
+> it staying empty rather than being re-added as a tuple literal. So as
+> of today there is **one** shrinking baseline row with live entries
+> (`LEGACY_INTERCEPT_BASELINE = {checkpoint}`), not two.
+
 Both directions fail. Adding to either fails with a message saying what
 to do instead ("declare a `client_action`"; "this is an open owner
 decision").
@@ -1191,18 +1224,33 @@ Collected here at the close of step 5 — everything this record
 deliberately did NOT decide. None blocks anything; each is a visible
 behaviour or schema change that wants an owner, not a refactor.
 
-1. **`/q` in Textual** (step 5). `ppxai/tui/app.py` accepts `/q`; it is
+1. ~~**`/q` in Textual**~~ (step 5). `ppxai/tui/app.py` accepts `/q`; it is
    not a registered alias, so completion, `/help` and `GET /commands`
    do not know it exists, and Rich does not accept it. **Registering it**
    makes it appear in Rich's completion too; **removing it** breaks a
    shortcut Textual users have. Held as the single-row baseline
    `TEXTUAL_LEGACY_QUIT_BASELINE` so the choice is recorded rather than
    hidden in a tuple literal.
-2. **Should `/help <cmd>` list subcommands?** (step 4). Eight commands
+   > **DECIDED 2026-09-21 — registered as an alias.** `/q` is now a
+   > declared alias of `/quit` (`aliases=["exit", "q"]`,
+   > `ppxai/commands/client_handled.py`), so it shows up in Rich's
+   > completion too. `TEXTUAL_LEGACY_QUIT_NAMES` was deleted from
+   > `ppxai/tui/app.py`; `TEXTUAL_LEGACY_QUIT_BASELINE` is empty and
+   > `tests/test_command_parity_fence.py::
+   > TestNoUndeclaredIntercepts::test_the_textual_quit_legacy_extra_is_gone`
+   > pins it staying that way. Web/VSCode still do not accept `/q`.
+2. ~~**Should `/help <cmd>` list subcommands?**~~ (step 4). Eight commands
    declare `subcommands` now, and neither `generate_help` nor
    `get_command_help` renders them — `/token` has declared them since
    step 1b without showing them. It is a visible output change to a
    surface with its own tests.
+   > **DECIDED 2026-09-21 — yes, implemented.** `/help <cmd>` now
+   > renders a "Subcommands" section from `CommandSpec.subcommands`
+   > (`CommandFactory.get_command_help`, `ppxai/commands/factory.py`).
+   > A sensitive subcommand (e.g. `/token set`) carries a "(value
+   > handled client-side, never sent to the server)" marker. A spec
+   > with no declared subcommands renders byte-identical to before.
+   > Tests: `tests/test_help_command_reconciliation.py`.
 3. **The second-level "argument kinds" schema** (step 1, still open).
    Five static tables stayed in `engine/completion.py` because the flat
    `list[tuple[str, str]]` shape cannot express a SECOND argument
@@ -1212,12 +1260,24 @@ behaviour or schema change that wants an owner, not a refactor.
    `/help`. `_THEME_NAMES` is a different case again: a restatement of a
    RUNTIME registry (`tui/themes/themes.py`), where the real fix points
    at the theme registry and `engine -> tui` would be a NEW inversion.
+   > **Filed 2026-09-21 as debt Item 75** (`docs/debt-inventory.md`) —
+   > not now. No blast radius today; the five tables work, only the
+   > duplication cost is real.
 4. **Fold chat-shaped-ness into the roster** (step 5). Web's
    `STREAMING_COMMANDS` (8 names) is the one literal the generic
    catalog detector exempts. A `chat_shaped` field on `CommandSpec`
    would delete it — a schema change to a published payload, so it is
    its own decision.
-5. **`GET /schema/app-state` has no consumer** (ADR 0007
+   > **Filed 2026-09-21 as debt Item 76** (`docs/debt-inventory.md`) —
+   > not now. Low blast radius; one file, one 8-name set, one fence
+   > exemption row.
+5. ~~**`GET /schema/app-state` has no consumer**~~ **PREMISE WRONG —
+   corrected 2026-09-21, see the ADR's correction block in §Follow-up.**
+   Web gets the schema injected at serve time (`routes/static.py`),
+   VSCode gets a build-time copy pinned identical by
+   `tests/test_app_state.py`; neither file is a hand-written mirror.
+   Recommendation: do not build a runtime fetch. Owner's call. Original
+   text kept below for the record. (ADR 0007
    §Follow-up, out of scope here). The endpoint exists
    (`server/routes/schema.py:32`) and neither JS client calls it, while
    both keep hand-written mirrors pinned by cross-language sentinel
@@ -1228,6 +1288,94 @@ behaviour or schema change that wants an owner, not a refactor.
 6. ~~**Flipping ADR 0007 to Accepted/Implemented.**~~ **DECIDED
    2026-09-21 — the owner accepted the record.** Items 1–5 stay open as
    follow-ups; none was a condition on acceptance.
+7. **`/checkpoint clear` cross-client confirmation** (raised 2026-09-21,
+   during the VSCode legacy-intercept migration, step C). Four of the
+   five `LEGACY_INTERCEPTS` (`tools`, `context`, `ls`, `tree`) moved to
+   factory routing today; `checkpoint` is the one that stayed, because
+   `/checkpoint clear` irreversibly deletes every file-backend snapshot
+   and VSCode's `showWarningMessage(..., {modal: true})`
+   (`vscode-extension/src/handlers/commands.ts`) is the only
+   confirmation any client has for that — `ppxai/commands/agent.py`
+   says plainly "Interactive confirmation is handled by the old handler
+   for now". Three options were on the table:
+   - **(A)** migrate to factory routing and lose the confirmation —
+     matches web, which has no confirmation either.
+   - **(B)** build a cross-client confirmation (the existing
+     `prompt_quick_pick` side effect could express it, but neither TUI
+     consumes command `side_effects` at all today — verified,
+     `grep -rn side_effect ppxai/tui ppxai/rich ppxai/rendering`
+     returns nothing — so (B) needs TUI work first), then migrate.
+   - **(C)** leave `/checkpoint` as the one acknowledged-legacy
+     intercept.
+   **DECIDED 2026-09-21: option B.** Build a confirmation that works in
+   all four clients, including both TUIs, then migrate `/checkpoint`
+   off `LEGACY_INTERCEPTS`. Implementation is in progress — until it
+   lands, the legacy table holds one row, `checkpoint`. Not filed as a
+   separate debt item; it is now planned work, not deferred work.
+
+## Step 5 follow-ups (2026-09-21, owner decisions)
+
+Landed on `bugfix/v1.19.3`, uncommitted at the time of writing. Six
+threads, each with its own tests.
+
+- **A — `/q` registered as a `/quit` alias.** `aliases=["exit", "q"]`
+  in `ppxai/commands/client_handled.py`; `TEXTUAL_LEGACY_QUIT_NAMES`
+  deleted from `ppxai/tui/app.py`; the parity fence's Textual-`"q"`
+  shrinking baseline is retired and replaced by a test that it stays
+  gone (`tests/test_command_parity_fence.py`). Rich gained `/q` for
+  free (no code change); web/VSCode still don't accept it.
+- **B — `/help <cmd>` lists subcommands.** See open decision 2 above.
+  `ppxai/commands/factory.py::get_command_help`;
+  `tests/test_help_command_reconciliation.py`.
+- **C — four of five VSCode legacy intercepts migrated to factory
+  routing.** `/tools`, `/context`, `/ls`, `/tree` now go
+  `POST /command/<name>` with `client:"vscode"`. `LEGACY_INTERCEPTS`
+  in `vscode-extension/src/commandRouter.ts` is down to one row:
+  `checkpoint` — **DECIDED 2026-09-21: option B** (decision 7 above),
+  implementation in progress. One fact that shapes that build: neither
+  TUI consumes command `side_effects` at all today (verified,
+  `grep -rn side_effect ppxai/tui ppxai/rich ppxai/rendering` returns
+  nothing), which is why a cross-client confirmation needs TUI-side
+  work, not just a new side-effect kind. Found and fixed along the way:
+  - `/tools help` (and `help editing`, `help <tool>`) existed only in
+    VSCode's intercept, even though `help` is a declared subcommand
+    offered by completion in all four clients. The guide text moved to
+    `ppxai/commands/tools.py` (`_FILE_EDITING_GUIDE`, `_tools_help`),
+    so it now works in Rich, Textual and web too.
+    `tests/test_tools_help_subcommand.py`.
+  - `/context clear` left a stale Ctx% badge in web (and would have in
+    VSCode): `clear_injected_contexts`
+    (`ppxai/engine/session_ops.py`) edited message text without
+    changing the list, so no `state_sync` fired. Fixed with a
+    one-line `_notify_messages_changed()` call, same precedent as
+    `ppxai/engine/multimodal_ops.py`.
+  - VSCode's `state:sync` handler in `chatPanel.ts` now refreshes the
+    Tools and Agent badges keyed on the FIELD (`tools_enabled`,
+    `agent_mode`), never a command name.
+  - Three user-facing strings in `ppxai/commands/tools.py` still said
+    `/tools agent` (removed by ADR 0011) — fixed.
+  - VSIX 137 KB. TS deleted: ~276 lines from `chatPanel.ts`, ~417 from
+    `handlers/commands.ts`.
+- **D — dead code deleted.** `ppxai/rich/ui.py::display_file_editing_help`
+  (a third copy of the editing guide, imported/re-exported but never
+  called in production) plus its imports, and its
+  `tests/test_ui.py::TestFileEditingHelp` class.
+- **E — `tests/test_no_new_lazy_imports.py` fences `tests/` too.**
+  New per-file shrinking baseline `BASELINE_TESTS_DIR`: 130 files,
+  1,245 function-level `ppxai` imports total. A file not listed is
+  allowed zero. Fails on growth AND on shrink-without-lowering-the-row.
+- **F — `tests/test_no_attribution_trailers.py` +
+  `scripts/git-hooks/commit-msg`.** No commit after the pinned
+  baseline `719fba024b68dfe0d46b7ec769b9cc60cdf99c8d` may carry a
+  Co-Authored-By-Claude / `Claude-Session:` / "Generated with
+  [Claude Code]" trailer. `ALLOWED_BY_OWNER` is an owner-only override
+  list; the hook has a `PPXAI_ALLOW_ATTRIBUTION=1` one-commit override.
+  Shallow CI clones (`.github/workflows/tests.yml` and `build.yml` both
+  use `actions/checkout@v5` at its default depth-1) fall back to a
+  committer-timestamp scan, so CI sees only the tip commit. The hook is
+  opt-in: `git config core.hooksPath scripts/git-hooks` — an owner
+  decision, not run by default. History before the baseline is exempt
+  by owner decision.
 
 ## Hybrid commands — dispatch routing becomes data
 

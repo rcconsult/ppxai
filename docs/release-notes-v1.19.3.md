@@ -1,8 +1,9 @@
 # Release Notes — v1.19.3
 
 > **Scope:** Started as a two-fix observability release and grew to
-> **nine fixes and one transcript change** on the same branch ahead of
-> tagging. Two make an **existing silent degradation visible**; neither
+> **nine fixes, one transcript change, and ADR 0007's one-command-registry
+> work** on the same branch ahead of tagging. Two of the fixes make an
+> **existing silent degradation visible**; neither
 > changes what the send path does, and neither changes a resolved fact
 > value. Two close out the 2026-09-27 Perplexity Sonar chat-completions
 > retirement on the web_search tool's own code path (the provider side
@@ -17,7 +18,19 @@
 > strip in the web and VSCode transcripts, which also fixes a chevron
 > that could expand to nothing.
 >
-> No config-shape changes and no command renames. The shipped microk8s
+> **Command-surface changes, landed and Accepted 2026-09-21 (ADR 0007).**
+> `CommandSpec` is now the single declaration for every command;
+> completion, `/help` and both JS clients' menus derive from it. **This
+> release DOES remove a command from web and VSCode**: `/quit` is gone
+> from both — web's header button is now "Leave", VSCode uses its
+> existing connect/disconnect commands; `/quit`/`/exit` are unaffected
+> in the Rich and Textual TUIs. Both JS clients now fail CLOSED on slash
+> commands when the roster can't be fetched (e.g. newer web assets
+> against an older server). See "One command registry" below for the
+> rest — subcommand display in `/help`, `/tools help` reaching Rich and
+> Textual, VSCode's `/tools`/`/context`/`/ls`/`/tree` now server-rendered.
+>
+> No config-shape changes. The shipped microk8s
 > coder template changes shape, but it is an example: nothing in an
 > existing install reads it. The v1 API gateway (`POST /v1/oneshot`,
 > bearer auth) and the `/v1/agent/*` surface are **byte-identical to
@@ -25,14 +38,54 @@
 
 ## Branch
 
-`bugfix/v1.19.3` (from master @ v1.19.2). Seventeen commits: six fixes,
-one web/VSCode feature, one test sweep, two deploy-example updates, six
-docs, one version bump.
+`bugfix/v1.19.3` (from master @ v1.19.2), **42 commits ahead of master**
+at the time of writing — re-derive with `git rev-list --count
+master..HEAD`; uncommitted work in the tree lands as further commits
+before tagging, so this count is a floor, not a final tally. Nine fixes
+and a web/VSCode transcript feature carried the branch through
+2026-09-16 (see Verification below for that tree's test state); ADR
+0007's one-command-registry work (steps 1–5 plus the same-day follow-ups
+in "One command registry" below) landed 2026-09-21.
 
 Nothing in this release requires an upgrade step. If you run tool loops
 against models whose facts rows you have not checked, the first fix is
 the reason to take it; if you serve the 27B-FP8 Qwen line, the catalog
-fix is.
+fix is; if you script against web or VSCode's `/quit`, switch to the
+"Leave" button / connect-disconnect commands.
+
+## One command registry (ADR 0007)
+
+Landed and Accepted 2026-09-21. `CommandSpec` is the only place a
+command is declared — completion, `/help`, and both JS clients' command
+menus are all derived from it, served over `GET /commands?client=<id>`.
+See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-completion-first-class-service.md).
+
+- Both JS clients fetch the roster at startup; the hand-written
+  `ppxai/web/shared/commands.js` and `vscode-extension/src/shared/commands.ts`
+  are deleted, along with five more hand-written command lists
+  (including a Rich welcome-screen catalog that had drifted 18 commands
+  out of date).
+- **⚠️ User-visible: `/quit` no longer exists as a command in web or
+  VSCode.** Ending a client session is a UI workflow now, not a slash
+  command — web's button reads "Leave"; VSCode uses connect/disconnect.
+  Unaffected in Rich/Textual, where `/quit`, `/exit`, and now `/q`
+  (newly registered as an alias) all still work.
+- Both JS clients fail CLOSED on slash commands when the roster can't
+  be fetched, rather than silently doing nothing or guessing at a name.
+- `/token set <value>` is `client_handled`, so a typed-inline
+  `/token set <bearer>` is masked and intercepted client-side before it
+  can reach the server dispatch path.
+- Same-day follow-ups: `/help <cmd>` now lists a command's
+  subcommands; `/tools help` / `/tools help editing` now work in Rich,
+  Textual and web (previously VSCode-only); VSCode's `/tools`,
+  `/context`, `/ls` and `/tree` are now server-rendered via
+  `POST /command/<name>` (`/checkpoint` is the one VSCode command that
+  stays client-side for now: `/checkpoint clear`'s irreversible delete
+  needs a confirmation, and the owner decided 2026-09-21 to build one
+  that works in all four clients, including both TUIs, before
+  `/checkpoint` migrates — implementation in progress);
+  `/context clear` no longer leaves a stale Ctx% badge; three stale
+  `/tools agent` hint strings (retired by ADR 0011) are fixed.
 
 ## Fixed
 

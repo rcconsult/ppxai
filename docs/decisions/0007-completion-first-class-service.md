@@ -24,6 +24,26 @@ the owner flipped it; the remaining open questions (the plan's §Open
 owner decisions) are follow-ups to an accepted record, not conditions on
 it. Extracting a `ppxai/completion/` package is now optional and
 cosmetic (see §Future). The "target v1.19.x" in the 08-15 revision has now been passed by v1.19.0, v1.19.1 and v1.19.2 without step 2 landing — it was a hope, not a plan, and is restated below as an explicit deferral with triggers rather than a date.
+
+**After acceptance (2026-09-21 follow-ups).** Three of the open owner
+decisions were decided the same day the record was accepted: **(A)**
+`/q` was registered as a declared alias of `/quit`
+(`ppxai/commands/client_handled.py`), so `TEXTUAL_LEGACY_QUIT_NAMES`
+and its baseline are gone from `ppxai/tui/app.py` and the fence.
+**(B)** `/help <cmd>` now renders a "Subcommands" section
+(`CommandFactory.get_command_help`), so the step-4 note above that the
+move "changed no help output" is superseded. **(C)** four of the five
+VSCode `LEGACY_INTERCEPTS` (`tools`, `context`, `ls`, `tree`) were
+migrated to factory routing; `LEGACY_INTERCEPT_BASELINE` is down to one
+row, `checkpoint`. **DECIDED 2026-09-21: option B** for
+`/checkpoint clear` (an irreversible delete whose only confirmation
+today is VSCode's modal) — build a confirmation that works in all four
+clients, including both TUIs (neither consumes command `side_effects`
+today), then migrate `checkpoint` off this table. Implementation is in
+progress; until it lands the baseline holds its one row. Detail:
+`docs/plan-adr-0007-completion-service.md` §"Step 5 follow-ups
+(2026-09-21, owner decisions)".
+
 **Related:**
 - `ppxai/engine/completion.py` — current home of `complete()`
 - `ppxai/commands/factory.py` — `CommandFactory`, `CompletionCommandInfo`, `iter_completion_specs()`
@@ -507,6 +527,10 @@ seed. Incremental path:
       `/help` needed no change — it has been registry-generated since
       step 1b, and neither `generate_help` nor `get_command_help`
       renders subcommands, so the move changed no help output.
+      > **Update (2026-09-21).** This is no longer current: open owner
+      > decision 2 was decided the same day — `get_command_help` now
+      > renders a "Subcommands" section from `CommandSpec.subcommands`.
+      > See §After acceptance below.
    5. **Parity fence** — ✅ **DONE 2026-09-21.**
       `tests/test_command_parity_fence.py` (128 tests) asserts five
       things, each read off the PYTHON declaration and compared against
@@ -516,7 +540,8 @@ seed. Incremental path:
       intercepts — zero per-name branches in either JS client, and
       `LEGACY_INTERCEPTS` as an explicit five-row SHRINKING baseline that
       fails when it grows AND when it shrinks without its baseline row
-      going too; (c) no surviving hand-written roster — every deletion in
+      going too (**update, 2026-09-21: down to one row, `checkpoint`
+      — see §After acceptance**); (c) no surviving hand-written roster — every deletion in
       the plan's completeness table fenced as absent, plus a GENERIC
       detector (a literal naming ≥ 6 distinct registered commands, N
       measured against the real tree) with one named, self-fencing
@@ -580,7 +605,7 @@ three different things in this codebase:
 |---|---|---|
 | `web/shared/commands.js`, the `web/app.js:199` fallback catalog, alias entries restated as standalone commands, `_appendExperimentalHelp()` | **Data** — names, descriptions, usage, subcommands | ✅ **Deleted** in step 3a (2026-09-21); populated from `GET /commands?client=web` via `web/shared/command-roster.js`. `vscode-extension/src/shared/commands.ts` was the same class of mirror and is ✅ **deleted** in step 3b (same day), populated from `GET /commands?client=vscode` via `vscode-extension/src/commandRoster.ts` |
 | `web/shared/side-effects.js` and the VSCode equivalent | **Behaviour** — 300 lines of handler implementations (`open_editor`, `copy_to_clipboard`, `prompt_text`, …) that *perform* an effect in the client | **Stays.** Not servable: this is the same line drawn when shipping client code from the server was rejected, and the same split as `client_action` — Python owns the NAME, the client bundles the IMPLEMENTATION |
-| `web/shared/app-state.js`, `vscode-extension/src/appState.ts` | **Data** — hand-written mirrors of `engine/app_state_schema.json` | **Could go, and is further along than the roster** — see below |
+| `web/shared/app-state.js`, `vscode-extension/src/appState.ts` | ~~**Data** — hand-written mirrors of `engine/app_state_schema.json`~~ **Behaviour.** Corrected 2026-09-21: neither file restates the schema. Both are the observable-store CLASS and DERIVE field names, defaults and the Python↔JS name mapping from the schema at construction | **Stays** — nothing here to replace with a GET; see the correction below |
 
 **The rule:** a mirror of DATA can be replaced by a GET; a mirror of
 BEHAVIOUR cannot, and should instead be held in line by a parity fence that
@@ -607,6 +632,52 @@ step 5's fence.
 > test and gets one.
 
 ### Follow-up, out of scope here: the AppState schema endpoint has no consumer
+
+> **CORRECTION (2026-09-21) — the conclusion below is wrong; the grep is
+> right.** No JS client *fetches* `GET /schema/app-state`, but neither
+> client maintains the schema by hand either. Both are already derived
+> from `ppxai/engine/app_state_schema.json`, by two other routes that the
+> endpoint's own module docstring (`server/routes/schema.py:8-16`)
+> describes and that were not read when this section was written:
+>
+> - **Web — derived at SERVE time.** `server/routes/static.py:41-47`
+>   injects `window.APP_STATE_SCHEMA` into `index.html` from the running
+>   server's `engine.app_state.SCHEMA`; `web/shared/app-state.js:46`
+>   refuses to construct without it. This is strictly better than a fetch:
+>   same source, no round-trip, and no version skew is possible because
+>   the page and the schema come from the same process.
+> - **VSCode — derived at BUILD time.** `vscode-extension/scripts/
+>   sync-schema.js` copies the Python file to
+>   `resources/app-state-schema.json` on `precompile`/`prepackage`/
+>   `prewatch`; `src/appState.ts::_loadSchema` reads it. The copy is
+>   tracked, and `tests/test_app_state.py` pins it identical to the source
+>   (verified identical 2026-09-21).
+>
+> So this is NOT "the command-roster problem one stage further along".
+> The roster's mirrors were hand-written DATA; these two files are the
+> store's BEHAVIOUR with the data already flowing in. The owner asked for
+> this to be wired up on the strength of the paragraph below, and the
+> finding was returned instead of built.
+>
+> **What a runtime fetch would and would not buy (VSCode only; web needs
+> nothing).** The one real gap is build-time vs run-time: an extension
+> built at version X talking to a server at version Y. A fetch at connect
+> would teach the extension Y's field names and defaults — but a field is
+> only useful to code that reads it BY NAME, and that code is compiled
+> into X. A roster entry is rendered generically (completion, help,
+> dispatch), which is why fetching it pays; an AppState field is not. The
+> skew is already DETECTED: both stores warn on a pushed field the schema
+> does not declare. And the bundled copy cannot be dropped, because the
+> extension constructs `AppState` before it has started the server it
+> would fetch from. Net: a second source of truth with a precedence rule,
+> for no behaviour. **Recommendation: do not build it; the endpoint stays
+> what its docstring says it is — a diagnostic surface.** The same error
+> also overstated one argument in "Why pull and not AppState push" above
+> (adding an AppState field does not mean editing hand-written mirrors;
+> it means the schema file, the sync script's copy, and the sentinel
+> tests). The pull decision does not rest on that argument alone and is
+> not reopened.
+
 
 `GET /schema/app-state` **already exists** (`ppxai/server/routes/schema.py:32`)
 and **neither JS client calls it** — `grep -rn "schema/app-state" ppxai/web/

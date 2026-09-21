@@ -66,6 +66,9 @@ quoting them** — this table is a map, not a source.
 | **23** | `SessionManager` growth drift | **flag-only, no action** (trigger: 2,500 LoC) |
 | **39** | `rtk discover` false-negatives | **no action** — documentation-only |
 | **47** | VSCode `/task` lacks the web split-pane | deliberate T8a scope |
+| **75** | second-level "argument kinds" schema for command completion | debt item, not now — owner decision 2026-09-21 (ADR 0007 open decision #3) |
+| **76** | fold chat-shaped-ness into the command roster (`STREAMING_COMMANDS`) | debt item for now — owner decision 2026-09-21 (ADR 0007 open decision #4) |
+| **77** | dead client code left after the ADR 0007 step-5 VSCode migration | ~30min, verified by grep — no owner decision needed |
 
 ---
 
@@ -2306,6 +2309,143 @@ answered by that extraction; **(u) DONE** (CORS+Host fix, bind-conditional, ship
 NetworkPolicy + optional app-layer bearer for cross-tenant coder isolation, with
 Item 3**; (d) with an SSE rework; (i) with a per-model capability-hint pass (cheap,
 anytime).
+
+---
+
+### Item 75 — second-level "argument kinds" schema for command completion [commands / completion]
+
+**Filed 2026-09-21.** Owner decision at ADR 0007 step 5 close-out — debt
+item, not now (`docs/plan-adr-0007-completion-service.md` §"Open owner
+decisions", item 3).
+
+**What's wrong:** `CommandSpec.subcommands: list[tuple[str, str]]`
+(`ppxai/commands/factory.py:189`, restated at `:277`) can express only ONE
+argument position. Five static tables stay hardcoded in
+`ppxai/engine/completion.py` because a real SECOND argument position has
+nowhere to live in the spec without publishing its values as first-level
+subcommands in `GET /commands` and `/help`, which they are not:
+
+| Table | Line | Feeds |
+|---|---|---|
+| `_USAGE_DISPLAY_MODES` | `completion.py:94` | `/usage show <mode>` |
+| `_CHECKPOINT_BACKENDS` | `completion.py:101` | `/checkpoint backend <backend>` |
+| `_THEME_NAMES` | `completion.py:108` | `/theme <name>` |
+| `_EMOJI_OPTIONS` | `completion.py:124` | `/theme emoji <on\|off>` |
+| `_TASK_RESPOND_ANSWERS` | `completion.py:144` | `/task respond <id> <answer>` |
+
+`_THEME_NAMES` is a separate sub-problem layered on top of the same
+symptom: it restates a RUNTIME registry (`CUSTOM_THEMES` /
+`DEFAULT_THEME` / `CYCLE_THEMES` in `ppxai/tui/themes/themes.py`), not a
+second argument position — `_complete_theme` merges it into the FIRST
+argument alongside the declared `list`/`emoji` subcommands
+(`completion.py:597-608`). Pointing the engine at the real theme registry
+to de-duplicate it would be a NEW `engine -> tui` import, which
+`tests/test_no_new_lazy_imports.py` fences at zero
+(`ppxai/engine/` imports nothing from `ppxai.commands`, and by the same
+principle nothing from `ppxai.tui`) — so fixing the duplication and fixing
+the schema gap are two different changes, not one.
+
+**Blast radius:** none today — the five tables work, are exercised by
+`ppxai/engine/completion.py`'s own tests, and only drift if a command's
+second-level values change without the table being updated by hand (which
+is the actual cost: five places someone has to remember, not five bugs).
+`GET /commands` and `/help` do not currently advertise second-level
+values for any command, declared or not, so there is no missing-feature
+symptom visible to a user — only the duplication cost to a maintainer.
+
+**Trigger to revisit:** a sixth command needing a second argument
+position, or `/help <cmd>` growing subcommand-argument display (tracked as
+its own open owner decision, plan doc item 2) — either would be a natural
+place to design the schema extension once, instead of bolting on a sixth
+static table.
+
+**Effort:** ~1–2 d for the schema extension (a typed second-level shape on
+`CommandSpec`, threaded through `GET /commands`, `/help`, and the five
+completion call sites) + a separate, smaller pass to point `_THEME_NAMES`
+at the real registry once the `engine -> tui` inversion question is
+answered on its own terms.
+
+---
+
+### Item 76 — fold chat-shaped-ness into the command roster [commands / web]
+
+**Filed 2026-09-21.** Owner decision at ADR 0007 step 5 close-out — debt
+item for now (`docs/plan-adr-0007-completion-service.md` §"Open owner
+decisions", item 4).
+
+**What's wrong:** web's `STREAMING_COMMANDS`
+(`ppxai/web/shared/command-dispatcher.js:51-54`) is a literal set of 8
+command names (`/generate`, `/explain`, `/test`, `/docs`, `/debug`,
+`/implement`, `/convert`, `/spec`) whose response IS the chat stream
+rather than a `POST /command/<name>` result — it is the ONE literal the
+parity fence's generic catalog detector deliberately exempts
+(`tests/test_command_parity_fence.py:177-196`, `STREAMING_COMMANDS`
+listed by name in the exemption table with its own explanatory comment).
+Every other hand-written command roster in the client layer was deleted by
+ADR 0007 steps 1–5; this is the one restatement of command DATA (which
+commands are chat-shaped) that survived, because `CommandSpec` has no
+field for it.
+
+**Fix shape:** a `chat_shaped: bool` (or similarly named) field on
+`CommandSpec`, published through `GET /commands`, would let
+`command-dispatcher.js` derive the set from the fetched roster instead of
+hardcoding it — deleting `STREAMING_COMMANDS` and its fence exemption
+the same way steps 3a/3b deleted `commands.js`/`commands.ts`. This is a
+schema change to a published payload (`GET /commands`), not a refactor —
+every consumer of that endpoint (web, and anything else that fetches the
+roster) starts seeing a new field, which is why it wants an owner
+decision rather than being folded into step 5 silently.
+
+**Blast radius:** low and contained — one file, one 8-name set, one fence
+exemption row. Nothing currently reads `STREAMING_COMMANDS` from outside
+`command-dispatcher.js`. The risk is entirely in the schema addition
+being done sloppily (e.g. a field that doesn't generalize to VSCode's
+own streaming-shaped commands, `coding.stream` in the client_action
+table), not in the deletion itself.
+
+**Trigger to revisit:** the next time `GET /commands`'s schema changes for
+an unrelated reason (natural place to add a field in the same breaking
+change), or if a second client grows its own hardcoded chat-shaped set —
+two independent restatements of the same fact would be the point where
+"debt item for now" should become "do it now".
+
+**Effort:** ~2–4 h — add the field to `CommandSpec` and the roster
+serializer, mark the 8 commands, update `command-dispatcher.js` to read it
+off the fetched roster, delete `STREAMING_COMMANDS` and its fence
+exemption row, confirm the parity fence still passes with one fewer
+exemption.
+
+---
+
+### Item 77 — dead client code left after the ADR 0007 step-5 VSCode migration [commands / vscode / rich]
+
+**Filed 2026-09-21.** Found while auditing the step-5 follow-ups above.
+
+**What's wrong, verified by grep:**
+- `vscode-extension/src/httpClient.ts` methods `listFiles`, `getFileTree`,
+  `reloadBootstrapContext`, `getBootstrapStatus` have zero callers.
+  `grep -rn "\.<method>(" vscode-extension/src ppxai tests` and a second
+  pass, `grep -rn "<method>" vscode-extension --include="*.ts" --include="*.js" | grep -v node_modules | grep -v httpClient.ts`,
+  both return nothing outside their own definitions in `httpClient.ts`.
+  These four were the HTTP-client half of the `/ls`/`/tree`/`/context
+  reload`/`/context show` VSCode intercepts that step 5 replaced with
+  factory routing (`POST /command/<name>`) — the intercepts calling them
+  were deleted, the client methods were not.
+- `ppxai/rich/ui.py::display_tool_help` has no production caller.
+  `grep -rn "display_tool_help" ppxai --include="*.py"` matches only its
+  own `def` line; every other hit is in `tests/test_ui.py` (7 test
+  methods exercising it directly).
+
+**Blast radius:** none — dead code, not reachable from any command path.
+
+**Trigger to revisit:** next pass through either file; cheap to delete
+whenever someone is already editing nearby (same shape as the
+`display_file_editing_help` deletion in the step-5 follow-ups above,
+which removed a sibling dead function the same day this was found).
+
+**Effort:** ~30min — four method deletions in `httpClient.ts` (plus
+their TS type declarations if any), one function deletion in `ui.py`
+plus its `tests/test_ui.py::TestToolHelp` class.
 
 ---
 
