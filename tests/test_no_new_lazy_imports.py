@@ -867,3 +867,466 @@ class TestConfigDoesNotImportEngine:
             "not configuration):\n  "
             + "\n  ".join(f"{m}:{line} -> {t}" for m, t, line in edges)
         )
+
+
+# ===========================================================================
+# Guard 4 — tests/ must not GAIN new function-level `ppxai` imports
+# ===========================================================================
+#
+# Owner decision 2026-09-21. The three guards above hold `ppxai/` production
+# code at a baseline (or at zero); nothing did the same for `tests/`. In this
+# very session, sub-agents added nested `ppxai` imports to brand-new test
+# files three times despite being told not to, because nothing failed. This
+# fence closes that hole the same way Guard 0 (`TestNoNewLazyImports`) closes
+# it for `ppxai/` — a per-file baseline that can shrink but never grow.
+#
+# **Per-FILE counts, not per-(module, target) pairs.** The `ppxai/` baseline
+# above pins exactly which edge exists, because steps 2/3 fix them one at a
+# time and the pair is the unit of that work. Nobody is about to hoist 1,258
+# rows in `tests/` — see the module docstring addendum below — so the unit
+# that matters here is simpler: does THIS FILE'S count of function-level
+# `ppxai` imports go up. A per-file count catches the failure mode that
+# actually happened this session (a NEW file appearing with a nested import,
+# or an existing file picking up an extra one) without pretending to track
+# which specific import moved.
+#
+# **Deliberate deferred imports are common and legitimate here** — a test
+# importing `ppxai.x` AFTER `monkeypatch.setenv(...)` or after patching a
+# module attribute so module-level state resolves under the patch. Hoisting
+# those is explicitly NOT this task (and would break the patched tests, the
+# same trap `RETAINED_ON_PURPOSE` above documents for `ppxai/`). The baseline
+# below is a debt/inventory snapshot, not a to-do list to clear.
+#
+# **Scope: every `.py` under `tests/`, no exclusions.** `conftest.py` files
+# and `tests/e2e/` are included — a conftest fixture or an e2e helper is as
+# capable of hiding a dependency as a `test_*.py` file, and carving out an
+# exception is exactly the kind of hole this fence exists to not have.
+#
+# **Baseline keys are repo-root-relative (`"tests/test_tui.py"`), not
+# tests-relative** — matching how files are named everywhere else in this
+# project (commit messages, CLAUDE.md, `pytest tests/...`).
+
+
+TESTS_ROOT = pathlib.Path(__file__).resolve().parent
+REPO_ROOT = TESTS_ROOT.parent
+
+
+def _try_handles_import_error(trynode):
+    """True when a `Try` node's `except` clause(s) name `ImportError` or
+    `ModuleNotFoundError` — the same test `_guarded_by_import_error` makes
+    above, factored out so it can be checked once per `Try` node instead of
+    once per import candidate (see the perf note on `_function_level_ppxai_imports`).
+    """
+    for handler in trynode.handlers:
+        names = []
+        if isinstance(handler.type, ast.Name):
+            names = [handler.type.id]
+        elif isinstance(handler.type, ast.Tuple):
+            names = [e.id for e in handler.type.elts if isinstance(e, ast.Name)]
+        if "ImportError" in names or "ModuleNotFoundError" in names:
+            return True
+    return False
+
+
+def _function_level_ppxai_imports(tree, module, is_init):
+    """`(target, lineno)` for every non-exempt function-level `ppxai` import
+    in one already-parsed tree.
+
+    A single-tree extractor (not a directory walker) so the exact same
+    function backs both the full `tests/` sweep and the synthetic-source
+    self-tests below — no second implementation to drift out of sync.
+
+    Correctness note this function exists to get right: counting must not
+    double-count a NESTED `def`. The obvious `for fn in ast.walk(tree): if
+    isinstance(fn, FunctionDef): ...` idiom (used by `_sweep()` above, for
+    `ppxai/`, where it is harmless because nothing there nests defs three
+    deep around an import) walks into an inner function from BOTH the outer
+    function's subtree AND the inner function's own top-level iteration,
+    counting one import twice. A depth-tracking visitor counts it once,
+    however deeply nested, because it visits each AST node exactly once.
+
+    Perf note: the ImportError-guard exemption is tracked the same way, with
+    a `guard_depth` counter bumped on entering a guarding `Try` node, rather
+    than re-walking the whole tree per import candidate to ask "am I inside
+    one". The re-walk version was measured at 7.2s on `tests/test_tui.py`
+    alone (quadratic: tree size x import count); this version is linear —
+    the whole `tests/` sweep drops from ~14s to well under 1s.
+    """
+
+    class _Finder(ast.NodeVisitor):
+        def __init__(self):
+            self.depth = 0
+            self.guard_depth = 0
+            self.hits = []
+
+        def visit_FunctionDef(self, node):
+            self.depth += 1
+            self.generic_visit(node)
+            self.depth -= 1
+
+        def visit_AsyncFunctionDef(self, node):
+            self.depth += 1
+            self.generic_visit(node)
+            self.depth -= 1
+
+        def visit_Try(self, node):
+            guarded = _try_handles_import_error(node)
+            if guarded:
+                self.guard_depth += 1
+            self.generic_visit(node)
+            if guarded:
+                self.guard_depth -= 1
+
+        def visit_Import(self, node):
+            if self.depth > 0 and self.guard_depth == 0:
+                self._maybe_record(node)
+            self.generic_visit(node)
+
+        def visit_ImportFrom(self, node):
+            if self.depth > 0 and self.guard_depth == 0:
+                self._maybe_record(node)
+            self.generic_visit(node)
+
+        def _maybe_record(self, node):
+            if isinstance(node, ast.Import):
+                ppxai_names = [a.name for a in node.names if a.name.startswith("ppxai")]
+                if not ppxai_names:
+                    return
+                target = ppxai_names[0]
+            else:
+                target = _resolve(node, module, is_init)
+                if not (target and target.startswith("ppxai")):
+                    return
+            self.hits.append((target, node.lineno))
+
+    finder = _Finder()
+    finder.visit(tree)
+    return finder.hits
+
+
+def _tests_dir_import_counts():
+    """`{"tests/relative/path.py": count}` — live from disk, current tree."""
+    counts = {}
+    for path in sorted(TESTS_ROOT.rglob("*.py")):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        is_init = path.name == "__init__.py"
+        module = _module_name(path)
+        hits = _function_level_ppxai_imports(tree, module, is_init)
+        if hits:
+            rel = str(path.relative_to(REPO_ROOT))
+            counts[rel] = len(hits)
+    return counts
+
+
+class TestTheTestsDirExtractorWorks:
+    """Guards FIRST, same discipline as `TestTheSweepWorks` above — every
+    other test in this section is built on `_function_level_ppxai_imports`
+    and `_tests_dir_import_counts`, so a detector that silently stopped
+    matching would make the fence below pass for the wrong reason."""
+
+    def test_module_level_import_not_counted(self):
+        tree = ast.parse("import ppxai.x\n")
+        assert _function_level_ppxai_imports(tree, "tests.fake", False) == []
+
+    def test_module_level_if_import_not_counted(self):
+        """A module-scope `if` is not a function — depth stays 0."""
+        tree = ast.parse("if True:\n    import ppxai.x\n")
+        assert _function_level_ppxai_imports(tree, "tests.fake", False) == []
+
+    def test_import_inside_def_counted_once(self):
+        tree = ast.parse("def f():\n    import ppxai.x\n")
+        assert len(_function_level_ppxai_imports(tree, "tests.fake", False)) == 1
+
+    def test_import_inside_async_def_counted_once(self):
+        tree = ast.parse("async def f():\n    import ppxai.x\n")
+        assert len(_function_level_ppxai_imports(tree, "tests.fake", False)) == 1
+
+    def test_import_inside_method_counted_once(self):
+        tree = ast.parse("class C:\n    def m(self):\n        import ppxai.x\n")
+        assert len(_function_level_ppxai_imports(tree, "tests.fake", False)) == 1
+
+    def test_nested_def_counted_once(self):
+        """The double-count trap this extractor was written to avoid: an
+        import inside a def nested inside another def must be ONE hit, not
+        two (once for the outer function's subtree walk, once for the
+        inner function's own top-level iteration)."""
+        tree = ast.parse(
+            "def outer():\n    def inner():\n        import ppxai.x\n    return inner\n"
+        )
+        assert len(_function_level_ppxai_imports(tree, "tests.fake", False)) == 1
+
+    def test_absolute_plain_import_counted(self):
+        tree = ast.parse("def f():\n    import ppxai.x\n")
+        hits = _function_level_ppxai_imports(tree, "tests.fake", False)
+        assert hits == [("ppxai.x", 2)]
+
+    def test_absolute_from_import_counted(self):
+        tree = ast.parse("def f():\n    from ppxai.x import y\n")
+        hits = _function_level_ppxai_imports(tree, "tests.fake", False)
+        assert hits == [("ppxai.x", 2)]
+
+    def test_relative_from_import_counted(self):
+        """`from . import z`. Real files under `tests/` cannot structurally
+        produce a relative import that resolves onto `ppxai` — `tests/` and
+        `ppxai/` are siblings, not nested packages — so this exercises the
+        resolver mechanism with a deliberately contrived module context
+        (`_resolve` is shared with the `ppxai/` guards above and is already
+        proven correct there); it is defense in depth, not a realistic case.
+        `_resolve` names the PACKAGE here (`"ppxai"`, not `"ppxai.z"`) for a
+        `from . import z` form with no `node.module` — the same behaviour
+        Guard 2's `test_the_detector_resolves_the_from_package_form` already
+        pins for this helper; it still starts with `"ppxai"`, so it counts.
+        """
+        tree = ast.parse("def f():\n    from . import z\n")
+        hits = _function_level_ppxai_imports(tree, "ppxai.fake", False)
+        assert hits == [("ppxai", 2)]
+
+    def test_relative_dotted_from_import_counted(self):
+        """`from ..a import b`, same contrived-context rationale as above."""
+        tree = ast.parse("def f():\n    from ..a import b\n")
+        hits = _function_level_ppxai_imports(tree, "ppxai.sub.fake", False)
+        assert hits == [("ppxai.a", 2)]
+
+    def test_stdlib_nested_import_not_counted(self):
+        tree = ast.parse("def f():\n    import os\n    from collections import OrderedDict\n")
+        assert _function_level_ppxai_imports(tree, "tests.fake", False) == []
+
+    def test_third_party_nested_import_not_counted(self):
+        tree = ast.parse("def f():\n    import pytest\n")
+        assert _function_level_ppxai_imports(tree, "tests.fake", False) == []
+
+    def test_string_mention_not_counted(self):
+        """A string that merely CONTAINS import-like text must not trip the
+        AST-based extractor — only real `Import`/`ImportFrom` nodes count."""
+        tree = ast.parse('def f():\n    x = "from ppxai import y"\n    return x\n')
+        assert _function_level_ppxai_imports(tree, "tests.fake", False) == []
+
+    def test_positive_control_a_planted_violation_is_detected(self):
+        """If the extractor cannot see an obvious violation, nothing below
+        it can be trusted."""
+        tree = ast.parse("def test_something():\n    import ppxai.version\n")
+        hits = _function_level_ppxai_imports(tree, "tests.test_planted", False)
+        assert hits == [("ppxai.version", 2)]
+
+    def test_import_error_guarded_import_not_counted(self):
+        """Same optional-dependency exemption `_guarded_by_import_error`
+        gives the `ppxai/` fence above — deferring inside a guarded `try` is
+        the point of an optional import, in tests/ as much as in ppxai/."""
+        tree = ast.parse(
+            "def f():\n"
+            "    try:\n"
+            "        import ppxai.optional_thing\n"
+            "    except ImportError:\n"
+            "        pass\n"
+        )
+        assert _function_level_ppxai_imports(tree, "tests.fake", False) == []
+
+    def test_the_tests_dir_is_where_we_think(self):
+        assert (TESTS_ROOT / "test_no_new_lazy_imports.py").exists(), "wrong root?"
+        assert (REPO_ROOT / "ppxai").is_dir(), "wrong root?"
+
+    def test_it_walks_a_realistic_number_of_files(self):
+        """A corpus-size floor, so a broken glob (wrong root, wrong suffix,
+        an early `return`) reads as "nothing to see" instead of green."""
+        files = list(TESTS_ROOT.rglob("*.py"))
+        assert len(files) >= 200, f"only {len(files)} files under tests/ — wrong root?"
+
+
+#: Per-file count of function-level `ppxai` imports under `tests/`, keyed by
+#: repo-root-relative path. Generated mechanically from `_tests_dir_import_counts()`
+#: — see the class docstring below for the exact procedure — then pasted in as
+#: a literal, the same choice `BASELINE` above makes for the same reason: a
+#: ~130-row dict is still more legible, greppable and diff-reviewable as a
+#: sorted literal than as a JSON sidecar nobody reads without a text editor.
+#:
+#: A file NOT in this dict is allowed ZERO function-level `ppxai` imports.
+#: Measured 2026-09-21 at HEAD `9d8c5764` (see `TestTheTestsDirBaselineIsHonest`
+#: for how in-flight concurrent edits were handled).
+BASELINE_TESTS_DIR = {
+    "tests/conftest.py": 5,
+    "tests/test_adr0012_migration_fence.py": 14,
+    "tests/test_agent_beat_cross_client_parity.py": 3,
+    "tests/test_agent_beat_emission.py": 7,
+    "tests/test_agent_beat_textual_renderer.py": 2,
+    "tests/test_agent_beat_zombie.py": 6,
+    "tests/test_agent_logger_attribute.py": 7,
+    "tests/test_agent_run_authz.py": 1,
+    "tests/test_agent_runs.py": 103,
+    "tests/test_agent_scoped_tools.py": 11,
+    "tests/test_agent_spawn.py": 9,
+    "tests/test_agent_spec.py": 1,
+    "tests/test_agent_system_prompt.py": 5,
+    "tests/test_agent_task_validation.py": 1,
+    "tests/test_app_state.py": 1,
+    "tests/test_attach_command.py": 4,
+    "tests/test_attach_remove.py": 2,
+    "tests/test_attach_vision_warning.py": 6,
+    "tests/test_auth_middleware.py": 17,
+    "tests/test_auto_command_cross_client.py": 1,
+    "tests/test_background_agents_mirror.py": 1,
+    "tests/test_benchmark_runner.py": 2,
+    "tests/test_bootstrap_context.py": 14,
+    "tests/test_capability_resolution.py": 11,
+    "tests/test_chat_route_r15.py": 1,
+    "tests/test_collect_semantics.py": 16,
+    "tests/test_command_envelope.py": 4,
+    "tests/test_command_result_serialization.py": 2,
+    "tests/test_commands.py": 3,
+    "tests/test_completion_provider.py": 3,
+    "tests/test_config.py": 19,
+    "tests/test_config_facts_are_complete.py": 1,
+    "tests/test_context_attachments_state.py": 2,
+    "tests/test_context_injection.py": 1,
+    "tests/test_context_percentage_state.py": 11,
+    "tests/test_csv_tools.py": 13,
+    "tests/test_custom_endpoint_integration.py": 14,
+    "tests/test_cwd_grounding.py": 4,
+    "tests/test_data.py": 25,
+    "tests/test_directory_result_renderers.py": 4,
+    "tests/test_display_edit_handler.py": 1,
+    "tests/test_docs_consistency.py": 3,
+    "tests/test_doctor.py": 12,
+    "tests/test_doctor_uncatalogued.py": 1,
+    "tests/test_engine_client_protocol.py": 4,
+    "tests/test_engine_streaming.py": 11,
+    "tests/test_engine_tool_parsing.py": 27,
+    "tests/test_event_bus.py": 2,
+    "tests/test_excel_pptx_tools.py": 4,
+    "tests/test_execution_profiles.py": 23,
+    "tests/test_facts_doctor.py": 8,
+    "tests/test_facts_resolver.py": 1,
+    "tests/test_file_editing_tools.py": 27,
+    "tests/test_file_tree.py": 24,
+    "tests/test_file_tree_ignore_config.py": 15,
+    "tests/test_files_cwd_anchor.py": 1,
+    "tests/test_files_preview_download.py": 8,
+    "tests/test_files_route.py": 6,
+    "tests/test_files_upload.py": 1,
+    "tests/test_gemini_native_tool_loop.py": 2,
+    "tests/test_gemini_null_parts.py": 2,
+    "tests/test_gemini_thought_signature.py": 1,
+    "tests/test_gemini_tool_schema.py": 2,
+    "tests/test_handle_save.py": 1,
+    "tests/test_http_server.py": 5,
+    "tests/test_image_handlers.py": 3,
+    "tests/test_image_session_query.py": 1,
+    "tests/test_markdown_tables.py": 12,
+    "tests/test_model_facts_are_the_source.py": 2,
+    "tests/test_model_vision.py": 2,
+    "tests/test_network_policy.py": 10,
+    "tests/test_oneshot_grounding.py": 19,
+    "tests/test_oneshot_route.py": 20,
+    "tests/test_openai_native.py": 2,
+    "tests/test_ops_modules.py": 1,
+    "tests/test_pdf_tools.py": 1,
+    "tests/test_per_model_capabilities.py": 2,
+    "tests/test_perplexity_capability_probe.py": 2,
+    "tests/test_perplexity_model_capabilities.py": 8,
+    "tests/test_pptx_render.py": 18,
+    "tests/test_premium_web_search_integration.py": 13,
+    "tests/test_preview.py": 53,
+    "tests/test_preview_log_tool.py": 5,
+    "tests/test_prompt_text_side_effect.py": 1,
+    "tests/test_pyinstaller_spec_completeness.py": 1,
+    "tests/test_r19_ppxaide_multimodal.py": 17,
+    "tests/test_r5_end_to_end.py": 1,
+    "tests/test_r5_provider_flatten.py": 7,
+    "tests/test_r5_session_round_trip.py": 1,
+    "tests/test_reasoning_tokens.py": 11,
+    "tests/test_recommended_defaults_have_facts.py": 2,
+    "tests/test_rest_event_piggyback.py": 1,
+    "tests/test_rich_markdown_link_rewrite.py": 1,
+    "tests/test_schema_endpoint.py": 2,
+    "tests/test_search_backend_resolver.py": 7,
+    "tests/test_server_route_edges.py": 1,
+    "tests/test_server_routes.py": 3,
+    "tests/test_session_persistence.py": 30,
+    "tests/test_session_security.py": 1,
+    "tests/test_session_store_engine_integration.py": 1,
+    "tests/test_shell_tool.py": 2,
+    "tests/test_shipped_model_facts.py": 7,
+    "tests/test_stream_handler_dispatch.py": 2,
+    "tests/test_task_authorization_parity.py": 14,
+    "tests/test_task_backend.py": 3,
+    "tests/test_task_command.py": 4,
+    "tests/test_task_grammar_parity.py": 1,
+    "tests/test_terminal_pty.py": 8,
+    "tests/test_tls_config.py": 1,
+    "tests/test_tokens_v1_route.py": 3,
+    "tests/test_tool_messages.py": 3,
+    "tests/test_tool_security.py": 4,
+    "tests/test_tool_usage.py": 6,
+    "tests/test_tui.py": 289,
+    "tests/test_tui_command_factory.py": 7,
+    "tests/test_ui.py": 7,
+    "tests/test_undefined_names_are_bound.py": 3,
+    "tests/test_usage_integration.py": 8,
+    "tests/test_usage_persistence.py": 2,
+    "tests/test_v18_1_audited_commands.py": 2,
+    "tests/test_v1_session_migration.py": 2,
+    "tests/test_version_banner.py": 7,
+    "tests/test_vision_sidecar.py": 12,
+    "tests/test_web_premium_wire.py": 4,
+    "tests/test_web_search_task_config.py": 13,
+    "tests/test_web_tools_ssl.py": 2,
+    "tests/test_wire_block_validator.py": 1,
+    "tests/test_wire_handlers_complete.py": 1,
+    "tests/test_word_preview.py": 10,
+    "tests/test_wrapper_framework.py": 6,
+}
+
+
+class TestNoNewLazyImportsInTestsDir:
+    """The fence itself: a file's count may fall, may hold, may not rise.
+
+    **Baseline generation procedure** (re-run to regenerate `BASELINE_TESTS_DIR`):
+    for every `.py` under `tests/`, count via `_tests_dir_import_counts()`.
+    For a file `git status --porcelain` shows as modified or untracked at
+    generation time, use the count from `git show HEAD:<path>` instead of the
+    working-tree count (0 for a file untracked at HEAD) — NOT because the
+    working-tree edit is assumed wrong, but because baselining a concurrent
+    agent's in-flight edit would silently swallow a regression the fence
+    exists to catch. The two states usually agree; when they do not, this
+    test fails immediately and names the file, which is the point.
+    """
+
+    def test_no_baseline_row_names_a_missing_file(self):
+        missing = sorted(rel for rel in BASELINE_TESTS_DIR if not (REPO_ROOT / rel).exists())
+        assert not missing, (
+            "BASELINE_TESTS_DIR names file(s) that no longer exist — delete "
+            "these rows:\n  " + "\n  ".join(missing)
+        )
+
+    def test_no_file_count_grows_or_silently_shrinks(self):
+        current = _tests_dir_import_counts()
+        growth = []
+        shrink = []
+        for rel in sorted(set(current) | set(BASELINE_TESTS_DIR)):
+            have = current.get(rel, 0)
+            base = BASELINE_TESTS_DIR.get(rel, 0)
+            if have > base:
+                growth.append(f"{rel}: {base} -> {have}")
+            elif have < base:
+                shrink.append(f"{rel}: {base} -> {have}")
+        problems = []
+        if growth:
+            problems.append(
+                "GROWTH — new function-level `ppxai` import(s). Hoist to module "
+                "top. If it genuinely must run after a `monkeypatch`/env-change "
+                "so module-level state resolves under the patch, that is a real "
+                "reason (see `RETAINED_ON_PURPOSE` above for the `ppxai/` "
+                "analogue) — but then raise this file's row in BASELINE_TESTS_DIR "
+                "deliberately, in the same commit, with a comment saying why:\n  "
+                + "\n  ".join(growth)
+            )
+        if shrink:
+            problems.append(
+                "SHRUNK — fewer function-level `ppxai` imports than the baseline "
+                "records. Good, but lower the row(s) in BASELINE_TESTS_DIR to "
+                "match, or the baseline drifts into a wish list:\n  "
+                + "\n  ".join(shrink)
+            )
+        assert not problems, "\n\n".join(problems)
