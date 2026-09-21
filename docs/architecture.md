@@ -334,6 +334,20 @@ secret in a request body and in the debug log. VSCode still carries its
 own hand-written roster (`vscode-extension/src/shared/commands.ts`)
 until step 3b.
 
+**Secrets ride the same declaration (ADR 0007 step 3a-sec).** A spec may
+mark subcommands whose ARGUMENT is a secret
+(`CommandSpec.sensitive_subcommands`; `/token set` is the only one
+today), and the roster publishes a `sensitive` flag on each subcommand
+entry. `CommandFactory.redact_sensitive()` is the one server-side
+implementation of the rule, and `CommandRoster.isSensitive/redact()` the
+one client-side implementation — so the web client masks the `> <input>`
+chat echo, skips `POST /complete` and keeps the line out of its input
+history WITHOUT hardcoding `/token` or `set`, and `POST /client-log`,
+`POST /complete` and `POST /command/<name>` redact again server-side for
+stale assets and for VSCode, whose client half waits for step 3b. With
+no roster the client fails closed: every slash command's args are
+treated as secret.
+
 ```
                   ┌────────────────────────┐
                   │  CommandFactory         │  Single registry

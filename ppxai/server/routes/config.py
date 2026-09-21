@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 import ppxai.config as _config
 import ppxai.config.execution as _execution
 
+from ...commands.factory import CommandFactory
 from ...common.logger import get_logger
 from ...config import (
     find_config_file,
@@ -280,10 +281,22 @@ async def client_log(request: dict):
     """Receive log entries from web/IDE clients.
 
     Body: {"level": "info|warning|error", "message": "...", "client": "web"}
+
+    ADR 0007 step 3a-sec — DEFENSE IN DEPTH. The web client mirrors its
+    `> <input>` chat echo here, so a `/token set <bearer>` typed inline
+    used to land verbatim in ~/.ppxai/logs. The fixed client redacts
+    before sending; this sink redacts again, because the assets are
+    served from ~/.ppxai/web and can be OLDER than the server
+    (docs/lessons/web-assets-served-from-ppxai-home.md), and because
+    VSCode's client half is not migrated until ADR 0007 step 3b. The
+    rule is declared once, in Python (`sensitive_subcommands`), and
+    applied here through the one helper.
     """
     level = request.get("level", "info")
     message = request.get("message", "")
     client = request.get("client", "web")
     if message:
-        logger.log_client_event(client, level, message)
+        logger.log_client_event(
+            client, level, CommandFactory.redact_sensitive(message)
+        )
     return {"ok": True}

@@ -1,7 +1,8 @@
 # Plan — closing ADR 0007 (one command registry)
 
-**Status: steps 1 (1a + 1b), 2, 2.5 and 3a (web) IMPLEMENTED; step 3b
-(VSCode) and steps 4-5 PROPOSED, not started.**
+**Status: steps 1 (1a + 1b), 2, 2.5, 3a (web) and 3a-sec (sensitive
+subcommands) IMPLEMENTED; step 3b (VSCode) and steps 4-5 PROPOSED, not
+started.**
 Written 2026-09-20 on `bugfix/v1.19.3`; **rewritten the same day** after
 the owner restated the goal. The first draft split the work (a) invert the
 edge / (b) relocate / (c) roster, called (c) "a feature wearing the ADR's
@@ -14,8 +15,9 @@ evidence decayed silently (it cited a module Item 65 had deleted), and this
 file is written not to repeat that.
 
 **Record:** [decisions/0007-completion-first-class-service.md](decisions/0007-completion-first-class-service.md)
-· step 1 shipped v1.18.8 · steps 2 and 2.5 landed 2026-09-20 and step 3a
-(web) on 2026-09-21, all on `bugfix/v1.19.3`, no target release.
+· step 1 shipped v1.18.8 · steps 2 and 2.5 landed 2026-09-20, step 3a
+(web) and 3a-sec on 2026-09-21, all on `bugfix/v1.19.3`, no target
+release.
 
 ## The goal
 
@@ -484,7 +486,109 @@ server debug log — which is precisely why bare `/token set` uses
 this token" warning. Unchanged by this step and out of its contract
 (§correctness contract item 4 is about the command-dispatch path), but
 the live e2e test now pins the exact set of paths so it cannot grow
-silently.
+silently. **Closed by 3a-sec below** — the pinned set is now empty.
+
+#### 3a-sec. Sensitive subcommands — ✅ DONE (2026-09-21)
+
+The leak the step-3a finding above recorded, closed with the machinery
+step 3a built. **Pre-existing**, not introduced by 3a: someone had
+mitigated it (prompt form, rotate warning) without closing it.
+
+**The declaration.** `CommandSpec.sensitive_subcommands:
+frozenset[str]` (default empty), validated at registration — every name
+must be a declared subcommand, or `register()` raises a `ValueError`
+naming the command, like the other `_validate_spec` rules. ADDITIVE:
+`subcommands` keeps its `list[tuple[str, str]]` shape. `/token` declares
+`{"set"}`, and it is the only command that declares anything (pinned, so
+the day a second one appears a reviewer re-checks every sink).
+`CommandFactory.roster()` gains `"sensitive": bool` on each subcommand
+dict; `CompletionCommandInfo` carries the frozenset. **Version/ETag
+semantics unchanged** — the flag rides on the existing payload.
+
+**The helper.** `CommandFactory.redact_sensitive(text) -> str`, beside
+the registry, pure and side-effect free. If `text` (optionally prefixed
+by the `> ` echo marker) is a slash command whose name **or alias**
+resolves to a spec with sensitive subcommands, and its first argument is
+one of them **with a value after it**, everything from that value on
+becomes a fixed mask (`••••`, never derived from the secret — a
+length-preserving mask leaks the length).
+
+**Decisions, made explicitly:**
+
+- **Case-INSENSITIVE** on both the command name and the subcommand. Not
+  cosmetic: the web dispatcher lowercases the command
+  (`parts[0].toLowerCase()`) and `_handleTokenCommand` lowercases the
+  verb, so `/TOKEN SET abc` really does store a token — a
+  case-sensitive redactor would pass exactly that line through. The
+  text KEPT is the original, unaltered.
+- **Whitespace-tolerant.** Any run of whitespace (tabs included)
+  separates the tokens, leading whitespace is ignored, and the kept
+  prefix is byte-for-byte original; only the separator before the mask
+  normalises to one space, so the output is deterministic.
+  `/token\tset\tabc` -> `/token\tset ••••`.
+- **A value is required.** `/token set` and `/token set   ` pass through
+  unchanged — which is what keeps completion of `/token se` -> `set`
+  working, on both the client and the server.
+- **Never raises.** Non-`str` returns `""` (a sink handed a dict body
+  must not 500); the regexes are token-based (`\S+`) so they are linear
+  and cannot backtrack; the one defensive `except` fails CLOSED.
+
+**Sinks found, and the disposition of each.** Server (defense in depth —
+these protect stale web assets served from `~/.ppxai/web` and VSCode,
+whose client half waits for 3b):
+
+| Sink | Disposition |
+|---|---|
+| `POST /client-log` (`routes/config.py`) — the `> <input>` echo mirror, straight into `~/.ppxai/logs` | **The leak.** `message` goes through `redact_sensitive` before `log_client_event`. Redacted, not dropped: the masked line is still logged, so the fix costs no observability |
+| `POST /complete` (`routes/completion.py`) — the composer buffer, per keystroke | A buffer redaction would change is answered with **no items**, and `complete()` is never called with it, so nothing derived from it is computed or echoed. (`complete()` returns `[]` for this buffer today anyway — the guard is the mechanism, and the test asserts the engine never sees the buffer rather than asserting the empty outcome) |
+| `POST /command/{name}` (`routes/commands.py`) — `args_preview` | Already argument-free for a client-handled command (step 1b). Now redacted through the same helper for a SERVER-dispatched command that declares a sensitive subcommand — none exists today, which is exactly why the guard belongs here rather than being remembered later |
+| `http.py` middleware (auth, activity, host validation) + the unhandled-exception handler | **Checked, no change needed.** None logs a request BODY; the exception handler logs `method + path` only. There is no generic body logger, so nothing captures these before the route runs |
+
+Client (`ppxai/web/` only — `vscode-extension/` is untouched, step 3b):
+
+| Sink | Disposition |
+|---|---|
+| The `> <input>` chat echo (`CommandDispatcher.dispatch`) — rendered AND mirrored to `/client-log` | Redacted via `_redactEcho` before either |
+| `POST /complete` (`app.js::handleInputChange`) | Skipped once the buffer carries a value after a sensitive subcommand. `/token se` still completes to `set` — sensitivity needs content AFTER the flagged subcommand |
+| Input history — `state.commandHistory` **and** `localStorage['ppxai-history']` (`app.js::sendMessage`) | Not written. ArrowUp cannot recall what was never stored |
+| Already-persisted history from before this fix | Purged once, right after the roster lands (`_purgeSensitiveHistory`) — deliberately not before, or the fail-closed rule would wipe every slash command |
+| `console.warn('dispatch called while already handling:', input)` | Redacted too. Devtools-only (nothing forwards `console` to `/client-log` — checked), but free |
+| `showError` / `_explainMissingRoster` | **Already clean**: every message is built from the command NAME, never the args |
+| `POST /command/<name>`, `POST /chat` (streaming commands) | Already covered by step 3a's roster gate — a client-dispatched command is never POSTed, and with no roster nothing is |
+
+**The client-side rule lives in ONE place**: `CommandRoster.classify()`
+in `web/shared/command-roster.js`, with `isSensitive()` / `redact()` on
+top of it, and `CommandRoster.redactWithoutRoster()` for a page with no
+roster INSTANCE at all. No client code anywhere names `/token` or `set`.
+
+**FAIL CLOSED**, consistently with step 3a's dispatch gate: with no
+roster loaded, the args of ANY slash command are treated as sensitive —
+echo masked after the command name, `/complete` skipped, nothing
+written to history. The command NAME is kept (it is not a secret and
+the refusal message needs it), and a bare `/tok` is still completable,
+so name completion survives. Plain chat is never touched in either mode.
+
+**`_handleTokenCommand`'s inline warning reworded** to the new reality —
+the value no longer leaves the page — while still recommending the
+prompt form, which remains the only one that never puts the token on
+screen or in a shoulder-surfable composer.
+
+**Tests.**
+
+| File | Disposition |
+|---|---|
+| `tests/test_sensitive_subcommands.py` | **New**, 89 tests. Spec validation (incl. the "flagged a subcommand on a spec that declares none" typo); `/token` declaring `set` and being the ONLY declaring command; roster + `CompletionCommandInfo` carrying it, alias entries included; the helper's full truth table — echo prefix, case, whitespace/tabs, alias, idempotence, fixed-length mask, ~25 never-raises fuzz cases, non-`str` inputs, a linearity check; and the three routes. Every security assertion is **MUTATION-VERIFIED** through a `no_redaction` fixture that neuters the helper: `/client-log` then leaks (the pre-fix behaviour, on demand), `/complete` then hands the engine the secret, and `/command/<name>`'s `args_preview` then carries it |
+| `tests/test_web_sensitive_redaction_behavior.py` | **New.** Drives the REAL roster + dispatcher under Node: the JS truth table mirrors Python's line for line; the rule follows the DATA (flip `sensitive` in the payload and the answer flips); fail-closed with no roster; nothing raises on odd input; and the dispatcher's echo is redacted with and without a roster, with the `showSystemMessage` fake wired to a `/client-log` call log so the assertion is about the real sink. Two mutants — an unredacted echo, and a roster that fails OPEN — must both fail the harness |
+| `tests/test_command_roster_endpoint.py` | `TestPayloadShape::test_field_types` — subcommand keys are now `{name, description, sensitive}` |
+| `tests/test_web_command_dispatcher_v18_1.py` | Size fence 480 → 510 with the reason in its threshold history (`_redactEcho` + rationale; the rule itself lives in `command-roster.js`) |
+| `tests/e2e/live-app.spec.ts` | `EXPECTED_ECHO_PATHS` is **empty** — the pinned leaking set `['/client-log','/complete']` is gone. New describe block against the real UI: the roster declares `set` sensitive; an inline `/token set SECRET` appears in NO request body or URL, is not in the rendered transcript (the masked echo is), is not in `commandHistory` or `localStorage`, is not recalled by ArrowUp, and DID store the token; the buffer is never sent to `/complete`; `/token se` still autocompletes to `set`. Mutation-verified by hand: with `_redactEcho` reverted, the run fails on `POST /client-log` carrying the raw secret |
+
+**Still open after this step:** the VSCode CLIENT side. `chatPanel.ts`
+echoes and dispatches `/token` itself and is not roster-driven until
+step 3b, so an inline `/token set` typed in the VSCode panel can still
+be echoed client-side. The SERVER-side redaction above already covers
+its `/client-log` and `/complete` paths, which is the half that reaches
+disk.
 
 #### 3b. VSCode — not started
 
@@ -573,6 +677,23 @@ move so the migration is verified rather than assumed:
    BEFORE dispatching. `client_handled` must therefore mean **dispatch happens in the
    client** — not "no server involvement" (`mint` is server-backed) and
    never "forward to the server and let it refuse".
+
+   **EXTENDED AND CLOSED FOR WEB in step 3a-sec (2026-09-21).** The
+   contract above was only ever about the DISPATCH path; the inline form
+   leaked on two paths that run before dispatch is consulted (the
+   `> <input>` echo -> `POST /client-log` -> `~/.ppxai/logs`, and the
+   composer buffer -> `POST /complete`), which is why the warning existed
+   at all. **The inline form no longer leaks on web.** Python declares
+   `sensitive_subcommands={"set"}` on `/token`; the roster publishes
+   `sensitive` per subcommand; `CommandRoster.isSensitive/redact` (the ONE
+   client implementation — no client names `/token` or `set`) masks the
+   echo, suppresses the `/complete` call and keeps the line out of the
+   input history; and `CommandFactory.redact_sensitive` re-redacts at
+   every server sink. The warning is reworded accordingly and still
+   recommends the prompt form. **The VSCode CLIENT half stays open until
+   step 3b** — its echo/dispatch is not roster-driven yet; the
+   server-side redaction already covers its `/client-log` and `/complete`
+   paths. See §3a-sec for the sink table and the fail-closed rule.
 
    Aliases need no schema work: `CommandSpec.aliases` exists, with
    resolution in `CommandFactory.get()` and publication via `iter_completion_specs()`

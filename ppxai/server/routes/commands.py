@@ -170,7 +170,16 @@ async def execute_command(
 
     # Logged only once the command is known to be server-dispatched, so a
     # client-handled command's arguments never reach the log at all.
-    args_preview = (request.args or "")[:120]
+    # ADR 0007 step 3a-sec: a SERVER-dispatched command may still declare
+    # a sensitive subcommand, so the line is redacted through the same
+    # one helper before it is truncated. No such command exists today
+    # (/token is client-handled), which is exactly why the guard belongs
+    # here rather than being remembered later.
+    args_preview = (
+        CommandFactory.redact_sensitive(f"/{name} {request.args}")
+        .removeprefix(f"/{name} ")[:120]
+        if request.args else ""
+    )
     logger.info(f"HTTP POST /command/{name} from session={s.id} args={args_preview!r}")
 
     context = ServerCommandContext(s.engine, client=client)

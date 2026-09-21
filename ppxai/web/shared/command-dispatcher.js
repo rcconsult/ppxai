@@ -99,7 +99,9 @@ class CommandDispatcher {
      */
     async dispatch(input) {
         if (this.app.state.isHandlingCommand) {
-            console.warn('dispatch called while already handling:', input);
+            // Redacted: even a devtools line should not hold a bearer.
+            console.warn('dispatch called while already handling:',
+                         this._redactEcho(input));
             return;
         }
         this.app.state.isHandlingCommand = true;
@@ -108,7 +110,13 @@ class CommandDispatcher {
             const cmd = parts[0].toLowerCase();
             const args = parts.slice(1).join(' ');
 
-            this.app.showSystemMessage(`> ${input}`);
+            // ADR 0007 step 3a-sec: the echo is REDACTED before it is
+            // rendered or mirrored to POST /client-log. `> /token set
+            // <bearer>` used to reach ~/.ppxai/logs verbatim, on a path
+            // that runs before routing is even consulted. The rule comes
+            // from the roster (`sensitive` per subcommand), never from a
+            // hardcoded name, and it fails closed with no roster.
+            this.app.showSystemMessage(`> ${this._redactEcho(input)}`);
 
             // (1) Fail closed. Routing is server-declared data; without it
             // this client cannot tell a client-handled command from a
@@ -142,6 +150,26 @@ class CommandDispatcher {
         } finally {
             this.app.state.isHandlingCommand = false;
         }
+    }
+
+    /**
+     * Redact the typed line for the chat echo (ADR 0007 step 3a-sec).
+     *
+     * Delegates to the roster, which owns the rule — loaded, it masks
+     * only the value of a subcommand Python declared sensitive; NOT
+     * loaded, it masks every argument of every slash command, the same
+     * fail-closed posture as the dispatch gate below.
+     */
+    _redactEcho(input) {
+        const roster = this.app.commandRoster;
+        if (roster && typeof roster.redact === 'function') {
+            return roster.redact(input);
+        }
+        if (typeof CommandRoster !== 'undefined') {
+            return CommandRoster.redactWithoutRoster(input);
+        }
+        // No roster module at all — the page is broken; say nothing.
+        return '\u2022\u2022\u2022\u2022';
     }
 
     /**
@@ -228,11 +256,16 @@ class CommandDispatcher {
      * protected /v1 API surface.
      *
      * Security shape:
-     * - `set` takes the value via a browser prompt(), NEVER inline — every
-     *   dispatched command line is echoed as a system message AND forwarded
-     *   to the server debug log (see `> ${input}` above), so an inline
-     *   secret would land in ~/.ppxai/logs. An inline value is still
-     *   accepted (it already echoed) but answered with a rotate warning.
+     * - `set` takes the value via a browser prompt(), which keeps the secret
+     *   out of the composer entirely — out of the input history, out of the
+     *   autocomplete buffer, and off the screen. An inline value is still
+     *   accepted and, since ADR 0007 step 3a-sec, no longer leaks from this
+     *   client: `set` is declared `sensitive` in Python, so the chat echo is
+     *   masked before it is rendered or mirrored to POST /client-log, the
+     *   composer buffer is never sent to POST /complete, and the line is not
+     *   written to the persisted input history. The prompt form is still the
+     *   one to recommend — it is the only one that never puts the secret on
+     *   the screen or in a shoulder-surfable composer.
      * - `mint` uses the loopback bootstrap: POST /v1/tokens is exempt from
      *   auth for a DIRECT local browser (server/auth.py::_is_bootstrap_mint),
      *   so a token-less local client can self-provision its first token.
@@ -270,9 +303,10 @@ class CommandDispatcher {
                 }
                 store(value);
                 this.app.showSystemMessage(
-                    `🔑 Token stored (${masked(value)}) — ⚠️ it was typed inline, so it was echoed ` +
-                    'into the chat + debug log. Prefer `/token set` without a value (prompt), and ' +
-                    'consider rotating this token.');
+                    `🔑 Token stored (${masked(value)}) — typed inline. The value was masked in ` +
+                    'the chat echo, kept out of the server debug log, out of autocomplete and out ' +
+                    'of the input history, so it did not leave this page. Still prefer `/token ' +
+                    'set` with no value (a prompt): it never puts the token on screen at all.');
                 return;
             }
             case 'mint': {

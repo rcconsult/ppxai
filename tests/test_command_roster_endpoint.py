@@ -158,7 +158,9 @@ class TestPayloadShape:
             assert (command["client_action_clients"] is None
                     or isinstance(command["client_action_clients"], list))
             for sub in command["subcommands"]:
-                assert set(sub.keys()) == {"name", "description"}, where
+                # `sensitive` joined the shape in ADR 0007 step 3a-sec.
+                assert set(sub.keys()) == {"name", "description", "sensitive"}, where
+                assert isinstance(sub["sensitive"], bool), where
 
     def test_no_handler_field(self, http_client):
         for command in fetch(http_client)["commands"]:

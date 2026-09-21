@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from ...commands.factory import CommandFactory
 from ...engine.completion import complete
 from ..state import Session, get_agent_run_registry, get_session
 
@@ -47,7 +48,19 @@ async def complete_endpoint(
     live tool list so Web/VSCode get the same `/tools help <tab>`,
     `/model <tab>`, and `/provider <tab>` behaviour that Rich/Textual
     already enjoy via in-process calls.
+
+    ADR 0007 step 3a-sec — DEFENSE IN DEPTH. The composer sends its
+    buffer here on every keystroke, so `/token set <bearer>` typed
+    inline used to arrive as a request body. A buffer the registry says
+    carries a secret (redaction would change it) is answered with NO
+    items and nothing derived from it is computed, logged or echoed —
+    there is no useful completion after `/token set` anyway. Completion
+    of the subcommand ITSELF is untouched: `/token se` has no value
+    after the subcommand, so it still completes to `set`.
     """
+    if CommandFactory.redact_sensitive(request.buffer) != request.buffer:
+        return CompleteResponse(items=[])
+
     working_dir: str | None = None
     current_provider: str | None = None
     tool_names: list[tuple[str, str]] = []

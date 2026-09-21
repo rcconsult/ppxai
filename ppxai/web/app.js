@@ -242,6 +242,7 @@ class PpxaiApp {
         // never throws: `load()` swallows and reports, and the dispatcher
         // retries on the next command.
         await this.commandRoster.load();
+        this._purgeSensitiveHistory();
 
         // v1.17.0: Start heartbeat watchdog
         this._heartbeatFailCount = 0;
@@ -1995,8 +1996,15 @@ class PpxaiApp {
         // Debounce guard to prevent rapid-fire
         this.state.isSending = true;
 
-        // Save to history
-        if (content !== this.state.commandHistory[0]) {
+        // Save to history — unless it carries a secret (ADR 0007 step
+        // 3a-sec). `/token set <bearer>` must not be recallable with
+        // ArrowUp and must not be written to localStorage, where it would
+        // outlive the tab. Driven by the roster's `sensitive` flag, never
+        // by a hardcoded command name; with no roster EVERY slash
+        // command's args count as secret (fail closed, as in the
+        // dispatcher).
+        if (content !== this.state.commandHistory[0]
+                && !this._isSensitiveInput(content)) {
             this.state.commandHistory.unshift(content);
             if (this.state.commandHistory.length > 100) this.state.commandHistory.pop();
             localStorage.setItem('ppxai-history', JSON.stringify(this.state.commandHistory));
@@ -3044,12 +3052,60 @@ class PpxaiApp {
         const cursorPos = this.elements.messageInput.selectionStart;
         const beforeCursor = value.slice(0, cursorPos);
 
+        // ADR 0007 step 3a-sec: never send a buffer that carries a secret
+        // to POST /complete. Only the VALUE is withheld — `/token se`
+        // still completes to `set`, because sensitivity needs content
+        // AFTER the flagged subcommand. There is no useful completion
+        // for a bearer token anyway.
+        if (this._isSensitiveInput(beforeCursor)) {
+            this.hideAutocomplete();
+            return;
+        }
+
         // Delegate to server-side completion for slash commands and @file refs
         if (beforeCursor.startsWith('/') || /@[\w.\-/]*$/.test(beforeCursor)) {
             this._fetchAutocomplete(beforeCursor, cursorPos);
         } else {
             this.hideAutocomplete();
         }
+    }
+
+    /**
+     * Does this composer text carry a secret? (ADR 0007 step 3a-sec.)
+     *
+     * One question, one answer-er: `CommandRoster.isSensitive`, which
+     * derives it from the server-declared `sensitive` flag on the
+     * command's subcommands. This wrapper exists only to fail closed if
+     * the roster OBJECT is somehow absent — a slash command is then
+     * assumed to carry one.
+     */
+    _isSensitiveInput(text) {
+        const roster = this.commandRoster;
+        if (roster && typeof roster.isSensitive === 'function') {
+            return roster.isSensitive(text);
+        }
+        return typeof text === 'string' && text.trim().startsWith('/');
+    }
+
+    /**
+     * Drop already-persisted secrets from the input history.
+     *
+     * `ppxai-history` in localStorage survives reloads, so a
+     * `/token set <bearer>` typed BEFORE this fix is still sitting there,
+     * recallable with ArrowUp. Runs once, right after the roster lands —
+     * deliberately not before, because the fail-closed rule would then
+     * classify every slash command as sensitive and wipe the lot.
+     */
+    _purgeSensitiveHistory() {
+        if (!this.commandRoster || !this.commandRoster.isLoaded()) return;
+        const kept = (this.state.commandHistory || [])
+            .filter((entry) => !this.commandRoster.isSensitive(entry));
+        if (kept.length === this.state.commandHistory.length) return;
+        this.state.commandHistory = kept;
+        this.state.historyIndex = -1;
+        try {
+            localStorage.setItem('ppxai-history', JSON.stringify(kept));
+        } catch (_e) { /* private mode — the in-memory copy is clean anyway */ }
     }
 
     async _fetchAutocomplete(buffer, cursor) {

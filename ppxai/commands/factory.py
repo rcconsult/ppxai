@@ -13,6 +13,7 @@ v1.17.4:  Eager loading — factory owns its preconditions
 
 import importlib
 import logging
+import re
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -87,6 +88,21 @@ CLIENT_ACTIONS = frozenset({
     "help.augment",
 })
 
+#: Fixed replacement for the value of a sensitive subcommand argument
+#: (ADR 0007 step 3a-sec). A constant, never derived from the secret — a
+#: length-preserving mask would leak the length.
+SENSITIVE_MASK = "••••"
+
+#: The echo marker the web client puts in front of a typed line
+#: (`showSystemMessage(f"> {input}")`). Tolerated so ONE helper redacts
+#: both the raw line and its chat echo.
+_ECHO_PREFIX = re.compile(r"^\s*>+\s*")
+
+#: `<lead ws>/<command> <ws> <first argument>`. Deliberately token-based
+#: (`\S+`), so it is linear in the input length and cannot backtrack —
+#: this runs on every `/client-log` message and every `/complete` buffer.
+_SLASH_HEAD = re.compile(r"(\s*)/(\S+)(\s+)(\S+)")
+
 
 def client_sees(
     clients: frozenset[str] | None,
@@ -143,6 +159,15 @@ class CommandSpec:
         client_action_clients: Which clients dispatch to `client_action`
             instead of `handler`. None means "every client that can see
             the command" (see `dispatches_in_client`).
+        sensitive_subcommands: Names (a subset of `subcommands`) whose
+            ARGUMENT is a secret — `/token set <bearer>` (ADR 0007 step
+            3a-sec). Everything after such a subcommand must never be
+            logged, echoed, persisted or sent anywhere; the one
+            implementation of that rule is `redact_sensitive`, and the
+            roster publishes the flag per subcommand so clients derive
+            the same behaviour instead of hardcoding "/token"/"set".
+            ADDITIVE on purpose: `subcommands` keeps its
+            `list[tuple[str, str]]` shape.
     """
     name: str
     description: str
@@ -155,6 +180,7 @@ class CommandSpec:
     clients: frozenset[str] | None = None
     client_action: str | None = None
     client_action_clients: frozenset[str] | None = None
+    sensitive_subcommands: frozenset[str] = frozenset()
 
     @property
     def is_client_handled(self) -> bool:
@@ -243,6 +269,8 @@ class CompletionCommandInfo:
     client_action: str | None = None
     client_action_clients: frozenset[str] | None = None
     client_handled: bool = False
+    # ADR 0007 step 3a-sec: subcommands whose argument is a secret.
+    sensitive_subcommands: frozenset[str] = frozenset()
 
 
 class CommandFactory:
@@ -314,6 +342,9 @@ class CommandFactory:
                   outside `KNOWN_CLIENTS`
                 - both `clients` and `client_action_clients` given, and the
                   latter is not a subset of the former
+                - `sensitive_subcommands` naming something that is not a
+                  declared subcommand (ADR 0007 step 3a-sec) — a typo
+                  there silently disables redaction, so it fails loudly
         """
         if spec.handler is None and spec.client_action is None:
             raise ValueError(
@@ -351,6 +382,14 @@ class CommandFactory:
                 f"Command '{spec.name}' has client_action_clients that is not "
                 f"a subset of clients"
             )
+        if spec.sensitive_subcommands:
+            declared = {sub for sub, _desc in spec.subcommands}
+            unknown = set(spec.sensitive_subcommands) - declared
+            if unknown:
+                raise ValueError(
+                    f"Command '{spec.name}' has sensitive_subcommands "
+                    f"{sorted(unknown)} that are not declared subcommands"
+                )
 
     @classmethod
     def register(cls, spec: CommandSpec) -> None:
@@ -524,6 +563,7 @@ class CommandFactory:
                 client_action=spec.client_action,
                 client_action_clients=spec.client_action_clients,
                 client_handled=spec.is_client_handled,
+                sensitive_subcommands=spec.sensitive_subcommands,
             ))
         for alias, canonical in cls._aliases.items():
             spec = cls._registry.get(canonical)
@@ -542,6 +582,7 @@ class CommandFactory:
                 client_action=spec.client_action,
                 client_action_clients=spec.client_action_clients,
                 client_handled=spec.is_client_handled,
+                sensitive_subcommands=spec.sensitive_subcommands,
             ))
         return infos
 
@@ -588,7 +629,12 @@ class CommandFactory:
                 "category": spec.category,
                 "hidden": spec.hidden,
                 "subcommands": [
-                    {"name": sub, "description": desc}
+                    # `sensitive` (ADR 0007 step 3a-sec) is what lets a
+                    # client redact `/token set <value>` without knowing
+                    # the words "token" or "set" — Python declares, the
+                    # client derives.
+                    {"name": sub, "description": desc,
+                     "sensitive": sub in spec.sensitive_subcommands}
                     for sub, desc in spec.subcommands
                 ],
                 "clients": sorted(spec.clients) if spec.clients is not None else None,
@@ -626,6 +672,83 @@ class CommandFactory:
     def roster_version(cls) -> int:
         """Current roster version (see `_roster_version`)."""
         return cls._roster_version
+
+    @classmethod
+    def redact_sensitive(cls, text: str) -> str:
+        """Mask the VALUE of a sensitive subcommand in a typed line.
+
+        THE one implementation of the redaction rule (ADR 0007 step
+        3a-sec). Pure and side-effect free: it reads the registry and
+        returns a string, logs nothing and mutates nothing. Every server
+        sink that writes or echoes client-supplied text runs it first,
+        and `web/shared/command-roster.js::redact` is its client-side
+        twin, driven by the same declaration through the roster's
+        per-subcommand `sensitive` flag.
+
+        The rule::
+
+            "/token set abc123"      -> "/token set ••••"
+            "> /token set abc123"    -> "> /token set ••••"
+            "/TOKEN SET abc123"      -> "/TOKEN SET ••••"
+            "/token  set\\tabc 123"   -> "/token  set ••••"
+            "/token set"             -> unchanged (no value to hide)
+            "/token se"              -> unchanged (not a declared subcommand)
+            "/token status x"        -> unchanged (not sensitive)
+            "/help me"               -> unchanged (no sensitive subcommands)
+            "tell me about /token set x" -> unchanged (not a command line)
+            ""                       -> unchanged
+
+        Decisions, made explicitly:
+
+        - **Case-INSENSITIVE** on both the command name and the
+          subcommand. Not cosmetic: the web dispatcher lowercases the
+          command (`parts[0].toLowerCase()`) and `_handleTokenCommand`
+          lowercases the verb, so `/TOKEN SET abc` really does store the
+          token — a case-sensitive redactor would let exactly that line
+          through. The text KEPT is the original, unaltered.
+        - **Whitespace-tolerant.** Any run of whitespace (spaces, tabs)
+          separates the tokens, and a leading run is ignored. The kept
+          prefix is byte-for-byte the original up to the end of the
+          subcommand; only the separator before the mask is normalised
+          to one space, so the output is deterministic.
+        - **A value is required.** Whitespace-only after the subcommand
+          is "no value", so `/token set ` passes through and completion
+          of `/token se` -> `set` keeps working.
+        - **Never raises.** A non-string returns `""`; nothing else in
+          the path can throw, and the one defensive `except` fails
+          CLOSED (masks) rather than returning the line.
+
+        Args:
+            text: a raw typed line, optionally prefixed by the web
+                client's `> ` chat-echo marker.
+
+        Returns:
+            `text` unchanged, or `text` truncated after the sensitive
+            subcommand with `SENSITIVE_MASK` appended.
+        """
+        if not isinstance(text, str):
+            return ""
+        body = _ECHO_PREFIX.sub("", text, count=1)
+        lead = len(text) - len(body)
+        match = _SLASH_HEAD.match(body)
+        if match is None:
+            return text
+        if not body[match.end(4):].strip():
+            return text          # `/token set` — a subcommand, no value
+        cut = lead + match.end(4)
+        try:
+            spec = cls.get(match.group(2).lower())
+            if spec is None or not spec.sensitive_subcommands:
+                return text
+            sensitive = {sub.lower() for sub in spec.sensitive_subcommands}
+            if match.group(4).lower() not in sensitive:
+                return text
+        except Exception:        # pragma: no cover — registry read cannot throw
+            # Fail CLOSED: this branch is only reachable for something
+            # that already looks like `/<command> <arg> <more>`, so
+            # masking is the safe direction.
+            logger.warning("redact_sensitive: registry lookup failed; masking")
+        return f"{text[:cut]} {SENSITIVE_MASK}"
 
     @classmethod
     def generate_help(cls, client: str | frozenset[str] | None = None,

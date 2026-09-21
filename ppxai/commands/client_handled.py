@@ -112,4 +112,13 @@ CommandFactory.register(CommandSpec(
         ("mint",   "Mint + store a token via the loopback bootstrap (local server)"),
         ("clear",  "Remove the stored token"),
     ],
+    # ADR 0007 step 3a-sec. `/token set <bearer>` typed INLINE used to
+    # reach the server on two paths that run BEFORE any command routing:
+    # the `> <input>` chat echo (POST /client-log -> ~/.ppxai/logs) and
+    # the composer buffer (POST /complete). Declaring `set` sensitive
+    # here is what lets every client and every server sink redact it
+    # WITHOUT hardcoding "/token" or "set" — the roster publishes the
+    # flag per subcommand, and `CommandFactory.redact_sensitive` is the
+    # one implementation of the rule.
+    sensitive_subcommands=frozenset({"set"}),
 ))

@@ -282,18 +282,18 @@ test.describe('live web app — chat + Ctx badge (needs a provider)', () => {
 });
 
 /**
- * PRE-EXISTING paths that carry a typed slash-command line off the client,
- * independent of dispatch. Recorded here so the fail-closed test below
- * asserts an exact set instead of "nothing" (which was never true):
- *   - POST /client-log — `app.showSystemMessage` mirrors the `> <input>`
- *     chat echo to the server debug log. This is why `/token set` with no
- *     value uses window.prompt, and why the inline form answers with a
- *     "consider rotating this token" warning.
- *   - POST /complete   — autocomplete sends the composer buffer as you type.
- * Neither is command dispatch, and neither is what ADR 0007 step 3a changed;
- * the day either is redacted, this list shrinks and the test says so.
+ * Paths that carry a typed slash-command line off the client, independent
+ * of dispatch. **Now EMPTY** — ADR 0007 step 3a-sec closed both:
+ *   - POST /client-log — `app.showSystemMessage` mirrored the `> <input>`
+ *     chat echo to the server debug log. The echo is redacted first now
+ *     (`CommandRoster.redact`, driven by the roster's per-subcommand
+ *     `sensitive` flag), and the route redacts again server-side.
+ *   - POST /complete   — autocomplete sent the composer buffer on every
+ *     keystroke. The buffer is no longer sent once it carries a value
+ *     after a sensitive subcommand, and the route refuses to process one.
+ * Kept as a list rather than deleted so a regression re-grows it visibly.
  */
-const EXPECTED_ECHO_PATHS = ['/client-log', '/complete'];
+const EXPECTED_ECHO_PATHS: string[] = [];
 
 test.describe('live web app — command roster (ADR 0007 step 3a)', () => {
     /**
@@ -418,15 +418,149 @@ test.describe('live web app — command roster (ADR 0007 step 3a)', () => {
 
         // The step-3a guarantee: nothing was dispatched.
         expect(bodies.filter((b) => b.includes('/command/'))).toEqual([]);
-        // ...and the one place the typed line DOES leave the browser is the
-        // PRE-EXISTING `> <input>` chat echo that app.showSystemMessage
-        // mirrors to POST /client-log. That is why `/token set` with no
-        // value uses window.prompt, and why the inline form answers with a
-        // "consider rotating this token" warning. Pinned rather than
-        // asserted-away so the day it is fixed (redact the echo), this test
-        // says so instead of silently passing.
+        // The step-3a-sec guarantee: with NO roster the client cannot tell
+        // which commands carry a secret, so it fails closed and masks the
+        // args of every slash command. Nothing carries the value at all —
+        // this list used to be ['/client-log', '/complete'].
         const carrying = bodies.filter((b) => b.includes('PLAYWRIGHT-SECRET-XYZ'))
             .map((b) => b.split(' ')[0]);
         expect([...new Set(carrying)].sort()).toEqual(EXPECTED_ECHO_PATHS);
+    });
+});
+
+/**
+ * ADR 0007 step 3a-sec — the inline `/token set <secret>` leak, closed.
+ *
+ * `/token set SECRET` typed INLINE used to reach the server on two paths
+ * that run BEFORE routing is consulted: the `> <input>` chat echo mirrored
+ * to POST /client-log (i.e. ~/.ppxai/logs), and the composer buffer sent to
+ * POST /complete on every keystroke. Both are driven by ONE Python
+ * declaration now — `CommandSpec.sensitive_subcommands={"set"}` on /token,
+ * published per subcommand as `sensitive` on GET /commands — so nothing in
+ * the browser names "/token" or "set".
+ *
+ * This block is the end-to-end proof, in a real browser against a real
+ * server: the value appears in NO request at all, is not rendered, and is
+ * not recallable from the input history — while `/token se` still
+ * autocompletes to `set`.
+ */
+test.describe('live web app — sensitive subcommands (ADR 0007 step 3a-sec)', () => {
+    const SECRET = 'PLAYWRIGHT-INLINE-SECRET-42';
+
+    async function typeCommand(page: Page, text: string) {
+        const input = page.locator('#messageInput');
+        await input.fill(text);
+        await expect(input).toHaveValue(text);
+        await page.waitForTimeout(400);
+        await input.press('Escape');
+        await expect(page.locator('#autocompleteDropdown')).toBeHidden();
+        await input.press('Enter');
+    }
+
+    async function rosterReady(page: Page) {
+        await expect
+            .poll(() => page.evaluate(() => !!(window as any).ppxai.commandRoster?.isLoaded()),
+                { timeout: 15_000 })
+            .toBe(true);
+    }
+
+    /** Record EVERY request: method, path, full URL and body. */
+    function recordRequests(page: Page) {
+        const seen: { url: string; body: string }[] = [];
+        page.on('request', (r) => seen.push({ url: r.url(), body: r.postData() || '' }));
+        return seen;
+    }
+
+    test('the roster declares /token set sensitive', async ({ page }) => {
+        await rosterReady(page);
+        const subs = await page.evaluate(() => {
+            const entry = (window as any).ppxai.commandRoster.resolve('/token');
+            return entry.subcommands.map((s: any) => [s.name, s.sensitive]);
+        });
+        expect(new Map(subs as [string, boolean][])).toEqual(new Map([
+            ['status', false], ['set', true], ['mint', false], ['clear', false],
+        ]));
+    });
+
+    test('an inline /token set never leaves the page', async ({ page }) => {
+        await rosterReady(page);
+        // Start from a clean history so the assertions below are about
+        // THIS line and not something a previous test left behind.
+        await page.evaluate(() => {
+            const app = (window as any).ppxai;
+            app.state.commandHistory = [];
+            localStorage.setItem('ppxai-history', '[]');
+        });
+        const seen = recordRequests(page);
+
+        await typeCommand(page, `/token set ${SECRET}`);
+
+        // The command RAN — redaction is not refusal.
+        await expect
+            .poll(async () => (await page.locator('.system-message').allTextContents())
+                .join('\n').includes('Token stored'), { timeout: 10_000 })
+            .toBe(true);
+
+        // 1. No request carries it — not in a body, not in a URL.
+        const carrying = seen.filter(
+            (r) => r.body.includes(SECRET) || r.url.includes(SECRET)
+        );
+        expect(carrying.map((r) => new URL(r.url).pathname + ' ' + r.body)).toEqual([]);
+
+        // 2. Not in the rendered transcript — the echo is masked instead.
+        const transcript = await page.locator('#messagesContainer').innerText();
+        expect(transcript).not.toContain(SECRET);
+        // The masked echo IS rendered. (`> ` is markdown: the echo renders
+        // as a blockquote, so innerText carries the line without the marker.)
+        expect(transcript).toContain('/token set \u2022\u2022\u2022\u2022');
+
+        // 3. Not in the input history — neither in memory nor in localStorage,
+        //    and ArrowUp does not bring it back.
+        const history = await page.evaluate(() => ({
+            memory: (window as any).ppxai.state.commandHistory,
+            stored: localStorage.getItem('ppxai-history') || '',
+        }));
+        expect(JSON.stringify(history.memory)).not.toContain(SECRET);
+        expect(history.stored).not.toContain(SECRET);
+
+        const input = page.locator('#messageInput');
+        await input.click();
+        await input.press('ArrowUp');
+        await input.press('ArrowUp');
+        expect(await input.inputValue()).not.toContain(SECRET);
+
+        // 4. The token really was stored client-side, which is the whole
+        //    point of the command being client-handled.
+        expect(await page.evaluate(() => (window as any).ppxai.apiClient.apiToken))
+            .toBe(SECRET);
+        await page.evaluate(() => (window as any).ppxai.commandDispatcher
+            ._handleTokenCommand('clear'));
+    });
+
+    test('the composer buffer is not sent to /complete once it carries a value',
+        async ({ page }) => {
+        await rosterReady(page);
+        const seen = recordRequests(page);
+        const input = page.locator('#messageInput');
+
+        await input.fill(`/token set ${SECRET}`);
+        await page.waitForTimeout(600);
+
+        const completes = seen.filter((r) => r.url.includes('/complete'));
+        expect(completes.filter((r) => r.body.includes(SECRET))).toEqual([]);
+        await input.fill('');
+    });
+
+    test('/token se still autocompletes to set', async ({ page }) => {
+        await rosterReady(page);
+        const input = page.locator('#messageInput');
+        await input.fill('/token se');
+        await expect(page.locator('#autocompleteDropdown')).toBeVisible();
+        await expect
+            .poll(() => page.evaluate(() => (window as any).ppxai.state.autocompleteItems
+                .map((i: any) => i.value)), { timeout: 10_000 })
+            .toEqual(['set']);
+        await input.press('Escape');
+        await input.fill('');
     });
 });

@@ -185,9 +185,15 @@ class TestNoBespokeBranches:
             roughly flat; the growth is the security rationale for failing
             closed (see the module header) plus the registry's per-action
             comments. Nothing bespoke came back — the fence's actual target.
+          - <510 at v1.19.3 (ADR 0007 step 3a-sec, ~492 total). `_redactEcho`
+            (a 12-line delegation to the roster, which owns the rule) plus the
+            rationale for redacting the `> <input>` chat echo before it is
+            rendered or mirrored to POST /client-log. Again no bespoke
+            handler — the sensitivity rule itself lives in command-roster.js
+            and is declared in Python.
         """
         line_count = len(_read().splitlines())
-        assert line_count < 480, (
+        assert line_count < 510, (
             f"command-dispatcher.js has grown to {line_count} lines. "
             f"That's a smell — a bespoke handler is probably creeping "
             f"back. Compare to the factory + side-effects pattern."

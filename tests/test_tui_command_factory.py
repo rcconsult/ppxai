@@ -218,7 +218,8 @@ def test_iter_completion_specs_exposes_no_handler():
     """The completion view is decoupled from CommandSpec — no handler /
     internal storage leaks (the ADR 0007 seam contract). Widened in step
     1a to carry `usage`, `category`, `subcommands`, `clients`,
-    `client_action`, `client_action_clients` and `client_handled` — see
+    `client_action`, `client_action_clients` and `client_handled`, and in
+    step 3a-sec to carry `sensitive_subcommands` — see
     tests/test_command_spec_schema.py for the field-by-field contract;
     this test only pins that `handler` itself never leaks."""
     info = CommandFactory.iter_completion_specs()[0]
@@ -226,6 +227,7 @@ def test_iter_completion_specs_exposes_no_handler():
         "name", "description", "hidden", "is_alias", "canonical",
         "usage", "category", "subcommands", "clients",
         "client_action", "client_action_clients", "client_handled",
+        "sensitive_subcommands",
     }
     assert "handler" not in vars(info)
 
