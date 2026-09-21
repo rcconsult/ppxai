@@ -427,7 +427,7 @@ def main():
         console.print(f"\n[green]Connected to:[/green] {provider_config['name']} ({base_url})")
 
         # Display welcome
-        display_welcome()
+        display_welcome(CommandFactory.roster("rich")["commands"])
 
         # Select initial model (from provider's available models)
         current_model = select_model(provider)

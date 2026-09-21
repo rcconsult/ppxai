@@ -26,6 +26,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from ppxai.commands.results import SideEffectKind
+
 WEB_DIR = Path(__file__).resolve().parents[1] / "ppxai" / "web"
 SHARED = WEB_DIR / "shared"
 
@@ -115,37 +117,26 @@ class TestSideEffectsHandler:
         src = _read("side-effects.js")
         assert "module.exports" in src and "SideEffectsHandler" in src
 
-    def test_handles_every_v18_1_kind(self):
-        """Drift fence: every kind in v1.18.1 SideEffectKind must
-        have a handler in side-effects.js. The Python sentinel
-        (test_command_envelope.py::TestSideEffectKindTaxonomy) pins
-        the kind set; this test pins the web's coverage of it."""
+    def test_handles_every_kind(self):
+        """Drift fence: every kind `SideEffectKind` declares must have a
+        handler in side-effects.js.
+
+        **DERIVED since ADR 0007 step 5.** This test used to hardcode
+        its own 16-name set, which is exactly how `refresh_command_roster`
+        could be added to `SideEffectKind` in step 2 with no client
+        noticing — and how `prompt_text` came to be MISSING from the
+        hardcoded set while side-effects.js has always handled it. The
+        full both-directions comparison (plus an orphan-handler check and
+        a web-vs-VSCode set comparison) lives in
+        tests/test_command_parity_fence.py; this row stays because this
+        file is where someone editing side-effects.js looks."""
         src = _read("side-effects.js")
-        # Mirror the v1.18.1 EXPECTED_KINDS_V1 frozenset
-        expected = {
-            "open_editor",
-            "open_viewer",
-            "show_image",
-            "show_pdf",
-            "reveal_in_explorer",
-            "open_terminal",
-            "run_shell",
-            "open_html_preview",
-            "refresh_file_tree",
-            "set_theme",
-            "copy_to_clipboard",
-            "attach_file",
-            "prompt_quick_pick",
-            "notify",
-            "vscode_delegate",
-            # ADR 0007 step 2 added this kind; step 3a is the first
-            # client to implement it (web refetches GET /commands).
-            "refresh_command_roster",
-        }
-        for kind in expected:
-            assert kind in src, (
-                f"side-effects.js missing handler for kind: {kind}"
-            )
+        missing = [kind for kind in SideEffectKind.all_kinds() if kind not in src]
+        assert not missing, (
+            f"side-effects.js has no handler for: {missing}. Kinds are an OPEN "
+            "enum, so an unhandled one is silently ignored at runtime — this "
+            "test is the only thing that sees it."
+        )
 
     def test_unknown_kind_is_no_op(self):
         """Open-enum invariant: unknown kinds are silently ignored,

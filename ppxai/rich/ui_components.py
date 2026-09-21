@@ -737,54 +737,6 @@ def render_status_panel(
     )
 
 
-def render_welcome(theme: Theme | None = None) -> Panel:
-    """Render welcome message with theme styling.
-
-    Args:
-        theme: Theme to use
-
-    Returns:
-        Rich Panel with welcome content
-    """
-    if theme is None:
-        theme = get_theme(DEFAULT_THEME)
-
-    welcome_text = """
-# ppxai - AI Text UI
-
-Welcome to the AI terminal interface!
-
-## General Commands
-- Type your question or prompt to chat
-- `/save` - Save session to JSON file
-- `/export [filename]` - Export last answer to markdown
-- `/copy [n]` - Copy last response to clipboard (or click # link in title)
-- `/usage` - Show current session usage statistics
-- `/theme` - List or switch themes
-- `/clear` - Clear conversation history
-- `/model` - Change model
-- `/help` - Show this help message
-- `/quit` or `/exit` - Exit the application
-
-## AI Tools
-- `/tools enable` - Enable AI tools
-- `/tools disable` - Disable AI tools
-- `/tools list` - Show available tools
-
-## Auto Mode
-- `/auto <task>` - Execute autonomous in-session task (was /agent)
-- `/undo` - Revert last auto task
-"""
-    return Panel(
-        Markdown(welcome_text),
-        title="[bold]Welcome[/bold]",
-        title_align="left",
-        border_style=theme.info_style,
-        box=box.ROUNDED,
-        padding=(1, 2),
-    )
-
-
 def render_error(message: str, theme: Theme | None = None) -> Panel:
     """Render an error message.
 

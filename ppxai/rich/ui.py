@@ -18,72 +18,76 @@ from ..prompts import SPEC_GUIDELINES, SPEC_TEMPLATES
 console = Console()
 
 
-def display_welcome():
-    """Display welcome message."""
-    welcome_text = """
-# ppxai - AI Text UI
+#: Prose the welcome screen keeps that is NOT command metadata: the
+#: consent/safety model for the file-editing tools. It names exactly one
+#: command (`/tools help editing`, the guide that explains it), so it is
+#: not a roster and cannot drift into one.
+_SAFETY_NOTES = """
+## File Editing Tools
 
-Welcome to the AI terminal interface!
+When tools are enabled, AI can edit files **with your consent** —
+`apply_patch`, `replace_block`, `insert_text`, `delete_lines`.
 
-## General Commands
-- Type your question or prompt to chat
-- `/save` - Save session to JSON file
-- `/export [filename]` - Export last answer to markdown file
-- `/copy [n]` - Copy last response to clipboard (or click # link in title)
-- `/sessions` - List all saved sessions
-- `/load <session>` - Load a previous session
-- `/usage` - Show current session usage statistics
-- `/clear` - Clear conversation history
-- `/model` - Change model
-- `/status` - Show status info
-- `/status datetime` - Toggle date/time in status bar
-- `/status version` - Toggle version in status bar
-- `/status cwd` - Toggle working dir in status bar
-- `/context` - Show context usage (tokens, injected files)
-- `/context clear` - Remove injected @file/@git/@tree from history
-- `/context hints` - Show active bootstrap hints for current provider/model
-- `/help` - Show this help message
-- `/quit` or `/exit` - Exit the application
-
-## File Commands
-- `/show <file>` - Display file contents with syntax highlighting (no LLM call)
-- `/cat <file>` - Alias for /show
-
-## Code Generation Tools
-- `/generate <description>` - Generate code from natural language description
-- `/test <file>` - Generate unit tests for a code file
-- `/docs <file>` - Generate documentation for a code file
-- `/implement <specification>` - Implement a feature from detailed specification
-- `/debug <error>` - Analyze and fix errors, exceptions, and bugs
-- `/explain <file>` - Explain code logic and design decisions step-by-step
-- `/convert <from> <to> <file>` - Convert code between programming languages
-- `/spec [type]` - Show specification guidelines and templates (api, cli, lib, algo, ui)
-- `/autoroute [on|off]` - Toggle auto-routing to best coding model (enabled by default)
-- `/provider` - Switch between providers (Perplexity, Custom)
-
-## AI Tools (Experimental)
-- `/tools enable` - Enable AI tools (file search, calculator, **file editing**)
-- `/tools disable` - Disable AI tools
-- `/tools list` - Show available tools
-- `/tools status` - Show tools status and consent mode
-- `/tools help editing` - 🆕 Interactive guide for file editing tools
-
-## Auto Mode (v1.19.1 — was /agent)
-- `/auto <task>` - Execute autonomous in-session task with checkpoints
-- `/undo` - Revert last auto task (requires checkpoints enabled)
-**Safety:** Changes auto-committed (git) or snapshotted (file backup) before tasks
-
-## File Editing Tools (v1.11.0) 🆕
-When tools are enabled, AI can edit files **with your consent**:
-- **apply_patch** - Apply unified diff patches
-- **replace_block** - Find and replace code blocks
-- **insert_text** - Insert code at specific lines
-- **delete_lines** - Delete line ranges
-
-**Safety:** User consent required (y/n/always/never) before any edit!
-**Learn more:** Type `/tools help editing` for examples
+**Safety:** user consent (y/n/always/never) is required before any edit,
+and auto-mode changes are auto-committed (git) or snapshotted (file
+backup) before a task runs.
+**Learn more:** type `/tools help editing` for examples.
 """
-    console.print(Panel(Markdown(welcome_text), title="Welcome", border_style="cyan"))
+
+
+def display_welcome(commands):
+    """Display the welcome message, DERIVED from the command registry.
+
+    ADR 0007 step 5. This screen used to carry a hand-written ~30-command
+    list with its own usage strings and descriptions — the SEVENTH roster
+    the record found, on the Python side, and already drifted: 18
+    registered commands were missing from it (`/attach`, `/cd`,
+    `/checkpoint`, `/config`, `/debug-log`, `/doctor`, `/edit`, `/keys`,
+    `/ls`, `/preview`, `/preview-log`, `/pwd`, `/reload`, `/run`,
+    `/task`, `/terminal`, `/theme`, `/tree`) and several descriptions no
+    longer matched the spec.
+
+    `commands` is PLAIN DATA — the `commands` list of
+    `CommandFactory.roster("rich")` — handed in by the caller, exactly as
+    step 4 did for `engine.completion.complete(roster=...)`. It is
+    REQUIRED and has no default: this module cannot import
+    `ppxai.commands` (that package's `__init__` imports this one back,
+    so a module-scope import is a genuine circular-import failure, and
+    the project bans lazy imports), and a default would turn a forgotten
+    roster into a silently empty welcome screen instead of a `TypeError`
+    naming the call site.
+
+    Args:
+        commands: Roster entries — dicts with `name`, `aliases`,
+            `description`, `usage`, `category`, `hidden`.
+    """
+    by_category: dict[str, list[dict]] = {}
+    for cmd in commands:
+        if cmd.get("hidden"):
+            continue
+        by_category.setdefault(cmd.get("category") or "other", []).append(cmd)
+
+    lines = [
+        "",
+        "# ppxai - AI Text UI",
+        "",
+        "Welcome to the AI terminal interface!",
+        "",
+        "Type your question or prompt to chat, or use a command:",
+        "",
+    ]
+    for category in sorted(by_category):
+        lines.append(f"## {category.title()}")
+        for cmd in sorted(by_category[category], key=lambda c: c["name"]):
+            usage = cmd.get("usage") or f"/{cmd['name']}"
+            aliases = cmd.get("aliases") or []
+            alias_str = f" *(/{', /'.join(aliases)})*" if aliases else ""
+            lines.append(f"- `{usage}`{alias_str} - {cmd['description']}")
+        lines.append("")
+    lines.append(_SAFETY_NOTES)
+
+    console.print(Panel(Markdown("\n".join(lines)),
+                        title="Welcome", border_style="cyan"))
 
 
 def display_file_editing_help():

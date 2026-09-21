@@ -575,8 +575,14 @@ class CommandHandler:
         # Strip leading / for factory lookup
         cmd_name = command[1:] if command.startswith("/") else command
 
-        # Special case: quit/exit must return True
-        if command in ["/quit", "/exit"]:
+        # Special case: the `app.quit` client action must return True.
+        # ADR 0007 step 5: the names are DERIVED from the spec that
+        # declares `client_action="app.quit"` (`/quit`, alias `/exit`)
+        # instead of being spelled out here — a literal list was a
+        # seventh hand-written roster, and it is the reason `/q` exists
+        # in Textual and nowhere else. Rich adds no legacy extra.
+        if command.startswith("/") and cmd_name in CommandFactory.names_for_client_action(
+                "app.quit"):
             return self.handle_quit()
 
         # Handle /<command> help pattern - redirect to /help <command>

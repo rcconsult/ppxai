@@ -659,6 +659,36 @@ class CommandFactory:
         return {"version": cls._roster_version, "commands": commands}
 
     @classmethod
+    def names_for_client_action(cls, action: str) -> frozenset[str]:
+        """Every typed name — canonical AND aliases — bound to `action`.
+
+        ADR 0007 step 5. The in-process TUIs intercept a couple of
+        commands BEFORE the factory lookup, because ending the process
+        is not something a handler can do. Those intercepts used to
+        spell the names out (`if cmd in ("quit", "q", "exit")`), which
+        made them a seventh hand-written roster: `/quit` grew the
+        `exit` alias on a spec, and two literals in two client files had
+        to be remembered.
+
+        Asking for the ACTION rather than for the name keeps the
+        declaration in one place and keeps it honest — `app.quit` is
+        what the client implements, and the spec says which typed names
+        reach it. Names come back WITHOUT the leading slash, which is
+        the form both intercepts compare against.
+
+        Returns an empty frozenset for an action nothing declares; the
+        caller is a dispatch path, so it must not raise on a registry
+        that has been cleared.
+        """
+        cls._ensure_loaded()
+        names: set[str] = set()
+        for spec in cls._registry.values():
+            if spec.client_action == action:
+                names.add(spec.name)
+                names.update(spec.aliases)
+        return frozenset(names)
+
+    @classmethod
     def get_categories(cls) -> list[str]:
         """Get all unique category names.
 

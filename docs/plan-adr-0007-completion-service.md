@@ -1,8 +1,9 @@
 # Plan — closing ADR 0007 (one command registry)
 
-**Status: steps 1 (1a + 1b), 2, 2.5, 3a (web), 3a-sec (sensitive
-subcommands), 3b (VSCode) and 4 (derive, don't restate) IMPLEMENTED;
-step 5 PROPOSED, not started.**
+**Status: ALL FIVE STEPS IMPLEMENTED** — 1 (1a + 1b), 2, 2.5, 3a (web),
+3a-sec (sensitive subcommands), 3b (VSCode), 4 (derive, don't restate)
+and **5 (the parity fence, 2026-09-21)**. The ADR's own Status line is
+the owner's to flip; implementation is complete.
 Written 2026-09-20 on `bugfix/v1.19.3`; **rewritten the same day** after
 the owner restated the goal. The first draft split the work (a) invert the
 edge / (b) relocate / (c) roster, called (c) "a feature wearing the ADR's
@@ -853,13 +854,201 @@ as long as the test does.
 | `tests/test_no_new_lazy_imports.py` | Guard 2 replaced (above) |
 | `tests/test_command_spec_schema.py` | Prose only — a comment describing where `KNOWN_CLIENTS` ids are measured |
 
-### 5. Parity fence
+### 5. Parity fence — ✅ DONE (2026-09-21)
 
-A test that fails when any client renders a command the registry does not
-declare, when the registry declares one a client does not render, or when a
-`client_action` named in Python has no implementation in a client listed in
-that spec's `clients`. The
-rosters drifted silently; this is what stops a repeat.
+`tests/test_command_parity_fence.py` (128 tests). A test that fails when
+a client implements a command action the registry does not declare, when
+the registry declares one a client does not implement, or when a
+hand-written roster reappears anywhere. The rosters drifted silently for
+months because **nothing compared them**; this is the comparison.
+
+**What each assertion reads, and how.** Every one reads the PYTHON
+declaration and compares it against the REAL client source — nothing is
+restated by hand except the two named baselines below.
+
+| # | Assertion | Read from |
+|---|---|---|
+| 1 | **Action coverage, both directions, per client** — every action Python declares for a client is implemented by it; every key in a client's registry is an action Python declares for that client; every key is in `CLIENT_ACTIONS` | web: `CommandDispatcher.CLIENT_ACTIONS` (brace-aware object-key extractor over `command-dispatcher.js`); vscode: `CLIENT_ACTIONS` in `commandRouter.ts` (same extractor, plus a **compiled-module cross-check** — esbuild + Node, `Object.keys()` off the real bundle); rich/textual: their `CommandFactory.names_for_client_action("…")` call sites |
+| 2 | **No undeclared intercepts** — zero per-name branches in the web dispatcher and in `chatPanel.ts`; `LEGACY_INTERCEPTS` is the ONLY name-keyed table in `commandRouter.ts` (its four exported tables are pinned by name) and matches `LEGACY_HANDLERS`; the legacy baseline may only shrink; no command with a `client_action` sits in it | regex over comment-stripped source, with the plan's own `grep -v subcommand` caveat encoded as `(?:^\|[^A-Za-z])command === '…'` and regression-tested |
+| 3 | **No surviving hand-written roster** — every deletion in the completeness table below fenced as ABSENT, plus a GENERIC detector | see §The generic catalog detector |
+| 4 | **Side-effect kind coverage**, both directions and web↔vscode | DERIVED from `SideEffectKind.all_kinds()`; web's `SideEffectsHandler._handlers` keys, VSCode's `case KIND.X:` resolved through the exported `KIND` table |
+| 5 | **Roster self-consistency** — for every id in `KNOWN_CLIENTS`, `CommandFactory.roster(client)` names no `dispatch == "client"` action that client does not implement, and none with no action at all | the real `roster()` payload, against assertion 1's implemented sets |
+
+**The extractors are the fragile part, so the fragility is loud.**
+Every one is self-tested on synthetic input BEFORE anything uses it,
+including the three traps this work actually hit: an apostrophe inside a
+`//` comment opening a string that eats the file; a template literal's
+`${…}` unbalancing a brace counter; `subcommand === 'clear'` matching a
+`command === '…'` pattern (the mistake that inflated VSCode's intercept
+count from 12 to 16). A **fourth** trap was found while writing the
+fence and is now guarded too: `String(s).replace(/[&<>"']/g, …)` in
+`web/shared/side-effects.js` holds BOTH quote characters inside a REGEX
+literal — read naively, that `"` opens a string that runs for a hundred
+lines, and the handler table came back four entries short **with no
+error**. The fence therefore has ONE JS lexer (`js_spans`) that knows
+comments, strings, template literals and regex literals, and every
+extractor is built on it. Every extractor also has a POSITIVE CONTROL
+against the real file: "0 actions found" is an error, never parity.
+
+**Where the real compiled module can be read, it is.** `commandRouter.ts`
+imports no `vscode`, so the fence bundles it with the extension's own
+esbuild and reads `Object.keys(CLIENT_ACTIONS)` and `LEGACY_INTERCEPTS`
+under Node, then asserts the regex agrees (`TestRegexAgreesWithThe
+CompiledModule`). Web's modules are plain CommonJS, so they are simply
+`require`d (`TestWebRegexAgreesWithTheRealModule`). Both cross-checks
+skip without Node; the regex path always runs, so the fence has no
+environment hole. **If the two ever disagree, trust the compiled module
+and fix the regex.**
+
+#### The seventh roster — found on the PYTHON side, fixed here
+
+Step 4's report flagged three things this step had to close:
+
+- **`ppxai/rich/ui.py::display_welcome()`** was a LIVE hand-written
+  ~30-command list with its own usage strings and descriptions,
+  rendered at Rich startup (`rich/main.py:430`) — and already drifted:
+  **18 registered commands were missing from it** (`/attach`, `/cd`,
+  `/checkpoint`, `/config`, `/debug-log`, `/doctor`, `/edit`, `/keys`,
+  `/ls`, `/preview`, `/preview-log`, `/pwd`, `/reload`, `/run`,
+  `/task`, `/terminal`, `/theme`, `/tree` — i.e. every command added
+  since roughly v1.17), several descriptions no longer matched the
+  spec (`/autoroute`, `/copy`), and it advertised `/tools help editing`
+  and three `/status` + three `/context` subcommands that the registry
+  now publishes as `subcommands` instead. It is now DERIVED from
+  `CommandFactory.roster("rich")["commands"]`, grouped by `category`,
+  keeping the Panel/Markdown look. The command list is the registry's;
+  only the file-editing consent/safety prose (which names exactly ONE
+  command) is still written out.
+
+  **It takes the roster as DATA — a required, keyword-free positional —
+  exactly as step 4 did for `complete(roster=…)`, and for a hard
+  reason, not for symmetry.** `ppxai/rich/ui.py` CANNOT import
+  `ppxai.commands`: `ppxai/commands/__init__.py` imports `.handler`,
+  which imports `..rich.ui`, so a module-scope import there is a
+  genuine circular-import failure (verified: `ImportError: cannot
+  import name 'console' from partially initialized module
+  'ppxai.rich.ui'`), and the project bans lazy imports and
+  `TYPE_CHECKING`. `rich/main.py` already held `CommandFactory` and
+  already called `roster("rich")` for completion, so the caller pays
+  nothing. No default: a forgotten roster is a `TypeError` naming the
+  call site rather than a silently empty welcome screen.
+
+- **`ppxai/rich/ui_components.py::render_welcome()`** — a second,
+  differently-worded welcome roster (13 commands). **Zero callers**,
+  including tests (verified across `ppxai/`, `tests/` and `scripts/`).
+  **Deleted.**
+
+- **`"q"`.** `ppxai/tui/app.py` intercepted `cmd in ("quit", "q",
+  "exit")` and `ppxai/commands/handler.py` the literal pair
+  `["/quit", "/exit"]`. Both literals are now DERIVED:
+  `CommandFactory.names_for_client_action("app.quit")` (new classmethod
+  — it asks for the ACTION, which is what the client implements, and
+  gets back the canonical name plus aliases). Textual keeps ONE named
+  legacy extra, `TEXTUAL_LEGACY_QUIT_NAMES = frozenset({"q"})`,
+  commented at its definition and carried in the fence as a single-row
+  shrinking baseline. **This is an OPEN OWNER DECISION and step 5
+  deliberately did not make it** — see §Open owner decisions.
+
+#### The generic catalog detector
+
+Assertion 3's second half: the roster nobody thought to name. It scans
+`ppxai/web/**/*.js` (minus `lib/`), `vscode-extension/src/**/*.ts`,
+`vscode-extension/media/**/*.js` (minus minified vendor) and
+`ppxai/**/*.py` (minus `ppxai/commands/`) for a **literal** — an
+array/object literal in VALUE position, or a single non-docstring
+string — naming **N or more distinct registered commands with a leading
+slash**.
+
+**N = 6, measured rather than guessed.** After this step's deletions the
+whole scanned tree yields exactly two literals above three:
+`STREAMING_COMMANDS` at 8 and a quick-command button block in
+`web/app.js` at 4. The catalogs this record deleted measured 28
+(`rich/ui.py`'s welcome), 13 (`render_welcome`), ~30 (`app.js`'s
+`slashCommands`) and 31 (`commands.ts`), so 6 has clear air on both
+sides.
+
+Three tuning decisions, each forced by a measurement and each with a
+regression test:
+
+- **Value position only.** Without it an entire `class
+  ChatViewProvider { … }` body read as one literal naming 23 commands,
+  which would have pushed N into uselessness. A `{`/`[` counts only when
+  it follows one of `=(,:[{|&?`, so class bodies, function bodies and
+  `if (…) {` are excluded.
+- **Command tokens, not substrings.** `/command/clear`, `/v1/tokens`
+  and `/models` must not read as commands; without the lookarounds
+  `api-client.js` scored 17 and `httpClient.ts` 20. Single-character
+  names (`/c`, `/s`, `/g`) are excluded outright as unusable noise.
+- **Docstrings are not catalogs.** `engine/completion.py`'s module
+  docstring explains at length which tables step 4 deleted, and naming
+  them is a record, not a roster. A NON-docstring string constant is
+  still scanned — that is exactly the shape the Rich welcome had.
+
+**One exemption, named with its reason**
+(`CATALOG_EXEMPTIONS`): `STREAMING_COMMANDS` in
+`command-dispatcher.js` (8 names) classifies commands whose RESPONSE is
+the chat stream — a behaviour classification, not command metadata, and
+the roster carries no `chat_shaped` field to derive it from. The
+exemption is itself fenced: if the literal disappears, the row must be
+deleted. Folding chat-shaped-ness into the roster would remove it, and
+is recorded in §Open owner decisions rather than taken here.
+
+#### Side-effect coverage: the hardcoded sets are gone
+
+`refresh_command_roster` was added to `SideEffectKind` in step 2 and no
+client noticed, because both drift fences hardcoded their own expected
+sets. **Retargeted, not deleted** — a reader editing `side-effects.js`
+looks in `test_web_shared_modules.py`, so that row stays, now iterating
+`SideEffectKind.all_kinds()`. Same for both rows in
+`test_vscode_step5a_helpers.py` (the per-client one and the web↔VSCode
+parity one, which compared both clients against a THIRD hand-written
+list). The full both-directions comparison lives in the new fence.
+
+**That retarget immediately found a live drift:**
+`test_web_shared_modules.py`'s hardcoded set was missing **`prompt_text`**
+— web has always implemented it, so the fence had simply stopped
+covering one kind. Nothing was broken; the guard was.
+
+#### The two shrinking baselines, and how to shrink them
+
+| Baseline | Today | Shrink it by |
+|---|---|---|
+| `LEGACY_INTERCEPT_BASELINE` | `tools`, `checkpoint`, `context`, `ls`, `tree` | migrating the command to factory routing, deleting its row from `LEGACY_INTERCEPTS` + `LEGACY_HANDLERS` in `commandRouter.ts`, **and** deleting the row here. A removed entry FAILS until the baseline row goes too, so this file stays a record of the cleanup rather than a wish-list |
+| `TEXTUAL_LEGACY_QUIT_BASELINE` | `q` | registering `q` as an alias of `/quit` (owner decision — see below), deleting `TEXTUAL_LEGACY_QUIT_NAMES` from `ppxai/tui/app.py`, and emptying this baseline |
+
+Both directions fail. Adding to either fails with a message saying what
+to do instead ("declare a `client_action`"; "this is an open owner
+decision").
+
+#### Mutation table
+
+Every assertion was verified by mutating the real tree, running the
+fence, and reverting — never leaving an edit behind.
+
+| Mutation | Test that failed |
+|---|---|
+| orphan `'ghost.action'` added to web's `CLIENT_ACTIONS` | `test_every_implementation_is_declared[web]` + `test_every_implementation_is_in_the_vocabulary[web]` |
+| web's `token.manage` renamed away | `test_every_declared_action_is_implemented[web]` + the two orphan checks + `test_no_client_dispatch_entry_names_an_unimplemented_action[web]` |
+| `'newthing'` added to `LEGACY_INTERCEPTS` | `test_the_legacy_baseline_has_not_grown` + `test_the_legacy_handlers_match_the_legacy_list` |
+| `'tree'` removed from `LEGACY_INTERCEPTS`, baseline row left | `test_the_legacy_baseline_has_no_stale_rows` + `test_the_legacy_handlers_match_the_legacy_list` |
+| VSCode's `preview.panel` row deleted | `test_every_declared_action_is_implemented[vscode]` + `test_no_client_dispatch_entry_names_an_unimplemented_action[vscode]` |
+| web's `prompt_text` handler renamed | `test_every_python_kind_is_handled[web]`, `test_no_client_handles_a_kind_python_does_not_declare[web]`, `test_the_two_clients_handle_the_same_kinds` — **and both retargeted fences** |
+| a 7-command catalog prepended to `app.js` | `test_no_new_catalog_anywhere_in_the_tree` |
+| a second legacy quit name added to `TEXTUAL_LEGACY_QUIT_NAMES` | `test_the_textual_quit_baseline_matches_the_source` |
+| Textual's quit intercept re-spelled as a literal | `test_neither_tui_spells_the_quit_names_out` + `test_every_declared_action_is_implemented[textual]` + the positive control `test_every_client_implements_at_least_one_action[textual]` |
+| `if (cmd === '/token')` re-added to the web dispatcher | `test_web_has_no_per_name_branch` |
+| the hand-written Rich welcome restored | `test_the_rich_welcome_is_derived_not_written` + `test_no_new_catalog_anywhere_in_the_tree` |
+| `_THEME_SUBCOMMANDS` reintroduced in `engine/completion.py` | `test_no_subcommand_table_survives[_THEME_SUBCOMMANDS]` + `test_no_subcommand_table_by_any_name` |
+
+**Tests.**
+
+| File | Disposition |
+|---|---|
+| `tests/test_command_parity_fence.py` | **New**, 128 tests. Guards (13 extractor self-tests incl. the four traps) → positive controls → the five assertions → the two compiled-module cross-checks → in-file mutation verification |
+| `tests/test_consumer_import_surface.py` | **New**, 8 tests (~18s, subprocess import closure). Pins what step 4 bought for an out-of-repo consumer: importing the v1 gateway surface or `ppxai.engine.completion` loads **zero** `ppxai.commands` modules (both closure tiers measured at 77 modules). Positive control proves the probe can see a `ppxai.commands` import when there is one |
+| `tests/test_web_shared_modules.py` | `test_handles_every_v18_1_kind` → `test_handles_every_kind`, derived from `SideEffectKind.all_kinds()`. Found the missing `prompt_text` |
+| `tests/test_vscode_step5a_helpers.py` | Both hardcoded kind lists (per-client and web↔VSCode) derived the same way |
+| `tests/test_client_handled_commands_contract.py`, `tests/test_shared_commands.py`, `tests/test_session_end_workflows.py` | **Assessed, unchanged.** The contract file's per-client action checks are the miniature this fence generalises; they stay as the place a reader of the dispatch ORDER looks |
 
 ## Migrating the client-handled commands — the correctness contract
 
@@ -968,7 +1157,11 @@ move so the migration is verified rather than assumed:
 
 **Deletions that prove the migration is complete** — if any survives, a
 second roster still exists. **All of them are done as of 2026-09-21**;
-`CommandSpec` is the only declaration left:
+`CommandSpec` is the only declaration left. **Step 5 fences EVERY row
+below as permanently absent** (`tests/test_command_parity_fence.py::
+TestNoSurvivingHandWrittenRoster`), so this table is now executable
+rather than aspirational — including a GENERIC detector for the roster
+nobody thought to name:
 
 | Deletion | Status |
 |---|---|
@@ -980,10 +1173,60 @@ second roster still exists. **All of them are done as of 2026-09-21**;
 | `vscode-extension/src/shared/commands.ts` in full — 31 entries, plus `generateHelpText`, `SLASH_COMMANDS`, `parseCommand`, `isSlashCommand`, `AI_FORWARDED_COMMANDS` — and `chatPanel.ts`'s twelve intercepts + the `CHAT_SHAPED_TASKS` map | ✅ DONE — step 3b, 2026-09-21; routing is the roster's `dispatch` field. Fenced by `assert_vscode_has_no_per_name_escape_hatch` |
 | the six `_*_SUBCOMMANDS` tables (`engine/completion.py`) | ✅ DONE — step 4, 2026-09-21. There were **seven** (`_RUN_SUBCOMMANDS` post-dated the count); all seven are gone, moved onto `CommandSpec.subcommands`. Five NON-`_*_SUBCOMMANDS` static tables stay by design (second-level arguments + the theme-name restatement) — see step 4 |
 | `from ..commands.factory import CommandFactory` (`engine/completion.py:48`), and the `client` parameter of `complete()` with it | ✅ DONE — step 4; `grep -rnE "from \.\.commands\|from ppxai\.commands\|import ppxai\.commands" ppxai/engine/` is empty. Fenced at zero by `tests/test_no_new_lazy_imports.py::TestEngineImportsNoCommands`, which REPLACES the retired `TestEngineCompletionStaysALeaf` |
+| `ppxai/rich/ui.py::display_welcome()`'s hand-written ~30-command list — the SEVENTH roster, on the Python side, rendered at Rich startup and 18 commands out of date | ✅ DONE — step 5, 2026-09-21; DERIVED from `CommandFactory.roster("rich")["commands"]`, handed in as plain data by `rich/main.py` |
+| `ppxai/rich/ui_components.py::render_welcome()` — a second, differently-worded welcome roster (13 commands), **zero callers** | ✅ DONE — step 5; deleted outright |
+| the literal quit names in the two TUI intercepts (`("quit", "q", "exit")`, `["/quit", "/exit"]`) | ✅ DONE — step 5; both derive from `CommandFactory.names_for_client_action("app.quit")`. ONE named legacy extra remains (`"q"`, Textual only) as a recorded owner decision |
+| ANY new literal catalog, anywhere | ✅ FENCED — step 5's generic detector (N = 6 distinct registered commands in one literal), with one named, self-fencing exemption |
 
 Not a deletion and deliberately so: `web/shared/side-effects.js` stays —
 it is a BEHAVIOUR mirror (ADR 0007 §Which mirrors can go), and step 3a
-ADDED a handler to it (`refresh_command_roster`).
+ADDED a handler to it (`refresh_command_roster`). Step 5 holds it in
+line the way that section prescribes: a parity fence reading the
+Python-owned vocabulary (`SideEffectKind.all_kinds()`), in BOTH
+directions and across both clients.
+
+## Open owner decisions
+
+Collected here at the close of step 5 — everything this record
+deliberately did NOT decide. None blocks anything; each is a visible
+behaviour or schema change that wants an owner, not a refactor.
+
+1. **`/q` in Textual** (step 5). `ppxai/tui/app.py` accepts `/q`; it is
+   not a registered alias, so completion, `/help` and `GET /commands`
+   do not know it exists, and Rich does not accept it. **Registering it**
+   makes it appear in Rich's completion too; **removing it** breaks a
+   shortcut Textual users have. Held as the single-row baseline
+   `TEXTUAL_LEGACY_QUIT_BASELINE` so the choice is recorded rather than
+   hidden in a tuple literal.
+2. **Should `/help <cmd>` list subcommands?** (step 4). Eight commands
+   declare `subcommands` now, and neither `generate_help` nor
+   `get_command_help` renders them — `/token` has declared them since
+   step 1b without showing them. It is a visible output change to a
+   surface with its own tests.
+3. **The second-level "argument kinds" schema** (step 1, still open).
+   Five static tables stayed in `engine/completion.py` because the flat
+   `list[tuple[str, str]]` shape cannot express a SECOND argument
+   position (`/usage show <mode>`, `/checkpoint backend <name>`,
+   `/theme emoji <on|off>`, `/task respond <id> <answer>`) without
+   publishing them as first-level subcommands in `GET /commands` and
+   `/help`. `_THEME_NAMES` is a different case again: a restatement of a
+   RUNTIME registry (`tui/themes/themes.py`), where the real fix points
+   at the theme registry and `engine -> tui` would be a NEW inversion.
+4. **Fold chat-shaped-ness into the roster** (step 5). Web's
+   `STREAMING_COMMANDS` (8 names) is the one literal the generic
+   catalog detector exempts. A `chat_shaped` field on `CommandSpec`
+   would delete it — a schema change to a published payload, so it is
+   its own decision.
+5. **`GET /schema/app-state` has no consumer** (ADR 0007
+   §Follow-up, out of scope here). The endpoint exists
+   (`server/routes/schema.py:32`) and neither JS client calls it, while
+   both keep hand-written mirrors pinned by cross-language sentinel
+   tests. It is the command-roster problem one stage further along, and
+   steps 3a/3b built exactly the fetch-at-startup machinery it would
+   reuse. Deliberately not folded in: it touches the sentinel tests and
+   the `state_sync` contract.
+6. **Flipping ADR 0007 to Accepted/Implemented.** All five steps are
+   done; the Status line is the owner's, not this work's.
 
 ## Hybrid commands — dispatch routing becomes data
 

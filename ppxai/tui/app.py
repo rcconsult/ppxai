@@ -69,6 +69,19 @@ from ..engine.task_backend import configure_task_backend
 from .run_consent import RunConsentWatcher
 from .session_restore_ops import check_session_restoration, restore_session
 
+#: The ONE quit name that is not in the command registry (ADR 0007
+#: step 5). `/q` has been accepted by this TUI since before the registry
+#: existed, but it is NOT a declared alias of `/quit`, so completion,
+#: `/help` and `GET /commands` do not know it exists — and Rich does not
+#: accept it. Registering it would make it appear in Rich's completion
+#: too; removing it would break a shortcut Textual users have; both are
+#: visible behaviour changes, so the call is the OWNER's, not this
+#: refactor's. It is named and commented here, and carried as a
+#: single-row shrinking baseline in
+#: `tests/test_command_parity_fence.py::TEXTUAL_LEGACY_QUIT_BASELINE`,
+#: so the decision is recorded rather than hidden in a tuple literal.
+TEXTUAL_LEGACY_QUIT_NAMES = frozenset({"q"})
+
 
 class PPXAIDEApp(App):
     """Main ppxaide application.
@@ -1038,8 +1051,15 @@ class PPXAIDEApp(App):
         cmd = parts[0].lower()
         args = parts[1] if len(parts) > 1 else ""
 
-        # Special case: quit/exit (direct action)
-        if cmd in ("quit", "q", "exit"):
+        # Special case: the `app.quit` client action (direct action).
+        # ADR 0007 step 5: the names are DERIVED from the spec that
+        # declares `client_action="app.quit"` (`/quit`, alias `/exit`)
+        # rather than spelled out here — a literal list was a seventh
+        # hand-written roster. `TEXTUAL_LEGACY_QUIT_NAMES` is the one
+        # name that is NOT in the registry and is kept working here; see
+        # its definition for the open owner decision.
+        if cmd in CommandFactory.names_for_client_action("app.quit") \
+                or cmd in TEXTUAL_LEGACY_QUIT_NAMES:
             self.exit()
             return
 

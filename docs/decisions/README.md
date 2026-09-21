@@ -12,15 +12,17 @@ Status is summarised; the record itself is authoritative.
 | [0004](0004-llm-gateway-features.md) | LLM gateway features | ✅ Accepted — implemented; §4 revised by ADR 0009 |
 | [0005](0005-inspection-triplet.md) | Inspection Triplet for runtime observability | ✅ Accepted — implemented |
 | [0006](0006-content-block-schema-separation.md) | Engine-internal vs wire content schema | ✅ Accepted — implemented |
-| [0007](0007-completion-first-class-service.md) | One command registry: completion, help and the roster from a single declaration | 🟡 Proposed — steps 1–4 implemented, **only step 5 (parity fence) open**, no target release. **Revised 2026-09-20: goal restated (define once, derive everywhere); roster decision changed from AppState push to a `GET /commands` pull endpoint.** **2026-09-21: all six hand-written rosters are gone (steps 3a/3b/4), and step 4 removed the `engine → commands` import — `ppxai/engine/` imports nothing from `ppxai.commands`, fenced at zero by `TestEngineImportsNoCommands`, which replaces the retired `TestEngineCompletionStaysALeaf`** |
+| [0007](0007-completion-first-class-service.md) | One command registry: completion, help and the roster from a single declaration | 🟡 Proposed — **implementation COMPLETE (all five steps, 2026-09-21, unreleased); the status flip awaits the owner.** **Revised 2026-09-20: goal restated (define once, derive everywhere); roster decision changed from AppState push to a `GET /commands` pull endpoint.** **2026-09-21: all six hand-written rosters are gone (steps 3a/3b/4), and step 4 removed the `engine → commands` import — `ppxai/engine/` imports nothing from `ppxai.commands`, fenced at zero by `TestEngineImportsNoCommands`, which replaces the retired `TestEngineCompletionStaysALeaf`. Step 5 closed the SEVENTH roster (`rich/ui.py::display_welcome`, 18 commands out of date) and added `tests/test_command_parity_fence.py` — both-directions action coverage per client, two shrinking baselines, a generic re-added-catalog detector, and side-effect kinds derived from Python** |
 | [0008](0008-cross-tier-cost-and-resource-accounting.md) | Cross-tier cost + shared-resource accounting | ✅ Accepted 2026-09-06 — Option A implemented (`ppxai/usage_events.py`, taps in `engine/task_runner.py` + `engine/session.py`, rollup in `/cost`). **Debt Item 49 closed.** |
 | [0009](0009-task-execution-profiles.md) | Task execution profiles + web_search enrichment | ✅ Accepted — all four steps implemented v1.19.1 |
 | [0010](0010-config-shape-review.md) | Config shape: three axes | ✅ Implemented v1.19.1 — **clean break**, one deviation from the planned migration |
 | [0011](0011-command-taxonomy-streamline.md) | Command taxonomy (`/auto` · `/run` · `/task`) | ✅ Accepted — implemented v1.19.1 |
 | [0012](0012-wire-protocol-as-per-model-capability.md) | Per-model facts: one resolution system, wire protocol included | ✅ Implemented v1.19.1 — all four migration steps: unified `ModelFacts`/`ProviderCapabilities` split, `ProtocolHandler` + **four** wire handlers, `wire_protocol` routing, Perplexity on two wires. **Items 61 + 62 closed.** §6 (Anthropic `messages`) **shipped in v1.19.1**, opt-in and untested against the live API (Item 71). Resolution logic moved from `config/facts_config.py` to `engine/facts_config.py` on 2026-09-20 |
 
-The only open record is **0007 step 2**; everything else is
-implemented. Numbering is sequential — the next record is `0013`.
+Every record is implemented. **0007 is the only one still marked
+Proposed, and only because its status flip is an owner decision** — all
+five of its steps landed 2026-09-21 (unreleased). Numbering is
+sequential — the next record is `0013`.
 
 ## About these records
 

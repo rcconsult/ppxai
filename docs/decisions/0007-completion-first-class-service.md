@@ -9,11 +9,21 @@ changed from AppState push to a pull endpoint, see §Goal and §Decision**;
 below: ending a GUI session is a UI button workflow, not a command**.
 Originally titled "Completion as a first-class service; command roster via
 AppState".)
-**Status:** Proposed — step 1 shipped v1.18.8; steps 2 + 2.5, **step
-3a (web fetches the roster; `commands.js` deleted)**, **step 3b
-(VSCode fetches it; `commands.ts` deleted)** and **step 4 (completion is
-DERIVED from the spec; the `engine → commands` import is GONE)** landed
-2026-09-21 on `bugfix/v1.19.3` (`CommandFactory.iter_completion_specs`, `commands/factory.py`). **Only step 5 (the parity fence) remains**, so the Status above is the owner's to flip, not this edit's. Extracting a `ppxai/completion/` package is now optional and cosmetic (see §Future). The "target v1.19.x" in the 08-15 revision has now been passed by v1.19.0, v1.19.1 and v1.19.2 without step 2 landing — it was a hope, not a plan, and is restated below as an explicit deferral with triggers rather than a date.
+**Status:** Proposed — **IMPLEMENTATION COMPLETE; the status change
+awaits the owner.** All five steps are done: step 1 shipped v1.18.8;
+steps 2 + 2.5, **step 3a (web fetches the roster; `commands.js`
+deleted)**, **step 3a-sec (sensitive subcommands)**, **step 3b (VSCode
+fetches it; `commands.ts` deleted)**, **step 4 (completion is DERIVED
+from the spec; the `engine → commands` import is GONE)** and **step 5
+(the parity fence — `tests/test_command_parity_fence.py`, 128 tests)**
+all landed 2026-09-21 on `bugfix/v1.19.3`
+(`CommandFactory.iter_completion_specs`, `commands/factory.py`).
+`CommandSpec` is the only command declaration left in the tree, and the
+fence is what keeps it that way. This edit deliberately does NOT flip
+the status to Accepted/Implemented — that is the owner's call, and it is
+the last open item on this record (see the plan's §Open owner
+decisions). Extracting a `ppxai/completion/` package is now optional and
+cosmetic (see §Future). The "target v1.19.x" in the 08-15 revision has now been passed by v1.19.0, v1.19.1 and v1.19.2 without step 2 landing — it was a hope, not a plan, and is restated below as an explicit deferral with triggers rather than a date.
 **Related:**
 - `ppxai/engine/completion.py` — current home of `complete()`
 - `ppxai/commands/factory.py` — `CommandFactory`, `CompletionCommandInfo`, `iter_completion_specs()`
@@ -473,7 +483,8 @@ seed. Incremental path:
    `CompletionCommandInfo`; `engine.completion` stops reading factory
    privates. No cascade — the `complete()` seam is unchanged. (Debt 29
    privates-reach closed.)
-2. **Open, no target release.** Sequenced by the goal, not by the layer
+2. **Done, no target release** (all five steps landed 2026-09-21 on
+   `bugfix/v1.19.3`, unreleased). Sequenced by the goal, not by the layer
    inversion (revised 2026-09-20 — the earlier (a)/(b)/(c) split treated
    the roster as the optional tail; it is the head):
 
@@ -496,9 +507,42 @@ seed. Incremental path:
       `/help` needed no change — it has been registry-generated since
       step 1b, and neither `generate_help` nor `get_command_help`
       renders subcommands, so the move changed no help output.
-   5. **Parity fence** — no client renders an undeclared command; no
-      declared command goes unrendered; and every `client_action` named in
-      Python is implemented by every client in that spec's `clients`.
+   5. **Parity fence** — ✅ **DONE 2026-09-21.**
+      `tests/test_command_parity_fence.py` (128 tests) asserts five
+      things, each read off the PYTHON declaration and compared against
+      the real client source: (a) action coverage in BOTH directions per
+      client — no missing implementations, no orphan ones, nothing
+      outside the `CLIENT_ACTIONS` vocabulary; (b) no undeclared
+      intercepts — zero per-name branches in either JS client, and
+      `LEGACY_INTERCEPTS` as an explicit five-row SHRINKING baseline that
+      fails when it grows AND when it shrinks without its baseline row
+      going too; (c) no surviving hand-written roster — every deletion in
+      the plan's completeness table fenced as absent, plus a GENERIC
+      detector (a literal naming ≥ 6 distinct registered commands, N
+      measured against the real tree) with one named, self-fencing
+      exemption; (d) side-effect kind coverage DERIVED from
+      `SideEffectKind.all_kinds()` rather than from a third hand-written
+      list; (e) roster self-consistency for every id in `KNOWN_CLIENTS`.
+
+      Step 5 also closed the SEVENTH roster, which was on the Python
+      side and which step 4 found: `rich/ui.py::display_welcome()` — a
+      live hand-written ~30-command list rendered at Rich startup and
+      **18 commands out of date** — now derives from
+      `CommandFactory.roster("rich")`, taking it as plain data because
+      `rich/ui.py` genuinely cannot import `ppxai.commands` (that
+      package's `__init__` imports this module back). A second,
+      caller-less welcome roster (`ui_components.py::render_welcome`)
+      was deleted, and both TUI quit intercepts now derive their names
+      from the spec via the new
+      `CommandFactory.names_for_client_action()`, leaving exactly one
+      named legacy extra (`"q"`, Textual only) as a recorded owner
+      decision rather than a hidden literal.
+
+      Retargeting the side-effect fences onto Python immediately found a
+      live gap: `test_web_shared_modules.py`'s hardcoded kind set was
+      missing `prompt_text`, which web has always implemented. That is
+      the whole argument for (d) in one line — a hand-written expected
+      set stops covering things silently.
 
    Each step ships alone. Steps 1–2 are server-only and change no client.
 
@@ -547,6 +591,20 @@ list of `SideEffectKind` names and of `CLIENT_ACTIONS` — so a client can
 verify at startup that it implements every name the server may send, and
 warn on a gap. That is a parity check, not a replacement; it belongs with
 step 5's fence.
+
+> **Done as a BUILD-TIME check, not a runtime one (step 5, 2026-09-21).**
+> `tests/test_command_parity_fence.py` reads both Python-owned
+> vocabularies and compares them against what each client source
+> actually implements, in both directions. A runtime warning was not
+> built and is not needed: the gap it would report is a shipping bug, and
+> a test that fails in CI catches it before the shipping rather than
+> after. The `client_action` half additionally fails CLOSED at runtime
+> already — a client-dispatched command whose action is unimplemented is
+> refused with a clear error and **never** forwarded (steps 3a/3b), so
+> the unsafe direction was closed by construction. The `SideEffectKind`
+> half cannot fail closed by design (kinds are an OPEN enum: unknown
+> kinds are ignored on purpose), which is exactly why that one needs a
+> test and gets one.
 
 ### Follow-up, out of scope here: the AppState schema endpoint has no consumer
 

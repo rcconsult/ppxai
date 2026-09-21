@@ -24,6 +24,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from ppxai.commands.results import SideEffectKind
+
 EXT_DIR = Path(__file__).resolve().parents[1] / "vscode-extension" / "src"
 
 
@@ -106,35 +108,19 @@ class TestSideEffectsHandlerModule:
             src,
         ), "apply() must be async (vscode.* APIs are async)"
 
-    def test_handles_every_v18_1_kind(self):
-        """Drift fence: every kind in the v1.18.1 SideEffectKind
-        constants must have a case in the VSCode dispatcher,
-        EXCEPT for kinds the spec marks as web-only / no-op."""
+    def test_handles_every_kind(self):
+        """Drift fence: every kind `SideEffectKind` declares must have a
+        case in the VSCode dispatcher.
+
+        **DERIVED since ADR 0007 step 5** — it used to hardcode its own
+        17-name set. See tests/test_command_parity_fence.py for the full
+        both-directions comparison; this row stays because this file is
+        where someone editing sideEffectsHandler.ts looks."""
         src = _read("sideEffectsHandler.ts")
-        for kind in (
-            "open_editor",
-            "open_viewer",
-            "show_image",
-            "show_pdf",
-            "reveal_in_explorer",
-            "open_terminal",
-            "run_shell",
-            "open_html_preview",
-            "refresh_file_tree",
-            "set_theme",
-            "copy_to_clipboard",
-            "attach_file",
-            "prompt_quick_pick",
-            "prompt_text",
-            "notify",
-            # ADR 0007 step 3b: /reload's roster-changed signal. Web
-            # grew its handler in step 3a; this is the VSCode half.
-            "refresh_command_roster",
-            "vscode_delegate",
-        ):
-            assert kind in src, (
-                f"sideEffectsHandler.ts missing handler for kind: {kind}"
-            )
+        missing = [kind for kind in SideEffectKind.all_kinds() if kind not in src]
+        assert not missing, (
+            f"sideEffectsHandler.ts has no case for: {missing}"
+        )
 
     def test_uses_sideeffect_host_interface(self):
         """The handler must take a SideEffectHost interface, not
@@ -334,18 +320,14 @@ class TestCrossClientParity:
     to prevent."""
 
     def test_web_and_vscode_handle_same_kind_set(self):
+        """**DERIVED since ADR 0007 step 5** — this list of 17 names was
+        hand-maintained too, so "both clients agree" only ever meant
+        "both agree with a third hand-written list"."""
         web_src = (
             Path(__file__).resolve().parents[1]
             / "ppxai" / "web" / "shared" / "side-effects.js"
         ).read_text(encoding="utf-8")
         vscode_src = _read("sideEffectsHandler.ts")
-        for kind in (
-            "open_editor", "open_viewer", "show_image", "show_pdf",
-            "reveal_in_explorer", "open_terminal", "run_shell",
-            "open_html_preview", "refresh_file_tree", "set_theme",
-            "copy_to_clipboard", "attach_file", "prompt_quick_pick",
-            "prompt_text", "notify", "refresh_command_roster",
-            "vscode_delegate",
-        ):
+        for kind in SideEffectKind.all_kinds():
             assert kind in web_src, f"web missing kind: {kind}"
             assert kind in vscode_src, f"VSCode missing kind: {kind}"
