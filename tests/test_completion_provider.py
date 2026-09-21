@@ -14,11 +14,43 @@ Scope:
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 import pytest
+from prompt_toolkit.document import Document
 
 # Trigger side-effect registrations so CommandFactory is populated
 import ppxai.commands.handler  # noqa: F401
-from ppxai.engine.completion import complete
+from ppxai.commands.factory import CommandFactory
+from ppxai.engine.completion import complete as engine_complete
+from ppxai.rich.main import PPXAICompleter
+from ppxai.tui.completer import TextualCompleter
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def roster_for(client=None):
+    """The roster as `complete()` now takes it (ADR 0007 step 4).
+
+    A test may import `ppxai.commands`; `ppxai/engine/completion.py` may
+    not — that edge is what step 4 removed, and
+    `tests/test_no_new_lazy_imports.py::TestEngineImportsNoCommands`
+    holds it at zero. The caller reads the registry and hands over plain
+    data, already filtered for its client.
+    """
+    return CommandFactory.roster(client)["commands"]
+
+
+def complete(buffer, cursor=-1, *, client=None, **kwargs):
+    """Test-side stand-in for the three real callers.
+
+    They each fetch `CommandFactory.roster(<their client>)["commands"]`
+    and pass it in; this helper does the same from a `client=` kwarg, so
+    every assertion below reads exactly as it did before step 4 and the
+    behaviour comparison is honest rather than rewritten.
+    """
+    return engine_complete(buffer, cursor, roster=roster_for(client), **kwargs)
 
 
 @pytest.fixture
@@ -567,3 +599,188 @@ class TestClientGating:
                         json={"buffer": "/task collect ", "client": "rich"})
         assert r.status_code == 200
         assert "run_held1" in [i["text"] for i in r.json()["items"]]
+
+
+# =============================================================================
+# ADR 0007 step 4 — completion is DERIVED from the command spec
+# =============================================================================
+#
+# Before step 4 this module held seven hand-written `_*_SUBCOMMANDS` tables
+# and reached UP into `ppxai.commands` to read the roster. Both are gone: the
+# caller passes the roster in as plain data, and every first-level subcommand
+# comes off `CommandSpec.subcommands`. These tests pin that the derivation is
+# real — they compare against the SPEC, never against a copied list, so a
+# table quietly reappearing anywhere fails them.
+
+COMPLETION_SOURCE = (
+    REPO_ROOT / "ppxai" / "engine" / "completion.py"
+).read_text(encoding="utf-8")
+
+
+class TestNoHandWrittenSubcommandTables:
+    """The deletion the plan tracks: no `_*_SUBCOMMANDS` table survives."""
+
+    def test_the_source_is_where_we_think(self):
+        assert "def complete(" in COMPLETION_SOURCE
+
+    def test_the_detector_would_see_a_table(self):
+        # Guard first: the regex must match the exact shape that was deleted.
+        assert re.search(
+            r"_[A-Z_]+_SUBCOMMANDS\s*:",
+            '_TOOLS_SUBCOMMANDS: list[tuple[str, str]] = [\n]',
+        )
+
+    def test_no_subcommand_table_remains(self):
+        offenders = re.findall(r"^_[A-Z_]+_SUBCOMMANDS\s*[:=]",
+                               COMPLETION_SOURCE, re.M)
+        assert offenders == [], (
+            "a hand-written subcommand table is back in "
+            "ppxai/engine/completion.py. Declare it on the command's "
+            "CommandSpec(subcommands=[...]) instead — completion reads the "
+            f"roster the caller hands in (ADR 0007 step 4): {offenders}"
+        )
+
+
+class TestSubcommandsComeFromTheSpec:
+    """Every migrated command's first-level completion IS its declaration.
+
+    Compared against `CommandSpec.subcommands` rather than a hand-copied
+    list: if the two were restated, this test would pass while they drifted
+    — which is the failure mode the whole record exists to remove.
+    """
+
+    MIGRATED = ["tools", "usage", "checkpoint", "status", "theme",
+                "task", "run", "token"]
+
+    @pytest.mark.parametrize("name", MIGRATED)
+    def test_offered_equals_declared(self, name):
+        spec = CommandFactory.get(name)
+        assert spec is not None and spec.subcommands, name
+        declared = [sub for sub, _ in spec.subcommands]
+        client = "web" if name == "token" else "rich"
+        offered = [i["text"] for i in complete(f"/{name} ", client=client)
+                   if i["kind"] == "subcommand"]
+        assert offered == declared, name
+
+    @pytest.mark.parametrize("name", MIGRATED)
+    def test_descriptions_come_from_the_spec_too(self, name):
+        spec = CommandFactory.get(name)
+        declared = dict(spec.subcommands)
+        client = "web" if name == "token" else "rich"
+        for item in complete(f"/{name} ", client=client):
+            if item["kind"] == "subcommand":
+                assert item["description"] == declared[item["text"]], name
+
+    def test_a_declared_subcommand_flows_through_to_completion(self):
+        """Liveness: add one to the DATA and completion must offer it."""
+        roster = [dict(e) for e in roster_for("rich")]
+        entry = next(e for e in roster if e["name"] == "status")
+        entry["subcommands"] = entry["subcommands"] + [
+            {"name": "zebra", "description": "probe", "sensitive": False}
+        ]
+        offered = [i["text"] for i in engine_complete("/status ", roster=roster)]
+        assert offered[-1] == "zebra"
+
+    def test_prefix_filtering_still_narrows(self):
+        assert [i["text"] for i in complete("/checkpoint ba", client="rich")] \
+            == ["backend"]
+
+    def test_second_level_arguments_are_unaffected(self):
+        """The nested tables stayed in completion (the flat schema cannot
+        hold them) and must keep working."""
+        assert [i["text"] for i in complete("/checkpoint backend ", client="rich")] \
+            == ["git", "file", "auto", "none"]
+        assert [i["text"] for i in complete("/usage show ", client="rich")] \
+            == ["session", "provider", "model", "off"]
+        assert [i["text"] for i in complete("/theme emoji ", client="rich")] \
+            == ["on", "off"]
+
+    def test_no_duplicate_subcommand_within_a_command(self):
+        """Subcommand names are not aliases, so nothing else pins this —
+        but a duplicate would offer the same completion twice."""
+        for name, spec in CommandFactory._registry.items():
+            declared = [sub for sub, _ in spec.subcommands]
+            assert len(declared) == len(set(declared)), name
+
+
+class TestAbsentRosterOffersNoCommands:
+    """No fallback: with no roster, completion does not reach for the
+    registry — it simply offers no slash commands. Paths and @refs, which
+    need no roster at all, must keep working."""
+
+    @pytest.mark.parametrize("roster", [None, []])
+    def test_no_command_names(self, roster):
+        assert engine_complete("/to", roster=roster) == []
+        assert engine_complete("/", roster=roster) == []
+
+    @pytest.mark.parametrize("roster", [None, []])
+    def test_no_subcommands(self, roster):
+        assert engine_complete("/tools ", roster=roster) == []
+        assert engine_complete("/token set", roster=roster) == []
+
+    @pytest.mark.parametrize("roster", [None, []])
+    def test_path_completion_still_works(self, roster, populated_dir):
+        items = engine_complete("/attach ", roster=roster,
+                                working_dir=str(populated_dir))
+        assert "alpha.txt" in [i["text"] for i in items]
+
+    @pytest.mark.parametrize("roster", [None, []])
+    def test_at_file_completion_still_works(self, roster, populated_dir):
+        items = engine_complete("look at @al", roster=roster,
+                                working_dir=str(populated_dir))
+        assert "@alpha.txt" in [i["text"] for i in items]
+
+    def test_the_roster_argument_is_required(self):
+        """A forgotten roster is a TypeError at the call site, not a
+        silently empty dropdown."""
+        with pytest.raises(TypeError):
+            engine_complete("/to")
+
+
+class TestTheThreeCallersPassTheirClientId:
+    """Each caller reads the roster for ITS client and hands it over.
+
+    Source-text, because the behavioural half lives in
+    `tests/test_completer_dynamic.py` (Rich, driven end to end) and in the
+    route tests above (server). What a source check adds is the client ID:
+    a caller that fetched `roster()` unfiltered would still complete, just
+    with commands its user cannot run.
+    """
+
+    CALLERS = {
+        "ppxai/rich/main.py": '"rich"',
+        "ppxai/tui/completer.py": '"textual"',
+        "ppxai/server/routes/completion.py": "request.client",
+    }
+
+    @pytest.mark.parametrize("path,client", sorted(CALLERS.items()))
+    def test_caller_passes_a_roster_for_its_client(self, path, client):
+        src = (REPO_ROOT / path).read_text(encoding="utf-8")
+        assert f'roster=CommandFactory.roster({client})["commands"]' in src, path
+
+    @pytest.mark.parametrize("path", sorted(CALLERS))
+    def test_caller_passes_no_client_kwarg(self, path):
+        """`complete()` has no `client` parameter any more — the gate is
+        the roster. A leftover `client=` would be a TypeError, but the
+        source check names the file."""
+        src = (REPO_ROOT / path).read_text(encoding="utf-8")
+        assert "client=client" not in src, path
+
+    def test_rich_completes_through_the_real_adapter(self):
+        """Behavioural end of the same claim: /token is web+vscode-only,
+        so Rich's own completer must not offer it — and it can only know
+        that from the roster it fetched for "rich"."""
+
+
+        doc = Document(text="/to", cursor_position=3)
+        texts = [c.text for c in
+                 PPXAICompleter().get_completions(doc, complete_event=None)]
+        assert "/tools" in texts
+        assert "/token" not in texts
+
+    def test_textual_completes_through_the_real_adapter(self, tmp_path):
+
+        completer = TextualCompleter(working_dir=tmp_path)
+        texts = [r for r, _ in completer.get_completions("/to")]
+        assert any(t.startswith("/tools") for t in texts)
+        assert not any(t.startswith("/token") for t in texts)

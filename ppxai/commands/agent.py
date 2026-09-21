@@ -829,5 +829,16 @@ CommandFactory.register(CommandSpec(
     description="Manage checkpoints for undo functionality",
     handler=handle_checkpoint,
     category="agent",
-    usage="/checkpoint [status|list|backend|clear|info]"
+    usage="/checkpoint [status|list|backend|clear|info]",
+    # ADR 0007 step 4 (was `_CHECKPOINT_SUBCOMMANDS`). The backend names
+    # offered for `/checkpoint backend <x>` are a second level and stay
+    # in completion — the flat schema cannot express them.
+    subcommands=[
+        ("status",  "Show checkpoint status"),
+        ("list",    "List recent checkpoints"),
+        ("backend", "Set checkpoint backend"),
+        ("clear",   "Clear old snapshots"),
+        ("info",    "Show checkpoint details"),
+        ("undo",    "Revert last checkpoint"),
+    ],
 ))

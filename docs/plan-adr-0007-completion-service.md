@@ -1,8 +1,8 @@
 # Plan — closing ADR 0007 (one command registry)
 
 **Status: steps 1 (1a + 1b), 2, 2.5, 3a (web), 3a-sec (sensitive
-subcommands) and 3b (VSCode) IMPLEMENTED; steps 4-5 PROPOSED, not
-started.**
+subcommands), 3b (VSCode) and 4 (derive, don't restate) IMPLEMENTED;
+step 5 PROPOSED, not started.**
 Written 2026-09-20 on `bugfix/v1.19.3`; **rewritten the same day** after
 the owner restated the goal. The first draft split the work (a) invert the
 edge / (b) relocate / (c) roster, called (c) "a feature wearing the ADR's
@@ -16,8 +16,8 @@ file is written not to repeat that.
 
 **Record:** [decisions/0007-completion-first-class-service.md](decisions/0007-completion-first-class-service.md)
 · step 1 shipped v1.18.8 · steps 2 and 2.5 landed 2026-09-20, steps 3a
-(web), 3a-sec and 3b (VSCode) on 2026-09-21, all on `bugfix/v1.19.3`, no
-target release.
+(web), 3a-sec, 3b (VSCode) and 4 on 2026-09-21, all on `bugfix/v1.19.3`,
+no target release.
 
 ## The goal
 
@@ -35,11 +35,19 @@ catalog at `web/app.js:199`; six `_*_SUBCOMMANDS` tables in
 
 > **Correction (2026-09-21): it was SIX.** `vscode-extension/src/shared/
 > commands.ts` is a second, independent hand-written roster (31 entries),
-> not a shared file — see step 3. **Five of the six are now gone:**
+> not a shared file — see step 3. **ALL SIX ARE NOW GONE:**
 > `_BUILTIN_SPECIAL_COMMANDS` + `_CLIENT_GATES` (step 1b),
 > `web/shared/commands.js` and the `app.js` fallback catalog (step 3a),
-> and `commands.ts` (step 3b, same day). Remaining: `CommandSpec` (the
-> intended single source) and the six `_*_SUBCOMMANDS` tables (step 4).
+> `commands.ts` (step 3b, same day), and the `_*_SUBCOMMANDS` tables
+> (step 4, same day). Only `CommandSpec` — the intended single source —
+> is left.
+>
+> **Second correction (2026-09-21, while doing step 4): there were SEVEN
+> `_*_SUBCOMMANDS` tables, not six.** This file and the ADR both say
+> six; the file held `_TOOLS_`, `_USAGE_`, `_CHECKPOINT_`, `_STATUS_`,
+> `_THEME_`, `_TASK_` **and `_RUN_`** (the U3 one-off family, added after
+> the count was taken). Five further static tables were NOT
+> `_*_SUBCOMMANDS` and are still there by design — see step 4.
 
 **Diff the rosters against canonical names AND aliases** — comparing
 canonical-only produces false "JS-only" hits (the first draft of this plan
@@ -725,15 +733,125 @@ fences, and the full Python suite. What is NOT is real webview
 interaction, SecretStorage, and the side-effect refetch in a live host.
 The manual smoke list is in the step-3b report.
 
-### 4. Derive, don't restate
+### 4. Derive, don't restate — ✅ DONE (2026-09-21)
 
-Completion's subcommand tables and `/help` read the spec. **At this point
-`engine/completion.py` stops importing `CommandFactory`** — the layer
-inversion and the `engine → commands → engine` package cycle close as a
-side effect. Delete `TestEngineCompletionStaysALeaf` (its own failure
-message says when).
+Completion's subcommand tables read the spec, and `engine/completion.py`
+stopped importing `CommandFactory` — the layer inversion and the
+`engine → commands → engine` package cycle closed as a side effect.
 
-Acceptance: `grep -rn 'from \.\.commands' ppxai/engine/` returns nothing.
+**Acceptance, met:**
+`grep -rnE "from \.\.commands|from ppxai\.commands|import ppxai\.commands" ppxai/engine/`
+returns nothing — checked across the whole engine package, function-level
+imports included. It was the only such edge; no other was found.
+
+**The design decision: DATA IN, NOT A PROTOCOL.** An earlier draft (and
+the ADR's own §Decision) had completion hold a `CommandRegistryProtocol`
+collaborator inside a new `CompletionService` in a new top-level
+`ppxai/completion/` package. **None of that was built, and none of it is
+needed** — steps 1–2 removed the reason for it. `CommandFactory.roster(client)`
+already returns PLAIN DATA: one entry per canonical command with
+`aliases`, `hidden` and `subcommands`, already filtered by `client_sees`.
+There is no collaborator left to abstract; a Protocol would only describe
+"an object that can hand me a list of dicts", which is a list of dicts.
+
+So `complete()` gained one keyword argument and lost one:
+
+    def complete(buffer, cursor=-1, *, roster, working_dir=None,
+                 current_provider=None, tool_names=None, agent_runs=None)
+
+- `roster` is **required and keyword-only**, typed
+  `list[dict[str, Any]] | None`: whatever
+  `CommandFactory.roster(client)["commands"]` yields. It has **no
+  default** on purpose — with only three callers, a forgotten roster
+  would be a silently empty dropdown that no test would notice, while a
+  missing argument is a `TypeError` naming the call site. Passing `None`
+  or `[]` is legitimate and means "no registry": no slash-command or
+  subcommand completions, while path and `@file` completion still work.
+- **`client` is GONE.** With the roster arriving already filtered, a
+  client id inside completion could only disagree with the data it was
+  handed. `_gate_for`, `_client_allows` and the `client_sees` import went
+  with it: gating is now structural — a command the client may not see is
+  simply not in the list. The fail-OPEN semantics for `client=None`
+  survives unchanged end to end, because the CALLER passes
+  `roster(None)`, which is the whole catalog
+  (`tests/test_client_handled_commands_contract.py`, Part A).
+- **No fallback.** There is no `roster=None` branch that imports
+  `CommandFactory`, no lazy import, no `sys.modules` lookup. A fallback
+  would be the same edge behind a branch nothing exercises.
+
+**Which tables moved, and which did not.** Seven (not six) tables were
+first-level subcommand rosters and moved onto their command's
+`CommandSpec(subcommands=[...])`, order and descriptions byte-identical,
+using `/token` (step 1b) as the pattern:
+
+| Table | Rows | Now declared in |
+|---|---|---|
+| `_TOOLS_SUBCOMMANDS` | 10 | `commands/tools.py` |
+| `_USAGE_SUBCOMMANDS` | 5 | `commands/tools.py` |
+| `_CHECKPOINT_SUBCOMMANDS` | 6 | `commands/agent.py` |
+| `_STATUS_SUBCOMMANDS` | 3 | `commands/system.py` |
+| `_THEME_SUBCOMMANDS` | 2 | `commands/system.py` |
+| `_TASK_SUBCOMMANDS` | 8 | `commands/task.py` |
+| `_RUN_SUBCOMMANDS` | 6 | `commands/task.py` |
+
+Five static tables stayed in `engine/completion.py`, and NOT because they
+were missed — the flat `list[tuple[str, str]]` shape cannot express them
+without conflating two argument positions (they would then be offered as
+first-level subcommands and published as such in `GET /commands` and
+`/help`):
+
+| Stayed | Why |
+|---|---|
+| `_USAGE_DISPLAY_MODES` (4), `_CHECKPOINT_BACKENDS` (4), `_EMOJI_OPTIONS` (2), `_TASK_RESPOND_ANSWERS` (2) | **second-level** arguments (`/usage show <mode>`, `/checkpoint backend <name>`, `/theme emoji <on\|off>`, `/task respond <id> <answer>`). Expressing them needs a nested argument schema — step 1's "how are argument kinds expressed" question, still open |
+| `_THEME_NAMES` (13) | first-level, but a restatement of a RUNTIME registry (`ppxai/tui/themes/themes.py` + `rich/themes.py`), not of the command declaration. Moving it to the spec would freeze a third copy into the roster; the real fix points at the theme registry, and `engine → tui` would be a NEW inversion |
+| `_TASK_ID_VERB_STATUSES`, `_PATH_ARG_COMMANDS`, `_CONTEXT_PROVIDERS` | not subcommands at all: a verb→status routing map for live run ids, a path-argument kind table, and the `@`-provider list |
+
+Genuinely dynamic suggestions were untouched and stay behaviour: run ids
+(`/task get <id>`), model ids, provider ids, tool names, file paths.
+
+**Side benefit, confirmed:** web and VSCode now receive subcommands for
+all eight declaring commands through `GET /commands` — they used to get
+`/token`'s only.
+
+**`/help` needed no change, and nothing else restates command metadata on
+the Python side.** `/help` has been generated from the registry since
+step 1b (`CommandFactory.generate_help`) and `/help <cmd>` from
+`get_command_help`; neither renders `subcommands`, so moving the tables
+changed no help output. **Follow-up, deliberately not taken here:** now
+that eight commands declare subcommands, `/help <cmd>` COULD list them.
+That is a visible output change to a surface with its own tests, and
+`/token` has declared subcommands since step 1b without showing them, so
+it is a separate, deliberate decision rather than a rider on this step.
+
+**Fences.** `TestEngineCompletionStaysALeaf` is **deleted** — its own
+failure message said to, and with the upward import gone there is nothing
+left to be a leaf about. It is replaced, in the same file and style as
+`TestConfigDoesNotImportEngine`, by
+`tests/test_no_new_lazy_imports.py::TestEngineImportsNoCommands`: **no
+module under `ppxai/engine/` imports `ppxai.commands`**, module scope or
+function level, held at ZERO, guards-first.
+
+**Mutation-verified, and the result is worth recording** because it
+differs from the other two fences: restoring the deleted module-scope
+import in `engine/completion.py` **does nothing visible** — `pytest
+--collect-only` still collects all 6,285 tests, `import
+ppxai.engine.completion` still succeeds in a fresh interpreter, and the
+completion suites stay green. Only the new fence fails. (For
+`TestConfigDoesNotImportEngine` and for the retired leaf guard, the
+module-scope mutation was LOUD: a collection-time `ImportError`.) A
+function-level mutation fails the new fence and `TestNoNewLazyImports`,
+and nothing else. So this rule is invisible in production and exists only
+as long as the test does.
+
+**Tests.**
+
+| File | Disposition |
+|---|---|
+| `tests/test_completion_provider.py` | Every existing assertion UNCHANGED, via a module-level `complete(buffer, cursor, *, client=None, **kw)` helper that does what the three real callers do (fetch `roster_for(client)`, pass it in) — so the behaviour comparison is honest rather than rewritten. NEW: no `_*_SUBCOMMANDS` table survives in the source (regex fence, guard tested first); each migrated command's offered subcommands and DESCRIPTIONS equal its `CommandSpec.subcommands` (compared against the spec, never a copy); a subcommand added to the DATA flows through; second-level tables still answer; no duplicate subcommand within a command; absent/empty roster offers no slash commands but still completes paths and `@file` refs; `roster` is required (`TypeError`); and the three callers pass their correct client id — source-text for all three plus a behavioural check that Rich's and Textual's real completers offer `/tools` and not `/token` |
+| `tests/test_client_handled_commands_contract.py` | Part A retargeted, Part B untouched. `_client_allows`/`_gate_for` no longer exist, so the unit-level gate is asked of `client_sees` + the roster's CONTENTS, and the liveness proof (a `monkeypatch` on `_gate_for`) becomes "flip the DATA and the answer flips" — the idiom the web/VSCode behavioural suites already use. The `client=None` fail-open pin is unchanged end to end |
+| `tests/test_client_handled_dispatch.py` | Same one-line helper; its `/token` assertions are unchanged, including "subcommands come from the spec" — true for all eight now |
+| `tests/test_no_new_lazy_imports.py` | Guard 2 replaced (above) |
+| `tests/test_command_spec_schema.py` | Prose only — a comment describing where `KNOWN_CLIENTS` ids are measured |
 
 ### 5. Parity fence
 
@@ -849,7 +967,8 @@ move so the migration is verified rather than assumed:
    (`is_alias` / `canonical`). `/exit` as an alias of `/quit` is native.
 
 **Deletions that prove the migration is complete** — if any survives, a
-second roster still exists:
+second roster still exists. **All of them are done as of 2026-09-21**;
+`CommandSpec` is the only declaration left:
 
 | Deletion | Status |
 |---|---|
@@ -859,7 +978,8 @@ second roster still exists:
 | `web/shared/commands.js` in full — including the alias entries restated as standalone commands (`/cat`, `/sh`, `/term`) | ✅ DONE — step 3a; `CommandRoster.resolve()` reads the `aliases` FIELD |
 | the five hardcoded `if (cmd === '/…')` intercepts in `command-dispatcher.js` | ✅ DONE — step 3a; routing is the roster's `dispatch` field. Fenced by `assert_web_has_no_per_name_escape_hatch` |
 | `vscode-extension/src/shared/commands.ts` in full — 31 entries, plus `generateHelpText`, `SLASH_COMMANDS`, `parseCommand`, `isSlashCommand`, `AI_FORWARDED_COMMANDS` — and `chatPanel.ts`'s twelve intercepts + the `CHAT_SHAPED_TASKS` map | ✅ DONE — step 3b, 2026-09-21; routing is the roster's `dispatch` field. Fenced by `assert_vscode_has_no_per_name_escape_hatch` |
-| the six `_*_SUBCOMMANDS` tables (`engine/completion.py`) | ⬜ step 4 |
+| the six `_*_SUBCOMMANDS` tables (`engine/completion.py`) | ✅ DONE — step 4, 2026-09-21. There were **seven** (`_RUN_SUBCOMMANDS` post-dated the count); all seven are gone, moved onto `CommandSpec.subcommands`. Five NON-`_*_SUBCOMMANDS` static tables stay by design (second-level arguments + the theme-name restatement) — see step 4 |
+| `from ..commands.factory import CommandFactory` (`engine/completion.py:48`), and the `client` parameter of `complete()` with it | ✅ DONE — step 4; `grep -rnE "from \.\.commands\|from ppxai\.commands\|import ppxai\.commands" ppxai/engine/` is empty. Fenced at zero by `tests/test_no_new_lazy_imports.py::TestEngineImportsNoCommands`, which REPLACES the retired `TestEngineCompletionStaysALeaf` |
 
 Not a deletion and deliberately so: `web/shared/side-effects.js` stays —
 it is a BEHAVIOUR mirror (ADR 0007 §Which mirrors can go), and step 3a
@@ -939,9 +1059,23 @@ static analysis misses.
   `tui/completer.py:79`, `routes/completion.py:89`). Real duplication,
   small, independent — do it opportunistically, not as a gate.
 
-## Guard in place meanwhile
+## The guard, and what replaced it (step 4, 2026-09-21)
 
 `tests/test_no_new_lazy_imports.py::TestEngineCompletionStaysALeaf`
-(2026-09-20). The package cycle is proven, not inferred: a module-scope
-import of `engine.completion` from `engine/client.py` kills the pytest run
-at collection with a partially-initialized-module `ImportError`.
+(2026-09-20) fenced the SYMPTOM: `engine.completion`'s leaf status, which
+was the only thing keeping the `engine → commands → engine` package cycle
+dormant. It proved the cycle rather than inferring it — a module-scope
+import of `engine.completion` from `engine/client.py` killed the pytest
+run at collection with a partially-initialized-module `ImportError`.
+
+Step 4 removed the upward import, so the guard was **deleted** (as its own
+failure message instructed) and replaced by the rule itself:
+`TestEngineImportsNoCommands` — no module under `ppxai/engine/` imports
+`ppxai.commands`, at module scope or inside a function, held at ZERO,
+guards-first, same style as `TestConfigDoesNotImportEngine`.
+
+Re-mutating on the new shape gave a different answer worth keeping: with
+the deleted import restored at module scope **nothing fails but the
+fence** (6,285 tests still collect, `import ppxai.engine.completion` still
+succeeds standalone, the completion suites stay green). The edge is
+invisible in production; the test is the only thing that sees it.

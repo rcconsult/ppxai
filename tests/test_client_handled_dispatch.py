@@ -47,7 +47,7 @@ from ppxai.commands.client_handled import client_handled_message
 from ppxai.commands.factory import SERVER_CLIENTS, CommandFactory, CommandSpec, client_sees
 from ppxai.commands.results import NotificationResult, ResultStatus
 from ppxai.common.logger import get_logger
-from ppxai.engine.completion import complete
+from ppxai.engine.completion import complete as engine_complete
 from ppxai.tui.app import PPXAIDEApp
 
 SECRET = "SECRET123"
@@ -285,6 +285,21 @@ class TestSecretNeverEchoed:
 # Completion — exactly once per client, no second roster
 # ---------------------------------------------------------------------------
 
+def complete(buffer, cursor=-1, *, client=None, **kwargs):
+    """`complete()` as a client calls it since ADR 0007 step 4.
+
+    The caller owns the command layer and hands the roster in as plain
+    data, already filtered for its client — `engine/completion.py`
+    imports nothing from `ppxai.commands`. Tests may, so this helper
+    does what `rich/main.py`, `tui/completer.py` and
+    `server/routes/completion.py` each do.
+    """
+    return engine_complete(
+        buffer, cursor,
+        roster=CommandFactory.roster(client)["commands"], **kwargs,
+    )
+
+
 class TestCompletionListsEachCommandOnce:
     @pytest.mark.parametrize("client", ["web", "vscode", "rich", "textual", None])
     def test_no_duplicates_in_the_whole_catalog(self, client):
@@ -317,8 +332,9 @@ class TestCompletionListsEachCommandOnce:
             assert "/token" not in texts, client
 
     def test_token_subcommands_come_from_the_spec(self):
-        """The `_TOKEN_SUBCOMMANDS` table is gone; the four rows now live
-        on the spec and completion reads them there."""
+        """The `_TOKEN_SUBCOMMANDS` table went first (step 1b); step 4
+        moved the other seven, so EVERY first-level subcommand now lives
+        on the spec and completion reads it off the roster."""
         spec = CommandFactory.get("token")
         offered = [i["text"] for i in complete("/token ", client="web")]
         assert offered == [name for name, _ in spec.subcommands]

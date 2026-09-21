@@ -760,7 +760,22 @@ CommandFactory.register(CommandSpec(
     handler=handle_tools,
     category="tools",
     aliases=["t"],
-    usage="/tools [on|off|list|status|config|set|help|agent]"
+    usage="/tools [on|off|list|status|config|set|help|agent]",
+    # ADR 0007 step 4: completion reads these off the spec. They used to
+    # be `_TOOLS_SUBCOMMANDS` in engine/completion.py — the last of the
+    # hand-written rosters. Order and wording are the table's, verbatim.
+    subcommands=[
+        ("on",      "Enable AI tools"),
+        ("off",     "Disable AI tools"),
+        ("enable",  "Enable AI tools"),
+        ("disable", "Disable AI tools"),
+        ("list",    "List available tools"),
+        ("status",  "Show tools status"),
+        ("help",    "Show help for a tool"),
+        ("set",     "Configure tool settings"),
+        ("config",  "Show tool configuration"),
+        ("auto",    "Enable/disable agent (auto) mode"),
+    ],
 ))
 
 CommandFactory.register(CommandSpec(
@@ -768,5 +783,15 @@ CommandFactory.register(CommandSpec(
     description="Show usage statistics",
     handler=handle_usage,
     category="tools",
-    usage="/usage [24h|week|month|year|all|show|reset]"
+    usage="/usage [24h|week|month|year|all|show|reset]",
+    # ADR 0007 step 4 (was `_USAGE_SUBCOMMANDS`). The second level —
+    # `/usage show <mode>` — stays in completion: the flat
+    # `list[tuple[str, str]]` schema has no place for a nested level.
+    subcommands=[
+        ("show",     "Show usage statistics"),
+        ("session",  "Show session usage"),
+        ("provider", "Show provider usage"),
+        ("off",      "Hide usage display"),
+        ("reset",    "Reset usage counters"),
+    ],
 ))

@@ -21,6 +21,7 @@ v1.17.x autocomplete refactor was to kill this duplication.
 
 from pathlib import Path
 
+from ..commands.factory import CommandFactory
 from ..engine.completion import complete as engine_complete
 
 
@@ -79,10 +80,14 @@ class TextualCompleter:
         items = engine_complete(
             text,
             cursor,
+            # ADR 0007 step 4: this client reads the registry (it is a
+            # client; the engine is not) and hands completion the plain
+            # roster, already filtered for "textual". ~76us per call —
+            # read fresh, so `/reload` is picked up immediately.
+            roster=CommandFactory.roster("textual")["commands"],
             working_dir=str(self.working_dir),
             current_provider=self._get_current_provider(),
             tool_names=self._get_tool_names(),
-            client="textual",
         )
 
         completions: list[tuple[str, str]] = []

@@ -10,9 +10,10 @@ below: ending a GUI session is a UI button workflow, not a command**.
 Originally titled "Completion as a first-class service; command roster via
 AppState".)
 **Status:** Proposed — step 1 shipped v1.18.8; steps 2 + 2.5, **step
-3a (web fetches the roster; `commands.js` deleted)** and **step 3b
-(VSCode fetches it; `commands.ts` deleted — all six hand-written rosters
-are now gone)** landed 2026-09-21 on `bugfix/v1.19.3` (`CommandFactory.iter_completion_specs`, `commands/factory.py`); step 2 (extract `ppxai/completion/` package) **still open**. The "target v1.19.x" in the 08-15 revision has now been passed by v1.19.0, v1.19.1 and v1.19.2 without step 2 landing — it was a hope, not a plan, and is restated below as an explicit deferral with triggers rather than a date.
+3a (web fetches the roster; `commands.js` deleted)**, **step 3b
+(VSCode fetches it; `commands.ts` deleted)** and **step 4 (completion is
+DERIVED from the spec; the `engine → commands` import is GONE)** landed
+2026-09-21 on `bugfix/v1.19.3` (`CommandFactory.iter_completion_specs`, `commands/factory.py`). **Only step 5 (the parity fence) remains**, so the Status above is the owner's to flip, not this edit's. Extracting a `ppxai/completion/` package is now optional and cosmetic (see §Future). The "target v1.19.x" in the 08-15 revision has now been passed by v1.19.0, v1.19.1 and v1.19.2 without step 2 landing — it was a hope, not a plan, and is restated below as an explicit deferral with triggers rather than a date.
 **Related:**
 - `ppxai/engine/completion.py` — current home of `complete()`
 - `ppxai/commands/factory.py` — `CommandFactory`, `CompletionCommandInfo`, `iter_completion_specs()`
@@ -47,7 +48,7 @@ commands.ts` is an independent copy, not a shared file):
 | 1 | `CommandSpec` (`commands/factory.py`) | name, description, category, aliases, usage, hidden |
 | 2 | `web/shared/commands.js` (376 lines, hand-written) | description, usage, category, **subcommands** — restated in JS, **aliases restated as standalone entries**. **DELETED by step 3a (2026-09-21)** |
 | 3 | `web/app.js:199` inline fallback catalog | a second JS copy, used when `SharedCommands` fails to load. **DELETED by step 3a** |
-| 4 | `engine/completion.py` `_*_SUBCOMMANDS` tables (six of them) | **subcommands** — a second hand-written set, in Python |
+| 4 | `engine/completion.py` `_*_SUBCOMMANDS` tables (six of them — **seven, in fact**) | **subcommands** — a second hand-written set, in Python. **DELETED by step 4 (2026-09-21)**: all seven moved onto `CommandSpec.subcommands` |
 | 5 | `engine/completion.py` `_BUILTIN_SPECIAL_COMMANDS` | the client-handled commands + their `clients` gating — in Python, but **outside the registry** |
 
 The rosters disagree. Nine canonical non-hidden Python commands are missing
@@ -64,8 +65,11 @@ from JS: `attach`, `autoroute`, `copy`, `debug-log`, `doctor`, `keys`,
 > (web fetches `GET /commands?client=web` now) and **step 3b, the same
 > day, deleted `commands.ts`** (VSCode fetches
 > `GET /commands?client=vscode` via `src/commandRoster.ts`). The two
-> shipped separately precisely because they never shared a file. Only
-> row 4, the six `_*_SUBCOMMANDS` tables, is left for step 4.
+> shipped separately precisely because they never shared a file. Row 4,
+> the `_*_SUBCOMMANDS` tables, **went the same day in step 4** — and
+> there were **seven** of them, not six: `_RUN_SUBCOMMANDS` (the U3
+> one-off family) post-dated the count. All six places are now gone;
+> `CommandSpec` is the only declaration left.
 >
 > **Correction (2026-09-20, same day).** The first version of this section
 > listed `cat`, `sh`, `term`, `token` as "in JS, missing from Python" and
@@ -100,9 +104,12 @@ script is in [plan-adr-0007-completion-service.md](../plan-adr-0007-completion-s
 ## Context
 
 Autocomplete for all four clients (Rich, Textual, Web, VSCode) is served
-by a single function, `engine.completion.complete()`. It is the only
-`engine → commands` import in the entire engine package: it reaches up
-into the `commands` layer to read the command roster from `CommandFactory`.
+by a single function, `engine.completion.complete()`. It **was** the only
+`engine → commands` import in the entire engine package: it reached up
+into the `commands` layer to read the command roster from
+`CommandFactory`. **Step 4 (2026-09-21) removed it — the count is now
+ZERO** (see the dated note in §Re-measured). The rest of this section is
+the diagnosis that produced the decision, kept as written.
 
 A v1.18.7 post-release review flagged this as a layer inversion. The
 deeper observation (review gate, debt 29): **completion is not engine-owned
@@ -152,6 +159,28 @@ What step 1 actually fixed, and what is left:
   import CommandFactory` at `ppxai/engine/completion.py:48`. It is the
   **only** `engine → commands` import in the entire engine package — the
   extraction stays a one-edge job.
+
+  > **CLOSED 2026-09-21 (step 4), on `bugfix/v1.19.3`, unreleased.** That
+  > import is deleted and the count is **zero**:
+  > `grep -rnE "from \.\.commands|from ppxai\.commands|import ppxai\.commands" ppxai/engine/`
+  > returns nothing, checked across the whole package including
+  > function-level imports. No other `engine → commands` edge existed.
+  > `complete()` now takes a required, keyword-only `roster=` and each
+  > caller passes `CommandFactory.roster(<its client>)["commands"]`; the
+  > `client` parameter is gone with the gate, which is structural now.
+  > The "one-edge job" estimate held exactly — and it turned out to be one
+  > keyword argument, not a package extraction, because steps 1–2 had
+  > already turned the roster into plain data.
+  >
+  > Held at zero by
+  > `tests/test_no_new_lazy_imports.py::TestEngineImportsNoCommands`,
+  > which REPLACES `TestEngineCompletionStaysALeaf` (deleted, as its own
+  > failure message instructed — with no upward import there is nothing
+  > left to be a leaf about). Mutation-verified on the new shape: restoring
+  > the module-scope import breaks NOTHING visible — 6,285 tests still
+  > collect, `import ppxai.engine.completion` still succeeds standalone,
+  > the completion suites stay green — so unlike the other two guards in
+  > that file, the fence is the only thing that can see this rule.
 - 🔎 **It does not block SDK embedding — measured on the real consumer
   surface.** The 2026-08-15 measurement listed eight symbols, one of which
   (`engine.model_profiles.get_profile`) **no longer exists** — Item 65
@@ -255,6 +284,29 @@ release-blocker.
 Split the two concerns and give each a first-class home.
 
 ### Behaviour → a `CompletionService` component, injected at startup
+
+> **SUPERSEDED BY MEASUREMENT, 2026-09-21 (step 4). Not built, and not
+> needed.** This subsection is kept as the reasoning of the time; what
+> actually closed the inversion was **data in, not a Protocol**.
+>
+> The design below has completion hold a `CommandRegistryProtocol`
+> collaborator inside a `CompletionService` in a new top-level
+> `ppxai/completion/` package, constructed at three composition roots.
+> Steps 1–2 removed the reason for all three pieces:
+> `CommandFactory.roster(client)` already returns PLAIN DATA — one entry
+> per canonical command with `aliases`, `hidden` and `subcommands`,
+> already filtered by `client_sees`. There is no collaborator left to
+> invert: a Protocol here would describe "an object that can hand me a
+> list of dicts", which is a list of dicts.
+>
+> So step 4 gave `complete()` a required keyword-only `roster=` argument
+> and each of its three callers — all of which already sit ABOVE
+> `commands` — reads the roster itself. No Protocol, no service class, no
+> new package, no global mutable state, and no `roster=None` fallback
+> that would re-create the edge behind a branch. The
+> `CompletionContextProtocol` half is untouched by this: the three
+> context scrapers still duplicate each other, and collapsing them stays
+> the optional, independent cleanup §Explicitly not in the path calls it.
 
 - New first-class package `ppxai/completion/` (sibling to `engine`,
   `commands`, `server`), signalling completion is **not** subordinate to
@@ -434,32 +486,42 @@ seed. Incremental path:
       deleted outright rather than becoming loaders. **Split: 3a (web)
       and 3b (VSCode) both DONE 2026-09-21** — the two clients kept
       SEPARATE hand-written rosters, so they shipped separately.
-   4. **Derive, don't restate** — completion's `_*_SUBCOMMANDS` tables and
-      `/help` read the spec. At this point `engine/completion.py` stops
-      importing `CommandFactory`, closing the layer inversion and the
-      package cycle as a side effect; `TestEngineCompletionStaysALeaf`
-      can then be deleted (it says so itself).
+   4. **Derive, don't restate** — ✅ **DONE 2026-09-21.** All seven
+      `_*_SUBCOMMANDS` tables moved onto `CommandSpec.subcommands`;
+      completion reads the roster the caller hands it;
+      `engine/completion.py` imports nothing from `ppxai.commands`, so
+      the layer inversion and the package cycle are closed;
+      `TestEngineCompletionStaysALeaf` is deleted and replaced by
+      `TestEngineImportsNoCommands` (the rule, at zero, whole package).
+      `/help` needed no change — it has been registry-generated since
+      step 1b, and neither `generate_help` nor `get_command_help`
+      renders subcommands, so the move changed no help output.
    5. **Parity fence** — no client renders an undeclared command; no
       declared command goes unrendered; and every `client_action` named in
       Python is implemented by every client in that spec's `clients`.
 
    Each step ships alone. Steps 1–2 are server-only and change no client.
 
-   **The guard is in place meanwhile** (2026-09-20):
+   **The guard that stood meanwhile** (2026-09-20 → 2026-09-21):
    `tests/test_no_new_lazy_imports.py::TestEngineCompletionStaysALeaf`
-   fences `engine.completion`'s leaf status. Mutating an import in proved
+   fenced `engine.completion`'s leaf status. Mutating an import in proved
    the package cycle empirically — a module-scope import of it from
-   `engine/client.py` takes the whole pytest run down at collection with
+   `engine/client.py` took the whole pytest run down at collection with
    `ImportError: cannot import name 'EngineClient' from partially
    initialized module 'ppxai.engine'`, via
    `completion -> commands.factory -> commands.handler -> engine`.
+   **Retired by step 4** and replaced with the permanent rule,
+   `TestEngineImportsNoCommands`: no module under `ppxai/engine/` imports
+   `ppxai.commands`, module scope or function level, held at zero.
 
    Relocating `complete()` to a `ppxai/completion/` package (the original
-   step-2 headline) is **optional after step 4** — once the upward import
-   is gone, where the module sits is cosmetic. Do not build the
-   `CompletionService` DI class ahead of need: a service holding a context
-   collaborator while callers still scrape context is worse than either
-   endpoint.
+   step-2 headline) is **optional now that step 4 has landed** — the
+   upward import is gone, so where the module sits is cosmetic. Do not
+   build the `CompletionService` DI class ahead of need: a service holding
+   a context collaborator while callers still scrape context is worse than
+   either endpoint. Step 4 confirmed the stronger version of that
+   caution — with the roster already plain data, the registry
+   collaborator had nothing left to abstract either.
 
    Plan: [plan-adr-0007-completion-service.md](../plan-adr-0007-completion-service.md).
 

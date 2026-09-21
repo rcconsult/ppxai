@@ -137,8 +137,10 @@ class TestRegistrationValidation:
         assert CommandFactory.get("_schema_probe_valid_subset") is spec
 
     def test_known_clients_and_client_actions_are_as_measured(self):
-        # These are the exact ids measured against callers of
-        # engine.completion.complete(client=...) and the owner-approved
+        # These are the exact ids measured against the three callers that
+        # ask for a roster (`CommandFactory.roster(<client>)`, ADR 0007
+        # step 4 — before it they passed the id to `complete(client=...)`)
+        # and the owner-approved
         # client_action vocabulary (2026-09-20): the pure client-handled
         # pair from step 1 (`token.manage`, `app.quit`) plus the seven
         # hybrid names declared in step 2.5.

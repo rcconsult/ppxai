@@ -14,6 +14,7 @@ from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.history import InMemoryHistory
 
 from ..commands.attach import build_multimodal_content
+from ..commands.factory import CommandFactory
 from ..commands.handler import CommandHandler
 from ..common.autosave_guard import AutosaveFailureGuard
 from ..common.logger import get_logger
@@ -217,10 +218,17 @@ class PPXAICompleter(Completer):
         items = engine_complete(
             text,
             len(text),
+            # ADR 0007 step 4: the CALLER owns the command layer and
+            # hands completion the roster as plain data, already
+            # filtered for this client. ~76us per call for 44 commands
+            # (measured 2026-09-21) — cheaper than the
+            # `iter_completion_specs()` snapshot completion used to take
+            # per keystroke, so it is read fresh and never cached; a
+            # cache would also have to invalidate on `/reload`.
+            roster=CommandFactory.roster("rich")["commands"],
             working_dir=self._get_working_dir(),
             current_provider=self._get_current_provider(),
             tool_names=self._get_tool_names(),
-            client="rich",
         )
         for item in items:
             yield Completion(

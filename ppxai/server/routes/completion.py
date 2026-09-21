@@ -99,14 +99,24 @@ async def complete_endpoint(
         except Exception:
             agent_runs = []
 
+    # ADR 0007 step 4: the ROUTE reads the registry and hands completion
+    # the roster as plain data, filtered for the client that asked.
+    # `request.client` keeps its three shapes: a known id filters to that
+    # client, an unknown one sees only universal commands, and None fails
+    # OPEN (the whole catalog) exactly as it did when the id was passed
+    # to `complete()` — both shipped clients send their id, so the absent
+    # case is legacy callers only. Deliberately NOT `SERVER_CLIENTS` (the
+    # fallback `/help` uses): that would hide `/quit` from a caller that
+    # can see it today, which is a behaviour change this step does not
+    # make. ~76us per keystroke for 44 commands, uncached.
     items = complete(
         request.buffer,
         request.cursor,
+        roster=CommandFactory.roster(request.client)["commands"],
         working_dir=working_dir,
         current_provider=current_provider,
         tool_names=tool_names,
         agent_runs=agent_runs,
-        client=request.client,
     )
 
     return CompleteResponse(items=items)

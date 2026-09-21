@@ -8,18 +8,26 @@ move is only "correct" if four behaviours survive unchanged; this file pins
 regression shows up as a failing test here rather than as a discovered
 production incident.
 
-Behaviour 1 — client gating (`ppxai/engine/completion.py`):
-`_client_allows()` fails OPEN for `client=None` (legacy/unknown callers see
-everything). That is deliberate, not an oversight, and the plan says it
-"moves onto the spec unchanged, or it is changed deliberately — not by
-accident." Part A pins the gate: `/token` is `{web, vscode}`-only, and
-`/quit` is `{rich, textual}`-only (owner decision, 2026-09-20 — REVERSES
-the earlier "universal" call: in a GUI, ending the session is a UI button
-workflow, not a command), and `complete()` reflects both end to end. ADR
-0007 step 1b moved WHERE the gate is stored (from the hand-written
-`_CLIENT_GATES` table to `CommandSpec.clients`, read via `_gate_for`);
-every assertion in Part A except `/quit`'s gate table is unchanged, which
-is the point — `client=None` still fails OPEN.
+Behaviour 1 — client gating. The gate fails OPEN for `client=None`
+(legacy/unknown callers see everything). That is deliberate, not an
+oversight, and the plan says it "moves onto the spec unchanged, or it is
+changed deliberately — not by accident." Part A pins the gate: `/token`
+is `{web, vscode}`-only, and `/quit` is `{rich, textual}`-only (owner
+decision, 2026-09-20 — REVERSES the earlier "universal" call: in a GUI,
+ending the session is a UI button workflow, not a command), and
+`complete()` reflects both end to end.
+
+**WHERE the gate lives has moved twice; WHAT it decides has not.** Step
+1b moved it from the hand-written `_CLIENT_GATES` table onto
+`CommandSpec.clients`, read by `engine/completion.py::_gate_for`. **Step
+4 (2026-09-21) made it structural**: completion no longer asks — the
+CALLER passes `CommandFactory.roster(client)["commands"]`, already
+filtered, and `engine/completion.py` imports nothing from
+`ppxai.commands` at all. So a command the client may not see is simply
+absent from the data completion works on. Every end-to-end assertion in
+Part A is unchanged through both moves, which is the point — including
+`client=None` (here: `roster(None)`, the whole catalog) still failing
+OPEN.
 
 Behaviour 4 — `/token set <value>` never transits command dispatch. The
 handler treats the value as a secret (bare `/token set` uses a masked
@@ -84,9 +92,12 @@ exact regression it exists to catch (branch order swapped, an extra
 dispatch-to-factory call injected, an extra network call added) and must
 reject it. A check that cannot fail is worse than none — this repo's
 convention (`tests/test_no_new_lazy_imports.py`) is that guards are tested
-first. Part A's equivalent liveness proof is a `monkeypatch` on
-`_gate_for`: it shows the gating assertions track live state rather
-than being vacuously true.
+first. Part A's equivalent liveness proof used to be a `monkeypatch` on
+`completion._gate_for`; since step 4 there is no function to patch, so
+it flips the DATA instead — a roster that gates `/token` to `rich` must
+flip `complete()`'s answer. Same proof, one level down, and the same
+idiom the JS behavioural suites use ("routing flips when the ROSTER
+flips").
 """
 
 from __future__ import annotations
@@ -100,9 +111,8 @@ import pytest
 # idiom as tests/test_completion_provider.py) — needed for complete() end
 # to end even though Part A's unit-level checks don't touch the factory.
 import ppxai.commands.handler  # noqa: F401
-import ppxai.engine.completion as completion_mod
-from ppxai.commands.factory import CommandFactory
-from ppxai.engine.completion import _client_allows, complete
+from ppxai.commands.factory import CommandFactory, client_sees
+from ppxai.engine.completion import complete as engine_complete
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WEB_DISPATCHER_PATH = REPO_ROOT / "ppxai" / "web" / "shared" / "command-dispatcher.js"
@@ -127,34 +137,72 @@ def _read(path: Path) -> str:
 # =============================================================================
 
 
-class TestClientAllowsFailsOpenForNone:
+def roster_for(client):
+    """What the three real callers hand `complete()` (ADR 0007 step 4)."""
+    return CommandFactory.roster(client)["commands"]
+
+
+def complete(buffer, cursor=-1, *, client=None, **kwargs):
+    """`complete()` as a client calls it: roster first, filtered for it."""
+    return engine_complete(buffer, cursor, roster=roster_for(client), **kwargs)
+
+
+def sees(name, client):
+    """True when `client` may see the command `name` (no slash).
+
+    The unit-level gate, asked of the declaration the way completion's
+    deleted `_client_allows(name, client)` used to ask it. Since step 4
+    the ONE definition is `client_sees` in `commands/factory.py` — the
+    same function `roster()` filters with, so the unit check and the
+    end-to-end check below cannot drift apart.
+    """
+    spec = CommandFactory.get(name)
+    return client_sees(spec.clients if spec is not None else None, client)
+
+
+def in_roster(name, client):
+    """True when `name` survives into the roster the caller passes in.
+
+    The structural half of the same question: after step 4 the gate is
+    not a check inside completion, it is the absence of the entry.
+    """
+    return any(entry["name"] == name for entry in roster_for(client))
+
+
+class TestGateFailsOpenForNone:
     """`client=None` (legacy/unknown caller) must see everything, unchanged."""
 
     def test_gated_name_allowed_for_none_client(self):
-        assert _client_allows("token", None) is True
+        assert sees("token", None) is True
+        assert in_roster("token", None) is True
 
     def test_other_gated_name_allowed_for_none_client(self):
         # Owner decision (2026-09-20) gated /quit to {rich, textual}, so
         # it no longer illustrates the "ungated name" case; the fail-open
         # semantics for client=None is unchanged and still worth pinning
         # against a second, independently-gated command.
-        assert _client_allows("quit", None) is True
+        assert sees("quit", None) is True
+        assert in_roster("quit", None) is True
 
 
 class TestTokenGateTable:
     """`/token` is web+vscode-only today; rich/textual are denied."""
 
     def test_token_allowed_for_web(self):
-        assert _client_allows("token", "web") is True
+        assert sees("token", "web") is True
+        assert in_roster("token", "web") is True
 
     def test_token_allowed_for_vscode(self):
-        assert _client_allows("token", "vscode") is True
+        assert sees("token", "vscode") is True
+        assert in_roster("token", "vscode") is True
 
     def test_token_denied_for_rich(self):
-        assert _client_allows("token", "rich") is False
+        assert sees("token", "rich") is False
+        assert in_roster("token", "rich") is False
 
     def test_token_denied_for_textual(self):
-        assert _client_allows("token", "textual") is False
+        assert sees("token", "textual") is False
+        assert in_roster("token", "textual") is False
 
 
 class TestQuitGateTable:
@@ -163,25 +211,30 @@ class TestQuitGateTable:
     fails open (legacy/unknown callers see everything)."""
 
     def test_quit_allowed_for_rich(self):
-        assert _client_allows("quit", "rich") is True
+        assert sees("quit", "rich") is True
+        assert in_roster("quit", "rich") is True
 
     def test_quit_allowed_for_textual(self):
-        assert _client_allows("quit", "textual") is True
+        assert sees("quit", "textual") is True
+        assert in_roster("quit", "textual") is True
 
     def test_quit_allowed_for_none(self):
-        assert _client_allows("quit", None) is True
+        assert sees("quit", None) is True
+        assert in_roster("quit", None) is True
 
     def test_quit_denied_for_web(self):
-        assert _client_allows("quit", "web") is False
+        assert sees("quit", "web") is False
+        assert in_roster("quit", "web") is False
 
     def test_quit_denied_for_vscode(self):
-        assert _client_allows("quit", "vscode") is False
+        assert sees("quit", "vscode") is False
+        assert in_roster("quit", "vscode") is False
 
 
 class TestCompleteEndToEnd:
     """`complete()` must apply the same gate through the public entry point,
-    not just at the `_client_allows` unit level. Items are dicts with a
-    stable `text` key (see the module docstring's schema)."""
+    not just at the declaration level. Items are dicts with a stable `text`
+    key (see the module docstring's schema)."""
 
     def test_token_prefix_surfaces_for_web_vscode_and_none(self):
         for client in ("web", "vscode", None):
@@ -208,36 +261,49 @@ class TestCompleteEndToEnd:
             texts = {i["text"] for i in items}
             assert "/quit" not in texts, (client, texts)
 
+    def test_gated_arg_completion_follows_the_same_data(self):
+        """`/token <tab>` offers the spec's subcommands where /token
+        exists and nothing where it does not — with no name-keyed gate
+        left in completion, this is the entry's presence and nothing
+        else."""
+        assert [i["text"] for i in complete("/token ", client="web")] == [
+            "status", "set", "mint", "clear"
+        ]
+        assert complete("/token ", client="rich") == []
 
-def _rich_only_gate(name: str):
-    """Stand-in for `completion._gate_for` that inverts `/token`'s gate."""
-    return frozenset({"rich"}) if name == "token" else None
+
+def _roster_including_token():
+    """A real roster that carries `/token` — the web audience's."""
+    return [dict(entry) for entry in roster_for("web")]
 
 
 class TestGatingAssertionsAreLive:
-    """Prove the assertions above are exercising the live gate, not just
-    passing by accident, by monkeypatching it and showing the outcome
-    changes — both at the `_client_allows` level and through `complete()`.
+    """Prove the assertions above exercise the live gate rather than
+    passing by accident.
 
-    ADR 0007 step 1b changed the lever, not the check: the gate table
-    `_CLIENT_GATES` (built from the hand-written
-    `_BUILTIN_SPECIAL_COMMANDS` roster) is gone, and `_client_allows`
-    now reads `CommandSpec.clients` off the registry through
-    `_gate_for(name)`. Patching that function is the same proof, one
-    level down.
+    ADR 0007 step 4 changed the lever again, not the check. There is no
+    `completion._gate_for` to monkeypatch any more — the gate IS the
+    roster the caller passes — so the proof flips the DATA: hand
+    `complete()` a roster WITHOUT `/token` and it must vanish; hand it
+    one WITH `/token` and it must appear, whatever client id the caller
+    would otherwise have claimed. That is the same "routing flips when
+    the roster flips" idiom the web/VSCode behavioural suites use.
     """
 
-    def test_monkeypatched_gate_flips_client_allows(self, monkeypatch):
-        monkeypatch.setattr(completion_mod, "_gate_for", _rich_only_gate)
-        assert _client_allows("token", "rich") is True
-        assert _client_allows("token", "web") is False
+    def test_the_gate_is_the_data_not_the_client_id(self):
+        with_token = _roster_including_token()
+        without_token = [e for e in with_token if e["name"] != "token"]
 
-    def test_monkeypatched_gate_flips_complete(self, monkeypatch):
-        monkeypatch.setattr(completion_mod, "_gate_for", _rich_only_gate)
-        rich_texts = {i["text"] for i in complete("/tok", client="rich")}
-        web_texts = {i["text"] for i in complete("/tok", client="web")}
-        assert "/token" in rich_texts
-        assert "/token" not in web_texts
+        shown = {i["text"] for i in engine_complete("/tok", roster=with_token)}
+        hidden = {i["text"] for i in engine_complete("/tok", roster=without_token)}
+        assert "/token" in shown
+        assert "/token" not in hidden
+
+    def test_an_absent_roster_offers_no_commands_at_all(self):
+        """The no-fallback rule: completion does not reach for the
+        registry when the caller hands it nothing."""
+        assert engine_complete("/tok", roster=None) == []
+        assert engine_complete("/", roster=[]) == []
 
 
 # =============================================================================

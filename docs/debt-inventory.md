@@ -55,7 +55,7 @@ quoting them** — this table is a map, not a source.
 | **3** | k8s session-manager security tests | trigger-deferred; quick pass done, full suite postponed |
 | **21** | `chat_with_tools` decomposition (673 LoC, fan-out 169) | v1.19.x+ |
 | **22** | `PpxaiApp` (web/app.js) decomposition (3,749 LoC) | trigger-deferred |
-| **29** | `engine.completion` imports `commands.factory` (layer inversion) | ~1–1.5 d remaining |
+| **29** | `engine.completion` imports `commands.factory` (layer inversion) | **the import is GONE (ADR 0007 step 4, 2026-09-21)** — see the note; what is left is optional and cosmetic |
 | **35** | pluggable persistence channel abstraction | ~2–3 d, wants its own ADR |
 | **38** | model-catalog watch list | recurring sweep; last one found 4 dead NVIDIA ids shipping |
 | **55** | OpenAI fleet refresh (gpt-5.6 GA + price cuts) | cost-driven, no deadline |
@@ -515,9 +515,39 @@ extract at that point).
 
 ### Item 29 — `engine.completion` imports `commands.factory` and reads its internals [layer inversion]
 
-**Affected files:** `ppxai/engine/completion.py` (import at line **48**).
-Shared entrypoint `complete()` is called from `ppxai/tui/completer.py:25`,
-`ppxai/rich/main.py:34`, and `ppxai/server/routes/completion.py:17`.
+**Affected files:** `ppxai/engine/completion.py` (the import was at line
+**48**). Shared entrypoint `complete()` is called from
+`ppxai/tui/completer.py`, `ppxai/rich/main.py`, and
+`ppxai/server/routes/completion.py`.
+
+> **THE INVERSION IS CLOSED — 2026-09-21, ADR 0007 step 4, on
+> `bugfix/v1.19.3` (unreleased).** `from ..commands.factory import
+> CommandFactory` is deleted;
+> `grep -rnE "from \.\.commands|from ppxai\.commands|import ppxai\.commands" ppxai/engine/`
+> returns nothing, function-level imports included. `complete()` now takes
+> a REQUIRED `roster=` argument and each of the three callers passes
+> `CommandFactory.roster(<its client>)["commands"]` — plain data, already
+> filtered for that client — so the `engine → commands → engine` package
+> cycle is closed and client gating is structural. The seven hand-written
+> `_*_SUBCOMMANDS` tables moved onto `CommandSpec.subcommands` in the same
+> step, which is what made the data hand-off sufficient.
+>
+> **Deliberately NOT done, and no longer required by this item:** no
+> `CommandRegistryProtocol`, no `CompletionService`, no `ppxai/completion/`
+> package. Steps 1–2 made them unnecessary — `roster()` already returns
+> plain data, so there is no collaborator to abstract. Relocating the
+> module is cosmetic (ADR 0007 §Explicitly not in the path).
+>
+> **Fenced:** `tests/test_no_new_lazy_imports.py::TestEngineImportsNoCommands`
+> holds `engine → commands` at ZERO — module scope and function level —
+> replacing `TestEngineCompletionStaysALeaf`, which defended the leaf status
+> that made the dormant cycle survivable. Mutation-verified: the module-scope
+> edge is SILENT (the suite collects and passes with it restored), so the
+> fence is the only thing that sees it.
+>
+> **Still open under ADR 0007:** step 5 (the parity fence) only. Whether
+> this item is now closed is the owner's call; nothing in it is a code
+> change any more.
 
 > **Re-verified 2026-08-15 — half of this item is already closed.** The
 > private-registry access is **gone**: completion now reads the public
@@ -567,8 +597,10 @@ layer — not engine-owned data. Decision recorded in
   (preloaded at startup); publish the command **roster** through AppState
   `state_sync` for palettes/help/menus. This is what removes the import.
 
-**Planned:** seed **done** in v1.18.8; first-class service + AppState roster
-**→ v1.19.x** per ADR 0007.
+**Planned:** seed **done** in v1.18.8; the import itself **removed
+2026-09-21** by ADR 0007 step 4 — by handing completion the roster as DATA,
+not by building the service/AppState design this paragraph predicted (see
+the note at the top of this item).
 
 **Branch when ready:** v1.19.x (new branch — pairs with any "ship engine
 standalone" goal).
@@ -577,9 +609,13 @@ standalone" goal).
 goal; a second client surface needing the live roster; a second cross-layer
 capability of the same shape).
 
-**Effort (remaining, v1.19.x):** ~1–1.5 d — two Protocols, the service
-package, composition-root wiring at 3 entry points, AppState roster field +
-4-mirror DTO update, cross-client completion tests.
+**Effort (remaining):** none for the inversion — it is done. The estimate
+below is what the SUPERSEDED design would have cost, kept as the record of
+how far off a plan can be when it targets the symptom: *"~1–1.5 d — two
+Protocols, the service package, composition-root wiring at 3 entry points,
+AppState roster field + 4-mirror DTO update, cross-client completion
+tests."* What it actually took, once the roster existed, was a keyword
+argument.
 
 ---
 

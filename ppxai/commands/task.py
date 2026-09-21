@@ -438,6 +438,21 @@ CommandFactory.register(CommandSpec(
     # controller and never call this handler; Rich/Textual keep it.
     client_action="task.controller",
     client_action_clients=frozenset({"web", "vscode"}),
+    # ADR 0007 step 4: the verb table completion used to hold as
+    # `_TASK_SUBCOMMANDS` in engine/completion.py. Canonical verbs only —
+    # the aliases `list`/`show`/`open`/`ack` are omitted as noise, as
+    # they were in the table. `/task <verb> <id>` completion stays in
+    # completion.py: run ids are live state, not a static declaration.
+    subcommands=[
+        ("ls",      "List runs"),
+        ("get",     "Open a run pane"),
+        ("watch",   "Open + live-tail a run"),
+        ("respond", "Answer a run parked in waiting (approve|deny|text)"),
+        ("collect", "Collect a held result (📬 → finalized)"),
+        ("resume",  "Continue an interrupted/cancelled run"),
+        ("cancel",  "Cancel a run"),
+        ("help",    "Show /task help"),
+    ],
 ))
 
 CommandFactory.register(CommandSpec(
@@ -451,4 +466,15 @@ CommandFactory.register(CommandSpec(
     # ADR 0007 step 2.5: same client-driven family as /task.
     client_action="run.controller",
     client_action_clients=frozenset({"web", "vscode"}),
+    # ADR 0007 step 4 (was `_RUN_SUBCOMMANDS`): the one-off family shares
+    # the /task lifecycle dispatch but launches with no flags and never
+    # parks, so `respond`/`resume` are deliberately absent.
+    subcommands=[
+        ("ls",      "List one-off runs"),
+        ("get",     "Open a run pane"),
+        ("watch",   "Open + live-tail a run"),
+        ("collect", "Collect a held result (📬 → finalized)"),
+        ("cancel",  "Cancel a run"),
+        ("help",    "Show /run help"),
+    ],
 ))

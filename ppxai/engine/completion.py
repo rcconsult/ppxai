@@ -8,17 +8,25 @@ server endpoint (Web, VSCode).
 
 Completion sources:
 
-1. **Slash commands** — via `CommandFactory.iter_completion_specs()` (the
-   public registry snapshot; see ADR 0007). Dynamic, never drifts, sorted
-   alphabetically, hidden commands filtered.
+1. **Slash commands** — from the ROSTER the caller hands in: the plain
+   data `CommandFactory.roster(client)["commands"]` returns (see ADR 0007
+   step 4). This module imports nothing from `ppxai.commands`; the caller
+   owns the registry and has already filtered the roster for its client,
+   so what arrives here is what that client may see. No roster (or an
+   empty one) means no slash-command completions — paths and @refs still
+   work.
 
 2. **Path arguments** — for commands like `/attach`, `/cd`, `/ls`, `/show`
    etc. Shell-style directory traversal with per-command file/dir filters.
 
-3. **Subcommand completion** — for `/tools`, `/usage`, `/checkpoint`,
-   `/status`, `/theme`, `/model`, `/provider`. Covers both the first
-   subcommand level (`/tools en` → `enable`) and the second level
-   (`/usage show session`, `/theme emoji on`, `/tools help <tool>`).
+3. **Subcommand completion** — the FIRST level is data: every roster
+   entry carries its declared `subcommands`, so `/tools en` → `enable`
+   needs no table here (ADR 0007 step 4 deleted the seven hand-written
+   `_*_SUBCOMMANDS` tables). What stays is behaviour the flat
+   declaration cannot express: second-level arguments (`/usage show
+   session`, `/checkpoint backend git`, `/theme emoji on`, `/tools help
+   <tool>`, `/task respond <id> approve`) and genuinely live sources
+   (`/model` ids, `/provider` ids, `/theme` names, `/task|/run` run ids).
 
 4. **@file + @context references** — `@git`, `@tree`, `@clipboard`, `@url`
    plus fuzzy-match files in the working directory.
@@ -45,7 +53,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-from ..commands.factory import CommandFactory, client_sees
 from ..config import PROVIDERS, get_provider_config
 
 # Commands that accept path arguments, and what kinds of entries make
@@ -65,30 +72,6 @@ _IGNORE_DIRS = frozenset({
     ".tox", "dist", "build", ".eggs", ".mypy_cache",
 })
 
-def _gate_for(name: str) -> frozenset[str] | None:
-    """Clients that may SEE the command `name` (no slash), None = universal.
-
-    Read off `CommandSpec.clients`; aliases resolve to their canonical
-    command's gate. `/token`, `/quit` and `/exit` used to be hand-written
-    entries here (`_BUILTIN_SPECIAL_COMMANDS` + the `_CLIENT_GATES` table
-    derived from them), because a command with no server handler could not
-    be expressed as a `CommandSpec`. It can since ADR 0007 step 1b, so the
-    second roster is gone.
-    """
-    spec = CommandFactory.get(name)
-    return spec.clients if spec is not None else None
-
-
-def _client_allows(name: str, client: str | None) -> bool:
-    """True when `client` may see the command `name` (no slash).
-
-    `client=None` (legacy/unknown caller) fails open — the pre-gating
-    behaviour — so only callers that declare themselves get filtering. An
-    unregistered name is ungated, for the same reason.
-    """
-    return client_sees(_gate_for(name), client)
-
-
 # Context-provider shortcuts — handled by ContextInjector, not the
 # filesystem. They appear in the @ dropdown alongside file refs so
 # users discover them without having to remember the list.
@@ -99,30 +82,14 @@ _CONTEXT_PROVIDERS: list[tuple[str, str]] = [
     ("@url",       "Fetch and include URL content"),
 ]
 
-# Subcommand tables — the single source of truth that Rich and Textual
-# used to each maintain their own copies of. Web and VSCode get these
-# for free now that they come through POST /complete.
-
-_TOOLS_SUBCOMMANDS: list[tuple[str, str]] = [
-    ("on",      "Enable AI tools"),
-    ("off",     "Disable AI tools"),
-    ("enable",  "Enable AI tools"),
-    ("disable", "Disable AI tools"),
-    ("list",    "List available tools"),
-    ("status",  "Show tools status"),
-    ("help",    "Show help for a tool"),
-    ("set",     "Configure tool settings"),
-    ("config",  "Show tool configuration"),
-    ("auto",    "Enable/disable agent (auto) mode"),
-]
-
-_USAGE_SUBCOMMANDS: list[tuple[str, str]] = [
-    ("show",     "Show usage statistics"),
-    ("session",  "Show session usage"),
-    ("provider", "Show provider usage"),
-    ("off",      "Hide usage display"),
-    ("reset",    "Reset usage counters"),
-]
+# Second-level argument tables. The FIRST subcommand level moved onto
+# `CommandSpec.subcommands` in ADR 0007 step 4 — the seven
+# `_*_SUBCOMMANDS` tables that used to live here (tools, usage,
+# checkpoint, status, theme, task, run) were the last hand-written
+# roster in the codebase, and completion now reads the caller's roster
+# instead. What remains below is what a flat `list[tuple[str, str]]`
+# declaration cannot carry: the values of a SECOND argument, and
+# suggestions whose source is a live registry rather than a declaration.
 
 _USAGE_DISPLAY_MODES: list[tuple[str, str]] = [
     ("session",  "Status line shows session totals"),
@@ -131,31 +98,11 @@ _USAGE_DISPLAY_MODES: list[tuple[str, str]] = [
     ("off",      "Hide usage from status line"),
 ]
 
-_CHECKPOINT_SUBCOMMANDS: list[tuple[str, str]] = [
-    ("status",  "Show checkpoint status"),
-    ("list",    "List recent checkpoints"),
-    ("backend", "Set checkpoint backend"),
-    ("clear",   "Clear old snapshots"),
-    ("info",    "Show checkpoint details"),
-    ("undo",    "Revert last checkpoint"),
-]
-
 _CHECKPOINT_BACKENDS: list[tuple[str, str]] = [
     ("git",  "Use git commits"),
     ("file", "Use file snapshots"),
     ("auto", "Auto-detect best backend"),
     ("none", "Disable checkpoints"),
-]
-
-_STATUS_SUBCOMMANDS: list[tuple[str, str]] = [
-    ("version",  "Toggle version display"),
-    ("cwd",      "Toggle working directory display"),
-    ("datetime", "Toggle date/time display"),
-]
-
-_THEME_SUBCOMMANDS: list[tuple[str, str]] = [
-    ("list",  "Show available themes"),
-    ("emoji", "Toggle emoji mode (on|off)"),
 ]
 
 _THEME_NAMES: list[tuple[str, str]] = [
@@ -179,23 +126,6 @@ _EMOJI_OPTIONS: list[tuple[str, str]] = [
     ("off", "Convert to text symbols"),
 ]
 
-# /task verbs (v1.19.x tool-capable tier; U2 ADR 0011 direct-launch grammar).
-# Mirrors the client dispatchers (web task-controller.js handle(), VSCode
-# taskController.ts) — the parity sentinel in
-# tests/test_vscode_task_controller.py pins THAT pair; this table lists the
-# canonical verbs (aliases `list`/`show`/`open`/`ack` omitted as noise).
-# There is no `run` verb: `/task "<desc>" --tools a,b,c` launches directly.
-_TASK_SUBCOMMANDS: list[tuple[str, str]] = [
-    ("ls",      "List runs"),
-    ("get",     "Open a run pane"),
-    ("watch",   "Open + live-tail a run"),
-    ("respond", "Answer a run parked in waiting (approve|deny|text)"),
-    ("collect", "Collect a held result (📬 → finalized)"),
-    ("resume",  "Continue an interrupted/cancelled run"),
-    ("cancel",  "Cancel a run"),
-    ("help",    "Show /task help"),
-]
-
 # Which run statuses make sense as the <id> argument of each /task verb.
 # None = any run (inspection verbs work on everything, incl. finalized).
 # Aliases (show/open/ack) complete ids too — typed by muscle memory.
@@ -216,28 +146,71 @@ _TASK_RESPOND_ANSWERS: list[tuple[str, str]] = [
     ("deny",    "Deny the parked request"),
 ]
 
-# /run verbs (U3, ADR 0011): the one-off family shares the /task lifecycle
-# dispatch but launches with no flags and never parks (respond/resume are
-# omitted here as noise — they exist but no-op/refuse for oneshot runs).
-_RUN_SUBCOMMANDS: list[tuple[str, str]] = [
-    ("ls",      "List one-off runs"),
-    ("get",     "Open a run pane"),
-    ("watch",   "Open + live-tail a run"),
-    ("collect", "Collect a held result (📬 → finalized)"),
-    ("cancel",  "Cancel a run"),
-    ("help",    "Show /run help"),
-]
+
+# =============================================================================
+# Roster access — plain data, handed in by the caller
+# =============================================================================
+#
+# ADR 0007 step 4. The roster is `CommandFactory.roster(client)["commands"]`:
+# one dict per CANONICAL command, ALREADY filtered for the client that asked.
+# This module consumes the following keys and nothing else, so any producer of
+# the same shape works:
+#
+#     name         str                     canonical name, no leading slash
+#     aliases      list[str]               alternative names, no slash
+#     description  str
+#     hidden       bool                    not offered in completion
+#     subcommands  list[{name, description, ...}]   first-level arguments
+#
+# Deliberately NO fallback: there is no `roster=None` branch that reaches for
+# `CommandFactory`, and no lazy import. A fallback would re-create the
+# `engine -> commands` edge this step exists to remove, and hide it behind a
+# branch nothing exercises.
+
+
+def _lookup(
+    roster: list[dict[str, Any]] | None, typed: str
+) -> dict[str, Any] | None:
+    """Resolve a typed command name or ALIAS to its roster entry.
+
+    Replaces `CommandFactory.get(typed)` — same resolution (canonical
+    first, then aliases), read off the data instead of the registry.
+    """
+    if not roster:
+        return None
+    for entry in roster:
+        if entry.get("name") == typed:
+            return entry
+    for entry in roster:
+        if typed in (entry.get("aliases") or ()):
+            return entry
+    return None
+
+
+def _subcommand_pairs(entry: dict[str, Any] | None) -> list[tuple[str, str]]:
+    """`[{name, description, ...}]` from the roster → `(name, description)`.
+
+    The roster publishes subcommands as dicts (they carry `sensitive`
+    too); every table-filtering helper here speaks pairs, which is also
+    the shape `CommandSpec.subcommands` declares.
+    """
+    if entry is None:
+        return []
+    return [
+        (str(sub.get("name", "")), str(sub.get("description", "")))
+        for sub in (entry.get("subcommands") or ())
+    ]
 
 
 def complete(
     buffer: str,
     cursor: int = -1,
     *,
+    roster: list[dict[str, Any]] | None,
     working_dir: str | None = None,
     current_provider: str | None = None,
     tool_names: list[tuple[str, str]] | None = None,
     agent_runs: list[dict[str, Any]] | None = None,
-    client: str | None = None,
 ) -> list[dict[str, Any]]:
     """Compute completions for a given input buffer + cursor position.
 
@@ -262,11 +235,21 @@ def complete(
                     this (the AgentRunRegistry is server-side state; the
                     in-process TUIs have no channel to it — T8b parked),
                     so callers without it simply get no run-id suggestions.
-        client: Which client is asking — "web", "vscode", "rich",
-                "textual". Client-side-only commands (/task, /run,
-                /token) are surfaced only to the clients that
-                implement them. None (legacy/unknown caller) fails open:
-                no filtering.
+
+    Keyword-only and REQUIRED (ADR 0007 step 4):
+        roster: The command roster as plain data —
+                `CommandFactory.roster(<this client>)["commands"]`, read
+                by the CALLER, which owns the command layer. It arrives
+                already filtered for that client, so client gating is
+                structural here: a command the client may not see is
+                simply not in the data, and there is no `client`
+                parameter left to disagree with it. `None` or `[]` is a
+                legitimate value meaning "no registry available" — no
+                slash-command or subcommand completions, while path and
+                @file completion still work. It has no DEFAULT on
+                purpose: with three callers, a forgotten roster would be
+                a silent empty dropdown, whereas a missing argument is a
+                TypeError naming the call site.
 
     Returns:
         List of completion item dicts with a stable JSON schema
@@ -293,11 +276,11 @@ def complete(
     if space_idx > 0:
         return _complete_slash_args(
             text, space_idx, wd, current_provider, tools,
-            agent_runs or [], client,
+            agent_runs or [], roster,
         )
 
     # Bare command name
-    return _complete_commands(text, client)
+    return _complete_commands(text, roster)
 
 
 # =============================================================================
@@ -306,45 +289,56 @@ def complete(
 
 
 def _complete_commands(
-    prefix: str, client: str | None = None
+    prefix: str, roster: list[dict[str, Any]] | None
 ) -> list[dict[str, Any]]:
-    """Complete slash command names from the CommandFactory registry.
+    """Complete slash command names from the roster the caller handed in.
 
-    Consumes the public `CommandFactory.iter_completion_specs()` snapshot
-    rather than the factory's private `_registry` / `_aliases` (ADR 0007
-    seam). Behaviour is unchanged: canonicals and aliases, skipping hidden
-    commands, with the alias description annotated.
+    One entry per canonical command, with its aliases as a FIELD — so
+    the alias items are expanded here rather than arriving as rows
+    (ADR 0007 step 4; before it this read
+    `CommandFactory.iter_completion_specs()` and applied the client gate
+    itself). Behaviour is unchanged: canonicals and aliases, hidden
+    commands skipped, alias descriptions annotated, sorted by text.
+
+    An absent roster yields nothing: completion offers no slash commands
+    rather than reaching for a registry it must not import.
     """
     items: list[dict[str, Any]] = []
     prefix_lower = prefix.lower()
 
-    for info in CommandFactory.iter_completion_specs():
-        if info.hidden:
+    for entry in roster or ():
+        # Client gating (ADR 0007 step 1b, structural since step 4): a
+        # command gated to other clients never reaches this loop — the
+        # caller asked the registry for ITS client's roster. An
+        # unfiltered list taught users to type commands that answered
+        # "Unknown command" everywhere else (Item 40 VSCode trial,
+        # 2026-07-12).
+        if entry.get("hidden"):
             continue
-        candidate = f"/{info.name}"
-        if not candidate.lower().startswith(prefix_lower):
+        canonical = str(entry.get("name", ""))
+        if not canonical:
             continue
-        # Client gating (ADR 0007 step 1b): a command gated to other
-        # clients is not offered here — an unfiltered list taught users
-        # to type commands that answered "Unknown command" everywhere
-        # else (Item 40 VSCode trial, 2026-07-12). Checked after the
-        # prefix so the registry lookup runs only for candidates.
-        if not _client_allows(info.name, client):
-            continue
-        if info.is_alias:
+        description = str(entry.get("description", ""))
+
+        candidate = f"/{canonical}"
+        if candidate.lower().startswith(prefix_lower):
             items.append({
                 "text": candidate,
                 "display": candidate,
-                "description": f"{info.description} (alias for /{info.canonical})",
-                "kind": "alias",
+                "description": description,
+                "kind": "command",
                 "replace_start": -len(prefix),
             })
-        else:
+
+        for alias in entry.get("aliases") or ():
+            candidate = f"/{alias}"
+            if not candidate.lower().startswith(prefix_lower):
+                continue
             items.append({
                 "text": candidate,
                 "display": candidate,
-                "description": info.description,
-                "kind": "command",
+                "description": f"{description} (alias for /{canonical})",
+                "kind": "alias",
                 "replace_start": -len(prefix),
             })
 
@@ -364,58 +358,54 @@ def _complete_slash_args(
     current_provider: str | None,
     tool_names: list[tuple[str, str]],
     agent_runs: list[dict[str, Any]],
-    client: str | None = None,
+    roster: list[dict[str, Any]] | None,
 ) -> list[dict[str, Any]]:
     """Route `/cmd ...` to the right arg completer.
 
-    Resolves aliases (so `/att` completes paths just like `/attach`)
-    before dispatching. Unknown commands fall through to an empty list.
+    Resolves aliases against the roster (so `/att` completes paths just
+    like `/attach`) before dispatching — `CommandFactory.get()` did that
+    until ADR 0007 step 4. Unknown commands keep the name as typed and
+    fall through to the path-arg table, then to an empty list.
+
+    The FIRST subcommand level is generic: whatever the entry declares
+    is what gets offered. The branches below are the completions that a
+    flat declaration cannot express — second-level arguments, and
+    suggestions computed from live state.
     """
     typed_cmd = text[1:space_idx]
-    spec = CommandFactory.get(typed_cmd)
-    canonical = spec.name if spec else typed_cmd
+    entry = _lookup(roster, typed_cmd)
+    canonical = str(entry["name"]) if entry is not None else typed_cmd
     args_region = text[space_idx + 1:]
+    subcommands = _subcommand_pairs(entry)
 
-    # Subcommand / dynamic tables first
+    # Commands whose arguments need more than the declared table
     if canonical == "tools":
-        return _complete_tools(args_region, tool_names)
+        return _complete_tools(args_region, tool_names, subcommands)
     if canonical == "usage":
-        return _complete_usage(args_region)
+        return _complete_usage(args_region, subcommands)
     if canonical == "checkpoint":
-        return _complete_checkpoint(args_region)
-    if canonical == "status":
-        return _complete_status(args_region)
+        return _complete_checkpoint(args_region, subcommands)
     if canonical == "theme":
-        return _complete_theme(args_region)
+        return _complete_theme(args_region, subcommands)
     if canonical == "model":
         return _complete_model(args_region, current_provider)
     if canonical == "provider":
         return _complete_provider(args_region)
     if canonical == "task":
-        # Same gate as the name completion: no verb/run-id suggestions
-        # for a command this client can't dispatch.
-        if not _client_allows("task", client):
+        # A command this client cannot dispatch is not in its roster, so
+        # there is nothing to suggest for it either — the explicit
+        # `_client_allows("task", client)` gate this used to carry is
+        # now structural (ADR 0007 step 4).
+        if entry is None:
             return []
-        return _complete_task(args_region, agent_runs)
+        return _complete_task(args_region, agent_runs, subcommands)
     if canonical == "run":
-        # U3: same machinery, one-off verb table, oneshot-kind ids only.
-        if not _client_allows("run", client):
+        # U3: same machinery, the entry's own verb table, oneshot ids.
+        if entry is None:
             return []
         return _complete_task(
-            args_region, agent_runs,
-            table=_RUN_SUBCOMMANDS, kind="oneshot",
+            args_region, agent_runs, subcommands, kind="oneshot",
         )
-    if canonical == "token":
-        if not _client_allows("token", client):
-            return []
-        completed, token = _split_args(args_region)
-        if not completed:
-            # Subcommands come off the spec (ADR 0007 step 1b) — the
-            # `_TOKEN_SUBCOMMANDS` table that used to live here was the
-            # same four rows written twice.
-            table = spec.subcommands if spec is not None else []
-            return _filter_table(token, table, "subcommand")
-        return []
 
     # Path arg commands
     path_opts = _PATH_ARG_COMMANDS.get(canonical)
@@ -426,6 +416,14 @@ def _complete_slash_args(
             include_files=path_opts["include_files"],
             include_dirs=path_opts["include_dirs"],
         )
+
+    # Everything else: the declared first-level subcommands, if any.
+    # `/token` came through here first (ADR 0007 step 1b) and is now
+    # simply one of many — no per-command code for a command whose
+    # completion IS its declaration.
+    completed, token = _split_args(args_region)
+    if not completed and subcommands:
+        return _filter_table(token, subcommands, "subcommand")
 
     return []
 
@@ -481,12 +479,13 @@ def _filter_table(
 def _complete_tools(
     args_region: str,
     tool_names: list[tuple[str, str]],
+    subcommands: list[tuple[str, str]],
 ) -> list[dict[str, Any]]:
-    """`/tools <subcmd>` + `/tools help <tool>`."""
+    """`/tools <subcmd>` (declared) + `/tools help <tool>` (live tools)."""
     completed, token = _split_args(args_region)
 
     if not completed:
-        return _filter_table(token, _TOOLS_SUBCOMMANDS, "subcommand")
+        return _filter_table(token, subcommands, "subcommand")
 
     if len(completed) == 1 and completed[0].lower() == "help":
         return _filter_table(token, tool_names, "tool")
@@ -497,8 +496,8 @@ def _complete_tools(
 def _complete_task(
     args_region: str,
     agent_runs: list[dict[str, Any]],
+    subcommands: list[tuple[str, str]],
     *,
-    table: list[tuple[str, str]] | None = None,
     kind: str = "task",
 ) -> list[dict[str, Any]]:
     """`/task <verb>` + status-aware `/task <verb> <run_id>` completion.
@@ -515,10 +514,7 @@ def _complete_task(
     completed, token = _split_args(args_region)
 
     if not completed:
-        return _filter_table(
-            token, table if table is not None else _TASK_SUBCOMMANDS,
-            "subcommand",
-        )
+        return _filter_table(token, subcommands, "subcommand")
 
     verb = completed[0].lower()
 
@@ -560,12 +556,15 @@ def _complete_task(
     return items
 
 
-def _complete_usage(args_region: str) -> list[dict[str, Any]]:
-    """`/usage <subcmd>` + `/usage show <mode>`."""
+def _complete_usage(
+    args_region: str,
+    subcommands: list[tuple[str, str]],
+) -> list[dict[str, Any]]:
+    """`/usage <subcmd>` (declared) + `/usage show <mode>` (second level)."""
     completed, token = _split_args(args_region)
 
     if not completed:
-        return _filter_table(token, _USAGE_SUBCOMMANDS, "subcommand")
+        return _filter_table(token, subcommands, "subcommand")
 
     if len(completed) == 1 and completed[0].lower() == "show":
         return _filter_table(token, _USAGE_DISPLAY_MODES, "subcommand")
@@ -573,12 +572,15 @@ def _complete_usage(args_region: str) -> list[dict[str, Any]]:
     return []
 
 
-def _complete_checkpoint(args_region: str) -> list[dict[str, Any]]:
-    """`/checkpoint <subcmd>` + `/checkpoint backend <backend>`."""
+def _complete_checkpoint(
+    args_region: str,
+    subcommands: list[tuple[str, str]],
+) -> list[dict[str, Any]]:
+    """`/checkpoint <subcmd>` (declared) + `/checkpoint backend <backend>`."""
     completed, token = _split_args(args_region)
 
     if not completed:
-        return _filter_table(token, _CHECKPOINT_SUBCOMMANDS, "subcommand")
+        return _filter_table(token, subcommands, "subcommand")
 
     if len(completed) == 1 and completed[0].lower() == "backend":
         return _filter_table(token, _CHECKPOINT_BACKENDS, "subcommand")
@@ -586,21 +588,21 @@ def _complete_checkpoint(args_region: str) -> list[dict[str, Any]]:
     return []
 
 
-def _complete_status(args_region: str) -> list[dict[str, Any]]:
-    """`/status <subcmd>`."""
-    completed, token = _split_args(args_region)
-    if not completed:
-        return _filter_table(token, _STATUS_SUBCOMMANDS, "subcommand")
-    return []
+def _complete_theme(
+    args_region: str,
+    subcommands: list[tuple[str, str]],
+) -> list[dict[str, Any]]:
+    """`/theme <name|list|emoji>` + `/theme emoji <on|off>`.
 
-
-def _complete_theme(args_region: str) -> list[dict[str, Any]]:
-    """`/theme <name|list|emoji>` + `/theme emoji <on|off>`."""
+    The verbs are declared; the theme NAMES are not — they belong to the
+    TUI theme registry (`ppxai/tui/themes/`), which this layer cannot
+    import, so `_THEME_NAMES` stays here. See the module note above.
+    """
     completed, token = _split_args(args_region)
 
     if not completed:
         # First arg: subcommands ("list"/"emoji") + theme names
-        subs = _filter_table(token, _THEME_SUBCOMMANDS, "subcommand")
+        subs = _filter_table(token, subcommands, "subcommand")
         themes = _filter_table(token, _THEME_NAMES, "theme")
         return subs + themes
 

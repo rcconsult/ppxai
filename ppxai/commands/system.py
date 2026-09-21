@@ -839,7 +839,14 @@ CommandFactory.register(CommandSpec(
     description="Switch TUI theme or emoji mode",
     handler=handle_theme,
     category="system",
-    usage="/theme [list|<name>|emoji on|off]"
+    usage="/theme [list|<name>|emoji on|off]",
+    # ADR 0007 step 4 (was `_THEME_SUBCOMMANDS`). Only the VERBS live
+    # here. Theme NAMES are a runtime registry (ppxai/tui/themes/) and
+    # keep their own completion path, as do the `emoji on|off` values.
+    subcommands=[
+        ("list",  "Show available themes"),
+        ("emoji", "Toggle emoji mode (on|off)"),
+    ],
 ))
 
 CommandFactory.register(CommandSpec(
@@ -847,7 +854,13 @@ CommandFactory.register(CommandSpec(
     description="Show status information",
     handler=handle_status,
     category="system",
-    usage="/status [version|cwd|datetime]"
+    usage="/status [version|cwd|datetime]",
+    # ADR 0007 step 4 (was `_STATUS_SUBCOMMANDS`).
+    subcommands=[
+        ("version",  "Toggle version display"),
+        ("cwd",      "Toggle working directory display"),
+        ("datetime", "Toggle date/time display"),
+    ],
 ))
 
 CommandFactory.register(CommandSpec(

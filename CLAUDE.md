@@ -49,7 +49,7 @@ Each has a dedicated doc — read it before changing code in that area.
 
 **Capability surface:**
 - AppState schema DTO (`engine/app_state_schema.json`) — single source of truth for 4 clients; mirrors in `web/shared/app-state.js` + `vscode-extension/src/appState.ts`; cross-language sentinel tests.
-- CompletionProvider engine layer (`engine/completion.py`) — single source of truth for autocomplete; clients are thin glue.
+- CompletionProvider engine layer (`engine/completion.py`) — single source of truth for autocomplete BEHAVIOUR; clients are thin glue. Command DATA is not its own: since ADR 0007 step 4 `complete()` takes a required `roster=` (`CommandFactory.roster(<client>)["commands"]`, passed by each caller, already client-filtered), subcommands are read off `CommandSpec.subcommands`, and **`ppxai/engine/` imports nothing from `ppxai.commands`** — fenced at zero by `tests/test_no_new_lazy_imports.py::TestEngineImportsNoCommands`.
 - File upload + multimodal — `/attach` command, `SessionFileStore`, file preprocessing, image validation, VL sidecar, PDF/Excel/PPTX/DOCX tools.
 - `/doctor` config advisor — deprecation table, dead/deprecated/new/recommended model scanning.
 - VSCode extension bundled via esbuild (v1.18.2) — 128 KB VSIX (was 1.1 MB), 15 files (was 804); CI has 500 KB size-budget gate.

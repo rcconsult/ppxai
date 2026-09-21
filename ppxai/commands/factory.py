@@ -47,10 +47,12 @@ _BUILTIN_COMMAND_MODULES = (
 
 
 #: Client ids recognized throughout the command registry — the exact
-#: strings passed as `client=` to `engine.completion.complete()` by
-#: `rich/main.py`, `tui/completer.py` and `server/routes/completion.py`
-#: (the latter forwarding the HTTP request's own `client` field, which
-#: carries "web" or "vscode"). ADR 0007 step 1a.
+#: strings `rich/main.py`, `tui/completer.py` and
+#: `server/routes/completion.py` ask `CommandFactory.roster()` for before
+#: handing the result to `engine.completion.complete()` (the last one
+#: forwarding the HTTP request's own `client` field, which carries "web"
+#: or "vscode"). ADR 0007 step 1a; they passed the id to `complete()`
+#: itself until step 4 made the roster the only channel.
 KNOWN_CLIENTS = frozenset({"rich", "textual", "web", "vscode"})
 
 #: The two clients `ServerCommandContext` serves — it fields HTTP requests
@@ -110,8 +112,11 @@ def client_sees(
 ) -> bool:
     """True when `client` may see a command gated to `clients`.
 
-    The single definition of the visibility gate, shared by completion
-    (`engine/completion.py::_client_allows`) and `/help`. `clients=None`
+    The single definition of the visibility gate, shared by `/help` and
+    by `roster()` — which is how it reaches completion since ADR 0007
+    step 4: the caller asks for ITS client's roster and hands completion
+    the filtered data, so `engine/completion.py` has no gate of its own
+    any more (`_client_allows` is gone). `clients=None`
     means universal. `client` accepts three shapes:
 
     - `None` (a legacy or unknown caller) fails OPEN and sees everything
@@ -151,7 +156,12 @@ class CommandSpec:
         hidden: If True, command is not shown in /help
         subcommands: (name, description) pairs, shown in completion/help.
             Shape deliberately matches the `_*_SUBCOMMANDS: list[tuple[str,
-            str]]` tables in `engine/completion.py` (ADR 0007 step 1a).
+            str]]` tables that used to live in `engine/completion.py`
+            (ADR 0007 step 1a); step 4 moved the last seven of them here
+            and made completion read this field through `roster()`.
+            FIRST level only — a second-level argument (`/usage show
+            <mode>`, `/checkpoint backend <name>`) has no place in this
+            flat shape and stays in the completion logic.
         clients: Which clients can SEE this command. None means universal.
         client_action: Name from `CLIENT_ACTIONS` naming the client-side
             behaviour this command binds to. None means the command has no

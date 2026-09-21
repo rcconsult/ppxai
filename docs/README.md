@@ -168,7 +168,11 @@ ppxai includes built-in tools for AI-powered development:
 
 All four clients (Rich TUI, Textual TUI, Web, VSCode) share the same
 autocomplete via `ppxai/engine/completion.py`. Rich + Textual call it
-in-process; Web + VSCode call it via `POST /complete`.
+in-process; Web + VSCode call it via `POST /complete`. The command data
+it works on is passed IN by the caller
+(`CommandFactory.roster(<client>)["commands"]`, ADR 0007 step 4), so a
+subcommand is declared once on its `CommandSpec` and every client
+derives it.
 
 | Input | Tab Shows |
 |-------|-----------|

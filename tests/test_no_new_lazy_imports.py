@@ -613,138 +613,152 @@ class TestTypeCheckingIsBanned:
 
 
 # ===========================================================================
-# Guard 2 — `engine.completion` must stay a leaf of the engine package
+# Guard 2 — `ppxai/engine/` must not import `ppxai.commands`
 # ===========================================================================
 #
-# ADR 0007. `ppxai/engine/completion.py:48` does
-# `from ..commands.factory import CommandFactory` — the ONLY `engine ->
-# commands` import in the whole engine package, and step 2 of that ADR (lift
-# `complete()` into a `ppxai/completion/` package behind a Protocol) is still
-# open after v1.19.0, .1 and .2.
+# ADR 0007, step 4 (2026-09-21). This guard REPLACES
+# `TestEngineCompletionStaysALeaf`, which fenced the single symptom:
+# `engine/completion.py` reached UP into the command layer
+# (`from ..commands.factory import CommandFactory`) to read the command
+# roster, and that edge made the PACKAGE graph cycle — importing
+# `ppxai.commands.factory` pulls ~52 `ppxai.engine` modules back, so the
+# direction of travel was engine -> commands -> engine. The MODULE graph
+# stayed acyclic for one reason only: nothing inside `engine` imported
+# `engine.completion`, so the loop was never closed at import time. That
+# leaf status was load-bearing and undefended, which is what the old guard
+# defended — an interim measure whose own failure message said to delete it
+# the day the upward import went away.
 #
-# Measured 2026-09-20 while re-verifying the ADR: importing
-# `ppxai.commands.factory` pulls **52** `ppxai.engine` modules. So the PACKAGE
-# graph already cycles — engine -> commands -> engine.
+# Step 4 removed the import instead of the symptom: the three CALLERS
+# (`rich/main.py`, `tui/completer.py`, `server/routes/completion.py`) each
+# read `CommandFactory.roster(<their client>)["commands"]` and hand
+# `complete()` that plain data. So there is nothing left to be a leaf ABOUT,
+# and the right fence is the layering rule itself, held at zero:
 #
-# The MODULE graph does not, and that is the only reason nothing breaks:
-# `engine.completion` is a leaf. `commands.factory` does not pull it, and no
-# module inside `engine` imports it either, so the cycle is never closed at
-# import time and `import ppxai.engine.completion` succeeds standalone.
+#     the engine does not know the command layer exists.
 #
-# That leaf status is LOAD-BEARING AND UNDEFENDED. One `engine` module
-# importing `engine.completion` — an obvious thing to do, since the name
-# says it belongs to the engine — closes the loop and turns a dormant
-# layering smell into an ImportError at startup. Nothing in the suite would
-# have caught it. This is that check: one test, no refactor, and it can go
-# away the day ADR 0007 step 2 lands and the upward import with it.
+# Same shape and same reasoning as Guard 3 (`config` must not import
+# `engine`): a rule at zero, walking the WHOLE AST so a function-level
+# evasion counts, with the guards tested before the sweep.
 
 
-ENGINE_COMPLETION = "ppxai.engine.completion"
+def _engine_to_commands_edges():
+    """`(module, target, lineno)` for every `engine -> commands` import.
 
-
-def _engine_modules_importing(target):
-    """`(module, lineno)` for every module under `ppxai/engine/` importing
-    `target` — at module scope or inside a function, both count.
-
-    A function-level import closes the cycle just as hard; it only moves the
-    moment it fires from startup to first call.
+    Module scope AND function level, across the whole `ppxai/engine/`
+    package. A function-level import closes the cycle just as hard; it only
+    moves the moment it fires from startup to first call.
     """
-    engine_root = PPXAI / "engine"
     found = []
+    engine_root = PPXAI / "engine"
     for path in sorted(engine_root.rglob("*.py")):
-        module = _module_name(path)
-        if module == target:
-            continue
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"))
         except SyntaxError:
             continue
+        module = _module_name(path)
         is_init = path.name == "__init__.py"
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
-                if any(a.name == target for a in node.names):
-                    found.append((module, node.lineno))
+                for a in node.names:
+                    if a.name == "ppxai.commands" or a.name.startswith(
+                        "ppxai.commands."
+                    ):
+                        found.append((module, a.name, node.lineno))
             elif isinstance(node, ast.ImportFrom):
-                resolved = _resolve(node, module, is_init)
-                if resolved == target:
-                    found.append((module, node.lineno))
-                elif resolved and any(
-                    f"{resolved}.{a.name}" == target for a in node.names
-                ):
-                    found.append((module, node.lineno))
+                target = _resolve(node, module, is_init)
+                if target and (target == "ppxai.commands"
+                               or target.startswith("ppxai.commands.")):
+                    found.append((module, target, node.lineno))
+                elif target == "ppxai":
+                    for a in node.names:
+                        if a.name == "commands":
+                            found.append((module, "ppxai.commands", node.lineno))
     return found
 
 
-class TestEngineCompletionStaysALeaf:
-    """Guards FIRST — see the module docstring's "the sweep must work" rule.
+class TestEngineImportsNoCommands:
+    """Guards FIRST — a detector that stopped matching would pass forever.
 
-    **Mutation-verified 2026-09-20, and the two cases behave differently —
-    which is the whole reason this guard is worth having.**
+    **Mutation-verified 2026-09-21, and the result differs from Guard 3's —
+    which makes this fence MORE load-bearing, not less.**
 
-    Adding `from .completion import complete` at MODULE scope in
-    `engine/client.py` does not fail this test. It fails the entire pytest
-    run at collection, before any test executes::
+    For Guard 3 (`config -> engine`) and for the retired
+    `TestEngineCompletionStaysALeaf` (`engine -> engine.completion`), a
+    module-scope mutation was LOUD: it took the whole pytest run down at
+    collection with a partially-initialized-module `ImportError`, so the
+    fence only really bought the function-level case.
 
-        INTERNALERROR> ... ppxai/engine/client.py: from .completion import complete
-        INTERNALERROR> ... ppxai/engine/completion.py:48: from ..commands.factory import CommandFactory
-        INTERNALERROR> ... ppxai/commands/handler.py:29: from ..engine import EngineClient
-        INTERNALERROR> ImportError: cannot import name 'EngineClient' from
-                       partially initialized module 'ppxai.engine'
-                       (most likely due to a circular import)
+    Not here. Both mutations were re-run on 2026-09-21:
 
-    That is loud, immediate, and needs no fence — but the traceback names
-    `handler.py` and `EngineClient`, and says nothing about ADR 0007, so a
-    reader can burn real time before finding the actual rule.
+    - **Module scope** — `from ..commands.factory import CommandFactory`
+      restored at the top of `engine/completion.py` (literally the line ADR
+      0007 step 4 deleted): **`pytest --collect-only` collects all 6,285
+      tests, `import ppxai.engine.completion` succeeds in a fresh
+      interpreter, and the completion suites stay green.** NOTHING fails
+      except this test. The cycle is real (`commands.factory` pulls ~52
+      `ppxai.engine` modules) but stays dormant, because `engine.completion`
+      is a leaf no engine module imports — which is exactly the silent state
+      this edge sat in for three releases.
+    - **Function level** — the same import inside a function in
+      `engine/completion.py`: this test fails, and so does
+      `TestNoNewLazyImports` (a function-level internal import breaks that
+      rule too). Nothing else fails.
 
-    The case that DOES need the fence is a **function-level** import inside
-    an engine module. It defers the cycle to call time, so the package still
-    imports, the suite still runs, every other test still passes, and the
-    breakage surfaces only when that function is first called — possibly in
-    a client, possibly in production. `_engine_modules_importing` walks the
-    whole AST rather than just module scope for exactly that reason;
-    mutating one in produces this test's failure and nothing else's.
+    So the whole `engine -> commands` rule is silent in production and needs
+    a test to be visible at all. `_engine_to_commands_edges` walks the whole
+    AST, module scope and function bodies alike, for that reason.
     """
 
     def test_the_detector_resolves_a_relative_import(self):
-        """`from .completion import complete` inside engine must be caught."""
-        tree = ast.parse("from .completion import complete\n")
+        """`from ..commands.factory import CommandFactory` must be caught."""
+        tree = ast.parse("from ..commands.factory import CommandFactory\n")
         node = next(n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom))
-        assert _resolve(node, "ppxai.engine.client", False) == ENGINE_COMPLETION
-
-    def test_the_detector_resolves_the_from_module_form(self):
-        """`from . import completion` resolves to the package, not the name.
-
-        This is the form the plain `_resolve` result misses, which is why the
-        sweep also checks `f"{resolved}.{alias}"` — without that branch this
-        guard would have a silent hole.
-        """
-        tree = ast.parse("from . import completion\n")
-        node = next(n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom))
-        resolved = _resolve(node, "ppxai.engine.client", False)
-        assert resolved == "ppxai.engine"
-        assert f"{resolved}.completion" == ENGINE_COMPLETION
-
-    def test_the_engine_root_is_where_we_think(self):
-        assert (PPXAI / "engine" / "completion.py").exists(), (
-            "ppxai/engine/completion.py is gone — if ADR 0007 step 2 landed "
-            "and it moved to ppxai/completion/, DELETE this whole guard "
-            "class; it has done its job."
+        assert _resolve(node, "ppxai.engine.completion", False) == (
+            "ppxai.commands.factory"
         )
 
-    def test_no_engine_module_imports_engine_completion(self):
-        offenders = _engine_modules_importing(ENGINE_COMPLETION)
-        assert not offenders, (
-            "a module under ppxai/engine/ now imports engine.completion, "
-            "which closes the engine -> commands -> engine package cycle "
-            "(ADR 0007).\n\n"
-            "engine/completion.py:48 imports CommandFactory, and "
-            "commands.factory pulls ~52 engine modules back. Today that is "
-            "harmless ONLY because completion is a leaf nothing in engine "
-            "reaches. Importing it from inside engine makes the cycle real.\n\n"
-            "Call `complete()` from a client (rich/main.py, tui/completer.py, "
-            "server/routes/completion.py all do), or land ADR 0007 step 2 and "
-            "delete this guard:\n  "
-            + "\n  ".join(f"{m}:{line}" for m, line in offenders)
+    def test_the_detector_resolves_the_from_package_form(self):
+        """`from .. import commands` names the package, not a submodule.
+
+        This is the form a plain `_resolve` result misses — it returns
+        `ppxai` — which is why the sweep also inspects the imported NAMES.
+        Without that branch this guard would have a silent hole.
+        """
+        tree = ast.parse("from .. import commands\n")
+        node = next(n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom))
+        assert _resolve(node, "ppxai.engine.completion", False) == "ppxai"
+        assert [a.name for a in node.names] == ["commands"]
+
+    def test_the_detector_sees_an_absolute_import(self):
+        tree = ast.parse("import ppxai.commands.factory\n")
+        node = next(n for n in ast.walk(tree) if isinstance(n, ast.Import))
+        assert node.names[0].name.startswith("ppxai.commands")
+
+    def test_the_engine_and_commands_packages_are_where_we_think(self):
+        assert (PPXAI / "engine").is_dir(), "wrong root?"
+        assert (PPXAI / "commands" / "factory.py").exists(), "wrong root?"
+
+    def test_the_engine_imports_nothing_from_commands(self):
+        edges = _engine_to_commands_edges()
+        assert not edges, (
+            "a module under ppxai/engine/ imports ppxai/commands/, which "
+            "inverts the layering and makes the two packages mutually "
+            "dependent (ADR 0007).\n\n"
+            "The layers are Engine -> Server -> Clients, and `commands` sits "
+            "ABOVE the engine: importing `ppxai.commands.factory` pulls ~52 "
+            "`ppxai.engine` modules back, so this edge closes an "
+            "engine -> commands -> engine package cycle. It held at zero "
+            "from 2026-09-21, when ADR 0007 step 4 removed the last one "
+            "(`engine/completion.py` reading the command roster).\n\n"
+            "If the engine needs command DATA, the CALLER passes it in as "
+            "plain data — that is what `complete(roster=...)` does: "
+            "`rich/main.py`, `tui/completer.py` and "
+            "`server/routes/completion.py` each read "
+            "`CommandFactory.roster(<their client>)[\"commands\"]` and hand it "
+            "over. Do not add a `roster=None` fallback that imports the "
+            "factory; that is this edge again, behind a branch:\n  "
+            + "\n  ".join(f"{m}:{line} -> {t}" for m, t, line in edges)
         )
 
 
@@ -803,7 +817,7 @@ def _config_to_engine_edges():
 class TestConfigDoesNotImportEngine:
     """Guards FIRST — a detector that stops matching would pass forever.
 
-    **Mutation-verified 2026-09-20, and as with the engine.completion guard
+    **Mutation-verified 2026-09-20, and as with Guard 2 (engine -> commands)
     the two cases behave differently — which is why this test exists.**
 
     A MODULE-scope `from ..engine.types import X` in `config/loader.py` does

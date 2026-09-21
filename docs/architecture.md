@@ -348,6 +348,17 @@ intercepted without a declared action, as the named, shrinking
 `vscode`-free by design (the `taskController.ts` idiom), so the
 behavioural tests compile and drive the real TypeScript under Node.
 
+**Completion derives from the same declaration too (ADR 0007 step 4,
+2026-09-21).** The seven hand-written `_*_SUBCOMMANDS` tables in
+`engine/completion.py` — the LAST of the six hand-written rosters the
+record counted — are gone: a command's first-level subcommands are
+`CommandSpec.subcommands`, and each of the three `complete()` callers
+(`rich/main.py`, `tui/completer.py`, `server/routes/completion.py`)
+passes `CommandFactory.roster(<its client>)["commands"]` in. The side
+effect is the layer inversion the record was originally filed for:
+`ppxai/engine/` now imports nothing from `ppxai.commands`. See
+§Cross-Client Autocomplete.
+
 **Secrets ride the same declaration (ADR 0007 step 3a-sec).** A spec may
 mark subcommands whose ARGUMENT is a secret
 (`CommandSpec.sensitive_subcommands`; `/token set` is the only one
@@ -882,19 +893,32 @@ Internal endpoints (these keep evolving):
 ## Cross-Client Autocomplete (v1.17.x)
 
 `ppxai/engine/completion.py` is the **single source of truth** for
-autocomplete across all four clients. Rich and Textual call it in-
-process; Web and VSCode call it via `POST /complete`. Client completers
-are pure glue layers — no client owns any subcommand tables, no client
-scans its own buffer to decide completion mode.
+autocomplete BEHAVIOUR across all four clients. Rich and Textual call it
+in-process; Web and VSCode call it via `POST /complete`. Client
+completers are pure glue layers — no client owns any subcommand tables,
+no client scans its own buffer to decide completion mode.
+
+**The command DATA comes from the registry, not from here (ADR 0007
+step 4, 2026-09-21).** `complete()` takes a required `roster=`
+argument: the caller passes
+`CommandFactory.roster(<its client>)["commands"]` — plain dicts, already
+filtered for that client. So `ppxai/engine/completion.py` **imports
+nothing from `ppxai.commands`** (fenced at zero by
+`tests/test_no_new_lazy_imports.py::TestEngineImportsNoCommands`), the
+`engine → commands → engine` package cycle is closed, and client gating
+is structural: a command the client may not see is simply absent from
+the data. Every first-level subcommand is read off
+`CommandSpec.subcommands`; with no roster, completion offers no slash
+commands while path and `@file` completion still work.
 
 ```
                   ┌──────────────────────────────────────────┐
                   │  engine/completion.py  ::  complete()    │
                   │  ──────────────────────────────────────  │
-                  │  • slash commands (CommandFactory)       │
+                  │  • slash commands (from roster= data)    │
                   │  • aliases + /quit /exit                 │
                   │  • path args (/attach, /cd, ...)         │
-                  │  • subcommands (/tools, /usage, ...)     │
+                  │  • subcommands (declared on the spec)    │
                   │  • /model + /provider (dynamic)          │
                   │  • /tools help <tool>                    │
                   │  • @file refs + @git/@tree/@clipboard/   │
@@ -959,13 +983,18 @@ had `@git`/`@tree`/`@clipboard`/`@url` but Rich didn't; Rich had
 a new subcommand meant editing five files and guessing which clients
 to retest.
 
-After the unification, adding a new subcommand or context provider
-is a one-file change in `engine/completion.py`. The web client picks
-it up for free (no recompile needed, just a server restart). VSCode
-picks it up on the next extension reload. Rich and Textual get it
-immediately because they call the engine in-process. Tests live next
-to the engine logic in `tests/test_completion_provider.py` (66 tests
-covering every source).
+After the unification, adding a new subcommand or context provider is a
+one-file change. Since ADR 0007 step 4 that file is the COMMAND's own
+module, not the engine: a subcommand is a row in its
+`CommandSpec(subcommands=[...])`, and completion, `GET /commands` and
+every client derive it. (Only completion BEHAVIOUR a flat declaration
+cannot express — second-level arguments like `/usage show <mode>`,
+and live sources like `/model` ids or `/task` run ids — still lives in
+`engine/completion.py`.) The web client picks it up for free (no
+recompile needed, just a server restart). VSCode picks it up on the
+next extension reload. Rich and Textual get it immediately because
+they call the engine in-process. Tests live next to the engine logic
+in `tests/test_completion_provider.py`.
 
 ## Schema-Driven AppState DTO (v1.17.4)
 
