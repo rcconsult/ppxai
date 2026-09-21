@@ -24,6 +24,7 @@ import {
 } from './commandRouter';
 
 import { AppState } from './appState';
+import { SchemaGuard } from './schemaGuard';
 
 // v1.19.x T8a: the /task command family (tool-capable /v1/agent/task tier).
 import { TaskController, RunController, ConsentAnswer } from './taskController';
@@ -210,12 +211,43 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     );
     private _commandRouter?: CommandRouter;
 
+    // Run-time half of the AppState contract (2026-09-21). The types in
+    // `appState.generated.ts` are derived from the schema at BUILD time;
+    // this asks the server we actually connected to whether it declares
+    // the same shape. Never blocks: `AppState` above is already
+    // constructed and complete from the bundled schema.
+    // Built in the constructor, not as a field initialiser: it needs
+    // `_context` for the extension version, and field initialisers run
+    // before the constructor body assigns it.
+    private _schemaGuard!: SchemaGuard;
+
     constructor(
         context: vscode.ExtensionContext,
         backend: HttpClient
     ) {
         this._context = context;
         this._backend = backend;
+        this._schemaGuard = new SchemaGuard(
+            { getAppStateSchema: () => this._backend.getAppStateSchema() },
+            AppState.BUNDLED_SCHEMA,
+            {
+                adopt: (fields) => this._appState.adoptFields(fields),
+                resetAdopted: () => this._appState.resetAdoptedFields(),
+                log: (message) => console.warn(message),
+                warnUser: (message) => {
+                    void vscode.window.showWarningMessage(message);
+                },
+                extensionVersion: context.extension?.packageJSON?.version,
+                serverVersion: async () => {
+                    try {
+                        const health = await this._backend.getHealth();
+                        return health?.version ?? null;
+                    } catch {
+                        return null;
+                    }
+                },
+            },
+        );
     }
 
     /**
@@ -929,6 +961,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             // command typed right after connect does not race it; a
             // failure is non-fatal (the router retries once, inline).
             await this._commandRoster.load();
+
+            // Run-time schema check. Awaited (it is one small GET) but
+            // deliberately NOT fail-closed: an older server that 404s
+            // here is still a usable server, so the guard logs and the
+            // panel carries on with the bundled schema.
+            await this._schemaGuard.check();
 
             // Set working directory for context injection
             const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -1914,6 +1952,7 @@ Review your previous actions and continue. If the task is complete, respond with
                 // just stopped. Drop it here too — `stopServer()` does
                 // not necessarily fire onServerStatusChange in this path.
                 this._commandRoster.unload();
+                this._schemaGuard.reset();
                 this._view.webview.postMessage({
                     type: 'serverStatus',
                     connected: false,
@@ -1962,7 +2001,12 @@ Review your previous actions and continue. If the task is complete, respond with
         // snapshot nobody promised is still true is exactly what the
         // fail-closed rule exists to prevent. `initializeBackend()`
         // refetches on the way back up.
-        if (!connected) { this._commandRoster.unload(); }
+        if (!connected) {
+            this._commandRoster.unload();
+            // Same reasoning for state: fields adopted from THAT server
+            // must not survive onto the next one.
+            this._schemaGuard.reset();
+        }
         if (!this._view) { return; }
         this._view.webview.postMessage({
             type: 'serverStatus',

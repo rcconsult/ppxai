@@ -16,126 +16,55 @@
  * events or REST responses) to `updateFromPython()` and read camelCase
  * values via the typed `get()` / `snapshot()` methods.
  *
- * The `AppStateFields` interface below is hand-maintained as static
- * type documentation. TypeScript enforces two invariants at build time:
- *   - Every field declared on the interface must appear in the JSON
- *     schema (checked at runtime by a constructor assertion).
- *   - The constructor only writes to fields that exist on the
- *     interface (type-checked by `keyof AppStateFields`).
+ * **The `AppStateFields` type is GENERATED** (`./appState.generated`), by
+ * the same `scripts/sync-schema.js` run that copies the JSON. It used to
+ * be a hand-written interface here and it drifted: the schema had 22
+ * fields and the interface 20 (`lastMessageRole` and `modelSupportsVision`
+ * were never added), while this comment claimed a constructor assertion
+ * that did not exist. Nothing in the type layer is hand-maintained now
+ * except the three container element interfaces in `./appStateTypes`.
+ *
+ * TypeScript enforces the remaining invariant at build time: the class
+ * only reads and writes keys of the generated `AppStateFields`, so a
+ * field removed from the canonical schema breaks compilation at every
+ * call site that still names it.
  *
  * When Python adds a new canonical field:
  *   1. Add it to `ppxai/engine/app_state_schema.json`.
- *   2. Bump `AppState.FIELDS` sentinel test in `tests/test_app_state.py`.
- *   3. Add the camelCase field to `AppStateFields` below.
- *   4. Mirror the change in `ppxai/web/shared/app-state.js` — only if
- *      the web AppState constructor needs type updates (the web side
- *      is fully dynamic and usually needs no changes).
+ *   2. Bump the `AppState.FIELDS` sentinel test in `tests/test_app_state.py`.
+ *   3. Run `npm run sync-schema` (or just `npm run compile`, which does it)
+ *      and commit the regenerated `src/appState.generated.ts` and
+ *      `resources/app-state-schema.json`.
+ * There is no step that types a field name by hand. `web/shared/app-state.js`
+ * is fully dynamic and needs nothing at all.
  *
- * The sync script ensures step 3 is always picked up at build time;
- * the Python test pins the schema count on the engine side; step 4
- * is the only manual work left, and only when a new field needs
- * TypeScript type coverage.
- *
- * The v1.18.x schema generator will auto-generate `AppStateFields`
- * from the JSON schema, eliminating step 3 entirely.
+ * **Version skew is checked at run time** by `./schemaGuard`, which the
+ * chat panel drives on connect: it fetches `GET /schema/app-state` from
+ * the server actually connected to and compares it with the bundled copy
+ * these types were generated from. Fields a NEWER server declares are
+ * adopted for that connection (`adoptFields`) so `updateFromPython`
+ * stores them instead of dropping them with a per-push warning; fields
+ * this build was compiled against but the server does not have are
+ * surfaced to the user once. Adoption is per-instance and cleared by
+ * `resetAdoptedFields()` on disconnect, so reconnecting to a different
+ * server cannot leave a stale field behind.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 
-/**
- * Canonical state fields shared across all ppxai clients.
- *
- * Hand-maintained type documentation. Must stay in sync with
- * `ppxai/engine/app_state_schema.json` — the constructor validates
- * at runtime that every interface field has a matching schema entry.
- */
-export interface AppStateFields {
-    // --- Core identity ---
-    currentProvider: string;
-    currentModel: string;
-    workingDir: string;
-    sessionId: string;
-    sessionName: string;
+import { AppStateFields } from './appState.generated';
+import {
+    AgentBeatSnapshot,
+    BackgroundAgentSummary,
+    ContextAttachment,
+} from './appStateTypes';
 
-    // --- Feature toggles ---
-    toolsEnabled: boolean;
-    toolsVerbose: boolean;
-    agentMode: boolean;
-    autoRoute: boolean;
-
-    // --- Streaming / flow control ---
-    isStreaming: boolean;
-    cancelRequested: boolean;
-
-    // --- Usage statistics ---
-    totalTokens: number;
-    promptTokens: number;
-    completionTokens: number;
-    estimatedCost: number;
-    contextPercentage: number;
-
-    // --- Debug ---
-    debugLog: boolean;
-
-    // --- Multimodal context (v1.17.4 Phase 6.3) ---
-    // List of attachment summaries currently in session.messages.
-    // Entry schema: { name, kind, media_type, turn_index, file_id }
-    contextAttachments: ContextAttachment[];
-
-    // --- Agent heartbeat (P0 v1.18.0) ---
-    // Latest AgentBeatState.as_event_data() dict from the engine.
-    // `{}` when idle; engine clears on AGENT_RUN_COMPLETE / _ERROR.
-    agentBeat: AgentBeatSnapshot | Record<string, never>;
-
-    // --- Background agents (v1.19.0 Inc 9) ---
-    // Active (non-terminal) /v1/agent/* runs mirrored from the
-    // server-global registry. `[]` when none active.
-    backgroundAgents: BackgroundAgentSummary[];
-}
-
-/**
- * One active agent-run summary mirrored into AppState.background_agents
- * (v1.19.0 Inc 9). Matches the server's
- * `AgentRunRegistry.active_summary()` projection — badge fields only,
- * never result/error/events.
- */
-export interface BackgroundAgentSummary {
-    run_id: string;
-    status: string;
-    task: string;
-    owner: string | null;
-}
-
-/**
- * A single agent-iteration heartbeat snapshot pushed from the engine
- * (P0 v1.18.0). Mirrors `ppxai/engine/types.py::AgentBeatState.as_event_data()`.
- * All fields are optional on the wire because an empty-object payload
- * `{}` is the engine's signal that the agent loop has ended.
- */
-export interface AgentBeatSnapshot {
-    iteration: number;
-    beat: number;
-    tool: string;
-    ok: boolean;
-    failures: number;
-    elapsed_s: number;
-}
-
-/**
- * A single multimodal attachment entry in context_attachments.
- * Matches the Python dict schema from EngineClient._refresh_context_attachments.
- */
-export interface ContextAttachment {
-    name: string;
-    kind: string;        // "image" | "text" | "pdf" | "file"
-    media_type: string;  // e.g. "image/png", "" if unknown
-    turn_index: number;  // index into session.messages
-    file_id: string;     // SessionFileStore identifier, "" for legacy
-}
+export { AppStateFields };
+export { AgentBeatSnapshot, BackgroundAgentSummary, ContextAttachment };
 
 /** Raw schema file shape. */
-interface SchemaField {
+export interface SchemaField {
     client: string;
     type: 'string' | 'boolean' | 'integer' | 'number' | 'array' | 'object';
     default: unknown;
@@ -143,10 +72,21 @@ interface SchemaField {
     doc?: string;
 }
 
-interface Schema {
+export interface Schema {
     version: string;
     description?: string;
     fields: Record<string, SchemaField>;
+}
+
+/**
+ * The minimum an adopted field must declare: where to store it and what
+ * to seed it with. Structurally satisfied by both `SchemaField` here and
+ * `SchemaFieldSpec` in `./schemaGuard`, which is the point — adoption
+ * must not force the two shapes to be the same nominal type.
+ */
+export interface AdoptableField {
+    client: string;
+    default: unknown;
 }
 
 /** Listener callback type */
@@ -205,9 +145,18 @@ export class AppState {
     static readonly SCHEMA: Schema = _SCHEMA;
 
     /**
-     * Python snake_case → TS camelCase map, derived from the schema
-     * at module load. Single source of truth for cross-language
-     * field name translation on the VSCode extension.
+     * The schema `appState.generated.ts` was generated from — the same
+     * object as `SCHEMA`, named for the one job that cares about the
+     * distinction: `schemaGuard` compares a CONNECTED SERVER's schema
+     * against what this build was COMPILED against.
+     */
+    static readonly BUNDLED_SCHEMA: Schema = _SCHEMA;
+
+    /**
+     * Python snake_case → TS camelCase map, derived from the bundled
+     * schema at module load. The compile-time vocabulary; an instance
+     * may hold a wider one after adopting a newer server's extra
+     * fields (see `adoptFields`).
      */
     static readonly PYTHON_TO_TS: Readonly<Record<string, string>> = Object.freeze(
         Object.fromEntries(
@@ -231,21 +180,43 @@ export class AppState {
     private _data: AppStateFields;
     private _listeners: Partial<Record<keyof AppStateFields, Listener[]>> = {};
 
+    /**
+     * Per-instance Python→TS map. Starts as a copy of the static
+     * (compile-time) map and may GAIN entries for fields a newer server
+     * declares. Per-instance, never static: a disconnect/reconnect to a
+     * different server must not inherit the previous one's vocabulary.
+     */
+    private _pythonToTs: Record<string, string>;
+
+    /** Client names adopted from a server this connection, in adoption order. */
+    private _adopted: string[] = [];
+
     constructor(initial?: Partial<AppStateFields>) {
         // Build defaults from the schema. The cast is safe because
-        // the `AppStateFields` interface and the schema are required
-        // to stay in sync (enforced by the Python drift test and the
-        // sync-schema pre-compile hook).
+        // `AppStateFields` is GENERATED from this same schema file by
+        // scripts/sync-schema.js — the two cannot disagree without
+        // tests/test_app_state_generated_types.py failing.
         const defaults: Partial<AppStateFields> = {};
         for (const [, spec] of Object.entries(_SCHEMA.fields)) {
             (defaults as any)[spec.client] = _cloneDefault(spec.default);
         }
         this._data = { ...defaults, ...initial } as AppStateFields;
+        this._pythonToTs = { ...AppState.PYTHON_TO_TS };
     }
 
     /** Get a state field value. */
     get<K extends keyof AppStateFields>(key: K): AppStateFields[K] {
         return this._data[key];
+    }
+
+    /**
+     * Read a field by client name without the compile-time key
+     * constraint. The only way to read a field ADOPTED from a newer
+     * server — by definition this build has no type for it, so the
+     * return type is `unknown` and the caller must narrow.
+     */
+    getRaw(key: string): unknown {
+        return (this._data as unknown as Record<string, unknown>)[key];
     }
 
     /** Set a state field. Returns true if value changed. No-op if identical. */
@@ -273,6 +244,58 @@ export class AppState {
     }
 
     /**
+     * Teach this instance about fields a CONNECTED SERVER declares that
+     * the bundled schema does not — the "newer server, older extension"
+     * skew. Each adopted field gets its server-declared default and a
+     * name-map entry, so `updateFromPython` STORES it (readable via
+     * `getRaw` / `snapshot`) instead of dropping it with a warning on
+     * every single push.
+     *
+     * Harmless by construction: nothing in this build reads an adopted
+     * field by name, because no such code could have been compiled.
+     * Fields already known are ignored, so calling this repeatedly with
+     * the same payload is a no-op.
+     *
+     * @param fields  Python-keyed schema field specs (the server's).
+     * @returns the client names newly adopted by THIS call.
+     */
+    adoptFields(fields: Record<string, AdoptableField>): string[] {
+        const added: string[] = [];
+        for (const [pyName, spec] of Object.entries(fields || {})) {
+            if (!spec || typeof spec.client !== 'string' || !spec.client) { continue; }
+            if (this._pythonToTs[pyName] !== undefined) { continue; }
+            this._pythonToTs[pyName] = spec.client;
+            (this._data as unknown as Record<string, unknown>)[spec.client] =
+                _cloneDefault(spec.default);
+            this._adopted.push(spec.client);
+            added.push(spec.client);
+        }
+        return added;
+    }
+
+    /**
+     * Forget every field adopted from a server — the name map reverts to
+     * the compile-time vocabulary and the values are dropped.
+     *
+     * Called when the connection goes away. A reconnect may reach a
+     * DIFFERENT server, and a field that server never declares must not
+     * survive in this store as a ghost of the previous one.
+     */
+    resetAdoptedFields(): void {
+        for (const clientName of this._adopted) {
+            delete (this._data as unknown as Record<string, unknown>)[clientName];
+            delete this._listeners[clientName as keyof AppStateFields];
+        }
+        this._adopted = [];
+        this._pythonToTs = { ...AppState.PYTHON_TO_TS };
+    }
+
+    /** Client names currently adopted from a server, in adoption order. */
+    adoptedFields(): string[] {
+        return [...this._adopted];
+    }
+
+    /**
      * Ingest a Python-shaped payload (snake_case keys) and apply it
      * to the local camelCase state. This is the single cross-language
      * boundary — every SSE `state_sync` event and every REST response
@@ -289,7 +312,7 @@ export class AppState {
 
         const mapped: Partial<AppStateFields> = {};
         for (const [pyKey, value] of Object.entries(payload)) {
-            const tsKey = AppState.PYTHON_TO_TS[pyKey];
+            const tsKey = this._pythonToTs[pyKey];
             if (tsKey === undefined) {
                 console.warn(
                     `[AppState] updateFromPython: unknown field '${pyKey}'. ` +

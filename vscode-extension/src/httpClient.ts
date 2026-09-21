@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 // ADR 0007 step 3b: the wire shape of GET /commands. Declared in the
 // VSCode-free roster module so the client and the roster cannot drift.
 import { RosterPayload } from './commandRoster';
+import { SchemaLike } from './schemaGuard';
 
 // === Types matching PythonBackend interface ===
 
@@ -1686,6 +1687,35 @@ export class HttpClient {
             throw err;
         }
         return response.json() as Promise<RosterPayload>;
+    }
+
+    /**
+     * Fetch the CONNECTED server's canonical AppState schema.
+     *
+     * `GET /schema/app-state` has existed since v1.17.4 and had no client
+     * consumer at all until `SchemaGuard` (2026-09-21). The extension
+     * bundles a build-time copy of the same file and generates its
+     * TypeScript types from it, so this fetch answers exactly one
+     * question: is the server we are actually talking to the one those
+     * types describe?
+     *
+     * Errors are thrown, not swallowed — but unlike `getCommandRoster`
+     * the caller does NOT fail closed on them. A 404 means an older
+     * server, which is a usable server; `SchemaGuard` logs and carries on
+     * with the bundled schema.
+     */
+    async getAppStateSchema(): Promise<SchemaLike> {
+        const response = await fetch(
+            `${this.baseUrl}/schema/app-state`,
+            { headers: this.getHeaders() },
+        );
+        if (!response.ok) {
+            const err: any = new Error(
+                `GET /schema/app-state failed: ${response.status} ${response.statusText}`);
+            err.status = response.status;
+            throw err;
+        }
+        return response.json() as Promise<SchemaLike>;
     }
 
     /**
