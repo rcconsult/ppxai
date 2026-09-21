@@ -12,7 +12,7 @@ State that multiple clients need to read (Rich, Textual, Web, VSCode) tends to g
 
 Any piece of state that more than one client needs to render or react to must live in `AppState.FIELDS` with these invariants:
 
-1. **Stable JSON-serializable schema** — plain dicts, not dataclasses. The field round-trips through SSE `state_sync` events to `ppxai/web/shared/app-state.js` and `vscode-extension/src/appState.ts`, which mirror the same field names in camelCase. Cross-language schema drift is a production bug.
+1. **Stable JSON-serializable schema** — plain dicts, not dataclasses. The field round-trips through SSE `state_sync` events to `ppxai/web/shared/app-state.js` and `vscode-extension/src/appState.ts`, both of which DERIVE the same camelCase field names from `ppxai/engine/app_state_schema.json` at construction (web) or module init (VSCode) — neither hand-restates them. Cross-language schema drift is a production bug; see "Run-time skew (VSCode)" below for the one gap that derivation alone cannot close.
 
 2. **Engine-owned invalidation** — `EngineClient` recomputes the field on mutation via a session callback. For `session.messages`, the callback is `SessionManager.on_messages_changed`, installed once and fired from every mutation site (`add_message`, `remove_last_message`, `clear`, `load`, `reset_for_model_switch`, `validate_and_fix_alternation`). When adding a new mutable store in the engine, give it an analogous `on_<thing>_changed` callback hook — never expect clients to poll.
 
@@ -60,10 +60,44 @@ render_status_panel(..., pending_files=attachments)
 
 1. **Ask "does more than one client need this?"** before inventing per-client state. If yes, it goes in AppState.
 2. **Schemas must be JSON-serializable plain dicts** — no dataclasses, no enums, no custom types. Document the schema inline in `FIELDS`.
-3. **Mirror the field in `web/shared/app-state.js` and `vscode-extension/src/appState.ts`** when adding to Python. Use camelCase. The three implementations are copies of the same contract.
+3. **No mirror to maintain by hand, on either JS client.** Adding a field to `ppxai/engine/app_state_schema.json` is the only edit — `web/shared/app-state.js` reads `window.APP_STATE_SCHEMA` (injected at serve time) and derives its camelCase names/defaults at construction; VSCode's `AppState` class reads the bundled JSON copy the same way, and (since 2026-09-21) its TypeScript TYPE layer — `AppStateFields`, historically the one hand-written restatement in this contract — is generated too: `npm run sync-schema` regenerates `vscode-extension/src/appState.generated.ts` from the schema, and `tests/test_app_state_generated_types.py` fails the build if the tracked generated file and a fresh regeneration ever differ. Commit the regenerated file when you touch the schema.
 4. **Invalidation is engine-side**, triggered by a single observable callback on the mutable store. Never have clients call a "refresh state" method manually.
 5. **Test the dedup path** — write a test that verifies a no-op mutation does NOT fire the field's listeners. Without this test, regressions that spam SSE events go unnoticed until production.
 6. **Bump `len(AppState.FIELDS)` sentinel test** in `tests/test_app_state.py` when adding a new field — intentional friction so every addition gets reviewed against the cross-client schema contract.
+
+## Run-time skew (VSCode)
+
+Build-time derivation (rule 3 above) guarantees the extension's bundled
+schema matches the schema it was compiled against — it says nothing
+about the SERVER it connects to at run time, since a VSIX and a
+`ppxai-server` install version independently. Since 2026-09-21,
+`vscode-extension/src/schemaGuard.ts` closes that gap: on every
+(re)connect it fetches `GET /schema/app-state` and compares FIELDS with
+the bundled schema (`chatPanel.ts::initializeBackend`, right after the
+roster load).
+
+| Server declares | Verdict | Behaviour |
+|---|---|---|
+| Same fields | `identical` | Silent — the normal case must produce no log line |
+| Extra fields this build doesn't know | `extra-only` | Adopted for the connection (`AppState.adoptFields`) + one log line; state is stored, never rendered, because rendering code is compiled in |
+| A compiled-against field missing, or retyped | `incompatible` | ONE visible `showWarningMessage`, naming the fields and both versions |
+| 404 / fetch failure | `unverified` | One log line, nothing blocked — state must NOT fail closed (opposite posture from the command roster's fail-closed gate, deliberately: `AppState` is constructed before any server exists) |
+
+`version` is not the signal — the schema's `"version"` key has read
+`"1.0"` since the file was created and none of the five field-changing
+commits since bumped it; the guard compares fields and reports the
+version strings only as context. `tests/test_vscode_schema_guard_behavior.py`
+drives the real compiled module under Node.
+
+**Web has no equivalent run-time check.** The web page gets the schema
+injected once at page load (`server/routes/static.py`); it recovers from
+a server restart WITHOUT a page reload (`app.js`'s heartbeat watchdog →
+`connectToServer(true)` / `_reanchorFromServer()`), but that re-anchor
+only re-fetches `GET /state`, never the schema. A tab left open across a
+server upgrade keeps the OLD injected schema against the NEW server: an
+unknown pushed field gives a `console.warn`; a removed/renamed field is
+silent. Open owner decision — see `docs/plan-adr-0007-completion-service.md`
+§"Open owner decisions" item 9.
 
 ## Reading the graphify signal about this pattern (don't misdiagnose)
 

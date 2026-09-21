@@ -236,6 +236,11 @@ client refetches. **The payload stays on the endpoint; only the signal is
 pushed.** Deliberately NOT AppState: that would cost the schema DTO, two
 hand-written mirrors and the sentinel tests, for data that almost never
 changes — the cost that stalled this record for three releases.
+> **Note (2026-09-21):** the "two hand-written mirrors" cost estimate was
+> already overstated for the DATA path (see ADR 0007's correction), and
+> since 2026-09-21 neither AppState client requires a hand-edit for a new
+> field at all — VSCode's TYPE layer is generated too. See open owner
+> decision 5's closure below.
 
 **Shipped shape.** `CommandFactory.roster(client=None) -> dict` in
 `commands/factory.py` is THE serializer — `GET /commands`
@@ -803,6 +808,31 @@ verified:
 >    commit, not a new gap; note it during the smoke pass rather than
 >    treating it as a regression.
 
+> **VSCode AppState schema-guard manual smoke items — NOT RUN, added
+> 2026-09-21 (commit `1953c29c`)**, alongside the two VSCode lists
+> above. `schemaGuard.ts` has never run against a real
+> `ppxai-server` process from inside a real extension host.
+>
+> 1. **Matched pair (the normal case).** Build the extension against
+>    the current schema, connect to a `ppxai-server` built from the
+>    same tree. No toast, and no `[ppxai SchemaGuard]` line in the
+>    Extension Host console.
+> 2. **Extension newer than server.** Delete `model_supports_vision`
+>    from the SERVER-side `ppxai/engine/app_state_schema.json` only —
+>    do **not** re-run `npm run sync-schema`, so the extension stays
+>    compiled against the field the server no longer declares. Restart
+>    the server, reconnect. Expect exactly one warning naming
+>    `model_supports_vision` and both versions; chat keeps working.
+>    Restore the file afterward (and confirm `git status` is clean
+>    before moving on).
+> 3. **Server older than v1.17.4 (no `/schema/app-state` endpoint).**
+>    No toast; one console line; chat works.
+> 4. **Server newer than extension.** Add a scratch field to the
+>    SERVER-side schema only. Expect one console line ("adopted"),
+>    no toast. Then remove the scratch field, restart the server,
+>    reconnect again — expect no stale field left adopted (adoption is
+>    per-connection and `reset()` clears it on disconnect).
+
 ### 4. Derive, don't restate — ✅ DONE (2026-09-21)
 
 Completion's subcommand tables read the spec, and `engine/completion.py`
@@ -1329,13 +1359,27 @@ behaviour or schema change that wants an owner, not a refactor.
    > **Filed 2026-09-21 as debt Item 76** (`docs/debt-inventory.md`) —
    > not now. Low blast radius; one file, one 8-name set, one fence
    > exemption row.
-5. ~~**`GET /schema/app-state` has no consumer**~~ **PREMISE WRONG —
+5. ~~**`GET /schema/app-state` has no consumer**~~ ~~**PREMISE WRONG —
    corrected 2026-09-21, see the ADR's correction block in §Follow-up.**
    Web gets the schema injected at serve time (`routes/static.py`),
    VSCode gets a build-time copy pinned identical by
    `tests/test_app_state.py`; neither file is a hand-written mirror.
-   Recommendation: do not build a runtime fetch. Owner's call. Original
-   text kept below for the record. (ADR 0007
+   Recommendation: do not build a runtime fetch. Owner's call.~~
+   **CLOSED, built 2026-09-21 (later the same day, commit `1953c29c`).**
+   The premise-wrong correction covered the DATA path only; it missed
+   that VSCode's TYPE path (`interface AppStateFields`) *was* a
+   hand-written mirror and had drifted (22 schema fields vs 20 typed —
+   `lastMessageRole`, `modelSupportsVision` never added). The owner
+   overrode the "do not build it" recommendation. Built: (1) the TYPE
+   gap closed at build time — `sync-schema.js` also emits
+   `src/appState.generated.ts`, hand-written interface deleted,
+   `tests/test_app_state_generated_types.py`; (2) a run-time
+   `GET /schema/app-state` consumer added anyway —
+   `vscode-extension/src/schemaGuard.ts`, checked on every (re)connect,
+   `tests/test_vscode_schema_guard_behavior.py`. See the ADR's
+   "CORRECTION OF THE CORRECTION" block in §"Which mirrors can go, and
+   which cannot" for the full account. Original text kept below for the
+   record. (ADR 0007
    §Follow-up, out of scope here). The endpoint exists
    (`server/routes/schema.py:32`) and neither JS client calls it, while
    both keep hand-written mirrors pinned by cross-language sentinel
@@ -1387,10 +1431,62 @@ behaviour or schema change that wants an owner, not a refactor.
    > legacy branch, `handlers/commands.ts`, `handlers/types.ts`) is
    > deleted, not emptied. `CLIENT_ROUND_TRIP_KINDS` in
    > `ppxai/commands/results.py` names the fenced contract.
+8. **VSCode vision badge / image gate using `modelSupportsVision`**
+   (raised 2026-09-21, filed while closing decision 5). Web has gated
+   its attach-button badge and blocked non-image-capable-model uploads
+   on `state.modelSupportsVision` since v1.18.6
+   (`ppxai/web/app.js:716-736`, `:1266-1276`). `modelSupportsVision` is
+   now typed on the VSCode side (`appState.generated.ts`, this session)
+   but no VSCode UI reads it — the extension still lets a user attach an
+   image to a model that will reject it. Building the mirror behaviour
+   is a UI change to a shipped surface, not a fence; owner's call
+   whether it is worth VSCode-side parity now or later.
+9. **The web stale-schema-after-server-upgrade window** (found
+   2026-09-21 while building the VSCode connect-time guard). Web's
+   schema comes from `window.APP_STATE_SCHEMA`, injected once at page
+   load (`server/routes/static.py`) — correct for that page load, but
+   the client recovers from a server restart WITHOUT a page reload:
+   `ppxai/web/app.js`'s heartbeat watchdog calls `connectToServer(true)`
+   after repeated failures, and `_reanchorFromServer()` (`app.js:280`,
+   also called from the visibility/focus re-anchor path) only re-fetches
+   `GET /state`, never the schema. A tab left open across a server
+   upgrade therefore keeps the OLD injected schema against the NEW
+   server's `state_sync` pushes: an unknown pushed field gives a
+   `console.warn` (silent to the user); a field the tab's schema still
+   expects but the new server renamed or dropped is not detected at
+   all — there is no VSCode-style connect-time comparison on web. Two
+   options on the table, neither built: **(A)** reload the page on
+   reconnect after a server-restart-shaped heartbeat failure (simple,
+   loses any unsent draft/scroll state); **(B)** fetch
+   `GET /schema/app-state` from `_reanchorFromServer()` and run the same
+   field-comparison VSCode now does, surfacing a banner instead of a
+   silent console line. Not filed as a debt item: it is presented here,
+   undecided, rather than deferred — filing it too would double-track
+   the same open question in two places.
+10. **Route `SchemaGuard` logs to the ppxai output channel** (found
+    2026-09-21). `schemaGuard.ts`'s `log()` callback is wired to
+    `console.warn` in `chatPanel.ts` today (Extension Host console,
+    which most users never open), the same place the roster's parity
+    warnings already go — unlike a `showWarningMessage` toast, which
+    users do see. Low cost, cosmetic; bundling it with a broader
+    "extension logging surface" pass may be worth more than a one-line
+    fix done in isolation.
+11. **Start maintaining schema `"version"`, or delete the key.** The
+    canonical schema's `"version"` has read `"1.0"` since the file was
+    created (`86adf127`) and none of the five field-changing commits
+    since bumped it (verified: `git log -p --follow
+    ppxai/engine/app_state_schema.json | grep '"version"'` returns one
+    hit). `schemaGuard.ts` deliberately does not treat it as the
+    verdict, for exactly this reason — but a field nobody maintains and
+    nothing enforces is either dead weight worth removing, or a
+    version-bump discipline worth actually adopting (e.g. bumped by the
+    same commit that adds/renames/retypes a field, checked by a test
+    the way `tests/test_version_consistency.py` checks the package
+    version). Owner's call which.
 
 ## Step 5 follow-ups (2026-09-21, owner decisions)
 
-Landed on `bugfix/v1.19.3`, uncommitted at the time of writing. Six
+Landed on `bugfix/v1.19.3`, uncommitted at the time of writing. Seven
 threads, each with its own tests.
 
 - **A — `/q` registered as a `/quit` alias.** `aliases=["exit", "q"]`
@@ -1459,6 +1555,24 @@ threads, each with its own tests.
   opt-in: `git config core.hooksPath scripts/git-hooks` — an owner
   decision, not run by default. History before the baseline is exempt
   by owner decision.
+- **G — open owner decision 5 built (2026-09-21, later the same day,
+  commit `1953c29c`).** The "premise wrong" correction to decision 5 had
+  only checked the DATA path; VSCode's TYPE path
+  (`interface AppStateFields`) was a real hand-written mirror and had
+  drifted (22 schema fields vs 20 typed — `lastMessageRole`,
+  `modelSupportsVision` missing). `vscode-extension/scripts/
+  sync-schema.js` now also emits `src/appState.generated.ts`
+  (tracked, byte-stable, `tests/test_app_state_generated_types.py`);
+  the hand-written interface is deleted. Separately,
+  `vscode-extension/src/schemaGuard.ts` fetches `GET /schema/app-state`
+  on every (re)connect and compares FIELDS with the bundled schema —
+  silent when identical, adopts-and-logs-once on extra server fields,
+  one visible warning on a missing/retyped compiled-against field, logs
+  and continues on 404/fetch failure (opposite posture from the command
+  roster's fail-closed gate — state must not fail closed).
+  `tests/test_vscode_schema_guard_behavior.py`. VSIX 138 KB. Full
+  account: ADR 0007 §"Which mirrors can go, and which cannot", the
+  "CORRECTION OF THE CORRECTION" block.
 
 ## Hybrid commands — dispatch routing becomes data
 

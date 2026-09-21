@@ -1083,7 +1083,9 @@ references a schema-declared field — drift surfaces at CI time.
 
 ### Drift protection
 
-Four layers, in increasing severity:
+**Updated 2026-09-21 (commit `1953c29c`):** what used to be layer 2
+(byte-for-byte DATA copy) now has a TYPE-layer counterpart, and a fifth,
+run-time layer was added. Five layers, in increasing severity:
 
 1. **Schema format tests** (`tests/test_app_state.py::TestSchemaDTO`)
    pin that every entry has the required properties, types match
@@ -1092,35 +1094,76 @@ Four layers, in increasing severity:
    comparison between the canonical JSON and the copy bundled with
    the extension. CI fails if someone edits one without running
    `npm run sync-schema`.
-3. **TUI field-name scan** test pins that Rich + Textual source code
+3. **VSCode generated-type equality** (added 2026-09-21).
+   `tests/test_app_state_generated_types.py` regenerates
+   `vscode-extension/src/appState.generated.ts` in memory from the
+   canonical schema and fails on any difference from the tracked file,
+   in either direction — the TYPE-layer analogue of layer 2. Before
+   this, the TypeScript `AppStateFields` interface was hand-written and
+   had silently drifted two fields behind the schema (`lastMessageRole`
+   since v1.18.0, `modelSupportsVision` since v1.18.6); no test compared
+   the two.
+4. **TUI field-name scan** test pins that Rich + Textual source code
    only accesses state fields declared in the schema.
-4. **Runtime drift warnings** in both Web + VSCode `updateFromPython()`
-   fire if the server pushes an unknown field — covers the case where
-   server and client are running different ppxai versions.
+5. **Runtime drift checks**, split by client:
+   - **Web** — `updateFromPython()` in `web/shared/app-state.js` warns
+     to the console if the server pushes an unknown field. No
+     connect-time check; see the caveat below.
+   - **VSCode** (added 2026-09-21) — `vscode-extension/src/schemaGuard.ts`
+     fetches `GET /schema/app-state` on every (re)connect and compares
+     FIELDS with the bundled schema: identical is silent, extra server
+     fields are adopted (stored, never rendered) with one log line, a
+     compiled-against field missing or retyped gets one visible
+     warning naming the fields and both versions, and a 404/fetch
+     failure logs once without blocking — the connect-time case layers
+     2–3 cannot cover, since server and extension version
+     independently (VSIX vs. pip/PyInstaller). Deliberately the
+     opposite posture from the command roster's fail-closed gate:
+     `AppState` exists before any server does, so there is nothing to
+     withhold. `tests/test_vscode_schema_guard_behavior.py`.
+
+**Web has no connect-time equivalent to layer 5's VSCode half.** The
+web page gets the schema injected once at page load
+(`server/routes/static.py`); a tab that survives a server restart
+without a page reload (`app.js`'s heartbeat → `connectToServer(true)` /
+`_reanchorFromServer()`) keeps the OLD schema, and `_reanchorFromServer`
+only re-fetches `GET /state`, never the schema. Open owner decision —
+`docs/plan-adr-0007-completion-service.md` §"Open owner decisions"
+item 9.
 
 ### Adding a new field
 
 One edit: add an entry to `ppxai/engine/app_state_schema.json`. Then
 bump the sentinel count in
-`tests/test_app_state.py::TestSchemaDTO::test_schema_has_fields_dict`
-and (until v1.18.x codegen lands) add the camelCase name to the
-`AppStateFields` TypeScript interface in
-`vscode-extension/src/appState.ts`. Everything else propagates
-automatically:
+`tests/test_app_state.py::TestSchemaDTO::test_schema_has_fields_dict`.
+**No hand-edit to a TypeScript interface is needed** — this section
+said otherwise before 2026-09-21 ("until v1.18.x codegen lands, add the
+camelCase name to the `AppStateFields` TypeScript interface"); that
+interface no longer exists. Everything else propagates automatically:
 
 - Python `AppState.FIELDS` picks it up at next import
 - `GET /schema/app-state` returns the updated schema
 - `serve_index` injects the updated schema into `index.html`
 - Web `AppState` reads it from `window.APP_STATE_SCHEMA`
 - `sync-schema.js` copies the new JSON to `vscode-extension/resources/`
-  on the next `npm run compile`
-- VSCode `AppState` reads the bundled copy
+  **and regenerates `vscode-extension/src/appState.generated.ts`** on
+  the next `npm run compile` (or `npm run sync-schema` directly) —
+  commit the regenerated file; `tests/test_app_state_generated_types.py`
+  fails CI otherwise
+- VSCode `AppState` reads the bundled JSON copy; VSCode code that wants
+  to read the new field by name imports the regenerated
+  `AppStateFields` type
 
-The schema-generator work proposed in `docs/archive/TODO-appstate-codegen.md`
-would have built on this (runtime loading is the architecture; codegen would
-add compile-time type generation for TypeScript so the `AppStateFields`
-interface becomes an artifact instead of hand-maintained), but it was never
-pursued — see that doc's Status line (archived 2026-07-12, superseded).
+**Corrected 2026-09-21:** the schema-generator work proposed in
+`docs/archive/TODO-appstate-codegen.md` was archived as "superseded /
+not pursued" on 2026-07-12, and this section previously repeated that
+verdict ("until v1.18.x codegen lands ... it was never pursued"). The
+TYPE-generation half of that proposal **was** built, on 2026-09-21,
+under ADR 0007 (`vscode-extension/scripts/sync-schema.js` emitting
+`src/appState.generated.ts`) — driven by a real drift, not by that
+archived TODO being revived. The archived doc's YAML-schema and
+runtime-schemas-for-k8s/desktop proposals are unrelated and remain not
+pursued.
 
 ## Agent Heartbeat Primitives (v1.18.0)
 

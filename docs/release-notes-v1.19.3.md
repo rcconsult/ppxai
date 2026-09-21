@@ -35,8 +35,16 @@
 > "One command registry" below for the rest — subcommand display in
 > `/help`, `/tools help` reaching Rich and Textual, VSCode's
 > `/tools`/`/context`/`/ls`/`/tree`/`/checkpoint` now server-rendered
-> and VSCode's legacy intercept mechanism deleted entirely.
+> and VSCode's legacy intercept mechanism deleted entirely. **Later the
+> same day, ADR 0007's last open decision closed:** VSCode's AppState
+> TypeScript types are now generated from the schema (a hand-written
+> copy had silently lost two fields), and VSCode now checks the
+> connected server's AppState shape on every (re)connect — **new,
+> user-visible: one warning when a compiled-against field is missing or
+> retyped on the server**; a newer server's extra fields are adopted
+> silently, an older server changes nothing.
 >
+
 > No config-shape changes. The shipped microk8s
 > coder template changes shape, but it is an example: nothing in an
 > existing install reads it. The v1 API gateway (`POST /v1/oneshot`,
@@ -112,6 +120,31 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   outright, not just emptied. See
   [docs/decisions/0007-completion-first-class-service.md](decisions/0007-completion-first-class-service.md)
   open owner decision 7. VSIX size: 136 KB.
+- **VSCode's AppState TypeScript types are now generated, closing open
+  owner decision 5** (2026-09-21, later the same day). The hand-written
+  `interface AppStateFields` had silently drifted from the canonical
+  schema — 22 fields declared, 20 typed — missing `lastMessageRole`
+  (v1.18.0) and `modelSupportsVision` (v1.18.6); no test compared the
+  two. `vscode-extension/scripts/sync-schema.js` now also emits
+  `src/appState.generated.ts`, tracked and pinned byte-identical to a
+  fresh regeneration.
+- **New, user-visible: VSCode checks the connected server's AppState
+  shape on every (re)connect.** `vscode-extension/src/schemaGuard.ts`
+  fetches `GET /schema/app-state` and compares it with the extension's
+  bundled schema. A matched pair is silent. A newer server's extra
+  fields are adopted for the connection silently — logged once, no
+  toast, because that state is stored but nothing renders it (rendering
+  code ships compiled in). **A field the extension was compiled against
+  going missing, or changing type, on the server produces exactly one
+  visible warning**, naming the fields and both versions. An older
+  server with no `/schema/app-state` endpoint (pre-v1.17.4) changes
+  nothing — one log line, chat keeps working; state deliberately does
+  NOT fail closed the way the command roster does, because `AppState`
+  is constructed before any server exists. VSIX 138 KB. Not built: a
+  VSCode-side use of the now-typed `modelSupportsVision` (web already
+  gates its attach badge on it), and a web-side equivalent of the
+  connect-time check — both filed as open owner decisions in
+  [docs/plan-adr-0007-completion-service.md](plan-adr-0007-completion-service.md).
 
 ## Fixed
 
@@ -483,17 +516,26 @@ carried over — Items 73 and 74 filed, Item 34 closed).
 
 ## Verification
 
-Full suite at `beffa197` (branch HEAD, 2026-09-21 — supersedes the
-`b067ce9c` figure below, taken before ADR 0007's steps landed) on macOS
-with `uv sync --all-extras`: **6,667 passed, 1 skipped, 0 failed** in
-531s. The `b067ce9c` measurement — **5,909 passed, 1 skipped, 0
-failed** in 535s — predates ADR 0007 entirely; kept for the record, not
-current. Windows at an earlier point in the branch, measured on the
-other host: **5,878 passed, 32 skipped, 0 failed** @ `1c1beac4`; the
-extra skips are the usual platform gates (PTY, symlink cases, POSIX
-signal semantics) — not re-run since ADR 0007 landed. The Playwright
-specs under `tests/e2e/` are not in either count — **209 passed**
-there at `beffa197`, including the 9 `tool-turn.spec.ts` tests.
+Full suite at `1953c29c` (branch HEAD, 2026-09-21, later the same day —
+supersedes the `beffa197` figure below, taken before the VSCode AppState
+codegen + connect-time schema-guard work landed) on macOS with
+`uv sync --all-extras`: **6,696 passed, 1 skipped, 0 failed** in 596s.
+The `beffa197` measurement — **6,667 passed, 1 skipped, 0 failed** in
+531s — predates that work; kept for the record, not current. The
+`b067ce9c` measurement — **5,909 passed, 1 skipped, 0 failed** in
+535s — predates ADR 0007 entirely; kept for the record, not current.
+Windows at an earlier point in the branch, measured on the other host:
+**5,878 passed, 32 skipped, 0 failed** @ `1c1beac4`; the extra skips
+are the usual platform gates (PTY, symlink cases, POSIX signal
+semantics) — not re-run since ADR 0007 landed. The Playwright specs
+under `tests/e2e/` are not in any of these counts — **209 passed**
+there at `beffa197`, including the 9 `tool-turn.spec.ts` tests; not
+re-run at `1953c29c` (the AppState work touched no web/VSCode webview
+UI a Playwright spec would exercise). The new VSCode AppState tests
+leave the real `~/.ppxai` untouched (entry count equal before and
+after, per the commit message). **NOT verified in a real VSCode
+extension host** — see the manual smoke checklist in
+[docs/plan-adr-0007-completion-service.md](plan-adr-0007-completion-service.md).
 
 The first two fixes were mutation-tested — the dropped-call warning
 fails 2 guards without its change, `/model info` fails 6. The tool-strip

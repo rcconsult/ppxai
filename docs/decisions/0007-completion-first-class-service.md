@@ -41,7 +41,10 @@ today is VSCode's modal) — build a confirmation that works in all four
 clients, including both TUIs (neither consumes command `side_effects`
 today), then migrate `checkpoint` off this table. Detail:
 `docs/plan-adr-0007-completion-service.md` §"Step 5 follow-ups
-(2026-09-21, owner decisions)".
+(2026-09-21, owner decisions)". **(D)** Open owner decision 5 (the
+AppState schema endpoint) also closed same day, later: it was built,
+not just corrected — see the second correction in §"Which mirrors can
+go, and which cannot" below (commit `1953c29c`).
 
 > **Update (2026-09-21, commit `beffa197`, later the same day). DONE,
 > not in progress.** `checkpoint` migrated too. `LEGACY_INTERCEPTS`
@@ -448,6 +451,14 @@ in `web/shared/app-state.js` and `vscode-extension/src/appState.ts`, and the
 cross-language sentinel tests that pin them — that was the *entire* cost that
 made this record look too expensive to start for three releases. A plain
 endpoint touches none of it.
+> **Note (2026-09-21):** "hand-written mirrors" overstates what an AppState
+> field costs, and did so even before either file was corrected — see the
+> "CORRECTION" and "CORRECTION OF THE CORRECTION" blocks in §"Which mirrors
+> can go, and which cannot" below. Neither `web/shared/app-state.js` nor (as
+> of 2026-09-21) `vscode-extension/src/appState.ts`'s generated TYPE layer
+> is hand-edited to add a field. The pull-vs-push decision itself is not
+> reopened by this note — a plain endpoint is still simpler for data that
+> almost never changes — only the cost estimate that helped motivate it.
 
 **The layer inversion closes as a side effect.** Once completion consumes
 spec data handed to it, `engine/completion.py` no longer needs
@@ -620,7 +631,7 @@ three different things in this codebase:
 |---|---|---|
 | `web/shared/commands.js`, the `web/app.js:199` fallback catalog, alias entries restated as standalone commands, `_appendExperimentalHelp()` | **Data** — names, descriptions, usage, subcommands | ✅ **Deleted** in step 3a (2026-09-21); populated from `GET /commands?client=web` via `web/shared/command-roster.js`. `vscode-extension/src/shared/commands.ts` was the same class of mirror and is ✅ **deleted** in step 3b (same day), populated from `GET /commands?client=vscode` via `vscode-extension/src/commandRoster.ts` |
 | `web/shared/side-effects.js` and the VSCode equivalent | **Behaviour** — 300 lines of handler implementations (`open_editor`, `copy_to_clipboard`, `prompt_text`, …) that *perform* an effect in the client | **Stays.** Not servable: this is the same line drawn when shipping client code from the server was rejected, and the same split as `client_action` — Python owns the NAME, the client bundles the IMPLEMENTATION |
-| `web/shared/app-state.js`, `vscode-extension/src/appState.ts` | ~~**Data** — hand-written mirrors of `engine/app_state_schema.json`~~ **Behaviour.** Corrected 2026-09-21: neither file restates the schema. Both are the observable-store CLASS and DERIVE field names, defaults and the Python↔JS name mapping from the schema at construction | **Stays** — nothing here to replace with a GET; see the correction below |
+| `web/shared/app-state.js`, `vscode-extension/src/appState.ts` | ~~**Data** — hand-written mirrors of `engine/app_state_schema.json`~~ ~~**Behaviour.** Corrected 2026-09-21: neither file restates the schema. Both are the observable-store CLASS and DERIVE field names, defaults and the Python↔JS name mapping from the schema at construction~~ **Corrected again, 2026-09-21 (later the same day): true for the DATA path on both clients, but VSCode also had a TYPE path — `interface AppStateFields` — that WAS a hand-written restatement and HAD drifted (22 schema fields vs 20 typed). Now generated; see the second correction below. | **Stays** for the DATA/behaviour class on both clients; the VSCode TYPE layer is now build-time generated (2026-09-21) — see the correction below |
 
 **The rule:** a mirror of DATA can be replaced by a GET; a mirror of
 BEHAVIOUR cannot, and should instead be held in line by a parity fence that
@@ -647,6 +658,12 @@ step 5's fence.
 > test and gets one.
 
 ### Follow-up, out of scope here: the AppState schema endpoint has no consumer
+
+> **Heading now stale (2026-09-21, later the same day): the endpoint HAS a
+> consumer.** `vscode-extension/src/schemaGuard.ts` calls
+> `GET /schema/app-state` on every (re)connect — see the "CORRECTION OF THE
+> CORRECTION" block above. Kept unedited below for the record of how this
+> section's reasoning evolved same-day.
 
 > **CORRECTION (2026-09-21) — the conclusion below is wrong; the grep is
 > right.** No JS client *fetches* `GET /schema/app-state`, but neither
@@ -693,6 +710,76 @@ step 5's fence.
 > tests). The pull decision does not rest on that argument alone and is
 > not reopened.
 
+> **CORRECTION OF THE CORRECTION (2026-09-21, later the same day).**
+> The correction above is right about the DATA path and wrong about
+> completeness: it never looked at the TYPE path, because the question
+> it was answering ("does either file restate the schema?") was read as
+> "does either file restate the schema's *data*?" `web/shared/app-state.js`
+> has no type layer to drift — JS is untyped — so the correction's web
+> half stands unmodified. VSCode's TYPE half was a second, separate
+> restatement the correction missed: `interface AppStateFields` in
+> `src/appState.ts` was hand-written, and by the time this second
+> correction was written the schema declared **22** fields against the
+> interface's **20** — `lastMessageRole` (v1.18.0) and
+> `modelSupportsVision` (v1.18.6) were never added, so no VSCode code
+> could read either field by name, while `ppxai/web/app.js` had been
+> gating its attach badge on `modelSupportsVision` since v1.18.6. The
+> file's own header compounded this: it claimed a "constructor assertion"
+> checked the interface against the schema (there was none — only a
+> `as AppStateFields` cast) and promised a generator "the v1.18.x schema
+> generator will auto-generate `AppStateFields`" that was never built.
+> No test compared the two, so none of this was caught.
+>
+> The first correction's "**Recommendation: do not build it**" therefore
+> rested on a half-wrong premise — it was correct that the DATA path
+> needed no runtime fetch, and wrong to conclude from that alone that
+> there was "nothing to build." The owner overrode the recommendation
+> and had both halves built the same day (commit `1953c29c`):
+>
+> - **Build-time (closes the TYPE gap).** `vscode-extension/scripts/
+>   sync-schema.js` now also emits `src/appState.generated.ts`; the
+>   hand-written interface is deleted. The schema stays language-neutral
+>   (`array`/`object` stay wide types), so a `TYPE_REFINEMENTS` map in
+>   the generator narrows the three container fields and refuses to
+>   refine a field the schema does not declare or one whose type is not
+>   a container. Tracked and byte-stable, pinned by
+>   `tests/test_app_state_generated_types.py` (regenerates in memory,
+>   fails on any difference).
+> - **Run-time (the gap the first correction argued was real but not
+>   worth closing).** `vscode-extension/src/schemaGuard.ts` fetches
+>   `GET /schema/app-state` on every (re)connect and compares FIELDS
+>   with the bundled schema — the endpoint's first consumer since
+>   v1.17.4. Identical: silent. Extra server fields: adopted for the
+>   connection, logged once. A compiled-against field missing or
+>   retyped: one visible warning naming the fields and both versions.
+>   404/fetch failure: logged once, nothing blocked. This is the
+>   **opposite posture from the command roster's fail-closed gate**,
+>   deliberately: `AppState` is constructed as a field initialiser
+>   before any server exists — there is no roster-shaped "refuse to
+>   dispatch" available, because there is nothing to dispatch — and a
+>   server too old to serve the endpoint is still a perfectly usable
+>   server, so blocking chat over an unverifiable diagnostic would be a
+>   self-inflicted outage.
+>
+> **What the first correction got right and still holds.** Adopted
+> fields are stored, never rendered — the argument that "a field is only
+> useful to code that reads it BY NAME, and that code is compiled into
+> the build" is exactly why `schemaGuard.ts` adopts silently instead of
+> trying to make an unknown field do anything. **What it missed:** the
+> other direction. A field this build WAS compiled against — vanishing
+> from, or retyped on, the server — used to be invisible; that silence
+> is exactly the failure mode the TYPE-layer drift itself had just
+> demonstrated (two fields absent for months, caught only by an
+> unrelated grep). Closing that is the guarantee the run-time half
+> buys, and it is why the recommendation changed.
+>
+> **`version` is still not the signal.** The schema's `"version"` key
+> has read `"1.0"` since the file was created (`86adf127`) and none of
+> the five field-changing commits since bumped it (verified:
+> `git log -p --follow ppxai/engine/app_state_schema.json | grep
+> '"version"'` returns one hit, the original add). `schemaGuard.ts`
+> compares FIELDS; `version` is reported in the message only as context
+> for whoever has to fix a real mismatch, never as the verdict.
 
 `GET /schema/app-state` **already exists** (`ppxai/server/routes/schema.py:32`)
 and **neither JS client calls it** — `grep -rn "schema/app-state" ppxai/web/
