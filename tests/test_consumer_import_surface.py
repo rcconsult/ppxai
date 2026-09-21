@@ -25,7 +25,8 @@ collection died with nothing upstream signalling it.
 ## Two copies, deliberately
 
 ppxai-sre holds its OWN executable copy of this same property:
-`libs/core/tests/test_ppxai_seam.py` (their commit d152000). That file is
+`libs/core/tests/test_ppxai_seam.py` (their commit d152000, "test(seam): fence
+the import CLOSURE, not just the symbols"). That file is
 the PEER fence, not the source of truth for this one — this file does not
 read it, does not read anything from that repo, and does not need to: a
 cross-repo file read would be a new coupling with no fence of its own, and
@@ -42,7 +43,8 @@ lists below match exactly, no drift found.
 
 **Which copy wins when the two disagree: theirs.** The pinned tiers below
 are a DATED SNAPSHOT (2026-09-21), copied by hand. ppxai-sre's copy is no
-longer hand-pinned: since their commit d7b2d86 it is DERIVED — an AST scan
+longer hand-pinned: since their commit d7b2d86 ("test(seam): derive the
+pinned surface from the source, don't maintain it") it is DERIVED — an AST scan
 of their own source trees that fails in both directions (an import added
 without a pin, a pin no longer imported). This file cannot run that check,
 because the source of truth is in their tree and reading it is the
@@ -50,6 +52,12 @@ coupling rejected above. So this copy can go stale GREEN: their surface
 changes, their derived check goes red and is fixed there, and nothing here
 signals it. If the tiers here ever differ from theirs, update THIS file
 and re-date the snapshot — do not "correct" theirs to match.
+
+Both shas above were, on 2026-09-21, on their UNMERGED branch
+`feature/ppxai-v1.19.x-alignment`, not their master. A squash or rebase on
+landing kills them while `git show <sha>` keeps resolving for a while — a
+dead citation that still answers. The quoted SUBJECTS are the durable
+half: find the successor with `git log --grep`.
 
 ## The two tiers
 
