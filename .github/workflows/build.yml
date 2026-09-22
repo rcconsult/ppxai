@@ -15,6 +15,13 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v5
+      with:
+        # tests/test_no_attribution_trailers.py walks commit history back
+        # to a pinned v1.19.2 baseline sha; a depth-1 checkout hides that
+        # history and the check silently falls back to a weaker tip-only
+        # scan. This job runs the full pytest suite (below), so it needs
+        # the same full history as tests.yml's `python` job.
+        fetch-depth: 0
 
     - name: Install uv
       uses: astral-sh/setup-uv@v4

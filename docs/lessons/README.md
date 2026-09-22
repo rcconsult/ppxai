@@ -208,3 +208,16 @@ discoverable later.
   statement — dead code that still executes. A 384-file bulk `--fix` also
   regressed `F811` and `E402` from zero, caught by the CI ratchet rather
   than by a green suite (2026-09-01).
+- [measure-against-a-clean-export-not-a-dirty-tree.md](measure-against-a-clean-export-not-a-dirty-tree.md)
+  — a measurement taken against a tree with uncommitted changes describes
+  code no commit contains; stamp a sha next to it and it becomes a
+  confident wrong number about that sha. `git status --short` before
+  trusting any "measured on this tree" claim; to pin a number to a commit,
+  export it clean first (`git archive <sha> | tar -x`) and measure there.
+- [a-doc-comment-promising-a-mechanism-is-not-the-mechanism.md](a-doc-comment-promising-a-mechanism-is-not-the-mechanism.md)
+  — `vscode-extension/src/appState.ts`'s header claimed a runtime
+  constructor assertion and a promised schema generator; neither existed,
+  and the hand-written interface sat two fields behind the schema
+  (`lastMessageRole`, `modelSupportsVision`) for four minor versions with
+  nothing to catch it. Verify a cross-file invariant claimed in a comment
+  before repeating it.
