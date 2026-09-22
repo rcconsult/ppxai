@@ -265,28 +265,37 @@ def _stmt_lists(node: ast.AST, *, is_root: bool = True):
                 yield from _stmt_lists(child, is_root=False)
 
 
+def _exit_is_terminated(stmts: list[ast.stmt], i: int) -> bool:
+    """True if an exit at position `i` of `stmts` (a `return` there, or
+    falling off the end when `i == len(stmts)`) follows a run terminal."""
+    preceding = stmts[i - 1] if i > 0 else None
+    if preceding is None:
+        return False
+    if _is_terminal_yield(preceding):
+        return True
+    # The zombie / max-iterations shape: the run terminal, then
+    # bookkeeping, then a final STREAM_END carrying the text. A STREAM_END
+    # alone is NOT a terminal — the run pair must appear earlier in the
+    # same block.
+    return (
+        _is_event_yield(preceding, {"STREAM_END"})
+        and any(_is_terminal_yield(s) for s in stmts[:i - 1])
+    )
+
+
 def _returns_without_terminal(func: ast.FunctionDef | ast.AsyncFunctionDef) -> list[int]:
-    """Line numbers of `return` statements NOT immediately preceded (in the
-    same block) by a terminal yield."""
+    """Line numbers of exits NOT preceded (in the same block) by a run
+    terminal: every explicit `return`, plus falling off the end of the
+    function body (the max-iterations exit has no `return`), reported at
+    the body's last line."""
     violations = []
     for stmt_list in _stmt_lists(func):
         for i, stmt in enumerate(stmt_list):
-            if not isinstance(stmt, ast.Return):
-                continue
-            preceding = stmt_list[i - 1] if i > 0 else None
-            if preceding is not None and _is_terminal_yield(preceding):
-                continue
-            # The zombie exit's shape: the run terminal, then bookkeeping,
-            # then a final STREAM_END carrying the text. A STREAM_END alone
-            # is NOT a terminal — the run pair must appear earlier in the
-            # same block.
-            if (
-                preceding is not None
-                and _is_event_yield(preceding, {"STREAM_END"})
-                and any(_is_terminal_yield(s) for s in stmt_list[:i - 1])
-            ):
-                continue
-            violations.append(stmt.lineno)
+            if isinstance(stmt, ast.Return) and not _exit_is_terminated(stmt_list, i):
+                violations.append(stmt.lineno)
+    body = func.body
+    if body and not isinstance(body[-1], ast.Return) and not _exit_is_terminated(body, len(body)):
+        violations.append(body[-1].lineno)
     return violations
 
 
@@ -336,6 +345,7 @@ class TestNoSilentExitFence:
                 yield Event(EventType.ERROR, "x")
                 yield Event(EventType.AGENT_RUN_ERROR, {})
                 return
+            yield Event(EventType.AGENT_RUN_COMPLETE, {})
         """
         func = _parse_function(good_source)
         assert _returns_without_terminal(func) == []
@@ -360,8 +370,32 @@ class TestNoSilentExitFence:
                 note = "x"
                 yield Event(EventType.STREAM_END, note)
                 return
+            yield Event(EventType.AGENT_RUN_COMPLETE, {})
         """
         assert _returns_without_terminal(_parse_function(zombie_shape)) == []
+
+    def test_falling_off_the_end_is_an_exit_too(self):
+        """Control: chat_with_tools' max-iterations exit has no `return` —
+        it falls off the end. Removing its AGENT_RUN_COMPLETE must trip the
+        fence exactly as a bare `return` would."""
+        bad_source = """
+        async def broken():
+            yield Event(EventType.AGENT_RUN_START, {})
+            for _ in range(3):
+                pass
+            yield Event(EventType.STREAM_END, "limit reached")
+        """
+        assert _returns_without_terminal(_parse_function(bad_source)) != []
+        good_source = """
+        async def fine():
+            yield Event(EventType.AGENT_RUN_START, {})
+            for _ in range(3):
+                pass
+            yield Event(EventType.AGENT_RUN_COMPLETE, {"max_iterations_reached": True})
+            note = "x"
+            yield Event(EventType.STREAM_END, note)
+        """
+        assert _returns_without_terminal(_parse_function(good_source)) == []
 
 
 # ---------------------------------------------------------------------------

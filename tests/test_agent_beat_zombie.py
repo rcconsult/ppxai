@@ -468,3 +468,8 @@ class TestEveryExitYieldsStreamEnd:
         ends = [e for e in events if e.type == EventType.STREAM_END and e.data]
         assert ends, "max-iterations exit ended the stream with NO final STREAM_END"
         assert "iterations limit reached" in str(ends[-1].data).lower()
+        # The fall-through exit owes the run terminal like every other exit.
+        completes = [e for e in events if e.type == EventType.AGENT_RUN_COMPLETE]
+        assert len(completes) == 1, "max-iterations exit must emit exactly one AGENT_RUN_COMPLETE"
+        assert completes[0].data.get("max_iterations_reached") is True
+        assert not [e for e in events if e.type == EventType.AGENT_RUN_ERROR]
