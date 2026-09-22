@@ -53,7 +53,7 @@ from .tools.network_policy import (
     apply_egress_ceiling,
     grant_has_shell,
 )
-from .types import EventType
+from .types import Event, EventType, ToolGuardReason
 
 # An egress allowlist entry is either a bare host ("example.com", any path) or
 # a scoped mapping {"host": ..., "paths": [...]}. Typed here because the
@@ -134,6 +134,89 @@ DEFAULT_AGENT_SYSTEM_PROMPT = (
     "egress allowlist; if the task cannot be done with the granted tools, say "
     "so plainly and stop. Be concise; report results, not intentions."
 )
+
+
+# ---------------------------------------------------------------------------
+# Turn-degradation audit records (debt Item 82, v1.19.3)
+#
+# The engine marks a tool-guard degradation with a `ToolGuardReason` at
+# `Event.metadata["reason"]`, and rolls the turn up into `degraded` /
+# `degradation_reasons` on its terminal AGENT_RUN_COMPLETE / AGENT_RUN_ERROR
+# (engine/chat.py, `_degradation_summary`). Until Item 82 none of that reached
+# a run's events.jsonl. Owner decision 2026-09-23: persist ONLY events that
+# carry a degradation reason, plus the terminal pair — never INFO wholesale.
+#
+# Record types are NOT the engine's own enum values on purpose. The registry
+# already writes `agent_run_complete` / `agent_run_error` for the RUN's own
+# terminal state (agent_runs.py, `run_in_background`), and both JS tails
+# (web `AgentRunController._TERMINAL_EVENTS`, VSCode `TERMINAL_EVENTS`) stop
+# reading the stream on those two strings. Persisting the engine's per-TURN
+# terminal under the same name would end a live watch before the run
+# finished, and put two different "ended" facts under one name.
+# ---------------------------------------------------------------------------
+
+#: One tool-guard degradation, mirrored from the engine event's metadata.
+TURN_DEGRADED_EVENT = "turn_degraded"
+#: The engine's per-turn terminal event (AGENT_RUN_COMPLETE/_ERROR), verbatim.
+TURN_END_EVENT = "turn_end"
+#: Engine terminal event types mirrored as TURN_END_EVENT.
+TURN_TERMINAL_TYPES = (EventType.AGENT_RUN_COMPLETE, EventType.AGENT_RUN_ERROR)
+#: Same clamp the TOOL_CALL audit record applies to argument values.
+_AUDIT_STR_CLAMP = 200
+
+
+def _clamp_audit_value(value: Any) -> Any:
+    """Clamp one audit value so a large string can't bloat events.jsonl.
+
+    JSON scalars pass through untouched (a bool stays a bool — `degraded`
+    must never become the string "False"); strings are cut to
+    `_AUDIT_STR_CLAMP`; lists/tuples are clamped element-wise (the engine's
+    `degradation_reasons`); anything else is stringified and clamped.
+    """
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        return value[:_AUDIT_STR_CLAMP]
+    if isinstance(value, (list, tuple)):
+        return [_clamp_audit_value(v) for v in value]
+    return str(value)[:_AUDIT_STR_CLAMP]
+
+
+def _clamp_audit_data(data: Any) -> dict[str, Any]:
+    """A dict payload, keys stringified and values clamped. Non-dict → {}."""
+    if not isinstance(data, dict):
+        return {}
+    return {str(k): _clamp_audit_value(v) for k, v in data.items()}
+
+
+def degradation_reason(event: Event) -> ToolGuardReason | None:
+    """The `ToolGuardReason` an engine event carries, or None.
+
+    Keyed on the ENUM, not on the event type and not on a string literal: any
+    event type whose `metadata["reason"]` is a valid member is a degradation
+    (so a future non-INFO carrier is covered), and an INFO with no reason — or
+    with a reason outside the enum — is not.
+    """
+    metadata = event.metadata
+    if not isinstance(metadata, dict) or "reason" not in metadata:
+        return None
+    try:
+        return ToolGuardReason(metadata["reason"])
+    except (ValueError, TypeError):
+        return None
+
+
+def turn_end_level(data: dict[str, Any], engine_event: EventType) -> str:
+    """Severity of a TURN_END_EVENT record: `warning` unless the turn ended
+    cleanly by the engine's own account (a COMPLETE that is neither degraded
+    nor capped by max_iterations)."""
+    if (
+        engine_event == EventType.AGENT_RUN_ERROR
+        or data.get("degraded") is True
+        or data.get("max_iterations_reached") is True
+    ):
+        return "warning"
+    return "info"
 
 
 def compose_agent_system_prompt(caller_system: str | None) -> str:
@@ -390,6 +473,16 @@ def build_task_runner(
 
         final_text: list[str] = []
         async for event in engine.chat(task, stream=False):
+            # Item 82: a tool-guard degradation reaches the audit file. Checked
+            # BEFORE the type dispatch below, and independently of it, so the
+            # record lands even for an event type that is also handled there
+            # (including one that raises). See `degradation_reason`.
+            reason = degradation_reason(event)
+            if reason is not None:
+                registry.emit_event(
+                    m.run_id, TURN_DEGRADED_EVENT, level="warning", category="tool",
+                    data={**_clamp_audit_data(event.metadata), "reason": reason.value},
+                )
             # Surface tool activity on the run's event stream. The engine's
             # TOOL_CALL carries the name in event.data["tool"] (a dict), not
             # in metadata; STREAM_END carries the final text as event.data,
@@ -438,6 +531,21 @@ def build_task_runner(
                 msg = d.get("message") if isinstance(d, dict) else str(d)
                 raise RuntimeError(
                     f"{event.type.value}: {msg or 'provider call failed'}"
+                )
+            elif event.type in TURN_TERMINAL_TYPES:
+                # Item 82: the engine's own end-of-turn statement, copied
+                # verbatim (clamped) — `degraded` / `degradation_reasons` are
+                # whatever the ENGINE said, never defaulted here. A turn with
+                # no TURN_END_EVENT record never reported: UNKNOWN, not clean.
+                # (The ERROR branch above raises on the ERROR that PRECEDES the
+                # engine's AGENT_RUN_ERROR on the interrupt/provider-error
+                # paths, so those turns have no TURN_END_EVENT record either.)
+                turn_data = _clamp_audit_data(event.data)
+                registry.emit_event(
+                    m.run_id, TURN_END_EVENT,
+                    level=turn_end_level(turn_data, event.type),
+                    category="lifecycle",
+                    data={**turn_data, "engine_event": event.type.value},
                 )
             elif event.type == EventType.STREAM_END and event.data is not None:
                 d = event.data
