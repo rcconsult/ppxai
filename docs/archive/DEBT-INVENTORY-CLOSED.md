@@ -2216,12 +2216,25 @@ backend was aimed at).
 Measured after the fix, same marker-file method, one full clean-tree
 run: **0** entries touched in the real `~/.ppxai`.
 
-#### NOT done — owner's call
+#### Residue cleanup — owner-run, 2026-09-22
 
-**Existing empty directories on developer hosts were not deleted.**
-`~/.ppxai` is the owner's live data directory; deleting from it is not
-something to do silently as a side effect of a docs/test-hermeticity
-pass. Commands, recorded here for whoever decides to run them:
+**Done on the owner's host, at the owner's instruction.** `~/.ppxai` is
+the owner's live data directory, so deleting from it was never a side
+effect of this item's test-hermeticity work; it happened a day later,
+asked for explicitly. On that host the directory went from **15,020
+entries to 1** (a `.DS_Store`): 15,017 empty `session_*` directories in
+the first pass, then `test-session` and `test-session-cleanup-test` —
+11 MB across ~2,900 files, and provably test residue rather than user
+data, since `tests/test_checkpoint.py` uses those exact ids and one held
+snapshots stamped `cp-20260101-120004`. `~/.ppxai/sessions/*.json`
+(1,005 real session files), `.env`, `ppxai-config.json` and the
+installed `web/` were untouched and verified afterwards. Separately, 33
+of 34 `~/.ppxai/web.backup.*` directories (263 MB, back to May) were
+removed, keeping the newest as the rollback for the current install.
+`~/.ppxai` went from 446 MB to 172 MB.
+
+**On any other host these are still not done.** Commands, recorded here
+for whoever decides to run them:
 
 ```bash
 # Dry run — count what WOULD be removed
@@ -2231,12 +2244,13 @@ find ~/.ppxai/sessions/checkpoints -maxdepth 1 -type d -name 'session_*' -empty 
 find ~/.ppxai/sessions/checkpoints -maxdepth 1 -type d -name 'session_*' -empty -delete
 ```
 
-This cannot and does not touch the two non-empty entries under that
-directory (`test-session`, `test-session-cleanup-test` — themselves
-test residue from hard-coded session ids used elsewhere, out of this
-item's scope). The `~/.ppxai/web.backup.*` directories (one per
-`/build-install` run) are unrelated install-tool output and are
-untouched by anything in this item.
+The `-empty` predicate cannot touch a non-empty entry, so it leaves
+`test-session` and `test-session-cleanup-test` behind; those need the
+explicit `rm -rf` above only once their contents have been eyeballed and
+confirmed as test residue. The `~/.ppxai/web.backup.*` directories (one
+per `/build-install` run) are unrelated install-tool output and are
+untouched by anything in this item; they accumulate without bound, one
+per install, which is worth knowing before a disk fills up.
 
 **Verified macOS only.** The `USERPROFILE`/`HOMEDRIVE`/`HOMEPATH`
 handling in `_redirect_home_to_tmp()` is unverified on Windows and
