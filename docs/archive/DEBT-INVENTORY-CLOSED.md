@@ -2269,3 +2269,134 @@ as **Item 79** rather than folded into this item's fix, since it is
 unrelated to test hermeticity.
 
 ---
+
+## Closed on `bugfix/v1.19.3` (archived 2026-09-23)
+
+### Item 82 — a `/task` run's `events.jsonl` never records a degraded turn → ✅ **CLOSED 2026-09-23** (narrow option) [engine / agent-platform]
+
+**Filed 2026-09-23.** Found while adding the `ToolGuardReason`
+degradation marker (`f7724d52`); pre-existing, not caused by it.
+
+**What's wrong.** `ppxai/engine/task_runner.py`'s engine-event loop
+persists exactly four event types to the run registry, and therefore to
+`events.jsonl` — verified at `f7724d52`:
+
+| Line | Persisted |
+|---|---|
+| `task_runner.py:397` | `EventType.TOOL_CALL` |
+| `task_runner.py:430` | `EventType.ERROR` **and** `EventType.PROVIDER_THROTTLED` |
+| `task_runner.py:442` | `EventType.STREAM_END`, only when `event.data is not None` |
+
+`EventType.INFO` and the `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` pair
+are not among them. So the whole tool-guard degradation surface added in
+`f7724d52` — the three `metadata["reason"]` events AND the turn-level
+`degraded` / `degradation_reasons` rollup — reaches an in-process
+embedder and an SSE consumer, but **never appears in a `/task` run's
+audit file**. An auditor reading `events.jsonl` sees a turn that looks
+complete.
+
+That four-type list is the correction worth recording: `f7724d52`'s own
+commit message says three, having missed `PROVIDER_THROTTLED` sharing a
+branch with `ERROR`. The ppxai-sre consumer session caught it while
+verifying the marker, and the list is exactly what someone will later
+check an audit consumer against.
+
+**Second, smaller hole, same area.** One interrupt path in
+`chat_with_tools` returns without emitting either terminal event, so the
+"exactly one `AGENT_RUN_COMPLETE`/`AGENT_RUN_ERROR` on every exit"
+contract stated in `docs/architecture.md` §"Agent Heartbeat Primitives"
+is not quite true. Consequence for any consumer of the new marker:
+`degraded` is authoritative only when a terminal event actually
+arrived — its ABSENCE means unknown, not clean. The consumer session has
+adopted that reading on their side.
+
+**Blast radius.** No data loss and no wrong answers; an audit trail that
+under-reports. It matters only to whoever reads `events.jsonl` to decide
+whether a run was complete — today that is the `/task` family and any
+external consumer of `/v1/agent/*`. ppxai-sre has said they will read
+degradation from the live stream instead until this is decided.
+
+**Why it is not simply fixed.** Widening the event-type filter is one
+line, but deciding what belongs in an audit log is not: `INFO` carries
+every informational message the engine emits, so forwarding it wholesale
+would change the file's volume and character. The narrow option is to
+persist only events carrying a `ToolGuardReason` plus the terminal pair.
+That is a design decision for the owner, not a cleanup.
+
+**Trigger to revisit.** A consumer asks why a `/task` run's audit file
+disagrees with what they saw live; or the terminal pair is needed in
+`events.jsonl` for anything else.
+
+**Effort.** ~1h for the narrow option plus a fence that the persisted
+event-type set matches what the audit contract promises; longer if the
+answer is "restructure what events.jsonl carries".
+
+#### Resolution (2026-09-23, `59702221`)
+
+Narrow option, owner's call: persist only events carrying a degradation
+reason, plus the terminal pair. Nothing wider — `EventType.INFO` is not
+forwarded wholesale.
+
+**Correction to how the item was filed.** It said `task_runner.py`
+"persists exactly four event types" — wrong verb. The "four types
+persisted" list was built from the loop's branch CONDITIONS
+(`if event.type == …`) without reading the branch BODIES, and carried
+unchecked through two sessions. Four branches exist; only the
+`TOOL_CALL` body calls `emit_event`. `ERROR`/`PROVIDER_THROTTLED` raise
+`RuntimeError` (`task_runner.py:532` as of `59702221`) after which the
+registry writes its own `agent_run_error`; `STREAM_END` only appends to
+`final_text` (`:550`). Every other `emit_event` call in that file is a
+registry-authored record (`run_usage`, lifecycle markers), not a
+passthrough of an engine event. To audit what a loop persists, read
+what each branch DOES, not which branches exist.
+
+**Now persisted, both new record types additive:**
+
+- **`turn_degraded`** (level `warning`, category `tool`) — one per
+  event whose `metadata["reason"]` converts to a valid `ToolGuardReason`
+  (keyed on the ENUM, not `EventType.INFO` and not a string literal, so
+  a stray informational message is never persisted and a future event
+  type carrying a reason is covered automatically). Checked BEFORE the
+  type dispatch, so it lands even when the carrying event takes the
+  raising `ERROR` branch. `data` is the event's own `metadata`, with
+  every string value clamped to 200 chars — the same clamp `TOOL_CALL`
+  already applies to tool arguments — plus the resolved `reason` value
+  appended.
+- **`turn_end`** (category `lifecycle`; level `warning` if
+  errored/degraded/`max_iterations_reached`, else `info`) — one per
+  engine `AGENT_RUN_COMPLETE`/`AGENT_RUN_ERROR`, a separate per-turn
+  record rather than folded into the run's own terminal: both JS tails
+  (web `AgentRunController._TERMINAL_EVENTS`, VSCode `TERMINAL_EVENTS`)
+  stop watching on the exact strings `agent_run_complete`/
+  `agent_run_error`, `resume_run` can put several turns in one run's
+  file, and a turn and its run can disagree (a zombie exit is an engine
+  error while the run still completes). `data` is the engine's own
+  terminal `event.data`, clamped, plus one added field —
+  `engine_event` (`event.type.value`). `degraded`/`degradation_reasons`
+  appear ONLY if the engine itself sent them on that terminal; they are
+  never defaulted here (a mutation that wrote a default `false` is
+  caught by the fence tests).
+
+**Reading `events.jsonl` per turn, nothing synthesized:** DEGRADED is
+any `turn_degraded` record, or a `turn_end` whose `degraded` is `true`;
+CLEAN is a `turn_end` whose `degraded` is `false` with no
+`turn_degraded`; UNKNOWN is no `turn_end` at all. Files written before
+`59702221` read as UNKNOWN — correct, since they predate both record
+types.
+
+**Fenced** by `tests/test_task_run_degradation_audit.py` — 13 tests
+collected (11 `def test_` functions; `test_every_member_is_recognised`
+is parametrized over the 3 `ToolGuardReason` members) — all through the
+real registry, runner and filesystem store, reading the `events.jsonl`
+file itself. A fence ties the persisted reasons, the rolled-up reasons
+and the enum together in both directions.
+
+**The no-terminal hole this item also recorded is NOT closed by this
+commit.** Three `chat_with_tools` exits (the tool-interrupt `return`,
+plus two provider-error fallbacks) emit no terminal event at all, and
+on the paths that do yield one, the engine yields `ERROR` immediately
+before `AGENT_RUN_ERROR` — the runner raises on the `ERROR` and never
+reads the `AGENT_RUN_ERROR` that follows. This is being fixed in a
+follow-up commit on this branch, not filed as separate debt.
+
+---

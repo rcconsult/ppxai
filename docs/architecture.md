@@ -1240,6 +1240,15 @@ backward compatibility, but every new observer should subscribe to
 `AGENT_RUN_COMPLETE` instead — it's mode-agnostic and strictly
 paired with `AGENT_RUN_START`.
 
+**2026-09-23:** `/task` audit files (`events.jsonl`) now carry
+`turn_degraded` and `turn_end` records mirroring this contract (debt
+Item 82, `59702221`) — one `turn_degraded` per tool-guard degradation
+and one `turn_end` per engine `AGENT_RUN_COMPLETE`/`AGENT_RUN_ERROR`,
+carrying `degraded`/`degradation_reasons` verbatim from the engine. A
+run's own `agent_run_complete`/`agent_run_error` records are unaffected
+— `turn_end` is a separate per-turn record. A missing `turn_end` for a
+turn means its outcome is unknown, not clean.
+
 ### `AgentBeatState` (`ppxai/engine/types.py`)
 
 The dataclass is the single source of truth for the heartbeat

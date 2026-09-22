@@ -432,6 +432,16 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   `tool_call_budgets` key in their response body, additively; `POST
   /v1/oneshot` is untouched. (`2514ba55`)
 
+- **A `/task` run's `events.jsonl` now records degraded turns.** A
+  `turn_degraded` record is written for each tool-guard degradation
+  (budget exhausted, tools withdrawn, repeat loop) and a `turn_end`
+  record per turn carrying `degraded`/`degradation_reasons`. Previously
+  the runner persisted only tool calls, so a degraded turn looked
+  complete in the audit file. Additive; existing records and the run's
+  own `agent_run_complete`/`agent_run_error` are unchanged. A missing
+  `turn_end` means the turn's outcome is unknown. (`59702221`, closes
+  debt Item 82)
+
 ### The guard against over-reach
 
 Comparing a value to `UNMEASURED` cannot by itself tell a guess from a

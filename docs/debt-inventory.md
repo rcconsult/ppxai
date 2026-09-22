@@ -72,7 +72,6 @@ quoting them** — this table is a map, not a source.
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
 | **80** | a non-repeating multi-tool cycle (`A, B, A, B, …`, distinct args every call) trips neither tool-loop guard | accepted gap, fuzzy matching deliberately declined — bounded only by the iteration cap and the zombie breaker |
 | **81** | test-ordering pollution: `test_oneshot_grounding.py::test_an_unregistered_provider_resolves_to_openai_compat` fails after `test_custom_endpoint_integration.py`, passes alone | predates v1.19.3 tool-loop work; a provider registration leaks across test modules |
-| **82** | a `/task` run's `events.jsonl` never records a degraded turn — `task_runner.py` persists only `TOOL_CALL`, `ERROR`, `PROVIDER_THROTTLED` and `STREAM_END`-with-data | the `ToolGuardReason` marker reaches in-process and SSE consumers but not the audit file; `degraded` is authoritative only when a terminal event arrived |
 
 ---
 
@@ -2586,65 +2585,6 @@ patch; filing this item is the "accepted, not hidden" record the
 
 ---
 
-### Item 82 — a `/task` run's `events.jsonl` never records a degraded turn [engine / agent-platform]
-
-**Filed 2026-09-23.** Found while adding the `ToolGuardReason`
-degradation marker (`f7724d52`); pre-existing, not caused by it.
-
-**What's wrong.** `ppxai/engine/task_runner.py`'s engine-event loop
-persists exactly four event types to the run registry, and therefore to
-`events.jsonl` — verified at `f7724d52`:
-
-| Line | Persisted |
-|---|---|
-| `task_runner.py:397` | `EventType.TOOL_CALL` |
-| `task_runner.py:430` | `EventType.ERROR` **and** `EventType.PROVIDER_THROTTLED` |
-| `task_runner.py:442` | `EventType.STREAM_END`, only when `event.data is not None` |
-
-`EventType.INFO` and the `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` pair
-are not among them. So the whole tool-guard degradation surface added in
-`f7724d52` — the three `metadata["reason"]` events AND the turn-level
-`degraded` / `degradation_reasons` rollup — reaches an in-process
-embedder and an SSE consumer, but **never appears in a `/task` run's
-audit file**. An auditor reading `events.jsonl` sees a turn that looks
-complete.
-
-That four-type list is the correction worth recording: `f7724d52`'s own
-commit message says three, having missed `PROVIDER_THROTTLED` sharing a
-branch with `ERROR`. The ppxai-sre consumer session caught it while
-verifying the marker, and the list is exactly what someone will later
-check an audit consumer against.
-
-**Second, smaller hole, same area.** One interrupt path in
-`chat_with_tools` returns without emitting either terminal event, so the
-"exactly one `AGENT_RUN_COMPLETE`/`AGENT_RUN_ERROR` on every exit"
-contract stated in `docs/architecture.md` §"Agent Heartbeat Primitives"
-is not quite true. Consequence for any consumer of the new marker:
-`degraded` is authoritative only when a terminal event actually
-arrived — its ABSENCE means unknown, not clean. The consumer session has
-adopted that reading on their side.
-
-**Blast radius.** No data loss and no wrong answers; an audit trail that
-under-reports. It matters only to whoever reads `events.jsonl` to decide
-whether a run was complete — today that is the `/task` family and any
-external consumer of `/v1/agent/*`. ppxai-sre has said they will read
-degradation from the live stream instead until this is decided.
-
-**Why it is not simply fixed.** Widening the event-type filter is one
-line, but deciding what belongs in an audit log is not: `INFO` carries
-every informational message the engine emits, so forwarding it wholesale
-would change the file's volume and character. The narrow option is to
-persist only events carrying a `ToolGuardReason` plus the terminal pair.
-That is a design decision for the owner, not a cleanup.
-
-**Trigger to revisit.** A consumer asks why a `/task` run's audit file
-disagrees with what they saw live; or the terminal pair is needed in
-`events.jsonl` for anything else.
-
-**Effort.** ~1h for the narrow option plus a fence that the persisted
-event-type set matches what the audit contract promises; longer if the
-answer is "restructure what events.jsonl carries".
-
 ### Item 81 — test-ordering pollution: a provider registration leaks across test modules [tests / providers]
 
 **Filed 2026-09-23.** Found while verifying the v1.19.3 tool-loop guard
@@ -2706,6 +2646,7 @@ One-liners only — full bodies + evidence trails in
 [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md);
 older per-version detail in the v1.18.2/v1.18.3 snapshots.
 
+- **Item 82** — a `/task` run's `events.jsonl` now records a degraded turn — closed 2026-09-23, `59702221`. Narrow option, owner's call: persist only events carrying a `ToolGuardReason`, plus the terminal pair. `turn_degraded` (one per tool-guard degradation) and `turn_end` (one per turn, `degraded`/`degradation_reasons` copied verbatim from the engine, never defaulted) are new record types, additive; existing records and the run's own `agent_run_complete`/`agent_run_error` are unchanged. **Correction to how the item was filed:** the "four types persisted" list was built from the loop's branch CONDITIONS (`if event.type == …`) without reading the branch BODIES, and carried unchecked through two sessions. Four branches exist; only the `TOOL_CALL` body called `emit_event`. To audit what a loop persists, read what each branch DOES, not which branches exist. Fenced by 13 tests (`tests/test_task_run_degradation_audit.py`). The no-terminal hole it also recorded — three `chat_with_tools` exits that emit no terminal event, plus paths where `ERROR` arrives before `AGENT_RUN_ERROR` so the runner raises before reading it — is **not** closed by this commit; it is being fixed in a follow-up commit on this branch. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 78** — the test suite leaked into the real `~/.ppxai` — closed 2026-09-21, and it was much bigger than filed: not just empty checkpoint directories (the filed leak), but also real session files, interleaved debug logs, `.preview-cache` PNGs, a staged upload, `usage.json`/`usage-events.jsonl` (the `/cost` sink) appended to, and the TUI's `session-state.json` restore pointer rewritten by a spawned `ppxai-server` subprocess that a pre-existing in-process guard could not reach. One clean-tree marker-file run measured **214 → 0** entries touched in the developer's real `~/.ppxai`. Fixed on both ends: `tests/conftest.py` redirects `HOME` to a throwaway directory before the first `ppxai` import (the one point at which that works), and `FileCheckpointBackend` no longer creates its directory at construction — only on the first real snapshot, which also means a session that never checkpoints leaves nothing behind in production, not just in tests. Fenced by `tests/test_home_hermeticity.py` and `tests/test_checkpoint.py::TestTheDirectoryIsCreatedLazily`. Existing empty directories on developer hosts were **not** deleted — cleanup command recorded in the archived body, owner's call. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 34** — office-preview deps; the `python-docx` half was **obsolete**, not deferred — closed 2026-09-20 (`99ca13f7`). The Word text fallback never used python-docx: `docx_tools.py` extracts with stdlib `zipfile` + `xml.etree` and `files.py:868` calls it for the `.docx` path; `grep -rn "import docx"` over `ppxai/` and `tests/` returns nothing, so the dependency would have grown every binary by a package nothing imports. The other two thirds (release-CI `--all-extras`) were verified fixed on 2026-06-14. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 69** — a test's verdict depended on a config file OUTSIDE the repo — closed 2026-09-06. The READ half of the same resolution rule as Item 70: nothing pinned `find_config_file()`, so any test reaching provider config read whichever file the cwd offered, and a stale personal config had already MASKED a real regression (2026-09-01, `sonar-pro` retired in `e6c366b9`). Pinned `PPXAI_CONFIG_FILE` to the shipped config in `pytest_configure` (before `initialize()`, which reads config during collection) and redirected `loader.USER_CONFIG_FILE` out of the real home, closing the cleared-environment fallthrough. `tests/test_config_source_is_pinned.py` proves it: deleting both halves fails 4 of its 6 tests. **Sharpened 2026-09-14 — the RUNTIME half is still open, and it makes `/doctor` lie.** Item 69 pinned the config source for TESTS; nothing pinned it for the tool whose whole job is auditing the operator's config. `find_config_file()` prefers `./ppxai-config.json`, so `/doctor` run from the ppxai repo root audits ppxai's OWN project config and reports a clean bill of health on a file it never opened. Measured 2026-09-14, same tree, same code, opposite verdict — the only variable is cwd: `cwd=<repo root>` → `find_config_file()` = `ppxai-config.json`, `incomplete_blocks_in_config()` = `{}` (0 partial records); `cwd=/tmp` + `PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json` → `/Users/…/.ppxai/ppxai-config.json`, **1 partial record, 11 unstated fields named**. So the ADR 0012 Q0d enforcement path returns a FALSE NEGATIVE for anyone running `/doctor` from a checkout — the failure mode Item 69 closed for tests, reproduced in the enforcement tool itself. Found by the ppxai-sre session cross-checking a HOME-config edit; the `0` was only trustworthy because the identical command had returned `1` on the same file minutes earlier (an empty result is not a measurement). Not reopened and not scheduled: recorded here so the next person to touch `/doctor`'s file resolution knows the test-side pin did not cover them.
