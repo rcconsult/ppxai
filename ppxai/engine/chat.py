@@ -683,6 +683,18 @@ async def chat_with_tools(
     })
 
     empty_retry_count = 0
+
+    # v1.19.3 tool-budget escalation state (guard B, tools/manager.py).
+    # `budget_refusals` counts how many times the model has reached for a
+    # tool whose per-turn budget is already spent. The first refusal is a
+    # nudge: tell it the avenue is closed and let it answer. A SECOND reach
+    # for the same refused tool means the nudge did not land, and the loop
+    # would otherwise hand it max_iterations more chances to hammer a tool
+    # that will never run — so `force_synthesis` turns tools OFF for the rest
+    # of the turn and the next provider call is a plain answer-now pass.
+    budget_refusals: dict[str, int] = {}
+    force_synthesis = False
+
     consecutive_truncation_retries = 0
     MAX_TRUNCATION_RETRIES = 3
 
@@ -716,7 +728,16 @@ async def chat_with_tools(
 
         messages = ctx.session.get_messages()
 
-        if not use_native_tools:
+        if force_synthesis:
+            # v1.19.3: tools are withdrawn for the rest of the turn (see
+            # budget_refusals). Send the transcript as-is — no tool
+            # descriptions in the system prompt, no `tools=` below — so the
+            # model has nothing left to call and answers from what it has.
+            yield Event(
+                EventType.INFO,
+                "Tools withdrawn for this turn — answering from the results already gathered"
+            )
+        elif not use_native_tools:
             # Prompt-based tool calling — build messages with tool descriptions in system prompt
             messages = _build_prompt_based_messages(ctx)
         else:
@@ -758,7 +779,8 @@ async def chat_with_tools(
         full_response = ""
         native_tool_calls = []
 
-        async for event in ctx.provider.chat(messages, ctx.model, stream=False, tools=openai_tools):
+        request_tools = None if force_synthesis else openai_tools
+        async for event in ctx.provider.chat(messages, ctx.model, stream=False, tools=request_tools):
             if event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                 # Only remove user message on first iteration (before any tool results added)
                 # This prevents session corruption from orphan user messages (v1.14.1)
@@ -829,7 +851,16 @@ async def chat_with_tools(
 
         # Build list of parsed tool calls
         tool_calls_list = []
-        if native_tool_calls:
+        if force_synthesis:
+            # v1.19.3: tools were withdrawn for this pass. Both paths are
+            # covered here on purpose — a native provider cannot emit a call
+            # it was not offered, but the PROMPT-BASED path parses tool JSON
+            # out of free text, and a model that has just been refused is
+            # exactly the one that writes one anyway. Strip it and treat the
+            # response as final.
+            if full_response:
+                full_response = strip_tool_json_from_text(full_response)
+        elif native_tool_calls:
             parsed_calls = []
             for tc in native_tool_calls:
                 tool_args = tc.get("arguments", {})
@@ -938,18 +969,48 @@ async def chat_with_tools(
                 tool_name = tc["tool"]
                 tool_args = tc.get("arguments", {})
 
-                # Check for tool loop (per tool)
+                # v1.19.3 guard B — per-turn call budget, argument-independent.
+                # Checked FIRST: once a tool is out of budget it is refused
+                # whatever the arguments are, so the repeat rule below has
+                # nothing left to say about it. The event text is its own —
+                # the old line claimed "called Nx with same args", which is
+                # false for a budget trip and taught the model to rephrase.
+                if ctx.tool_manager.is_tool_budget_exceeded(tool_name):
+                    budget = ctx.tool_manager.get_tool_call_budget(tool_name)
+                    budget_refusals[tool_name] = budget_refusals.get(tool_name, 0) + 1
+                    yield Event(
+                        EventType.INFO,
+                        f"Tool budget exhausted: '{tool_name}' used its "
+                        f"{budget} calls for this turn — refused"
+                    )
+                    ctx.session.add_message(
+                        Message("user", ctx.tool_manager.get_budget_message(tool_name))
+                    )
+                    if budget_refusals[tool_name] >= 2:
+                        # Second reach for a tool it has already been told is
+                        # closed: stop negotiating and withdraw tools for the
+                        # rest of the turn (see force_synthesis above).
+                        logger.warning(
+                            f"Tool {tool_name!r} attempted again after its per-turn "
+                            f"budget ({budget}) was refused; withdrawing tools for "
+                            f"the rest of this turn."
+                        )
+                        force_synthesis = True
+                    interrupted = True  # Stop processing remaining tools
+                    break
+
+                # Guard A — same tool, byte-identical arguments, N times in
+                # this turn (not merely N in a row; v1.19.3).
                 if ctx.tool_manager.is_tool_loop_detected(tool_name, tool_args):
                     yield Event(
                         EventType.INFO,
-                        f"Loop detected: '{tool_name}' called {ctx.tool_manager.max_same_tool_calls}x with same args"
+                        f"Loop detected: '{tool_name}' called "
+                        f"{ctx.tool_manager.max_same_tool_calls}x with same args this turn"
                     )
                     loop_msg = ctx.tool_manager.get_loop_message(tool_name)
                     ctx.session.add_message(Message("user", loop_msg))
                     interrupted = True  # Stop processing remaining tools
                     break
-
-                ctx.tool_manager.record_tool_call(tool_name, tool_args)
 
                 yield Event(EventType.TOOL_CALL, {
                     "tool": tool_name,
@@ -965,6 +1026,12 @@ async def chat_with_tools(
                 # Check for interrupt (signaled by None result)
                 if result is None:
                     return
+
+                # v1.19.3: record AFTER execution, with the outcome. A call
+                # that failed is kept out of both guard counts so a retry of
+                # a transient failure is not mistaken for a loop; see
+                # ToolManager.record_tool_call.
+                ctx.tool_manager.record_tool_call(tool_name, tool_args, success)
 
                 results.append((tc, result, success))
                 last_tool_name = tool_name

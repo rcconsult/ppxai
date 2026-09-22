@@ -87,8 +87,17 @@ class MockToolManager:
             return json.dumps(args, sort_keys=True) == json.dumps(self._loop_on[1], sort_keys=True)
         return False
 
-    def record_tool_call(self, name, args):
-        self._recorded_calls.append((name, args))
+    def record_tool_call(self, name, args, success=True):
+        self._recorded_calls.append((name, args, success))
+
+    def is_tool_budget_exceeded(self, name):
+        return False
+
+    def get_tool_call_budget(self, name):
+        return 0
+
+    def get_budget_message(self, tool_name):
+        return f"No more {tool_name} this turn"
 
     async def execute_tool(self, name, **kwargs):
         tool = self._tools.get(name)

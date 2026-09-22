@@ -1,0 +1,48 @@
+{
+  "name": "tool-repetition-per-turn-reset-four-rechecks",
+  "shape": "tool-repetition",
+  "provenance": "constructed",
+  "source": "Extends the tau-bench airline-36 shape past the repeat threshold, so removing the per-turn reset cannot pass unnoticed.",
+  "description": "The same byte-identical call once in each of FOUR consecutive user turns. Observed runs stop at three re-checks, which is one short of the threshold and therefore cannot fence the reset; four turns can. Nothing may trip: the guards are per turn, and a user asking again is a new turn. At the loop tier this drives four real chat() calls, so the reset under test is the engine's own.",
+  "uses_shipped_defaults": true,
+  "loop_tier": true,
+  "calls": [
+    {
+      "tool": "get_reservation_details",
+      "args": {
+        "reservation_id": "PEP4E0"
+      },
+      "success": true,
+      "turn": 1
+    },
+    {
+      "tool": "get_reservation_details",
+      "args": {
+        "reservation_id": "PEP4E0"
+      },
+      "success": true,
+      "turn": 2
+    },
+    {
+      "tool": "get_reservation_details",
+      "args": {
+        "reservation_id": "PEP4E0"
+      },
+      "success": true,
+      "turn": 3
+    },
+    {
+      "tool": "get_reservation_details",
+      "args": {
+        "reservation_id": "PEP4E0"
+      },
+      "success": true,
+      "turn": 4
+    }
+  ],
+  "expect": {
+    "first_trip": null,
+    "first_budget_trip_index": null,
+    "first_repeat_trip_index": null
+  }
+}

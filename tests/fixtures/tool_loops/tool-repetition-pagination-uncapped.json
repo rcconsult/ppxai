@@ -1,0 +1,96 @@
+{
+  "name": "tool-repetition-pagination-uncapped",
+  "shape": "tool-repetition",
+  "provenance": "constructed",
+  "source": "False-positive fence for the classic paging shape.",
+  "description": "One tool, arguments differing only by an incrementing offset, on a tool with no budget. Must never trip.",
+  "uses_shipped_defaults": true,
+  "loop_tier": true,
+  "calls": [
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "big.log",
+        "offset": 0
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "big.log",
+        "offset": 1000
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "big.log",
+        "offset": 2000
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "big.log",
+        "offset": 3000
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "big.log",
+        "offset": 4000
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "big.log",
+        "offset": 5000
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "big.log",
+        "offset": 6000
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "big.log",
+        "offset": 7000
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "big.log",
+        "offset": 8000
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "big.log",
+        "offset": 9000
+      },
+      "success": true
+    }
+  ],
+  "expect": {
+    "first_trip": null,
+    "first_budget_trip_index": null,
+    "first_repeat_trip_index": null
+  }
+}

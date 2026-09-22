@@ -192,6 +192,7 @@ class ToolSetting:
     MAX_TOOL_ITERATIONS: Final[str] = "max_tool_iterations"
     AUTO_RETRY_EMPTY: Final[str] = "auto_retry_empty"
     MAX_SAME_TOOL_CALLS: Final[str] = "max_same_tool_calls"
+    TOOL_CALL_BUDGETS: Final[str] = "tool_call_budgets"  # v1.19.3
     VERBOSE: Final[str] = "verbose"
     CONTEXT_CHAR_LIMIT: Final[str] = "context_char_limit"
     MIN_TASK_WORDS: Final[str] = "min_task_words"
@@ -217,6 +218,31 @@ class Default:
     # fails 10× with hallucinated variations" sessions from burning
     # max_iterations worth of tokens before giving up.
     ZOMBIE_THRESHOLD: Final[int] = 3
+
+    # v1.19.3 per-turn, per-tool call budget (guard B in
+    # engine/tools/manager.py). Argument-independent, so it stops the
+    # paraphrase loop that the identical-arguments guard cannot see.
+    #
+    # Only RETRIEVAL tools are capped, and deliberately generously.
+    # Measured against tau-bench's published historical trajectories
+    # (sierra-research/tau-bench, 1,960 GPT-4o + Sonnet trajectories,
+    # airline + retail), 10,700 per-(turn, tool) samples: 1 call 83.6%,
+    # <=3 95.4%, <=5 99.3%, <=7 99.8%, max observed 12 — and 32 of the 76
+    # turns with >=6 calls of one tool are on SUCCESSFUL runs (reward 1.0,
+    # e.g. get_reservation_details 9x in one turn). A low cap therefore
+    # cuts into legitimate work, which is why the number is 10 (~0.03% of
+    # legitimate turns) and why nothing is capped globally: read_file,
+    # list_directory and execute_shell_command are uncapped on purpose.
+    # The 2026-09-22 incident (15 web_search calls in 113 s) is still
+    # caught at call 11, and the identical-arguments guard catches its
+    # repeated query independently at call 14.
+    # Absent tool = unlimited. Override per deployment with
+    # `"tools": {"agent": {"tool_call_budgets": {"web_search": 20}}}`
+    # (merged over these, so 0 re-opens one tool without dropping the rest).
+    TOOL_CALL_BUDGETS: Final[dict[str, int]] = {
+        "web_search": 10,
+        "fetch_url": 10,
+    }
 
     # Context limits
     CONTEXT_LIMIT: Final[int] = 128_000

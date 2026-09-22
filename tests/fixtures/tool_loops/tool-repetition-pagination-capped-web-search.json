@@ -1,0 +1,115 @@
+{
+  "name": "tool-repetition-pagination-capped-web-search",
+  "shape": "tool-repetition",
+  "provenance": "constructed",
+  "source": "Records the COST of the web_search budget, honestly.",
+  "description": "Twelve paged web_search calls, every one a distinct argument set. The repeat rule correctly stays silent, but the per-turn budget of 10 refuses the eleventh page. This is the accepted false positive of guard B — tau-bench puts a twelve-call turn at the extreme edge of legitimate behaviour (max observed 12, 99.8% of turns at <=7) — and a deployment that needs more raises tools.agent.tool_call_budgets. The model is told the avenue is closed, not that it repeated itself.",
+  "uses_shipped_defaults": true,
+  "loop_tier": true,
+  "calls": [
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 1
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 2
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 3
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 4
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 5
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 6
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 7
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 8
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 9
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 10
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 11
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "ppxai release notes",
+        "page": 12
+      },
+      "success": true
+    }
+  ],
+  "expect": {
+    "first_trip": {
+      "index": 11,
+      "rule": "budget"
+    },
+    "first_budget_trip_index": 11,
+    "first_repeat_trip_index": null
+  }
+}

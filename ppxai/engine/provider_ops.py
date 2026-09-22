@@ -164,6 +164,13 @@ def set_provider(engine, provider_name: str) -> bool:
         engine.tool_manager.max_same_tool_calls = engine._agent_config.get(
             "max_same_tool_calls", Default.MAX_SAME_TOOL_CALLS
         )
+        # v1.19.3: re-apply the per-turn call budgets too — `clear()` above
+        # only drops the tools, but a fresh manager would otherwise keep the
+        # shipped defaults and silently ignore the operator's override after
+        # a provider switch.
+        engine.tool_manager.tool_call_budgets = dict(
+            engine._agent_config.get("tool_call_budgets", Default.TOOL_CALL_BUDGETS)
+        )
 
     # Log hints transition for debugging (v1.14.0)
     if engine._bootstrap_context:

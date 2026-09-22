@@ -1,0 +1,40 @@
+{
+  "name": "tool-repetition-swe-agent-1235-failing-retries",
+  "shape": "tool-repetition",
+  "provenance": "observed",
+  "source": "SWE-agent issue #1235 (2025-07-06, GPT-4o, SWE-agent 1.1.0), reported by the session coordinator; not fetched by this harness.",
+  "description": "str_replace_editor view '.' then view 'missing_colon.py' twice byte-identical, all three FAILING with the same environment error (/usr/bin/env: 'python3\\r'). The retry-after-failure case in the wild: a human diagnosing the same broken environment would also retry two or three times. Under our decision — failed calls count toward neither guard — nothing trips.",
+  "uses_shipped_defaults": true,
+  "loop_tier": false,
+  "calls": [
+    {
+      "tool": "str_replace_editor",
+      "args": {
+        "command": "view",
+        "path": "."
+      },
+      "success": false
+    },
+    {
+      "tool": "str_replace_editor",
+      "args": {
+        "command": "view",
+        "path": "missing_colon.py"
+      },
+      "success": false
+    },
+    {
+      "tool": "str_replace_editor",
+      "args": {
+        "command": "view",
+        "path": "missing_colon.py"
+      },
+      "success": false
+    }
+  ],
+  "expect": {
+    "first_trip": null,
+    "first_budget_trip_index": null,
+    "first_repeat_trip_index": null
+  }
+}

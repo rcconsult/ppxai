@@ -1,0 +1,47 @@
+{
+  "name": "tool-repetition-three-identical-consecutive",
+  "shape": "tool-repetition",
+  "provenance": "constructed",
+  "source": "Pins the pre-v1.19.3 behaviour: the back-to-back case must still trip at the same threshold.",
+  "description": "Four identical read_file calls. read_file carries no budget, so only the repeat rule can fire; the fourth attempt is the one refused (three already recorded).",
+  "uses_shipped_defaults": true,
+  "loop_tier": true,
+  "calls": [
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a.py"
+      },
+      "success": true
+    }
+  ],
+  "expect": {
+    "first_trip": {
+      "index": 4,
+      "rule": "repeat"
+    },
+    "first_budget_trip_index": null,
+    "first_repeat_trip_index": 4
+  }
+}

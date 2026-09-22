@@ -1,0 +1,100 @@
+{
+  "name": "tool-repetition-distinct-paths",
+  "shape": "tool-repetition",
+  "provenance": "constructed",
+  "source": "False-positive fence for ordinary file work.",
+  "description": "Twelve reads and listings on twelve different paths. Neither guard may fire: the arguments differ every time and neither tool carries a budget.",
+  "uses_shipped_defaults": true,
+  "loop_tier": true,
+  "calls": [
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "src/mod_0.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "src/mod_1.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "src/mod_2.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "src/mod_3.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "src/mod_4.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "src/mod_5.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "src/mod_6.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "src/mod_7.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "src/pkg_0"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "src/pkg_1"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "src/pkg_2"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "src/pkg_3"
+      },
+      "success": true
+    }
+  ],
+  "expect": {
+    "first_trip": null,
+    "first_budget_trip_index": null,
+    "first_repeat_trip_index": null
+  }
+}

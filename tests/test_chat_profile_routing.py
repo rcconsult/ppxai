@@ -81,8 +81,17 @@ class MockToolManager:
     def is_tool_loop_detected(self, name, args):
         return False
 
-    def record_tool_call(self, name, args):
+    def record_tool_call(self, name, args, success=True):
         pass
+
+    def is_tool_budget_exceeded(self, name):
+        return False
+
+    def get_tool_call_budget(self, name):
+        return 0
+
+    def get_budget_message(self, tool_name):
+        return f"No more {tool_name} this turn"
 
     async def execute_tool(self, name, **kwargs):
         tool = self._tools.get(name)

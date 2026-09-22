@@ -16,6 +16,7 @@ from .defaults import (
     DEFAULT_AGENT_MAX_SAME_TOOL_CALLS,
     DEFAULT_AGENT_MAX_TOOL_ITERATIONS,
     DEFAULT_AGENT_MIN_TASK_WORDS,
+    DEFAULT_AGENT_TOOL_CALL_BUDGETS,
     DEFAULT_AGENT_ZOMBIE_THRESHOLD,
     DEFAULT_ALLOWED_COMMANDS,
     DEFAULT_DANGEROUS_COMMANDS,
@@ -176,10 +177,21 @@ def get_agent_config() -> dict[str, Any]:
     """
     agent_config = get_tool_config("agent")
 
+    # v1.19.3 per-turn tool call budgets. MERGED over the shipped defaults,
+    # not replacing them: an operator raising web_search should not silently
+    # uncap fetch_url. Set a tool to 0 to make it unlimited again.
+    configured_budgets = agent_config.get("tool_call_budgets")
+    tool_call_budgets = dict(DEFAULT_AGENT_TOOL_CALL_BUDGETS)
+    if isinstance(configured_budgets, dict):
+        for tool_name, budget in configured_budgets.items():
+            tool_call_budgets[str(tool_name)] = budget
+
     return {
         "max_iterations": agent_config.get("max_iterations", DEFAULT_AGENT_MAX_ITERATIONS),
         "max_tool_iterations": agent_config.get("max_tool_iterations", DEFAULT_AGENT_MAX_TOOL_ITERATIONS),
         "max_same_tool_calls": agent_config.get("max_same_tool_calls", DEFAULT_AGENT_MAX_SAME_TOOL_CALLS),
+        # v1.19.3: {tool_name: max calls per turn}; absent or 0 = unlimited.
+        "tool_call_budgets": tool_call_budgets,
         "context_char_limit": agent_config.get("context_char_limit", DEFAULT_AGENT_CONTEXT_CHAR_LIMIT),
         "min_task_words": agent_config.get("min_task_words", DEFAULT_AGENT_MIN_TASK_WORDS),
         "auto_retry_empty": agent_config.get("auto_retry_empty", DEFAULT_AGENT_AUTO_RETRY_EMPTY),

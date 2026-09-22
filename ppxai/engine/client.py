@@ -6,6 +6,7 @@ It has no UI dependencies and communicates via events.
 """
 
 import asyncio
+import json
 import threading
 from collections.abc import AsyncIterator
 from datetime import datetime
@@ -755,6 +756,12 @@ class EngineClient:
             self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", Default.MAX_TOOL_ITERATIONS)
             # Apply configurable loop detection threshold
             self.tool_manager.max_same_tool_calls = self._agent_config.get("max_same_tool_calls", Default.MAX_SAME_TOOL_CALLS)
+            # v1.19.3: per-turn, per-tool call budgets (argument-independent
+            # guard). Copied, never aliased — the manager mutates nothing but
+            # the config dict is shared with `get_agent_config()`'s callers.
+            self.tool_manager.tool_call_budgets = dict(
+                self._agent_config.get("tool_call_budgets", Default.TOOL_CALL_BUDGETS)
+            )
             self.tools_enabled = True
             self.state.set("tools_enabled", True)
             self.session.tools_enabled = True  # Sync for session persistence
@@ -853,8 +860,8 @@ class EngineClient:
 
         Returns:
             Dict with max_iterations, max_tool_iterations, max_same_tool_calls,
-            context_char_limit, min_task_words, auto_retry_empty,
-            zombie_threshold
+            tool_call_budgets, context_char_limit, min_task_words,
+            auto_retry_empty, zombie_threshold
         """
         return self._agent_config
 
@@ -936,6 +943,27 @@ class EngineClient:
             # Loop detection threshold (0=disabled)
             self.tool_manager.max_same_tool_calls = int(value)
             return True
+        elif setting == "tool_call_budgets":
+            # v1.19.3: {tool_name: max calls per turn}; 0 or absent = unlimited.
+            # Merged over what is already set so a caller can raise one tool
+            # without knowing the rest, mirroring get_agent_config().
+            if isinstance(value, str):
+                # `POST /tools/config` types its `value` as str
+                # (server/models.py), so the wire form is a JSON object.
+                try:
+                    value = json.loads(value)
+                except ValueError:
+                    return False
+            if not isinstance(value, dict):
+                return False
+            merged = dict(self.tool_manager.tool_call_budgets)
+            for tool_name, budget in value.items():
+                try:
+                    merged[str(tool_name)] = max(0, int(budget))
+                except (TypeError, ValueError):
+                    return False
+            self.tool_manager.tool_call_budgets = merged
+            return True
         return False
 
     def get_tools_status(self) -> dict[str, Any]:
@@ -950,6 +978,7 @@ class EngineClient:
             "max_iterations": self.tool_manager.max_iterations,
             "auto_retry_empty": self.tool_manager.auto_retry_empty,
             "max_same_tool_calls": self.tool_manager.max_same_tool_calls,
+            "tool_call_budgets": dict(self.tool_manager.tool_call_budgets),  # v1.19.3
             "verbose": self._tools_verbose  # Include verbose setting
         }
 

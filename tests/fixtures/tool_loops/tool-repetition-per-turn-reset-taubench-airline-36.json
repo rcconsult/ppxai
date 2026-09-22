@@ -1,0 +1,40 @@
+{
+  "name": "tool-repetition-per-turn-reset-taubench-airline-36",
+  "shape": "tool-repetition",
+  "provenance": "observed",
+  "source": "tau-bench historical trajectories (sierra-research/tau-bench, MIT), sonnet-35-new-airline task 36, reward 1.0 — scanned locally by the session coordinator, not fetched by this harness.",
+  "description": "get_reservation_details {'reservation_id': 'PEP4E0'} three times, byte-identical, consecutive in TOOL-CALL order — on a run that SUCCEEDED. What makes it legitimate is that the three calls are separated by user messages ('can you at least double-check one more time?'), so each is a fresh turn. ppxai clears the guard state per chat() call, so each re-check starts from zero and nothing trips. That per-turn scoping is load-bearing for correctness here, not tidiness: the loop tier drives three real chat() invocations rather than clearing anything by hand.",
+  "uses_shipped_defaults": true,
+  "loop_tier": true,
+  "calls": [
+    {
+      "tool": "get_reservation_details",
+      "args": {
+        "reservation_id": "PEP4E0"
+      },
+      "success": true,
+      "turn": 1
+    },
+    {
+      "tool": "get_reservation_details",
+      "args": {
+        "reservation_id": "PEP4E0"
+      },
+      "success": true,
+      "turn": 2
+    },
+    {
+      "tool": "get_reservation_details",
+      "args": {
+        "reservation_id": "PEP4E0"
+      },
+      "success": true,
+      "turn": 3
+    }
+  ],
+  "expect": {
+    "first_trip": null,
+    "first_budget_trip_index": null,
+    "first_repeat_trip_index": null
+  }
+}

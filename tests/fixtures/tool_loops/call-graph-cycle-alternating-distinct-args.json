@@ -1,0 +1,86 @@
+{
+  "name": "call-graph-cycle-alternating-distinct-args",
+  "shape": "call-graph-cycle",
+  "provenance": "constructed",
+  "source": "Documents a KNOWN GAP rather than a guarantee.",
+  "description": "Two uncapped tools alternating, every call with fresh arguments. Neither guard fires — the repeat rule needs identical arguments and neither tool carries a budget — so a model cycling between read_file and list_directory with new paths is bounded only by max_tool_iterations and the zombie breaker. Fuzzy/semantic argument matching was explicitly rejected (needs a tuned threshold, blocks deliberately different queries), so this gap is accepted, not hidden.",
+  "uses_shipped_defaults": true,
+  "loop_tier": false,
+  "calls": [
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a0.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "dir1"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a2.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "dir3"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a4.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "dir5"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a6.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "dir7"
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a8.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "dir9"
+      },
+      "success": true
+    }
+  ],
+  "expect": {
+    "first_trip": null,
+    "first_budget_trip_index": null,
+    "first_repeat_trip_index": null
+  }
+}

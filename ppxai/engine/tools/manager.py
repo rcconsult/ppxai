@@ -6,13 +6,30 @@ Handles tool registration, filtering by provider, and execution.
 
 import json
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 from ...config import get_tool_description_overrides
+from ...constants import Default
 from .base import BaseTool, FunctionTool
 from .wrappers import get_registry as get_wrapper_registry
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ToolCallRecord:
+    """One executed tool call in the current turn's history.
+
+    `success` is filled in by `record_tool_call()`, which the engine calls
+    AFTER the tool has run, so the guards below can tell a genuine repeat
+    (same args, worked, asked again) from a legitimate retry after a
+    transient failure.
+    """
+
+    tool: str
+    args_hash: str
+    success: bool = True
 
 
 class ToolManager:
@@ -30,8 +47,24 @@ class ToolManager:
         self.max_iterations: int = 15
         self.auto_retry_empty: int = 3  # Max retries for empty responses (0=disabled)
         # Loop detection - prevent models from calling same tool with same args repeatedly
-        self.max_same_tool_calls: int = 3  # Max consecutive calls to same tool+args (0=disabled)
-        self._tool_call_history: list[tuple[str, str]] = []  # Track (tool_name, args_hash) for loop detection
+        # v1.19.3: counted per TURN, not as a trailing streak (see
+        # is_tool_loop_detected).
+        self.max_same_tool_calls: int = Default.MAX_SAME_TOOL_CALLS  # Same tool+args per turn (0=disabled)
+        self._tool_call_history: list[ToolCallRecord] = []  # Executed calls this turn
+
+        # Per-tool call budget for one turn (v1.19.3), argument-independent.
+        # Catches the loop the repeat rule cannot see: a model that
+        # paraphrases the SAME hunt into fresh arguments every iteration
+        # (measured 2026-09-22: 15 web_search calls in 113 s, 5 of them
+        # byte-identical, the other 10 rewordings of one query).
+        # Same shape as `tool_display_limits`: {tool_name: int}. 0 or absent
+        # means unlimited, which is deliberately the case for every tool that
+        # legitimately runs many times in a turn (read_file, list_directory,
+        # execute_shell_command, the editing tools).
+        # Overridable via `tools.agent.tool_call_budgets` in
+        # ppxai-config.json or `EngineClient.set_tool_config`.
+        self.tool_call_budgets: dict[str, int] = dict(Default.TOOL_CALL_BUDGETS)
+        self._tool_call_counts: dict[str, int] = {}  # Successful calls per tool, this turn
 
         # Display limit configuration (v1.15.3)
         # Controls how much of a tool result is displayed to the user
@@ -483,14 +516,34 @@ class ToolManager:
         """Remove all registered tools."""
         self._tools.clear()
 
-    # === Loop Detection (v1.13.10) ===
+    # === Loop Detection (v1.13.10, reworked v1.19.3) ===
+    #
+    # Two independent per-turn guards, both cleared by reset_tool_history():
+    #
+    #   A. repeat detection  — same tool, byte-identical arguments, N times
+    #      ANYWHERE in the turn (is_tool_loop_detected)
+    #   B. call budget       — same tool, ANY arguments, N times in the turn
+    #      (is_tool_budget_exceeded)
+    #
+    # A catches "asked the same question again"; B catches "asked the same
+    # question in fifteen different wordings". Neither does fuzzy/semantic
+    # argument matching, and that is a decision, not an omission: a
+    # similarity threshold has to be tuned per tool and blocks two
+    # deliberately-different queries as readily as one rephrased one.
 
     def reset_tool_history(self):
-        """Reset tool call history for a new chat turn.
+        """Reset the per-turn loop-guard state for a new chat turn.
 
-        Should be called at the start of each chat() invocation.
+        Clears BOTH the call history (guard A) and the per-tool call counts
+        (guard B). Should be called at the start of each chat() invocation.
+
+        Kept under its original name even though it now clears more than the
+        history: `chat_with_tools()` is the only production caller and four
+        test doubles mirror the name, so a rename costs churn and buys what
+        this docstring already says.
         """
         self._tool_call_history.clear()
+        self._tool_call_counts.clear()
 
     def _hash_args(self, args: dict[str, Any]) -> str:
         """Create a stable hash of tool arguments for loop detection.
@@ -506,49 +559,109 @@ class ToolManager:
         except (TypeError, ValueError):
             return str(args)
 
-    def record_tool_call(self, tool_name: str, args: dict[str, Any] | None = None):
-        """Record a tool call for loop detection.
+    def record_tool_call(
+        self,
+        tool_name: str,
+        args: dict[str, Any] | None = None,
+        success: bool = True,
+    ):
+        """Record an EXECUTED tool call for the per-turn guards.
+
+        v1.19.3: called AFTER the tool has run (engine/chat.py), so the real
+        outcome is known. A failed call is kept in the history for the record
+        but counts toward NEITHER guard: retrying a tool that failed
+        transiently — same arguments, second attempt — is legitimate recovery,
+        not a loop, and punishing it would tell a model to give up at exactly
+        the moment it was doing the right thing. A tool that keeps FAILING is
+        already covered by the zombie circuit breaker
+        (`tools.agent.zombie_threshold`, engine/chat.py), which trips on
+        consecutive failed iterations.
 
         Args:
-            tool_name: Name of the tool being called
+            tool_name: Name of the tool that was called
             args: Tool arguments (optional, for argument-aware loop detection)
+            success: Whether the call succeeded (failures are not counted)
         """
-        args_hash = self._hash_args(args or {})
-        self._tool_call_history.append((tool_name, args_hash))
+        self._tool_call_history.append(
+            ToolCallRecord(tool_name, self._hash_args(args or {}), bool(success))
+        )
+        if success:
+            self._tool_call_counts[tool_name] = self._tool_call_counts.get(tool_name, 0) + 1
 
     def is_tool_loop_detected(self, tool_name: str, args: dict[str, Any] | None = None) -> bool:
-        """Check if calling this tool with these args would create a loop.
+        """Check if calling this tool with these args would repeat the turn.
 
-        A loop is detected when the same tool with the same arguments has been
-        called max_same_tool_calls times consecutively. Calling the same tool
-        with different arguments (e.g., list_directory on different paths) is
-        allowed and does not trigger loop detection.
+        Guard A. Trips when the same tool has already been called
+        successfully with byte-identical arguments `max_same_tool_calls`
+        times ANYWHERE in the current turn. Different arguments (e.g.
+        list_directory on different paths) never contribute.
+
+        v1.19.3: this used to count only a TRAILING streak — it walked the
+        history backward and reset to zero at the first different call. A
+        model that interleaved its repeats (measured: one query issued 5
+        times among 10 paraphrases of the same hunt) never built a streak of
+        3 and looped untouched for 113 s. The streak rule is not kept as a
+        separate earlier trip because it cannot fire first: a trailing streak
+        of N is also N occurrences in the turn, so the streak rule is
+        strictly weaker than this one and the same threshold covers both.
 
         Args:
             tool_name: Name of the tool about to be called
             args: Tool arguments (optional)
 
         Returns:
-            True if this call would exceed the loop threshold
+            True if this call would exceed the repeat threshold
         """
         if self.max_same_tool_calls <= 0:
             return False  # Loop detection disabled
 
         args_hash = self._hash_args(args or {})
+        repeats = sum(
+            1
+            for record in self._tool_call_history
+            if record.success and record.tool == tool_name and record.args_hash == args_hash
+        )
+        return repeats >= self.max_same_tool_calls
 
-        # Count consecutive calls to this tool with same args from the end of history
-        consecutive = 0
-        for prev_tool, prev_args_hash in reversed(self._tool_call_history):
-            if prev_tool == tool_name and prev_args_hash == args_hash:
-                consecutive += 1
-            else:
-                break
+    def get_tool_call_budget(self, tool_name: str) -> int:
+        """Per-turn call budget for a tool (0 = unlimited).
 
-        # Would this call exceed the threshold?
-        return consecutive >= self.max_same_tool_calls
+        Args:
+            tool_name: Tool name
+
+        Returns:
+            Maximum successful calls allowed this turn, 0 for unlimited
+        """
+        budget = self.tool_call_budgets.get(tool_name, 0)
+        try:
+            return max(0, int(budget))
+        except (TypeError, ValueError):
+            logger.warning(
+                f"Ignoring non-numeric tool_call_budgets entry for "
+                f"{tool_name!r}: {budget!r} (treating as unlimited)"
+            )
+            return 0
+
+    def is_tool_budget_exceeded(self, tool_name: str) -> bool:
+        """Check if this tool has used up its per-turn call budget.
+
+        Guard B — argument-independent, so it catches the paraphrase loop
+        that guard A structurally cannot. Only successful calls count (see
+        record_tool_call).
+
+        Args:
+            tool_name: Name of the tool about to be called
+
+        Returns:
+            True if the tool has spent its budget for this turn
+        """
+        budget = self.get_tool_call_budget(tool_name)
+        if budget <= 0:
+            return False  # No budget configured for this tool
+        return self._tool_call_counts.get(tool_name, 0) >= budget
 
     def get_loop_message(self, tool_name: str) -> str:
-        """Get a message to inject when a loop is detected.
+        """Get a message to inject when guard A (repeat) trips.
 
         Args:
             tool_name: Tool that was being called repeatedly
@@ -557,9 +670,32 @@ class ToolManager:
             Message prompting the model to synthesize instead of loop
         """
         return (
-            f"You have called the '{tool_name}' tool with the same arguments {self.max_same_tool_calls} times consecutively. "
+            f"You have called the '{tool_name}' tool with the same arguments "
+            f"{self.max_same_tool_calls} times in this turn. "
             "Please stop calling tools and provide a response based on the results you already have. "
             "Synthesize the information into a helpful answer for the user."
+        )
+
+    def get_budget_message(self, tool_name: str) -> str:
+        """Get a message to inject when guard B (budget) trips.
+
+        Deliberately NOT the repeat message: the model has to understand
+        that this avenue is closed for the rest of the turn, otherwise it
+        reads the nudge as "you repeated yourself" and rephrases — which is
+        exactly the behaviour that exhausted the budget.
+
+        Args:
+            tool_name: Tool whose per-turn budget is spent
+
+        Returns:
+            Message telling the model the tool is refused for this turn
+        """
+        return (
+            f"You have used all {self.get_tool_call_budget(tool_name)} of your "
+            f"'{tool_name}' calls for this turn, and that tool is now refused "
+            f"until the user's next message. Rephrasing the arguments will not "
+            f"help — the tool will not run again. Answer now from the results "
+            f"you already have, and state plainly what you could not find."
         )
 
     async def cleanup(self):

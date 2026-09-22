@@ -1,0 +1,125 @@
+{
+  "name": "tool-repetition-imdb-image-id-hunt-2026-09-22",
+  "shape": "tool-repetition",
+  "provenance": "observed",
+  "source": "~/.ppxai/logs/server-debug.log, 2026-09-22 23:20:38-23:22:31, web client, gemini-3.5-flash, one chat turn",
+  "description": "15 web_search calls in 113 s hunting one IMDb image id. Every call SUCCEEDED (17 SSE tool_call + 17 SSE tool_result lines in the window), so this is a genuine loop, not a retry sequence. The user interrupted it; 'Loop detected' appears 0 times in the log, because the pre-v1.19.3 rule counted only a TRAILING streak and the FOUR identical queries (calls 2, 7, 10, 14 — four, not five: counted off the log) never sat next to each other. Call 5's query is TRUNCATED at 100 chars in the log; kept verbatim, tail not invented, and a distinct string either way.",
+  "uses_shipped_defaults": true,
+  "loop_tier": true,
+  "calls": [
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "\"BMmM1ZTc5ZTYtOTM2My00MjBmLWE5NzktYzkyYzdlYWE3ZDAzXkEyXkFqcGc\" OR \"MV5BMmM1ZTc5ZTYtOTM2My00MjBmLWE5NzktYzkyYzdlYWE3ZDAzXkEyXkFqcGc\""
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "\"MV5BMmM1ZTc5ZTYtOTM2My00MjBmLWE5NzktYzkyYzdlYWE3ZDAzXkEyXkFqcGc\""
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "IMDb \"tt27402786\""
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "\"tt27402786\""
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "\"MV5BMmM1ZTc5ZTYtOTM2My00MjBmLWE5NzktYzkyYzdlYWE3ZDAzXkEyXkFqcGc\" OR \"BMmM1ZTc5ZTYtOTM2My00MjBmLWE5NzktYzkyYzdlYWE3ZDAzXkEyXkFqcGc\" movie po"
+      },
+      "success": true,
+      "truncated_in_log": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "\"War Machine\" Netflix 2026 poster image description"
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "\"MV5BMmM1ZTc5ZTYtOTM2My00MjBmLWE5NzktYzkyYzdlYWE3ZDAzXkEyXkFqcGc\""
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "https://m.media-amazon.com/images/M/MV5BMmM1ZTc5ZTYtOTM2My00MjBmLWE5NzktYzkyYzdlYWE3ZDAzXkEyXkFqcGc@._V1_.jpg"
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "site:imdb.com \"MV5BMmM1ZTc5ZTYtOTM2My00MjBmLWE5NzktYzkyYzdlYWE3ZDAzXkEyXkFqcGc\""
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "\"MV5BMmM1ZTc5ZTYtOTM2My00MjBmLWE5NzktYzkyYzdlYWE3ZDAzXkEyXkFqcGc\""
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "site:allocine.fr/film/fichefilm_gen_cfilm=1000000243.html"
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "\"War Machine\" 2026 Alan Ritchson IMDb"
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "\"War Machine\" 2026 poster description colors"
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "\"MV5BMmM1ZTc5ZTYtOTM2My00MjBmLWE5NzktYzkyYzdlYWE3ZDAzXkEyXkFqcGc\""
+      },
+      "success": true
+    },
+    {
+      "tool": "web_search",
+      "args": {
+        "query": "\"War Machine\" 2026 Netflix poster"
+      },
+      "success": true
+    }
+  ],
+  "expect": {
+    "first_trip": {
+      "index": 11,
+      "rule": "budget"
+    },
+    "first_budget_trip_index": 11,
+    "first_repeat_trip_index": 14
+  }
+}

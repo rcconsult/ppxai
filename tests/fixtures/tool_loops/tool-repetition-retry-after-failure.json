@@ -1,0 +1,44 @@
+{
+  "name": "tool-repetition-retry-after-failure",
+  "shape": "tool-repetition",
+  "provenance": "constructed",
+  "source": "Encodes the retry-after-failure decision (ToolManager.record_tool_call).",
+  "description": "Same tool, same arguments, three transient FAILURES then a success. Must never trip: a retry after a failure is recovery, not a loop, and the success that follows must not be punished for the failures before it. Runaway FAILING tools are the zombie circuit breaker's job (tools.agent.zombie_threshold), which is also why this trace is not replayed at the loop tier — three consecutive failed iterations trip that breaker by design.",
+  "uses_shipped_defaults": true,
+  "loop_tier": false,
+  "calls": [
+    {
+      "tool": "fetch_url",
+      "args": {
+        "url": "https://example.com/a"
+      },
+      "success": false
+    },
+    {
+      "tool": "fetch_url",
+      "args": {
+        "url": "https://example.com/a"
+      },
+      "success": false
+    },
+    {
+      "tool": "fetch_url",
+      "args": {
+        "url": "https://example.com/a"
+      },
+      "success": false
+    },
+    {
+      "tool": "fetch_url",
+      "args": {
+        "url": "https://example.com/a"
+      },
+      "success": true
+    }
+  ],
+  "expect": {
+    "first_trip": null,
+    "first_budget_trip_index": null,
+    "first_repeat_trip_index": null
+  }
+}

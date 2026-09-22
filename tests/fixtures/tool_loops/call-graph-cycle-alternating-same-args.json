@@ -1,0 +1,75 @@
+{
+  "name": "call-graph-cycle-alternating-same-args",
+  "shape": "call-graph-cycle",
+  "provenance": "constructed",
+  "source": "The shape the pre-v1.19.3 trailing-streak rule structurally could not see.",
+  "description": "read_file(a.py) and list_directory(.) alternating, identical arguments each time. No streak ever reaches 3, so the old rule never fired; the per-turn count fires on the fourth read_file, which is call 7.",
+  "uses_shipped_defaults": true,
+  "loop_tier": true,
+  "calls": [
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "."
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "."
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "."
+      },
+      "success": true
+    },
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "a.py"
+      },
+      "success": true
+    },
+    {
+      "tool": "list_directory",
+      "args": {
+        "path": "."
+      },
+      "success": true
+    }
+  ],
+  "expect": {
+    "first_trip": {
+      "index": 7,
+      "rule": "repeat"
+    },
+    "first_budget_trip_index": null,
+    "first_repeat_trip_index": 7
+  }
+}
