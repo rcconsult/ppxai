@@ -171,7 +171,9 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   notice** telling the user the page was refreshed and to reload for a
   matching UI; an unreachable endpoint logs once and blocks nothing.
 - **SchemaGuard's log now reaches the extension's Output panel**
-  (`"ppxai HTTP"` channel), not only the Extension Host console
+  (the dedicated `"ppxai"` channel as of 2026-09-22; it first landed on
+  the `"ppxai HTTP"` channel a day earlier), not only the Extension Host
+  console
   (closing open owner decision 10).
 - **The AppState schema's `"version"` field is maintained from `"1.1"`
   on** (closing open owner decision 11). `"1.0"` sat unchanged across

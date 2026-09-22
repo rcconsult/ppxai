@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import { HttpClient, getHttpClient, resetHttpClient } from './httpClient';
 import { ChatViewProvider } from './chatPanel';
 import { SessionsProvider } from './sessionsProvider';
+import { getOutputChannel } from './outputChannel';
 
 let backend: HttpClient;
 let extensionVersion: string = 'unknown';
@@ -234,6 +235,13 @@ export async function activate(context: vscode.ExtensionContext) {
     // Get version from package.json
     extensionVersion = context.extension.packageJSON.version || 'unknown';
     console.log(`ppxai extension v${extensionVersion} activating...`);
+
+    // The extension's one general-purpose output channel ("ppxai") — created
+    // here (once) and registered for disposal so it doesn't leak across
+    // repeated activate/deactivate cycles. Separate from HttpClient's own
+    // "ppxai HTTP" channel (session/SSE/consent tracing), which keeps its
+    // own lifecycle.
+    context.subscriptions.push(getOutputChannel());
 
     // Initialize HTTP backend (connects to ppxai-server)
     backend = getHttpClient();

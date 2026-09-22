@@ -709,6 +709,7 @@ host, the webview and everything between them:
 | `globalState` / `workspaceState` | **Checked, clean.** The only writer is `sessionsProvider.ts` (`ppxai.sessions`), which stores server-side session metadata, never composer input |
 | `POST /client-log` | **Never receives raw input.** Every `logClientEvent` call site forwards a `systemMessage`/`error` the client PRODUCED (`getHandlerContext`, `wireUISubscriptions`, `CommandRenderer`'s host). The command echo is posted straight to the webview and is not mirrored. The server-side redaction from 3a-sec stays as defence in depth |
 | The `ppxai HTTP` OutputChannel (`httpClient.ts`) | **Checked, clean.** It logs connection state, SSE event JSON, consent answers and agent lifecycle; `executeCommand` and `complete` log nothing |
+| The `ppxai` OutputChannel (`outputChannel.ts`, added 2026-09-22) | **Checked, clean.** Its only writer is `SchemaGuard`'s host `log`, whose two call sites pass SCHEMA-SHAPE text — field names, types, version strings — never a command line, command args or user input. A new sink is a new place for `/token set <secret>` to land, so it is enumerated here rather than assumed harmless |
 | `console.*` in the extension host | **Checked, clean.** `commandRenderer.ts` warns with the result TYPE, `sideEffectsHandler.ts` with the KIND; no call carries user input |
 | webview → host `postMessage` (`chat`, `complete`) | **Enumerated, unchanged.** In-process IPC inside the extension: not logged, not persisted, never networked, and the value is already in the composer DOM the message came from. Gating it would need the webview to carry the rule — a second roster |
 | `POST /command/{name}` args | A client-dispatched command is never POSTed, and with no roster nothing is |
@@ -848,7 +849,8 @@ verified:
 > 4. Skew scenario (reuse manual-smoke item 2's setup above: delete a
 >    field from the server-side schema without re-syncing the
 >    extension) → confirm the guard line now shows in the Output panel
->    under **"ppxai HTTP"**, not only the Extension Host console.
+>    under **"ppxai"** — its own channel, not the `ppxai HTTP` trace
+>    channel and not only the Extension Host console.
 >
 > **Web:**
 > 1. Open the web UI, remove a field from the server-side schema,
@@ -1592,6 +1594,17 @@ behaviour or schema change that wants an owner, not a refactor.
     > context only, because a version check ahead of the field diff would
     > have hidden exactly the failure mode this decision exists to fix
     > (a field change landing with no bump).
+    >
+    > **Superseded 2026-09-22 (owner):** the mismatch was not left as-is.
+    > A dedicated `"ppxai"` channel now lives in
+    > `vscode-extension/src/outputChannel.ts`, created once and registered
+    > in `context.subscriptions` at activation; SchemaGuard's host `log`
+    > routes there and `HttpClient.logToOutputChannel` — added the day
+    > before for this one caller — is deleted. The `ppxai HTTP` channel
+    > keeps its own tracing. Fenced by
+    > `tests/test_vscode_schema_guard_output_channel.py` (name, wiring,
+    > disposal, and that the dead method stays gone), each fence
+    > mutation-verified.
 
 ## Step 5 follow-ups (2026-09-21, owner decisions)
 

@@ -7,13 +7,27 @@ confident wrong number about that sha.
 
 **Verify with:**
 ```bash
-git status --short
+git status --short --ignored=matching
 ```
 Run this before trusting any "measured on this tree" claim that also cites
 a commit hash. Any output at all — staged, unstaged, or untracked — means
 the tree you measured and the commit you're about to name are two
 different things. `git diff --stat` producing any lines is the same
 signal: a non-empty diff already means tree ≠ HEAD.
+
+**`--ignored=matching` is not optional, and a clean result still proves
+less than it looks.** Plain `git status --short` is silent about
+everything `.gitignore` matches, and a `git archive` export contains none
+of it either — so the two trees can differ while the check prints
+nothing. Measured in this repo on 2026-09-22: plain `git status --short`
+reported **5** entries, `--ignored=matching` reported **72** more,
+including `.env`, `.venv/`, `build/` and `__pycache__/`, and a clean
+export of the same sha had none of the four. `.env` decides what provider
+config a measurement reads; stale `__pycache__` decides what actually
+gets imported, which for any measurement *about* import behaviour is the
+whole subject. So a clean `git status` is necessary, not sufficient: the
+export is the authority, because it is defined by what the sha contains
+rather than by what git chose to report.
 
 ## Why this trips people up
 

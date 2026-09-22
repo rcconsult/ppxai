@@ -2279,22 +2279,6 @@ export class HttpClient {
             body: JSON.stringify({ level, message, client: 'vscode' }),
         }).catch(() => {});
     }
-
-    /**
-     * Append a line to the extension's output channel (Extension Host's
-     * "ppxai HTTP" channel — the only output channel this extension owns).
-     *
-     * Added 2026-09-21 (owner decision 10,
-     * docs/plan-adr-0007-completion-service.md) so `SchemaGuard`'s
-     * compatibility diagnostics land somewhere a user can actually find
-     * them (Output panel) instead of only the Extension Host console,
-     * which most users never open. Reuses this channel deliberately
-     * rather than creating a second one — the owner decision calls this
-     * a "low cost, cosmetic" fix, not a broader logging-surface redesign.
-     */
-    logToOutputChannel(message: string): void {
-        this.outputChannel.appendLine(message);
-    }
 }
 
 /**

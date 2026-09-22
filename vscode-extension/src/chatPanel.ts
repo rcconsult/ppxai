@@ -25,6 +25,7 @@ import {
 
 import { AppState } from './appState';
 import { SchemaGuard } from './schemaGuard';
+import { log as logToPpxaiChannel } from './outputChannel';
 
 // v1.19.x T8a: the /task command family (tool-capable /v1/agent/task tier).
 import { TaskController, RunController, ConsentAnswer } from './taskController';
@@ -233,14 +234,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             {
                 adopt: (fields) => this._appState.adoptFields(fields),
                 resetAdopted: () => this._appState.resetAdoptedFields(),
-                // 2026-09-21 (owner decision 10, docs/plan-adr-0007-completion-
-                // service.md): route through the extension's existing output
-                // channel instead of the Extension Host console, which most
-                // users never open. `schemaGuard.ts` itself stays vscode-free
+                // 2026-09-21 (owner decision 10) routed this through
+                // HttpClient's "ppxai HTTP" channel; 2026-09-22 (owner
+                // decision) moved it to the extension's general-purpose
+                // "ppxai" channel instead — HTTP tracing and a compatibility
+                // diagnostic are different things, and "ppxai HTTP" stays
+                // privately owned by HttpClient for session/SSE/consent
+                // tracing. `schemaGuard.ts` itself stays vscode-free
                 // (tests/test_app_state_generated_types.py pins that) — the
-                // channel lives on `HttpClient` and is reached through this
-                // injected callback, same IoC shape as `adopt`/`resetAdopted`.
-                log: (message) => this._backend.logToOutputChannel(message),
+                // channel lives in `outputChannel.ts` and is reached through
+                // this injected callback, same IoC shape as `adopt`/
+                // `resetAdopted`. See vscode-extension/src/outputChannel.ts.
+                log: (message) => logToPpxaiChannel(message),
                 warnUser: (message) => {
                     void vscode.window.showWarningMessage(message);
                 },
