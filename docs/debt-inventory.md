@@ -72,6 +72,7 @@ quoting them** — this table is a map, not a source.
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
 | **80** | a non-repeating multi-tool cycle (`A, B, A, B, …`, distinct args every call) trips neither tool-loop guard | accepted gap, fuzzy matching deliberately declined — bounded only by the iteration cap and the zombie breaker |
 | **81** | test-ordering pollution: `test_oneshot_grounding.py::test_an_unregistered_provider_resolves_to_openai_compat` fails after `test_custom_endpoint_integration.py`, passes alone | predates v1.19.3 tool-loop work; a provider registration leaks across test modules |
+| **82** | a `/task` run's `events.jsonl` never records a degraded turn — `task_runner.py` persists only `TOOL_CALL`, `ERROR`, `PROVIDER_THROTTLED` and `STREAM_END`-with-data | the `ToolGuardReason` marker reaches in-process and SSE consumers but not the audit file; `degraded` is authoritative only when a terminal event arrived |
 
 ---
 
@@ -2584,6 +2585,65 @@ patch; filing this item is the "accepted, not hidden" record the
 2514ba55 commit message promised.
 
 ---
+
+### Item 82 — a `/task` run's `events.jsonl` never records a degraded turn [engine / agent-platform]
+
+**Filed 2026-09-23.** Found while adding the `ToolGuardReason`
+degradation marker (`f7724d52`); pre-existing, not caused by it.
+
+**What's wrong.** `ppxai/engine/task_runner.py`'s engine-event loop
+persists exactly four event types to the run registry, and therefore to
+`events.jsonl` — verified at `f7724d52`:
+
+| Line | Persisted |
+|---|---|
+| `task_runner.py:397` | `EventType.TOOL_CALL` |
+| `task_runner.py:430` | `EventType.ERROR` **and** `EventType.PROVIDER_THROTTLED` |
+| `task_runner.py:442` | `EventType.STREAM_END`, only when `event.data is not None` |
+
+`EventType.INFO` and the `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` pair
+are not among them. So the whole tool-guard degradation surface added in
+`f7724d52` — the three `metadata["reason"]` events AND the turn-level
+`degraded` / `degradation_reasons` rollup — reaches an in-process
+embedder and an SSE consumer, but **never appears in a `/task` run's
+audit file**. An auditor reading `events.jsonl` sees a turn that looks
+complete.
+
+That four-type list is the correction worth recording: `f7724d52`'s own
+commit message says three, having missed `PROVIDER_THROTTLED` sharing a
+branch with `ERROR`. The ppxai-sre consumer session caught it while
+verifying the marker, and the list is exactly what someone will later
+check an audit consumer against.
+
+**Second, smaller hole, same area.** One interrupt path in
+`chat_with_tools` returns without emitting either terminal event, so the
+"exactly one `AGENT_RUN_COMPLETE`/`AGENT_RUN_ERROR` on every exit"
+contract stated in `docs/architecture.md` §"Agent Heartbeat Primitives"
+is not quite true. Consequence for any consumer of the new marker:
+`degraded` is authoritative only when a terminal event actually
+arrived — its ABSENCE means unknown, not clean. The consumer session has
+adopted that reading on their side.
+
+**Blast radius.** No data loss and no wrong answers; an audit trail that
+under-reports. It matters only to whoever reads `events.jsonl` to decide
+whether a run was complete — today that is the `/task` family and any
+external consumer of `/v1/agent/*`. ppxai-sre has said they will read
+degradation from the live stream instead until this is decided.
+
+**Why it is not simply fixed.** Widening the event-type filter is one
+line, but deciding what belongs in an audit log is not: `INFO` carries
+every informational message the engine emits, so forwarding it wholesale
+would change the file's volume and character. The narrow option is to
+persist only events carrying a `ToolGuardReason` plus the terminal pair.
+That is a design decision for the owner, not a cleanup.
+
+**Trigger to revisit.** A consumer asks why a `/task` run's audit file
+disagrees with what they saw live; or the terminal pair is needed in
+`events.jsonl` for anything else.
+
+**Effort.** ~1h for the narrow option plus a fence that the persisted
+event-type set matches what the audit contract promises; longer if the
+answer is "restructure what events.jsonl carries".
 
 ### Item 81 — test-ordering pollution: a provider registration leaks across test modules [tests / providers]
 
