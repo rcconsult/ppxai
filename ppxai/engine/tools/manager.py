@@ -55,8 +55,8 @@ class ToolManager:
         # Per-tool call budget for one turn (v1.19.3), argument-independent.
         # Catches the loop the repeat rule cannot see: a model that
         # paraphrases the SAME hunt into fresh arguments every iteration
-        # (measured 2026-09-22: 15 web_search calls in 113 s, 5 of them
-        # byte-identical, the other 10 rewordings of one query).
+        # (measured 2026-09-22: 15 web_search calls in 113 s, 4 of them
+        # byte-identical, the other 11 rewordings of one query).
         # Same shape as `tool_display_limits`: {tool_name: int}. 0 or absent
         # means unlimited, which is deliberately the case for every tool that
         # legitimately runs many times in a turn (read_file, list_directory,

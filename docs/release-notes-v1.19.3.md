@@ -1,7 +1,7 @@
 # Release Notes — v1.19.3
 
 > **Scope:** Started as a two-fix observability release and grew to
-> **nine fixes, one transcript change, and ADR 0007's one-command-registry
+> **ten fixes, one transcript change, and ADR 0007's one-command-registry
 > work** on the same branch ahead of tagging. Two of the fixes make an
 > **existing silent degradation visible**; neither
 > changes what the send path does, and neither changes a resolved fact
@@ -14,9 +14,13 @@
 > shipped Qwen 27B-FP8 row now covers the in-place 3.8 upgrade — **this
 > release does change the model catalog**, one glob, one family — and
 > the context-window badge stops multiplying its baseline by the
-> tool-loop iteration count. The last lands with the turn-level tool
-> strip in the web and VSCode transcripts, which also fixes a chevron
-> that could expand to nothing.
+> tool-loop iteration count. One rebuilds tool-loop detection: a guard
+> that only ever saw a trailing streak of byte-identical arguments is
+> replaced by a per-turn occurrence count plus an argument-independent
+> per-tool budget, after a live incident where 15 paraphrased
+> `web_search` calls tripped nothing. The last lands with the turn-level
+> tool strip in the web and VSCode transcripts, which also fixes a
+> chevron that could expand to nothing.
 >
 > **Command-surface changes, landed and Accepted 2026-09-21 (ADR 0007).**
 > `CommandSpec` is now the single declaration for every command;
@@ -60,7 +64,8 @@ before tagging, so this count is a floor, not a final tally. Nine fixes
 and a web/VSCode transcript feature carried the branch through
 2026-09-16 (see Verification below for that tree's test state); ADR
 0007's one-command-registry work (steps 1–5 plus the same-day follow-ups
-in "One command registry" below) landed 2026-09-21.
+in "One command registry" below) landed 2026-09-21. A tenth fix — the
+tool-loop guard rework below — landed 2026-09-23.
 
 Nothing in this release requires an upgrade step. If you run tool loops
 against models whose facts rows you have not checked, the first fix is
@@ -353,6 +358,79 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   tracking) are untouched — only the context-percentage baseline
   changes. The plain single-request chat path never passes
   `context_tokens`, so its behaviour (v1.18.4 Item A) is unchanged.
+
+- **Tool-loop detection now catches paraphrased repeats, not just
+  byte-identical streaks.** Measured live (2026-09-22, web client,
+  `gemini-3.5-flash`): one turn ran `web_search` 15 times in 113 seconds
+  hunting a single IMDb image id, every call succeeding, until the user
+  interrupted it. `"Loop detected"` appeared **zero** times in the log.
+  Four of the fifteen queries were byte-identical, but interleaved with
+  ten paraphrases (calls 2, 7, 10 and 14) — and the existing guard,
+  `is_tool_loop_detected`, walked the turn's history *backward from the
+  most recent call* and reset to zero at the first non-matching one, so
+  a trailing streak of 3 never formed. Plumbing was ruled out first: 17
+  `SSE: tool_call` and 17 `SSE: tool_result` lines in the window, so
+  every result reached the model — it was looping, not being made to
+  repeat.
+
+  Two changes, not one:
+
+  1. **Guard A now counts occurrences of `(tool, args)` anywhere in the
+     current turn**, among successful calls only, instead of a trailing
+     streak. The old streak rule is deleted outright rather than kept
+     alongside the new one — a trailing streak of N is also N
+     occurrences in the turn, so it could never fire before the new rule
+     does; keeping both would have left dead code.
+  2. **A new argument-independent per-turn call budget** (guard B) on
+     `web_search` and `fetch_url` only — 10 calls each by default,
+     configured at `tools.agent.tool_call_budgets` and merged over the
+     shipped default (raising one tool's cap doesn't uncap the others;
+     absent or 0 means unlimited). This is the guard exact-argument
+     matching structurally cannot replace: it catches the ten
+     *paraphrased* calls the incident actually ran, not just the four
+     byte-identical ones. The number comes from tau-bench's published
+     historical trajectories (`sierra-research/tau-bench`, MIT license;
+     1,960 real GPT-4o/Sonnet runs scanned locally): a tool is called
+     once in 83.6% of turns, five times or fewer in 99.3%, but **32 of
+     the 76 turns that called one tool six-plus times succeeded** (reward
+     1.0) — so a low cap would have cut real, working turns. Ten calls
+     costs an estimated ~0.03% of legitimate turns and still stops the
+     2026-09-22 incident at call 11. Nothing else is capped — reading
+     files, listing directories and running shell commands legitimately
+     repeat many times in a turn.
+
+  **Failed calls count toward neither guard.** A retry after a transient
+  failure is recovery, not a loop, and "synthesize from the results you
+  already have" is the wrong thing to tell a model when there are no
+  results yet; a tool that keeps failing remains the zombie circuit
+  breaker's job (`tools.agent.zombie_threshold`). `record_tool_call` now
+  runs *after* the tool executes, with the real outcome, so this
+  distinction is possible at all.
+
+  **Each guard's refusal carries its own message.** The old text —
+  "called the tool with the same arguments N times" — is simply false
+  for a budget trip, and would teach the model to rephrase its
+  arguments, which is exactly the behaviour that caused the incident.
+  **The budget refusal is also terminal**: a second attempt at an
+  already-exhausted tool withdraws tools for the rest of the turn and
+  forces a synthesis pass, so the model can't spend its remaining
+  iterations negotiating with a tool that will never run again this
+  turn.
+
+  A gap is accepted, not hidden: an alternating two-tool cycle where
+  every call uses fresh arguments (`A, B, A, B, …`, never repeating) is
+  caught by neither guard — fuzzy/semantic argument matching was
+  considered and declined, since it needs a tuned per-tool similarity
+  threshold and would block two deliberately different queries as
+  readily as one rephrased one. That gap is bounded only by the
+  iteration cap and the zombie breaker, and is recorded in
+  `tests/fixtures/tool_loops/call-graph-cycle-alternating-distinct-args.json`
+  rather than left undocumented.
+
+  Config lands on the existing `tools.agent.*` axis, not a new one.
+  `GET /tools/status` and `GET /agent/config` both gain a
+  `tool_call_budgets` key in their response body, additively; `POST
+  /v1/oneshot` is untouched. (`2514ba55`)
 
 ### The guard against over-reach
 

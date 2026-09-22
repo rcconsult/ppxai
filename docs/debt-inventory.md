@@ -70,6 +70,8 @@ quoting them** — this table is a map, not a source.
 | **76** | fold chat-shaped-ness into the command roster (`STREAMING_COMMANDS`) | debt item for now — owner decision 2026-09-21 (ADR 0007 open decision #4) |
 | **77** | dead client code left after the ADR 0007 step-5 VSCode migration | ~45min, verified by grep — no owner decision needed, extended 2026-09-21 with 4 more dead `httpClient.ts` methods |
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
+| **80** | a non-repeating multi-tool cycle (`A, B, A, B, …`, distinct args every call) trips neither tool-loop guard | accepted gap, fuzzy matching deliberately declined — bounded only by the iteration cap and the zombie breaker |
+| **81** | test-ordering pollution: `test_oneshot_grounding.py::test_an_unregistered_provider_resolves_to_openai_compat` fails after `test_custom_endpoint_integration.py`, passes alone | predates v1.19.3 tool-loop work; a provider registration leaks across test modules |
 
 ---
 
@@ -2521,6 +2523,120 @@ already open for something else.
 **Effort:** ~10min — one attribute path fix plus a regression test
 asserting the notification string names the backend's REAL
 `checkpoint_dir`, not just a plausible-looking literal.
+
+---
+
+### Item 80 — a non-repeating multi-tool cycle trips neither tool-loop guard [engine / tool-loop]
+
+**Filed 2026-09-23.** Found while verifying the v1.19.3 tool-loop guard
+rework (`2514ba55`).
+
+**What's wrong, verified by reading the code:** the rework gave
+`ToolManager` two guards — `is_tool_loop_detected`
+(`ppxai/engine/tools/manager.py:591`), which counts a tool called with
+byte-identical arguments N times anywhere in the turn, and
+`is_tool_budget_exceeded` (`manager.py:645`), an argument-independent
+per-turn call cap configured only for `web_search` and `fetch_url`
+(`Default.TOOL_CALL_BUDGETS`, `ppxai/constants.py:242-245`). A model
+that alternates between two (or more) tools — `read_file`,
+`list_directory`, `read_file`, `list_directory`, …, each call with
+**different** arguments — satisfies neither guard's trigger condition:
+guard A never sees the same `(tool, args)` pair twice, and guard B has
+no budget configured for either tool (deliberately — see
+`manager.py:56-63`, files/directories/shell legitimately repeat many
+times in a turn). This is a known, accepted gap, not an oversight: it
+is documented in the fixture
+`tests/fixtures/tool_loops/call-graph-cycle-alternating-distinct-args.json`,
+whose own `description` field states the gap and that fuzzy/semantic
+argument matching was explicitly rejected as the fix — it "needs a
+tuned per-tool similarity threshold and blocks deliberately different
+queries as readily as one rephrased one" (no single threshold
+distinguishes "same hunt, reworded" from "genuinely the next
+question").
+
+**Blast radius:** a model stuck in this exact cycle shape is bounded
+only by the tool-loop's iteration cap (`max_iterations`, raised per
+model by `max_tool_iterations` via `facts.max_tool_iterations` near the
+top of `chat_with_tools`, `ppxai/engine/chat.py`) and the zombie circuit
+breaker
+(`tools.agent.zombie_threshold`) — both of which exist for a different
+purpose (bounding total turn length / consecutive failures) and neither
+of which is tuned to this loop shape specifically. Unlike guard B's
+budget trip, there is no escalation path here: nothing forces a
+synthesis pass, so a model in this cycle burns iterations until one of
+those two unrelated limits trips.
+
+**Fix:** none proposed — the fuzzy-matching alternative was considered
+and declined for cause (see above). A future option, not evaluated
+here, is a call-graph-shape detector (e.g. flag an A→B→A→B alternation
+regardless of arguments) rather than an argument-matching one; this
+would need its own false-positive analysis against legitimate
+alternating patterns (e.g. read-then-list-then-read-next-file) before
+it could ship.
+
+**Trigger to revisit:** a live incident matching this shape (two or
+more tools alternating with non-repeating arguments, burning
+iterations) — same evidentiary bar the 2026-09-22 `web_search` incident
+set for guard B.
+
+**Effort:** unscoped — the fix needs a designed detector, not a small
+patch; filing this item is the "accepted, not hidden" record the
+2514ba55 commit message promised.
+
+---
+
+### Item 81 — test-ordering pollution: a provider registration leaks across test modules [tests / providers]
+
+**Filed 2026-09-23.** Found while verifying the v1.19.3 tool-loop guard
+work; unrelated to that change — reproduced against the same commit
+(`2514ba55`) with no code edits, so it predates this branch's tool-loop
+work.
+
+**What's wrong, reproduced directly:**
+
+```
+uv run pytest tests/test_custom_endpoint_integration.py tests/test_oneshot_grounding.py -q
+```
+
+fails one test:
+
+```
+FAILED tests/test_oneshot_grounding.py::TestTypeBasedProviders::test_an_unregistered_provider_resolves_to_openai_compat
+AssertionError: assert <class 'ppxai.engine.providers.openai_compat.OpenAICompatibleProvider'> is <class 'ppxai.engine.providers.openai_compat.OpenAICompatibleProvider'>
+```
+
+Both sides of the `is` comparison print the identical class path, which
+means two distinct class OBJECTS with the same qualified name are being
+compared — the shape of a module re-import or a registry re-populated
+with a second copy of the class, not a logic bug in
+`provider_class_for`. Run alone, the same test passes:
+
+```
+uv run pytest tests/test_oneshot_grounding.py::TestTypeBasedProviders::test_an_unregistered_provider_resolves_to_openai_compat -q
+# 1 passed
+```
+
+**Blast radius:** test-suite reliability only — this is an ordering
+artifact of running `tests/test_custom_endpoint_integration.py` before
+`tests/test_oneshot_grounding.py` in the same process (bisected to this
+specific pairing per the session that first noticed it; not
+independently re-bisected here beyond confirming the two-file
+reproduction and the alone-pass). No production code path is affected;
+`provider_class_for` behaves correctly in a fresh process.
+
+**Fix:** not diagnosed here — needs tracing which fixture or
+module-level state in `test_custom_endpoint_integration.py` registers
+or monkeypatches a provider class without tearing it down (a
+`get_provider_class` / `provider_class_for` registry entry surviving
+across test modules is the leading suspect, given the symptom).
+
+**Trigger to revisit:** next time someone touches provider registration
+plumbing (`ppxai/engine/providers/__init__.py`,
+`ppxai/engine/facts_resolver.py`) or adds a new cross-file provider
+test, since the leak widens the more tests can trip it.
+
+**Effort:** ~30min–1h to trace the leaking fixture; the fix itself is
+likely a teardown/reset one-liner once found.
 
 ---
 

@@ -221,3 +221,9 @@ discoverable later.
   (`lastMessageRole`, `modelSupportsVision`) for four minor versions with
   nothing to catch it. Verify a cross-file invariant claimed in a comment
   before repeating it.
+- [exact-match-loop-guards-miss-paraphrase-loops.md](exact-match-loop-guards-miss-paraphrase-loops.md)
+  — a tool-loop guard that counts only a trailing streak of byte-identical
+  arguments misses the loop shape models actually produce (paraphrased
+  repeats interleaved with other calls); catching it needs BOTH a per-turn
+  occurrence count and an argument-independent per-tool budget, not either
+  alone (2026-09-22 incident: 15 `web_search` calls, 0 loop-detector hits).

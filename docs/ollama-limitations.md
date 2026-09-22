@@ -106,9 +106,9 @@ model_hints:
 
 See [Bootstrap Context Guide](bootstrap-context-guide.md) for full documentation.
 
-### 1. Tool Loop Detection (v1.13.10)
+### 1. Tool Loop Detection (v1.13.10, reworked v1.19.3)
 
-Small models sometimes get stuck calling the same tool repeatedly without synthesizing results. ppxai v1.13.10 adds automatic loop detection:
+Small models sometimes get stuck calling the same tool repeatedly without synthesizing results. ppxai v1.13.10 added automatic loop detection:
 
 ```json
 {
@@ -120,12 +120,29 @@ Small models sometimes get stuck calling the same tool repeatedly without synthe
 }
 ```
 
-When a model calls the same tool 3+ times consecutively, ppxai:
-1. Stops the tool execution
-2. Injects a message asking the model to synthesize
-3. Forces the model to respond with available data
+**Updated 2026-09-23 (v1.19.3):** the original rule only counted a
+*trailing streak* of byte-identical calls — a model that interleaves its
+repeats with other calls (paraphrasing the same query instead of asking
+it verbatim) could loop past this threshold undetected. It now counts
+occurrences of the same tool + arguments **anywhere in the turn**, not
+just back-to-back:
 
-This prevents infinite loops like `get_weather → get_weather → get_weather → ...`
+1. Stops the tool execution once the same tool has been called with
+   byte-identical arguments `max_same_tool_calls` times in the turn
+2. Injects a message asking the model to synthesize from what it already
+   has
+3. Does **not** withdraw the tool — the model may call it again with
+   different arguments next iteration
+
+A second, argument-independent per-turn call budget now catches the
+paraphrase case the rule above cannot: `web_search` and `fetch_url` are
+each capped at 10 calls per turn by default
+(`tools.agent.tool_call_budgets`; absent or 0 = unlimited; every other
+tool is uncapped). Unlike the rule above, a budget trip is terminal —
+tools are withdrawn for the rest of the turn and a synthesis pass is
+forced, since rephrasing the arguments won't reopen the budget.
+
+This prevents infinite loops like `get_weather → get_weather → get_weather → ...`, including ones where the arguments change slightly on every call.
 
 ### 2. Use Cloud Providers for Complex Tasks
 
