@@ -2396,7 +2396,24 @@ commit.** Three `chat_with_tools` exits (the tool-interrupt `return`,
 plus two provider-error fallbacks) emit no terminal event at all, and
 on the paths that do yield one, the engine yields `ERROR` immediately
 before `AGENT_RUN_ERROR` — the runner raises on the `ERROR` and never
-reads the `AGENT_RUN_ERROR` that follows. This is being fixed in a
-follow-up commit on this branch, not filed as separate debt.
+reads the `AGENT_RUN_ERROR` that follows. The owner chose to fix it
+rather than file it.
+
+**Fixed the same day** in the follow-up commit "fix(engine): every
+tool-loop exit ends with a run terminal". Each of the three exits now
+yields `AGENT_RUN_ERROR` (reason `provider_error` /
+`provider_throttled` / `interrupted`, with the degradation rollup).
+The runner no longer raises on `ERROR`: it remembers the message, keeps
+consuming only `AGENT_RUN_ERROR`/`AGENT_RUN_COMPLETE`/`INFO`/
+`STREAM_END` so the terminal lands as `turn_end`, stops at the first
+other event (no tool runs after an `ERROR`), and raises the identical
+message after the loop, including when the stream ends with no
+terminal at all. An AST fence in
+`tests/test_agent_run_terminal_contract.py` holds every `return` in
+`chat_with_tools` to a preceding run terminal. After the fix, a turn
+with no `turn_end` means the engine or runner raised an exception; no
+designed exit leaves one out. The same commit added `filesystem` to
+`agent_runs.CATEGORIES` (`path_denied` used it undeclared) and taught
+the web and VSCode task views to render `turn_degraded`/`turn_end`.
 
 ---

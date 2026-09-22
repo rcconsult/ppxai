@@ -1004,7 +1004,7 @@ async def get_agent_run_events(
     since: int = Query(0, ge=0, description="Return events with seq > since (replay cursor)."),
     live: bool = Query(False, description="Keep the connection open and stream new events (SSE)."),
     min_level: str = Query("debug", description="debug|info|warning|error — drop lower severities."),
-    category: str | None = Query(None, description="Comma-separated: lifecycle,tool,network,consent,result."),
+    category: str | None = Query(None, description="Comma-separated: lifecycle,tool,network,filesystem,consent,result."),
 ):
     """Run events (ADR 0003 §11a). Replay (?since=) + optional live tail
     (?live=1), filtered by ?min_level= and ?category=.

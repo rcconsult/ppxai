@@ -383,6 +383,36 @@ class TaskRunView extends AgentRunView {
             case 'agent_run_resume':     return `▶️ resumed (was ${d.from || 'interrupted'})`;
             case 'subagent_spawned':  return `⑂ sub-agent ${d.child_run_id || ''}`;
             case 'subagent_finished': return `⑂ sub-agent ${d.status || 'done'}`;
+            // Item 82 (v1.19.3): the per-turn audit records the runner now
+            // persists to events.jsonl (task_runner.py TURN_DEGRADED_EVENT /
+            // TURN_END_EVENT), mirrored here so they show up in the live log
+            // the same way they show up in the audit file.
+            case 'turn_degraded': {
+                const bits = [];
+                if (d.budget != null) bits.push(`budget ${d.budget}`);
+                if (d.threshold != null) bits.push(`threshold ${d.threshold}`);
+                if (d.occurrences != null) bits.push(`${d.occurrences}x`);
+                if (d.refusal_count != null) bits.push(`refusal #${d.refusal_count}`);
+                const extra = bits.length ? ` (${bits.join(', ')})` : '';
+                return `⚠ turn degraded: ${d.reason || 'unknown'} (${d.tool || d.trigger_tool || 'tool'})${extra}`;
+            }
+            case 'turn_end': {
+                // `degraded` is present/absent, never defaulted — a missing
+                // key means the engine never reported (UNKNOWN), not clean.
+                let text;
+                if (d.degraded === true) {
+                    const reasons = Array.isArray(d.degradation_reasons) ? d.degradation_reasons.join(', ') : '';
+                    text = `turn ended (degraded: ${reasons})`;
+                } else if (d.degraded === false) {
+                    text = 'turn ended';
+                } else {
+                    text = 'turn ended (outcome unknown)';
+                }
+                if (d.engine_event === 'agent_run_error') {
+                    text += ` — error: ${d.reason || 'unknown'}`;
+                }
+                return text;
+            }
             default: return String(ev.type);
         }
     }

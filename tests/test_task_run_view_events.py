@@ -160,3 +160,94 @@ def test_task_run_view_park_invalidated_by_interrupt():
     proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
     assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
     assert "ALL OK" in proc.stdout, proc.stdout
+
+
+# Debt Item 82 (v1.19.3): the runner now persists turn_degraded/turn_end
+# audit records to events.jsonl (task_runner.py). Before this test's fix,
+# the view's `default:` branch rendered these as the bare literal type
+# string ("turn_degraded" / "turn_end") — not invisible like VSCode's
+# eventText (which returns null for unknown types), but not informative
+# either. This harness pins the real rendered strings.
+_DEGRADATION_HARNESS = r"""
+const fs = require('fs');
+global.BaseView = class {{}};
+global.AgentRunView = class extends global.BaseView {{ _statusLabel(s) {{ return s; }} }};
+global.escapeHtml = (s) => s;
+global.window = {{}};
+eval(fs.readFileSync({view}, 'utf8'));
+const TRV = global.window.TaskRunView;
+function assert(c, m) {{ if (!c) throw new Error("FAIL: " + m); }}
+const txt = (type, data) => TRV._eventText({{ type, data }});
+
+// turn_degraded: reason + tool + budget fields.
+const deg = txt('turn_degraded', {{
+  reason: 'tool_budget_exhausted', tool: 'web_search', budget: 3, refusal_count: 2,
+}});
+assert(/turn degraded/.test(deg), "turn_degraded missing label: " + deg);
+assert(/tool_budget_exhausted/.test(deg), "turn_degraded dropped reason: " + deg);
+assert(/web_search/.test(deg), "turn_degraded dropped tool: " + deg);
+assert(/budget 3/.test(deg), "turn_degraded dropped budget: " + deg);
+assert(/refusal #2/.test(deg), "turn_degraded dropped refusal_count: " + deg);
+
+// turn_end: degraded true -> reasons joined, warning-worthy text.
+const endDegraded = txt('turn_end', {{ degraded: true, degradation_reasons: ['tool_repeat_loop'] }});
+assert(/degraded: tool_repeat_loop/.test(endDegraded), "turn_end(degraded=true) missing reasons: " + endDegraded);
+
+// turn_end: degraded false -> clean, no "unknown" wording.
+const endClean = txt('turn_end', {{ degraded: false }});
+assert(endClean === 'turn ended', "turn_end(degraded=false) should be exactly 'turn ended': " + endClean);
+
+// turn_end: degraded ABSENT -> explicitly unknown, never read as clean.
+const endUnknown = txt('turn_end', {{}});
+assert(/unknown/.test(endUnknown), "turn_end with no degraded key must say unknown: " + endUnknown);
+assert(endUnknown !== 'turn ended', "turn_end with no degraded key must NOT render as clean");
+
+// turn_end: engine_event agent_run_error folds its reason in.
+const endErr = txt('turn_end', {{ degraded: false, engine_event: 'agent_run_error', reason: 'provider_error' }});
+assert(/provider_error/.test(endErr), "turn_end(agent_run_error) dropped its reason: " + endErr);
+
+console.log("ALL OK");
+"""
+
+
+def test_task_run_view_renders_turn_degraded_and_turn_end():
+    script = _DEGRADATION_HARNESS.format(view=json.dumps(str(VIEW)))
+    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
+    assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
+    assert "ALL OK" in proc.stdout, proc.stdout
+
+
+# Escaping fence: `_eventText` returns a plain string; `_appendEventLine`
+# assigns it via `.textContent` (never innerHTML), so a malicious
+# tool/reason string can't inject markup. Prove it end-to-end through
+# appendEvent + a stub DOM node, same as the existing DOM harness above.
+_ESCAPING_HARNESS = r"""
+const fs = require('fs');
+global.BaseView = class {{}};
+global.AgentRunView = class extends global.BaseView {{ _statusLabel(s) {{ return s; }} }};
+global.escapeHtml = (s) => s;
+global.window = {{}};
+global.document = {{ createElement: () => ({{ }}) }};
+eval(fs.readFileSync({view}, 'utf8'));
+const TRV = global.window.TaskRunView;
+function assert(c, m) {{ if (!c) throw new Error("FAIL: " + m); }}
+
+const el = {{ nodes: [], scrollTop: 0, scrollHeight: 0,
+  appendChild(n) {{ this.nodes.push(n); }}, removeChild() {{}}, get firstChild() {{ return this.nodes[0] || null; }} }};
+const view = new TRV('r', 't', {{}});
+view._eventsEl = el;
+const malicious = '<img src=x onerror=alert(1)>';
+view.appendEvent({{ type: 'turn_degraded', data: {{ reason: malicious, tool: malicious }} }});
+const line = el.nodes[el.nodes.length - 1];
+assert(typeof line.textContent === 'string' && line.textContent.includes(malicious),
+  "malicious text must land in textContent (never HTML-interpreted): " + JSON.stringify(line));
+assert(!('innerHTML' in line) || line.innerHTML === undefined, "line must never receive innerHTML");
+console.log("ALL OK");
+"""
+
+
+def test_task_run_view_turn_degraded_escapes_via_textcontent():
+    script = _ESCAPING_HARNESS.format(view=json.dumps(str(VIEW)))
+    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
+    assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
+    assert "ALL OK" in proc.stdout, proc.stdout

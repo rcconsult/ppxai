@@ -472,7 +472,25 @@ def build_task_runner(
         control = registry.get_control(m.run_id)
 
         final_text: list[str] = []
+        # v1.19.3: an ERROR/PROVIDER_THROTTLED no longer raises on the spot —
+        # the engine's own AGENT_RUN_ERROR now always follows it (chat.py's
+        # three previously-silent exits were fixed to emit one), and that
+        # terminal is what turn_end needs to persist a degraded/errored turn
+        # to events.jsonl. `pending_error` remembers the message; the loop
+        # keeps consuming ONLY terminal-ish or harmless events after that
+        # (AGENT_RUN_ERROR / AGENT_RUN_COMPLETE / INFO / STREAM_END) so the
+        # terminal pair can land — a TOOL_CALL or anything else stops
+        # consumption immediately (fail-fast: no tool may execute once an
+        # ERROR was seen, same guarantee the old immediate `raise` gave).
+        pending_error: str | None = None
         async for event in engine.chat(task, stream=False):
+            if pending_error is not None and event.type not in (
+                EventType.AGENT_RUN_ERROR,
+                EventType.AGENT_RUN_COMPLETE,
+                EventType.INFO,
+                EventType.STREAM_END,
+            ):
+                break
             # Item 82: a tool-guard degradation reaches the audit file. Checked
             # BEFORE the type dispatch below, and independently of it, so the
             # record lands even for an event type that is also handled there
@@ -525,21 +543,24 @@ def build_task_runner(
                 # exceptions — chat() yields ERROR ("No provider", auth, network)
                 # or PROVIDER_THROTTLED (429/403) and returns normally. If we
                 # only watched STREAM_END, run_in_background would see a clean
-                # return and mark the run COMPLETED with an empty result. Raise
-                # so the run finishes FAILED with the provider's message.
+                # return and mark the run COMPLETED with an empty result. Used
+                # to raise right here; now remembered instead, so the engine's
+                # AGENT_RUN_ERROR that follows still gets persisted as
+                # turn_end below — the raise moved to after the loop, with the
+                # identical message, so run status/message are unchanged.
                 d = event.data
                 msg = d.get("message") if isinstance(d, dict) else str(d)
-                raise RuntimeError(
-                    f"{event.type.value}: {msg or 'provider call failed'}"
-                )
+                pending_error = f"{event.type.value}: {msg or 'provider call failed'}"
             elif event.type in TURN_TERMINAL_TYPES:
                 # Item 82: the engine's own end-of-turn statement, copied
                 # verbatim (clamped) — `degraded` / `degradation_reasons` are
                 # whatever the ENGINE said, never defaulted here. A turn with
                 # no TURN_END_EVENT record never reported: UNKNOWN, not clean.
-                # (The ERROR branch above raises on the ERROR that PRECEDES the
-                # engine's AGENT_RUN_ERROR on the interrupt/provider-error
-                # paths, so those turns have no TURN_END_EVENT record either.)
+                # (v1.19.3: the ERROR branch above no longer raises before
+                # this can run — it only remembers the message — so the
+                # interrupt/provider-error paths' AGENT_RUN_ERROR now DOES
+                # reach here and get a TURN_END_EVENT record, same as any
+                # other terminal.)
                 turn_data = _clamp_audit_data(event.data)
                 registry.emit_event(
                     m.run_id, TURN_END_EVENT,
@@ -552,6 +573,15 @@ def build_task_runner(
                 text = d.get("content", "") if isinstance(d, dict) else str(d)
                 if text:
                     final_text.append(text)
+
+        # v1.19.3: raise here, not inline in the loop above, so the engine's
+        # AGENT_RUN_ERROR (and any AGENT_RUN_COMPLETE/INFO/STREAM_END the
+        # generator still yielded on its way there) got a chance to persist
+        # turn_end first. Message is byte-identical to the old inline raise —
+        # this run must still end FAILED with the provider's message, never
+        # COMPLETED with an empty result.
+        if pending_error is not None:
+            raise RuntimeError(pending_error)
 
         # F4: persist the run's OWN usage on its audit trail. This engine is
         # run-local (D1), so session.usage is per-run attribution by

@@ -874,6 +874,24 @@ async def chat_with_tools(
                 async for event in ctx.provider.chat(fallback_messages, ctx.model, stream=False, tools=None):
                     if event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                         yield event
+                        # v1.19.3 (Agent Heartbeat contract): this fallback
+                        # used to `return` right after the bare ERROR, which
+                        # broke the "exactly one AGENT_RUN_ERROR per exit"
+                        # promise — see docs/architecture.md §"Agent Heartbeat
+                        # Primitives". Mirror the primary-path ERROR handling
+                        # above (~line 837).
+                        reason = (
+                            "provider_throttled"
+                            if event.type == EventType.PROVIDER_THROTTLED
+                            else "provider_error"
+                        )
+                        yield Event(EventType.AGENT_RUN_ERROR, {
+                            "reason": reason,
+                            "iteration": iteration,
+                            "elapsed_s": round(beat.elapsed_s, 1),
+                            "detail": str(event.data) if event.data else "",
+                            **_degradation_summary(degradation_events),
+                        })
                         return
                     elif event.type == EventType.STREAM_END:
                         full_response = event.data or ""
@@ -1076,8 +1094,18 @@ async def chat_with_tools(
                 for ev in extra_events:
                     yield ev
 
-                # Check for interrupt (signaled by None result)
+                # Check for interrupt (signaled by None result). The ERROR
+                # event is already in extra_events (yielded above) —
+                # _execute_single_tool's interrupt branch puts it there — so
+                # only the missing terminal needs adding here (v1.19.3;
+                # mirrors the interrupt exits ~line 737 / ~858).
                 if result is None:
+                    yield Event(EventType.AGENT_RUN_ERROR, {
+                        "reason": "interrupted",
+                        "iteration": iteration,
+                        "elapsed_s": round(beat.elapsed_s, 1),
+                        **_degradation_summary(degradation_events),
+                    })
                     return
 
                 # v1.19.3: record AFTER execution, with the outcome. A call
@@ -1326,6 +1354,21 @@ async def chat_with_tools(
                 ):
                     if event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                         yield event
+                        # v1.19.3: same fix as the fallback-on-empty ERROR
+                        # exit above — a bare `return` here skipped the
+                        # Agent Heartbeat terminal-pair contract.
+                        reason = (
+                            "provider_throttled"
+                            if event.type == EventType.PROVIDER_THROTTLED
+                            else "provider_error"
+                        )
+                        yield Event(EventType.AGENT_RUN_ERROR, {
+                            "reason": reason,
+                            "iteration": iteration,
+                            "elapsed_s": round(beat.elapsed_s, 1),
+                            "detail": str(event.data) if event.data else "",
+                            **_degradation_summary(degradation_events),
+                        })
                         return
                     elif event.type == EventType.STREAM_END:
                         full_response = event.data or ""

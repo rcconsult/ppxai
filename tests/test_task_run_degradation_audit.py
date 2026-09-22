@@ -20,8 +20,15 @@ How an auditor tells the three states apart from events.jsonl:
   DEGRADED  any `turn_degraded` record, or a `turn_end` whose `degraded` is
             true.
   CLEAN     a `turn_end` whose `degraded` is false, and no `turn_degraded`.
-  UNKNOWN   no `turn_end` record for the turn — the engine never reported
-            (interrupt/provider-error exits). Never read as clean.
+  UNKNOWN   no `turn_end` record for the turn. As filed, this covered the
+            interrupt/provider-error exits, because the runner used to raise
+            on the engine's ERROR before its AGENT_RUN_ERROR could reach the
+            terminal-handling branch below. v1.19.3 closed that gap on both
+            ends (chat.py's three previously-silent exits now always emit
+            AGENT_RUN_ERROR; task_runner.py no longer raises until AFTER
+            consuming it) — see `tests/test_agent_run_terminal_contract.py`.
+            UNKNOWN is now reserved for a turn the engine generator crashes
+            out of with an actual uncaught exception. Never read as clean.
 """
 
 from __future__ import annotations
@@ -273,11 +280,14 @@ class TestCleanTurn:
 
 class TestUnreportedTurnIsUnknown:
 
-    async def test_provider_error_leaves_no_turn_end(self, tmp_path, monkeypatch):
-        """A provider error after a degradation: the runner raises on the
-        ERROR that PRECEDES the engine's AGENT_RUN_ERROR, so no `turn_end` is
-        written. The degradation already seen is still on file; nothing
-        claims the turn was clean."""
+    async def test_provider_error_now_gets_a_turn_end(self, tmp_path, monkeypatch):
+        """v1.19.3: a provider error after a degradation. The engine's ERROR
+        is always followed by its own AGENT_RUN_ERROR (chat.py's exits were
+        fixed to guarantee this), and the runner no longer raises on the bare
+        ERROR — it remembers the message and keeps consuming until the
+        terminal lands, so `turn_end` IS written (with `engine_event:
+        agent_run_error`) before the run still ends FAILED with the
+        provider's message on the REGISTRY's own `agent_run_error` row."""
         engine = ScriptedEngine(ScriptedProvider([
             _tool_iteration("c1", "a"),
             _tool_iteration("c2", "b"),                   # refused
@@ -285,10 +295,16 @@ class TestUnreportedTurnIsUnknown:
         ]), budgets={"ok_tool": 1})
         rows, _ = await _run(tmp_path, monkeypatch, engine)
 
-        assert _of(rows, TURN_END) == []
         assert [r["data"]["reason"] for r in _of(rows, DEGRADED)] == ["tool_budget_exhausted"]
+        (end,) = _of(rows, TURN_END)
+        assert end["data"]["engine_event"] == "agent_run_error"
+        assert end["data"]["degraded"] is True
+        assert end["data"]["degradation_reasons"] == ["tool_budget_exhausted"]
         (err,) = _of(rows, "agent_run_error")
         assert "boom" in err["data"]["error"]
+        # turn_end (the engine's own report) precedes the registry's terminal.
+        types = [r["type"] for r in rows]
+        assert types.index(TURN_END) < types.index("agent_run_error")
 
     async def test_terminal_without_a_degraded_field_is_not_defaulted(self, tmp_path, monkeypatch):
         """The runner copies what the engine said; it never writes

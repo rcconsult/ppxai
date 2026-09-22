@@ -144,9 +144,11 @@ LEVELS = ("debug", "info", "warning", "error")
 _LEVEL_RANK = {lvl: i for i, lvl in enumerate(LEVELS)}
 
 # Kind axis. lifecycle = run start/complete/status; tool = tool calls;
-# network = egress policy (Inc 5); consent = WAITING/consent (Inc 6+);
-# result = AGENT_RESULT_READY (Inc 6).
-CATEGORIES = ("lifecycle", "tool", "network", "consent", "result")
+# network = egress policy (Inc 5); filesystem = sandbox path denials (T2,
+# task_runner.py's `path_denied` — added here, it was omitted when T2
+# shipped, so a filter naming it silently matched nothing); consent =
+# WAITING/consent (Inc 6+); result = AGENT_RESULT_READY (Inc 6).
+CATEGORIES = ("lifecycle", "tool", "network", "filesystem", "consent", "result")
 
 
 @dataclass

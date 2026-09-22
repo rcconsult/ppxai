@@ -712,3 +712,4 @@
 .task-event-spawn_denied { color: #ef4444; }
 .task-event-network_policy_allowed { color: #0ea5e9; }
 .task-event-tool_result { color: #22c55e; }
+.task-event-turn_degraded { color: #f59e0b; }

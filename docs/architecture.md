@@ -1249,6 +1249,17 @@ run's own `agent_run_complete`/`agent_run_error` records are unaffected
 — `turn_end` is a separate per-turn record. A missing `turn_end` for a
 turn means its outcome is unknown, not clean.
 
+**2026-09-23, same day:** the contract above had three exceptions until
+the "every tool-loop exit ends with a run terminal" fix: the
+prompt-based fallback's provider error, the retry-synthesis provider
+error, and the tool-interrupt return all ended with no terminal. All
+three now yield `AGENT_RUN_ERROR`, and
+`tests/test_agent_run_terminal_contract.py` fences it structurally:
+every `return` in `chat_with_tools` must be immediately preceded by
+`AGENT_RUN_ERROR`/`AGENT_RUN_COMPLETE`, or by a final `STREAM_END` with
+the run terminal earlier in the same block (the zombie exit). An
+uncaught exception is the only way a turn still ends without one.
+
 ### `AgentBeatState` (`ppxai/engine/types.py`)
 
 The dataclass is the single source of truth for the heartbeat

@@ -442,6 +442,19 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   `turn_end` means the turn's outcome is unknown. (`59702221`, closes
   debt Item 82)
 
+- **Every tool-loop exit now ends with a run terminal.** Three
+  `chat_with_tools` exits (the prompt-based fallback's provider error,
+  the retry-synthesis provider error, and a tool interrupt) returned
+  without `AGENT_RUN_ERROR`, breaking the heartbeat contract and leaving
+  those turns with no `turn_end`. They now emit it, and the `/task`
+  runner waits for it before failing the run: the run still ends FAILED
+  with the same message, and no tool runs after an error. `path_denied`
+  audit records' `filesystem` category is now declared, so a
+  `?category=filesystem` filter documented from the list finds them.
+  The web and VSCode task views render `turn_degraded` and `turn_end`;
+  a turn that did not report `degraded` shows as "outcome unknown",
+  never as clean.
+
 ### The guard against over-reach
 
 Comparing a value to `UNMEASURED` cannot by itself tell a guess from a
