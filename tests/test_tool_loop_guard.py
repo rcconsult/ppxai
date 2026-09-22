@@ -57,7 +57,7 @@ from ppxai.constants import Default
 from ppxai.engine.client import EngineClient
 from ppxai.engine.model_facts import ModelFacts
 from ppxai.engine.tools.manager import ToolManager
-from ppxai.engine.types import Event, EventType, Message, ProviderCapabilities
+from ppxai.engine.types import Event, EventType, Message, ProviderCapabilities, ToolGuardReason
 from tests.test_tool_messages import MockChatContext, MockProvider, collect_events
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "tool_loops"
@@ -595,3 +595,170 @@ class TestRuntimeConfigPath:
     def test_agent_config_carries_the_budgets(self):
         engine = EngineClient()
         assert engine.get_agent_config()["tool_call_budgets"] == dict(Default.TOOL_CALL_BUDGETS)
+
+
+# ---------------------------------------------------------------------------
+# Machine-readable degradation metadata (v1.19.3, ppxai-sre gap)
+#
+# The three guard trips above are, to a person, a free-text INFO line. To an
+# audit-trail consumer that never wants to string-match prose — the wording
+# already changed once during this work — each one ALSO carries a
+# `ToolGuardReason` at `Event.metadata["reason"]`, and the turn's terminal
+# `AGENT_RUN_COMPLETE` rolls every reason seen this turn into
+# `data["degraded"]` / `data["degradation_reasons"]`. See
+# `ppxai/engine/types.py::ToolGuardReason` and
+# `ppxai/engine/chat.py::_degradation_summary`.
+# ---------------------------------------------------------------------------
+
+REPEAT_TRACE_NAME = "call-graph-cycle-alternating-same-args"
+
+
+def repeat_trace() -> dict:
+    """The alternating read_file/list_directory trace — a pure repeat trip."""
+    return next(t for t in TRACES if t["name"] == REPEAT_TRACE_NAME)
+
+
+class TestDegradationMetadata:
+    """Each of the three degradation events carries the right `metadata`."""
+
+    @pytest.mark.asyncio
+    async def test_budget_refusal_event_carries_metadata(self):
+        trace = incident_trace()
+        ctx = build_context(trace)
+        events = await drive(ctx, trace)
+
+        refusals = [
+            e for e in events
+            if e.type == EventType.INFO and "Tool budget exhausted" in str(e.data)
+        ]
+        assert len(refusals) == 2, refusals
+
+        first = refusals[0]
+        assert first.metadata == {
+            "reason": ToolGuardReason.TOOL_BUDGET_EXHAUSTED.value,
+            "tool": "web_search",
+            "budget": 10,
+            "refusal_count": 1,
+        }
+        second = refusals[1]
+        assert second.metadata == {
+            "reason": ToolGuardReason.TOOL_BUDGET_EXHAUSTED.value,
+            "tool": "web_search",
+            "budget": 10,
+            "refusal_count": 2,
+        }
+
+    @pytest.mark.asyncio
+    async def test_withdrawal_event_carries_metadata(self):
+        """The SECOND refusal is what withdraws tools for the rest of the turn."""
+        trace = incident_trace()
+        ctx = build_context(trace)
+        events = await drive(ctx, trace)
+
+        withdrawals = [
+            e for e in events
+            if e.type == EventType.INFO and "answering from the results" in str(e.data)
+        ]
+        assert len(withdrawals) == 1, withdrawals
+        assert withdrawals[0].metadata == {
+            "reason": ToolGuardReason.TOOLS_WITHDRAWN.value,
+            "trigger_tool": "web_search",
+        }
+
+    @pytest.mark.asyncio
+    async def test_repeat_loop_event_carries_metadata(self):
+        """The trace alternates two tools; both independently hit the
+        threshold (read_file at call 7, then list_directory at call 8, since
+        the guard only stops the TRIPPING call — the scripted provider still
+        offers its next scheduled call on the following iteration). Only the
+        FIRST trip (read_file, matching `expect.first_trip`) is asserted
+        precisely here.
+        """
+        trace = repeat_trace()
+        ctx = build_context(trace)
+        events = await drive(ctx, trace)
+
+        trips = [
+            e for e in events
+            if e.type == EventType.INFO and "Loop detected" in str(e.data)
+        ]
+        assert trips, "expected at least one repeat-loop trip"
+        assert trips[0].metadata == {
+            "reason": ToolGuardReason.TOOL_REPEAT_LOOP.value,
+            "tool": "read_file",
+            "threshold": 3,
+            "occurrences": 3,
+        }
+
+
+class TestTurnLevelDegradationMarker:
+    """The terminal AGENT_RUN_COMPLETE answers "was this turn degraded?"
+    without a consumer re-scanning every mid-turn INFO event.
+    """
+
+    @pytest.mark.asyncio
+    async def test_agent_run_complete_rolls_up_budget_and_withdrawal(self):
+        trace = incident_trace()
+        ctx = build_context(trace)
+        events = await drive(ctx, trace)
+
+        completes = [e for e in events if e.type == EventType.AGENT_RUN_COMPLETE]
+        assert len(completes) == 1, completes
+        data = completes[0].data
+        assert data["degraded"] is True
+        assert data["degradation_reasons"] == sorted({
+            ToolGuardReason.TOOL_BUDGET_EXHAUSTED.value,
+            ToolGuardReason.TOOLS_WITHDRAWN.value,
+        })
+
+    @pytest.mark.asyncio
+    async def test_agent_run_complete_rolls_up_repeat_loop(self):
+        trace = repeat_trace()
+        ctx = build_context(trace)
+        events = await drive(ctx, trace)
+
+        completes = [e for e in events if e.type == EventType.AGENT_RUN_COMPLETE]
+        assert len(completes) == 1, completes
+        data = completes[0].data
+        assert data["degraded"] is True
+        assert data["degradation_reasons"] == [ToolGuardReason.TOOL_REPEAT_LOOP.value]
+
+    @pytest.mark.asyncio
+    async def test_agent_run_complete_not_degraded_when_no_guard_fires(self):
+        trace = next(t for t in TRACES if t["name"] == "tool-repetition-distinct-paths")
+        assert trace["expect"]["first_trip"] is None, "fixture must be a clean trace"
+        ctx = build_context(trace)
+        events = await drive(ctx, trace)
+
+        completes = [e for e in events if e.type == EventType.AGENT_RUN_COMPLETE]
+        assert len(completes) == 1, completes
+        data = completes[0].data
+        assert data["degraded"] is False
+        assert data["degradation_reasons"] == []
+
+
+class TestReasonVocabularyFence:
+    """Every `ToolGuardReason` is emitted, and nothing not in it is.
+
+    Mirrors `tests/test_command_parity_fence.py`'s two-way fence for
+    `SideEffectKind`, but checked against REAL behaviour — the same
+    trace-replay-through-the-real-loop the LOOP tier above uses to prove the
+    guards are consulted, not merely declared — rather than a source grep.
+    """
+
+    @pytest.mark.asyncio
+    async def test_every_reason_is_emitted_and_nothing_else_is(self):
+        emitted: set[str] = set()
+
+        for trace in (incident_trace(), repeat_trace()):
+            ctx = build_context(trace)
+            for event in await drive(ctx, trace):
+                if event.type == EventType.INFO and event.metadata and "reason" in event.metadata:
+                    emitted.add(event.metadata["reason"])
+
+        declared = {member.value for member in ToolGuardReason}
+        assert emitted == declared, (
+            f"ToolGuardReason vocabulary drift: engine emitted {emitted}, "
+            f"enum declares {declared}. Add a fixture/path for whichever "
+            f"side is missing, or explicitly exempt it here with a reason."
+        )

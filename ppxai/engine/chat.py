@@ -28,7 +28,7 @@ from .tools.builtin import web_premium
 from .tools.manager import ToolManager
 from .tools.parser import detect_truncated_tool_call, parse_tool_call, strip_tool_json_from_text
 from .tools.validator import ResponseValidator, check_session_pollution
-from .types import AgentBeatState, Event, EventType, Message, UsageStats
+from .types import AgentBeatState, Event, EventType, Message, ToolGuardReason, UsageStats
 
 logger = get_logger("chat")
 
@@ -239,6 +239,26 @@ def _get_zombie_threshold(ctx: ChatContext) -> int:
         )
     except Exception:
         return DEFAULT_AGENT_ZOMBIE_THRESHOLD
+
+
+def _degradation_summary(degradation_events: list[dict[str, Any]]) -> dict[str, Any]:
+    """Turn-level rollup of mid-turn tool-guard degradations (v1.19.3).
+
+    `chat_with_tools()` appends one dict per `ToolGuardReason` event it
+    emits (budget refusal, forced withdrawal, repeat-loop trip) to
+    `degradation_events` as the turn runs. This collapses that list into
+    the two additive fields merged onto EVERY `AGENT_RUN_COMPLETE` /
+    `AGENT_RUN_ERROR` this function yields, so a consumer's "was this turn
+    degraded?" audit question is answerable from the one event that ends
+    every turn — see the Agent Heartbeat Primitives emission contract in
+    docs/architecture.md — without re-scanning every INFO event in the
+    stream. `degradation_reasons` is a sorted, deduplicated list of
+    `ToolGuardReason` values; empty when nothing degraded this turn.
+    """
+    return {
+        "degraded": bool(degradation_events),
+        "degradation_reasons": sorted({e["reason"] for e in degradation_events}),
+    }
 
 
 def _get_bootstrap_tool_calling(ctx: ChatContext, model: str) -> dict:
@@ -694,6 +714,13 @@ async def chat_with_tools(
     # of the turn and the next provider call is a plain answer-now pass.
     budget_refusals: dict[str, int] = {}
     force_synthesis = False
+    withdrawal_trigger_tool: str | None = None
+
+    # v1.19.3: every ToolGuardReason event this turn (metadata dicts, in
+    # emission order) — see `_degradation_summary()`. Feeds the additive
+    # `degraded` / `degradation_reasons` fields on this turn's terminal
+    # AGENT_RUN_COMPLETE / AGENT_RUN_ERROR.
+    degradation_events: list[dict[str, Any]] = []
 
     consecutive_truncation_retries = 0
     MAX_TRUNCATION_RETRIES = 3
@@ -713,6 +740,7 @@ async def chat_with_tools(
                 "reason": "interrupted",
                 "iteration": iteration,
                 "elapsed_s": round(beat.elapsed_s, 1),
+                **_degradation_summary(degradation_events),
             })
             return
 
@@ -733,9 +761,15 @@ async def chat_with_tools(
             # budget_refusals). Send the transcript as-is — no tool
             # descriptions in the system prompt, no `tools=` below — so the
             # model has nothing left to call and answers from what it has.
+            withdrawal_metadata = {
+                "reason": ToolGuardReason.TOOLS_WITHDRAWN.value,
+                "trigger_tool": withdrawal_trigger_tool,
+            }
+            degradation_events.append(withdrawal_metadata)
             yield Event(
                 EventType.INFO,
-                "Tools withdrawn for this turn — answering from the results already gathered"
+                "Tools withdrawn for this turn — answering from the results already gathered",
+                withdrawal_metadata,
             )
         elif not use_native_tools:
             # Prompt-based tool calling — build messages with tool descriptions in system prompt
@@ -805,6 +839,7 @@ async def chat_with_tools(
                     "iteration": iteration,
                     "elapsed_s": round(beat.elapsed_s, 1),
                     "detail": str(event.data) if event.data else "",
+                    **_degradation_summary(degradation_events),
                 })
                 return
             elif event.type == EventType.TOOL_CALL:
@@ -826,6 +861,7 @@ async def chat_with_tools(
                 "reason": "interrupted",
                 "iteration": iteration,
                 "elapsed_s": round(beat.elapsed_s, 1),
+                **_degradation_summary(degradation_events),
             })
             return
 
@@ -978,10 +1014,18 @@ async def chat_with_tools(
                 if ctx.tool_manager.is_tool_budget_exceeded(tool_name):
                     budget = ctx.tool_manager.get_tool_call_budget(tool_name)
                     budget_refusals[tool_name] = budget_refusals.get(tool_name, 0) + 1
+                    budget_metadata = {
+                        "reason": ToolGuardReason.TOOL_BUDGET_EXHAUSTED.value,
+                        "tool": tool_name,
+                        "budget": budget,
+                        "refusal_count": budget_refusals[tool_name],
+                    }
+                    degradation_events.append(budget_metadata)
                     yield Event(
                         EventType.INFO,
                         f"Tool budget exhausted: '{tool_name}' used its "
-                        f"{budget} calls for this turn — refused"
+                        f"{budget} calls for this turn — refused",
+                        budget_metadata,
                     )
                     ctx.session.add_message(
                         Message("user", ctx.tool_manager.get_budget_message(tool_name))
@@ -996,16 +1040,25 @@ async def chat_with_tools(
                             f"the rest of this turn."
                         )
                         force_synthesis = True
+                        withdrawal_trigger_tool = tool_name
                     interrupted = True  # Stop processing remaining tools
                     break
 
                 # Guard A — same tool, byte-identical arguments, N times in
                 # this turn (not merely N in a row; v1.19.3).
                 if ctx.tool_manager.is_tool_loop_detected(tool_name, tool_args):
+                    repeat_metadata = {
+                        "reason": ToolGuardReason.TOOL_REPEAT_LOOP.value,
+                        "tool": tool_name,
+                        "threshold": ctx.tool_manager.max_same_tool_calls,
+                        "occurrences": ctx.tool_manager.max_same_tool_calls,
+                    }
+                    degradation_events.append(repeat_metadata)
                     yield Event(
                         EventType.INFO,
                         f"Loop detected: '{tool_name}' called "
-                        f"{ctx.tool_manager.max_same_tool_calls}x with same args this turn"
+                        f"{ctx.tool_manager.max_same_tool_calls}x with same args this turn",
+                        repeat_metadata,
                     )
                     loop_msg = ctx.tool_manager.get_loop_message(tool_name)
                     ctx.session.add_message(Message("user", loop_msg))
@@ -1165,6 +1218,7 @@ async def chat_with_tools(
                         f"Circuit breaker tripped at {zombie_threshold} "
                         f"consecutive failures on tool {beat.last_tool!r}."
                     ),
+                    **_degradation_summary(degradation_events),
                 })
                 # Contract: EVERY chat_with_tools exit yields a final
                 # STREAM_END carrying the best available text. Consumers
@@ -1354,6 +1408,7 @@ async def chat_with_tools(
             yield Event(EventType.AGENT_RUN_COMPLETE, {
                 "iterations": iteration,
                 "elapsed_s": round(beat.elapsed_s, 1),
+                **_degradation_summary(degradation_events),
             })
 
             # Transfer tool usage from context to accumulated_usage (v1.16.0)
@@ -1433,6 +1488,7 @@ async def chat_with_tools(
         "iterations": max_iterations,
         "elapsed_s": round(beat.elapsed_s, 1),
         "max_iterations_reached": True,
+        **_degradation_summary(degradation_events),
     })
 
     ctx.session.add_message(Message(

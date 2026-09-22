@@ -206,6 +206,49 @@ class EventType(Enum):
     INFO = "info"
 
 
+class ToolGuardReason(str, Enum):
+    """Machine-readable discriminator for tool-loop-guard degradation (v1.19.3).
+
+    The per-turn tool guards in `ppxai/engine/tools/manager.py` (consulted
+    from `ppxai/engine/chat.py::chat_with_tools`) degrade a turn in three
+    ways, each an `EventType.INFO` event carrying one of these values at
+    `Event.metadata["reason"]`:
+
+      TOOL_BUDGET_EXHAUSTED  a tool hit its per-turn call budget (guard B)
+                             and one specific call was refused.
+      TOOLS_WITHDRAWN       a SECOND reach for an already-refused tool —
+                             every tool is withdrawn for the rest of the
+                             turn and the model is forced to synthesize.
+      TOOL_REPEAT_LOOP       a tool was called with byte-identical arguments
+                             `max_same_tool_calls` times this turn (guard A).
+
+    The existing human-readable `Event.data` text is unchanged — this is an
+    ADDITIVE sibling for consumers (e.g. the ppxai-sre audit trail) that
+    need to detect a degraded turn without string-matching prose, which has
+    already changed wording once during this work.
+
+    The same reasons also roll up onto the turn's terminal lifecycle event
+    (`AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR`) as `data["degraded"]` /
+    `data["degradation_reasons"]`, so a consumer can answer "was this turn
+    degraded?" from the one event that ends every turn, without scanning
+    every INFO event in between. See `chat_with_tools`'s `degradation_events`
+    and `_degradation_summary()`.
+
+    `tests/test_tool_loop_guard.py::TestReasonVocabularyFence` asserts every
+    member here is actually emitted by the engine, and every `reason` value
+    the engine emits is a member of this enum — both directions, the way
+    `tests/test_command_parity_fence.py` fences `SideEffectKind`.
+
+    Import path (stable — this module is in ppxai-sre's pinned consumer
+    surface, `tests/test_consumer_import_surface.py::PRODUCTION_IMPORTS`):
+
+        from ppxai.engine.types import ToolGuardReason
+    """
+    TOOL_BUDGET_EXHAUSTED = "tool_budget_exhausted"
+    TOOLS_WITHDRAWN = "tools_withdrawn"
+    TOOL_REPEAT_LOOP = "tool_repeat_loop"
+
+
 @dataclass
 class Event:
     """An event emitted by the engine.

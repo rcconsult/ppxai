@@ -397,3 +397,64 @@ class TestStateSyncBeatPayloadRoundTrips:
             assert "type" in ev  # every frame has a type
             # Values that appear on the wire must be JSON-native.
             json.dumps(ev)  # re-encode — will raise if something non-native slipped in
+
+
+class TestToolGuardDegradationSSE:
+    """v1.19.3: the tool-loop-guard `metadata["reason"]` survives the wire.
+
+    `sse_event_generator` (ppxai/server/streaming.py) forwards
+    `event.metadata` for EVERY event type generically (it was already doing
+    so for STREAM_END's `usage` payload before this work) — this test is
+    the proof for the NEW `ToolGuardReason` metadata specifically, so a
+    consumer reading the raw SSE stream (not just in-process `Event`
+    objects) can key off `reason` too.
+    """
+
+    @pytest.fixture
+    def engine(self):
+        eng = EngineClient()
+        eng.tools_enabled = True
+        _register_echo_tools(eng)
+        eng.tool_manager.tool_call_budgets = {"ok_tool": 1}
+        return eng
+
+    @pytest.mark.asyncio
+    async def test_budget_refusal_metadata_survives_the_sse_round_trip(self, engine):
+        provider = MockProvider(scripted_iterations=[
+            # Iteration 1 — ok_tool runs, spends the whole budget (1).
+            [
+                Event(EventType.TOOL_CALL, {
+                    "tool": "ok_tool", "arguments": {}, "tool_call_id": "c1",
+                }),
+                Event(EventType.STREAM_END, ""),
+            ],
+            # Iteration 2 — ok_tool again: budget already spent, refused.
+            [
+                Event(EventType.TOOL_CALL, {
+                    "tool": "ok_tool", "arguments": {}, "tool_call_id": "c2",
+                }),
+                Event(EventType.STREAM_END, ""),
+            ],
+            # Iteration 3 — final answer.
+            [Event(EventType.STREAM_END, "Done.")],
+        ])
+        _install_mock_provider(engine, provider)
+        provider.facts = ModelFacts(tool_mode="native")
+
+        events = await _drain_sse(sse_event_generator("hello", engine))
+
+        info_events = [e for e in events if e["type"] == "info"]
+        refusal = next(
+            e for e in info_events if "Tool budget exhausted" in str(e.get("data"))
+        )
+        assert refusal["metadata"] == {
+            "reason": "tool_budget_exhausted",
+            "tool": "ok_tool",
+            "budget": 1,
+            "refusal_count": 1,
+        }
+
+        # Round-trips onto the terminal lifecycle event too.
+        complete = next(e for e in events if e["type"] == "agent_run_complete")
+        assert complete["data"]["degraded"] is True
+        assert complete["data"]["degradation_reasons"] == ["tool_budget_exhausted"]
