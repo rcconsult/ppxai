@@ -423,7 +423,8 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   considered and declined, since it needs a tuned per-tool similarity
   threshold and would block two deliberately different queries as
   readily as one rephrased one. That gap is bounded only by the
-  iteration cap and the zombie breaker, and is recorded in
+  iteration cap and the zombie breaker (the cap now ends in an answer
+  pass and logs the call pattern; see the Item 80 entry below), and is recorded in
   `tests/fixtures/tool_loops/call-graph-cycle-alternating-distinct-args.json`
   rather than left undocumented.
 
@@ -454,6 +455,31 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   The web and VSCode task views render `turn_degraded` and `turn_end`;
   a turn that did not report `degraded` shows as "outcome unknown",
   never as clean.
+
+- **A tool loop that hits its iteration cap now answers instead of
+  giving up** (debt Item 80). The cap used to end the turn on a canned
+  *"[Tool iterations limit reached …]"* line and throw away everything
+  the loop gathered. That was the only outcome for the loop neither
+  guard sees: two tools alternating with fresh arguments on every call.
+  After the last tool iteration, one extra pass now runs with tools
+  withdrawn, and its answer ends the turn. The cap is a new
+  degradation reason, `ToolGuardReason.ITERATION_CAP`
+  (`"iteration_cap"`, additive). `AGENT_RUN_COMPLETE` still sets
+  `max_iterations_reached: true` alongside it, so
+  `task_runner.turn_end_level` grades the turn `warning` as before. At
+  ~70% of the cap the model gets one "converge" notice
+  (`metadata.notice = "iteration_warning"`). It refuses nothing, so it
+  is not a degradation reason. The cap, the notice, both guards and the
+  zombie breaker log the turn's call pattern: shape, the repeating tool
+  cycle if any, per-tool calls and distinct arguments, and the last 12
+  tool names. The pattern also rides in the cap and notice metadata as
+  `call_pattern`. A detector that *refuses* the alternating shape is
+  still declined, because legitimate exploration looks the same. The
+  logged pattern is the evidence a future one would be designed from.
+  **For consumers:** a turn capped with a positive `max_iterations`
+  no longer reaches the fall-through exit, so its final text is the
+  model's answer, not the canned line. The fall-through now runs only
+  when `max_iterations <= 0`.
 
 ### The guard against over-reach
 

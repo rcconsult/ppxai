@@ -2491,3 +2491,86 @@ under `tests/`. It was mutation-verified: restoring the old fixture
 fails the fence and names line 86. Named-leaf deletions such as
 `ppxai._build_info` and purges inside subprocess script strings are
 still allowed.
+
+### Item 80 — a non-repeating multi-tool cycle trips neither tool-loop guard → ✅ **CLOSED 2026-09-26** (outcome + visibility, not detection) [engine / tool-loop]
+
+**Filed 2026-09-23.** Found while verifying the v1.19.3 tool-loop guard
+rework (`2514ba55`).
+
+**What's wrong, verified by reading the code:** the rework gave
+`ToolManager` two guards — `is_tool_loop_detected`
+(`ppxai/engine/tools/manager.py:591`), which counts a tool called with
+byte-identical arguments N times anywhere in the turn, and
+`is_tool_budget_exceeded` (`manager.py:645`), an argument-independent
+per-turn call cap configured only for `web_search` and `fetch_url`
+(`Default.TOOL_CALL_BUDGETS`, `ppxai/constants.py:242-245`). A model
+that alternates between two (or more) tools — `read_file`,
+`list_directory`, `read_file`, `list_directory`, …, each call with
+**different** arguments — satisfies neither guard's trigger condition:
+guard A never sees the same `(tool, args)` pair twice, and guard B has
+no budget configured for either tool (deliberately — see
+`manager.py:56-63`, files/directories/shell legitimately repeat many
+times in a turn). This is a known, accepted gap, not an oversight: it
+is documented in the fixture
+`tests/fixtures/tool_loops/call-graph-cycle-alternating-distinct-args.json`,
+whose own `description` field states the gap and that fuzzy/semantic
+argument matching was explicitly rejected as the fix — it "needs a
+tuned per-tool similarity threshold and blocks deliberately different
+queries as readily as one rephrased one" (no single threshold
+distinguishes "same hunt, reworded" from "genuinely the next
+question").
+
+**Blast radius:** a model stuck in this exact cycle shape is bounded
+only by the tool-loop's iteration cap (`max_iterations`, raised per
+model by `max_tool_iterations` via `facts.max_tool_iterations` near the
+top of `chat_with_tools`, `ppxai/engine/chat.py`) and the zombie circuit
+breaker
+(`tools.agent.zombie_threshold`) — both of which exist for a different
+purpose (bounding total turn length / consecutive failures) and neither
+of which is tuned to this loop shape specifically. Unlike guard B's
+budget trip, there is no escalation path here: nothing forces a
+synthesis pass, so a model in this cycle burns iterations until one of
+those two unrelated limits trips.
+
+**Fix:** none proposed — the fuzzy-matching alternative was considered
+and declined for cause (see above). A future option, not evaluated
+here, is a call-graph-shape detector (e.g. flag an A→B→A→B alternation
+regardless of arguments) rather than an argument-matching one; this
+would need its own false-positive analysis against legitimate
+alternating patterns (e.g. read-then-list-then-read-next-file) before
+it could ship.
+
+**Trigger to revisit:** a live incident matching this shape (two or
+more tools alternating with non-repeating arguments, burning
+iterations) — same evidentiary bar the 2026-09-22 `web_search` incident
+set for guard B.
+
+**Effort:** unscoped — the fix needs a designed detector, not a small
+patch; filing this item is the "accepted, not hidden" record the
+2514ba55 commit message promised.
+
+**Resolution (2026-09-26).** The owner chose options B and C from the
+plan, plus logging of the pattern that causes the loop. **B:** after
+the last tool iteration, `chat_with_tools` runs ONE extra pass with
+tools withdrawn (`loop_limit = max_iterations + 1`). It reuses the
+`force_synthesis` path that guard B's withdrawal already had, and emits
+`ToolGuardReason.ITERATION_CAP` with `max_iterations` and
+`call_pattern`. The answer leaves through the normal completion exit,
+which still sets `max_iterations_reached: true`, so
+`task_runner.turn_end_level` grades it `warning` as before. A turn
+already withdrawn by guard B is not relabelled. **C:** one converge
+notice at `ceil(0.7 × cap)` for caps of 5 or more: a user message plus
+an INFO with `metadata.notice = "iteration_warning"`. It carries no
+`reason`, because it refuses nothing and must not mark the turn
+degraded. **Logging:** `ToolManager.describe_call_pattern()` classifies
+the turn as `repeated_args` / `cycle` / `streak` / `mixed` / `empty`,
+finds the tool-name period (1–4) repeating at the end of the
+sequence, and counts calls, distinct arguments and failures per tool.
+`format_call_pattern()` renders it as one log line. It is logged at
+the cap, the notice, both guard trips and the zombie breaker (visible
+with `/debug-log on`), and it rides in the cap and notice metadata.
+Refusing the shape is still declined. A cycle needs 3 full repeats to
+be named, so A,B,A,B,A (the notice point in the fixture) reads as
+`mixed`. The fall-through exit after the loop is now reached only when
+`max_iterations <= 0`; its test was split to keep that exit covered.
+

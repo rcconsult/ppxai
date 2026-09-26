@@ -70,7 +70,6 @@ quoting them** — this table is a map, not a source.
 | **76** | fold chat-shaped-ness into the command roster (`STREAMING_COMMANDS`) | debt item for now — owner decision 2026-09-21 (ADR 0007 open decision #4) |
 | **77** | dead client code left after the ADR 0007 step-5 VSCode migration | ~45min, verified by grep — no owner decision needed, extended 2026-09-21 with 4 more dead `httpClient.ts` methods |
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
-| **80** | a non-repeating multi-tool cycle (`A, B, A, B, …`, distinct args every call) trips neither tool-loop guard | accepted gap, fuzzy matching deliberately declined — bounded only by the iteration cap and the zombie breaker |
 
 ---
 
@@ -2525,71 +2524,13 @@ asserting the notification string names the backend's REAL
 
 ---
 
-### Item 80 — a non-repeating multi-tool cycle trips neither tool-loop guard [engine / tool-loop]
-
-**Filed 2026-09-23.** Found while verifying the v1.19.3 tool-loop guard
-rework (`2514ba55`).
-
-**What's wrong, verified by reading the code:** the rework gave
-`ToolManager` two guards — `is_tool_loop_detected`
-(`ppxai/engine/tools/manager.py:591`), which counts a tool called with
-byte-identical arguments N times anywhere in the turn, and
-`is_tool_budget_exceeded` (`manager.py:645`), an argument-independent
-per-turn call cap configured only for `web_search` and `fetch_url`
-(`Default.TOOL_CALL_BUDGETS`, `ppxai/constants.py:242-245`). A model
-that alternates between two (or more) tools — `read_file`,
-`list_directory`, `read_file`, `list_directory`, …, each call with
-**different** arguments — satisfies neither guard's trigger condition:
-guard A never sees the same `(tool, args)` pair twice, and guard B has
-no budget configured for either tool (deliberately — see
-`manager.py:56-63`, files/directories/shell legitimately repeat many
-times in a turn). This is a known, accepted gap, not an oversight: it
-is documented in the fixture
-`tests/fixtures/tool_loops/call-graph-cycle-alternating-distinct-args.json`,
-whose own `description` field states the gap and that fuzzy/semantic
-argument matching was explicitly rejected as the fix — it "needs a
-tuned per-tool similarity threshold and blocks deliberately different
-queries as readily as one rephrased one" (no single threshold
-distinguishes "same hunt, reworded" from "genuinely the next
-question").
-
-**Blast radius:** a model stuck in this exact cycle shape is bounded
-only by the tool-loop's iteration cap (`max_iterations`, raised per
-model by `max_tool_iterations` via `facts.max_tool_iterations` near the
-top of `chat_with_tools`, `ppxai/engine/chat.py`) and the zombie circuit
-breaker
-(`tools.agent.zombie_threshold`) — both of which exist for a different
-purpose (bounding total turn length / consecutive failures) and neither
-of which is tuned to this loop shape specifically. Unlike guard B's
-budget trip, there is no escalation path here: nothing forces a
-synthesis pass, so a model in this cycle burns iterations until one of
-those two unrelated limits trips.
-
-**Fix:** none proposed — the fuzzy-matching alternative was considered
-and declined for cause (see above). A future option, not evaluated
-here, is a call-graph-shape detector (e.g. flag an A→B→A→B alternation
-regardless of arguments) rather than an argument-matching one; this
-would need its own false-positive analysis against legitimate
-alternating patterns (e.g. read-then-list-then-read-next-file) before
-it could ship.
-
-**Trigger to revisit:** a live incident matching this shape (two or
-more tools alternating with non-repeating arguments, burning
-iterations) — same evidentiary bar the 2026-09-22 `web_search` incident
-set for guard B.
-
-**Effort:** unscoped — the fix needs a designed detector, not a small
-patch; filing this item is the "accepted, not hidden" record the
-2514ba55 commit message promised.
-
----
-
 ## Closed (recent)
 
 One-liners only — full bodies + evidence trails in
 [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md);
 older per-version detail in the v1.18.2/v1.18.3 snapshots.
 
+- **Item 80** — a non-repeating multi-tool cycle trips neither guard — closed 2026-09-26 by making its outcome better and its shape visible, not by detecting it (owner chose options B+C+logging). The iteration cap used to end every such turn on a canned "limit reached" line. Now one tools-withdrawn answer pass runs after the last tool iteration (`ToolGuardReason.ITERATION_CAP`, additive; `max_iterations_reached` still set), a single converge notice goes out at ~70% of the cap, and the cap, the notice, both guards and the zombie breaker log `ToolManager.describe_call_pattern()` (shape, repeating cycle, per-tool distinct-args counts, tail). A detector that refuses the alternating shape is still declined, because exploration looks the same. The logged pattern is the evidence for designing one if an incident recurs. Fenced by `tests/test_tool_loop_guard.py::TestIterationCap` / `TestCallPattern` and the reason-vocabulary fence. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 81** — test-order provider-class leak — closed 2026-09-26. `test_custom_endpoint_integration.py::custom_engine` purged `ppxai.engine.providers*` from `sys.modules` without restoring them, even on its skip path, so later modules compared classes from two imports. The purge was obsolete, because `tls_verify()` resolves at client build, so it is deleted. Fenced by `tests/test_no_sys_modules_purge.py` (AST check against computed-name `sys.modules` deletes in-process, mutation-verified). Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 82** — a `/task` run's `events.jsonl` now records a degraded turn — closed 2026-09-23, `59702221`. Narrow option, owner's call: persist only events carrying a `ToolGuardReason`, plus the terminal pair. `turn_degraded` (one per tool-guard degradation) and `turn_end` (one per turn, `degraded`/`degradation_reasons` copied verbatim from the engine, never defaulted) are new record types, additive; existing records and the run's own `agent_run_complete`/`agent_run_error` are unchanged. **Correction to how the item was filed:** the "four types persisted" list was built from the loop's branch CONDITIONS (`if event.type == …`) without reading the branch BODIES, and carried unchecked through two sessions. Four branches exist; only the `TOOL_CALL` body called `emit_event`. To audit what a loop persists, read what each branch DOES, not which branches exist. Fenced by 13 tests (`tests/test_task_run_degradation_audit.py`). The no-terminal hole it also recorded — three `chat_with_tools` exits that emit no terminal event, plus paths where `ERROR` arrives before `AGENT_RUN_ERROR` so the runner raises before reading it — was not closed by `59702221`; the owner chose to fix it rather than file it, and it was fixed the same day on this branch ("fix(engine): every tool-loop exit ends with a run terminal"): all three exits now emit `AGENT_RUN_ERROR`, and the runner holds an `ERROR`'s raise until the terminal has been persisted as `turn_end`. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 78** — the test suite leaked into the real `~/.ppxai` — closed 2026-09-21, and it was much bigger than filed: not just empty checkpoint directories (the filed leak), but also real session files, interleaved debug logs, `.preview-cache` PNGs, a staged upload, `usage.json`/`usage-events.jsonl` (the `/cost` sink) appended to, and the TUI's `session-state.json` restore pointer rewritten by a spawned `ppxai-server` subprocess that a pre-existing in-process guard could not reach. One clean-tree marker-file run measured **214 → 0** entries touched in the developer's real `~/.ppxai`. Fixed on both ends: `tests/conftest.py` redirects `HOME` to a throwaway directory before the first `ppxai` import (the one point at which that works), and `FileCheckpointBackend` no longer creates its directory at construction — only on the first real snapshot, which also means a session that never checkpoints leaves nothing behind in production, not just in tests. Fenced by `tests/test_home_hermeticity.py` and `tests/test_checkpoint.py::TestTheDirectoryIsCreatedLazily`. Existing empty directories on developer hosts were **not** deleted — cleanup command recorded in the archived body, owner's call. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).

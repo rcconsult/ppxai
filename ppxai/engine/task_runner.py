@@ -171,7 +171,10 @@ def _clamp_audit_value(value: Any) -> Any:
     JSON scalars pass through untouched (a bool stays a bool — `degraded`
     must never become the string "False"); strings are cut to
     `_AUDIT_STR_CLAMP`; lists/tuples are clamped element-wise (the engine's
-    `degradation_reasons`); anything else is stringified and clamped.
+    `degradation_reasons`); dicts are clamped value-wise, keys stringified
+    (the ITERATION_CAP event's `call_pattern`, debt Item 80 — stringifying it
+    stored a truncated Python repr); anything else is stringified and
+    clamped.
     """
     if value is None or isinstance(value, (bool, int, float)):
         return value
@@ -179,6 +182,8 @@ def _clamp_audit_value(value: Any) -> Any:
         return value[:_AUDIT_STR_CLAMP]
     if isinstance(value, (list, tuple)):
         return [_clamp_audit_value(v) for v in value]
+    if isinstance(value, dict):
+        return {str(k)[:_AUDIT_STR_CLAMP]: _clamp_audit_value(v) for k, v in value.items()}
     return str(value)[:_AUDIT_STR_CLAMP]
 
 

@@ -750,8 +750,12 @@ class TestReasonVocabularyFence:
     async def test_every_reason_is_emitted_and_nothing_else_is(self):
         emitted: set[str] = set()
 
-        for trace in (incident_trace(), repeat_trace()):
+        for trace, max_iterations in (
+            (incident_trace(), None), (repeat_trace(), None), (cycle_trace(), 6),
+        ):
             ctx = build_context(trace)
+            if max_iterations:
+                ctx.tool_manager.max_iterations = max_iterations
             for event in await drive(ctx, trace):
                 if event.type == EventType.INFO and event.metadata and "reason" in event.metadata:
                     emitted.add(event.metadata["reason"])
@@ -762,3 +766,159 @@ class TestReasonVocabularyFence:
             f"enum declares {declared}. Add a fixture/path for whichever "
             f"side is missing, or explicitly exempt it here with a reason."
         )
+
+
+# ---------------------------------------------------------------------------
+# Debt Item 80: the iteration cap answers instead of giving up, warns first,
+# and logs the call shape
+# ---------------------------------------------------------------------------
+
+CYCLE = "call-graph-cycle-alternating-distinct-args"
+
+
+def cycle_trace() -> dict:
+    """The known gap: two uncapped tools alternating with fresh arguments."""
+    return next(t for t in TRACES if t["name"] == CYCLE)
+
+
+def pattern_of(calls: list[tuple[str, dict, bool]]) -> dict:
+    manager = ToolManager()
+    for tool, args, success in calls:
+        manager.record_tool_call(tool, args, success)
+    return manager.describe_call_pattern()
+
+
+class TestIterationCap:
+    """The cycle neither guard sees now ends in an answer, not a canned line."""
+
+    @pytest.mark.asyncio
+    async def test_the_cycle_ends_in_an_answer_pass(self):
+        trace = cycle_trace()
+        ctx = build_context(trace)
+        ctx.tool_manager.max_iterations = 6
+        with patch("ppxai.engine.chat.logger") as chat_logger:
+            events = await drive(ctx, trace)
+
+        executed = [e for e in events if e.type == EventType.TOOL_CALL]
+        assert len(executed) == 6, "every tool iteration up to the cap still runs"
+        assert ctx.provider.chat_calls[-1]["tools"] is None, (
+            "the pass after the cap must offer no tools"
+        )
+        assert events[-1].type == EventType.STREAM_END
+        assert events[-1].data == "Here is what I found."
+
+        caps = [e for e in events if e.type == EventType.INFO and e.metadata
+                and e.metadata.get("reason") == ToolGuardReason.ITERATION_CAP.value]
+        assert len(caps) == 1
+        pattern = caps[0].metadata["call_pattern"]
+        assert pattern["shape"] == "cycle"
+        assert pattern["cycle"] == ["read_file", "list_directory"]
+        assert pattern["cycle_repeats"] == 3
+        assert pattern["total_calls"] == 6
+
+        complete = next(e for e in events if e.type == EventType.AGENT_RUN_COMPLETE)
+        assert complete.data["max_iterations_reached"] is True
+        assert complete.data["degradation_reasons"] == [ToolGuardReason.ITERATION_CAP.value]
+
+        warnings = [c.args[0] for c in chat_logger.warning.call_args_list]
+        cap_logs = [w for w in warnings if "iteration cap" in w]
+        assert cap_logs and "cycle read_file→list_directory ×3" in cap_logs[0]
+
+    @pytest.mark.asyncio
+    async def test_one_converge_notice_at_seventy_percent(self):
+        trace = cycle_trace()
+        ctx = build_context(trace)
+        ctx.tool_manager.max_iterations = 6
+        with patch("ppxai.engine.chat.logger") as chat_logger:
+            events = await drive(ctx, trace)
+
+        notices = [e for e in events if e.type == EventType.INFO and e.metadata
+                   and e.metadata.get("notice") == "iteration_warning"]
+        assert len(notices) == 1, "the converge notice is sent once per turn"
+        assert notices[0].metadata["iteration"] == 5  # ceil(0.7 * 6)
+        assert notices[0].metadata["call_pattern"]["total_calls"] == 5
+        assert "reason" not in notices[0].metadata, (
+            "a notice refuses nothing, so it must not read as a degradation"
+        )
+        injected = [m.content for m in ctx.session.messages if m.role == "user"]
+        assert ctx.tool_manager.get_iteration_warning_message(5, 6) in injected
+        warnings = [c.args[0] for c in chat_logger.warning.call_args_list]
+        # 5 calls, A,B,A,B,A: 2.5 repeats, under the 3 a cycle needs.
+        assert any("converge notice" in w and "5 calls" in w for w in warnings)
+
+    @pytest.mark.asyncio
+    async def test_a_turn_under_the_notice_threshold_is_untouched(self):
+        trace = cycle_trace()
+        ctx = build_context(trace)  # max_iterations = 40, trace has 10 calls
+        events = await drive(ctx, trace)
+
+        assert not [e for e in events if e.type == EventType.INFO and e.metadata
+                    and ("notice" in e.metadata or "reason" in e.metadata)]
+        complete = next(e for e in events if e.type == EventType.AGENT_RUN_COMPLETE)
+        assert complete.data["degraded"] is False
+        assert "max_iterations_reached" not in complete.data
+
+    @pytest.mark.asyncio
+    async def test_a_budget_withdrawal_is_not_relabelled_as_the_cap(self):
+        """Tools already withdrawn by guard B stay a TOOLS_WITHDRAWN turn."""
+        trace = incident_trace()
+        ctx = build_context(trace)
+        events = await drive(ctx, trace)
+
+        reasons = {e.metadata["reason"] for e in events
+                   if e.type == EventType.INFO and e.metadata and "reason" in e.metadata}
+        assert ToolGuardReason.ITERATION_CAP.value not in reasons
+        assert ToolGuardReason.TOOLS_WITHDRAWN.value in reasons
+
+
+class TestCallPattern:
+    """`describe_call_pattern` classifies; it never refuses anything."""
+
+    def test_empty(self):
+        assert pattern_of([])["shape"] == "empty"
+
+    def test_alternating_distinct_args_is_a_cycle(self):
+        calls = [("read_file" if i % 2 == 0 else "list_directory", {"path": f"p{i}"}, True)
+                 for i in range(8)]
+        pattern = pattern_of(calls)
+        assert pattern["shape"] == "cycle"
+        assert pattern["cycle"] == ["read_file", "list_directory"]
+        assert pattern["cycle_repeats"] == 4
+
+    def test_three_tool_cycle(self):
+        names = ["grep", "read_file", "list_directory"] * 3
+        pattern = pattern_of([(n, {"q": i}, True) for i, n in enumerate(names)])
+        assert pattern["cycle"] == names[:3]
+        assert pattern["cycle_repeats"] == 3
+
+    def test_one_tool_distinct_args_is_a_streak(self):
+        pattern = pattern_of([("web_search", {"q": f"q{i}"}, True) for i in range(5)])
+        assert pattern["shape"] == "streak"
+        assert pattern["cycle"] == ["web_search"]
+        assert pattern["cycle_repeats"] == 5
+
+    def test_a_successful_repeat_outranks_the_cycle(self):
+        calls = [("read_file", {"path": "a"}, True), ("list_directory", {"path": "d"}, True)] * 3
+        assert pattern_of(calls)["shape"] == "repeated_args"
+
+    def test_a_failed_retry_is_not_a_repeat(self):
+        calls = [("read_file", {"path": "a"}, False), ("read_file", {"path": "a"}, True)]
+        pattern = pattern_of(calls)
+        assert pattern["shape"] != "repeated_args"
+        assert pattern["failed_calls"] == 1
+        assert pattern["per_tool"]["read_file"] == {"calls": 2, "distinct_args": 1, "failed": 1}
+
+    def test_no_repeating_tail_is_mixed(self):
+        names = ["read_file", "grep", "list_directory", "edit_file", "read_file"]
+        pattern = pattern_of([(n, {"i": i}, True) for i, n in enumerate(names)])
+        assert pattern["shape"] == "mixed"
+        assert pattern["cycle"] is None
+
+    def test_the_log_line_names_the_cycle_and_counts(self):
+        calls = [("read_file" if i % 2 == 0 else "list_directory", {"path": f"p{i}"}, True)
+                 for i in range(6)]
+        line = ToolManager.format_call_pattern(pattern_of(calls))
+        assert "shape=cycle" in line
+        assert "cycle read_file→list_directory ×3" in line
+        assert "read_file 3x/3 distinct" in line
+

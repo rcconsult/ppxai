@@ -210,7 +210,7 @@ class ToolGuardReason(str, Enum):
     """Machine-readable discriminator for tool-loop-guard degradation (v1.19.3).
 
     The per-turn tool guards in `ppxai/engine/tools/manager.py` (consulted
-    from `ppxai/engine/chat.py::chat_with_tools`) degrade a turn in three
+    from `ppxai/engine/chat.py::chat_with_tools`) degrade a turn in four
     ways, each an `EventType.INFO` event carrying one of these values at
     `Event.metadata["reason"]`:
 
@@ -221,6 +221,12 @@ class ToolGuardReason(str, Enum):
                              turn and the model is forced to synthesize.
       TOOL_REPEAT_LOOP       a tool was called with byte-identical arguments
                              `max_same_tool_calls` times this turn (guard A).
+      ITERATION_CAP          the turn used every tool iteration it had; tools
+                             are withdrawn and ONE extra answer-only pass runs
+                             instead of ending on a canned message (v1.19.3,
+                             debt Item 80). Metadata carries `max_iterations`
+                             and `call_pattern` (the turn's call shape, see
+                             `ToolManager.describe_call_pattern`).
 
     The existing human-readable `Event.data` text is unchanged — this is an
     ADDITIVE sibling for consumers (e.g. the ppxai-sre audit trail) that
@@ -247,6 +253,7 @@ class ToolGuardReason(str, Enum):
     TOOL_BUDGET_EXHAUSTED = "tool_budget_exhausted"
     TOOLS_WITHDRAWN = "tools_withdrawn"
     TOOL_REPEAT_LOOP = "tool_repeat_loop"
+    ITERATION_CAP = "iteration_cap"
 
 
 @dataclass

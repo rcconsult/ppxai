@@ -86,11 +86,13 @@ class ScriptedEngine(EngineClient):
     the guards, the ScopedToolManager wrap and the event stream are all real.
     """
 
-    def __init__(self, provider: ScriptedProvider, *, budgets=None, max_same=None):
+    def __init__(self, provider: ScriptedProvider, *, budgets=None, max_same=None,
+                 max_iterations=None):
         super().__init__()
         self._scripted = provider
         self._budgets = budgets
         self._max_same = max_same
+        self._max_iterations = max_iterations
 
     def set_provider(self, provider_name: str) -> bool:
         self.provider = self._scripted
@@ -113,6 +115,8 @@ class ScriptedEngine(EngineClient):
             self.tool_manager.tool_call_budgets = dict(self._budgets)
         if self._max_same is not None:
             self.tool_manager.max_same_tool_calls = self._max_same
+        if self._max_iterations is not None:
+            self.tool_manager.max_iterations = self._max_iterations
         return True
 
 
@@ -190,6 +194,16 @@ def _repeat_loop_engine() -> ScriptedEngine:
     ]), budgets={}, max_same=2)
 
 
+def _iteration_cap_engine() -> ScriptedEngine:
+    """Two tool iterations with fresh args hit a cap of 2 → one answer pass
+    with tools withdrawn (debt Item 80)."""
+    return ScriptedEngine(ScriptedProvider([
+        _tool_iteration("c1", "a"),
+        _tool_iteration("c2", "b"),
+        FINAL,
+    ]), budgets={}, max_iterations=2)
+
+
 def _clean_engine() -> ScriptedEngine:
     return ScriptedEngine(ScriptedProvider([
         _tool_iteration("c1", "a"),
@@ -203,6 +217,24 @@ def _clean_engine() -> ScriptedEngine:
 
 
 class TestDegradedTurnIsAudited:
+
+    async def test_iteration_cap_is_audited_with_its_call_pattern(self, tmp_path, monkeypatch):
+        """Item 80: the cap's answer pass is a degraded turn in events.jsonl,
+        and its call pattern is stored as JSON, not as a Python repr."""
+        rows, _ = await _run(tmp_path, monkeypatch, _iteration_cap_engine())
+
+        degraded = _of(rows, DEGRADED)
+        assert [r["data"]["reason"] for r in degraded] == [ToolGuardReason.ITERATION_CAP.value]
+        pattern = degraded[0]["data"]["call_pattern"]
+        assert isinstance(pattern, dict)
+        assert pattern["total_calls"] == 2
+        assert pattern["per_tool"]["ok_tool"] == {"calls": 2, "distinct_args": 2, "failed": 0}
+        assert pattern["sequence_tail"] == ["ok_tool", "ok_tool"]
+
+        (end,) = _of(rows, TURN_END)
+        assert end["level"] == "warning"
+        assert end["data"]["max_iterations_reached"] is True
+        assert end["data"]["degradation_reasons"] == [ToolGuardReason.ITERATION_CAP.value]
 
     async def test_budget_refusal_and_withdrawal_reach_events_jsonl(self, tmp_path, monkeypatch):
         rows, _ = await _run(tmp_path, monkeypatch, _budget_and_withdrawal_engine())
@@ -396,7 +428,9 @@ class TestPersistedVocabularyFence:
     async def test_persisted_reasons_equal_the_enum(self, tmp_path, monkeypatch):
         persisted: set[str] = set()
         rolled_up: set[str] = set()
-        for i, make in enumerate((_budget_and_withdrawal_engine, _repeat_loop_engine)):
+        for i, make in enumerate((
+            _budget_and_withdrawal_engine, _repeat_loop_engine, _iteration_cap_engine,
+        )):
             rows, _ = await _run(tmp_path / f"s{i}", monkeypatch, make())
             persisted |= {r["data"]["reason"] for r in _of(rows, DEGRADED)}
             for end in _of(rows, TURN_END):

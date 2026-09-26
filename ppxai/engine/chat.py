@@ -12,6 +12,7 @@ Architecture:
 
 import asyncio
 import json
+import math
 import time
 from collections.abc import AsyncIterator
 from dataclasses import asdict
@@ -715,6 +716,22 @@ async def chat_with_tools(
     budget_refusals: dict[str, int] = {}
     force_synthesis = False
     withdrawal_trigger_tool: str | None = None
+    # Why tools were withdrawn: a second reach for a refused tool (guard B)
+    # or the iteration cap (Item 80). Decides the reason on the notice.
+    withdrawal_reason = ToolGuardReason.TOOLS_WITHDRAWN
+
+    # v1.19.3 (debt Item 80): the iteration cap no longer ends a turn on a
+    # canned "limit reached" line. After the last tool iteration, ONE more
+    # pass runs with tools withdrawn, so the model answers from what it
+    # gathered. `loop_limit` is that extra pass. Before the cap, a single
+    # notice at ~70% tells the model the steps are running out. Both log the
+    # turn's call shape, because a loop neither guard sees (A, B, A, B, …
+    # with fresh arguments) is only recognizable after the fact.
+    loop_limit = max_iterations + 1 if max_iterations > 0 else 0
+    iteration_warning_at = (
+        math.ceil(max_iterations * 0.7) if max_iterations >= 5 else 0
+    )
+    iteration_warning_sent = False
 
     # v1.19.3: every ToolGuardReason event this turn (metadata dicts, in
     # emission order) — see `_degradation_summary()`. Feeds the additive
@@ -733,7 +750,7 @@ async def chat_with_tools(
     # provider path rather than explicit /tools enable.
     ctx.session.tools_enabled = True
 
-    while iteration < max_iterations:
+    while iteration < loop_limit:
         if ctx.is_interrupted:
             yield Event(EventType.ERROR, "Interrupted by user")
             yield Event(EventType.AGENT_RUN_ERROR, {
@@ -746,6 +763,32 @@ async def chat_with_tools(
 
         iteration += 1
 
+        if iteration > max_iterations and not force_synthesis:
+            # Item 80: every tool iteration is spent. Withdraw tools for this
+            # one extra pass (see loop_limit) instead of ending on the canned
+            # "limit reached" message after the loop.
+            call_pattern = ctx.tool_manager.describe_call_pattern()
+            logger.warning(
+                f"Tool iteration cap ({max_iterations}) reached for model "
+                f"{ctx.model!r}; withdrawing tools for one answer pass. Call "
+                f"pattern: {ctx.tool_manager.format_call_pattern(call_pattern)}"
+            )
+            force_synthesis = True
+            withdrawal_reason = ToolGuardReason.ITERATION_CAP
+            withdrawal_trigger_tool = last_tool_name or None
+            cap_metadata = {
+                "reason": ToolGuardReason.ITERATION_CAP.value,
+                "max_iterations": max_iterations,
+                "call_pattern": call_pattern,
+            }
+            degradation_events.append(cap_metadata)
+            yield Event(
+                EventType.INFO,
+                f"Tool step limit ({max_iterations}) reached — answering from "
+                f"the results already gathered",
+                cap_metadata,
+            )
+
         if iteration > 1:
             # Show which tool just completed so the user has breadcrumbs
             # during long tool chains instead of 20+ seconds of silence.
@@ -757,20 +800,23 @@ async def chat_with_tools(
         messages = ctx.session.get_messages()
 
         if force_synthesis:
-            # v1.19.3: tools are withdrawn for the rest of the turn (see
-            # budget_refusals). Send the transcript as-is — no tool
-            # descriptions in the system prompt, no `tools=` below — so the
-            # model has nothing left to call and answers from what it has.
-            withdrawal_metadata = {
-                "reason": ToolGuardReason.TOOLS_WITHDRAWN.value,
-                "trigger_tool": withdrawal_trigger_tool,
-            }
-            degradation_events.append(withdrawal_metadata)
-            yield Event(
-                EventType.INFO,
-                "Tools withdrawn for this turn — answering from the results already gathered",
-                withdrawal_metadata,
-            )
+            # Item 80: an ITERATION_CAP withdrawal sends the same answer-only
+            # request; its own notice above already said why, so skip this one.
+            if withdrawal_reason == ToolGuardReason.TOOLS_WITHDRAWN:
+                # v1.19.3: tools are withdrawn for the rest of the turn (see
+                # budget_refusals). Send the transcript as-is — no tool
+                # descriptions in the system prompt, no `tools=` below — so the
+                # model has nothing left to call and answers from what it has.
+                withdrawal_metadata = {
+                    "reason": ToolGuardReason.TOOLS_WITHDRAWN.value,
+                    "trigger_tool": withdrawal_trigger_tool,
+                }
+                degradation_events.append(withdrawal_metadata)
+                yield Event(
+                    EventType.INFO,
+                    "Tools withdrawn for this turn — answering from the results already gathered",
+                    withdrawal_metadata,
+                )
         elif not use_native_tools:
             # Prompt-based tool calling — build messages with tool descriptions in system prompt
             messages = _build_prompt_based_messages(ctx)
@@ -1039,6 +1085,10 @@ async def chat_with_tools(
                         "refusal_count": budget_refusals[tool_name],
                     }
                     degradation_events.append(budget_metadata)
+                    logger.warning(
+                        f"Tool budget exhausted for {tool_name!r} ({budget}). Call "
+                        f"pattern: {ctx.tool_manager.format_call_pattern(ctx.tool_manager.describe_call_pattern())}"
+                    )
                     yield Event(
                         EventType.INFO,
                         f"Tool budget exhausted: '{tool_name}' used its "
@@ -1072,6 +1122,11 @@ async def chat_with_tools(
                         "occurrences": ctx.tool_manager.max_same_tool_calls,
                     }
                     degradation_events.append(repeat_metadata)
+                    logger.warning(
+                        f"Repeat loop on {tool_name!r} (same args "
+                        f"{ctx.tool_manager.max_same_tool_calls}x). Call pattern: "
+                        f"{ctx.tool_manager.format_call_pattern(ctx.tool_manager.describe_call_pattern())}"
+                    )
                     yield Event(
                         EventType.INFO,
                         f"Loop detected: '{tool_name}' called "
@@ -1228,6 +1283,10 @@ async def chat_with_tools(
             # burns max_iterations worth of tokens before giving up.
             zombie_threshold = _get_zombie_threshold(ctx)
             if zombie_threshold > 0 and beat.consecutive_failures >= zombie_threshold:
+                logger.warning(
+                    f"Zombie breaker at {zombie_threshold} consecutive failures. Call "
+                    f"pattern: {ctx.tool_manager.format_call_pattern(ctx.tool_manager.describe_call_pattern())}"
+                )
                 yield Event(EventType.AGENT_ZOMBIE, {
                     "reason": f"{beat.consecutive_failures} consecutive tool failures",
                     "threshold": zombie_threshold,
@@ -1262,6 +1321,37 @@ async def chat_with_tools(
                 ctx.session.add_message(Message("assistant", zombie_text))
                 yield Event(EventType.STREAM_END, zombie_text)
                 return
+
+            # Item 80 (C): one converge notice at ~70% of the cap. A nudge,
+            # not a degradation — nothing is refused, so it is not a
+            # ToolGuardReason and does not mark the turn degraded.
+            if (
+                iteration_warning_at
+                and not iteration_warning_sent
+                and not force_synthesis
+                and iteration >= iteration_warning_at
+            ):
+                iteration_warning_sent = True
+                call_pattern = ctx.tool_manager.describe_call_pattern()
+                logger.warning(
+                    f"Tool loop at {iteration}/{max_iterations} iterations for "
+                    f"model {ctx.model!r}; sending converge notice. Call pattern: "
+                    f"{ctx.tool_manager.format_call_pattern(call_pattern)}"
+                )
+                ctx.session.add_message(Message(
+                    "user",
+                    ctx.tool_manager.get_iteration_warning_message(iteration, max_iterations),
+                ))
+                yield Event(
+                    EventType.INFO,
+                    f"Tool steps: {iteration} of {max_iterations} used — asked the model to converge",
+                    {
+                        "notice": "iteration_warning",
+                        "iteration": iteration,
+                        "max_iterations": max_iterations,
+                        "call_pattern": call_pattern,
+                    },
+                )
 
             continue
 
@@ -1438,10 +1528,17 @@ async def chat_with_tools(
 
             # Signal agent task completion (v1.16.0)
             # Enables clients to show undo badge, update status, etc.
+            # Item 80: a turn that reached this exit through the iteration
+            # cap's answer pass still reports the cap, as the old
+            # fall-through exit did (task_runner.turn_end_level reads it).
+            capped = {"max_iterations_reached": True} if (
+                withdrawal_reason == ToolGuardReason.ITERATION_CAP
+            ) else {}
             if ctx.agent_mode:
                 yield Event(EventType.AGENT_COMPLETE, {
                     "iterations": iteration,
                     "commit": commit_hash[:8] if commit_hash else None,
+                    **capped,
                 })
 
             # P0 (v1.18.0): mode-agnostic run-completion event. Unlike
@@ -1451,6 +1548,7 @@ async def chat_with_tools(
             yield Event(EventType.AGENT_RUN_COMPLETE, {
                 "iterations": iteration,
                 "elapsed_s": round(beat.elapsed_s, 1),
+                **capped,
                 **_degradation_summary(degradation_events),
             })
 
@@ -1508,6 +1606,10 @@ async def chat_with_tools(
             context_tokens=last_request_tokens,
         )
 
+    # Item 80: with a positive cap, the loop now ends through the answer pass
+    # (see loop_limit), whose final-response branch always returns. This
+    # fall-through is reached only when there is no iteration to run at all
+    # (max_iterations <= 0). Kept because it still owes the full terminal.
     yield Event(EventType.INFO, "Maximum tool iterations reached")
 
     # Commit any pending agent changes before signaling completion

@@ -73,6 +73,18 @@ class MockToolManager:
     def reset_tool_history(self):
         self._recorded_calls = []
 
+    # Item 80: the engine logs the turn's call shape and sends a converge
+    # notice; the double answers with an empty shape.
+    def describe_call_pattern(self, tail=12):
+        return {"total_calls": 0, "failed_calls": 0, "sequence_tail": [],
+                "per_tool": {}, "cycle": None, "cycle_repeats": 0, "shape": "empty"}
+
+    def format_call_pattern(self, pattern):
+        return f"shape={pattern['shape']}"
+
+    def get_iteration_warning_message(self, iteration, max_iterations):
+        return f"{iteration} of {max_iterations} steps used"
+
     def get_tools_openai_format(self):
         return [{"type": "function", "function": {"name": n}} for n in self._tools]
 

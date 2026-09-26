@@ -698,6 +698,120 @@ class ToolManager:
             f"you already have, and state plainly what you could not find."
         )
 
+    def get_iteration_warning_message(self, iteration: int, max_iterations: int) -> str:
+        """Get the one-time notice injected at ~70% of the iteration cap.
+
+        A nudge, not a refusal: nothing is withdrawn and no call is blocked.
+        It exists because the cap itself used to be silent until it hit
+        (debt Item 80).
+        """
+        remaining = max(0, max_iterations - iteration)
+        return (
+            f"You have used {iteration} of {max_iterations} tool steps for this "
+            f"request ({remaining} left). Converge now: call a tool only if its "
+            f"result will change your answer, otherwise answer from the results "
+            f"you already have. When the steps run out, tools are withdrawn and "
+            f"you will have to answer from what you have."
+        )
+
+    def describe_call_pattern(self, tail: int = 12) -> dict[str, Any]:
+        """Describe the SHAPE of this turn's tool calls, for logs and metadata.
+
+        Diagnostic only: nothing here refuses a call. Debt Item 80 is a loop
+        neither guard can see (`A, B, A, B, …` with fresh arguments every
+        call). A detector for that shape was deliberately not built, because
+        legitimate exploration looks the same. So when a turn runs long, the
+        shape is recorded, and the next incident can be classified from the
+        logs instead of reconstructed.
+
+        Returns:
+            total_calls    executed calls this turn (failures included)
+            failed_calls   how many of them failed
+            sequence_tail  the last `tail` tool names, in order
+            per_tool       {tool: {"calls", "distinct_args", "failed"}}
+            cycle          the tool-name period repeating at the END of the
+                           sequence (e.g. ["read_file", "list_directory"]),
+                           or None
+            cycle_repeats  how many times that period repeats at the end
+            shape          "empty" | "repeated_args" | "cycle" | "streak" |
+                           "mixed" (first match wins, in that order)
+        """
+        history = self._tool_call_history
+        names = [record.tool for record in history]
+
+        per_tool: dict[str, dict[str, int]] = {}
+        seen_args: dict[str, set[str]] = {}
+        for record in history:
+            entry = per_tool.setdefault(record.tool, {"calls": 0, "distinct_args": 0, "failed": 0})
+            entry["calls"] += 1
+            if not record.success:
+                entry["failed"] += 1
+            seen_args.setdefault(record.tool, set()).add(record.args_hash)
+        for tool, hashes in seen_args.items():
+            per_tool[tool]["distinct_args"] = len(hashes)
+
+        # Smallest period p (1..4) whose repetition covers the longest run
+        # at the end of the sequence. Each extra match at distance p extends
+        # the run by one call; repeats = covered length // p.
+        cycle: list[str] | None = None
+        cycle_repeats = 0
+        best_covered = 0
+        for period in range(1, 5):
+            if len(names) < 2 * period:
+                break
+            run = 0
+            for i in range(len(names) - 1, period - 1, -1):
+                if names[i] != names[i - period]:
+                    break
+                run += 1
+            covered = run + period
+            repeats = covered // period
+            if repeats >= 3 and covered > best_covered:
+                period_names = names[len(names) - period:]
+                if period > 1 and len(set(period_names)) == 1:
+                    continue  # a streak already found at period 1
+                cycle, cycle_repeats, best_covered = period_names, repeats, covered
+
+        successful = [(r.tool, r.args_hash) for r in history if r.success]
+        repeated_args = len(successful) > len(set(successful))
+        if not names:
+            shape = "empty"
+        elif repeated_args:
+            shape = "repeated_args"
+        elif cycle and len(cycle) > 1:
+            shape = "cycle"
+        elif cycle:
+            shape = "streak"
+        else:
+            shape = "mixed"
+
+        return {
+            "total_calls": len(names),
+            "failed_calls": sum(1 for record in history if not record.success),
+            "sequence_tail": names[-tail:],
+            "per_tool": per_tool,
+            "cycle": cycle,
+            "cycle_repeats": cycle_repeats,
+            "shape": shape,
+        }
+
+    @staticmethod
+    def format_call_pattern(pattern: dict[str, Any]) -> str:
+        """One log line for a `describe_call_pattern()` result."""
+        tools = ", ".join(
+            f"{tool} {entry['calls']}x/{entry['distinct_args']} distinct"
+            + (f"/{entry['failed']} failed" if entry["failed"] else "")
+            for tool, entry in pattern["per_tool"].items()
+        )
+        cycle = (
+            f"; cycle {'→'.join(pattern['cycle'])} ×{pattern['cycle_repeats']}"
+            if pattern["cycle"] else ""
+        )
+        return (
+            f"shape={pattern['shape']}, {pattern['total_calls']} calls{cycle}; "
+            f"{tools or 'no calls'}; tail={pattern['sequence_tail']}"
+        )
+
     async def cleanup(self):
         """Clean up resources (for MCP tools, etc)."""
         # Placeholder for future MCP cleanup

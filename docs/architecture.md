@@ -1249,6 +1249,17 @@ run's own `agent_run_complete`/`agent_run_error` records are unaffected
 — `turn_end` is a separate per-turn record. A missing `turn_end` for a
 turn means its outcome is unknown, not clean.
 
+**2026-09-26 (debt Item 80):** "max-iterations reached" no longer ends
+the turn on the fall-through exit. After the last tool iteration, one
+extra pass runs with tools withdrawn (an INFO carrying
+`ToolGuardReason.ITERATION_CAP` and the turn's `call_pattern`), and its
+answer leaves through the normal completion exit. That exit's
+`AGENT_RUN_COMPLETE` then carries `max_iterations_reached: true`. The
+fall-through exit is still fenced as an exit, but a positive cap never
+reaches it now; only `max_iterations <= 0` does. At ~70% of the cap an
+INFO with `metadata.notice = "iteration_warning"` precedes it. That
+INFO is not a degradation.
+
 **2026-09-23, same day:** the contract above had three exceptions until
 the "every tool-loop exit ends with a run terminal" fix: the
 prompt-based fallback's provider error, the retry-synthesis provider

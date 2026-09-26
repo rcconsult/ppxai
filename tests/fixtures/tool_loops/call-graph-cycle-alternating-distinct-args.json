@@ -3,7 +3,7 @@
   "shape": "call-graph-cycle",
   "provenance": "constructed",
   "source": "Documents a KNOWN GAP rather than a guarantee.",
-  "description": "Two uncapped tools alternating, every call with fresh arguments. Neither guard fires — the repeat rule needs identical arguments and neither tool carries a budget — so a model cycling between read_file and list_directory with new paths is bounded only by max_tool_iterations and the zombie breaker. Fuzzy/semantic argument matching was explicitly rejected (needs a tuned threshold, blocks deliberately different queries), so this gap is accepted, not hidden.",
+  "description": "Two uncapped tools alternating, every call with fresh arguments. Neither guard fires — the repeat rule needs identical arguments and neither tool carries a budget — so a model cycling between read_file and list_directory with new paths is bounded only by max_tool_iterations and the zombie breaker. Fuzzy/semantic argument matching was explicitly rejected (needs a tuned threshold, blocks deliberately different queries), so this gap is accepted, not hidden. Since debt Item 80 (2026-09-26) the cap no longer ends the turn on a canned line: one tools-withdrawn answer pass runs (ToolGuardReason.ITERATION_CAP), a converge notice precedes it at ~70% of the cap, and both log this shape as call_pattern.shape == 'cycle' (tests/test_tool_loop_guard.py::TestIterationCap). Detection-by-refusal is still not built.",
   "uses_shipped_defaults": true,
   "loop_tier": false,
   "calls": [

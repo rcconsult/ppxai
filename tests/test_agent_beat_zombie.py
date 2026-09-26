@@ -26,6 +26,7 @@ from ppxai.engine.types import (
     EventType,
     Message,
     ProviderCapabilities,
+    ToolGuardReason,
 )
 
 
@@ -65,6 +66,18 @@ class MockToolManager:
         self._recorded = []
 
     def reset_tool_history(self): self._recorded = []
+    # Item 80: the engine logs the turn's call shape and sends a converge
+    # notice; the double answers with an empty shape.
+    def describe_call_pattern(self, tail=12):
+        return {"total_calls": 0, "failed_calls": 0, "sequence_tail": [],
+                "per_tool": {}, "cycle": None, "cycle_repeats": 0, "shape": "empty"}
+
+    def format_call_pattern(self, pattern):
+        return f"shape={pattern['shape']}"
+
+    def get_iteration_warning_message(self, iteration, max_iterations):
+        return f"{iteration} of {max_iterations} steps used"
+
     def get_tools_openai_format(self):
         return [{"type": "function", "function": {"name": n}} for n in self._tools]
     def get_tools_prompt(self, working_dir=None): return ""
@@ -447,14 +460,25 @@ class TestEveryExitYieldsStreamEnd:
 
     @pytest.mark.asyncio
     async def test_max_iterations_exit_yields_final_stream_end(self):
-        # Ceiling of 2 with three scripted tool-turns: the loop must exit at
-        # the ceiling and still say so via STREAM_END (tools all succeed, so
-        # the zombie breaker never fires).
+        # Ceiling of 2 with more scripted tool-turns than that: after the
+        # second tool iteration, ONE answer-only pass runs with tools
+        # withdrawn (debt Item 80) and its text ends the stream, instead of
+        # the old canned "iterations limit reached" line. Tools all succeed,
+        # so the zombie breaker never fires.
         provider = MockProvider(scripted=[
             _ok_response("ok", "c1"),
             _ok_response("ok", "c2"),
-            _ok_response("ok", "c3"),
+            [Event(EventType.STREAM_END, "Answer from what I gathered.")],
         ])
+        tools_offered = []
+        scripted_chat = provider.chat
+
+        async def recording_chat(messages, model, stream=False, tools=None):
+            tools_offered.append(tools)
+            async for ev in scripted_chat(messages, model, stream=stream, tools=tools):
+                yield ev
+
+        provider.chat = recording_chat
         tm = MockToolManager(tools={"ok": _ok_tool})
         tm.max_iterations = 2
         ctx = MockChatContext(provider=provider, tool_manager=tm)
@@ -465,11 +489,44 @@ class TestEveryExitYieldsStreamEnd:
             mock_threshold.return_value = 0
             events = await _collect(ctx)
 
+        assert len(tools_offered) == 3, "two tool iterations plus one answer pass"
+        assert tools_offered[-1] is None, "the answer pass must offer no tools"
         ends = [e for e in events if e.type == EventType.STREAM_END and e.data]
-        assert ends, "max-iterations exit ended the stream with NO final STREAM_END"
-        assert "iterations limit reached" in str(ends[-1].data).lower()
-        # The fall-through exit owes the run terminal like every other exit.
+        assert ends, "capped turn ended the stream with NO final STREAM_END"
+        assert ends[-1].data == "Answer from what I gathered."
+        caps = [e for e in events if e.type == EventType.INFO and e.metadata
+                and e.metadata.get("reason") == ToolGuardReason.ITERATION_CAP.value]
+        assert len(caps) == 1
+        assert caps[0].metadata["max_iterations"] == 2
+        assert caps[0].metadata["call_pattern"]["shape"] == "empty"  # the double's
         completes = [e for e in events if e.type == EventType.AGENT_RUN_COMPLETE]
-        assert len(completes) == 1, "max-iterations exit must emit exactly one AGENT_RUN_COMPLETE"
+        assert len(completes) == 1, "capped turn must emit exactly one AGENT_RUN_COMPLETE"
+        assert completes[0].data.get("max_iterations_reached") is True
+        assert completes[0].data["degraded"] is True
+        assert completes[0].data["degradation_reasons"] == [ToolGuardReason.ITERATION_CAP.value]
+        assert not [e for e in events if e.type == EventType.AGENT_RUN_ERROR]
+
+    @pytest.mark.asyncio
+    async def test_fall_through_exit_with_no_iterations_yields_final_stream_end(self):
+        # With a positive cap the loop now always ends through the answer
+        # pass; the fall-through exit after the loop is reached only when
+        # there is no iteration to run. It still owes STREAM_END and the
+        # run terminal like every other exit.
+        provider = MockProvider(scripted=[_ok_response("ok", "c1")])
+        tm = MockToolManager(tools={"ok": _ok_tool})
+        tm.max_iterations = 0
+        ctx = MockChatContext(provider=provider, tool_manager=tm)
+        ctx.session.add_message(Message("user", "loop"))
+
+        provider.facts = ModelFacts(tool_mode="native")
+        with patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
+            mock_threshold.return_value = 0
+            events = await _collect(ctx)
+
+        ends = [e for e in events if e.type == EventType.STREAM_END and e.data]
+        assert ends, "fall-through exit ended the stream with NO final STREAM_END"
+        assert "iterations limit reached" in str(ends[-1].data).lower()
+        completes = [e for e in events if e.type == EventType.AGENT_RUN_COMPLETE]
+        assert len(completes) == 1, "fall-through exit must emit exactly one AGENT_RUN_COMPLETE"
         assert completes[0].data.get("max_iterations_reached") is True
         assert not [e for e in events if e.type == EventType.AGENT_RUN_ERROR]
