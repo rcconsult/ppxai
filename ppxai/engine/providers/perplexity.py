@@ -242,6 +242,14 @@ class PerplexityProvider(BaseProvider):
     #: so ONE provider serves both wires off one table.
     shipped_model_facts = AGENT_FLEET_FACTS
 
+    #: Function names `/v1/responses` refuses for custom tools ("custom
+    #: function name ... is reserved"), all three shipped as ppxai tools.
+    #: Measured 2026-09-26 against `perplexity/sonar` by sending ppxai's
+    #: full tool set (41 builtins plus `web_search`, `fetch_url`,
+    #: `get_weather`) and dropping each name the API reported until the
+    #: request passed. The Responses handler aliases these on the wire;
+    #: see `ResponsesHandler.RESERVED_ALIAS_PREFIX`.
+    reserved_function_names = frozenset({"search_files", "web_search", "fetch_url"})
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

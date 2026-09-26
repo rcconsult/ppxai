@@ -22,6 +22,12 @@
 > tool strip in the web and VSCode transcripts, which also fixes a
 > chevron that could expand to nothing.
 >
+> Two more, found by the 2026-09-26 VSCode smoke run, make the
+> Responses wire usable on `perplexity/sonar`, the only Sonar id left
+> after 09-27: attachments were sent with chat-completions part types,
+> and three tool names (`search_files`, `web_search`, `fetch_url`) are
+> reserved by Perplexity. Both failed every affected turn.
+>
 > **Command-surface changes, landed and Accepted 2026-09-21 (ADR 0007).**
 > `CommandSpec` is now the single declaration for every command;
 > completion, `/help` and both JS clients' menus derive from it. **This
@@ -480,6 +486,22 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   no longer reaches the fall-through exit, so its final text is the
   model's answer, not the canned line. The fall-through now runs only
   when `max_iterations <= 0`.
+- **Attachments work on Responses-wire models.** `perplexity/sonar`,
+  gpt-5.6-terra, gpt-5.3-codex and gpt-5-pro rejected every attachment
+  turn with `invalid type "text"`. The Responses handler passed
+  chat-completions content parts through unchanged. It now sends `text`
+  as `input_text` (`output_text` for assistant turns), `image_url` as
+  `input_image` and `file` as `input_file`.
+- **Tools on with `perplexity/sonar` no longer fails every turn.**
+  Perplexity's `/v1/responses` reserves `search_files`, `web_search` and
+  `fetch_url` as custom function names (measured 2026-09-26), so a
+  tools-on turn, and any `/task` grant naming one of them, failed before
+  the model answered. A provider now declares `reserved_function_names`;
+  the Responses handler sends those tools as `ppxai_<name>` and maps the
+  name back when the model calls one. Registry, grants, consent and logs
+  keep the real names. Only `PerplexityProvider` declares any.
+  Live-verified: a tools-on turn called `search_files`, then
+  `read_file`, and answered.
 
 ### The guard against over-reach
 

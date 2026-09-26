@@ -174,7 +174,9 @@ class TestOpenAINativeResponsesFlatten:
         )
         content = input_items[0]["content"]
         assert isinstance(content, list)
-        assert [b["type"] for b in content] == ["text", "text"]
+        # `/v1/responses` takes `input_text`, never the chat-completions
+        # "text" part (Perplexity 400s on it; smoke run 2026-09-26).
+        assert [b["type"] for b in content] == ["input_text", "input_text"]
         assert content[0]["text"] == "Check this doc:"
         assert content[1]["text"] == _expected_marker()
 

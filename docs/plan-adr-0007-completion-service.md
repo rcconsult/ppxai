@@ -890,7 +890,7 @@ verified:
 > | | 3 switch back → badge | ✅ flips back within 1.5 s |
 > | | 4 skew guard line in the "ppxai" channel | ✅ (same run as schema-guard 2) |
 >
-> **Defects found (none fixed yet; owner decides fix vs file):**
+> **Defects found (3 and 4 fixed 2026-09-26; the rest wait on the owner's fix vs file call):**
 > 1. **Inline `style="display:none"` is ignored in the webview.** The CSP
 >    is `style-src ${webview.cspSource}` with no `'unsafe-inline'`
 >    (`vscode-extension/src/chatPanel.ts:2723`), so the 6 elements that
@@ -906,18 +906,29 @@ verified:
 >    `/tools auto on` sends "Use '/auto <task>' to start …" (see
 >    `ppxai/commands/tools.py:385`), and the transcript shows
 >    "Use '/auto ' to start …", with `<task>` swallowed as a tag.
-> 3. **Attachments fail on every Responses-wire model.**
+> 3. **FIXED 2026-09-26. Attachments fail on every Responses-wire model.**
 >    `wire/responses.py` passes a list content through unchanged, so a
 >    chat-completions `{"type":"text"}` part reaches `/v1/responses`,
 >    which accepts only `input_text` / `output_text` / `input_image`.
 >    The live error was `input[0]: content part 0: invalid type "text"` on
 >    perplexity/sonar. The same code path serves gpt-5.6-terra,
 >    gpt-5.3-codex and gpt-5-pro.
-> 4. **Tools on + perplexity/sonar fails every turn.** Perplexity
+> 4. **FIXED 2026-09-26. Tools on + perplexity/sonar fails every turn.** Perplexity
 >    rejects `custom function name "search_files" is reserved`, so
 >    ppxai's full tool set cannot be offered to the only Sonar id left
->    after 2026-09-27. (`/task` grants that omit `search_files` are
->    unaffected.)
+>    after 2026-09-27. A probe of the whole tool set found three reserved
+>    names: `search_files`, `web_search` and `fetch_url`, so `/task`
+>    grants naming any of them failed too.
+>
+>    **Fix for 3 and 4:** `ResponsesHandler.to_responses_parts` maps
+>    `text`→`input_text` (`output_text` for assistant), `image_url`→
+>    `input_image` and `file`→`input_file`. A provider declares
+>    `reserved_function_names`; the handler sends those tools as
+>    `ppxai_<name>` (definitions, tool hint, history `function_call`
+>    items) and maps the name back on both the stream and non-stream
+>    paths. Live-verified on perplexity/sonar: a text attachment answers,
+>    and a tools-on turn called `search_files` then `read_file` and
+>    answered. Pinned by `tests/test_responses_wire_parts_and_reserved_names.py`.
 > 5. **`/context clear` never removes injected content.**
 >    The injector writes `` \n---\n**Attached context:**\n\n**`@x`** … ``,
 >    but the removal regex in `session_ops.clear_injected_contexts`

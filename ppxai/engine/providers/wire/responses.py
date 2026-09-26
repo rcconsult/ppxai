@@ -107,7 +107,7 @@ class ResponsesHandler:
                 if content:
                     input_items.append({
                         "role": role,
-                        "content": content,
+                        "content": ResponsesHandler.to_responses_parts(content, role),
                     })
                 # Assistant tool calls become SEPARATE `function_call` items.
                 # The engine stores them in the normalised chat-completions
@@ -127,6 +127,83 @@ class ResponsesHandler:
 
         instructions = "\n\n".join(instructions_parts) if instructions_parts else None
         return instructions, input_items
+
+    @staticmethod
+    def to_responses_parts(content: Any, role: str) -> Any:
+        """Translate chat-completions content parts to Responses input parts.
+
+        A string passes through (the API takes a bare string). A list is
+        rewritten part by part, because `/v1/responses` rejects the
+        chat-completions part types outright: Perplexity answered an
+        attachment with `input[N]: content part 0: invalid type "text"`
+        (smoke run 2026-09-26). User parts become `input_text` /
+        `input_image` / `input_file`; assistant parts become `output_text`.
+        An unknown part type is passed through unchanged, so the API names
+        it instead of it vanishing here.
+        """
+        if not isinstance(content, list):
+            return content
+        text_type = "output_text" if role == "assistant" else "input_text"
+        parts: list[Any] = []
+        for block in content:
+            if not isinstance(block, dict):
+                parts.append(block)
+                continue
+            btype = block.get("type")
+            if btype == "text":
+                parts.append({"type": text_type, "text": block.get("text", "")})
+            elif btype == "image_url":
+                image = block.get("image_url")
+                url = image.get("url", "") if isinstance(image, dict) else image
+                part: dict[str, Any] = {"type": "input_image", "image_url": url}
+                if isinstance(image, dict) and image.get("detail"):
+                    part["detail"] = image["detail"]
+                parts.append(part)
+            elif btype == "file":
+                file_obj = block.get("file") or {}
+                parts.append({"type": "input_file", **file_obj})
+            else:
+                parts.append(block)
+        return parts
+
+    # ------------------------------------------------------------------
+    # Reserved function names (debt: smoke run 2026-09-26, defect 4)
+    # ------------------------------------------------------------------
+
+    #: Prefix a reserved tool name gets on the wire. The model sees and calls
+    #: `ppxai_search_files`; ppxai's tool registry, grants, consent and
+    #: hints keep the real name, because the alias never leaves this module.
+    RESERVED_ALIAS_PREFIX = "ppxai_"
+
+    @staticmethod
+    def _reserved(ctx: Any) -> frozenset[str]:
+        # Optional host attribute, same contract as `enable_web_search`:
+        # a host with no reserved names simply does not declare any.
+        return frozenset(getattr(ctx, "reserved_function_names", ()) or ())
+
+    @classmethod
+    def alias_name(cls, name: str, reserved: frozenset[str]) -> str:
+        return f"{cls.RESERVED_ALIAS_PREFIX}{name}" if name in reserved else name
+
+    @classmethod
+    def unalias_name(cls, name: str, reserved: frozenset[str]) -> str:
+        prefix = cls.RESERVED_ALIAS_PREFIX
+        if name.startswith(prefix) and name[len(prefix):] in reserved:
+            return name[len(prefix):]
+        return name
+
+    @classmethod
+    def _alias_chat_tools(
+        cls, tools: list[dict[str, Any]], reserved: frozenset[str]
+    ) -> list[dict[str, Any]]:
+        """Copy chat-format tools with every reserved name aliased."""
+        aliased = []
+        for tool in tools:
+            func = tool.get("function") if isinstance(tool, dict) else None
+            if isinstance(func, dict) and func.get("name") in reserved:
+                tool = {**tool, "function": {**func, "name": cls.alias_name(func["name"], reserved)}}
+            aliased.append(tool)
+        return aliased
 
     @staticmethod
     def convert_tools(openai_tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -233,6 +310,20 @@ class ResponsesHandler:
         matching what `_oneshot_responses` did before the move.
         """
         instructions, input_items = self.convert_messages(messages)
+
+        # A provider may reserve function names for its own built-in tools.
+        # Perplexity rejects `search_files`, `web_search` and `fetch_url`
+        # ("custom function name ... is reserved"), and ppxai ships tools
+        # with all three names. Alias them here, in the definitions, the
+        # tool hint and the history's `function_call` items, and map them
+        # back in `_stream` / `_non_stream`.
+        reserved = self._reserved(ctx)
+        if reserved:
+            if tools:
+                tools = self._alias_chat_tools(tools, reserved)
+            for item in input_items:
+                if item.get("type") == "function_call":
+                    item["name"] = self.alias_name(item.get("name", ""), reserved)
 
         request_kwargs: dict[str, Any] = {"model": model, "input": input_items}
         if instructions:
@@ -456,10 +547,13 @@ class ResponsesHandler:
                 if resp:
                     usage = self.parse_usage(getattr(resp, "usage", None))
 
-        # Emit TOOL_CALL events for all completed function calls
+        # Emit TOOL_CALL events for all completed function calls, under the
+        # REAL tool name (a reserved name was aliased in build_request).
+        reserved = self._reserved(ctx)
         tool_calls_metadata = []
         for call_id, fc in function_calls.items():
             if fc.get("name"):
+                fc["name"] = self.unalias_name(fc["name"], reserved)
                 try:
                     args = json.loads(fc["arguments"]) if fc["arguments"] else {}
                 except json.JSONDecodeError:
@@ -520,7 +614,7 @@ class ResponsesHandler:
 
                 elif item_type == "function_call":
                     call_id = getattr(item, "call_id", "") or getattr(item, "id", "")
-                    name = getattr(item, "name", "")
+                    name = self.unalias_name(getattr(item, "name", ""), self._reserved(ctx))
                     arguments = getattr(item, "arguments", "")
                     if name:
                         try:

@@ -315,4 +315,4 @@ class TestValidatorCoversThisWire:
         msg = Message(role="user", content=[{"type": "text", "text": "hi"}])
         instructions, items = ResponsesHandler.convert_messages([msg])
         assert instructions is None
-        assert items == [{"role": "user", "content": [{"type": "text", "text": "hi"}]}]
+        assert items == [{"role": "user", "content": [{"type": "input_text", "text": "hi"}]}]
