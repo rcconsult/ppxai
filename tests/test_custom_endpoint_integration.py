@@ -67,7 +67,6 @@ def custom_engine():
     to ensure it's set before any ppxai modules are imported during test collection.
     """
     import importlib
-    import sys
 
     # Load project .env for API keys
     env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
@@ -78,12 +77,11 @@ def custom_engine():
     if os.path.exists(user_env_path):
         load_dotenv(dotenv_path=user_env_path, override=True)
 
-    # Force reload of the base provider module to ensure fresh SSL_VERIFY reading
-    # This is critical because BaseProvider reads SSL_VERIFY at __init__ time
-    # and a previous test might have created a provider with different SSL settings
-    for mod_name in list(sys.modules.keys()):
-        if 'ppxai.engine.providers' in mod_name:
-            del sys.modules[mod_name]
+    # No provider-module purge here: TLS policy is resolved per client build
+    # (`tls_verify()` in ppxai/config/tls.py), so a fresh read needs no
+    # re-import. The purge this replaced deleted every `ppxai.engine.providers*`
+    # module without restoring it, so later modules compared classes from two
+    # different imports (debt Item 81).
 
     # Save original ConfigStore state
     import ppxai.config.store

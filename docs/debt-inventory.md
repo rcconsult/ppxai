@@ -71,7 +71,6 @@ quoting them** — this table is a map, not a source.
 | **77** | dead client code left after the ADR 0007 step-5 VSCode migration | ~45min, verified by grep — no owner decision needed, extended 2026-09-21 with 4 more dead `httpClient.ts` methods |
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
 | **80** | a non-repeating multi-tool cycle (`A, B, A, B, …`, distinct args every call) trips neither tool-loop guard | accepted gap, fuzzy matching deliberately declined — bounded only by the iteration cap and the zombie breaker |
-| **81** | test-ordering pollution: `test_oneshot_grounding.py::test_an_unregistered_provider_resolves_to_openai_compat` fails after `test_custom_endpoint_integration.py`, passes alone | predates v1.19.3 tool-loop work; a provider registration leaks across test modules |
 
 ---
 
@@ -2585,67 +2584,13 @@ patch; filing this item is the "accepted, not hidden" record the
 
 ---
 
-### Item 81 — test-ordering pollution: a provider registration leaks across test modules [tests / providers]
-
-**Filed 2026-09-23.** Found while verifying the v1.19.3 tool-loop guard
-work; unrelated to that change — reproduced against the same commit
-(`2514ba55`) with no code edits, so it predates this branch's tool-loop
-work.
-
-**What's wrong, reproduced directly:**
-
-```
-uv run pytest tests/test_custom_endpoint_integration.py tests/test_oneshot_grounding.py -q
-```
-
-fails one test:
-
-```
-FAILED tests/test_oneshot_grounding.py::TestTypeBasedProviders::test_an_unregistered_provider_resolves_to_openai_compat
-AssertionError: assert <class 'ppxai.engine.providers.openai_compat.OpenAICompatibleProvider'> is <class 'ppxai.engine.providers.openai_compat.OpenAICompatibleProvider'>
-```
-
-Both sides of the `is` comparison print the identical class path, which
-means two distinct class OBJECTS with the same qualified name are being
-compared — the shape of a module re-import or a registry re-populated
-with a second copy of the class, not a logic bug in
-`provider_class_for`. Run alone, the same test passes:
-
-```
-uv run pytest tests/test_oneshot_grounding.py::TestTypeBasedProviders::test_an_unregistered_provider_resolves_to_openai_compat -q
-# 1 passed
-```
-
-**Blast radius:** test-suite reliability only — this is an ordering
-artifact of running `tests/test_custom_endpoint_integration.py` before
-`tests/test_oneshot_grounding.py` in the same process (bisected to this
-specific pairing per the session that first noticed it; not
-independently re-bisected here beyond confirming the two-file
-reproduction and the alone-pass). No production code path is affected;
-`provider_class_for` behaves correctly in a fresh process.
-
-**Fix:** not diagnosed here — needs tracing which fixture or
-module-level state in `test_custom_endpoint_integration.py` registers
-or monkeypatches a provider class without tearing it down (a
-`get_provider_class` / `provider_class_for` registry entry surviving
-across test modules is the leading suspect, given the symptom).
-
-**Trigger to revisit:** next time someone touches provider registration
-plumbing (`ppxai/engine/providers/__init__.py`,
-`ppxai/engine/facts_resolver.py`) or adds a new cross-file provider
-test, since the leak widens the more tests can trip it.
-
-**Effort:** ~30min–1h to trace the leaking fixture; the fix itself is
-likely a teardown/reset one-liner once found.
-
----
-
 ## Closed (recent)
 
 One-liners only — full bodies + evidence trails in
 [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md);
 older per-version detail in the v1.18.2/v1.18.3 snapshots.
 
+- **Item 81** — test-order provider-class leak — closed 2026-09-26. `test_custom_endpoint_integration.py::custom_engine` purged `ppxai.engine.providers*` from `sys.modules` without restoring them, even on its skip path, so later modules compared classes from two imports. The purge was obsolete, because `tls_verify()` resolves at client build, so it is deleted. Fenced by `tests/test_no_sys_modules_purge.py` (AST check against computed-name `sys.modules` deletes in-process, mutation-verified). Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 82** — a `/task` run's `events.jsonl` now records a degraded turn — closed 2026-09-23, `59702221`. Narrow option, owner's call: persist only events carrying a `ToolGuardReason`, plus the terminal pair. `turn_degraded` (one per tool-guard degradation) and `turn_end` (one per turn, `degraded`/`degradation_reasons` copied verbatim from the engine, never defaulted) are new record types, additive; existing records and the run's own `agent_run_complete`/`agent_run_error` are unchanged. **Correction to how the item was filed:** the "four types persisted" list was built from the loop's branch CONDITIONS (`if event.type == …`) without reading the branch BODIES, and carried unchecked through two sessions. Four branches exist; only the `TOOL_CALL` body called `emit_event`. To audit what a loop persists, read what each branch DOES, not which branches exist. Fenced by 13 tests (`tests/test_task_run_degradation_audit.py`). The no-terminal hole it also recorded — three `chat_with_tools` exits that emit no terminal event, plus paths where `ERROR` arrives before `AGENT_RUN_ERROR` so the runner raises before reading it — was not closed by `59702221`; the owner chose to fix it rather than file it, and it was fixed the same day on this branch ("fix(engine): every tool-loop exit ends with a run terminal"): all three exits now emit `AGENT_RUN_ERROR`, and the runner holds an `ERROR`'s raise until the terminal has been persisted as `turn_end`. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 78** — the test suite leaked into the real `~/.ppxai` — closed 2026-09-21, and it was much bigger than filed: not just empty checkpoint directories (the filed leak), but also real session files, interleaved debug logs, `.preview-cache` PNGs, a staged upload, `usage.json`/`usage-events.jsonl` (the `/cost` sink) appended to, and the TUI's `session-state.json` restore pointer rewritten by a spawned `ppxai-server` subprocess that a pre-existing in-process guard could not reach. One clean-tree marker-file run measured **214 → 0** entries touched in the developer's real `~/.ppxai`. Fixed on both ends: `tests/conftest.py` redirects `HOME` to a throwaway directory before the first `ppxai` import (the one point at which that works), and `FileCheckpointBackend` no longer creates its directory at construction — only on the first real snapshot, which also means a session that never checkpoints leaves nothing behind in production, not just in tests. Fenced by `tests/test_home_hermeticity.py` and `tests/test_checkpoint.py::TestTheDirectoryIsCreatedLazily`. Existing empty directories on developer hosts were **not** deleted — cleanup command recorded in the archived body, owner's call. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 34** — office-preview deps; the `python-docx` half was **obsolete**, not deferred — closed 2026-09-20 (`99ca13f7`). The Word text fallback never used python-docx: `docx_tools.py` extracts with stdlib `zipfile` + `xml.etree` and `files.py:868` calls it for the `.docx` path; `grep -rn "import docx"` over `ppxai/` and `tests/` returns nothing, so the dependency would have grown every binary by a package nothing imports. The other two thirds (release-CI `--all-extras`) were verified fixed on 2026-06-14. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).

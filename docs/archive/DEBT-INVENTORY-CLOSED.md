@@ -2417,3 +2417,77 @@ designed exit leaves one out. The same commit added `filesystem` to
 the web and VSCode task views to render `turn_degraded`/`turn_end`.
 
 ---
+
+## Closed on `bugfix/v1.19.3` (archived 2026-09-26)
+
+### Item 81 — test-ordering pollution: a provider registration leaks across test modules → ✅ **CLOSED 2026-09-26** [tests / providers]
+
+**Filed 2026-09-23.** Found while verifying the v1.19.3 tool-loop guard
+work; unrelated to that change — reproduced against the same commit
+(`2514ba55`) with no code edits, so it predates this branch's tool-loop
+work.
+
+**What's wrong, reproduced directly:**
+
+```
+uv run pytest tests/test_custom_endpoint_integration.py tests/test_oneshot_grounding.py -q
+```
+
+fails one test:
+
+```
+FAILED tests/test_oneshot_grounding.py::TestTypeBasedProviders::test_an_unregistered_provider_resolves_to_openai_compat
+AssertionError: assert <class 'ppxai.engine.providers.openai_compat.OpenAICompatibleProvider'> is <class 'ppxai.engine.providers.openai_compat.OpenAICompatibleProvider'>
+```
+
+Both sides of the `is` comparison print the identical class path, which
+means two distinct class OBJECTS with the same qualified name are being
+compared — the shape of a module re-import or a registry re-populated
+with a second copy of the class, not a logic bug in
+`provider_class_for`. Run alone, the same test passes:
+
+```
+uv run pytest tests/test_oneshot_grounding.py::TestTypeBasedProviders::test_an_unregistered_provider_resolves_to_openai_compat -q
+# 1 passed
+```
+
+**Blast radius:** test-suite reliability only — this is an ordering
+artifact of running `tests/test_custom_endpoint_integration.py` before
+`tests/test_oneshot_grounding.py` in the same process (bisected to this
+specific pairing per the session that first noticed it; not
+independently re-bisected here beyond confirming the two-file
+reproduction and the alone-pass). No production code path is affected;
+`provider_class_for` behaves correctly in a fresh process.
+
+**Fix:** not diagnosed here — needs tracing which fixture or
+module-level state in `test_custom_endpoint_integration.py` registers
+or monkeypatches a provider class without tearing it down (a
+`get_provider_class` / `provider_class_for` registry entry surviving
+across test modules is the leading suspect, given the symptom).
+
+**Trigger to revisit:** next time someone touches provider registration
+plumbing (`ppxai/engine/providers/__init__.py`,
+`ppxai/engine/facts_resolver.py`) or adds a new cross-file provider
+test, since the leak widens the more tests can trip it.
+
+**Effort:** ~30min–1h to trace the leaking fixture; the fix itself is
+likely a teardown/reset one-liner once found.
+
+**Resolution (2026-09-26).** Traced in one read: the `custom_engine`
+fixture in `tests/test_custom_endpoint_integration.py` deleted every
+`ppxai.engine.providers*` entry from `sys.modules` and never restored
+them. It ran even when the test then skipped (no custom endpoint
+configured), because the purge came before the skip checks. Every
+module imported afterwards got fresh copies of the provider classes,
+while `ppxai.engine.facts_resolver`, already imported, still held the
+originals. That is why `is` failed with identical printed paths. The
+purge was obsolete anyway: its comment said `BaseProvider` read
+`SSL_VERIFY` at import, but TLS policy is now resolved per client build
+through `tls_verify()` (`ppxai/config/tls.py`), so no re-import is
+needed. The purge is deleted, and nothing replaces it. Fenced by
+`tests/test_no_sys_modules_purge.py`, an AST check that fails any
+in-process `del sys.modules[<non-literal>]` or `sys.modules.pop(<non-literal>)`
+under `tests/`. It was mutation-verified: restoring the old fixture
+fails the fence and names line 86. Named-leaf deletions such as
+`ppxai._build_info` and purges inside subprocess script strings are
+still allowed.
