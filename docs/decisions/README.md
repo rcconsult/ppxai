@@ -18,11 +18,10 @@ Status is summarised; the record itself is authoritative.
 | [0010](0010-config-shape-review.md) | Config shape: three axes | ✅ Implemented v1.19.1 — **clean break**, one deviation from the planned migration |
 | [0011](0011-command-taxonomy-streamline.md) | Command taxonomy (`/auto` · `/run` · `/task`) | ✅ Accepted — implemented v1.19.1 |
 | [0012](0012-wire-protocol-as-per-model-capability.md) | Per-model facts: one resolution system, wire protocol included | ✅ Implemented v1.19.1 — all four migration steps: unified `ModelFacts`/`ProviderCapabilities` split, `ProtocolHandler` + **four** wire handlers, `wire_protocol` routing, Perplexity on two wires. **Items 61 + 62 closed.** §6 (Anthropic `messages`) **shipped in v1.19.1**, opt-in and untested against the live API (Item 71). Resolution logic moved from `config/facts_config.py` to `engine/facts_config.py` on 2026-09-20 |
+| [0013](0013-ssh-remote-backend.md) | SSH remote backend: a local hub reaching remote ppxai servers | 📝 Proposed 2026-09-26 — seams S1–S7 defined, no code; five open questions. Plan: [`../plan-ssh-remote-backend.md`](../plan-ssh-remote-backend.md) |
 
-Every record is accepted and implemented; none is Proposed. 0007 was the
-last — all five of its steps landed 2026-09-21 and the owner accepted it
-the same day (unreleased). Numbering is
-sequential — the next record is `0013`.
+Records 0001–0012 are accepted and implemented; 0013 is Proposed. Numbering is
+sequential — the next record is `0014`.
 
 ## About these records
 
