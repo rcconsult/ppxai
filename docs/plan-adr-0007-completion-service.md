@@ -754,7 +754,7 @@ fences, and the full Python suite. What is NOT is real webview
 interaction, SecretStorage, and the side-effect refetch in a live host.
 The manual smoke list is in the step-3b report.
 
-**VSCode manual smoke checklist — NOT RUN.** No real VSCode extension
+**VSCode manual smoke checklist — RUN 2026-09-26 in VSCode web (see results below the vision list).** No real VSCode extension
 host was available during step C's `/tools`/`/context`/`/ls`/`/tree`
 migration (2026-09-21) either, so this list carries eight more items
 that also need a real extension host before they can be marked
@@ -859,6 +859,90 @@ verified:
 >    page to get the matching UI.").
 > 2. Same setup but ADD a field instead of removing one → only a
 >    `console.info` line, no chat notice, no interruption.
+
+> **VSCode smoke RUN 2026-09-26: 18 of 19 passed, 1 partial, and 7 defects found.**
+> Harness: a VSIX built from `864a7abc`, installed into `code serve-web`
+> (VSCode 1.133, isolated data dir) and driven headlessly by Playwright
+> Chromium 143. Firefox 144 (Playwright build) was tried first: the
+> workbench loads, but the chat webview stays blank because VS Code
+> serves webview resources through a service worker and never creates the
+> content frame. `ppxai-server` ran from source on :54320 with the real
+> `~/.ppxai` config, in a scratch workspace. **This is VSCode *web*, not
+> the desktop extension host.** SecretStorage and desktop-only paths were
+> not exercised. The Rich and Textual lists above are **still NOT RUN**.
+>
+> | List | Item | Result |
+> |---|---|---|
+> | step-C 8 | 1 `/tools` status block | ✅ key/value list |
+> | | 2 `/tools on`/`off` + Tools badge | ✅ badge shows `41`, then `off` |
+> | | 3 `/tools auto on`/`off` + Agent badge | ✅ flips both ways (see defect 2 for the message text) |
+> | | 4 `/tools help editing` / `<tool>` / `nope` | ✅ guide, description, red error |
+> | | 5 `/ls`, `/ls -a`, `/ls src`, `/tree`, `/tree 2` | ✅ readable table and tree |
+> | | 6 `/context`, `show`, `hints`, `reload` | ✅ |
+> | | 7 attach, then `/context clear` → Ctx% drops | ⚠️ **partial.** The badge refresh path works, but the clear removes nothing (defect 5) |
+> | | 8 `/checkpoint clear` QuickPick | ✅ Cancel is row 1 and focused; Enter on it → "Cancelled — nothing deleted"; Esc deletes nothing; row 2 → "Cleared 1 checkpoint(s)" |
+> | schema-guard | 1 matched pair | ✅ silent; the guard did fetch `/schema/app-state` |
+> | | 2 extension newer than server | ✅ **after a window reload**: one toast naming `model_supports_vision` with both versions, the same line in the "ppxai" channel, chat still works. See defect 7 for the restart-only case |
+> | | 3 server with no `/schema/app-state` (404 proxy) | ✅ no toast, one "could not verify … 404" line, chat works |
+> | | 4 server newer than extension | ✅ one "Adopted … smokeScratchField" line, no toast. Not observable from outside: whether a stale adoption survives a reconnect without a reload |
+> | vision | 1 palette switch to a non-vision model → badge | ✅ `ppxai: Switch Provider` → perplexity/sonar flips the badge within 1.5 s, no chat turn. `ppxai: Switch Model` updates it too, but no reachable model pair flips it that way |
+> | | 2 image attach warning wording | ✅ new wording ("the send will be blocked … never silently dropped") |
+> | | 3 switch back → badge | ✅ flips back within 1.5 s |
+> | | 4 skew guard line in the "ppxai" channel | ✅ (same run as schema-guard 2) |
+>
+> **Defects found (none fixed yet; owner decides fix vs file):**
+> 1. **Inline `style="display:none"` is ignored in the webview.** The CSP
+>    is `style-src ${webview.cspSource}` with no `'unsafe-inline'`
+>    (`vscode-extension/src/chatPanel.ts:2723`), so the 6 elements that
+>    start hidden through an attribute actually start visible (lines
+>    2745–2796): "⏹ Streaming..." shows while idle, "⚙ idle",
+>    "🤖 0 agents", the hints badge, the workspace-info row, and a raw
+>    "Choose Files" input. JS-set `element.style` still works, so some of
+>    them hide after the first state update; the file input never does.
+>    The CSP has been in place since v1.8.0 and the first inline style
+>    since 2025-12-20. Seen in VSCode web; desktop has the same CSP, but
+>    I have not checked it.
+> 2. **Command output is not HTML-escaped in the webview.**
+>    `/tools auto on` sends "Use '/auto <task>' to start …" (see
+>    `ppxai/commands/tools.py:385`), and the transcript shows
+>    "Use '/auto ' to start …", with `<task>` swallowed as a tag.
+> 3. **Attachments fail on every Responses-wire model.**
+>    `wire/responses.py` passes a list content through unchanged, so a
+>    chat-completions `{"type":"text"}` part reaches `/v1/responses`,
+>    which accepts only `input_text` / `output_text` / `input_image`.
+>    The live error was `input[0]: content part 0: invalid type "text"` on
+>    perplexity/sonar. The same code path serves gpt-5.6-terra,
+>    gpt-5.3-codex and gpt-5-pro.
+> 4. **Tools on + perplexity/sonar fails every turn.** Perplexity
+>    rejects `custom function name "search_files" is reserved`, so
+>    ppxai's full tool set cannot be offered to the only Sonar id left
+>    after 2026-09-27. (`/task` grants that omit `search_files` are
+>    unaffected.)
+> 5. **`/context clear` never removes injected content.**
+>    The injector writes `` \n---\n**Attached context:**\n\n**`@x`** … ``,
+>    but the removal regex in `session_ops.clear_injected_contexts`
+>    expects `` **`@x`** `` straight after `---`. The tracking list is
+>    cleared and the command reports "Cleared N", while the content stays
+>    in history (live: ~31,981 tokens / 25% before and after). Reproduced
+>    offline against `ContextInjector` too. It dates back to v1.13.9.
+> 6. **VSCode's `/auto` loop ignores completion.**
+>    `chatPanel.ts` looks for `TASK_COMPLETE:` only in `chunk` events.
+>    The tool path delivers its text whole, so the loop ran all 50
+>    iterations after "✅ Task completed!" on iteration 1. The closing
+>    "Max iterations reached" line is also posted unconditionally, even
+>    after a `break`.
+> 7. **The schema guard does not re-run when the server restarts under a
+>    live connection.** `check()` runs only in `initializeBackend()`. A
+>    server restart was picked up by the heartbeat re-anchor, which
+>    re-fetched state but not `/schema/app-state` (the only hit on the new
+>    server was my own curl). Web re-checks on heartbeat recovery; VSCode
+>    does not.
+>
+> Minor: `/checkpoint list` cuts file-backend ids to 8 characters, so every
+> same-day id reads `cp-20260`. Message timestamps (and the usage badge)
+> render dark-on-blue and are near-unreadable in VS Code web's light theme.
+> "No checkpoints found" renders as a red error. The vision warning
+> suggests `gpt-5.5, gemini-3-flash`.
 
 ### 4. Derive, don't restate — ✅ DONE (2026-09-21)
 
