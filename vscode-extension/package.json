@@ -168,7 +168,7 @@
         },
         "ppxai.defaultProvider": {
           "type": "string",
-          "default": "perplexity",
+          "default": "gemini",
           "description": "Default AI provider"
         },
         "ppxai.defaultModel": {

@@ -28,6 +28,11 @@
 > and three tool names (`search_files`, `web_search`, `fetch_url`) are
 > reserved by Perplexity. Both failed every affected turn.
 >
+> **Perplexity is deprecated as a chat provider; Gemini is the new
+> default** (owner decision 2026-09-27). Nothing is removed. Perplexity
+> stays a `web_search` backend, and an existing config that names it for
+> chat keeps working, with a warning. See "Deprecated" below.
+>
 > **Command-surface changes, landed and Accepted 2026-09-21 (ADR 0007).**
 > `CommandSpec` is now the single declaration for every command;
 > completion, `/help` and both JS clients' menus derive from it. **This
@@ -77,7 +82,10 @@ Nothing in this release requires an upgrade step. If you run tool loops
 against models whose facts rows you have not checked, the first fix is
 the reason to take it; if you serve the 27B-FP8 Qwen line, the catalog
 fix is; if you script against web or VSCode's `/quit`, switch to the
-"Leave" button / connect-disconnect commands.
+"Leave" button / connect-disconnect commands. If your
+`default_provider` (or `MODEL_PROVIDER`) is `perplexity`, nothing breaks
+yet, but switch chat to another provider before the removal release;
+`/doctor` flags it.
 
 ## One command registry (ADR 0007)
 
@@ -486,6 +494,13 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   no longer reaches the fall-through exit, so its final text is the
   model's answer, not the canned line. The fall-through now runs only
   when `max_iterations <= 0`.
+- **The server ignored `default_provider`.** `SessionManager` started
+  every engine on the first provider block in the config file, so neither
+  `default_provider` nor `MODEL_PROVIDER` reached web, VSCode or
+  `/v1/oneshot`. Found on 2026-09-27: with `default_provider: "gemini"`
+  the server still started on Perplexity, which is listed first. It now
+  starts on `get_default_provider()`. If that provider has no API key, it
+  tries the configured providers in file order.
 - **Attachments work on Responses-wire models.** `perplexity/sonar`,
   gpt-5.6-terra, gpt-5.3-codex and gpt-5-pro rejected every attachment
   turn with `invalid type "text"`. The Responses handler passed
@@ -543,6 +558,31 @@ guesses. Tests pin both.
   subprocess the suite spawns) resolves into the throwaway home from
   then on. `PPXAI_TEST_KEEP_HOME=1` keeps it after the run for
   inspection. No change for anyone who only runs `ppxai` normally.
+
+## Deprecated
+
+- **Perplexity as a chat provider.** Its chat-completions API retired on
+  2026-09-27. The one Sonar id left, `perplexity/sonar`, needed two
+  wire fixes found the day before (see Fixed). Perplexity stays as a
+  `web_search` backend; only chat is deprecated.
+  - `default_provider` is now `gemini` in both shipped configs, the
+    configs the installers generate, and VSCode's built-in config and
+    `ppxai.defaultProvider` setting. The fallback when nothing valid is
+    configured is `gemini`, then the first configured provider.
+  - Selecting Perplexity for chat **warns and never raises**: one log
+    warning, and an INFO event (`metadata.notice =
+    "provider_deprecated"`) leading the next chat turn. `/provider` marks
+    it, and `/doctor` flags a Perplexity default with a warning status
+    (`metadata.deprecated_default_provider`). Start-up code that selects
+    the configured default keeps working.
+  - `get_provider_config("<unknown>")` returns `{}` instead of
+    Perplexity's block, which silently swapped providers under the caller.
+  - The web_search backend reads Perplexity's model facts from
+    `providers/perplexity_facts.py`, not from the chat provider class, so
+    phase 2 can delete that class without breaking web_search.
+  - **Phase 2 (a later release, new ADR):** remove the chat provider and
+    its gateway models, and decide what replaces grounding through
+    Perplexity; today that path *is* the chat provider.
 
 ## Changed
 

@@ -9,6 +9,7 @@ v1.15.0: Migrated to type-based renderer dispatch
 
 
 from ..config import (  # noqa: F401 — patched/read by tests
+    DEPRECATED_CHAT_PROVIDERS,
     PROVIDERS,
     get_api_key,
     get_base_url,
@@ -160,6 +161,8 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
             has_key = bool(get_api_key(provider_id))
             is_current = provider_id == current_provider
             key_status = "" if has_key else " (no API key)"
+            if provider_id in DEPRECATED_CHAT_PROVIDERS:
+                key_status += " (deprecated for chat)"
             items.append({
                 "id": provider_id,
                 "name": config.get("name", provider_id),
@@ -230,12 +233,16 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
     message = f"Switched to: {new_config['name']} (model: {new_model})"
     if reset_count > 0:
         message += f" (cleared {reset_count} previous messages)"
+    deprecation = DEPRECATED_CHAT_PROVIDERS.get(new_provider)
+    if deprecation:
+        message += f"\n⚠ {deprecation}"
 
     details = {
         "provider": new_provider,
         "provider_name": new_config['name'],
         "model": new_model,
         "context_reset": reset_count,
+        "deprecated": bool(deprecation),
     }
 
     return ConfirmationResult(

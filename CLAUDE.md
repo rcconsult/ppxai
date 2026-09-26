@@ -226,7 +226,7 @@ GH_TOKEN=$(cat .github/gh-token.env) gh release list
 3. **Event-based communication** — Engine emits events; clients render them
 4. **OpenAI SDK for all providers** — OpenAI-compatible API format
 5. **Hybrid config** — Secrets (`.env`) separate from settings (`ppxai-config.json`)
-6. **Built-in providers** — Perplexity and Gemini always available without config
+6. **Default chat provider is Gemini** (since 2026-09-27). Perplexity is deprecated as a chat provider: selecting it warns (log + one INFO event, `/doctor` flags a Perplexity default) and never raises; it stays a web_search backend. Removal is phase 2, under a new ADR. The old "built-in providers" rule was already stale (`BUILTIN_PROVIDERS` removed in v1.13.10).
 7. **Transactional state management** — checkpoint/commit/rollback for atomic multi-step operations
 
 ## ppxaide / Terminal Images
@@ -241,7 +241,7 @@ For Hermes vs Harmony parsers, GPT-OSS quirks, Qwen3/2.5 setup, and the "I'll us
 
 ## Known Issues
 
-- Perplexity/Gemini may use shell commands for web data instead of native search when tools enabled (accepted behavior).
+- Gemini (and the deprecated Perplexity chat provider) may use shell commands for web data instead of native search when tools enabled (accepted behavior).
 
 ## Shell wrapper framework (v1.18.5)
 

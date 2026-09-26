@@ -34,8 +34,8 @@ from typing import Any
 
 import ppxai.config as _config
 
+from ..config import DEPRECATED_CHAT_PROVIDERS, find_config_file
 from ..config import execution as _execution
-from ..config import find_config_file
 from ..config.tls import resolve_tls_verify
 from ..engine.facts_config import (
     incomplete_blocks_in_config,
@@ -879,6 +879,29 @@ def _format_config_migration_section(config_data: dict[str, Any]) -> list[str]:
     return lines
 
 
+def deprecated_default_provider(config_data: dict[str, Any] | None) -> str | None:
+    """The deprecated chat provider this config or `MODEL_PROVIDER` selects.
+
+    `MODEL_PROVIDER` wins over the file's `default_provider`, as in
+    `get_default_provider()`. None when the selected provider is not
+    deprecated (or nothing is selected).
+    """
+    selected = os.getenv("MODEL_PROVIDER") or (config_data or {}).get("default_provider")
+    return selected if selected in DEPRECATED_CHAT_PROVIDERS else None
+
+
+def _format_default_provider_section(config_data: dict[str, Any] | None) -> list[str]:
+    """Flag a default chat provider that is deprecated (Perplexity, 2026-09-27)."""
+    lines = ["Default chat provider:"]
+    provider = deprecated_default_provider(config_data)
+    if provider is None:
+        lines.append("   ✓ not deprecated")
+        return lines
+    source = "MODEL_PROVIDER" if os.getenv("MODEL_PROVIDER") == provider else "default_provider"
+    lines.append(f"   ⚠ {source} is {provider!r}. {DEPRECATED_CHAT_PROVIDERS[provider]}")
+    return lines
+
+
 def _format_facts_section(config_data: dict[str, Any] | None = None) -> list[str]:
     """Report `facts` blocks that are stale, partial, misplaced or mistyped.
 
@@ -1002,6 +1025,11 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
         report = report + "\n\n" + "\n".join(_format_facts_section(raw_config))
     except Exception:  # noqa: BLE001 — never fail /doctor over a scan
         pass
+    # Perplexity deprecated as a chat provider (2026-09-27): the one place an
+    # operator whose config still defaults to it is told, before the removal
+    # release turns the warning into an error.
+    deprecated_default = deprecated_default_provider(raw_config)
+    report = report + "\n\n" + "\n".join(_format_default_provider_section(raw_config))
     probe_results: dict[str, dict[str, Any]] = {}
     drift: list[dict[str, Any]] = []
 
@@ -1030,7 +1058,9 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     # Escalate the result status when dead models are present so clients
     # that color by status highlight the warning appropriately.
     has_dead = bool(audit["dead"])
-    has_warnings = bool(audit["upcoming"]) or bool(audit["default_warnings"])
+    has_warnings = (
+        bool(audit["upcoming"]) or bool(audit["default_warnings"]) or bool(deprecated_default)
+    )
     has_drift_overclaim = any(d["severity"] == "over-claim" for d in drift)
 
     if has_dead or has_drift_overclaim:
@@ -1048,6 +1078,7 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
             "upcoming_count": len(audit["upcoming"]),
             "missing_recommended_count": len(audit["missing_recommended"]),
             "default_warnings_count": len(audit["default_warnings"]),
+            "deprecated_default_provider": deprecated_default,
             "probed": do_probe,
             "drift_overclaim_count": sum(1 for d in drift if d["severity"] == "over-claim"),
             "drift_underclaim_count": sum(1 for d in drift if d["severity"] == "under-claim"),

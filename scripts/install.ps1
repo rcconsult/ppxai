@@ -349,7 +349,7 @@ function Get-ConfigTemplate {
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "version": "1.3",
-  "default_provider": "perplexity",
+  "default_provider": "gemini",
   "session": {
     "auto_restore": "prompt",
     "auto_save_interval": 1
@@ -544,15 +544,16 @@ function Get-EnvTemplate {
 #   - OpenRouter: https://openrouter.ai/keys
 
 # =============================================================================
-# PERPLEXITY AI (Recommended - includes web search)
+# PERPLEXITY AI (web_search backend - deprecated as a chat provider 2026-09-27)
 # =============================================================================
-# Perplexity provides real-time web search with AI-powered answers.
+# Perplexity backs the web_search tool. As a chat provider it is deprecated
+# and will be removed in a later release; chat defaults to Gemini.
 # Models: perplexity/sonar (the only Sonar id on the Responses wire)
 #
 # PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # =============================================================================
-# GOOGLE GEMINI (Free tier available)
+# GOOGLE GEMINI (Recommended default chat provider - free tier available)
 # =============================================================================
 # Google's multimodal AI with web search grounding.
 # Models: gemini-3.5-flash, gemini-3.1-pro-preview, gemini-3.1-flash-lite

@@ -23,8 +23,26 @@ def _get_providers() -> dict[str, Any]:
 
 
 def _get_models() -> dict[str, Any]:
-    """Get models from default perplexity provider."""
-    return _get_providers().get("perplexity", {}).get("models", {})
+    """Get models from the default provider."""
+    return _get_providers().get(get_default_provider(), {}).get("models", {})
+
+
+#: The chat provider used when neither `MODEL_PROVIDER` nor the config's
+#: `default_provider` names one that is configured. Was "perplexity" until
+#: 2026-09-27, when Perplexity was deprecated as a chat provider (it stays
+#: a web_search backend).
+FALLBACK_PROVIDER = "gemini"
+
+#: Chat providers that still work but are deprecated. `set_provider` warns
+#: on selecting one and `/doctor` flags it as the configured default.
+DEPRECATED_CHAT_PROVIDERS: dict[str, str] = {
+    "perplexity": (
+        "Perplexity is deprecated as a chat provider (2026-09-27) and will be "
+        "removed in a later release. It remains available as a web_search "
+        "backend (tools.web_search). Switch chat to another provider, e.g. "
+        "gemini."
+    ),
+}
 
 
 def get_default_provider() -> str:
@@ -33,7 +51,8 @@ def get_default_provider() -> str:
     Checks in order:
     1. MODEL_PROVIDER environment variable
     2. default_provider from config file
-    3. Falls back to "perplexity"
+    3. Falls back to FALLBACK_PROVIDER ("gemini") if configured, else the
+       first configured provider
 
     Returns:
         Provider ID string.
@@ -43,11 +62,14 @@ def get_default_provider() -> str:
         return env_provider
 
     config = ConfigStore.get_instance().config
-    default = config.get("default_provider", "perplexity")
-    if default in _get_providers():
+    providers = _get_providers()
+    default = config.get("default_provider", FALLBACK_PROVIDER)
+    if default in providers:
         return default
 
-    return "perplexity"
+    if FALLBACK_PROVIDER in providers or not providers:
+        return FALLBACK_PROVIDER
+    return next(iter(providers))
 
 
 def get_config_source() -> str:
@@ -61,11 +83,15 @@ def get_available_providers() -> list[str]:
 
 
 def get_provider_config(provider: str = None) -> dict:
-    """Get configuration for the specified provider."""
+    """Get configuration for the specified provider.
+
+    An unknown provider gets an empty dict. It used to get Perplexity's
+    block, which silently swapped providers under the caller (e.g. a
+    per-provider `web_search` override read from the wrong block).
+    """
     if provider is None:
         provider = get_default_provider()
-    providers = _get_providers()
-    return providers.get(provider, providers.get("perplexity", {}))
+    return _get_providers().get(provider, {})
 
 
 def get_active_models() -> dict:

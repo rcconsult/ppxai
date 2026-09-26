@@ -20,7 +20,7 @@ from ppxai.config.tls import tls_verify
 from ppxai.constants import APIEndpoint
 
 from ...model_facts import shipped_facts_for_model
-from ...providers.perplexity import PerplexityProvider
+from ...providers.perplexity_facts import AGENT_FLEET_FACTS
 from ...types import ToolUsage
 
 # ADR 0009 step ④: the ONE shared backend resolver (leaf module, top-level
@@ -247,7 +247,9 @@ async def web_search_perplexity(query: str, num_results: int = 5) -> tuple[str, 
     perplexity_model = tool_config.get("perplexity_model", "perplexity/sonar")
 
     # ADR 0012 W3: which wire this model speaks is a per-model FACT, resolved
-    # from the same table `PerplexityProvider` uses. This tool used to build
+    # from `perplexity_facts.AGENT_FLEET_FACTS`, the table the (deprecated)
+    # chat provider also reads; it lives outside the provider class so this
+    # backend survives the provider's removal. This tool used to build
     # its own client hardcoded to `/chat/completions`, which meant the
     # 2026-09-27 Sonar retirement would break web_search independently of the
     # provider — a second path to patch instead of one path to fix. Reading
@@ -255,7 +257,7 @@ async def web_search_perplexity(query: str, num_results: int = 5) -> tuple[str, 
     # this tool follows the provider onto the surviving wire with no code
     # change.
     wire = shipped_facts_for_model(
-        perplexity_model, PerplexityProvider.shipped_model_facts
+        perplexity_model, AGENT_FLEET_FACTS
     ).wire_protocol
 
     # TLS via the shared resolver. This site previously honoured SSL_VERIFY

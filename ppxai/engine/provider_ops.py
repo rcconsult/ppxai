@@ -26,6 +26,7 @@ functions because they're only called from `set_model` / `set_provider`.
 
 
 from ..common.logger import get_logger
+from ..config import DEPRECATED_CHAT_PROVIDERS
 from ..constants import Default
 from .model_facts import supports_vision as _supports_vision
 from .providers import create_provider
@@ -138,6 +139,15 @@ def set_provider(engine, provider_name: str) -> bool:
 
     engine.provider_name = provider_name
     engine.state.set("provider", provider_name)
+
+    # Deprecated chat providers still work: warn, never refuse. A raise here
+    # would fail every caller that selects the configured default at
+    # start-up (ppxai-sre's initialize() does), so the removal release is
+    # where this becomes an error, not this one.
+    deprecation = DEPRECATED_CHAT_PROVIDERS.get(provider_name)
+    if deprecation:
+        logger.warning(deprecation)
+    engine._pending_provider_notice = deprecation
     engine.tool_manager.set_provider(provider_name)
     engine.session.set_provider(provider_name)
 

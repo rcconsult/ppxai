@@ -20,10 +20,10 @@ import json
 
 import pytest
 
-from ppxai.engine.providers.perplexity import (
+from ppxai.engine.providers.perplexity import PerplexityProvider
+from ppxai.engine.providers.perplexity_facts import (
     PERPLEXITY_NATIVE_TOOL_MODELS,
     PERPLEXITY_TOOL_REJECTING_MODELS,
-    PerplexityProvider,
 )
 from ppxai.engine.task_authorizer import (
     TaskAuthorizationError,

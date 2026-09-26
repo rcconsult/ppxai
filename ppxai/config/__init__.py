@@ -112,6 +112,8 @@ from .prompts import (
 
 # Provider, model, pricing, capabilities
 from .providers import (
+    DEPRECATED_CHAT_PROVIDERS,
+    FALLBACK_PROVIDER,
     _get_config,
     _get_models,
     _get_providers,
@@ -181,7 +183,7 @@ def _refresh_module_dicts():
     PROVIDERS.clear()
     PROVIDERS.update(config.get("providers", {}))
     MODELS.clear()
-    MODELS.update(PROVIDERS.get("perplexity", {}).get("models", {}))
+    MODELS.update(_get_models())
 
 
 # Register so reload_config() in store.py can refresh PROVIDERS/MODELS
@@ -239,6 +241,8 @@ def initialize():
 # =============================================================================
 
 __all__ = [
+    "DEPRECATED_CHAT_PROVIDERS",
+    "FALLBACK_PROVIDER",
     # Store
     "ConfigStore",
     "get_config",

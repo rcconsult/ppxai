@@ -115,7 +115,7 @@ AFTER INSTALLATION:
        source ~/.bashrc
 
     2. Set up your API key (or use --with-config to generate template):
-       echo 'PERPLEXITY_API_KEY=your-key-here' > ~/.ppxai/.env
+       echo 'GEMINI_API_KEY=your-key-here' > ~/.ppxai/.env
 
     3. Run ppxai:
        ppxai              # Rich TUI (original)
@@ -349,7 +349,7 @@ generate_config() {
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "version": "1.3",
-  "default_provider": "perplexity",
+  "default_provider": "gemini",
   "session": {
     "auto_restore": "prompt",
     "auto_save_interval": 1
@@ -555,15 +555,16 @@ generate_env_template() {
 #   - OpenRouter: https://openrouter.ai/keys
 
 # =============================================================================
-# PERPLEXITY AI (Recommended - includes web search)
+# PERPLEXITY AI (web_search backend - deprecated as a chat provider 2026-09-27)
 # =============================================================================
-# Perplexity provides real-time web search with AI-powered answers.
+# Perplexity backs the web_search tool. As a chat provider it is deprecated
+# and will be removed in a later release; chat defaults to Gemini.
 # Models: perplexity/sonar (the only Sonar id on the Responses wire)
 #
 # PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # =============================================================================
-# GOOGLE GEMINI (Free tier available)
+# GOOGLE GEMINI (Recommended default chat provider - free tier available)
 # =============================================================================
 # Google's multimodal AI with web search grounding.
 # Models: gemini-3.5-flash, gemini-3.1-pro-preview, gemini-3.1-flash-lite
@@ -970,7 +971,7 @@ main() {
     fi
 
     # Check for API key (skip if config was generated)
-    if [[ "$INSTALL_CONFIG" != true ]] && [[ ! -f "${DATA_DIR}/.env" ]] && [[ -z "${PERPLEXITY_API_KEY:-}" ]]; then
+    if [[ "$INSTALL_CONFIG" != true ]] && [[ ! -f "${DATA_DIR}/.env" ]] && [[ -z "${GEMINI_API_KEY:-}" ]]; then
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         info "Next: Set up your API key"
@@ -979,9 +980,9 @@ main() {
         echo "    curl -sSL ... | bash -s -- --with-config"
         echo ""
         echo "Option 2: Create ~/.ppxai/.env manually:"
-        echo "    echo 'PERPLEXITY_API_KEY=your-key-here' > ~/.ppxai/.env"
+        echo "    echo 'GEMINI_API_KEY=your-key-here' > ~/.ppxai/.env"
         echo ""
-        echo "Get your API key at: https://www.perplexity.ai/settings/api"
+        echo "Get your API key at: https://aistudio.google.com/apikey"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     fi
 

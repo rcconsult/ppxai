@@ -43,12 +43,44 @@ export interface PpxaiConfig {
     providers: Record<string, ProviderConfig>;
 }
 
-// Built-in default configuration (Perplexity)
+// Built-in default configuration. Gemini is the default chat provider since
+// 2026-09-27, when Perplexity was deprecated for chat (it remains a
+// web_search backend server-side). Mirrors ppxai-config.example.json.
 const DEFAULT_CONFIG: PpxaiConfig = {
-    default_provider: "perplexity",
+    default_provider: "gemini",
     providers: {
+        "gemini": {
+            name: "Google Gemini",
+            base_url: "https://generativelanguage.googleapis.com/v1beta/openai",
+            api_key_env: "GEMINI_API_KEY",
+            default_model: "gemini-3.5-flash",
+            coding_model: "gemini-3.5-flash",
+            models: {
+                "gemini-3.5-flash": {
+                    name: "Gemini 3.5 Flash",
+                    description: "Default chat model",
+                    facts: { wire_protocol: "chat_completions", tool_mode: "native", max_tokens: 65536 }
+                },
+                "gemini-3.1-pro-preview": {
+                    name: "Gemini 3.1 Pro Preview",
+                    description: "Advanced reasoning and agentic model, 1M context",
+                    facts: { wire_protocol: "chat_completions", tool_mode: "native", max_tokens: 65536 }
+                },
+                "gemini-3.1-flash-lite": {
+                    name: "Gemini 3.1 Flash Lite",
+                    description: "Cheapest Gemini 3 tier",
+                    facts: { wire_protocol: "chat_completions", tool_mode: "native", max_tokens: 16384 }
+                }
+            },
+            pricing: {
+                "gemini-3.5-flash": { input: 0.5, output: 3.0 },
+                "gemini-3.1-pro-preview": { input: 2.0, output: 12.0 },
+                "gemini-3.1-flash-lite": { input: 0.1, output: 0.4 }
+            }
+        },
+        // Deprecated as a chat provider 2026-09-27; removal in a later release.
         "perplexity": {
-            name: "Perplexity AI",
+            name: "Perplexity AI (deprecated for chat)",
             base_url: "https://api.perplexity.ai",
             api_key_env: "PERPLEXITY_API_KEY",
             default_model: "perplexity/sonar",
@@ -285,7 +317,7 @@ export class ConfigManager {
 
     getBaseUrl(provider?: string): string {
         const p = this.config.providers[provider || this.currentProvider];
-        return p?.base_url || 'https://api.perplexity.ai';
+        return p?.base_url || DEFAULT_CONFIG.providers[DEFAULT_CONFIG.default_provider].base_url;
     }
 
     getCodingModel(provider?: string): string {

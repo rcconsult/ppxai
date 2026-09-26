@@ -8,7 +8,7 @@ The label came from `is_unmeasured(model_id, provider_table)`, which answers
 `(built-in)`.
 
 `PerplexityProvider` builds its gateway rows like this
-(`AGENT_FLEET_FACTS`, `providers/perplexity.py`):
+(`AGENT_FLEET_FACTS`, `providers/perplexity_facts.py`):
 
     replace(shipped_facts_for_model(glob.rstrip("*")), wire_protocol=...,
             max_tokens=..., tool_mode=...)
@@ -42,7 +42,7 @@ import pytest
 import ppxai.commands.provider as provider_mod
 from ppxai.commands.provider import handle_model_info
 from ppxai.engine.model_facts import UNMEASURED, is_unmeasured
-from ppxai.engine.providers.perplexity import AGENT_FLEET_FACTS, AGENT_FLEET_GLOBS
+from ppxai.engine.providers.perplexity_facts import AGENT_FLEET_FACTS, AGENT_FLEET_GLOBS
 
 GATEWAY_MODEL = "openai/gpt-5.6-terra"
 

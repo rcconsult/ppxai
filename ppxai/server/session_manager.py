@@ -17,7 +17,11 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from ..common.logger import get_logger
-from ..config import (get_available_providers, get_server_config)  # noqa: F401 — patched/read by tests
+from ..config import (  # noqa: F401 — patched/read by tests
+    get_available_providers,
+    get_default_provider,
+    get_server_config,
+)
 from ..config.paths import get_default_working_dir
 from ..engine import EngineClient
 from pathlib import Path  # noqa: F401 — patched by tests
@@ -31,6 +35,24 @@ logger = get_logger("session_manager")
 # Engine -> Server -> Clients — which blocked engine/task_runner.py. Callers
 # doing `from ..session_manager import get_default_working_dir` still work.
 __all__ = ["get_default_working_dir", "SessionManager", "Session"]
+
+
+def _select_default_provider(engine) -> None:
+    """Start an engine on the configured default provider.
+
+    Used to take `get_available_providers()[0]`, the first block in the
+    config file, so `default_provider` and `MODEL_PROVIDER` never reached
+    the server (found 2026-09-27: with `default_provider: "gemini"` the
+    server still started on Perplexity, listed first). If the default
+    cannot be set (no API key), fall back to the configured providers in
+    order, so the server starts on a working provider rather than none.
+    """
+    default = get_default_provider()
+    if engine.set_provider(default):
+        return
+    for provider in get_available_providers():
+        if provider != default and engine.set_provider(provider):
+            return
 
 
 @dataclass
@@ -160,10 +182,7 @@ class SessionManager:
         # When server starts from a binary, CWD may be the install dir.
         self._default_engine.set_working_dir(self._get_default_working_dir())
 
-        # Set default provider
-        providers = get_available_providers()
-        if providers:
-            self._default_engine.set_provider(providers[0])
+        _select_default_provider(self._default_engine)
 
         # Initialize activity tracking
         self._last_activity = time.time()
@@ -279,10 +298,7 @@ class SessionManager:
         # Default working dir from config (server.working_dir) or home directory
         engine.set_working_dir(self._get_default_working_dir())
 
-        # Set default provider
-        providers = get_available_providers()
-        if providers:
-            engine.set_provider(providers[0])
+        _select_default_provider(engine)
 
         return Session(
             engine=engine,

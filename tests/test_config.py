@@ -187,10 +187,13 @@ class TestProviderConfig:
         assert config["name"] == "Perplexity AI"
         assert config["base_url"] == "https://api.perplexity.ai"
 
-    def test_get_provider_config_invalid_falls_back(self):
-        """Test get_provider_config falls back to perplexity for invalid provider."""
-        config = get_provider_config("nonexistent")
-        assert config == PROVIDERS["perplexity"]
+    def test_get_provider_config_unknown_is_empty(self):
+        """An unknown provider gets {}, not another provider's block.
+
+        It used to get Perplexity's, silently swapping providers under the
+        caller (2026-09-27, when Perplexity was deprecated for chat).
+        """
+        assert get_provider_config("nonexistent") == {}
 
     def test_get_active_models(self):
         """Test get_active_models returns models dict."""

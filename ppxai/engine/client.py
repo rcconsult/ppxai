@@ -217,6 +217,11 @@ class EngineClient:
         # initialization makes the intent clear and avoids any early-call edge cases.
         self._suppress_hint_log: bool = False
 
+        # Deprecation notice for the active chat provider, set by
+        # set_provider() and shown once as an INFO event on the next chat
+        # turn (Perplexity deprecated as a chat provider 2026-09-27).
+        self._pending_provider_notice: str | None = None
+
         # Event side-channel for SSE streaming (consent requests, state sync).
         # Protected by a lock — SSE drain loop pops while listeners/callbacks append.
         self._event_queue: list[Event] = []
@@ -1065,6 +1070,14 @@ class EngineClient:
         if not self.model:
             yield Event(EventType.ERROR, "No model selected")
             return
+
+        if self._pending_provider_notice:
+            notice, self._pending_provider_notice = self._pending_provider_notice, None
+            yield Event(
+                EventType.INFO,
+                notice,
+                metadata={"notice": "provider_deprecated", "provider": self.provider_name},
+            )
 
         # Reset interrupt flag at start of chat
         self._interrupted = False
