@@ -56,18 +56,15 @@ const DEFAULT_CONFIG: PpxaiConfig = {
             models: {
                 // ADR 0012 W3/W5. `perplexity/sonar` is the ONLY Sonar model
                 // Perplexity serves on the Responses wire (measured
-                // 2026-08-31); the bare IDs below are chat-completions only,
-                // and that endpoint retires 2026-09-27. Defaults point at the
-                // surviving wire so a fresh install keeps working.
+                // 2026-08-31). The chat-completions ids (`sonar`, `sonar-pro`,
+                // `sonar-reasoning`, `sonar-reasoning-pro`) are no longer
+                // offered: that endpoint retired 2026-09-27. Their pricing
+                // rows stay below so older sessions still cost correctly.
                 "perplexity/sonar": {
                     name: "Sonar",
-                    description: "Fast, good for general queries (Responses wire — survives 2026-09-27)",
+                    description: "Fast, good for general queries (Responses wire)",
                     facts: { wire_protocol: "responses", tool_mode: "auto", max_tokens: 4096 }
-                },
-                "sonar": { name: "Sonar (chat wire)", description: "Chat-completions only — endpoint retires 2026-09-27" },
-                "sonar-pro": { name: "Sonar Pro", description: "Advanced reasoning. Chat-completions only — not served on the Responses wire" },
-                "sonar-reasoning": { name: "Sonar Reasoning", description: "Extended thinking. Chat-completions only" },
-                "sonar-reasoning-pro": { name: "Sonar Reasoning Pro", description: "Most capable reasoning. Chat-completions only" }
+                }
             },
             pricing: {
                 "perplexity/sonar": { input: 1.0, output: 1.0 },

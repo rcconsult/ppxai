@@ -7,7 +7,7 @@ v1.12.0+: Use EngineClient for programmatic access:
     from ppxai.engine import EngineClient
     engine = EngineClient()
     engine.set_provider("perplexity")
-    engine.set_model("sonar-pro")
+    engine.set_model("perplexity/sonar")
 
 Note: TUI-specific imports are properly isolated - server builds exclude
 prompt_toolkit via PyInstaller spec, so no lazy loading is needed.

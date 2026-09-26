@@ -378,14 +378,6 @@ generate_config() {
             "tool_mode": "auto",
             "max_tokens": 4096
           }
-        },
-        "sonar-pro": {
-          "name": "Sonar Pro",
-          "description": "Advanced search model for complex queries. CHAT-COMPLETIONS ONLY - Perplexity retires that endpoint 2026-09-27 and does not serve this model on the Responses wire (measured 2026-08-31)."
-        },
-        "sonar-reasoning-pro": {
-          "name": "Sonar Reasoning Pro",
-          "description": "Precision reasoning with Chain of Thought. CHAT-COMPLETIONS ONLY - see sonar-pro."
         }
       },
       "pricing": {
@@ -566,7 +558,7 @@ generate_env_template() {
 # PERPLEXITY AI (Recommended - includes web search)
 # =============================================================================
 # Perplexity provides real-time web search with AI-powered answers.
-# Models: sonar (fast), sonar-pro (advanced), sonar-reasoning-pro
+# Models: perplexity/sonar (the only Sonar id on the Responses wire)
 #
 # PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
