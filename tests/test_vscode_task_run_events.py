@@ -24,11 +24,13 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import ESBUILD as CONFTEST_ESBUILD
+
 ROOT = Path(__file__).resolve().parents[1]
 EXT = ROOT / "vscode-extension"
 SRC = EXT / "src"
 CONTROLLER = SRC / "taskController.ts"
-ESBUILD = EXT / "node_modules" / ".bin" / "esbuild"
+ESBUILD = CONFTEST_ESBUILD
 NODE = shutil.which("node")
 
 pytestmark = pytest.mark.skipif(
@@ -120,7 +122,7 @@ def test_vscode_event_text_renders_turn_degraded_and_turn_end(tmp_path):
         "PATH": __import__("os").environ.get("PATH", ""),
     }
     proc = subprocess.run(
-        [NODE, "-e", _HARNESS], capture_output=True, text=True, timeout=30, env=env,
+        [NODE, "-e", _HARNESS], capture_output=True, text=True, encoding="utf-8", timeout=30, env=env,
     )
     assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
     assert "ALL OK" in proc.stdout, proc.stdout
@@ -151,7 +153,7 @@ def test_vscode_event_text_turn_degraded_is_plain_text(tmp_path):
         "PATH": __import__("os").environ.get("PATH", ""),
     }
     proc = subprocess.run(
-        [NODE, "-e", _ESCAPING_HARNESS], capture_output=True, text=True, timeout=30, env=env,
+        [NODE, "-e", _ESCAPING_HARNESS], capture_output=True, text=True, encoding="utf-8", timeout=30, env=env,
     )
     assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
     assert "ALL OK" in proc.stdout, proc.stdout

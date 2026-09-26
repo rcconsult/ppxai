@@ -27,6 +27,7 @@ docs/consent-contract.md for the full contract.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -356,6 +357,7 @@ class TestShellSecurityContract:
         await engine.request_shell_consent("git push origin main", ".")
         callback.assert_awaited_once()  # only first call asked
 
+    @pytest.mark.skipif(shutil.which("sleep") is None, reason="needs a sleep executable on PATH (Windows cmd.exe has none; Git's usr/bin provides one)")
     @pytest.mark.asyncio
     async def test_shell_execute_returns_timeout_message(self, tmp_path):
         """When the shell command exceeds tools.shell.timeout, the tool

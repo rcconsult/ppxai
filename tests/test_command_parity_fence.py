@@ -117,6 +117,7 @@ from ppxai.commands.factory import (
     CommandFactory,
 )
 from ppxai.commands.results import CLIENT_ROUND_TRIP_KINDS, SideEffectKind
+from tests.conftest import ESBUILD as CONFTEST_ESBUILD
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PPXAI = REPO_ROOT / "ppxai"
@@ -653,7 +654,9 @@ def find_catalogs(threshold: int = CATALOG_THRESHOLD) -> list[tuple[str, int, in
                 else scan_js_catalogs(src, token))
         for line, count, names in rows:
             if count >= threshold:
-                hits.append((str(path.relative_to(REPO_ROOT)), line,
+                # as_posix: CATALOG_EXEMPTIONS is keyed with "/"; str() gives
+                # "\" on Windows and no exemption ever matches there.
+                hits.append((path.relative_to(REPO_ROOT).as_posix(), line,
                              count, sorted(names)))
     return sorted(hits)
 
@@ -1644,7 +1647,7 @@ class TestRosterSelfConsistency:
 # extension's own esbuild — it is, and the two must agree.
 
 NODE = shutil.which("node")
-ESBUILD = EXT / "node_modules" / ".bin" / "esbuild"
+ESBUILD = CONFTEST_ESBUILD
 
 _ENTRY = "export * from './commandRouter';\n"
 
@@ -1671,14 +1674,14 @@ def _compiled_router_tables(tmp_path: Path) -> dict:
     build = subprocess.run(
         [str(ESBUILD), str(work / "entry.ts"), "--bundle", "--format=cjs",
          "--platform=node", "--target=node18", f"--outfile={out}"],
-        capture_output=True, text=True, timeout=120,
+        capture_output=True, text=True, encoding="utf-8", timeout=120,
     )
     assert build.returncode == 0, f"esbuild failed:\n{build.stderr}"
     script = tmp_path / "read.js"
     script.write_text(_HARNESS, encoding="utf-8")
     env = dict(os.environ, PPXAI_BUNDLE=str(out))
     run = subprocess.run([NODE, str(script)], capture_output=True,
-                         text=True, timeout=60, env=env)
+                         text=True, encoding="utf-8", timeout=60, env=env)
     assert run.returncode == 0, f"node failed:\n{run.stderr}"
     return json.loads(run.stdout)
 
@@ -1730,7 +1733,7 @@ class TestWebRegexAgreesWithTheRealModule:
         env = dict(os.environ, PPXAI_DISPATCHER=str(WEB_DISPATCHER),
                    PPXAI_SIDE_EFFECTS=str(WEB_SIDE_EFFECTS))
         run = subprocess.run([NODE, str(script)], capture_output=True,
-                             text=True, timeout=60, env=env)
+                             text=True, encoding="utf-8", timeout=60, env=env)
         assert run.returncode == 0, f"node failed:\n{run.stderr}"
         real = json.loads(run.stdout)
         assert real["actions"], "the real CLIENT_ACTIONS registry is empty"

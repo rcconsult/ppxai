@@ -51,10 +51,12 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import ESBUILD as CONFTEST_ESBUILD
+
 ROOT = Path(__file__).resolve().parents[1]
 EXT = ROOT / "vscode-extension"
 SRC = EXT / "src"
-ESBUILD = EXT / "node_modules" / ".bin" / "esbuild"
+ESBUILD = CONFTEST_ESBUILD
 NODE = shutil.which("node")
 CANONICAL = ROOT / "ppxai" / "engine" / "app_state_schema.json"
 
@@ -376,7 +378,7 @@ def _run(bundle: Path, harness: str = _HARNESS, **extra: str):
     env["PPXAI_CANONICAL_SCHEMA"] = CANONICAL.read_text(encoding="utf-8")
     env.update(extra)
     return subprocess.run(
-        [NODE, "-e", harness], capture_output=True, text=True, timeout=120, env=env
+        [NODE, "-e", harness], capture_output=True, text=True, encoding="utf-8", timeout=120, env=env
     )
 
 

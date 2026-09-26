@@ -59,7 +59,7 @@ def _run_gate(js_path: pathlib.Path, is_image, model_supports_vision) -> bool:
     result = subprocess.run(
         [NODE, "-e", script],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8",
         timeout=30,
     )
     assert result.returncode == 0, f"node failed: {result.stderr}"

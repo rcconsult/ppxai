@@ -11,6 +11,13 @@ from dotenv import load_dotenv
 #: The config this repository SHIPS. The suite's verdicts are pinned to it.
 REPO_CONFIG_FILE = Path(__file__).resolve().parent.parent / "ppxai-config.json"
 
+# The extension's esbuild, for the tests that compile real TS modules and run
+# them under Node. `.bin/esbuild` is a POSIX shell script; Windows cannot
+# execute it (WinError 193) and needs npm's `.cmd` shim instead.
+ESBUILD = (Path(__file__).resolve().parent.parent / "vscode-extension"
+           / "node_modules" / ".bin"
+           / ("esbuild.cmd" if sys.platform == "win32" else "esbuild"))
+
 #: The developer's REAL home, captured at conftest IMPORT time — i.e. before
 #: `pytest_configure` points `HOME` somewhere else. Everything downstream
 #: compares against this, so "is this path in the user's real data directory?"
@@ -102,9 +109,18 @@ def _redirect_home_to_tmp() -> Path:
     # serves from it (`WEB_UI_DIR`), and `grep -rn "web_dir\|WEB_DIR" ppxai/`
     # finds no write, mkdir, copy or unlink. If that ever changes, copy
     # instead; the symlink is the one thread back to the real home.
+    #
+    # Windows without Developer Mode refuses the symlink (WinError 1314), and
+    # this runs in `pytest_configure`, so an unhandled error there kills
+    # EVERY pytest invocation on such a host. Fall back to a copy: slower,
+    # but the copy lives inside the throwaway home `pytest_unconfigure`
+    # removes, so nothing can reach back to the real one.
     real_web = REAL_PPXAI_HOME / "web"
     if real_web.is_dir():
-        (ppxai_home / "web").symlink_to(real_web, target_is_directory=True)
+        try:
+            (ppxai_home / "web").symlink_to(real_web, target_is_directory=True)
+        except OSError:
+            shutil.copytree(real_web, ppxai_home / "web")
 
     os.environ["HOME"] = str(fake_home)
     # Windows: `os.path.expanduser("~")` prefers USERPROFILE, then

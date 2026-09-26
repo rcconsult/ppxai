@@ -133,7 +133,7 @@ console.log('ALL OK');
 def _run(side_effects: Path = SIDE_EFFECTS) -> subprocess.CompletedProcess:
     env = dict(os.environ, PPXAI_SIDE_EFFECTS=str(side_effects))
     return subprocess.run([NODE, "-e", _HARNESS], capture_output=True,
-                          text=True, timeout=60, env=env)
+                          text=True, encoding="utf-8", timeout=60, env=env)
 
 
 def test_web_renders_cancel_first_and_dispatches_the_picked_value():

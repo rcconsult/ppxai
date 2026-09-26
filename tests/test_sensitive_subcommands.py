@@ -322,7 +322,9 @@ class TestRedactSensitive:
         "/token set " + "x" * 100_000, "> " * 500 + "/token set x",
         "/token" + " " * 5000 + "set" + " " * 5000 + "secret",
         "\x00\x01\x02", "🔑", "/🔑 set x",
-    ])
+    # Short ids: pytest copies the node id into PYTEST_CURRENT_TEST, and a
+    # 100k-char id breaks Windows' 32,767-char environment-variable limit.
+    ], ids=lambda t: repr(t)[:40])
     def test_never_raises(self, text):
         out = CommandFactory.redact_sensitive(text)
         assert isinstance(out, str)

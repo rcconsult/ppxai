@@ -66,7 +66,7 @@ console.log("ALL OK");
 
 def test_task_run_view_event_text_reads_emitted_fields():
     script = _HARNESS.format(view=json.dumps(str(VIEW)))
-    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
+    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
     assert "ALL OK" in proc.stdout, proc.stdout
 
@@ -105,7 +105,7 @@ def test_task_run_view_live_log_bounds_dom_not_just_array():
     """appendEvent must prune the DOM in lock-step with the capped array — a long
     live run otherwise grows _eventsEl's node count without bound (Gemini review)."""
     script = _DOM_HARNESS.format(view=json.dumps(str(VIEW)))
-    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
+    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
     assert "ALL OK" in proc.stdout, proc.stdout
 
@@ -157,7 +157,7 @@ def test_task_run_view_park_invalidated_by_interrupt():
     agent_run_interrupted right behind it, so the card never dangles a dead
     pre-restart token (T7 retrial 409, 2026-07-12)."""
     script = _PARK_HARNESS.format(view=json.dumps(str(VIEW)))
-    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
+    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
     assert "ALL OK" in proc.stdout, proc.stdout
 
@@ -212,7 +212,7 @@ console.log("ALL OK");
 
 def test_task_run_view_renders_turn_degraded_and_turn_end():
     script = _DEGRADATION_HARNESS.format(view=json.dumps(str(VIEW)))
-    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
+    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
     assert "ALL OK" in proc.stdout, proc.stdout
 
@@ -248,6 +248,6 @@ console.log("ALL OK");
 
 def test_task_run_view_turn_degraded_escapes_via_textcontent():
     script = _ESCAPING_HARNESS.format(view=json.dumps(str(VIEW)))
-    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
+    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
     assert "ALL OK" in proc.stdout, proc.stdout

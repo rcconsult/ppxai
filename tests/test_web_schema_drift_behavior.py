@@ -265,7 +265,7 @@ def _run(app_state_js: Path = APP_STATE_JS, diff_js: Path = DIFF_JS) -> subproce
     env["PPXAI_DIFF_JS"] = str(diff_js)
     env["PPXAI_CANONICAL_SCHEMA"] = CANONICAL.read_text(encoding="utf-8")
     return subprocess.run(
-        [NODE, "-e", _HARNESS], capture_output=True, text=True, timeout=60, env=env
+        [NODE, "-e", _HARNESS], capture_output=True, text=True, encoding="utf-8", timeout=60, env=env
     )
 
 

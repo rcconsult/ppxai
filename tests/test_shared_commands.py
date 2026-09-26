@@ -97,7 +97,7 @@ class TestCommandRosterModule:
     def test_valid_javascript_syntax(self):
         result = subprocess.run(
             ["node", "--check", str(COMMAND_ROSTER_JS)],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8",
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
 
@@ -146,7 +146,7 @@ class TestFormatterFunctions:
     def test_formatters_js_syntax(self):
         result = subprocess.run(
             ["node", "--check", str(FORMATTERS_JS)],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8",
         )
         assert result.returncode == 0, f"Syntax error in formatters.js: {result.stderr}"
 

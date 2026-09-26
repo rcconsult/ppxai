@@ -80,7 +80,7 @@ global.fetch = async (url, opts) => {{
 def test_api_client_scopes_bearer_to_v1():
     script = _HARNESS.format(api_client=repr(str(API_CLIENT)))
     proc = subprocess.run(
-        [NODE, "-e", script], capture_output=True, text=True, timeout=60,
+        [NODE, "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=60,
     )
     assert proc.returncode == 0, f"stdout={proc.stdout}\nstderr={proc.stderr}"
     assert "ALL_PASS" in proc.stdout

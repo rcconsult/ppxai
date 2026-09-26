@@ -340,7 +340,7 @@ def _run(dispatcher: Path = DISPATCHER, roster: Path = ROSTER):
     env["PPXAI_ROSTER"] = str(roster)
     env["PPXAI_SIDE_EFFECTS"] = str(SIDE_EFFECTS)
     return subprocess.run(
-        [NODE, "-e", _HARNESS], capture_output=True, text=True, timeout=60, env=env
+        [NODE, "-e", _HARNESS], capture_output=True, text=True, encoding="utf-8", timeout=60, env=env
     )
 
 

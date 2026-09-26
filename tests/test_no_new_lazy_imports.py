@@ -1016,7 +1016,9 @@ def _tests_dir_import_counts():
         module = _module_name(path)
         hits = _function_level_ppxai_imports(tree, module, is_init)
         if hits:
-            rel = str(path.relative_to(REPO_ROOT))
+            # as_posix: BASELINE_TESTS_DIR is keyed "tests/x.py"; str() gives
+            # "tests\x.py" on Windows and every row reads as growth from 0.
+            rel = path.relative_to(REPO_ROOT).as_posix()
             counts[rel] = len(hits)
     return counts
 

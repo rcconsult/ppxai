@@ -234,7 +234,7 @@ def _run_js_renderer(renderer_src: str, beat: dict) -> dict[str, Any]:
     result = subprocess.run(
         ["node", "-e", patched_harness, json.dumps(beat)],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8",
         timeout=15,
     )
     if result.returncode != 0:

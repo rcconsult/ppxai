@@ -70,11 +70,12 @@ import pytest
 
 import ppxai.commands.handler  # noqa: F401  (populates CommandFactory)
 from ppxai.commands.factory import CommandFactory
+from tests.conftest import ESBUILD as CONFTEST_ESBUILD
 
 ROOT = Path(__file__).resolve().parents[1]
 EXT = ROOT / "vscode-extension"
 SRC = EXT / "src"
-ESBUILD = EXT / "node_modules" / ".bin" / "esbuild"
+ESBUILD = CONFTEST_ESBUILD
 NODE = shutil.which("node")
 
 #: The modules bundled for the harness. The first two are `vscode`-free
@@ -600,7 +601,7 @@ def _run(bundle: Path, harness: str = _HARNESS, **extra: str):
     env["PPXAI_VSCODE_ACTIONS"] = json.dumps(_vscode_actions())
     env.update(extra)
     return subprocess.run(
-        [NODE, "-e", harness], capture_output=True, text=True, timeout=120, env=env
+        [NODE, "-e", harness], capture_output=True, text=True, encoding="utf-8", timeout=120, env=env
     )
 
 

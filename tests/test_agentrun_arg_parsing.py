@@ -34,7 +34,7 @@ def _parse(argline: str) -> dict:
     )
     # `--` ends Node's own option parsing so a leading `--provider` in argline
     # reaches the script as process.argv[1] instead of being read as a node flag.
-    out = subprocess.check_output([NODE, "-e", harness, "--", argline], text=True)
+    out = subprocess.check_output([NODE, "-e", harness, "--", argline], text=True, encoding="utf-8")
     return json.loads(out)
 
 
@@ -106,7 +106,7 @@ def _start_body(argline: str, ui_provider: str, ui_model: str) -> dict:
         "})();\n"
         % (json.dumps(str(CONTROLLER)), json.dumps(ui_provider), json.dumps(ui_model))
     )
-    out = subprocess.check_output([NODE, "-e", harness, "--", argline], text=True)
+    out = subprocess.check_output([NODE, "-e", harness, "--", argline], text=True, encoding="utf-8")
     return json.loads(out)
 
 

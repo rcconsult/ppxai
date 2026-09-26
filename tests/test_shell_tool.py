@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import shutil
 import sys
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -30,6 +31,7 @@ def shell_tool(mock_engine):
 class TestCompoundCommands:
     """Shell operators (&&, ||, ;, |) should bypass cd/interactive handlers."""
 
+    @pytest.mark.skipif(shutil.which("pwd") is None, reason="needs a pwd executable on PATH (Windows cmd.exe has none; Git's usr/bin provides one)")
     @pytest.mark.asyncio
     async def test_cd_with_and_operator_runs_as_shell(self, shell_tool):
         """cd /path && command should NOT trigger cd handler (was bug: 'Directory not found')."""
@@ -51,6 +53,7 @@ class TestCompoundCommands:
         result = await shell_tool.execute("cd /tmp; pwd")
         assert "Directory not found" not in result
 
+    @pytest.mark.skipif(shutil.which("tr") is None, reason="needs a tr executable on PATH (Windows cmd.exe has none; Git's usr/bin provides one)")
     @pytest.mark.asyncio
     async def test_pipe_compound_command(self, shell_tool):
         """Commands with | should run via shell."""

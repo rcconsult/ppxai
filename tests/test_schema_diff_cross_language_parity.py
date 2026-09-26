@@ -24,10 +24,12 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import ESBUILD as CONFTEST_ESBUILD
+
 ROOT = Path(__file__).resolve().parents[1]
 EXT = ROOT / "vscode-extension"
 SRC = EXT / "src"
-ESBUILD = EXT / "node_modules" / ".bin" / "esbuild"
+ESBUILD = CONFTEST_ESBUILD
 NODE = shutil.which("node")
 CANONICAL = ROOT / "ppxai" / "engine" / "app_state_schema.json"
 WEB_DIFF_JS = ROOT / "ppxai" / "web" / "shared" / "app-state-schema-diff.js"
@@ -139,7 +141,7 @@ def _run(tmp_path: Path) -> subprocess.CompletedProcess:
     env["PPXAI_WEB_DIFF_JS"] = str(WEB_DIFF_JS)
     env["PPXAI_CANONICAL_SCHEMA"] = CANONICAL.read_text(encoding="utf-8")
     return subprocess.run(
-        [NODE, "-e", _HARNESS], capture_output=True, text=True, timeout=60, env=env
+        [NODE, "-e", _HARNESS], capture_output=True, text=True, encoding="utf-8", timeout=60, env=env
     )
 
 

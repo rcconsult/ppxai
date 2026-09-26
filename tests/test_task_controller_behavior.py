@@ -402,7 +402,7 @@ function makeApp(opts) {{
 def _run() -> subprocess.CompletedProcess:
     script = _HARNESS.format(controller=json.dumps(str(CONTROLLER)))
     return subprocess.run(
-        [NODE, "-e", script], capture_output=True, text=True, timeout=30
+        [NODE, "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30
     )
 
 

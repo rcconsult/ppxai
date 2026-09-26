@@ -85,8 +85,11 @@ def _node(script: str, **env_extra: str) -> subprocess.CompletedProcess:
     env = dict(os.environ)
     env["PPXAI_GENERATOR"] = str(GENERATOR)
     env.update(env_extra)
+    # encoding="utf-8": Node writes UTF-8; text=True alone decodes with the
+    # locale code page on Windows (cp1252), turning every "—" into "â€”".
     return subprocess.run(
-        [NODE, "-e", script], capture_output=True, text=True, timeout=120, env=env
+        [NODE, "-e", script], capture_output=True, text=True, encoding="utf-8",
+        timeout=120, env=env,
     )
 
 
