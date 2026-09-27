@@ -493,6 +493,16 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   no longer reaches the fall-through exit, so its final text is the
   model's answer, not the canned line. The fall-through now runs only
   when `max_iterations <= 0`.
+- **Five more defects from the 2026-09-26 VSCode smoke run.**
+  `/context clear` now actually removes injected content (defect 5,
+  broken since v1.13.9). Six VSCode webview elements that the CSP left
+  visible now start hidden (defect 1). Raw HTML in message text is
+  escaped in both VSCode and web, so `<task>` stays visible and
+  `<img onerror=...>` from a model is inert (defect 2). VSCode's `/auto`
+  stops when a tool-using turn reports `TASK_COMPLETE:`, and says "Max
+  iterations reached" only when it did (defect 6). VSCode re-checks the
+  AppState schema on window focus, so a server restarted under a live
+  connection is verified (defect 7).
 - **The first process on a fresh HOME had no providers.** Importing
   `ppxai` reads config at module level, which loaded the store before
   `initialize()` seeded `~/.ppxai/ppxai-config.json`. The store kept that

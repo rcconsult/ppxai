@@ -60,7 +60,7 @@ def _assert_stage_file_calls_gate(source: str) -> None:
 
 def _assert_reanchor_forwards_state_sync(source: str) -> None:
     m = re.search(
-        r"private async _reanchorFromServer\(\): Promise<void> \{(.*?)\n    \}",
+        r"private async _reanchorFromServer\([^)]*\): Promise<void> \{(.*?)\n    \}",
         source,
         re.DOTALL,
     )

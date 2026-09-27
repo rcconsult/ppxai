@@ -202,8 +202,12 @@ class TestLoggerBannerIntegration:
         monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
 
         from ppxai.common.logger import Logger
-        # Drop the cached singleton so the new home dir takes effect.
-        Logger._instances.clear()
+        # Drop the cached singletons so the new home dir takes effect, and
+        # put them back afterwards. A bare `.clear()` leaked into later tests
+        # in the same process: with the suite parallel (--dist loadfile), a
+        # worker that ran this file before test_config_write_target.py lost
+        # the "shadows it" warning that test asserts (found 2026-09-27).
+        monkeypatch.setattr(Logger, "_instances", {})
         log = Logger("banner-test")
         log.enable()
 

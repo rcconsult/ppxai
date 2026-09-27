@@ -95,6 +95,25 @@ if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
         breaks: true,
         gfm: true
     });
+    // Smoke defect 2 (2026-09-26): marked passes raw HTML through, so text
+    // such as "Use '/auto <task>' to start" rendered `<task>` as an element
+    // and the word vanished. Assistant, command and tool text is TEXT, so
+    // every raw-HTML token is escaped. The one exception is the link
+    // parseMarkdown() itself injects for a backticked URL below, matched by
+    // its exact shape.
+    const URL_LINK_OPEN = /^<a href="https?:\/\/[^"<>\s]*" target="_blank" rel="noopener" class="url-link">$/;
+    const escapeRawHtml = (s) => String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    marked.use({
+        renderer: {
+            html(html) {
+                const raw = String(html);
+                const t = raw.trim();
+                if (URL_LINK_OPEN.test(t) || t === '</a>') return raw;
+                return escapeRawHtml(raw);
+            }
+        }
+    });
     // Wrap marked.parse to pre-process backtick-wrapped URLs and markdown code blocks
     parseMarkdown = function(text) {
         if (!text) return '';
@@ -814,7 +833,7 @@ function updateAgentBeatBadge(beat) {
     const hasPayload = beat && typeof beat === 'object'
         && ('iteration' in beat || 'tool' in beat || 'elapsed_s' in beat);
     if (!hasPayload) {
-        badge.style.display = 'none';
+        badge.hidden = true;
         badge.classList.remove('warn', 'error');
         text.textContent = '⚙ idle';
         return;
@@ -836,7 +855,7 @@ function updateAgentBeatBadge(beat) {
     badge.classList.remove('warn', 'error');
     if (failures >= 2) badge.classList.add('warn');
     else if (!ok) badge.classList.add('error');
-    badge.style.display = '';
+    badge.hidden = false;
 }
 
 // Background-agents badge renderer (v1.19.0 Inc 9).
@@ -851,7 +870,7 @@ function updateBackgroundAgentsBadge(runs) {
 
     const list = Array.isArray(runs) ? runs : [];
     if (list.length === 0) {
-        badge.style.display = 'none';
+        badge.hidden = true;
         badge.removeAttribute('title');
         return;
     }
@@ -861,7 +880,7 @@ function updateBackgroundAgentsBadge(runs) {
         .map((r) => (r && r.task ? String(r.task) : '(task)'))
         .map((t) => (t.length > 60 ? t.slice(0, 60) + '…' : t));
     badge.setAttribute('title', 'Background agents:\n' + tasks.join('\n'));
-    badge.style.display = '';
+    badge.hidden = false;
 }
 
 // Function to update server status (v1.13.1)
@@ -1022,7 +1041,7 @@ window.addEventListener('message', (event) => {
         case 'startResponse':
             typingIndicator.textContent = 'Thinking... (Press Esc to stop)';
             typingIndicator.classList.add('visible');
-            streamingBadge.style.display = 'block';  // Show streaming indicator
+            streamingBadge.hidden = false;  // Show streaming indicator
             // v1.13.2: Set streaming flag, clear sending flag (matches web app pattern)
             isStreaming = true;
             isSending = false;
@@ -1090,7 +1109,7 @@ window.addEventListener('message', (event) => {
         case 'endResponse':
             endToolTurn();  // v1.19.3
             typingIndicator.classList.remove('visible');
-            streamingBadge.style.display = 'none';  // Hide streaming indicator
+            streamingBadge.hidden = true;  // Hide streaming indicator
             // v1.13.2: Reset flags after response (matches web app pattern)
             isStreaming = false;
             isSending = false;
@@ -1106,7 +1125,7 @@ window.addEventListener('message', (event) => {
         case 'error':
             endToolTurn();  // v1.19.3 — a failed turn still closes its strip
             typingIndicator.classList.remove('visible');
-            streamingBadge.style.display = 'none';  // Hide streaming indicator
+            streamingBadge.hidden = true;  // Hide streaming indicator
             addMessage('error', message.content, false);
             // v1.13.2: Reset flags after error (matches web app pattern)
             isStreaming = false;
@@ -1169,11 +1188,11 @@ window.addEventListener('message', (event) => {
 
         case 'hintsStatus':
             if (!message.loaded || message.total === 0) {
-                hintsBadge.style.display = 'none';
+                hintsBadge.hidden = true;
             } else {
                 hintsStatus.textContent = 'Hints: ' + message.total;
                 hintsBadge.title = message.provCount + ' provider + ' + message.modelCount + ' model hints\nSource: ' + message.source;
-                hintsBadge.style.display = '';
+                hintsBadge.hidden = false;
                 hintsBadge.classList.toggle('enabled', message.total > 0);
             }
             break;
@@ -1323,9 +1342,9 @@ window.addEventListener('message', (event) => {
                 workspacePathEl.textContent = message.path;
                 workspacePathEl.title = message.path;  // Show full path on hover
                 workspaceNameEl.textContent = message.name;
-                workspaceInfoEl.style.display = 'flex';
+                workspaceInfoEl.hidden = false;
             } else {
-                workspaceInfoEl.style.display = 'none';
+                workspaceInfoEl.hidden = true;
             }
             break;
 

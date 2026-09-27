@@ -919,6 +919,17 @@ class PpxaiApp {
                 breaks: true,
                 gfm: true  // GitHub Flavored Markdown (tables, strikethrough, etc.)
             });
+            // Smoke defect 2 (2026-09-26, found in VSCode, same code here):
+            // marked passes raw HTML through, so "Use '/auto <task>'" rendered
+            // `<task>` as an element and the word vanished. Message text is
+            // TEXT, so every raw-HTML token is escaped.
+            marked.use({
+                renderer: {
+                    html(html) {
+                        return escapeHtml(String(html));
+                    }
+                }
+            });
         }
     }
 

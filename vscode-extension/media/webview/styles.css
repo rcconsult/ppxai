@@ -1,3 +1,11 @@
+/* Smoke defect 1 (2026-09-26): the webview CSP has no 'unsafe-inline'
+   for style-src, so inline style="display:none" attributes were ignored and
+   six elements started visible. Elements start hidden with the `hidden`
+   attribute instead, and JS toggles `el.hidden`. !important because a class
+   that sets `display` (e.g. .workspace-info) would otherwise beat the UA's
+   [hidden] rule. */
+[hidden] { display: none !important; }
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -318,6 +326,7 @@ body {
 }
 
 .streaming-badge {
+    display: block;
     background: var(--vscode-editorWarning-foreground, #ff9800);
     color: var(--vscode-editor-background);
     padding: 2px 8px;

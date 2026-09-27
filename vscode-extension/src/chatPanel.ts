@@ -8,6 +8,7 @@
  *           to maintain parity with Desktop Web App.
  */
 
+import { AutoIterationText, taskCompleteSummary } from './autoLoop';
 import * as vscode from 'vscode';
 import { HttpClient, StreamEvent, SsePiggybackEvent } from './httpClient';
 import { startServer, stopServer, onServerStatusChange } from './extension';
@@ -792,7 +793,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             webviewView.webview,
             this._buildMessageHandlers(),
         );
-        const focusReanchor = installFocusReanchor(() => this._reanchorFromServer());
+        // Focus is VSCode's reconnect boundary, like web's tab-visible: a
+        // server restarted meanwhile is only noticed here, so re-verify the
+        // schema too (smoke defect 7: check() ran only in initializeBackend()).
+        const focusReanchor = installFocusReanchor(() => this._reanchorFromServer(true));
 
         webviewView.onDidDispose(() => {
             messageRouter.dispose();
@@ -870,8 +874,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
      * in `main.js`) never learns about it, and badges depending on it
      * stay stale until the next SSE push.
      */
-    private async _reanchorFromServer(): Promise<void> {
+    private async _reanchorFromServer(checkSchema = false): Promise<void> {
         try {
+            // Schema first, so fields adopted from a restarted server apply
+            // to the snapshot below. check() never fails closed and does not
+            // repeat a warning within one connection. Off for the
+            // provider/model-switch callers, as web's `checkSchema` is: same
+            // server, nothing to re-verify.
+            if (checkSchema) {
+                await this._schemaGuard.check();
+            }
             const snapshot = await this._backend.fetchState();
             const mapped = this._appState.updateFromPython(snapshot);
             this._view?.webview.postMessage({ type: 'stateSync', changes: mapped });
@@ -1461,7 +1473,10 @@ Example: /auto Fix the bug in auth.py
         // Process @file references in task
         const { message: augmentedTask } = await this.processFileReferences(task);
 
-        // Run agent loop
+        // Run agent loop. `stopped` is set by a completion or an error, so
+        // the "Max iterations" line is posted only when the loop really ran
+        // out (smoke defect 6: it was posted unconditionally).
+        let stopped = false;
         for (let iteration = 1; iteration <= maxIterations; iteration++) {
             this._view.webview.postMessage({
                 type: 'systemMessage',
@@ -1476,30 +1491,27 @@ Example: /auto Fix the bug in auth.py
             // Start streaming response
             this._view.webview.postMessage({ type: 'startResponse' });
 
-            let response = '';
-            let taskComplete = false;
+            // Chunks AND the `done` event: a tool-using turn delivers its
+            // text only in `done` (smoke defect 6).
+            const reply = new AutoIterationText();
 
             try {
                 await this._backend.chat(
                     prompt,
                     (event: StreamEvent) => {
                         this.handleStreamEvent(event);
-                        if (event.type === 'chunk' && event.content) {
-                            response += event.content;
-                        }
+                        reply.add(event);
                     }
                 );
 
-                // Check for completion signal
-                if (response.includes('TASK_COMPLETE:')) {
-                    taskComplete = true;
-                    const summaryParts = response.split('TASK_COMPLETE:');
-                    const summary = summaryParts[1]?.trim().slice(0, 200) || 'Done';
+                const summary = taskCompleteSummary(reply.text);
+                if (summary !== null) {
                     this._view.webview.postMessage({
                         type: 'systemMessage',
                         content: `✅ **Task completed!**
 Summary: ${summary}${summary.length >= 200 ? '...' : ''}`
                     });
+                    stopped = true;
                     break;
                 }
             } catch (error) {
@@ -1507,17 +1519,17 @@ Summary: ${summary}${summary.length >= 200 ? '...' : ''}`
                     type: 'error',
                     content: `Agent error: ${error}`
                 });
+                stopped = true;
                 break;
             }
-
-            if (taskComplete) break;
         }
 
-        // If we exhausted iterations
-        this._view.webview.postMessage({
-            type: 'systemMessage',
-            content: `⚠️ Max iterations (${maxIterations}) reached. Task may be incomplete.`
-        });
+        if (!stopped) {
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: `⚠️ Max iterations (${maxIterations}) reached. Task may be incomplete.`
+            });
+        }
     }
 
     /**
@@ -2742,18 +2754,18 @@ Review your previous actions and continue. If the task is complete, respond with
             <button class="tools-badge disabled" id="toolsBadge" title="Click to toggle tools">Tools: off</button>
             <button class="agent-badge disabled" id="agentBadge" title="Click to toggle agent mode">Agent: off</button>
             <button class="undo-badge" id="undoBadge" title="No checkpoint to undo">↶ Undo</button>
-            <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
-            <span class="agent-beat-badge" id="agentBeatBadge" style="display: none;" title="Agent heartbeat (iteration · tool · elapsed)"><span id="agentBeatText">⚙ idle</span></span>
-            <span class="background-agents-badge" id="backgroundAgentsBadge" style="display: none;" title="Active background agents"><span id="backgroundAgentsText">🤖 0 agents</span></span>
+            <button class="streaming-badge" id="streamingBadge" hidden title="Press Esc to stop">⏹ Streaming...</button>
+            <span class="agent-beat-badge" id="agentBeatBadge" hidden title="Agent heartbeat (iteration · tool · elapsed)"><span id="agentBeatText">⚙ idle</span></span>
+            <span class="background-agents-badge" id="backgroundAgentsBadge" hidden title="Active background agents"><span id="backgroundAgentsText">🤖 0 agents</span></span>
             <span class="usage-badge" id="usageBadge" title="Session token usage and cost">0↓/0↑</span>
             <button class="context-badge" id="contextBadge" title="Context window usage - Click to clear injected files">
                 <span id="contextUsage">Ctx: 0%</span>
             </button>
-            <span class="hints-badge" id="hintsBadge" style="display: none;" title="No bootstrap hints loaded">
+            <span class="hints-badge" id="hintsBadge" hidden title="No bootstrap hints loaded">
                 <span id="hintsStatus">Hints</span>
             </span>
         </div>
-        <div class="workspace-info" id="workspaceInfo" style="display: none;">
+        <div class="workspace-info" id="workspaceInfo" hidden>
             <span class="workspace-icon">📁</span>
             <span id="workspacePath" class="workspace-path"></span>
             <span class="workspace-name">(<span id="workspaceName"></span>)</span>
@@ -2793,7 +2805,7 @@ Review your previous actions and continue. If the task is complete, respond with
         <div class="autocomplete-container">
             <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
             <div class="input-wrapper">
-                <input type="file" id="fileInput" multiple style="display:none"
+                <input type="file" id="fileInput" multiple hidden
                        accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.xlsx,.pptx,.docx,.txt,.md,.py,.js,.ts,.json,.yaml,.yml">
                 <button id="attachBtn" class="attach-btn" title="Attach files">📎</button>
                 <textarea

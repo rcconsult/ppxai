@@ -185,8 +185,17 @@ def clear_injected_contexts(engine) -> int:
     if removed_count == 0:
         return 0
 
+    # `ContextInjector.process_message` appends ONE section to the end of the
+    # message: "\n\n---\n**Attached context:**\n", then a
+    # "\n**`<source>`** (<size>):\n```<lang>\n<content>\n```\n" block per
+    # source. The old pattern expected a "**`@x`**" block straight after the
+    # "---", which the injector has never written, so nothing was removed
+    # while the command reported "Cleared N" (smoke defect 5, 2026-09-26;
+    # dates back to v1.13.9). Matching the header to the end of the text
+    # removes the whole section, including content that itself contains
+    # ``` fences, which a per-block non-greedy match would cut short.
     injection_pattern = re.compile(
-        r'\n---\n\*\*`@[^`]+`\*\*[^\n]*:\n```[^\n]*\n.*?```\n',
+        r'\n\n---\n\*\*Attached context:\*\*\n.*\Z',
         re.DOTALL
     )
 

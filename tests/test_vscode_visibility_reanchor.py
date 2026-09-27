@@ -76,7 +76,8 @@ class TestVSCodeVisibilityReanchorWiring:
         # Side (b): the orchestrator wires `_reanchorFromServer` as
         # the callback.
         orchestrator_call = re.search(
-            r"installFocusReanchor\(\s*\(\)\s*=>\s*this\._reanchorFromServer\(\)\s*\)",
+            # `(true)`: focus also re-checks the schema (smoke defect 7).
+            r"installFocusReanchor\(\s*\(\)\s*=>\s*this\._reanchorFromServer\((?:true)?\)\s*\)",
             src,
         )
         assert orchestrator_call, (

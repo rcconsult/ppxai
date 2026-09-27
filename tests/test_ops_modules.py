@@ -892,7 +892,14 @@ class TestSessionOps:
                 self.role = role
                 self.content = content
 
-        msg1 = FakeMsg("user", 'Hello\n---\n**`@a.py`** (100 chars):\n```python\nprint("hi")\n```\n')
+        # The format ContextInjector actually writes (smoke defect 5: this
+        # test used to feed a "**`@a.py`**"-right-after-"---" shape the
+        # injector never produced, which is how the dead regex stayed green).
+        msg1 = FakeMsg(
+            "user",
+            'Hello\n\n---\n**Attached context:**\n'
+            '\n**`a.py`** (100 B):\n```python\nprint("hi")\n```\n',
+        )
         msg2 = FakeMsg("assistant", "Response here")
         engine.session.messages = [msg1, msg2]
 
@@ -900,7 +907,7 @@ class TestSessionOps:
 
         assert result == 2
         assert engine._injected_contexts == []
-        # Injection markup should be stripped from user message
-        assert "@a.py" not in msg1.content
+        # The whole injected section goes; the user's own words stay.
+        assert msg1.content == "Hello"
         # Assistant message untouched
         assert msg2.content == "Response here"

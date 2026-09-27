@@ -123,7 +123,9 @@ class TestContextTracking:
             Message(role="user", content="""What is this file?
 
 ---
-**`@file:test.py`**:
+**Attached context:**
+
+**`test.py`** (16 B):
 ```python
 print("hello")
 ```
@@ -139,8 +141,7 @@ print("hello")
 
         # Check that injection block is removed
         remaining = engine_client.session.messages[0].content
-        assert "@file:test.py" not in remaining
-        assert "```python" not in remaining
+        assert remaining == "What is this file?"
 
 
     def test_clear_injected_contexts_pushes_a_context_percentage_sync(
@@ -164,7 +165,7 @@ print("hello")
         """
         engine_client.session.messages = [
             Message(role="user", content=(
-                "What is this file?\n\n---\n**`@file:big.py`**:\n"
+                "What is this file?\n\n---\n**Attached context:**\n\n**`big.py`** (12.0 KB):\n"
                 "```python\n" + ("x = 1\n" * 2000) + "```\n"
             )),
         ]
@@ -240,7 +241,9 @@ class TestContextIntegration:
             Message(role="user", content="""What about this?
 
 ---
-**`@file:test.py`**:
+**Attached context:**
+
+**`test.py`** (6 B):
 ```python
 x = 1
 ```

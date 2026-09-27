@@ -890,8 +890,8 @@ verified:
 > | | 3 switch back → badge | ✅ flips back within 1.5 s |
 > | | 4 skew guard line in the "ppxai" channel | ✅ (same run as schema-guard 2) |
 >
-> **Defects found (3 and 4 fixed 2026-09-26; the rest wait on the owner's fix vs file call):**
-> 1. **Inline `style="display:none"` is ignored in the webview.** The CSP
+> **Defects found. All seven are FIXED: 3 and 4 on 2026-09-26 (`1bafc270`), 1, 2, 5, 6 and 7 on 2026-09-27.**
+> 1. **FIXED 2026-09-27.** **Inline `style="display:none"` is ignored in the webview.** The CSP
 >    is `style-src ${webview.cspSource}` with no `'unsafe-inline'`
 >    (`vscode-extension/src/chatPanel.ts:2723`), so the 6 elements that
 >    start hidden through an attribute actually start visible (lines
@@ -902,7 +902,7 @@ verified:
 >    The CSP has been in place since v1.8.0 and the first inline style
 >    since 2025-12-20. Seen in VSCode web; desktop has the same CSP, but
 >    I have not checked it.
-> 2. **Command output is not HTML-escaped in the webview.**
+> 2. **FIXED 2026-09-27.** **Command output is not HTML-escaped in the webview.**
 >    `/tools auto on` sends "Use '/auto <task>' to start …" (see
 >    `ppxai/commands/tools.py:385`), and the transcript shows
 >    "Use '/auto ' to start …", with `<task>` swallowed as a tag.
@@ -929,20 +929,20 @@ verified:
 >    paths. Live-verified on perplexity/sonar: a text attachment answers,
 >    and a tools-on turn called `search_files` then `read_file` and
 >    answered. Pinned by `tests/test_responses_wire_parts_and_reserved_names.py`.
-> 5. **`/context clear` never removes injected content.**
+> 5. **FIXED 2026-09-27.** **`/context clear` never removes injected content.**
 >    The injector writes `` \n---\n**Attached context:**\n\n**`@x`** … ``,
 >    but the removal regex in `session_ops.clear_injected_contexts`
 >    expects `` **`@x`** `` straight after `---`. The tracking list is
 >    cleared and the command reports "Cleared N", while the content stays
 >    in history (live: ~31,981 tokens / 25% before and after). Reproduced
 >    offline against `ContextInjector` too. It dates back to v1.13.9.
-> 6. **VSCode's `/auto` loop ignores completion.**
+> 6. **FIXED 2026-09-27.** **VSCode's `/auto` loop ignores completion.**
 >    `chatPanel.ts` looks for `TASK_COMPLETE:` only in `chunk` events.
 >    The tool path delivers its text whole, so the loop ran all 50
 >    iterations after "✅ Task completed!" on iteration 1. The closing
 >    "Max iterations reached" line is also posted unconditionally, even
 >    after a `break`.
-> 7. **The schema guard does not re-run when the server restarts under a
+> 7. **FIXED 2026-09-27.** **The schema guard does not re-run when the server restarts under a
 >    live connection.** `check()` runs only in `initializeBackend()`. A
 >    server restart was picked up by the heartbeat re-anchor, which
 >    re-fetched state but not `/schema/app-state` (the only hit on the new

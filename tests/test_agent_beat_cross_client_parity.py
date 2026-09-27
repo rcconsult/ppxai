@@ -199,7 +199,9 @@ if (typeof updateAgentBeatBadge === 'function') {
 
 const badge = badges.agentBeatBadge;
 const text = badges.agentBeatText;
-const hidden = badge._classes.has('hidden') || badge._style.display === 'none';
+// VSCode toggles the `hidden` attribute since smoke defect 1 (the webview
+// CSP ignores inline styles); web still uses style.display.
+const hidden = badge._classes.has('hidden') || badge._style.display === 'none' || badge.hidden === true;
 const variant = badge._classes.has('error')
     ? 'error'
     : badge._classes.has('warn')
