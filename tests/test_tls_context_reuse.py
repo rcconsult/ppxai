@@ -41,6 +41,13 @@ def ca_loads(tls_policy, monkeypatch):
     system or certifi roots) and loading a CA file. A bare
     `SSLContext(PROTOCOL_TLS_CLIENT)` loads nothing and is not counted."""
     tls_verify()  # the one legitimate build: the shared, cached context
+    # conftest shares one context across default-TLS httpx clients to keep
+    # the suite fast; that cache would hide exactly the regression this file
+    # guards (the SDK building its own default context), so bypass it here.
+    import httpx._transports.default as transport
+
+    from tests.conftest import REAL_CREATE_SSL_CONTEXT
+    monkeypatch.setattr(transport, "create_ssl_context", REAL_CREATE_SSL_CONTEXT)
     calls = []
     real_create = ssl.create_default_context
     real_load = ssl.SSLContext.load_verify_locations

@@ -581,6 +581,40 @@ def _no_ssrf_dns(monkeypatch):
         lambda host: False)
 
 
+# ---------------------------------------------------------------------------
+# One CA-loaded SSL context for every default-TLS httpx client in the suite.
+#
+# Every `httpx.Client()` -- and so every FastAPI `TestClient`, and every
+# module-level `httpx.get()` -- builds a fresh SSL context from certifi,
+# even for plain http:// or the in-process ASGI transport. Under the
+# OpenSSL 3.0 that Windows CPython ships that is ~0.8s of CPU per client
+# (measured 2026-09-27: 5 clients, 4.2s), and it was most of the suite's
+# fixture-setup time -- debt Item 83. Tests never need a fresh one, so
+# clients built with the DEFAULTS share one per SSL_CERT_FILE/SSL_CERT_DIR
+# value; anything passing its own `verify`/`cert` takes the real path.
+# Test-only: production builds its clients from `ppxai.config.tls`.
+# ---------------------------------------------------------------------------
+
+import httpx._transports.default as _httpx_transport  # noqa: E402
+
+REAL_CREATE_SSL_CONTEXT = _httpx_transport.create_ssl_context
+_ssl_context_cache: dict = {}
+
+
+def _shared_create_ssl_context(verify=True, cert=None, trust_env=True):
+    if verify is not True or cert is not None:
+        return REAL_CREATE_SSL_CONTEXT(verify=verify, cert=cert, trust_env=trust_env)
+    key = (trust_env, os.environ.get("SSL_CERT_FILE"), os.environ.get("SSL_CERT_DIR"))
+    ctx = _ssl_context_cache.get(key)
+    if ctx is None:
+        ctx = _ssl_context_cache[key] = REAL_CREATE_SSL_CONTEXT(
+            verify=verify, cert=cert, trust_env=trust_env)
+    return ctx
+
+
+_httpx_transport.create_ssl_context = _shared_create_ssl_context
+
+
 _libreoffice_allowed = os.environ.get("PPXAI_TESTS_ALLOW_LIBREOFFICE") == "1"
 
 
