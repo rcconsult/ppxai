@@ -33,7 +33,7 @@ from ...common.logger import get_logger
 from ...config.tls import tls_verify
 from ..model_facts import shipped_facts_for_model
 from ..types import Event, EventType, Message, ProviderCapabilities
-from .base import BaseProvider
+from .base import BaseProvider, client_timeout
 from .wire import get_handler
 
 logger = get_logger("openai_native")
@@ -174,6 +174,7 @@ class OpenAINativeProvider(BaseProvider):
         self.client = OpenAI(
             api_key=api_key,
             http_client=httpx.Client(verify=tls_verify()),
+            timeout=client_timeout(self.provider_id),
         )
 
     #: Benchmark-derived per-model rows (ADR 0012 §2 Q0e). Was

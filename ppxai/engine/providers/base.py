@@ -20,6 +20,7 @@ from ...config import (
     get_extra_body,
     get_generation_params,
     get_model_max_tokens,
+    get_provider_config,
     get_reasoning_trigger,
 )
 from ...config.tls import tls_verify
@@ -27,6 +28,29 @@ from .. import facts_config as _facts_config
 from ..model_facts import ModelFacts, shipped_facts_for_model
 from ..types import Event, Message, ModelInfo, ProviderCapabilities, UsageStats
 from .wire import get_handler
+
+logger = get_logger(__name__)
+
+
+def client_timeout(provider_id: str | None) -> float | openai.NotGiven:
+    """`providers.<id>.timeout_s` for the OpenAI SDK client, else its default.
+
+    The SDK default is a 600 s read timeout with 2 retries, so an upstream
+    that accepts a request and never answers held it for up to ~30 minutes
+    (2026-09-28: kimi-k3 on NVIDIA). A per-provider value bounds each
+    attempt. Unset, zero, negative or non-numeric keeps the SDK default.
+    """
+    if not provider_id:
+        return openai.NOT_GIVEN
+    raw = (get_provider_config(provider_id) or {}).get("timeout_s")
+    if raw is None:
+        return openai.NOT_GIVEN
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        logger.warning(f"providers.{provider_id}.timeout_s={raw!r} is not a number; ignored")
+        return openai.NOT_GIVEN
+    return value if value > 0 else openai.NOT_GIVEN
 
 
 class BaseProvider(ABC):
@@ -103,6 +127,7 @@ class BaseProvider(ABC):
             api_key=api_key,
             base_url=base_url,
             http_client=httpx.Client(verify=tls_verify()),
+            timeout=client_timeout(provider_id),
         )
 
     @abstractmethod

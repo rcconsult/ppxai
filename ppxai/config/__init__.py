@@ -101,6 +101,7 @@ from .paths import (
     get_idle_timeout,
     get_paths_config,
     get_server_config,
+    get_shutdown_grace_s,
 )
 
 # System prompts (depends on providers)
@@ -355,6 +356,7 @@ __all__ = [
     # Server functions
     "get_server_config",
     "get_idle_timeout",
+    "get_shutdown_grace_s",
     # System prompt functions
     "get_system_prompt",
     "get_system_prompt_mode",

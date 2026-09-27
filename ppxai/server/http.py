@@ -12,7 +12,9 @@ Usage:
 
 import argparse
 import asyncio
+import concurrent.futures
 import json
+import logging
 import os
 import signal
 import sys
@@ -36,7 +38,7 @@ from fastapi.responses import JSONResponse
 import ppxai.config.loader as _loader
 
 from ..common.logger import get_logger
-from ..config import get_idle_timeout, initialize
+from ..config import get_idle_timeout, get_shutdown_grace_s, initialize
 from ..version import __version__
 from . import registry
 from . import state as _state  # noqa: F401 — backing store for session_manager
@@ -458,6 +460,48 @@ def _forwarded_allow_ips() -> str:
 _IDLE_TIMEOUT_OVERRIDE: int | None = None
 
 
+class _PpxaiServer(uvicorn.Server):
+    """uvicorn's server, with ppxai's stop rules in its signal handler.
+
+    uvicorn installs `handle_exit` for SIGINT/SIGTERM for the whole of
+    `serve()`, so a handler registered beforehand never sees a signal while
+    the server runs. Here the first signal records why ppxai stopped. A
+    second signal of EITHER kind forces the stop (uvicorn forces on a second
+    SIGINT only) and cancels in-flight requests: on Python 3.12+
+    `Server.wait_closed()` waits for every open connection, so without the
+    cancel a request stuck in a provider call kept even a forced stop
+    waiting for the full grace.
+    """
+
+    _loop: asyncio.AbstractEventLoop | None = None
+
+    async def serve(self, sockets=None):
+        self._loop = asyncio.get_running_loop()
+        await super().serve(sockets)
+
+    def handle_exit(self, sig, frame):
+        first = not self.should_exit
+        super().handle_exit(sig, frame)
+        try:
+            name = signal.Signals(sig).name
+        except (AttributeError, ValueError):
+            name = str(sig)
+        if first:
+            logger.info(f"Received {name}, initiating shutdown")
+            if _state.session_manager:
+                _state.session_manager.request_shutdown(
+                    "ctrl_c" if sig == signal.SIGINT else "signal")
+            return
+        _warn_console(f"Received {name} again, forcing shutdown")
+        self.force_exit = True
+        if self._loop is not None:
+            self._loop.call_soon_threadsafe(self._cancel_requests)
+
+    def _cancel_requests(self) -> None:
+        for task in list(self.server_state.tasks):
+            task.cancel()
+
+
 async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_level: str = "info",
                                              fd: int | None = None):
     """Run uvicorn server with graceful shutdown support (v1.13.10).
@@ -473,6 +517,7 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
         fd: An already-listening socket to serve on instead of host/port
             (the `--uds` path binds it itself, 0600 before the first accept).
     """
+    grace_s = get_shutdown_grace_s()
     config = uvicorn.Config(
         app_ref,
         host=host,
@@ -481,22 +526,20 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
         log_level=log_level,
         # Don't trust proxy client-IP headers by default — see _forwarded_allow_ips.
         forwarded_allow_ips=_forwarded_allow_ips(),
+        # Bound the wait for in-flight requests. uvicorn's default (None)
+        # waited for ever, so one provider call that never answered held the
+        # server past SIGTERM until SIGKILL (2026-09-28, WSL, kimi-k3).
+        timeout_graceful_shutdown=grace_s,
     )
-    server = uvicorn.Server(config)
+    server = _PpxaiServer(config)
 
-    # Set up signal handlers to capture shutdown reason
+    # Outside `serve()` (startup, and when uvicorn re-raises the signals it
+    # captured after `serve()` returns) signals come here. During `serve()`
+    # uvicorn installs `server.handle_exit` itself, so the logic lives there.
     def handle_signal(signum, frame):
-        try:
-            sig_name = signal.Signals(signum).name
-        except (AttributeError, ValueError):
-            sig_name = str(signum)
-        reason = "ctrl_c" if signum == signal.SIGINT else "signal"
-        logger.info(f"Received {sig_name}, initiating shutdown")
-        if _state.session_manager:
-            _state.session_manager.request_shutdown(reason)
-        server.should_exit = True
+        if not server.should_exit:
+            server.handle_exit(signum, frame)
 
-    # Install signal handlers (uvicorn's defaults will be overridden)
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
@@ -522,6 +565,55 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
             await shutdown_task
         except asyncio.CancelledError:
             pass
+        await _release_worker_threads(0.0 if server.force_exit else grace_s)
+
+
+#: Set when provider calls were still running in worker threads at shutdown.
+#: The caller then finishes its own cleanup and calls `_exit_if_workers_hung`.
+_workers_hung = False
+
+
+async def _release_worker_threads(grace_s: float) -> None:
+    """Wait at most `grace_s` for `asyncio.to_thread` work, then let go.
+
+    Provider calls run in the loop's default executor. `asyncio.run` joins
+    it without a limit on exit (and the interpreter joins its threads again
+    at exit), so a call that never returns kept the process alive after the
+    server had stopped. `shutdown_default_executor(timeout=)` is 3.12+ only;
+    `wait_for` bounds it on every supported Python (>= 3.10).
+    """
+    global _workers_hung
+    loop = asyncio.get_running_loop()
+    try:
+        await asyncio.wait_for(loop.shutdown_default_executor(), timeout=max(grace_s, 0.05))
+        return
+    except asyncio.TimeoutError:
+        pass
+    _workers_hung = True
+    _warn_console(
+        f"Provider call(s) still running {grace_s:.0f}s after shutdown; "
+        "exiting without waiting for them"
+    )
+    # A fresh, idle executor so asyncio.run's own final join returns at once.
+    loop.set_default_executor(concurrent.futures.ThreadPoolExecutor(max_workers=1))
+
+
+def _warn_console(message: str) -> None:
+    """Warn where an operator stopping the server sees it: uvicorn's console
+    logger (ppxai's own log is a file, off by default) and the debug log."""
+    logging.getLogger("uvicorn.error").warning(message)
+    logger.warning(message)
+
+
+def _exit_if_workers_hung() -> None:
+    """Exit now if hung worker threads would otherwise block interpreter exit.
+
+    Called by each entry point AFTER its own cleanup (the announced server
+    removes its registry entry and socket first). Logs are flushed first.
+    """
+    if _workers_hung:
+        logging.shutdown()
+        os._exit(0)
 
 
 def run_server():
@@ -622,6 +714,7 @@ def run_server():
                 port=args.port,
                 log_level="info",
             ))
+    _exit_if_workers_hung()
 
 
 def _list_servers(as_json: bool) -> int:
@@ -711,6 +804,7 @@ def _run_announced(args) -> int:
             socket_path.unlink()
         except OSError:
             pass
+    _exit_if_workers_hung()
     return 0
 
 
@@ -797,6 +891,7 @@ def run_desktop():
             port=args.port,
             log_level="warning",
         ))
+    _exit_if_workers_hung()
 
 
 if __name__ == "__main__":

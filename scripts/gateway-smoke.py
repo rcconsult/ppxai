@@ -76,6 +76,9 @@ def _force_utf8_console() -> None:
 DEFAULT_PORT = 54320
 STARTUP_WAIT_S = 20
 RUN_POLL_TIMEOUT_S = 180
+# Backstop lifetime of the bootstrap-minted bearer; it is revoked at the end
+# of every run anyway (see Gateway.revoke_bootstrap_token).
+BOOTSTRAP_TOKEN_TTL_S = 3600
 RUN_POLL_INTERVAL_S = 1.5
 
 PASS, FAIL, SKIP = "PASS", "FAIL", "SKIP"
@@ -355,12 +358,30 @@ class Gateway:
         `POST /v1/tokens` is loopback-exempt precisely so a local operator can
         mint the first token, so the smoke test provisions its own. Returns
         the token material, or None if minting isn't available.
+
+        The token is revoked at the end of the run (`revoke_bootstrap_token`)
+        and minted with a TTL as a backstop, so a crashed run still leaves
+        nothing usable behind. Before 2026-09-28 every run left a new,
+        non-expiring token in the store.
         """
-        code, body = self.request("POST", "/v1/tokens", {"owner": owner})
+        code, body = self.request("POST", "/v1/tokens",
+                                  {"owner": owner, "ttl_s": BOOTSTRAP_TOKEN_TTL_S})
         if code == 201 and isinstance(body, dict) and body.get("token"):
             self.token = body["token"]
+            self.minted_token_id = (body.get("meta") or {}).get("token_id")
             return self.token
         return None
+
+    def revoke_bootstrap_token(self):
+        """Revoke the token `bootstrap_token` minted. Returns the HTTP status,
+        or None when this run minted nothing."""
+        token_id = getattr(self, "minted_token_id", None)
+        if not token_id:
+            return None
+        code, _ = self.request("DELETE", f"/v1/tokens/{token_id}")
+        if code == 200:
+            self.minted_token_id = None
+        return code
 
     def poll_run(self, run_id: str, terminal: set) -> dict:
         """Poll run meta until its status enters `terminal` (or timeout)."""
@@ -781,6 +802,15 @@ def main() -> int:
                            f"{run_id} → ack http {code} → {(meta or {}).get('status')}")
 
     finally:
+        # Revoke our bootstrap token while the server is still up.
+        try:
+            revoked = gw.revoke_bootstrap_token()
+        except Exception as exc:  # noqa: BLE001 — cleanup must not mask the run
+            record("auth: revoke bootstrap token", FAIL, f"{type(exc).__name__}: {exc}")
+        else:
+            if revoked is not None:
+                record("auth: revoke bootstrap token", PASS if revoked == 200 else FAIL,
+                       f"http {revoked}")
         if proc is not None:
             _signal_tree(proc, "term")
             try:

@@ -89,6 +89,27 @@ def get_idle_timeout() -> int:
     return get_server_config().get("idle_timeout", 300)
 
 
+#: `server.shutdown_grace_s` default. A stop waits this long for in-flight
+#: requests, then as long again for provider calls still running in worker
+#: threads, then exits anyway.
+DEFAULT_SHUTDOWN_GRACE_S = 10.0
+
+
+def get_shutdown_grace_s() -> float:
+    """Seconds a stop waits for in-flight work before exiting anyway.
+
+    Without a bound, one hung upstream call (a provider that never answers)
+    held `ppxai-server` past SIGTERM until SIGKILL. A bad value falls back to
+    the default rather than to "wait forever".
+    """
+    raw = get_server_config().get("shutdown_grace_s", DEFAULT_SHUTDOWN_GRACE_S)
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_SHUTDOWN_GRACE_S
+    return value if value >= 0 else DEFAULT_SHUTDOWN_GRACE_S
+
+
 def get_default_working_dir() -> str:
     """The deployment-wide default working directory.
 
