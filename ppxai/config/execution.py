@@ -86,6 +86,55 @@ def get_execution_run_config() -> dict[str, Any]:
     return out
 
 
+#: `execution.run.grounding` values (ADR 0014). `True` means "retrieve".
+GROUNDING_MODES = ("off", "retrieve", "native")
+
+
+def normalize_grounding_mode(value: Any) -> str | None:
+    """Map a raw `grounding` value to a mode, or None when it is not one.
+
+    `False`/`None`/`"off"` -> "off"; `True`/`"retrieve"` -> "retrieve":
+    search through the ADR 0014 search layer before the model call, for any
+    provider. `"native"` -> the provider's own in-call search (the pre-0014
+    meaning of `True`, Gemini only).
+    """
+    if value is None or value is False:
+        return "off"
+    if value is True:
+        return "retrieve"
+    if isinstance(value, str) and value.strip().lower() in GROUNDING_MODES:
+        return value.strip().lower()
+    return None
+
+
+def get_execution_run_grounding_raw() -> Any:
+    """The configured `execution.run.grounding` value as written (legacy
+    `tools.web_search.oneshot_grounding` when the new key is absent), or
+    False when the config cannot be read. For `/doctor`, which names a value
+    `normalize_grounding_mode` does not recognise."""
+    try:
+        run = dict(_read_execution_block().get("run", {}) or {})
+    except _ConfigUnavailable:
+        return False
+    if "grounding" in run:
+        return run["grounding"]
+    try:
+        return _tools.get_tool_config("web_search").get("oneshot_grounding", False)
+    except Exception:
+        return False
+
+
+def get_execution_run_grounding_mode() -> str:
+    """`execution.run.grounding` as a mode: "off", "retrieve" or "native".
+
+    Same source and dual-read as `get_execution_run_config()["grounding"]`,
+    but keeps the distinction that bool() erases. Fail-safe: an unreadable
+    config or an unrecognised value resolves to "off" (a capability must not
+    survive a config it cannot read); `/doctor` names an unrecognised value.
+    """
+    return normalize_grounding_mode(get_execution_run_grounding_raw()) or "off"
+
+
 def _normalize_sandbox(sb: dict[str, Any]) -> dict[str, Any]:
     """Normalize the `execution.task.sandbox` block with defaults.
 

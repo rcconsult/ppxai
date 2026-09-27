@@ -153,10 +153,15 @@ Consequences:
 
 ### 5. Wire contract
 
-`POST /v1/oneshot` stays byte-identical: same request, same response
-fields. Citations reach the caller inside the answer text. A structured
+The response keeps its fields. The one addition is the optional request
+field of question 4. Citations reach the caller inside the answer text:
+the model is told to cite sources as `[n]`, and ppxai does **not** append a
+source list to the model's content, since that would break a JSON
+`response_format`. The existing optional `grounding` response record
+(`searched`, `run_id`, `queries`, `backend`, `search_cost`) is set on the
+retrieve path, as it already is on the search-loop path. A structured
 `citations` field would be an additive change to the one stable external
-surface, and is deferred to its own decision (question 4).
+surface, and is deferred to its own decision.
 
 ### 6. Cost
 

@@ -50,7 +50,9 @@ from ..engine.model_deprecations import (
     classify_model,
     find_missing_recommended,
 )
+from ..engine.search import get_backend as get_search_backend
 from ..engine.search.resolver import resolve_web_search_backend
+from ..engine.tools.network_policy import NetworkPolicy
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -629,11 +631,22 @@ def _format_grounding_section() -> list[str]:
         run_cfg = _execution.get_execution_run_config()
     except Exception:
         run_cfg = {"web_search": False, "grounding": False}
+    raw = _execution.get_execution_run_grounding_raw()
+    mode = _execution.normalize_grounding_mode(raw)
     lines.append(
         f"   web_search={'on' if run_cfg.get('web_search') else 'off'}"
-        f"  grounding={'on' if run_cfg.get('grounding') else 'off'}"
+        f"  grounding={mode or 'off'}"
         f"  (both off = pure LLM, air-gap-safe)"
     )
+    if mode is None:
+        lines.append(
+            f"   ⚠ execution.run.grounding={raw!r} is not one of "
+            f"{', '.join(_execution.GROUNDING_MODES)} (or true/false) — "
+            "treated as off"
+        )
+    if mode == "retrieve":
+        # ADR 0014 Decision 4: say what leaves the machine, and where.
+        lines.extend(_format_retrieve_backend_lines())
     try:
         providers = _config.get_available_providers()
     except Exception:
@@ -646,6 +659,8 @@ def _format_grounding_section() -> list[str]:
         "search-loop": "search-loop — web_search tool via the run tier "
                        "(auditable kind=oneshot run)",
         "closed-book": "closed-book — pure LLM, no enrichment",
+        "retrieve": "retrieve — searches with the prompt, then answers "
+                    "(any provider)",
     }
     for p in providers:
         try:
@@ -657,6 +672,40 @@ def _format_grounding_section() -> list[str]:
         except Exception:
             path = "closed-book"
         lines.append(f"   {p} ({model or 'no default model'}): {labels[path]}")
+    return lines
+
+
+def _format_retrieve_backend_lines() -> list[str]:
+    """Where retrieval grounding would send a prompt (ADR 0014), and the
+    untrusted-input warning. The backend is the first candidate of the
+    global resolution; a provider's own `web_search` block can reorder it,
+    which the backend section below reports."""
+    lines: list[str] = []
+    try:
+        ceiling = _execution.get_execution_egress_ceiling()
+    except ValueError as exc:
+        return [f"   ⚠ execution.egress_ceiling is malformed ({exc}) — "
+                "grounded requests will fail"]
+    allows = NetworkPolicy(ceiling).allows_host if ceiling is not None else None
+    res = resolve_web_search_backend(None, egress_allows=allows)
+    if res.candidates:
+        first = res.candidates[0]
+        hosts = ", ".join(get_search_backend(first).hosts)
+        lines.append(
+            f"   retrieve: prompt text is sent to {first} ({hosts})"
+            + (f", falling back to {' → '.join(res.candidates[1:])}"
+               if len(res.candidates) > 1 and not res.strict else "")
+        )
+    else:
+        lines.append(
+            "   ⚠ retrieve: no usable search backend (keys, order or egress "
+            "ceiling) — grounded requests answer without search"
+        )
+    lines.append(
+        "   ⚠ retrieve sends every oneshot prompt to a third-party search "
+        "host, and its results reach the model: callers with untrusted or "
+        "confidential prompts should send \"grounding\": false"
+    )
     return lines
 
 

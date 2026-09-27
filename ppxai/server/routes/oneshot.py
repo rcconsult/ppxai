@@ -77,18 +77,26 @@ from ...config import (
     get_base_url,
     get_default_model,
     get_default_provider,
+    get_execution_egress_ceiling,
     get_execution_run_config,
+    get_max_injection_size,
     get_provider_config,
+)
+from ...config.execution import (
+    get_execution_run_grounding_mode,
 )
 from ...engine import task_authorizer as _authz
 from ...engine import task_runner as _task_runner
 from ...engine.facts_resolver import get_effective_oneshot_path
 from ...engine.providers import create_provider
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
+from ...engine.search.grounding import Retrieval, grounded_prompt, retrieve
 from ...engine.search.resolver import resolve_web_search_backend
 from ...engine.task_authorizer import TIERS as _TIERS
 from ...engine.task_authorizer import TaskAuthorizationError, authorize_oneshot
+from ...engine.tools.network_policy import NetworkPolicy
 from ...engine.types import ProviderCapabilities
+from ...usage_events import TIER_ONESHOT, record_usage
 from ..state import get_agent_run_registry
 
 logger = get_logger("server")
@@ -135,6 +143,17 @@ class OneshotRequest(BaseModel):
         le=2.0,
         description="Sampling temperature. Overrides per-model config.",
     )
+    grounding: bool | None = Field(
+        None,
+        description=(
+            "Per-request web-search control (ADR 0014). null/absent: the "
+            "server's execution.run.grounding decides. false: no web search "
+            "of any kind for this request (no retrieval, no native search, "
+            "no search loop) - send it for untrusted or confidential "
+            "prompts. true: require grounding; 400 when the server has it "
+            "off."
+        ),
+    )
 
 
 class OneshotUsage(BaseModel):
@@ -145,7 +164,9 @@ class OneshotUsage(BaseModel):
 
 class OneshotGrounding(BaseModel):
     """Present ONLY when the request was served by the enriched search-loop
-    path (ADR 0009 §4, F3/F4 facade). Absent → byte-identical legacy
+    path (ADR 0009 §4, F3/F4 facade) or by retrieval grounding (ADR 0014:
+    one search with the prompt as the query, before the model call; the
+    record is built from that search). Absent → byte-identical legacy
     response.
 
     `run_id` is the debug handle: the enriched oneshot executed as a real
@@ -197,10 +218,7 @@ def _oneshot_grounding_enabled() -> bool:
     `execution.run.grounding` (ADR 0011 Q5), which dual-reads the legacy
     `tools.web_search.oneshot_grounding` key until it is retired.
     """
-    try:
-        return bool(get_execution_run_config().get("grounding", False))
-    except Exception:
-        return False
+    return get_execution_run_grounding_mode() != "off"
 
 
 def _oneshot_enrichment_enabled() -> bool:
@@ -431,6 +449,69 @@ async def _oneshot_via_search_loop(
     )
 
 
+def _grounding_egress_allows_or_400():
+    """`execution.egress_ceiling` as the host predicate retrieval grounding
+    passes to the backend resolver (ADR 0014 Decision 4), or None when no
+    ceiling is set. Called before the run starts: a malformed ceiling is a
+    pre-start 400, as in `task_authorizer.apply_ceiling_or_error` — a
+    security cap fails loud, never open, never as an async run failure."""
+    try:
+        ceiling = get_execution_egress_ceiling()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if ceiling is None:
+        return None
+    return NetworkPolicy(ceiling).allows_host
+
+
+async def _retrieve_for_grounding(
+    prompt: str, provider_name: str, egress_allows
+) -> Retrieval:
+    """ADR 0014 retrieval: search once with the prompt through the resolved
+    backend chain, inside the egress ceiling. Never raises: a search that
+    fails leaves `searched=False` and the model answers without it."""
+    return await retrieve(prompt, provider_name, egress_allows=egress_allows)
+
+
+def _grounded(prompt: str, retrieval: Retrieval) -> str:
+    """The prompt the model sees: the search result framed ahead of it."""
+    return grounded_prompt(prompt, retrieval, max_chars=get_max_injection_size())
+
+
+def _record_grounding_usage(retrieval: Retrieval, owner, run_id: str) -> None:
+    """Put the search's cost in the usage log under the oneshot tier (ADR
+    0014 Decision 6, ADR 0008). Never fails the request."""
+    usage = retrieval.result.usage if retrieval.result else None
+    if usage is None:
+        return
+    try:
+        record_usage(
+            provider=retrieval.backend or "unknown",
+            model="web_search",
+            tier=TIER_ONESHOT,
+            prompt_tokens=int(getattr(usage, "tokens_in", 0) or 0),
+            completion_tokens=int(getattr(usage, "tokens_out", 0) or 0),
+            estimated_cost=retrieval.cost,
+            owner=owner,
+            run_id=run_id,
+        )
+    except Exception:  # noqa: BLE001 — accounting must never fail a request
+        pass
+
+
+def _grounding_record(retrieval: Retrieval, run_id: str) -> OneshotGrounding:
+    """The response's optional `grounding` record for a retrieval-grounded
+    call, every field set explicitly (the route serializes with
+    exclude_unset)."""
+    return OneshotGrounding(
+        searched=retrieval.searched,
+        run_id=run_id,
+        queries=[retrieval.query] if retrieval.searched else [],
+        backend=retrieval.backend,
+        search_cost=retrieval.cost,
+    )
+
+
 def _apply_oneshot_grounding(provider, provider_name: str) -> None:
     """Turn on a provider's NATIVE web search for a oneshot call, in place.
 
@@ -483,7 +564,7 @@ def _validate_provider_or_400(provider_name: str) -> None:
         raise HTTPException(status_code=exc.status, detail=exc.detail)
 
 
-def _build_provider(provider_name: str):
+def _build_provider(provider_name: str, native_grounding: bool | None = None):
     """Construct a provider instance directly from config.
 
     Mirrors `engine/provider_ops.py::set_provider` minus the
@@ -539,7 +620,12 @@ def _build_provider(provider_name: str):
     # Option A: opt-in native web search for the tool-free oneshot tiers.
     # No-op unless tools.web_search.oneshot_grounding is on AND the provider is
     # search-capable. Does NOT expose any web tool to the model.
-    if _oneshot_grounding_enabled():
+    # ADR 0014: only "native" mode turns on the provider's own search;
+    # "retrieve" searches through the search layer instead, and a request's
+    # `grounding: false` passes native_grounding=False.
+    if native_grounding is None:
+        native_grounding = get_execution_run_grounding_mode() == "native"
+    if native_grounding:
         _apply_oneshot_grounding(provider, provider_name)
     elif hasattr(provider, "enable_grounding"):
         # Default OFF: the oneshot perimeter is unchanged regardless of a
@@ -580,12 +666,33 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
             f"provider {provider_name!r}.",
         )
 
+    # ADR 0014: a request can refuse web search (`grounding: false`, always
+    # honoured: it only reduces exposure) or require it (`true`, refused
+    # when the server cannot ground rather than silently answered without).
+    grounding_mode = get_execution_run_grounding_mode()
+    if req.grounding is True and grounding_mode == "off":
+        raise HTTPException(
+            status_code=400,
+            detail="grounding=true requested but execution.run.grounding is "
+            "off on this server.",
+        )
+
     # ADR 0009 §4 gating: resolve + log the effective path per request.
     # Both keys default off → byte-identical wire for existing consumers.
-    effective_path = _oneshot_effective_path(provider_name, model)
+    if req.grounding is False:
+        effective_path = "closed-book"
+    else:
+        effective_path = _oneshot_effective_path(provider_name, model)
+    if req.grounding is True and effective_path not in ("retrieve", "native"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"grounding=true requested but execution.run.grounding="
+            f"{grounding_mode!r} cannot ground {provider_name}/{model} "
+            f"(the provider has no native web search).",
+        )
     logger.debug(
         f"/v1/oneshot gating: provider={provider_name} model={model} "
-        f"grounding_on={_oneshot_grounding_enabled()} "
+        f"grounding_mode={grounding_mode} request_grounding={req.grounding} "
         f"enrichment_on={_oneshot_enrichment_enabled()} -> {effective_path}"
     )
 
@@ -599,7 +706,10 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
             owner = None
         return await _oneshot_via_search_loop(req, provider_name, model, owner)
 
-    provider = _build_provider(provider_name)
+    provider = _build_provider(provider_name, native_grounding=effective_path == "native")
+    egress_allows = (
+        _grounding_egress_allows_or_400() if effective_path == "retrieve" else None
+    )
 
     # FU (ADR 0009 follow-up unification): the plain path ALSO executes as a
     # real `kind=oneshot` registry run — the direct non-registry branch that
@@ -638,14 +748,22 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
     # identical to the pre-FU direct path — the awaiting handler holds this
     # closure, so the envelope never touches shared state.
     envelope: dict[str, Any] = {}
+    retrieval: list[Retrieval] = []
 
     async def _runner(m) -> str:
+        prompt = req.prompt
+        if effective_path == "retrieve":
+            # ADR 0014: search once with the prompt, then answer from it.
+            found = await _retrieve_for_grounding(req.prompt, provider_name, egress_allows)
+            retrieval.append(found)
+            _record_grounding_usage(found, owner, m.run_id)
+            prompt = _grounded(req.prompt, found)
         # provider.oneshot is blocking I/O (SDK round-trip). Offload it so a
         # slow provider (e.g. Gemini preview, multi-second reasoning) doesn't
         # starve the single event loop and stall every other request.
         result = await asyncio.to_thread(
             lambda: provider.oneshot(
-                prompt=req.prompt,
+                prompt=prompt,
                 model=model,
                 system=req.system,
                 response_format=req.response_format,
@@ -686,10 +804,16 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
     if envelope.get("usage") is not None:
         usage = OneshotUsage(**envelope["usage"])
 
+    # `grounding` is passed only on the retrieve path; absent everywhere
+    # else, so the closed-book and native wire stays byte-identical.
+    extra: dict[str, Any] = {}
+    if retrieval:
+        extra["grounding"] = _grounding_record(retrieval[0], meta.run_id)
     return OneshotResponse(
         content=envelope.get("content", ""),
         finish_reason=envelope.get("finish_reason"),
         model=envelope.get("model", model),
         provider=provider_name,
         usage=usage,
+        **extra,
     )

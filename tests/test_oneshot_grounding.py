@@ -20,6 +20,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from ppxai.config import execution as _exec_mod
 from ppxai.server.routes import oneshot as oneshot_mod
 
 # ---------------------------------------------------------------------------
@@ -35,24 +36,23 @@ class TestGroundingFlag:
     def test_default_off(self):
         """No config => grounding disabled (byte-identical legacy behavior)."""
         with patch.object(
-            oneshot_mod, "get_execution_run_config",
-            return_value={"web_search": False, "grounding": False},
+            oneshot_mod, "get_execution_run_grounding_mode", return_value="off",
         ):
             assert oneshot_mod._oneshot_grounding_enabled() is False
 
-    def test_explicit_on(self):
+    @pytest.mark.parametrize("mode", ["retrieve", "native"])
+    def test_explicit_on(self, mode):
         with patch.object(
-            oneshot_mod, "get_execution_run_config",
-            return_value={"web_search": False, "grounding": True},
+            oneshot_mod, "get_execution_run_grounding_mode", return_value=mode,
         ):
             assert oneshot_mod._oneshot_grounding_enabled() is True
 
     def test_config_error_fails_to_off(self):
         with patch.object(
-            oneshot_mod, "get_execution_run_config",
-            side_effect=RuntimeError("boom"),
+            _exec_mod, "_read_execution_block",
+            side_effect=_exec_mod._ConfigUnavailable("boom"),
         ):
-            assert oneshot_mod._oneshot_grounding_enabled() is False
+            assert _exec_mod.get_execution_run_grounding_mode() == "off"
 
 
 class TestExecutionRunConfig:
@@ -227,9 +227,14 @@ class TestEffectivePath:
         from ppxai.engine.model_facts import ModelFacts
         from ppxai.engine.types import ProviderCapabilities
 
+        # These rows pin the provider-native rule, which ADR 0014 moved to
+        # the explicit "native" mode; a bare True here means "native".
+        mode = "native" if grounding is True else (grounding or "off")
         with patch.object(
             fr_mod, "get_execution_run_config",
-            return_value={"web_search": enrichment, "grounding": grounding},
+            return_value={"web_search": enrichment, "grounding": mode != "off"},
+        ), patch.object(
+            fr_mod, "get_execution_run_grounding_mode", return_value=mode,
         ), patch(
             "ppxai.engine.providers.get_provider_class",
             # A real class, so the endpoint branch is reached at all — the
@@ -248,6 +253,16 @@ class TestEffectivePath:
 
     def test_both_off_is_closed_book(self):
         assert self._path() == "closed-book"
+
+    @pytest.mark.parametrize("web_capable", [True, False])
+    @pytest.mark.parametrize("enrichment", [True, False])
+    def test_retrieve_needs_no_provider_capability_and_wins(self, web_capable, enrichment):
+        """ADR 0014: retrieval searches through the search layer, so any
+        provider can be grounded, and it keeps enrichment XOR grounding."""
+        assert self._path(
+            grounding="retrieve", enrichment=enrichment, web_capable=web_capable,
+            tool_mode="native",
+        ) == "retrieve"
 
     def test_grounding_on_capable_is_native(self):
         assert self._path(grounding=True, web_capable=True) == "native"
@@ -368,6 +383,8 @@ class TestTypeBasedProviders:
             fr_mod,
             "get_execution_run_config",
             return_value={"web_search": False, "grounding": True},
+        ), patch.object(
+            fr_mod, "get_execution_run_grounding_mode", return_value="native",
         ):
             assert (
                 fr_mod.get_effective_oneshot_path("myrouter", "some-model")
@@ -475,16 +492,39 @@ class TestBuildProviderWiring:
         oneshot_mod._build_provider("gemini")
         assert provider.enable_grounding is False
 
-    def test_flag_on_grounds_search_provider(self, monkeypatch):
+    def test_native_mode_grounds_search_provider(self, monkeypatch):
         provider = MagicMock()
         provider.enable_grounding = False
         _patch_construction(monkeypatch, provider)
         monkeypatch.setattr(
-            oneshot_mod, "get_execution_run_config",
-            lambda: {"web_search": False, "grounding": True},
+            oneshot_mod, "get_execution_run_grounding_mode", lambda: "native",
         )
         oneshot_mod._build_provider("gemini")
         assert provider.enable_grounding is True
+
+    def test_retrieve_mode_keeps_native_search_off(self, monkeypatch):
+        """ADR 0014: `true` means retrieve, which searches through the search
+        layer — the provider's own search must stay off, or a Gemini request
+        would search twice."""
+        provider = MagicMock()
+        provider.enable_grounding = True
+        _patch_construction(monkeypatch, provider)
+        monkeypatch.setattr(
+            oneshot_mod, "get_execution_run_grounding_mode", lambda: "retrieve",
+        )
+        oneshot_mod._build_provider("gemini")
+        assert provider.enable_grounding is False
+
+    def test_an_explicit_false_overrides_native_mode(self, monkeypatch):
+        """A request's `grounding: false` reaches here as native_grounding=False."""
+        provider = MagicMock()
+        provider.enable_grounding = True
+        _patch_construction(monkeypatch, provider)
+        monkeypatch.setattr(
+            oneshot_mod, "get_execution_run_grounding_mode", lambda: "native",
+        )
+        oneshot_mod._build_provider("gemini", native_grounding=False)
+        assert provider.enable_grounding is False
 
 
 # ---------------------------------------------------------------------------

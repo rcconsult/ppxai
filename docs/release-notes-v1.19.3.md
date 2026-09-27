@@ -610,11 +610,61 @@ guesses. Tests pin both.
   - The web_search backend reads Perplexity's model facts from
     `providers/perplexity_facts.py`, not from the chat provider class, so
     phase 2 can delete that class without breaking web_search.
-  - **Phase 2 (a later release, new ADR):** remove the chat provider and
-    its gateway models, and decide what replaces grounding through
-    Perplexity; today that path *is* the chat provider.
+  - **Phase 2 (ADR 0015, planned for this release):** remove the chat
+    provider and its gateway models. Grounding through Perplexity no
+    longer depends on it: see "Grounding searches first" below.
 
 ## Changed
+
+### Grounding searches first, for every provider (ADR 0014)
+
+Web search is now its own layer, `ppxai/engine/search/`: the Perplexity,
+Gemini and DuckDuckGo backends and the resolver that orders them. It
+imports nothing from the chat providers, which a test pins. The
+`web_search` tool is an adapter over it, and its output is unchanged.
+
+**`execution.run.grounding: true` now means `"retrieve"`.** On
+`/v1/oneshot` and the tool-free `/v1/agent/run`, ppxai searches once, with
+the prompt as the query (capped at 2,000 characters), through the same
+backend chain as `web_search` — Perplexity first when `PERPLEXITY_API_KEY`
+is set — and then calls the model with the result framed ahead of the
+prompt. Any provider can be grounded.
+
+- The response's existing optional `grounding` record is set: `searched`,
+  `run_id`, `queries`, `backend`, `search_cost`. `searched: false` means no
+  backend was usable or every one failed, and the model answered without a
+  search.
+- The search cost is logged under the oneshot tier, so `/cost` counts it.
+- Only the prompt text is sent: not the system message, history or
+  attachments. The backend's hosts must pass `execution.egress_ceiling`;
+  a malformed ceiling is a 400 before the run starts.
+- The injected result is capped by `context.max_injection_size`. The
+  model is asked to cite `[n]`; ppxai does not append sources to the
+  answer, since that would break a JSON `response_format`.
+- `"native"` keeps the provider's in-call search (Gemini), the meaning
+  `true` had before. An unrecognised value is treated as off.
+- `/doctor` shows the mode, the `retrieve` path per model, the backend and
+  host a prompt would reach, and a warning about untrusted input.
+
+**New optional request field, `/v1/oneshot`: `grounding`.**
+
+| Value | Effect |
+|---|---|
+| absent / `null` | The server setting decides. |
+| `false` | No web search of any kind for this request: no retrieval, no native search, no search loop. |
+| `true` | Grounding required: 400 when the server cannot ground this request. |
+
+The response shape is unchanged. **Callers with untrusted or confidential
+prompts should send `false`**: retrieval sends the prompt text to a
+third-party search host, and the results reach the model. A server older
+than v1.19.3 ignores the field; a caller that depends on it checks the
+version from `GET /health`.
+
+**Upgrade.** If you set `execution.run.grounding: true` (or the legacy
+`tools.web_search.oneshot_grounding: true`) and serve Gemini, search moves
+from Gemini's in-call Google Search to the resolved backend. Set
+`"native"` to keep the old behaviour.
+
 
 - **Gemini's default model is now `gemini-3.8-flash`** (owner decision,
   2026-09-27): the newest generally available Gemini Flash model, at half

@@ -129,6 +129,10 @@ from ..state import get_agent_run_registry
 from .oneshot import (  # noqa: F401 — ONESHOT_SEARCH_ITERATIONS read by tests
     ONESHOT_SEARCH_ITERATIONS,
     _build_provider,
+    _grounded,
+    _grounding_egress_allows_or_400,
+    _record_grounding_usage,
+    _retrieve_for_grounding,
     _validate_provider_or_400,
 )
 
@@ -418,11 +422,23 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
         hold_result=hold,  # same execution.collect contract as the grant path
     )
 
+    # ADR 0014: under "retrieve" grounding the tool-free run searches once
+    # with its task, then answers from the result (no request override on
+    # this surface; the server setting decides).
+    retrieve_first = _execution_config.get_execution_run_grounding_mode() == "retrieve"
+    egress_allows = _grounding_egress_allows_or_400() if retrieve_first else None
+    owner = _caller_owner(request)
+
     async def _runner(m) -> str:
+        prompt = auth.task
+        if retrieve_first:
+            found = await _retrieve_for_grounding(auth.task, auth.provider, egress_allows)
+            _record_grounding_usage(found, owner, m.run_id)
+            prompt = _grounded(auth.task, found)
         # provider.oneshot is blocking I/O — run it off the event loop so
         # other requests (e.g. GET status polls) aren't starved.
         result = await asyncio.to_thread(
-            provider.oneshot, prompt=auth.task, model=auth.model,
+            provider.oneshot, prompt=prompt, model=auth.model,
             system=auth.system,
         )
         return result.get("content", "")

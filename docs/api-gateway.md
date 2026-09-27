@@ -444,7 +444,8 @@ Content-Type: application/json
     "type": "json_object"                       //   or "json_schema" with json_schema field
   },
   "max_tokens": 512,                            // optional, > 0
-  "temperature": 0.0                            // optional, 0.0–2.0
+  "temperature": 0.0,                           // optional, 0.0–2.0
+  "grounding": false                            // optional (v1.19.3); see "Grounding" below
 }
 ```
 
@@ -465,9 +466,9 @@ Content-Type: application/json
     "total_tokens": 510
   },
   "grounding": {                     // v1.19.1, ADDITIVE: present ONLY when the
-    "searched": true,                //   search-loop enrichment served the request
-    "run_id": "run_c02a3cbac2f0",    //   (absent — not null — otherwise, so existing
-    "queries": ["..."],              //   consumers see a byte-identical envelope)
+    "searched": true,                //   search-loop or (v1.19.3) retrieval grounding
+    "run_id": "run_c02a3cbac2f0",    //   served the request (absent — not null —
+    "queries": ["..."],              //   otherwise: a byte-identical envelope)
     "backend": "perplexity",         // premium backend, or "duckduckgo" (free)
     "search_cost": 0.0000568         // premium-search USD cost of THIS request
   }
@@ -484,7 +485,7 @@ trail — concurrent requests cannot cross-attribute cost.
 
 | Status | Condition |
 |---|---|
-| 400 | Unknown provider, missing model with no default, no API key for provider, provider doesn't support oneshot in v1 |
+| 400 | Unknown provider, missing model with no default, no API key for provider, provider doesn't support oneshot in v1; `"grounding": true` on a server that cannot ground the request (the detail names `execution.run.grounding`); a malformed `execution.egress_ceiling` on the retrieval path |
 | 422 | Request body fails validation (empty prompt, negative max_tokens, temperature out of range, etc.) |
 | 502 | Provider call raised — wraps the upstream error as `{"detail": "Provider call failed: <message>"}`; on the enrichment path, a failed/cancelled run — the detail carries the `run_id` for post-mortem |
 | 504 | Enrichment-path run exceeded the request timeout — the run is cooperatively cancelled and the detail carries its `run_id` (the record stays inspectable) |
@@ -527,21 +528,61 @@ trail — concurrent requests cannot cross-attribute cost.
   This means vendor knobs (NIM `chat_template_kwargs.enable_thinking`,
   Qwen3 `enable_thinking`, etc.) carry through without the caller
   having to know about them.
-- **Grounding (opt-in, v1.19.1 — two independent switches under
-  `execution.run.*`).** Both default **off**; with both off the endpoint is
-  a **pure closed-book LLM call** — no context enrichment, no egress beyond
-  the provider API itself (with a local provider this is fully
-  air-gap-safe). The decision is made **per request** per the ADR 0009 §4
-  gating table, logged to the server debug log, and reported per configured
-  model by `/doctor`:
+- **Grounding (opt-in — two independent switches under `execution.run.*`,
+  plus a per-request override).** Both default **off**; with both off the
+  endpoint is a **pure closed-book LLM call** — no context enrichment, no
+  egress beyond the provider API itself (with a local provider this is
+  fully air-gap-safe). The decision is made **per request** per the ADR
+  0009 §4 gating table (extended by ADR 0014), logged to the server debug
+  log, and reported per configured model by `/doctor`.
+
+  `execution.run.grounding` takes `false`/`"off"`, `true`/`"retrieve"`, or
+  `"native"`. **Since v1.19.3, `true` means `"retrieve"`** (ADR 0014); an
+  unrecognised value is treated as off and named by `/doctor`.
 
   | `execution.run.web_search` | `execution.run.grounding` | Behavior |
   |---|---|---|
   | off | off | **Closed-book** (default): training-data answer only. |
-  | off | on | **Native**: the provider's own search (Gemini grounding, Perplexity Sonar) retrieves *inside the provider's API call*. No new egress and no tool exposed. It still executes as a `kind=oneshot` registry run like every other oneshot (see the run-record section above) — native retrieval changes what the provider does, not whether the call is recorded. Non-search providers degrade gracefully to closed-book. |
+  | any | `true` / `"retrieve"` | **Retrieve** (v1.19.3): ppxai searches **once, with the prompt as the query** (capped at 2,000 characters), through the same backend chain the `web_search` tool uses (`tools.web_search.order`/`preferred`/`strict`; Perplexity first when `PERPLEXITY_API_KEY` is set), then makes the tool-free model call with the result framed ahead of the prompt as reference material. Works for **every provider**. The `grounding` response record appears (`searched: false` when no backend was usable or every backend failed — the model then answers without it). The search cost is logged under the oneshot tier. |
+  | off | `"native"` | **Native**: the provider's own search (Gemini grounding) retrieves *inside the provider's API call*. No new egress and no tool exposed. Non-search providers degrade to closed-book. This was the meaning of `true` before v1.19.3. |
   | on | off | **Search-loop**: the model gets exactly one tool, `web_search`, and the request executes as an auditable `kind=oneshot` run (the `grounding` response field appears). Exists so **local models get context enrichment** they otherwise never have. Non-tool-capable models degrade to closed-book; a failed search degrades to answering with what the model has. |
-  | on | on | **Best available per provider**: native wins when the provider has it (never both — retrieval is never done or billed twice); the search loop is the fallback for providers without native search. |
+  | on | `"native"` | **Best available per provider**: native wins when the provider has it (never both); the search loop is the fallback for providers without native search. |
 
+  Every path executes as a `kind=oneshot` registry run (see the run-record
+  section above).
+
+  **Per request: `"grounding": true | false | null`** (v1.19.3, optional):
+
+  - `null` or absent — the server's configuration decides (the table above).
+  - `false` — **no web search of any kind** for this request: no
+    retrieval, no native search, no search loop. Always honoured, since it
+    can only reduce exposure.
+  - `true` — grounding is required: a server whose configuration cannot
+    ground this request (grounding off, or `"native"` for a provider with
+    no native search) answers **400** instead of silently answering
+    closed-book.
+
+  > **Untrusted or confidential prompts: send `"grounding": false`.**
+  > Retrieval sends the prompt text to a third-party search host
+  > (`/doctor` names it), and the search results reach the model. A prompt
+  > built from untrusted input — an email body, a web form — would steer
+  > both the query and the injected context. The egress ceiling limits
+  > *where* the prompt goes, not *whether*.
+  >
+  > A server **older than v1.19.3 ignores the field** (unknown request
+  > fields are dropped). A caller that depends on the opt-out should check
+  > the server version from `GET /health` first. Older servers only do
+  > native grounding, which reaches no new host.
+
+  - **Retrieval perimeter.** Only the prompt text is sent — never the
+    system message, history or attachments; the query is never
+    model-written; no model-named URL is fetched. The backend's hosts must
+    pass `execution.egress_ceiling` (a backend outside it is skipped; none
+    left means no search, never an unchecked host), and `strict` pins one
+    backend. The injected result is capped by `context.max_injection_size`.
+    Citations are asked for as `[n]` in the answer text; ppxai never
+    appends to the model's content (that would break a JSON
+    `response_format`).
   - **No combination errors out** — the switches only change where the
     answer's knowledge comes from, and every unmet precondition degrades
     gracefully toward closed-book.
@@ -549,7 +590,7 @@ trail — concurrent requests cannot cross-attribute cost.
     `{web_search}` (nothing can widen it); `NetworkPolicy` clamps egress to
     the search-backend hosts; a small iteration budget bounds the loop.
     Host/filesystem-safe, not injection-proof: retrieved text can influence
-    the answer — inherent to grounding, including the native path.
+    the answer — inherent to grounding, on every path.
   - **ADR 0004 revision.** v1 originally promised "no tool loop in
     oneshot". That purity claim is revised (ADR 0009 §4 / ADR 0011): the
     search-loop path drives the *same* sandboxed run tier as

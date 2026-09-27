@@ -985,12 +985,13 @@ class TestGroundingSection:
             exec_mod, "get_execution_run_config",
             lambda: {"web_search": True, "grounding": True},
         )
+        monkeypatch.setattr(exec_mod, "get_execution_run_grounding_raw", lambda: "native")
         monkeypatch.setattr(
             doctor_mod, "get_effective_oneshot_path",
             lambda p, m: {"gem": "native", "local": "search-loop"}[p],
         )
         text = "\n".join(doctor_mod._format_grounding_section())
-        assert "web_search=on" in text and "grounding=on" in text
+        assert "web_search=on" in text and "grounding=native" in text
         assert "gem (g1): native" in text
         assert "local (q1): search-loop" in text
 

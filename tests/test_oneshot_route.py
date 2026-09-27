@@ -262,7 +262,7 @@ class TestProviderCapabilityCheck:
     def test_unbuildable_provider_400(self, http_client):
         from fastapi import HTTPException
 
-        def _raise(name):
+        def _raise(name, **_kw):
             raise HTTPException(status_code=400, detail=f"unknown provider {name!r}")
         with patch(
             "ppxai.server.routes.oneshot._build_provider", side_effect=_raise

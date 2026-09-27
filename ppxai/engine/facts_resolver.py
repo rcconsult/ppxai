@@ -17,7 +17,10 @@ import ...` in `model_facts` or `providers` restores the cycle.
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from ..config.execution import get_execution_run_config
+from ..config.execution import (
+    get_execution_run_config,
+    get_execution_run_grounding_mode,
+)
 
 #: Imported as a MODULE, not by name: `_providers.get_provider_class` resolves
 #: at CALL time, so a test patching `providers.get_provider_class` on the
@@ -186,9 +189,15 @@ def get_effective_oneshot_path(provider: str, model: str) -> str:
     tool via the run tier) — enrichment XOR native, never both; anything
     else is `closed-book` (pure LLM, no context enrichment):
 
-        grounding on AND capabilities.web_search          → "native"
+        grounding "retrieve" (or true)                    → "retrieve"
+        grounding "native" AND capabilities.web_search    → "native"
         elif web_search on AND tool-calling capable       → "search-loop"
         else                                              → "closed-book"
+
+    "retrieve" (ADR 0014) searches through `engine/search/` before the
+    model call and so needs no provider capability. A request's
+    `grounding: false` is applied by the route before this table: it forces
+    "closed-book".
 
     Tool-calling capable = native function calling OR an explicit
     per-provider/model `tool_calling` config block (the prompt-based path);
@@ -204,6 +213,13 @@ def get_effective_oneshot_path(provider: str, model: str) -> str:
     """
     run_cfg = get_execution_run_config()
 
+    # ADR 0014: "retrieve" searches through the search layer before the
+    # model call, whatever the provider, so it needs no provider capability.
+    # "native" keeps the pre-0014 rule below (the provider's own search).
+    grounding_mode = get_execution_run_grounding_mode()
+    if grounding_mode == "retrieve":
+        return "retrieve"
+
     # Endpoint ability and model ability are two separate questions with two
     # separate records (ADR 0012 §2 Q0e), which is what this function used
     # to approximate with a capabilities dict plus a tool_calling fallback.
@@ -211,7 +227,7 @@ def get_effective_oneshot_path(provider: str, model: str) -> str:
         caps = capabilities_without_an_instance(provider)
     except Exception:  # noqa: BLE001 — an unknown provider is not fatal here
         caps = None
-    if run_cfg.get("grounding") and caps is not None and caps.web_search:
+    if grounding_mode == "native" and caps is not None and caps.web_search:
         return "native"
 
     # NOT `tool_mode != "prompt_based"`. The question here is whether the
