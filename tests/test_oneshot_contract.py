@@ -21,13 +21,11 @@ from ppxai.engine.providers.base import BaseProvider
 from ppxai.engine.providers.gemini import GeminiProvider
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 from ppxai.engine.providers.openai_native import OpenAINativeProvider
-from ppxai.engine.providers.perplexity import PerplexityProvider
 
 ALL_PROVIDER_CLASSES = [
     OpenAICompatibleProvider,
     OpenAINativeProvider,
     GeminiProvider,
-    PerplexityProvider,
 ]
 
 
@@ -82,22 +80,6 @@ class TestOpenAINativeOneshot:
         assert out["finish_reason"] == "stop"
         assert out["usage"] == {"prompt_tokens": 3, "completion_tokens": 5,
                                 "total_tokens": 8}
-
-
-class TestPerplexityOneshot:
-    def _provider(self):
-        with patch("ppxai.engine.providers.base.OpenAI"):
-            return PerplexityProvider(api_key="k", base_url="https://api.perplexity.ai",
-                                      provider_id="perplexity")
-
-    def test_content_and_usage(self):
-        p = self._provider()
-        p.client = MagicMock()
-        p.client.chat.completions.create.return_value = _openai_sdk_response(
-            content="pong", pt=1, ct=2, tt=3)
-        out = p.oneshot(prompt="ping", model="sonar")
-        assert out["content"] == "pong"
-        assert out["usage"]["total_tokens"] == 3
 
 
 class TestGeminiOneshot:

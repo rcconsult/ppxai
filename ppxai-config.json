@@ -51,89 +51,6 @@
     "checkpoints": "~/.ppxai/checkpoints"
   },
   "providers": {
-    "perplexity": {
-      "name": "Perplexity AI",
-      "base_url": "https://api.perplexity.ai",
-      "api_key_env": "PERPLEXITY_API_KEY",
-      "default_model": "perplexity/sonar",
-      "coding_model": "perplexity/sonar",
-      "system_prompt": "You have two capabilities: (1) NATIVE WEB SEARCH for research, facts, and current information - use this automatically for questions and cite sources as markdown links. (2) EXTERNAL TOOLS for file operations, shell commands, and editing - when tools are available and the user asks to DO something (cd, ls, edit, fix, run, create, analyze), execute the appropriate tool immediately instead of explaining how. For actions: act first, report results briefly. For questions: search and cite. Never tell the user to do manually what a tool can do.",
-      "generation_params": {
-        "temperature": 0.2,
-        "top_p": 0.9,
-        "frequency_penalty": 0.15
-      },
-      "models": {
-        "perplexity/sonar": {
-          "name": "Sonar (Responses wire)",
-          "description": "Lightweight search model with real-time grounding. The ONLY Sonar id that answers on /v1/responses — verified by calling it 2026-08-31. sonar-pro and sonar-reasoning-pro return 'validation failed: model not supported' there, bare and namespaced, so they have NO successor.",
-          "__comment_best_for": "Quick file operations, simple edits, list/read tasks, directory navigation",
-          "generation_params": {
-            "temperature": 0.1,
-            "top_p": 0.85,
-            "max_tokens": 2048,
-            "frequency_penalty": 0.2
-          },
-          "facts": {
-            "fallback_on_empty": false,
-            "fallback_on_failure": false,
-            "max_tokens": 4096,
-            "max_tool_iterations": 20,
-            "parallel_tool_calls": true,
-            "restricted_params": [],
-            "strip_json_from_text": false,
-            "supports_reasoning": false,
-            "supports_vision": false,
-            "tier": "B",
-            "tool_mode": "auto",
-            "wire_protocol": "responses"
-          },
-          "__comment_deadline": "⏰ The chat-completions endpoint every OTHER sonar id uses retires 2026-09-27. This entry is on the surviving wire.",
-          "__comment_tool_mode": "tool_mode intentionally NOT overridden: the shipped row says `auto` (native attempt, prompt-based fallback) so a model that stops accepting a tools array degrades instead of erroring. Forcing `native` here removes that safety net."
-        },
-        "anthropic/claude-sonnet-5": {
-          "name": "Claude Sonnet 5 (via Perplexity)",
-          "description": "Anthropic's Sonnet 5 served on Perplexity's /v1/responses wire. Verified live 2026-09-01. This is the agentic tier: when the Sonar chat-completions endpoint retires 2026-09-27, perplexity/sonar remains for grounding/search and the tool-driven work moves here. PRICING: $2/$10 per MTok, MEASURED from usage.cost on 2026-09-01 and UNCORROBORATED — this repo has no anthropic provider block to check it against, unlike the terra and gemini rates which match their direct-vendor entries exactly.",
-          "context_limit": 200000
-        },
-        "openai/gpt-5.6-terra": {
-          "name": "GPT-5.6 Terra (via Perplexity)",
-          "description": "OpenAI's cost-efficient flagship served on Perplexity's /v1/responses wire. Verified live 2026-09-01. Same id ppxai uses direct from OpenAI, reachable on this account too. PRICING: $2/$12 per MTok, measured from usage.cost 2026-09-01 and matching the direct-from-OpenAI entry exactly — so Perplexity passes the vendor rate through rather than marking up.",
-          "context_limit": 200000
-        },
-        "google/gemini-3.1-pro-preview": {
-          "name": "Gemini 3.1 Pro (via Perplexity)",
-          "description": "Google's Pro tier served on Perplexity's /v1/responses wire. Verified live 2026-09-01. Still PREVIEW upstream — there is no GA successor in the Gemini Pro tier (re-confirmed 2026-09-01). PRICING: $2/$12 per MTok, measured from usage.cost 2026-09-01 and matching the direct-from-Google entry exactly.",
-          "context_limit": 200000
-        }
-      },
-      "pricing": {
-        "anthropic/claude-sonnet-5": {
-          "input": 2.0,
-          "output": 10.0
-        },
-        "openai/gpt-5.6-terra": {
-          "input": 2.0,
-          "output": 12.0
-        },
-        "google/gemini-3.1-pro-preview": {
-          "input": 2.0,
-          "output": 12.0
-        },
-        "perplexity/sonar": {
-          "input": 0.25,
-          "output": 2.5
-        }
-      },
-      "capabilities": {
-        "web_search": true,
-        "web_fetch": true,
-        "weather": true,
-        "realtime_info": true,
-        "native_tool_calling": false,
-        "__comment_native_tool_calling": "Perplexity uses prompt-based tool calling (not native API)"
-      }
-    },
     "gemini": {
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
@@ -809,7 +726,7 @@
     },
     "web_search": {
       "preferred": "auto",
-      "perplexity_model": "sonar",
+      "perplexity_model": "perplexity/sonar",
       "gemini_model": "gemini-3.6-flash",
       "__comment_egress": "ADR 0009 §2 per-tool egress baseline: hosts merged into any run that GRANTS this tool (task tier + oneshot facade). Supersedes task_default_allow (legacy, dual-read).",
       "egress": [

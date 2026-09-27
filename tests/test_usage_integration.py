@@ -58,12 +58,6 @@ def _create_engine(provider_id: str):
 
 
 @pytest.fixture
-def perplexity_engine(fake_providers):
-    """An EngineClient on the perplexity provider id (fake wire)."""
-    return _create_engine("perplexity")
-
-
-@pytest.fixture
 def gemini_engine(fake_providers):
     """An EngineClient on the gemini provider id (fake wire)."""
     return _create_engine("gemini")
@@ -270,9 +264,9 @@ def _create_test_client_with_engine(engine):
 class TestUsageCountersViaFactory:
     """Test /usage through CommandFactory — verify counter VALUES, not just types."""
 
-    def test_counters_match_raw_session_data(self, perplexity_engine):
-        """Chat with Perplexity → verify table rows match session.get_usage()."""
-        engine, model_id = perplexity_engine
+    def test_counters_match_raw_session_data(self, gemini_engine):
+        """Chat with Gemini → verify table rows match session.get_usage()."""
+        engine, model_id = gemini_engine
 
         # Reset to start clean
         engine.session.reset_usage()
@@ -280,15 +274,15 @@ class TestUsageCountersViaFactory:
         raw_usage = _chat_and_get_usage(engine)
         result_dict = _extract_usage_table(_get_usage_result(engine))
 
-        _assert_table_matches_raw_usage(result_dict, raw_usage, "perplexity", model_id)
+        _assert_table_matches_raw_usage(result_dict, raw_usage, "gemini", model_id)
 
-        print(f"\n[Factory/Perplexity] Raw: in={raw_usage['prompt_tokens']} "
+        print(f"\n[Factory/Gemini] Raw: in={raw_usage['prompt_tokens']} "
               f"out={raw_usage['completion_tokens']} cost=${raw_usage['estimated_cost']:.4f}")
         print(f"  Table TOTAL row: {result_dict['rows'][-1]}")
 
-    def test_counters_accumulate_over_multiple_chats(self, perplexity_engine):
+    def test_counters_accumulate_over_multiple_chats(self, gemini_engine):
         """Two chats accumulate tokens — total is sum of both."""
-        engine, model_id = perplexity_engine
+        engine, model_id = gemini_engine
 
         # Reset to start clean
         engine.session.reset_usage()
@@ -316,9 +310,9 @@ class TestUsageCountersViaFactory:
 
         print(f"\n[Factory] Accumulated: 1st={tokens_1} tokens, 2nd={tokens_2} tokens")
 
-    def test_reset_zeroes_all_counters(self, perplexity_engine):
+    def test_reset_zeroes_all_counters(self, gemini_engine):
         """After /usage reset, raw counters AND table show zero."""
-        engine, _ = perplexity_engine
+        engine, _ = gemini_engine
 
         # Chat to populate counters
         _chat_and_get_usage(engine)
@@ -374,9 +368,9 @@ class TestUsageCountersViaFactory:
 
         print(f"\n[Factory/Gemini] Row: {row}")
 
-    def test_cost_format_is_dollar_4_decimals(self, perplexity_engine):
+    def test_cost_format_is_dollar_4_decimals(self, gemini_engine):
         """Cost column uses $x.xxxx format."""
-        engine, _ = perplexity_engine
+        engine, _ = gemini_engine
 
         engine.session.reset_usage()
         _chat_and_get_usage(engine)
@@ -398,9 +392,9 @@ class TestUsageCountersViaFactory:
 class TestUsageShowMode:
     """Test /usage show subcommands return correct values."""
 
-    def test_show_returns_current_mode(self, perplexity_engine):
+    def test_show_returns_current_mode(self, gemini_engine):
         """'/usage show' returns KeyValueResult with correct current mode."""
-        engine, _ = perplexity_engine
+        engine, _ = gemini_engine
 
         # Set to model mode
         set_dict = _get_usage_result(engine, "show model")
@@ -418,9 +412,9 @@ class TestUsageShowMode:
         show_dict = _get_usage_result(engine, "show")
         assert show_dict["pairs"]["Current mode"] == "session"
 
-    def test_show_invalid_mode_returns_error_with_suggestions(self, perplexity_engine):
+    def test_show_invalid_mode_returns_error_with_suggestions(self, gemini_engine):
         """'/usage show bananas' returns ErrorResult with valid mode list."""
-        engine, _ = perplexity_engine
+        engine, _ = gemini_engine
 
         err_dict = _get_usage_result(engine, "show bananas")
         assert err_dict["type"] == "ErrorResult"
@@ -433,9 +427,9 @@ class TestUsageShowMode:
             assert mode in suggestion_text, \
                 f"Suggestion should mention '{mode}': {suggestion_text}"
 
-    def test_unknown_subcommand_returns_error(self, perplexity_engine):
+    def test_unknown_subcommand_returns_error(self, gemini_engine):
         """'/usage bananas' returns ErrorResult with valid subcommands."""
-        engine, _ = perplexity_engine
+        engine, _ = gemini_engine
 
         err_dict = _get_usage_result(engine, "bananas")
         assert err_dict["type"] == "ErrorResult"
@@ -525,9 +519,9 @@ class TestUsageCountersViaHttp:
 class TestUsageCrossClientConsistency:
     """Verify all client paths produce identical usage data from same session."""
 
-    def test_factory_and_http_show_same_counters(self, perplexity_engine):
+    def test_factory_and_http_show_same_counters(self, gemini_engine):
         """CommandFactory and HTTP endpoint return identical counter values."""
-        engine, _ = perplexity_engine
+        engine, _ = gemini_engine
 
         engine.session.reset_usage()
         raw_usage = _chat_and_get_usage(engine)
@@ -556,9 +550,9 @@ class TestUsageCrossClientConsistency:
         print(f"  Factory TOTAL: {factory_dict['rows'][-1]}")
         print(f"  HTTP TOTAL:    {http_dict['rows'][-1]}")
 
-    def test_show_mode_consistent_across_paths(self, perplexity_engine):
+    def test_show_mode_consistent_across_paths(self, gemini_engine):
         """Setting mode via Factory is visible via HTTP and vice versa."""
-        engine, _ = perplexity_engine
+        engine, _ = gemini_engine
 
         # Set via Factory
         _get_usage_result(engine, "show model")
@@ -585,9 +579,9 @@ class TestUsageCrossClientConsistency:
 class TestResultSerialization:
     """Test that CommandResult.to_dict() produces valid JSON for renderers."""
 
-    def test_table_result_has_renderer_fields(self, perplexity_engine):
+    def test_table_result_has_renderer_fields(self, gemini_engine):
         """TableResult.to_dict() has all fields renderCommandResult() needs."""
-        engine, _ = perplexity_engine
+        engine, _ = gemini_engine
         engine.session.reset_usage()
         _chat_and_get_usage(engine)
 
@@ -600,9 +594,9 @@ class TestResultSerialization:
         assert isinstance(d["rows"], list)
         assert all(isinstance(r, list) and len(r) == 5 for r in d["rows"])
 
-    def test_key_value_result_has_pairs(self, perplexity_engine):
+    def test_key_value_result_has_pairs(self, gemini_engine):
         """KeyValueResult.to_dict() has non-empty pairs dict."""
-        engine, _ = perplexity_engine
+        engine, _ = gemini_engine
 
         d = _get_usage_result(engine, "show")
 
@@ -611,9 +605,9 @@ class TestResultSerialization:
         assert len(d["pairs"]) > 0
         assert "Current mode" in d["pairs"]
 
-    def test_confirmation_result_has_details(self, perplexity_engine):
+    def test_confirmation_result_has_details(self, gemini_engine):
         """ConfirmationResult.to_dict() has details dict."""
-        engine, _ = perplexity_engine
+        engine, _ = gemini_engine
 
         d = _get_usage_result(engine, "reset")
 
@@ -622,9 +616,9 @@ class TestResultSerialization:
         assert isinstance(d["details"], dict)
         assert d["details"]["counters_reset"] is True
 
-    def test_error_result_has_suggestions_list(self, perplexity_engine):
+    def test_error_result_has_suggestions_list(self, gemini_engine):
         """ErrorResult.to_dict() has non-empty suggestions list."""
-        engine, _ = perplexity_engine
+        engine, _ = gemini_engine
 
         d = _get_usage_result(engine, "bananas")
 

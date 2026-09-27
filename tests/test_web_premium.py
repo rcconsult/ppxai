@@ -195,9 +195,18 @@ class TestPerplexitySearch:
                 mock_client_class.return_value = mock_client
                 mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-                with patch.object(pricing_module, "get_tool_pricing") as mock_pricing:
+                with patch.object(pricing_module, "get_tool_pricing") as mock_pricing, \
+                        patch.object(
+                            pplx_backend, "get_tool_config",
+                            return_value={"perplexity_model": "sonar"},
+                        ):
                     mock_pricing.return_value = {"input": 0.20, "output": 0.20, "model": "per_token"}
 
+                    # "sonar" is the chat-completions wire id (the code
+                    # default is "perplexity/sonar", the Responses wire —
+                    # see TestItFollowsTheConfiguredModelOntoItsWire in
+                    # test_web_premium_wire.py); pinned here so this test
+                    # exercises `chat.completions.create` deterministically.
                     content, citations, usage = await pplx_backend.search_perplexity(
                         "test query", num_results=2
                     )
@@ -288,22 +297,43 @@ class TestRegistration:
     """Tests for tool registration."""
 
     def test_register_tools_native_search_provider(self):
-        """Test web_search tool registration for providers with native search.
+        """Test web_search tool registration for providers.
 
-        Perplexity: Skipped (has native web search always on)
-        Gemini: Registered (v1.15.2) - grounding disabled when tools active
+        ADR 0015: Perplexity is no longer a chat provider, so there is no
+        chat provider left with "always-on" native search to skip — every
+        provider (including the bare string "perplexity", still accepted
+        as a config-lookup key) gets web_search/get_weather/fetch_url
+        registered. Gemini registers too (v1.15.2) — grounding is disabled
+        when tools are active, so it needs web_search in agent mode.
         """
         mock_manager = MagicMock()
 
-        # Should skip registration for Perplexity (native web search)
-        web_premium.register_tools(mock_manager, provider="perplexity")
-        mock_manager.register_function.assert_not_called()
+        with patch.object(web_premium, "is_available", return_value=True), \
+                patch.object(
+                    web_premium, "get_premium_search_provider",
+                    return_value="perplexity",
+                ):
+            web_premium.register_tools(mock_manager, provider="perplexity")
+        assert mock_manager.register_function.call_count == 3
+        tool_names = [call[1]["name"] for call in mock_manager.register_function.call_args_list]
+        assert "web_search" in tool_names
+        assert "get_weather" in tool_names
+        assert "fetch_url" in tool_names
+        # No `provider_excluded` kwarg any more — nothing is excluded.
+        for call in mock_manager.register_function.call_args_list:
+            assert "provider_excluded" not in call[1]
 
-        # Should register for Gemini (v1.15.2) - needs web_search tool in agent mode
-        # because grounding is disabled when native function calling is active
+        # Should register for Gemini too (v1.15.2) - needs web_search tool
+        # in agent mode because grounding is disabled when native function
+        # calling is active
         mock_manager.reset_mock()
-        web_premium.register_tools(mock_manager, provider="gemini")
-        # Now registers 3 tools: web_search, get_weather, fetch_url
+        with patch.object(web_premium, "is_available", return_value=True), \
+                patch.object(
+                    web_premium, "get_premium_search_provider",
+                    return_value="gemini",
+                ):
+            web_premium.register_tools(mock_manager, provider="gemini")
+        # Registers 3 tools: web_search, get_weather, fetch_url
         assert mock_manager.register_function.call_count == 3
 
         # Check all three tools are registered (order doesn't matter)
@@ -311,11 +341,6 @@ class TestRegistration:
         assert "web_search" in tool_names
         assert "get_weather" in tool_names
         assert "fetch_url" in tool_names
-
-        # Check that web_search has correct exclusion list
-        web_search_call = [call for call in mock_manager.register_function.call_args_list
-                          if call[1]["name"] == "web_search"][0]
-        assert web_search_call[1]["provider_excluded"] == ["perplexity"]
 
     def test_register_tools_no_api_keys(self):
         """Test registration falls back to free search when no API keys."""
@@ -353,9 +378,10 @@ class TestRegistration:
                     first_call_kwargs = mock_manager.register_function.call_args_list[0][1]
                     assert first_call_kwargs["name"] == "web_search"
                     assert "perplexity" in first_call_kwargs["description"].lower()
-                    # Only Perplexity excluded (has native web search)
-                    # Gemini needs web_search in agent mode (grounding disabled with native tools)
-                    assert first_call_kwargs["provider_excluded"] == ["perplexity"]
+                    # No `provider_excluded` kwarg any more (ADR 0015):
+                    # Perplexity is no longer a chat provider, so nothing
+                    # is excluded from web_search registration.
+                    assert "provider_excluded" not in first_call_kwargs
                     # Check get_weather and fetch_url are also registered
                     tool_names = [call[1]["name"] for call in mock_manager.register_function.call_args_list]
                     assert "get_weather" in tool_names

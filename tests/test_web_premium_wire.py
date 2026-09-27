@@ -20,7 +20,6 @@ request runs no search and returns no citations — and the results arrive as a
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from ppxai.engine.model_facts import shipped_facts_for_model
-from ppxai.engine.providers.perplexity import PerplexityProvider
 from ppxai.engine.search import gemini as gemini_backend
 from ppxai.engine.search import perplexity as pplx_backend
 from ppxai.engine.search.perplexity import (
@@ -31,19 +30,27 @@ from ppxai.engine.search.perplexity import (
 from ppxai.engine.search.perplexity import (
     search_perplexity as web_search_perplexity,
 )
+from ppxai.engine.search.perplexity_facts import SEARCH_MODEL_FACTS
 
 
 class TestNoSecondHardcodedClient:
-    def test_the_tool_reads_the_same_table_as_the_provider(self):
-        """One resolution, two consumers — the root-cause rule."""
-        for model in ("sonar", "sonar-pro", "perplexity/sonar"):
-            from_table = shipped_facts_for_model(
-                model, PerplexityProvider.shipped_model_facts
-            ).wire_protocol
-            from_provider = PerplexityProvider(
-                api_key="k", base_url="https://api.perplexity.ai"
-            )._wire_for(model)
-            assert from_table == from_provider, model
+    def test_the_tool_reads_the_one_table_it_owns(self):
+        """Perplexity is no longer a chat provider (ADR 0015) — the search
+        backend's `SEARCH_MODEL_FACTS` is now the ONLY table naming this
+        wire, so there is no second consumer left to agree with. What
+        remains worth pinning is that the table still resolves the two
+        surviving id shapes onto the wires the live behavioural test
+        (`TestItFollowsTheConfiguredModelOntoItsWire`) exercises.
+        """
+        chat_wire = shipped_facts_for_model("sonar", SEARCH_MODEL_FACTS).wire_protocol
+        chat_wire_pro = shipped_facts_for_model(
+            "sonar-pro", SEARCH_MODEL_FACTS
+        ).wire_protocol
+        responses_wire = shipped_facts_for_model(
+            "perplexity/sonar", SEARCH_MODEL_FACTS
+        ).wire_protocol
+        assert chat_wire == chat_wire_pro == "chat_completions"
+        assert responses_wire == "responses"
 
     def test_no_wire_path_is_hardcoded_in_the_search_function(self):
         """The base URLs are named constants derived from one host.
@@ -344,7 +351,7 @@ class TestCodeDefaultsAreNotDeprecatedModels:
         assert m, "the perplexity_model default moved — update this fence"
         default = m.group(1)
         wire = shipped_facts_for_model(
-            default, PerplexityProvider.shipped_model_facts
+            default, SEARCH_MODEL_FACTS
         ).wire_protocol
         assert wire == "responses", (
             f"the web_search Perplexity default {default!r} resolves to the "

@@ -40,7 +40,6 @@ import pytest
 from ppxai.engine import facts_config as fcmod
 from ppxai.engine.model_facts import shipped_facts_for_model
 from ppxai.engine.providers.openai_native import OpenAINativeProvider
-from ppxai.engine.providers.perplexity import PerplexityProvider
 from ppxai.engine.types import ProviderCapabilities
 
 
@@ -146,43 +145,50 @@ class TestProviderConfigCannotReachAModelFact:
             "must be disjoint"
         )
 
-    def test_sonar_cannot_be_made_tool_capable_from_a_provider_block(
+    def test_a_shipped_prompt_based_model_stays_that_way_from_a_provider_block(
         self, config_file
     ):
-        """Debt Item 43's exact model, its exact regression."""
+        """Debt Item 43's exact regression, ported off the deprecated chat
+        provider (ADR 0015): a provider-wide statement must not reach a
+        model that has its own shipped row."""
         config_file(
-            {
-                "perplexity": {
-                    "name": "P",
-                    "base_url": "https://api.perplexity.ai",
-                    "api_key_env": "K",
-                    "facts": {"tool_mode": "native"},
-                }
-            }
+            _provider(
+                base_url="https://api.example.invalid",
+                facts={"tool_mode": "native"},
+            )
         )
-        p = PerplexityProvider(api_key="k", provider_id="perplexity")
-        assert p.get_facts_for_model("sonar").tool_mode == "prompt_based"
+        p = OpenAINativeProvider(api_key="k", provider_id="p")
+        assert p.get_facts_for_model("o4-mini").tool_mode == "prompt_based"
 
     def test_the_guard_agrees_end_to_end(self, config_file):
         """Not just the helper — the admission guard (the I3 lesson).
 
         I3 shipped a `NameError` that 38 tests missed by only ever calling
-        the helper directly.
+        the helper directly. Uses `local` (a registered provider, mapping
+        to `OpenAICompatibleProvider`) with a per-model `facts` block that
+        resolves `tool_mode="prompt_based"` — the generic shape of Item
+        43's Perplexity/`sonar` regression, which no longer exists as a
+        chat provider (ADR 0015).
         """
-        from ppxai.engine.task_authorizer import _reject_tool_incapable_model
+        from ppxai.engine.task_authorizer import (
+            TaskAuthorizationError,
+            _reject_tool_incapable_model,
+        )
 
         config_file(
             {
-                "perplexity": {
-                    "name": "P",
-                    "base_url": "https://api.perplexity.ai",
+                "local": {
+                    "name": "L",
+                    "base_url": "https://api.example.invalid",
                     "api_key_env": "K",
-                    "facts": {"tool_mode": "native"},
+                    "models": {"m1": {"facts": {"tool_mode": "prompt_based"}}},
                 }
             }
         )
-        with pytest.raises(Exception):
-            _reject_tool_incapable_model("perplexity", "sonar", ["read_file"])
+
+        with pytest.raises(TaskAuthorizationError) as excinfo:
+            _reject_tool_incapable_model("local", "m1", ["read_file"])
+        assert excinfo.value.status == 400
 
     def test_a_model_block_still_wins(self, config_file):
         """The operator CAN override the table — by naming the model."""

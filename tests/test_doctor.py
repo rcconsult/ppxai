@@ -37,7 +37,6 @@ from ppxai.engine.model_deprecations import (
     GEMINI_DEPRECATIONS,
     NVIDIA_DEPRECATIONS,
     OPENAI_DEPRECATIONS,
-    PERPLEXITY_DEPRECATIONS,
     RECOMMENDED_DEFAULTS,
     RECOMMENDED_NEW_MODELS,
     audit_config_models,
@@ -680,42 +679,11 @@ class TestDeprecationTableInvariants:
         # gpt-3.5-turbo-instruct, gpt-3.5-turbo-1106, babbage-002, davinci-002.
         assert len(OPENAI_DEPRECATIONS) == 16
 
-    def test_perplexity_deprecation_count(self):
-        """The three Sonar IDs served only on the retiring chat wire.
-
-        Was "no active deprecations, verified 2026-04-12" — true then. On
-        2026-09-27 Perplexity retires the Sonar chat-completions ENDPOINT,
-        which is unlike every other table here: the models are not withdrawn,
-        the wire they are served on is.
-
-        All four point at `perplexity/sonar` because that is the only Sonar
-        model measured live on the Responses wire (2026-08-31, re-measured
-        2026-09-01); `sonar-pro` and `sonar-reasoning-pro` 400 there in both
-        bare and namespaced form. Naming a replacement that does not exist
-        would be a worse hint than naming a lighter one that does.
-
-        `sonar-deep-research` joined on 2026-09-01. It had NO row while being
-        live on chat-completions and absent from Responses — so it would have
-        stopped working on the cutover with no migration hint at all. This
-        assertion is a SET rather than a count precisely so an addition has
-        to be justified here rather than silently absorbed.
-        """
-        assert set(PERPLEXITY_DEPRECATIONS) == {
-            "sonar",
-            "sonar-deep-research",
-            "sonar-pro",
-            "sonar-reasoning-pro",
-        }
-        for model, dep in PERPLEXITY_DEPRECATIONS.items():
-            assert dep.shutdown_date == "2026-09-27", model
-            assert dep.replacement == "perplexity/sonar", model
-
     def test_all_deprecations_merged_correctly(self):
         # ALL_DEPRECATIONS must be the union of every provider-specific dict.
         expected = (
             len(GEMINI_DEPRECATIONS)
             + len(OPENAI_DEPRECATIONS)
-            + len(PERPLEXITY_DEPRECATIONS)
             + len(NVIDIA_DEPRECATIONS)
         )
         assert len(ALL_DEPRECATIONS) == expected, (
@@ -730,7 +698,7 @@ class TestDeprecationTableInvariants:
         for k in NVIDIA_DEPRECATIONS:
             assert k in ALL_DEPRECATIONS
 
-    @pytest.mark.parametrize("provider", ["openai", "gemini", "perplexity", "nvidia"])
+    @pytest.mark.parametrize("provider", ["openai", "gemini", "nvidia"])
     def test_recommended_default_matches_the_example_config(self, provider):
         """The INTENT, asserted instead of a hardcoded literal.
 

@@ -47,12 +47,10 @@ from ppxai.engine.providers.base import BaseProvider
 from ppxai.engine.providers.gemini import GeminiProvider
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 from ppxai.engine.providers.openai_native import OpenAINativeProvider
-from ppxai.engine.providers.perplexity import PerplexityProvider
 
 # All provider classes to test
 ALL_PROVIDERS = [
     OpenAICompatibleProvider,
-    PerplexityProvider,
     OpenAINativeProvider,
     GeminiProvider,
 ]
@@ -143,17 +141,6 @@ class TestTheTwoAccessors:
         assert (
             provider.get_facts_for_model("gpt-4.1-mini").tool_mode == "prompt_based"
         )
-
-    def test_perplexity_splits_endpoint_from_model(self):
-        """`sonar` is not tool-capable, but the ENDPOINT still searches."""
-        with patch("ppxai.engine.providers.base.OpenAI"):
-            provider = PerplexityProvider(
-                api_key="test",
-                base_url="https://api.perplexity.ai",
-            )
-        assert provider.get_capabilities().web_search is True
-        assert provider.get_facts_for_model("sonar").tool_mode == "prompt_based"
-        assert provider.get_facts_for_model("sonar-pro").tool_mode != "prompt_based"
 
     def test_gemini_splits_endpoint_from_model(self):
         with patch("ppxai.engine.providers.gemini.genai") as mock_genai:

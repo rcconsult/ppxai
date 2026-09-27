@@ -32,12 +32,12 @@ Implementation notes:
   call has zero session-state side effects.
 - Every shipped provider now implements `oneshot()`: `OpenAICompatibleProvider`
   (covers `local`, `custom`, `openai`-compat NIM/vLLM/Ollama deployments),
-  `openai_native`, `perplexity`, and `gemini`. (This bullet previously said
+  `openai_native`, `gemini` and `anthropic`. (This bullet previously said
   the native providers raise 400 "until they grow `oneshot()`" — they since
   did, and the note went stale.)
 - `response_format` reaches the model on every provider, but by two different
   routes, because only one of them is an OpenAI endpoint:
-    * openai_compat / openai_native / perplexity — forwarded verbatim in
+    * openai_compat / openai_native — forwarded verbatim in
       `request_kwargs`. NVIDIA NIM, vLLM and modern OpenAI-compatible
       endpoints accept `{"type": "json_object"}` and
       `{"type": "json_schema", "json_schema": {...}}`.
@@ -72,6 +72,7 @@ import ppxai.server.routes.agent_v1 as _agent_v1
 
 from ...common.logger import get_logger
 from ...config import (
+    REMOVED_CHAT_PROVIDERS,
     calculate_cost,
     get_api_key,
     get_available_providers,
@@ -208,7 +209,7 @@ def _oneshot_grounding_enabled() -> bool:
 
     Option A (docs/archive/plan-oneshot-grounding.md): the tool-FREE oneshot tiers
     (`/v1/oneshot`, `/v1/agent/run`) may augment a single-turn completion with
-    the PROVIDER'S OWN web search (Perplexity Sonar, Gemini grounding) — NOT by
+    the PROVIDER'S OWN web search (Gemini grounding) — NOT by
     handing the model a `web_search`/`fetch_url` tool (that's Option B, with the
     tool-loop exfiltration surface). Retrieval happens inside the provider's API
     call, so the egress perimeter is unchanged: the same provider host the call
@@ -552,11 +553,6 @@ def _apply_oneshot_grounding(provider, provider_name: str) -> None:
     - Gemini: set `enable_grounding=True`; `oneshot()` then builds the config
       with `GoogleSearch()` (no ppxai tools are passed on the oneshot path, so
       grounding is not suppressed by function-calling).
-    - Perplexity: search is intrinsic to sonar* models and already on for the
-      configured default — no per-call switch to flip here. (A future tightening
-      could substitute a sonar model when a non-search model is requested; out
-      of scope for this increment, and we must not silently downgrade a
-      deliberately chosen reasoning model.)
     - Others with web_search capability but no oneshot grounding hook: no-op.
 
     Best-effort and fail-open-to-current-behavior: any error leaves the
@@ -607,9 +603,14 @@ def _build_provider(provider_name: str, native_grounding: bool | None = None):
     by `/v1/oneshot` and the agent-run tier (`agent_v1._v1_provider_or_400`
     delegates here), so both oneshot tiers pick up grounding from one place.
     """
-    # get_provider_config falls back to "perplexity" for unknown providers,
-    # which would silently swap providers under the caller. Check membership
-    # explicitly first.
+    # Check membership explicitly: get_provider_config() returns {} for an
+    # unknown provider, and a removed chat provider (ADR 0015) gets its own
+    # message naming the fix.
+    if provider_name in REMOVED_CHAT_PROVIDERS:
+        raise HTTPException(
+            status_code=400,
+            detail=REMOVED_CHAT_PROVIDERS[provider_name],
+        )
     if provider_name not in get_available_providers():
         raise HTTPException(
             status_code=400,
@@ -687,6 +688,10 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
             status_code=400,
             detail="No provider specified and no default_provider configured.",
         )
+    if provider_name in REMOVED_CHAT_PROVIDERS:
+        # ADR 0015: named before the model lookup, which would otherwise
+        # answer "no default_model" for a provider that no longer exists.
+        raise HTTPException(status_code=400, detail=REMOVED_CHAT_PROVIDERS[provider_name])
 
     model = req.model or get_default_model(provider_name)
     if not model:

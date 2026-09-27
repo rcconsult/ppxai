@@ -335,7 +335,15 @@ class TestPerplexityClientLifecycle:
                 create.create = _create
                 self.chat.completions = create
 
-        with patch.object(pplx_backend, "AsyncOpenAI", FakeAsyncOpenAI):
+        # Pin the chat-completions wire id explicitly: the code default is
+        # "perplexity/sonar" (the Responses wire, ADR 0014/0015), and this
+        # fake only implements `chat.completions` — the client-lifecycle
+        # behaviour under test does not depend on which wire is used.
+        with patch.object(pplx_backend, "AsyncOpenAI", FakeAsyncOpenAI), \
+                patch.object(
+                    pplx_backend, "get_tool_config",
+                    return_value={"perplexity_model": "sonar"},
+                ):
             await pplx_backend.search_perplexity("q")
 
         assert captured["http_client"] is not None, (
@@ -366,7 +374,11 @@ class TestPerplexityClientLifecycle:
                 create.create = _create
                 self.chat.completions = create
 
-        with patch.object(pplx_backend, "AsyncOpenAI", FakeAsyncOpenAI):
+        with patch.object(pplx_backend, "AsyncOpenAI", FakeAsyncOpenAI), \
+                patch.object(
+                    pplx_backend, "get_tool_config",
+                    return_value={"perplexity_model": "sonar"},
+                ):
             with pytest.raises(RuntimeError):
                 await pplx_backend.search_perplexity("q")
 

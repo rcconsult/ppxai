@@ -179,6 +179,14 @@ RETIRED = {
         "failure is account-scoped — another deployment may well be entitled to "
         "it, which is precisely why a catalog scan cannot decide this."
     ),
+    "perplexity::__endpoint__": (
+        "2026-09-27 — ADR 0015 removed Perplexity as a chat provider entirely: "
+        "`ppxai-config.example.json` no longer ships a `providers.perplexity` "
+        "block at all (it stays a web_search/grounding backend, configured "
+        "under `tools.web_search`, not `providers`). There is no successor "
+        "endpoint record to compare — the whole record is gone, not one field "
+        "of it, which is why this key moved here rather than into DECLARED."
+    ),
 }
 
 
@@ -212,7 +220,6 @@ class TestBehaviourIsPreserved:
     #: hiding them — a fixture quietly edited to match new behaviour proves
     #: nothing at all.
     DECLARED = {
-        ("perplexity::__endpoint__", "citations"),
         ("qwen36-agent::Qwen/Qwen3.6-27B-FP8-agent", "supports_vision"),
     }
 
@@ -264,29 +271,6 @@ class TestTheNamedFixtures:
         decision, not an implementation detail."""
         assert resolved["vllm-gpt-oss::openai/gpt-oss-120b"]["tool_mode"] == "native"
 
-    def test_perplexity_keeps_its_tool_capable_models(self):
-        """Attempt 1 demoted these to `prompt_based` — Item 43 inverted.
-
-        Asserted against the RESOLVER rather than the example config, because
-        the config no longer ships these ids: on 2026-08-31 the Sonar
-        chat-completions endpoint was given a 2026-09-27 retirement date and
-        the example config moved to `perplexity/sonar`, the only Sonar model
-        Perplexity serves on the surviving wire. The models still exist and
-        are still tool-capable — an operator who configures them must not get
-        them demoted — so the property this fence exists for is unchanged and
-        is now checked where it actually lives.
-        """
-        from ppxai.engine.model_facts import shipped_facts_for_model
-        from ppxai.engine.providers.perplexity import PerplexityProvider
-
-        table = PerplexityProvider.shipped_model_facts
-        assert shipped_facts_for_model("sonar-pro", table).tool_mode == "auto"
-        assert shipped_facts_for_model("sonar-reasoning-pro", table).tool_mode == "auto"
-        assert shipped_facts_for_model("sonar", table).tool_mode == "prompt_based"
-        # The successor keeps native tools on the new wire (measured 2026-08-31:
-        # it accepted a tools array AND called the tool, unlike bare `sonar`).
-        assert shipped_facts_for_model("perplexity/sonar", table).tool_mode == "auto"
-
     @pytest.mark.parametrize(
         "provider",
         ["openrouter", "nvidia", "local-vllm", "vllm-gpt-oss", "lmstudio", "ollama"],
@@ -311,31 +295,54 @@ class TestTheEndpointDefaultSemantic:
 
     HEAD: a config `capabilities` block REPLACES the class record, so an
     omitted field falls to the dataclass default. New: the class record is
-    the base and stated fields override it. The Perplexity `citations`
-    case is the one place in the shipped example where the two differ.
+    the base and stated fields override it. The Perplexity `citations` case
+    was the one place in the shipped example where the two differed — ADR
+    0015 removed Perplexity as a chat provider, so its config block (and
+    that live example) is gone (see `RETIRED["perplexity::__endpoint__"]`
+    above). The semantic itself is generic, not Perplexity-specific, and is
+    asserted here directly against a REGISTERED provider class whose own
+    default differs from the dataclass default — `GeminiProvider` states
+    `citations=True` where `ProviderCapabilities()` defaults to `False`.
     """
 
-    def test_an_unstated_endpoint_field_keeps_the_class_value(self, resolved):
-        from ppxai.engine.providers.perplexity import PerplexityProvider
+    def test_an_unstated_endpoint_field_keeps_the_class_value(
+        self, monkeypatch, tmp_path
+    ):
+        import ppxai.engine.facts_config as fc
+        from ppxai.engine.providers.gemini import GeminiProvider
+        from ppxai.engine.types import ProviderCapabilities
 
-        assert PerplexityProvider.default_capabilities.citations is True
-        assert resolved["perplexity::__endpoint__"]["citations"] is True
+        assert GeminiProvider.default_capabilities.citations is True
+        assert ProviderCapabilities().citations is False
+
+        cfg = tmp_path / "ppxai-config.json"
+        # `citations` is left UNSTATED — only an unrelated field is stated.
+        cfg.write_text(
+            json.dumps({"providers": {"gemini": {"facts": {"weather": False}}}}),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(fc, "find_config_file", lambda: cfg)
+        got = fc.apply_provider_overrides(
+            GeminiProvider.default_capabilities, "gemini"
+        )
+        assert got.citations is True
+        assert got.weather is False
 
     def test_a_stated_endpoint_field_still_overrides(self, monkeypatch, tmp_path):
         """The override direction must not be lost to the new base."""
         import ppxai.engine.facts_config as fc
-        from ppxai.engine.providers.perplexity import PerplexityProvider
+        from ppxai.engine.providers.gemini import GeminiProvider
 
         cfg = tmp_path / "ppxai-config.json"
         cfg.write_text(
             json.dumps(
-                {"providers": {"perplexity": {"facts": {"citations": False}}}}
+                {"providers": {"gemini": {"facts": {"citations": False}}}}
             ),
             encoding="utf-8",
         )
         monkeypatch.setattr(fc, "find_config_file", lambda: cfg)
         got = fc.apply_provider_overrides(
-            PerplexityProvider.default_capabilities, "perplexity"
+            GeminiProvider.default_capabilities, "gemini"
         )
         assert got.citations is False
 

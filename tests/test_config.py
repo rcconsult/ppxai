@@ -35,7 +35,6 @@ from ppxai.config import (
     get_default_provider,
     get_max_injection_size,
     get_model_context_limit,
-    get_provider_capabilities,
     get_provider_config,
     get_shell_config,
     get_tool_config,
@@ -111,15 +110,13 @@ class TestConfig:
         assert isinstance(MODEL_PRICING, dict)
 
     def test_coding_model_constant(self):
-        """CODING_MODEL points at a model on the SURVIVING wire.
+        """CODING_MODEL points at the default chat provider's model.
 
-        Was `sonar-pro` until 2026-08-31. Perplexity retires the Sonar
-        chat-completions endpoint on 2026-09-27 and does not serve sonar-pro
-        on the Responses wire (measured — 400 in both bare and namespaced
-        form), so the shipped default would have broken on that date.
-        `perplexity/sonar` is the only Sonar model on the surviving wire.
+        Perplexity is deprecated as a chat provider (ADR 0015); Gemini is
+        the default provider and `gemini-3.8-flash` its default model
+        since 2026-09-27.
         """
-        assert CODING_MODEL == "perplexity/sonar"
+        assert CODING_MODEL == "gemini-3.8-flash"
 
     def test_default_capabilities(self):
         """Test default capabilities are all False."""
@@ -154,19 +151,19 @@ class TestProviderConfig:
 
     def test_providers_dict_exists(self):
         """Test that PROVIDERS dictionary exists with expected providers."""
-        assert "perplexity" in PROVIDERS
+        assert "gemini" in PROVIDERS
 
-    def test_perplexity_provider_structure(self):
-        """Test Perplexity provider has all required fields."""
-        provider = PROVIDERS["perplexity"]
+    def test_gemini_provider_structure(self):
+        """Test Gemini provider has all required fields."""
+        provider = PROVIDERS["gemini"]
         assert "name" in provider
         assert "base_url" in provider
         assert "api_key_env" in provider
         assert "models" in provider
         assert "pricing" in provider
         assert "coding_model" in provider
-        assert provider["base_url"] == "https://api.perplexity.ai"
-        assert provider["api_key_env"] == "PERPLEXITY_API_KEY"
+        assert provider["base_url"] == "https://generativelanguage.googleapis.com/v1beta/openai"
+        assert provider["api_key_env"] == "GEMINI_API_KEY"
 
     def test_provider_models_have_required_fields(self):
         """Test that all provider models have required fields."""
@@ -181,11 +178,11 @@ class TestProviderConfig:
         config = get_provider_config()
         assert config == PROVIDERS[get_default_provider()]
 
-    def test_get_provider_config_perplexity(self):
-        """Test get_provider_config for perplexity provider."""
-        config = get_provider_config("perplexity")
-        assert config["name"] == "Perplexity AI"
-        assert config["base_url"] == "https://api.perplexity.ai"
+    def test_get_provider_config_gemini(self):
+        """Test get_provider_config for gemini provider."""
+        config = get_provider_config("gemini")
+        assert config["name"] == "Google Gemini"
+        assert config["base_url"] == "https://generativelanguage.googleapis.com/v1beta/openai"
 
     def test_get_provider_config_unknown_is_empty(self):
         """An unknown provider gets {}, not another provider's block.
@@ -207,25 +204,25 @@ class TestProviderConfig:
         assert isinstance(pricing, dict)
         assert len(pricing) > 0
 
-    def test_get_base_url_perplexity(self):
-        """Test get_base_url for perplexity."""
-        url = get_base_url("perplexity")
-        assert url == "https://api.perplexity.ai"
+    def test_get_base_url_gemini(self):
+        """Test get_base_url for gemini."""
+        url = get_base_url("gemini")
+        assert url == "https://generativelanguage.googleapis.com/v1beta/openai"
 
-    def test_get_coding_model_perplexity(self):
-        """Test get_coding_model for perplexity."""
-        model = get_coding_model("perplexity")
-        assert model == "perplexity/sonar"
+    def test_get_coding_model_gemini(self):
+        """Test get_coding_model for gemini."""
+        model = get_coding_model("gemini")
+        assert model == "gemini-3.8-flash"
 
-    def test_get_default_model_perplexity(self):
-        """Test get_default_model for perplexity."""
-        model = get_default_model("perplexity")
-        assert model == "perplexity/sonar"
+    def test_get_default_model_gemini(self):
+        """Test get_default_model for gemini."""
+        model = get_default_model("gemini")
+        assert model == "gemini-3.8-flash"
 
-    @patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key-123"})
-    def test_get_api_key_perplexity(self):
-        """Test get_api_key retrieves perplexity key from env."""
-        key = get_api_key("perplexity")
+    @patch.dict(os.environ, {"GEMINI_API_KEY": "test-key-123"})
+    def test_get_api_key_gemini(self):
+        """Test get_api_key retrieves gemini key from env."""
+        key = get_api_key("gemini")
         assert key == "test-key-123"
 
     def test_get_api_key_missing(self):
@@ -238,19 +235,9 @@ class TestProviderConfig:
 class TestProviderCapabilities:
     """Tests for provider capabilities."""
 
-    def test_get_provider_capabilities_perplexity(self):
-        """Test Perplexity has web search capability."""
-        caps = get_provider_capabilities("perplexity")
-        assert caps["web_search"] is True
-        assert caps["realtime_info"] is True
-
-    def test_provider_needs_tool_perplexity(self):
-        """Test Perplexity doesn't need web search tool."""
-        assert provider_needs_tool("perplexity", "web_search") is False
-
     def test_provider_needs_tool_unknown_category(self):
         """Test unknown capability defaults to needing tool."""
-        assert provider_needs_tool("perplexity", "unknown_capability") is True
+        assert provider_needs_tool("gemini", "unknown_capability") is True
 
 
 class TestConfigLoading:
@@ -410,7 +397,7 @@ class TestConfigHelpers:
         """Test get_available_providers returns list."""
         providers = get_available_providers()
         assert isinstance(providers, list)
-        assert "perplexity" in providers
+        assert "gemini" in providers
 
     def test_get_default_provider(self):
         """Test get_default_provider returns a valid provider."""
@@ -429,13 +416,13 @@ class TestConfigHelpers:
     def test_validate_config_provider_info(self):
         """Test validate_config includes provider details."""
         result = validate_config()
-        assert "perplexity" in result["providers"]
-        pplx = result["providers"]["perplexity"]
-        assert "name" in pplx
-        assert "has_api_key" in pplx
-        assert "api_key_env" in pplx
-        assert "base_url" in pplx
-        assert "model_count" in pplx
+        assert "gemini" in result["providers"]
+        gemini = result["providers"]["gemini"]
+        assert "name" in gemini
+        assert "has_api_key" in gemini
+        assert "api_key_env" in gemini
+        assert "base_url" in gemini
+        assert "model_count" in gemini
 
 
 class TestConfigReload:

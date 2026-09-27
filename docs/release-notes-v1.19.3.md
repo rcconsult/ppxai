@@ -28,10 +28,13 @@
 > and three tool names (`search_files`, `web_search`, `fetch_url`) are
 > reserved by Perplexity. Both failed every affected turn.
 >
-> **Perplexity is deprecated as a chat provider; Gemini is the new
-> default** (owner decision 2026-09-27). Nothing is removed. Perplexity
-> stays a `web_search` backend, and an existing config that names it for
-> chat keeps working, with a warning. See "Deprecated" below.
+> **⚠️ Perplexity is removed as a chat provider; Gemini is the new
+> default** (owner decision 2026-09-27, ADR 0015). Perplexity stays a
+> web search and grounding backend. A config that still names it
+> for chat is **ignored, with a warning**, and the engine falls back to
+> the next configured provider; see "Removed" and the upgrade steps
+> below. **Grounding now searches first, for every provider** (ADR 0014),
+> and `/v1/oneshot` gained an optional `grounding` request field.
 >
 > **Command-surface changes, landed and Accepted 2026-09-21 (ADR 0007).**
 > `CommandSpec` is now the single declaration for every command;
@@ -60,11 +63,14 @@
 > silently, an older server changes nothing.
 >
 
-> No config-shape changes. The shipped microk8s
-> coder template changes shape, but it is an example: nothing in an
-> existing install reads it. The v1 API gateway (`POST /v1/oneshot`,
-> bearer auth) and the `/v1/agent/*` surface are **byte-identical to
-> v1.19.2** — ppxai-sre and any other v1 consumer is unaffected.
+> Config shape: a `providers.perplexity` block is now ignored, and
+> `execution.run.grounding: true` now means search-first retrieval (see
+> the upgrade steps). The shipped microk8s coder template changes shape,
+> but it is an example: nothing in an existing install reads it. The v1
+> API gateway (`POST /v1/oneshot`, bearer auth) keeps its response shape;
+> its request gains one optional field, `grounding`, and a request naming
+> `provider: "perplexity"` now answers 400 instead of calling the retired
+> endpoint.
 
 ## Branch
 
@@ -78,14 +84,36 @@ and a web/VSCode transcript feature carried the branch through
 in "One command registry" below) landed 2026-09-21. A tenth fix — the
 tool-loop guard rework below — landed 2026-09-23.
 
-Nothing in this release requires an upgrade step. If you run tool loops
-against models whose facts rows you have not checked, the first fix is
-the reason to take it; if you serve the 27B-FP8 Qwen line, the catalog
-fix is; if you script against web or VSCode's `/quit`, switch to the
-"Leave" button / connect-disconnect commands. If your
-`default_provider` (or `MODEL_PROVIDER`) is `perplexity`, nothing breaks
-yet, but switch chat to another provider before the removal release;
-`/doctor` flags it.
+**Upgrade steps.** Run `/doctor` after upgrading; it reports each of
+these.
+
+1. **Perplexity for chat (ADR 0015).** If `default_provider` or
+   `MODEL_PROVIDER` is `perplexity`, or your `ppxai-config.json` has a
+   `providers.perplexity` block, the block is now ignored and ppxai
+   starts on the next configured provider. Set `default_provider` to
+   another provider (e.g. `gemini`) and delete the block. Models you
+   reached through a Perplexity key move to the vendor's own provider:
+   `openai/*` → `openai`, `google/*` → `gemini`, `anthropic/*` →
+   `anthropic` (opt-in, untested against the live API), `xai/*` →
+   `openrouter`. Keep `PERPLEXITY_API_KEY`: it still powers web search
+   and grounding.
+2. **The web search model.** If `tools.web_search.perplexity_model` is a
+   bare Sonar id (`sonar`, `sonar-pro`, ...), set it to
+   `"perplexity/sonar"`. The bare ids were served only on the
+   chat-completions endpoint that retired 2026-09-27, so every
+   Perplexity search fails with them. **The shipped `ppxai-config.json`
+   carried `sonar` until this release.**
+3. **Grounding.** If you set `execution.run.grounding: true` and serve
+   Gemini, search moves from Gemini's in-call Google Search to a
+   separate search before the model call, through the resolved backend
+   chain (Gemini's Google Search first when `GEMINI_API_KEY` is set). Set
+   `"native"` to keep the old behaviour.
+
+Otherwise: if you run tool loops against models whose facts rows you
+have not checked, the first fix is the reason to take this release; if
+you serve the 27B-FP8 Qwen line, the catalog fix is; if you script
+against web or VSCode's `/quit`, switch to the "Leave" button /
+connect-disconnect commands.
 
 ## One command registry (ADR 0007)
 
@@ -597,30 +625,44 @@ guesses. Tests pin both.
   then on. `PPXAI_TEST_KEEP_HOME=1` keeps it after the run for
   inspection. No change for anyone who only runs `ppxai` normally.
 
-## Deprecated
+## Removed
 
-- **Perplexity as a chat provider.** Its chat-completions API retired on
-  2026-09-27. The one Sonar id left, `perplexity/sonar`, needed two
-  wire fixes found the day before (see Fixed). Perplexity stays as a
-  `web_search` backend; only chat is deprecated.
-  - `default_provider` is now `gemini` in both shipped configs, the
-    configs the installers generate, and VSCode's built-in config and
+- **Perplexity as a chat provider (ADR 0015).** Its chat-completions API
+  retired on 2026-09-27; the one Sonar id left needed two wire fixes the
+  day before (see Fixed). Perplexity stays a web search and grounding
+  backend, second in the default order after Gemini. The phase-1 deprecation (warn on select) never
+  shipped: it is replaced by the removal in the same release.
+  - `PerplexityProvider` and the models it served through a Perplexity
+    key (`openai/*`, `anthropic/*`, `google/*`, `xai/*`,
+    `perplexity/*` as chat) are gone.
+  - A `providers.perplexity` block is ignored, never rewritten, and
+    logged once at start-up. `set_provider("perplexity")` returns False
+    and never raises (start-up code that selects the configured default
+    keeps working), and it never falls back to a generic
+    OpenAI-compatible client, which would have called the retired
+    endpoint and failed every turn. The engine starts on the next
+    configured provider.
+  - `/provider perplexity`, `/v1/oneshot` and the task tier answer with a
+    message naming the fix. `/doctor` reports the leftover default or
+    block, with a replacement per model it lists
+    (`metadata.removed_chat_providers`).
+  - A session recorded on Perplexity keeps its history, continues on the
+    current provider, and says so once: in the restore result
+    (`notice`) and as an INFO event (`metadata.notice =
+    "provider_removed"`) leading the next chat turn.
+  - Defaults: `default_provider` is `gemini` in both shipped configs, the
+    installers' generated configs, and VSCode's built-in config and
     `ppxai.defaultProvider` setting. The fallback when nothing valid is
     configured is `gemini`, then the first configured provider.
-  - Selecting Perplexity for chat **warns and never raises**: one log
-    warning, and an INFO event (`metadata.notice =
-    "provider_deprecated"`) leading the next chat turn. `/provider` marks
-    it, and `/doctor` flags a Perplexity default with a warning status
-    (`metadata.deprecated_default_provider`). Start-up code that selects
-    the configured default keeps working.
-  - `get_provider_config("<unknown>")` returns `{}` instead of
-    Perplexity's block, which silently swapped providers under the caller.
-  - The web_search backend reads Perplexity's model facts from
-    `providers/perplexity_facts.py`, not from the chat provider class, so
-    phase 2 can delete that class without breaking web_search.
-  - **Phase 2 (ADR 0015, planned for this release):** remove the chat
-    provider and its gateway models. Grounding through Perplexity no
-    longer depends on it: see "Grounding searches first" below.
+    `get_provider_config("<unknown>")` returns `{}` instead of
+    Perplexity's block, which silently swapped providers under the
+    caller.
+  - Removed with it: the Perplexity chat system prompt, its `AGENTS.md`
+    hints, its model-deprecation and recommended-model rows,
+    `ProviderName.PERPLEXITY`, and
+    `scripts/probe-perplexity-capabilities.py` (it measured chat tool
+    calling). `perplexity_facts.py` keeps only the search backend's
+    Responses-wire row. `CODING_MODEL` now names `gemini-3.8-flash`.
 
 ## Changed
 
@@ -634,8 +676,8 @@ imports nothing from the chat providers, which a test pins. The
 **`execution.run.grounding: true` now means `"retrieve"`.** On
 `/v1/oneshot` and the tool-free `/v1/agent/run`, ppxai searches once, with
 the prompt as the query (capped at 2,000 characters), through the same
-backend chain as `web_search` — Perplexity first when `PERPLEXITY_API_KEY`
-is set — and then calls the model with the result framed ahead of the
+backend chain as `web_search` — by default Gemini, then Perplexity, then
+DuckDuckGo, each when usable — and then calls the model with the result framed ahead of the
 prompt. Any provider can be grounded.
 
 - The response's existing optional `grounding` record is set: `searched`,
@@ -667,6 +709,12 @@ prompts should send `false`**: retrieval sends the prompt text to a
 third-party search host, and the results reach the model. A server older
 than v1.19.3 ignores the field; a caller that depends on it checks the
 version from `GET /health`.
+
+**Default search order.** The `web_search` chain, which grounding also
+uses, is now Gemini → Perplexity → DuckDuckGo (was Perplexity first;
+owner decision 2026-09-27). Only usable backends are tried, so without
+`GEMINI_API_KEY` it stays Perplexity → DuckDuckGo. To keep the old order,
+set `tools.web_search.order: ["perplexity", "gemini", "duckduckgo"]`.
 
 **Upgrade.** If you set `execution.run.grounding: true` (or the legacy
 `tools.web_search.oneshot_grounding: true`) and serve Gemini, search moves

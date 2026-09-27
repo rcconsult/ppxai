@@ -363,36 +363,6 @@ function Get-ConfigTemplate {
     "data_dir": "{home}/.ppxai"
   },
   "providers": {
-    "perplexity": {
-      "name": "Perplexity AI",
-      "base_url": "https://api.perplexity.ai",
-      "api_key_env": "PERPLEXITY_API_KEY",
-      "default_model": "perplexity/sonar",
-      "coding_model": "perplexity/sonar",
-      "models": {
-        "perplexity/sonar": {
-          "name": "Sonar",
-          "description": "Lightweight search model with real-time grounding (Responses wire - survives the 2026-09-27 retirement)",
-          "facts": {
-            "wire_protocol": "responses",
-            "tool_mode": "auto",
-            "max_tokens": 4096
-          }
-        }
-      },
-      "pricing": {
-        "perplexity/sonar": {"input": 0.20, "output": 0.20},
-        "sonar": {"input": 0.20, "output": 0.20},
-        "sonar-pro": {"input": 3.00, "output": 15.00},
-        "sonar-reasoning-pro": {"input": 5.00, "output": 15.00}
-      },
-      "capabilities": {
-        "web_search": true,
-        "web_fetch": true,
-        "weather": true,
-        "realtime_info": true
-      }
-    },
     "gemini": {
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",

@@ -19,10 +19,10 @@ Status is summarised; the record itself is authoritative.
 | [0011](0011-command-taxonomy-streamline.md) | Command taxonomy (`/auto` · `/run` · `/task`) | ✅ Accepted — implemented v1.19.1 |
 | [0012](0012-wire-protocol-as-per-model-capability.md) | Per-model facts: one resolution system, wire protocol included | ✅ Implemented v1.19.1 — all four migration steps: unified `ModelFacts`/`ProviderCapabilities` split, `ProtocolHandler` + **four** wire handlers, `wire_protocol` routing, Perplexity on two wires. **Items 61 + 62 closed.** §6 (Anthropic `messages`) **shipped in v1.19.1**, opt-in and untested against the live API (Item 71). Resolution logic moved from `config/facts_config.py` to `engine/facts_config.py` on 2026-09-20 |
 | [0013](0013-ssh-remote-backend.md) | SSH remote backend: a local hub reaching remote ppxai servers | 📝 Proposed 2026-09-26 — seams S1–S7 defined, no code; five open questions. Plan: [`../plan-ssh-remote-backend.md`](../plan-ssh-remote-backend.md) |
-| [0014](0014-web-search-layer-and-retrieval-grounding.md) | Web search is its own layer; grounding retrieves before the model call | ✅ Accepted 2026-09-27 — `engine/search/` layer, retrieval grounding (Perplexity default), web_search tool as an adapter, per-request `grounding` opt-out on `/v1/oneshot` (from ppxai-sre). Ships in v1.19.3 |
-| [0015](0015-remove-perplexity-chat-provider.md) | Remove Perplexity as a chat provider | ✅ Accepted 2026-09-27 — phase 2 of the deprecation; after 0014, same release (v1.19.3, no deprecation window); explicit refusal of leftover config, session-restore notice |
+| [0014](0014-web-search-layer-and-retrieval-grounding.md) | Web search is its own layer; grounding retrieves before the model call | ✅ Implemented 2026-09-27 — `engine/search/` layer, retrieval grounding (default order Gemini → Perplexity → DuckDuckGo, revised same day), web_search tool as an adapter, per-request `grounding` opt-out on `/v1/oneshot` (from ppxai-sre). Ships in v1.19.3 |
+| [0015](0015-remove-perplexity-chat-provider.md) | Remove Perplexity as a chat provider | ✅ Implemented 2026-09-27 — phase 2 of the deprecation; after 0014, same release (v1.19.3, no deprecation window); explicit refusal of leftover config, session-restore notice |
 
-Records 0001–0012 are accepted and implemented; 0013 is Proposed; 0014–0015 are Accepted, implementation in progress.
+Records 0001–0012 are accepted and implemented; 0013 is Proposed; 0014–0015 are accepted and implemented.
 Numbering is sequential — the next record is `0016`.
 
 ## About these records

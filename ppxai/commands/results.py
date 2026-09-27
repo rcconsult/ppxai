@@ -618,7 +618,7 @@ class TableResult(CommandResult):
             message="3 sessions found",
             columns=["Name", "Created", "Provider", "Model"],
             rows=[
-                ["session1", "2024-01-20", "perplexity", "sonar"],
+                ["session1", "2024-01-20", "gemini", "gemini-3.8-flash"],
                 ["session2", "2024-01-21", "openai", "gpt-4"]
             ]
         )
@@ -715,7 +715,7 @@ class ListResult(CommandResult):
             status=ResultStatus.SUCCESS,
             message="5 providers available",
             items=[
-                {"text": "perplexity", "icon": "🌐", "badge": "default"},
+                {"text": "gemini", "icon": "🌐", "badge": "default"},
                 {"text": "openai", "icon": "🤖", "badge": "premium"}
             ]
         )

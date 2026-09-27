@@ -189,16 +189,16 @@ class StatusBar(Static):
 
     # CSS is in layout.tcss
 
-    provider = reactive("perplexity")
-    model = reactive("sonar")
+    provider = reactive("gemini")
+    model = reactive("gemini-3.8-flash")
     tools_enabled = reactive(False)
     context_tokens = reactive(0)
     context_limit = reactive(128000)
 
     def __init__(
         self,
-        provider: str = "perplexity",
-        model: str = "sonar",
+        provider: str = "gemini",
+        model: str = "gemini-3.8-flash",
         tools_enabled: bool = False,
         context_tokens: int = 0,
         context_limit: int = 128000,

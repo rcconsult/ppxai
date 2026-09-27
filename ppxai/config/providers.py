@@ -18,8 +18,23 @@ def _get_config() -> dict[str, Any]:
 
 
 def _get_providers() -> dict[str, Any]:
-    """Get providers dict from config store."""
-    return _get_config().get("providers", {})
+    """Get providers dict from config store, without removed providers.
+
+    A `providers.<id>` block for a removed chat provider (ADR 0015) is
+    ignored here, the one place every provider lookup goes through, so the
+    provider list, the default, `set_provider`, `/v1/oneshot` and the task
+    tier all treat it as unconfigured. The file is never rewritten;
+    `removed_providers_in_config()` names the leftover block for `/doctor`
+    and the start-up warning.
+    """
+    providers = _get_config().get("providers", {}) or {}
+    return {k: v for k, v in providers.items() if k not in REMOVED_CHAT_PROVIDERS}
+
+
+def removed_providers_in_config() -> list[str]:
+    """Removed chat providers that the loaded config still has a block for."""
+    providers = _get_config().get("providers", {}) or {}
+    return [k for k in providers if k in REMOVED_CHAT_PROVIDERS]
 
 
 def _get_models() -> dict[str, Any]:
@@ -33,14 +48,20 @@ def _get_models() -> dict[str, Any]:
 #: a web_search backend).
 FALLBACK_PROVIDER = "gemini"
 
-#: Chat providers that still work but are deprecated. `set_provider` warns
-#: on selecting one and `/doctor` flags it as the configured default.
-DEPRECATED_CHAT_PROVIDERS: dict[str, str] = {
+#: Chat providers that have been removed (ADR 0015), with the message that
+#: names the fix. A config block for one is ignored, `set_provider` refuses
+#: it (returns False, never raises, never falls back to a generic
+#: OpenAI-compatible client against the retired endpoint), and `/doctor`
+#: flags it.
+REMOVED_CHAT_PROVIDERS: dict[str, str] = {
     "perplexity": (
-        "Perplexity is deprecated as a chat provider (2026-09-27) and will be "
-        "removed in a later release. It remains available as a web_search "
-        "backend (tools.web_search). Switch chat to another provider, e.g. "
-        "gemini."
+        "Perplexity was removed as a chat provider in v1.19.3 (ADR 0015); "
+        "its chat-completions API retired on 2026-09-27. It remains a "
+        "web_search and grounding backend (PERPLEXITY_API_KEY, "
+        "tools.web_search). For chat, use another provider, e.g. gemini; "
+        "for the openai/*, anthropic/*, google/* and xai/* models it "
+        "served, use that vendor's own provider or openrouter. Remove the "
+        "providers.perplexity block from ppxai-config.json."
     ),
 }
 

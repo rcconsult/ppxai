@@ -23,13 +23,6 @@ class TestPremiumWebSearchIntegration:
         with tempfile.TemporaryDirectory() as tmpdir:
             yield Path(tmpdir)
 
-    def test_web_search_tool_excluded_for_perplexity(self):
-        """Test that web_search tool is not registered for Perplexity provider."""
-        from ppxai.config import provider_needs_tool
-
-        # Perplexity has native web search
-        assert provider_needs_tool("perplexity", "web_search") is False
-
     def test_web_search_tool_excluded_for_gemini(self):
         """Test that web_search tool is not registered for Gemini provider."""
         from ppxai.config import provider_needs_tool

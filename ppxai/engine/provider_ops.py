@@ -26,7 +26,7 @@ functions because they're only called from `set_model` / `set_provider`.
 
 
 from ..common.logger import get_logger
-from ..config import DEPRECATED_CHAT_PROVIDERS
+from ..config import REMOVED_CHAT_PROVIDERS
 from ..constants import Default
 from .model_facts import supports_vision as _supports_vision
 from .providers import create_provider
@@ -89,7 +89,7 @@ def set_provider(engine, provider_name: str) -> bool:
 
     Args:
         engine: EngineClient reference (read/write).
-        provider_name: Provider ID (e.g., 'perplexity', 'openai')
+        provider_name: Provider ID (e.g., 'gemini', 'openai')
 
     Returns:
         True if provider was set successfully, False if the provider
@@ -101,6 +101,16 @@ def set_provider(engine, provider_name: str) -> bool:
             provider, model and history exactly as they were.
     """
     _refuse_if_run_in_flight(engine, "the provider")
+
+    # ADR 0015: a removed chat provider is refused by name, with the message
+    # that names the fix. False, never a raise: callers that select the
+    # configured default at start-up (ppxai-sre's initialize()) must keep
+    # working. Never the generic OpenAI-compatible fallback below either —
+    # that would "work" against a retired endpoint and 400 on every turn.
+    removed = REMOVED_CHAT_PROVIDERS.get(provider_name)
+    if removed:
+        logger.warning(removed)
+        return False
 
     if provider_name not in engine.providers_config:
         return False
@@ -140,14 +150,6 @@ def set_provider(engine, provider_name: str) -> bool:
     engine.provider_name = provider_name
     engine.state.set("provider", provider_name)
 
-    # Deprecated chat providers still work: warn, never refuse. A raise here
-    # would fail every caller that selects the configured default at
-    # start-up (ppxai-sre's initialize() does), so the removal release is
-    # where this becomes an error, not this one.
-    deprecation = DEPRECATED_CHAT_PROVIDERS.get(provider_name)
-    if deprecation:
-        logger.warning(deprecation)
-    engine._pending_provider_notice = deprecation
     engine.tool_manager.set_provider(provider_name)
     engine.session.set_provider(provider_name)
 

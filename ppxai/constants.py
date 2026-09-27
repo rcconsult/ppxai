@@ -23,7 +23,6 @@ from typing import Final
 
 class ProviderName(str, Enum):
     """Provider identifier constants."""
-    PERPLEXITY = "perplexity"
     GEMINI = "gemini"
     OPENAI = "openai"
     LOCAL = "local"

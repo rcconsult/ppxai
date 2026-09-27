@@ -57,11 +57,9 @@ from .openai_compat import OpenAICompatibleProvider  # noqa: E402 — must follo
 
 # Import native OpenAI provider
 from .openai_native import OpenAINativeProvider  # noqa: E402
-from .perplexity import PerplexityProvider  # noqa: E402
 
 # Register providers
 register_provider("openai", OpenAINativeProvider)
-register_provider("perplexity", PerplexityProvider)
 register_provider("local", OpenAICompatibleProvider)
 register_provider("custom", OpenAICompatibleProvider)
 
@@ -85,7 +83,6 @@ __all__ = [
     "BaseProvider",
     "OpenAICompatibleProvider",
     "OpenAINativeProvider",
-    "PerplexityProvider",
     "GeminiProvider",
     "AnthropicProvider",
     "register_provider",

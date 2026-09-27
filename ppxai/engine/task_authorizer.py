@@ -799,6 +799,9 @@ def validate_provider_or_error(provider_name: str) -> None:
     which meant an engine-only caller and an HTTP caller silently ran different
     checks. See the config-reads note above for the same lesson.
     """
+    removed = _providers_config.REMOVED_CHAT_PROVIDERS.get(provider_name)
+    if removed:
+        raise TaskAuthorizationError(400, removed)
     if provider_name not in _providers_config.get_available_providers():
         raise TaskAuthorizationError(
             400,

@@ -252,18 +252,15 @@ def register_tools(manager, provider=None):
     """Register premium web search if available.
 
     Supports per-provider configuration overrides and auto-detection.
-    Skips registration for providers with native web search.
 
     Args:
         manager: ToolManager instance
-        provider: Current provider name (e.g., 'perplexity', 'gemini', 'custom-vllm')
+        provider: Current provider name (e.g., 'gemini', 'openai', 'custom-vllm')
     """
-    # Skip for providers with native search (Perplexity only)
-    # NOTE: Gemini removed from skip list (v1.15.2) because grounding is disabled
-    # when native function calling is active. Gemini needs web_search tool in agent mode.
-    if provider == "perplexity":
-        return
-
+    # No chat provider skips these any more: Perplexity, the one with
+    # native search, was removed as a chat provider (ADR 0015). Gemini left
+    # the skip list in v1.15.2 (grounding is off while native function
+    # calling is on, so it needs web_search in agent mode).
     # Only register if premium provider available
     if not is_available():
         # Fall back to free search
@@ -302,14 +299,10 @@ def register_tools(manager, provider=None):
             "required": ["query"]
         },
         handler=web_search_with_provider,
-        # Only exclude Perplexity (has native web search)
-        # Gemini needs web_search tool in agent mode because grounding is disabled
-        # when native function calling is active (Live API limitation)
-        provider_excluded=["perplexity"]
     )
 
     # get_weather via the premium-aware wrapper (v1.19.1): wttr.in when reachable,
-    # premium provider (perplexity/gemini) as fallback or when pinned — so weather
+    # premium backend (perplexity/gemini) as fallback or when pinned — so weather
     # works wherever web_search does (matches the search backend policy).
     async def get_weather_with_provider(location: str, format: str = "short") -> str:
         return await get_weather_premium(location, format, _provider_name=provider)
@@ -333,7 +326,6 @@ def register_tools(manager, provider=None):
             "required": ["location"]
         },
         handler=get_weather_with_provider,
-        provider_excluded=["perplexity"]  # Perplexity has native weather via grounding
     )
 
     manager.register_function(
@@ -354,5 +346,4 @@ def register_tools(manager, provider=None):
             "required": ["url"]
         },
         handler=web.fetch_url,
-        provider_excluded=["perplexity"]  # Perplexity can fetch URLs via search
     )

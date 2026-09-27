@@ -1,6 +1,6 @@
 # ADR 0015: Remove Perplexity as a chat provider
 
-- **Status:** Accepted (2026-09-27): owner chose option B; release and window answered below
+- **Status:** Implemented (2026-09-27, `bugfix/v1.19.3`): owner chose option B; release and window answered below; implementation notes at the end
 - **Deciders:** owner
 - **Target:** v1.19.3, together with ADR 0014 and after it in commit
   order (owner, 2026-09-27).
@@ -158,3 +158,22 @@ INFO event. The owner's `~/.ppxai/session-state.json` records
 - The search backend needs something only the chat client provided, such
   as a Perplexity-only request option. It then belongs in the
   `SearchBackend` implementation, not a revived provider.
+
+## Implementation notes (2026-09-27)
+
+- **The block is filtered in one place.** `config/providers.py::
+  _get_providers()` drops removed providers, so the provider list, the
+  default, `config.PROVIDERS`, `set_provider`, `/v1/oneshot` and the task
+  tier agree without each checking. `set_provider` also refuses by name,
+  with the message; the filter alone already made it return False (no API
+  key resolves for a filtered provider), so the trap in Decision 3 is
+  closed twice.
+- **Found while doing it:** the shipped `ppxai-config.json` set
+  `tools.web_search.perplexity_model` to bare `sonar`, a chat-completions
+  id, so Perplexity search from the shipped config failed from
+  2026-09-27. Fixed, and `/doctor` flags such a value.
+- **Decision 1's `PERPLEXITY_DEPRECATIONS` removal** also removes the
+  migration hint for bare Sonar ids in a leftover provider block. That
+  block is reported as removed as a whole instead; the search model is
+  checked by wire, above.
+

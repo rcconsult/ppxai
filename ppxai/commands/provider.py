@@ -9,8 +9,8 @@ v1.15.0: Migrated to type-based renderer dispatch
 
 
 from ..config import (  # noqa: F401 — patched/read by tests
-    DEPRECATED_CHAT_PROVIDERS,
     PROVIDERS,
+    REMOVED_CHAT_PROVIDERS,
     get_api_key,
     get_base_url,
     get_coding_model,
@@ -161,8 +161,6 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
             has_key = bool(get_api_key(provider_id))
             is_current = provider_id == current_provider
             key_status = "" if has_key else " (no API key)"
-            if provider_id in DEPRECATED_CHAT_PROVIDERS:
-                key_status += " (deprecated for chat)"
             items.append({
                 "id": provider_id,
                 "name": config.get("name", provider_id),
@@ -183,7 +181,15 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
             ]
         )
 
-    # Direct provider selection by ID
+    # Direct provider selection by ID. A removed chat provider (ADR 0015)
+    # gets the message that names the fix, not "not found".
+    if args in REMOVED_CHAT_PROVIDERS:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"{args} is no longer a chat provider",
+            error_details=REMOVED_CHAT_PROVIDERS[args],
+            suggestions=["Use /provider list to see available providers"],
+        )
     if args not in PROVIDERS:
         return ErrorResult(
             status=ResultStatus.ERROR,
@@ -233,16 +239,12 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
     message = f"Switched to: {new_config['name']} (model: {new_model})"
     if reset_count > 0:
         message += f" (cleared {reset_count} previous messages)"
-    deprecation = DEPRECATED_CHAT_PROVIDERS.get(new_provider)
-    if deprecation:
-        message += f"\n⚠ {deprecation}"
 
     details = {
         "provider": new_provider,
         "provider_name": new_config['name'],
         "model": new_model,
         "context_reset": reset_count,
-        "deprecated": bool(deprecation),
     }
 
     return ConfirmationResult(
@@ -338,10 +340,10 @@ def handle_model_info(context: CommandContext, provider: str, model_id: str) -> 
     # v1.19.3 — a provider row can itself BE the floor, field by field.
     #
     # `is_unmeasured()` answers "did a row match", and a matched row used to
-    # make every field print `(built-in)`. But `PerplexityProvider` seeds its
-    # gateway rows from `shipped_facts_for_model("openai/")` (and
-    # `"anthropic/"`, `"google/"`, `"xai/"`, `"perplexity/"`), none of which
-    # match anything — so the seed IS `UNMEASURED`, and only three fields
+    # make every field print `(built-in)`. But a provider row seeded from a
+    # glob that matches nothing — the Perplexity chat provider's gateway rows
+    # were, from `shipped_facts_for_model("openai/")` and the like, until ADR
+    # 0015 removed it — IS `UNMEASURED`, and only three fields
     # (`wire_protocol`, `tool_mode`, `max_tokens`) are then deliberately set.
     # The remaining nine arrived as floor values wearing a `(built-in)` label,
     # across every model those five globs serve. Q0e requires the opposite:

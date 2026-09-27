@@ -108,7 +108,10 @@ class TestProviderResolution:
         # Provider exists but no model specified and no default_model →
         # 400 with a clear message. We patch get_default_model to None
         # to simulate this, alongside _build_provider so we don't need
-        # a real provider config / API key.
+        # a real provider config / API key. Uses "gemini" — "perplexity"
+        # is a REMOVED_CHAT_PROVIDERS name (ADR 0015) and is intercepted
+        # with its own 400 before the model lookup runs (see
+        # TestRemovedChatProvider below).
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
         fake = MagicMock()
         fake.__class__ = OpenAICompatibleProvider
@@ -119,10 +122,20 @@ class TestProviderResolution:
         ):
             r = http_client.post(
                 "/v1/oneshot",
-                json={"prompt": "hi", "provider": "perplexity"},
+                json={"prompt": "hi", "provider": "gemini"},
             )
         assert r.status_code == 400
         assert "default_model" in r.json()["detail"]
+
+    def test_a_removed_chat_provider_is_400_before_the_model_lookup(self, http_client):
+        """ADR 0015: Perplexity is intercepted before `get_default_model`,
+        so the error names the removal, not a missing model."""
+        r = http_client.post(
+            "/v1/oneshot",
+            json={"prompt": "hi", "provider": "perplexity"},
+        )
+        assert r.status_code == 400
+        assert "removed as a chat provider" in r.json()["detail"].lower()
 
 
 class TestResponseShape:

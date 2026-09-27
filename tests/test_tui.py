@@ -297,8 +297,8 @@ class TestStatusBarStress:
 
         bar = StatusBar()
         # Default values match the defaults in StatusBar.__init__
-        assert bar.provider == "perplexity"
-        assert bar.model == "sonar"
+        assert bar.provider == "gemini"
+        assert bar.model == "gemini-3.8-flash"
         assert bar.tools_enabled is False
         assert bar.context_tokens == 0
 

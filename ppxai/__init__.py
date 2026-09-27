@@ -1,13 +1,14 @@
 """
 ppxai - AI Text UI Application
 
-A terminal-based interface for interacting with LLM providers (Perplexity AI or custom self-hosted models).
+A terminal-based interface for interacting with LLM providers (Gemini, OpenAI,
+Anthropic, OpenRouter, NVIDIA NIM or self-hosted models).
 
 v1.12.0+: Use EngineClient for programmatic access:
     from ppxai.engine import EngineClient
     engine = EngineClient()
-    engine.set_provider("perplexity")
-    engine.set_model("perplexity/sonar")
+    engine.set_provider("gemini")
+    engine.set_model("gemini-3.8-flash")
 
 Note: TUI-specific imports are properly isolated - server builds exclude
 prompt_toolkit via PyInstaller spec, so no lazy loading is needed.

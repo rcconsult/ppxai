@@ -386,30 +386,6 @@ class TestCommandHandlerBothProviders:
         # Verify set_provider was called
         mock_engine_client.set_provider.assert_called_once_with("custom")
 
-    @patch('ppxai.commands.provider.get_api_key')
-    @patch('ppxai.commands.provider.get_base_url')
-    @patch('ppxai.commands.provider.get_provider_config')
-    def test_provider_switch_custom_to_perplexity(
-        self,
-        mock_get_config,
-        mock_get_url,
-        mock_get_key,
-        handler_custom,
-        mock_engine_client
-    ):
-        """Test switching from custom to Perplexity provider."""
-        # Setup mocks
-        mock_get_key.return_value = "ppx-key"
-        mock_get_url.return_value = "https://api.perplexity.ai"
-        mock_get_config.return_value = {"name": "Perplexity AI", "api_key_env": "PERPLEXITY_API_KEY"}
-        mock_engine_client.set_provider = Mock(return_value=True)
-
-        # Use /provider <name> to switch
-        handler_custom.handle_command("/provider perplexity")
-
-        # Verify set_provider was called
-        mock_engine_client.set_provider.assert_called_once_with("perplexity")
-
     def test_provider_same_selection_perplexity(self, handler_perplexity, capsys):
         """Test selecting same provider (Perplexity)."""
         handler_perplexity.handle_command("/provider perplexity")

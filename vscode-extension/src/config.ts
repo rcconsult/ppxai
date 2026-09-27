@@ -43,9 +43,10 @@ export interface PpxaiConfig {
     providers: Record<string, ProviderConfig>;
 }
 
-// Built-in default configuration. Gemini is the default chat provider since
-// 2026-09-27, when Perplexity was deprecated for chat (it remains a
-// web_search backend server-side). Mirrors ppxai-config.example.json.
+// Built-in default configuration. Gemini is the default chat provider.
+// Perplexity was removed as a chat provider (ADR 0015); it remains a
+// web_search and grounding backend server-side. Mirrors
+// ppxai-config.example.json.
 const DEFAULT_CONFIG: PpxaiConfig = {
     default_provider: "gemini",
     providers: {
@@ -82,38 +83,6 @@ const DEFAULT_CONFIG: PpxaiConfig = {
                 "gemini-3.5-flash": { input: 1.5, output: 9.0 },
                 "gemini-3.1-pro-preview": { input: 2.0, output: 12.0 },
                 "gemini-3.1-flash-lite": { input: 0.25, output: 1.5 }
-            }
-        },
-        // Deprecated as a chat provider 2026-09-27; removal in a later release.
-        "perplexity": {
-            name: "Perplexity AI (deprecated for chat)",
-            base_url: "https://api.perplexity.ai",
-            api_key_env: "PERPLEXITY_API_KEY",
-            default_model: "perplexity/sonar",
-            coding_model: "perplexity/sonar",
-            models: {
-                // ADR 0012 W3/W5. `perplexity/sonar` is the ONLY Sonar model
-                // Perplexity serves on the Responses wire (measured
-                // 2026-08-31). The chat-completions ids (`sonar`, `sonar-pro`,
-                // `sonar-reasoning`, `sonar-reasoning-pro`) are no longer
-                // offered: that endpoint retired 2026-09-27. Their pricing
-                // rows stay below so older sessions still cost correctly.
-                "perplexity/sonar": {
-                    name: "Sonar",
-                    description: "Fast, good for general queries (Responses wire)",
-                    facts: { wire_protocol: "responses", tool_mode: "auto", max_tokens: 4096 }
-                }
-            },
-            pricing: {
-                "perplexity/sonar": { input: 1.0, output: 1.0 },
-                "sonar": { input: 1.0, output: 1.0 },
-                "sonar-pro": { input: 3.0, output: 15.0 },
-                "sonar-reasoning": { input: 1.0, output: 5.0 },
-                "sonar-reasoning-pro": { input: 2.0, output: 8.0 }
-            },
-            capabilities: {
-                web_search: true,
-                realtime_info: true
             }
         },
         "openai": {

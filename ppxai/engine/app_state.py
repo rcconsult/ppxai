@@ -50,9 +50,9 @@ must never be edited.
 Usage:
     state = AppState()
     state.on("provider", lambda v: print(f"Provider: {v}"))
-    state.set("provider", "perplexity")  # triggers listener
-    state.set("provider", "perplexity")  # no-op (same value)
-    state.get("provider")                # "perplexity"
+    state.set("provider", "gemini")  # triggers listener
+    state.set("provider", "gemini")  # no-op (same value)
+    state.get("provider")                # "gemini"
 
     # Batch update (listeners fire after all fields set):
     state.update(provider="openai", model="gpt-4.1-mini")

@@ -127,8 +127,8 @@ class PPXAIDEApp(App):
         self._engine_client: EngineClient | None = None
         # Shadow state fields — kept for compose() which runs before engine init.
         # After _initialize_engine(), properties delegate to engine_client.state (AppState).
-        self._provider = "perplexity"
-        self._model = "sonar"
+        self._provider = "gemini"
+        self._model = "gemini-3.8-flash"
         self._tools_enabled = False     # Shadow for compose(); reads from AppState after init
         self._tools_verbose = False     # Shadow for compose(); reads from AppState after init
         self._tool_group_active = False  # v1.16.0: Track active tool group for noise reduction

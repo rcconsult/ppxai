@@ -16,11 +16,6 @@ DEFAULT_SYSTEM_PROMPTS = {
         "You are a helpful AI assistant. Be concise and direct in your responses. "
         "When using tools, report results briefly without unnecessary elaboration."
     ),
-    "perplexity": (
-        "You are a helpful AI assistant with web search capabilities. "
-        "Be concise. Cite sources as markdown links. "
-        "For tool results, report essential information only."
-    ),
     "gemini": (
         "You are a helpful AI assistant. Be concise and direct. "
         "When using tools, report results briefly. "

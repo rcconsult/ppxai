@@ -27,10 +27,10 @@ class TestContextTracking:
     @pytest.fixture
     def engine_client(self):
         """Create an EngineClient instance for testing."""
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
             return client
 
     def test_initial_context_list_empty(self, engine_client):
@@ -204,10 +204,10 @@ class TestContextIntegration:
     @pytest.fixture
     def engine_client(self):
         """Create an EngineClient instance for testing."""
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
             return client
 
     def test_context_tracking_after_injection(self, engine_client):
@@ -229,8 +229,8 @@ class TestContextIntegration:
         """Test that provider and model are included in context info."""
         info = engine_client.get_context_info()
 
-        assert info["provider"] == "perplexity"
-        assert info["model"] == "sonar"
+        assert info["provider"] == "gemini"
+        assert info["model"] == "gemini-3.8-flash"
 
     def test_clear_preserves_conversation_flow(self, engine_client):
         """Test that clearing contexts preserves non-injection content."""
@@ -272,9 +272,9 @@ class TestContextLimits:
     def test_context_limit_import_fallback(self):
         """Test that context limit falls back to default on import error."""
         # Create client
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
+            client.set_provider("gemini")
 
         # Mock the config import to raise ImportError
         original_get_context_info = client.get_context_info
@@ -291,9 +291,9 @@ class TestContextLimits:
 
     def test_injected_contexts_copy_returned(self):
         """Test that get_context_info returns a copy of injected_contexts."""
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
+            client.set_provider("gemini")
 
         client._injected_contexts = [{"source": "@file:test.py", "size": 100}]
 

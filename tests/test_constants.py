@@ -16,7 +16,6 @@ class TestStrEnumBehavior:
 
     def test_provider_name_string_comparison(self):
         """Enum values should compare equal to their string values."""
-        assert ProviderName.PERPLEXITY == "perplexity"
         assert ProviderName.GEMINI == "gemini"
         assert "openai" == ProviderName.OPENAI
 
@@ -37,7 +36,7 @@ class TestStrEnumBehavior:
 
     def test_enum_string_methods(self):
         """Enum values should support string methods."""
-        assert ProviderName.PERPLEXITY.upper() == "PERPLEXITY"
+        assert ProviderName.GEMINI.upper() == "GEMINI"
         assert SystemPromptMode.PREPEND.startswith("pre")
         assert len(ShellRiskLevel.DANGEROUS) == 9
 
@@ -71,11 +70,11 @@ class TestEnumMembership:
     def test_enum_iteration(self):
         """Enums should be iterable."""
         providers = list(ProviderName)
-        assert len(providers) == 5
-        assert ProviderName.PERPLEXITY in providers
+        assert len(providers) == 4
+        assert ProviderName.GEMINI in providers
 
     def test_enum_membership_check(self):
         """Test membership check using 'in' operator."""
         # Note: 'in' checks enum members, not values
-        assert ProviderName.PERPLEXITY in ProviderName
-        assert "perplexity" in {p.value for p in ProviderName}
+        assert ProviderName.GEMINI in ProviderName
+        assert "gemini" in {p.value for p in ProviderName}

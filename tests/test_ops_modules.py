@@ -706,7 +706,7 @@ class TestSessionOps:
     def test_restore_session_restores_provider_and_model(self):
         engine = _make_engine()
         engine.session.load.return_value = True
-        engine.session.metadata = {"provider": "perplexity", "model": "sonar-pro"}
+        engine.session.metadata = {"provider": "gemini", "model": "gemini-3.7-flash"}
         engine.session.tools_enabled = True
         engine.session.working_dir = None
         engine.session.messages = []
@@ -715,9 +715,30 @@ class TestSessionOps:
         result = restore_session(engine, "sess1")
 
         assert result["success"] is True
-        engine.set_provider.assert_called_once_with("perplexity")
-        engine.set_model.assert_called_with("sonar-pro", strict=True, reset_context=False)
+        engine.set_provider.assert_called_once_with("gemini")
+        engine.set_model.assert_called_with("gemini-3.7-flash", strict=True, reset_context=False)
         engine.enable_tools.assert_called_once()
+
+    def test_restore_session_on_a_removed_chat_provider_gives_a_notice(self):
+        """ADR 0015: a session recorded on Perplexity (removed as a chat
+        provider) keeps its history and continues on the current provider —
+        `set_model` is skipped and a notice is surfaced instead of silently
+        answering from a provider the session was not recorded on."""
+        engine = _make_engine()
+        engine.session.load.return_value = True
+        engine.session.metadata = {"provider": "perplexity", "model": "sonar-pro"}
+        engine.session.tools_enabled = True
+        engine.session.working_dir = None
+        engine.session.messages = []
+        engine.provider_name = "gemini"
+
+        result = restore_session(engine, "sess1")
+
+        assert result["success"] is True
+        engine.set_provider.assert_called_once_with("perplexity")
+        engine.set_model.assert_not_called()
+        assert "notice" in result
+        assert "perplexity" in result["notice"]
 
     @patch("ppxai.engine.session_ops.get_default_model", return_value="gpt-4o")
     def test_restore_session_model_fallback(self, mock_default):

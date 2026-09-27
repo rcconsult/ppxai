@@ -24,11 +24,11 @@ class TestEngineClientStreaming:
     @pytest.fixture
     async def engine_client(self):
         """Create an EngineClient instance for testing."""
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
             # Set provider to perplexity for testing
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
             return client
 
     @pytest.mark.asyncio
@@ -38,10 +38,10 @@ class TestEngineClientStreaming:
         This is the critical fix for the 400 error bug. The TUI breaks out of the
         event loop when it receives STREAM_END, so the message must be added first.
         """
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
 
         # Mock the provider's chat method to return streaming events
         mock_provider_response = [
@@ -84,10 +84,10 @@ class TestEngineClientStreaming:
         2. Enable tools (history sync)
         3. Second query (should not get 400 error)
         """
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
 
         # Mock provider to return simple responses
         with patch.object(client.provider, 'chat') as mock_chat:
@@ -131,10 +131,10 @@ class TestEngineClientStreaming:
     @pytest.mark.asyncio
     async def test_stream_end_contains_full_response(self):
         """Test that STREAM_END event contains the full accumulated response."""
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
 
         with patch.object(client.provider, 'chat') as mock_chat:
             # Simulate streaming chunks
@@ -158,10 +158,10 @@ class TestEngineClientStreaming:
     @pytest.mark.asyncio
     async def test_non_streaming_also_adds_message(self):
         """Test that non-streaming chat also properly adds messages."""
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
 
         with patch.object(client.provider, 'chat') as mock_chat:
             # Non-streaming returns single STREAM_END event
@@ -185,10 +185,10 @@ class TestEngineClientStreaming:
     @pytest.mark.asyncio
     async def test_interrupt_during_streaming(self):
         """Test that interrupting during streaming doesn't corrupt history."""
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
 
         with patch.object(client.provider, 'chat') as mock_chat:
             mock_chat.return_value = async_event_generator([
@@ -233,10 +233,10 @@ class TestErrorRollback:
         The fix ensures remove_last_message() is called when iteration == 1
         (the first iteration after increment).
         """
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
 
         # Enable tools to exercise chat_with_tools path
         client.tools_enabled = True
@@ -244,7 +244,7 @@ class TestErrorRollback:
         with patch.object(client.provider, 'chat') as mock_chat:
             # Simulate error on first API call
             mock_chat.return_value = async_event_generator([
-                Event(EventType.STREAM_START, {"model": "sonar"}),
+                Event(EventType.STREAM_START, {"model": "gemini-3.8-flash"}),
                 Event(EventType.ERROR, "Connection failed: Unable to reach server"),
             ])
 
@@ -265,10 +265,10 @@ class TestErrorRollback:
     @pytest.mark.asyncio
     async def test_error_rollback_allows_retry(self):
         """Test that after error rollback, a retry succeeds without alternation errors."""
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
 
         client.tools_enabled = True
         client.session.messages = []
@@ -276,7 +276,7 @@ class TestErrorRollback:
         with patch.object(client.provider, 'chat') as mock_chat:
             # First call fails
             mock_chat.return_value = async_event_generator([
-                Event(EventType.STREAM_START, {"model": "sonar"}),
+                Event(EventType.STREAM_START, {"model": "gemini-3.8-flash"}),
                 Event(EventType.ERROR, "Connection failed"),
             ])
 
@@ -288,7 +288,7 @@ class TestErrorRollback:
 
             # Second call succeeds
             mock_chat.return_value = async_event_generator([
-                Event(EventType.STREAM_START, {"model": "sonar"}),
+                Event(EventType.STREAM_START, {"model": "gemini-3.8-flash"}),
                 Event(EventType.STREAM_END, "Success!"),
             ])
 
@@ -303,10 +303,10 @@ class TestErrorRollback:
     @pytest.mark.asyncio
     async def test_multiple_errors_dont_corrupt_session(self):
         """Test that multiple consecutive errors don't leave orphan messages."""
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
 
         client.tools_enabled = True
         client.session.messages = []
@@ -315,7 +315,7 @@ class TestErrorRollback:
             # Fail three times in a row
             for i in range(3):
                 mock_chat.return_value = async_event_generator([
-                    Event(EventType.STREAM_START, {"model": "sonar"}),
+                    Event(EventType.STREAM_START, {"model": "gemini-3.8-flash"}),
                     Event(EventType.ERROR, f"Error {i+1}"),
                 ])
 
@@ -553,17 +553,17 @@ class TestLiveRunTokens:
     async def test_live_run_tokens_tracks_provider_usage(self):
         from ppxai.engine.types import UsageStats
 
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
         client.tools_enabled = True
         client.session.messages = []
 
         with patch.object(client.provider, "chat") as mock_chat:
             # One turn, no tool calls: provider reports 123 tokens at STREAM_END.
             mock_chat.return_value = async_event_generator([
-                Event(EventType.STREAM_START, {"model": "sonar"}),
+                Event(EventType.STREAM_START, {"model": "gemini-3.8-flash"}),
                 Event(
                     EventType.STREAM_END, "done",
                     {"usage": UsageStats(prompt_tokens=100, completion_tokens=23,
@@ -580,16 +580,16 @@ class TestLiveRunTokens:
     async def test_live_run_tokens_reset_between_turns(self):
         from ppxai.engine.types import UsageStats
 
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             client = EngineClient()
-            client.set_provider("perplexity")
-            client.set_model("sonar")
+            client.set_provider("gemini")
+            client.set_model("gemini-3.8-flash")
         client.tools_enabled = True
         client.session.messages = []
 
         def _turn(n):
             return async_event_generator([
-                Event(EventType.STREAM_START, {"model": "sonar"}),
+                Event(EventType.STREAM_START, {"model": "gemini-3.8-flash"}),
                 Event(EventType.STREAM_END, f"r{n}",
                       {"usage": UsageStats(prompt_tokens=n, completion_tokens=n,
                                            total_tokens=2 * n)}),

@@ -223,9 +223,9 @@ class EngineClient:
         # initialization makes the intent clear and avoids any early-call edge cases.
         self._suppress_hint_log: bool = False
 
-        # Deprecation notice for the active chat provider, set by
-        # set_provider() and shown once as an INFO event on the next chat
-        # turn (Perplexity deprecated as a chat provider 2026-09-27).
+        # Shown once as an INFO event on the next chat turn. Set by
+        # restore_session() when the session was recorded on a chat provider
+        # that has since been removed (ADR 0015).
         self._pending_provider_notice: str | None = None
 
         # Event side-channel for SSE streaming (consent requests, state sync).
@@ -692,7 +692,7 @@ class EngineClient:
         re-registration, and hints logging.
 
         Args:
-            provider_name: Provider ID (e.g., 'perplexity', 'openai')
+            provider_name: Provider ID (e.g., 'gemini', 'openai')
 
         Returns:
             True if provider was set successfully
@@ -1082,7 +1082,7 @@ class EngineClient:
             yield Event(
                 EventType.INFO,
                 notice,
-                metadata={"notice": "provider_deprecated", "provider": self.provider_name},
+                metadata={"notice": "provider_removed", "provider": self.provider_name},
             )
 
         # Reset interrupt flag at start of chat

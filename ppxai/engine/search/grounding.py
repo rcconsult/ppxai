@@ -2,8 +2,8 @@
 
 With `execution.run.grounding` on ("retrieve", which `true` means), the
 one-off tier searches ONCE with the caller's prompt through the same
-resolved backend chain the `web_search` tool uses — Perplexity first when
-its key is set — and hands the result to the model as reference material
+resolved backend chain the `web_search` tool uses (by default Gemini, then
+Perplexity, then DuckDuckGo, each when usable) and hands the result to the model as reference material
 ahead of the prompt. The model call itself stays tool-free.
 
 What leaves the machine, and where (ADR 0014 Decision 4): only the prompt

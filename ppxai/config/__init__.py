@@ -20,7 +20,7 @@ v1.17.0: Split into domain submodules (providers, tools, features, paths, prompt
 
 from typing import Any, Dict
 
-from ..common.logger import Logger
+from ..common.logger import Logger, get_logger
 
 # Context, injection, bootstrap (no provider/prompt dependencies)
 from .context import (
@@ -112,8 +112,8 @@ from .prompts import (
 
 # Provider, model, pricing, capabilities
 from .providers import (
-    DEPRECATED_CHAT_PROVIDERS,
     FALLBACK_PROVIDER,
+    REMOVED_CHAT_PROVIDERS,
     _get_config,
     _get_models,
     _get_providers,
@@ -136,6 +136,7 @@ from .providers import (
     get_provider_config,
     get_reasoning_trigger,
     provider_needs_tool,
+    removed_providers_in_config,
     validate_config,
 )
 from .store import ConfigStore, get_config, register_reload_callback, reload_config
@@ -154,11 +155,10 @@ from .tools import (
 # Legacy compatibility exports
 # Note: MODEL_PRICING is deprecated - use get_model_pricing() instead
 MODEL_PRICING = {}
-# ADR 0012 W5: `sonar-pro` is chat-completions ONLY and Perplexity retires
-# that endpoint 2026-09-27 — it is not served on the Responses wire in either
-# bare or namespaced form (measured 2026-08-31). `perplexity/sonar` is the
-# only Sonar model on the surviving wire, so the shipped default points there.
-CODING_MODEL = "perplexity/sonar"
+# A legacy public constant with no reader in the package. It named
+# `perplexity/sonar` until ADR 0015 removed Perplexity as a chat provider;
+# it now names the shipped default chat model.
+CODING_MODEL = "gemini-3.8-flash"
 
 
 # =============================================================================
@@ -171,6 +171,7 @@ CODING_MODEL = "perplexity/sonar"
 PROVIDERS: dict[str, Any] = {}
 MODELS: dict[str, Any] = {}
 _initialized = False
+_config_logger = get_logger("config")
 
 
 def _refresh_module_dicts():
@@ -179,9 +180,10 @@ def _refresh_module_dicts():
     Called by initialize() and registered as a reload callback
     so reload_config() can update these dicts without importing __init__.
     """
-    config = ConfigStore.get_instance().config
     PROVIDERS.clear()
-    PROVIDERS.update(config.get("providers", {}))
+    # Removed chat providers (ADR 0015) are dropped here too, so the engine's
+    # `providers_config` never offers one.
+    PROVIDERS.update(_get_providers())
     MODELS.clear()
     MODELS.update(_get_models())
 
@@ -218,6 +220,13 @@ def initialize():
 
     # Then populate PROVIDERS/MODELS from config
     _refresh_module_dicts()
+
+    # ADR 0015: a leftover block for a removed chat provider is ignored,
+    # never rewritten. Say so once per process, so a headless deployment
+    # sees it without running /doctor.
+    if not _initialized:
+        for removed in removed_providers_in_config():
+            _config_logger.warning(REMOVED_CHAT_PROVIDERS[removed])
 
     # Restore persisted debug-log state for ALL ppxai clients (Rich, Textual,
     # Web server, VSCode server, benchmarks). Must run inside initialize()
@@ -265,7 +274,8 @@ def ensure_initialized() -> None:
 
 __all__ = [
     "ensure_initialized",
-    "DEPRECATED_CHAT_PROVIDERS",
+    "REMOVED_CHAT_PROVIDERS",
+    "removed_providers_in_config",
     "FALLBACK_PROVIDER",
     # Store
     "ConfigStore",

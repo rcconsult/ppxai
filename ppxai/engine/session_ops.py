@@ -12,7 +12,12 @@ from pathlib import Path
 from typing import Any
 
 from ..common.logger import get_logger
-from ..config import EXPORTS_DIR, get_default_model, get_model_context_limit
+from ..config import (
+    EXPORTS_DIR,
+    REMOVED_CHAT_PROVIDERS,
+    get_default_model,
+    get_model_context_limit,
+)
 
 logger = get_logger("engine")
 
@@ -24,7 +29,8 @@ def restore_session(engine, name: str) -> dict:
 
     Returns:
         dict with keys: success, provider, model, tools_enabled, working_dir,
-        message_count, error
+        message_count, error; plus `notice` when the session was recorded on
+        a chat provider that has since been removed (ADR 0015).
     """
     engine.reload_config()
 
@@ -40,8 +46,20 @@ def restore_session(engine, name: str) -> dict:
         except Exception as e:
             logger.warning(f"Failed to restore provider '{stored_provider}': {e}")
 
+    # ADR 0015: the history is kept and the session continues on the current
+    # provider; say so once, in the result and as the next turn's INFO event,
+    # instead of silently answering from a different provider.
+    notice = None
+    if stored_provider in REMOVED_CHAT_PROVIDERS:
+        notice = (
+            f"This session was recorded on {stored_provider}, which is no "
+            f"longer a chat provider; continuing on {engine.provider_name or 'no provider'}. "
+            f"{REMOVED_CHAT_PROVIDERS[stored_provider]}"
+        )
+        engine._pending_provider_notice = notice
+
     stored_model = engine.session.metadata.get("model")
-    if stored_model:
+    if stored_model and notice is None:
         if not engine.set_model(stored_model, strict=True, reset_context=False):
             provider_name = engine.provider_name if engine.provider else stored_provider
             default = get_default_model(provider_name) if provider_name else None
@@ -57,7 +75,7 @@ def restore_session(engine, name: str) -> dict:
     if wd and os.path.isdir(wd):
         engine.set_working_dir(wd)
 
-    return {
+    result = {
         "success": True,
         "provider": engine.provider_name,
         "model": engine.model,
@@ -65,6 +83,9 @@ def restore_session(engine, name: str) -> dict:
         "working_dir": engine.get_working_dir(),
         "message_count": len(engine.session.messages),
     }
+    if notice:
+        result["notice"] = notice
+    return result
 
 
 def get_history(engine) -> list[dict[str, str]]:

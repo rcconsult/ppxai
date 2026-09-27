@@ -126,30 +126,30 @@ class TestTheRealFacade:
 
     @pytest.fixture
     def engine(self):
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
             engine = EngineClient()
-            engine.set_provider("perplexity")
-            engine.set_model("sonar")
+            engine.set_provider("gemini")
+            engine.set_model("gemini-3.8-flash")
         return engine
 
     def test_the_facade_refuses_mid_run_and_recovers_after(self, engine):
         engine.state.update(is_streaming=True)
 
         with pytest.raises(ModelSwitchInFlightError):
-            engine.set_model("sonar-pro")
-        assert engine.model == "sonar"
+            engine.set_model("gemini-3.7-flash")
+        assert engine.model == "gemini-3.8-flash"
 
         engine.state.update(is_streaming=False)
-        assert engine.set_model("sonar-pro") is True
-        assert engine.model == "sonar-pro"
+        assert engine.set_model("gemini-3.7-flash") is True
+        assert engine.model == "gemini-3.7-flash"
 
     def test_the_facade_refuses_a_provider_switch_mid_run(self, engine):
         engine.state.update(is_streaming=True)
 
         with pytest.raises(ModelSwitchInFlightError):
-            engine.set_provider("perplexity")
-        assert engine.provider_name == "perplexity"
-        assert engine.model == "sonar"
+            engine.set_provider("gemini")
+        assert engine.provider_name == "gemini"
+        assert engine.model == "gemini-3.8-flash"
 
 
 # ---------------------------------------------------------------------------

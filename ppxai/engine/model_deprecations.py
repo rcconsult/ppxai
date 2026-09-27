@@ -250,93 +250,9 @@ OPENAI_DEPRECATIONS: dict[str, Deprecation] = {
 }
 
 
-# =============================================================================
-# Perplexity deprecations — the ENDPOINT retires, not the models
-# =============================================================================
-#
-# Perplexity retires the Sonar **chat-completions** endpoint on 2026-09-27.
-# This is unlike every other table here: the models are not being withdrawn,
-# the wire they are served on is. ppxai routes per model via
-# `ModelFacts.wire_protocol` (ADR 0012), so the migration is an ID change
-# rather than a model change — but only where a replacement ID exists.
-#
-# MEASURED 2026-08-31 against `https://api.perplexity.ai/v1/responses`, twice
-# (probe + a plain SDK call, no framing):
-#
-#   perplexity/sonar                 200  — the ONLY Sonar on the new wire
-#   sonar-pro                        400  validation failed: not supported
-#   perplexity/sonar-pro             400  validation failed: not supported
-#   perplexity/sonar-reasoning-pro   400  validation failed: not supported
-#
-# So `sonar` has a successor and the pro models, as of today, do not. Their
-# entries below say that plainly instead of inventing a replacement ID that
-# would 400 — a wrong migration hint is worse than an honest dead end, since
-# the user would follow it and get a broken config.
-#
-# ✅ RE-PROBING IS DONE — debt Item 64 closed 2026-09-10. Four probes across
-# ten days (2026-08-31, 09-01, 09-06, 09-10) each returned byte-identical
-# `400 validation failed: model "..." is not supported` for all three pro
-# ids on the Responses wire. Perplexity never moved the pro line, so the
-# `replacement` rows below are correct as written and were never changed.
-#
-# The item closed 17 days before the cutover at the owner's direction, which
-# means the final stretch is unobserved on purpose. The exposure is bounded:
-# if Perplexity ships the pro line late, this table advises a downgrade that
-# is no longer necessary — suboptimal advice, not a broken config — and the
-# rows still correctly migrate anyone off a dying id.
-#
-# If that turns out to matter, the probe is unchanged and takes two minutes;
-# updating `replacement` then also means the example config, the pricing row,
-# and the migration fence's RETIRED set (the archived Item 64 body lists them):
-#
-#   uv run python scripts/probe-perplexity-capabilities.py \
-#       --api-path responses --model "perplexity/sonar-pro" \
-#       --model "perplexity/sonar-reasoning-pro" --model "sonar-pro"
-
-PERPLEXITY_DEPRECATIONS: dict[str, Deprecation] = {
-    "sonar": Deprecation(
-        shutdown_date="2026-09-27",
-        replacement="perplexity/sonar",
-        reason=(
-            "The Sonar chat-completions endpoint retires. The same model is "
-            "served on the Responses wire under the namespaced ID — and gains "
-            "native tool calling there, which the chat wire refuses for this "
-            "model (measured 2026-08-31)."
-        ),
-    ),
-    "sonar-pro": Deprecation(
-        shutdown_date="2026-09-27",
-        replacement="perplexity/sonar",
-        reason=(
-            "The Sonar chat-completions endpoint retires and Perplexity does "
-            "NOT serve sonar-pro on the Responses wire in either bare or "
-            "namespaced form (measured 2026-08-31 — both 400). "
-            "`perplexity/sonar` is the only Sonar successor available today; "
-            "it is the lighter model, so re-check before the date in case the "
-            "pro line lands on the new wire."
-        ),
-    ),
-    "sonar-deep-research": Deprecation(
-        shutdown_date="2026-09-27",
-        replacement="perplexity/sonar",
-        reason=(
-            "Same as the pro ids: live on chat-completions, ABSENT from the "
-            "Responses wire (measured 2026-09-01), so it dies with that "
-            "endpoint. It had NO row until then — a configured model would "
-            "have stopped working with no migration hint at all. There is no "
-            "deep-research successor on Responses; `perplexity/sonar` is the "
-            "only Sonar id served there."
-        ),
-    ),
-    "sonar-reasoning-pro": Deprecation(
-        shutdown_date="2026-09-27",
-        replacement="perplexity/sonar",
-        reason=(
-            "Same as sonar-pro: chat-completions only, absent from the "
-            "Responses wire as of 2026-08-31."
-        ),
-    ),
-}
+# Perplexity: its Sonar chat-completions endpoint retired 2026-09-27 and ADR
+# 0015 removed Perplexity as a chat provider, so its rows went with it. A
+# leftover `providers.perplexity` block is reported by /doctor as removed.
 
 
 # =============================================================================
@@ -493,7 +409,6 @@ NVIDIA_DEPRECATIONS: dict[str, Deprecation] = {
 ALL_DEPRECATIONS: dict[str, Deprecation] = {
     **GEMINI_DEPRECATIONS,
     **OPENAI_DEPRECATIONS,
-    **PERPLEXITY_DEPRECATIONS,
     **NVIDIA_DEPRECATIONS,
 }
 
@@ -589,16 +504,6 @@ RECOMMENDED_NEW_MODELS: list[dict[str, str]] = [
         "model": "moonshotai/kimi-k3",
         "reason": "Best NIM model still live — the only Kimi id that answers 200 (2026-08-31 per-id sweep; k2.6 is listed but 404s \"not found for account\"). Replaces both the qwen recommendation and retired kimi-k2-thinking.",
     },
-    {
-        "provider": "perplexity",
-        "model": "anthropic/claude-sonnet-5",
-        "reason": "Perplexity's /v1/responses is a multi-vendor gateway, not a Sonar-only endpoint (measured 2026-09-01). When the chat-completions wire retires 2026-09-27, sonar-pro and sonar-reasoning-pro have no successor — but the agentic work moves here, on the same provider and key.",
-    },
-    {
-        "provider": "perplexity",
-        "model": "openai/gpt-5.6-terra",
-        "reason": "Same gateway. Cost-efficient flagship at $2/$12 per MTok, matching OpenAI's own rate — Perplexity passes it through rather than marking up.",
-    },
     # REMOVED 2026-09-01: deepseek-ai/deepseek-v4-pro-0813. It was recommended
     # here as a model to ADOPT while both suffixed deepseek ids failed to
     # respond at all — three attempts, 45s / 120s / 300s-with-retry, ten
@@ -614,7 +519,6 @@ RECOMMENDED_NEW_MODELS: list[dict[str, str]] = [
 RECOMMENDED_DEFAULTS: dict[str, str] = {
     "gemini": "gemini-3.8-flash",     # 2026-09-27 (owner decision): newest GA flash, half 3.5-flash's price
     "openai": "gpt-5.6-terra",        # 2026-08-31: parity with gpt-5.5 at 40% price
-    "perplexity": "perplexity/sonar",  # ADR 0012: only Sonar on the surviving wire
     "nvidia": "moonshotai/kimi-k3",  # 2026-08-31: the qwen line hit EOL (410)
     # 2026-09-10: was claude-sonnet-4-6, a previous-generation id this repo
     # neither ships nor prices. Harmless while no Anthropic provider existed;
@@ -746,7 +650,6 @@ __all__ = [
     "Deprecation",
     "GEMINI_DEPRECATIONS",
     "OPENAI_DEPRECATIONS",
-    "PERPLEXITY_DEPRECATIONS",
     "NVIDIA_DEPRECATIONS",
     "ALL_DEPRECATIONS",
     "RECOMMENDED_NEW_MODELS",

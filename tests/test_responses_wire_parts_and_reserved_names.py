@@ -21,7 +21,6 @@ import json
 from types import SimpleNamespace
 
 from ppxai.engine.model_facts import ModelFacts
-from ppxai.engine.providers.perplexity import PerplexityProvider
 from ppxai.engine.providers.wire.responses import ResponsesHandler
 from ppxai.engine.types import EventType, Message
 
@@ -203,8 +202,3 @@ class TestReservedNamesAreMappedBackInbound:
     def test_an_unrelated_prefixed_name_is_left_alone(self):
         assert H.unalias_name(f"{PREFIX}read_file", RESERVED) == f"{PREFIX}read_file"
         assert H.unalias_name("read_file", RESERVED) == "read_file"
-
-
-def test_perplexity_declares_the_measured_reserved_names():
-    """Pinned to the 2026-09-26 probe. Change it only with a new measurement."""
-    assert PerplexityProvider.reserved_function_names == RESERVED

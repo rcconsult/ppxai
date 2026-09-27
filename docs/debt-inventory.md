@@ -875,6 +875,12 @@ and this probe stays the only check that can see a capability change.
 `sonar-deep-research` (dropped from the roster at I3) still returns its
 distinct parameter-SHAPE 400, unchanged.
 
+**Probe deleted 2026-09-27 (ADR 0015).** Perplexity is no longer a chat
+provider, so its chat tool-calling capabilities no longer route anything
+and `scripts/probe-perplexity-capabilities.py` went with the provider.
+The Perplexity watch in this item now covers only the search backend's
+model (`tools.web_search.perplexity_model`, default `perplexity/sonar`).
+
 ---
 
 ### Item 39 — `rtk discover` false-negatives under hook rewriting; `rtk gain` is ground truth [tooling]

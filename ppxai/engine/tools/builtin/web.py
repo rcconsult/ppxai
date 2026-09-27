@@ -1,8 +1,8 @@
 """
 Web tools: web_search, fetch_url, get_weather.
 
-These tools are provider-aware - providers with native web capabilities
-(like Perplexity) won't have these registered.
+Registered for every chat provider. The one exception, Perplexity (native
+web search), was removed as a chat provider (ADR 0015).
 """
 
 import json
@@ -412,19 +412,13 @@ def fetch_url(url: str, max_length: int = 5000) -> str:
 def register_tools(manager: ToolManagerProtocol, provider: str = None):
     """Register web tools with the manager.
 
-    These tools are excluded for providers with native capabilities.
-
     Args:
         manager: ToolManager instance
         provider: Current provider name
     """
-    # Providers with native web capabilities don't need these tools
-    # - perplexity: Native web search with citations
-    # NOTE: Gemini removed from exclusion list (v1.15.2) because grounding is
-    # disabled when native tool calling is active. Gemini needs web_search/get_weather
-    # tools in agent mode to get web info via wttr.in or separate grounding API call.
-    providers_with_web_search = ["perplexity"]
-    providers_with_weather = ["perplexity"]
+    # No chat provider is excluded any more: Perplexity (native web search)
+    # was removed as a chat provider (ADR 0015); Gemini left the list in
+    # v1.15.2, since grounding is off while native tool calling is on.
 
     manager.register_function(
         name="get_weather",
@@ -445,7 +439,6 @@ def register_tools(manager: ToolManagerProtocol, provider: str = None):
             "required": ["location"]
         },
         handler=get_weather,
-        provider_excluded=providers_with_weather
     )
 
     manager.register_function(
@@ -466,7 +459,6 @@ def register_tools(manager: ToolManagerProtocol, provider: str = None):
             "required": ["query"]
         },
         handler=web_search,
-        provider_excluded=providers_with_web_search
     )
 
     manager.register_function(
@@ -487,5 +479,4 @@ def register_tools(manager: ToolManagerProtocol, provider: str = None):
             "required": ["url"]
         },
         handler=fetch_url,
-        provider_excluded=providers_with_web_search  # Perplexity can fetch URLs via search
     )

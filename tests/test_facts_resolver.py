@@ -30,11 +30,12 @@ from ppxai.engine.facts_resolver import (
     facts_without_an_instance,
     provider_class_for,
 )
+from ppxai.engine.providers.gemini import GeminiProvider
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
-from ppxai.engine.providers.perplexity import PerplexityProvider
+from ppxai.engine.providers.openai_native import OpenAINativeProvider
 from ppxai.engine.types import ProviderCapabilities
 
-REGISTERED = ["perplexity", "openai", "gemini"]
+REGISTERED = ["openai", "gemini"]
 TYPE_BASED = ["openrouter", "nvidia", "local-vllm", "a-name-nobody-registered"]
 
 
@@ -54,8 +55,8 @@ class TestTheOneFallbackRule:
         assert r.capabilities() is not None
 
     def test_a_registered_name_resolves_to_its_own_class(self):
-        r = FactsResolver("perplexity")
-        assert r.provider_class is PerplexityProvider
+        r = FactsResolver("openai")
+        assert r.provider_class is OpenAINativeProvider
         assert r.is_registered is True
 
 
@@ -76,8 +77,8 @@ class TestTheWrappersAgreeWithTheResolver:
     @pytest.mark.parametrize(
         "provider,model",
         [
-            ("perplexity", "perplexity/sonar"),
-            ("perplexity", "sonar-pro"),
+            ("gemini", "gemini-3.8-flash"),
+            ("gemini", "gemini-3.1-pro-preview"),
             ("openai", "gpt-5.1-codex"),
             ("openrouter", "anthropic/claude-sonnet-4"),
         ],
@@ -101,7 +102,7 @@ class TestTheDoctorScaffoldUsesTheSameResolution:
 
     @pytest.mark.parametrize(
         "provider,model",
-        [("perplexity", "perplexity/sonar"), ("openrouter", "some/model")],
+        [("gemini", "gemini-3.8-flash"), ("openrouter", "some/model")],
     )
     def test_model_scaffold_matches_the_resolver(self, provider, model):
         scaffold = complete_record_for(provider, model)
@@ -149,13 +150,11 @@ class TestTheInstancePathAgreesWithTheClassPath:
 
     @pytest.mark.parametrize(
         "model",
-        ["sonar", "sonar-pro", "perplexity/sonar", "anthropic/claude-sonnet-5"],
+        ["gpt-5.1-codex", "o4-mini", "gpt-5.6-terra"],
     )
     def test_registered_provider_instance_matches_the_resolver(self, model):
-        provider = PerplexityProvider(
-            api_key="test-key", base_url="https://api.perplexity.ai"
-        )
-        assert provider.get_facts_for_model(model) == FactsResolver("perplexity").facts(
+        provider = OpenAINativeProvider(api_key="test-key", provider_id="openai")
+        assert provider.get_facts_for_model(model) == FactsResolver("openai").facts(
             model
         )
 
@@ -184,8 +183,6 @@ class TestTheInstancePathAgreesWithTheClassPath:
         A fence that cannot fail is worse than no fence, so this is the row
         that makes the class mean something.
         """
-        from ppxai.engine.providers.gemini import GeminiProvider
-
         model = "gemini-nothing-like-this-exists"
         resolved = FactsResolver("gemini").facts(model)
         assert resolved.wire_protocol == "generate_content", (
@@ -200,19 +197,17 @@ class TestTheInstancePathAgreesWithTheClassPath:
         assert provider.get_facts_for_model(model) == resolved
 
     def test_the_endpoint_record_agrees_too(self):
-        provider = PerplexityProvider(
-            api_key="test-key", base_url="https://api.perplexity.ai"
-        )
-        assert provider.get_capabilities() == FactsResolver("perplexity").capabilities()
+        provider = OpenAINativeProvider(api_key="test-key", provider_id="openai")
+        assert provider.get_capabilities() == FactsResolver("openai").capabilities()
 
 
 class TestOneResolutionAnswersEveryQuestion:
     def test_the_resolver_answers_all_three_from_one_construction(self):
-        r = FactsResolver("perplexity")
-        assert r.provider_class is PerplexityProvider
+        r = FactsResolver("gemini")
+        assert r.provider_class is GeminiProvider
         assert r.capabilities().web_search is True
-        assert r.facts("perplexity/sonar").wire_protocol == "responses"
-        assert r.can_drive_a_tool_loop("perplexity/sonar") is True
+        assert r.facts("gemini-3.8-flash").wire_protocol == "generate_content"
+        assert r.can_drive_a_tool_loop("gemini-3.8-flash") is True
 
     def test_can_drive_a_tool_loop_is_not_the_send_path_question(self):
         """Prompt-based tool calling is still tool calling.
@@ -220,11 +215,11 @@ class TestOneResolutionAnswersEveryQuestion:
         Conflating the two dropped every prompt-based model to closed-book on
         the `/v1/oneshot` enrichment gate.
         """
-        r = FactsResolver("perplexity")
-        assert r.facts("sonar").tool_mode == "prompt_based"
-        assert r.can_drive_a_tool_loop("sonar") is True
+        r = FactsResolver("openrouter")
+        assert r.facts("some/unlisted-model").tool_mode == "prompt_based"
+        assert r.can_drive_a_tool_loop("some/unlisted-model") is True
 
     def test_it_is_frozen_so_it_cannot_drift_mid_use(self):
-        r = FactsResolver("perplexity")
+        r = FactsResolver("openai")
         with pytest.raises(Exception):
-            r.provider = "openai"  # type: ignore[misc]
+            r.provider = "gemini"  # type: ignore[misc]

@@ -83,7 +83,7 @@ class CommandContext(Protocol):
 
     @property
     def provider(self) -> str:
-        """Currently selected provider (e.g., 'openai', 'perplexity')."""
+        """Currently selected provider (e.g., 'openai', 'gemini')."""
         ...
 
     # ========================================================================
@@ -102,7 +102,7 @@ class CommandContext(Protocol):
         """Switch to specified provider.
 
         Args:
-            provider: Provider ID (e.g., 'openai', 'perplexity')
+            provider: Provider ID (e.g., 'openai', 'gemini')
         """
         ...
 
@@ -110,7 +110,7 @@ class CommandContext(Protocol):
         """Get currently selected provider.
 
         Returns:
-            Provider ID (e.g., 'openai', 'perplexity')
+            Provider ID (e.g., 'openai', 'gemini')
         """
         ...
 

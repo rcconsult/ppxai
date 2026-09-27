@@ -51,14 +51,6 @@ provider_hints:
     - "Avoid duplicate or redundant calls. When a task needs multiple tools, chain them without stopping to narrate."
     - "COMPLETE ALL STEPS. Never stop a multi-step task early. If the task is write→test→fix→retest, do all 4 steps."
     - "Explore thoroughly: list subdirectories, not just the top level. Read ALL relevant files before summarizing."
-  perplexity:
-    - "Use your native web search for current information - don't use web_search tool."
-    - "Cite sources as markdown links inline."
-    - "CRITICAL: Do NOT make duplicate calls for the same operation. Chain multiple DIFFERENT tool calls without stopping to narrate."
-    - "To call a tool, output ONLY the JSON object with 'tool' and 'arguments' keys — no surrounding text, no markdown code fences."
-    - "Keep tool calls small. For apply_patch: use focused patches on specific sections, NOT full file rewrites."
-    - "If a tool call fails or is truncated, try a DIFFERENT approach — do NOT repeat the same large call."
-    - "Do NOT mention tools in your response that you didn't actually call."
   openai:
     - "You have native function calling - ALWAYS use the tools API to call tools. NEVER output tool call JSON like {\"tool\": \"...\", \"arguments\": {...}} in your response text."
     - "For code modifications, ALWAYS use apply_patch with unified diff format. Do NOT use read_file when you should be editing."
@@ -151,7 +143,9 @@ model_hints:
   "qwen2.5-coder*":
     - "Focus on code quality and correctness."
     - "Use apply_patch or replace_block for surgical changes, write_file only for new files."
-  "Qwen/Qwen3.5*":
+  # Widened 2026-09-27 to Qwen3.6 (27B-FP8, 27B-FP8-agent, 35B-A3B-FP8): same
+  # qwen3_coder parser family; they matched no model hint before.
+  "Qwen/Qwen3.[56]*":
     - "You have native tool calling via qwen3_coder parser. Call tools directly using the API, NOT XML formatting."
     - "CRITICAL: After EVERY tool call, read the COMPLETE result. If it contains 'FAILED', 'Error:', 'permission denied', acknowledge the exact error. Do NOT claim success."
     - "After repeated tool failure (2+ attempts), STOP and report: 'Operation failed persistently: [error]'. Do NOT retry indefinitely."
@@ -363,39 +357,6 @@ model_hints:
     - "CRITICAL: Do NOT output tool call JSON in your response text - use the native tools API only."
     - "CRITICAL: When a tool fails, acknowledge the error to the user. Do NOT silently continue."
     - "Your response should state your conclusion - keep detailed reasoning internal, and tool calls go through the API, not in text."
-  # sonar-deep-research* — Jobs API, exhaustive research. NOT BENCHMARKED in agentic loop.
-  # Stub hints — this model uses a different API path (async jobs) so tool calling
-  # semantics differ from the chat models. Primary use case is report generation.
-  "sonar-deep-research*":
-    - "You are Perplexity Sonar Deep Research — an exhaustive research model with comprehensive report generation."
-    - "You have real-time web access — use it extensively for thorough, well-sourced reports."
-    - "ALWAYS cite sources inline with markdown links; aim for 10+ citations per long-form answer."
-    - "For research tasks, produce comprehensive structured reports: executive summary, detailed findings, sources."
-    - "Use reasoning_effort parameter (low/medium/high) to scale depth vs. cost."
-    - "Note: this model uses the Jobs API (async), not Chat Completions — tool calling support is limited."
-    - "For coding tasks, defer to sonar-pro — you are optimized for research, not agentic code editing."
-  # sonar-reasoning-pro* — DeepSeek-R1 based, Chain of Thought. NOT BENCHMARKED in agentic loop.
-  # Memory notes this model has poor tool calling (50%) and code editing (28.6%) vs.
-  # sonar-pro. Hints emphasise keeping it out of agentic tool loops.
-  "sonar-reasoning-pro*":
-    - "You are Perplexity Sonar Reasoning Pro — precision reasoning with Chain of Thought (DeepSeek-R1)."
-    - "You have real-time web access — use it for current information and cite sources as markdown links."
-    - "Your strength is algorithm design, bug root cause analysis, test generation, and complex logic — focus there."
-    - "KNOWN WEAKNESS: tool calling accuracy is low. Keep tool sequences short — do NOT chain many apply_patch calls."
-    - "For multi-step agentic coding, defer to sonar-pro — it has better tool calling scores."
-    - "To call a tool, output ONLY the JSON object — no surrounding text, no markdown fences."
-    - "Keep apply_patch calls SMALL and specific. Large patches get truncated."
-    - "If a tool call was truncated, do NOT repeat it — try a different, smaller approach."
-    - "Keep reasoning out of the tool-call JSON; briefly state your approach before the call when useful."
-  "sonar*":
-    - "You have real-time web access - use it for current information."
-    - "Always cite sources with markdown links."
-    - "CRITICAL: Do NOT make 5-6 duplicate apply_patch calls for the same file. One patch per file, but chain calls across DIFFERENT files."
-    - "To call a tool, output ONLY the JSON object — example: {\"tool\": \"read_file\", \"arguments\": {\"filepath\": \"path\"}}. No surrounding text, no markdown fences."
-    - "Keep apply_patch calls SMALL. Patch specific sections, NOT entire files. Large patches get truncated and fail."
-    - "If a tool call was truncated, do NOT repeat it. Break the work into smaller patches or use a different tool."
-    - "Do NOT mention tools in your response that you didn't actually call."
-    - "After calling a tool, provide minimal response - let the tool output speak for itself."
   # gemini-3-flash* — benchmarked 2026-04-12.
   # Best score: 74.3% WITH hints (8 hints). Tuning attempt with 14 hints
   # scored 65.3% (−9.0% regression) — aggressive "MUST/NEVER/CRITICAL"
@@ -410,7 +371,10 @@ model_hints:
   #   - consecutive_tool_loop: 0/5 steps (deep agentic chain limit)
   #   - error_recovery_chain: 1/4 steps
   #   - tool_call_efficiency: 0 calls in efficiency test scenario
-  "gemini-3-flash*":
+  # Widened 2026-09-27 to gemini-3.5..3.9-flash (the default is now
+  # gemini-3.8-flash). NOT re-benchmarked on those. 3.1-flash-lite keeps
+  # its own block below and is not matched here.
+  "gemini-3(.[5-9])?-flash*":
     - "You excel at code editing - use apply_patch confidently for all file modifications."
     - "Include all necessary imports and context in patches."
     - "Verify tool exists in available tools list before calling - don't hallucinate tool names."
@@ -515,7 +479,7 @@ model_hints:
 
 ## Project: ppxai
 
-ppxai is a terminal-based UI application for interacting with multiple AI providers (Gemini, OpenAI, local models via Ollama/vLLM; Perplexity is deprecated as a chat provider since 2026-09-27 and kept as a web_search backend).
+ppxai is a terminal-based UI application for interacting with multiple AI providers (Gemini, OpenAI, local models via Ollama/vLLM; Perplexity is a web_search and grounding backend, no longer a chat provider — ADR 0015).
 
 ### Architecture
 
@@ -524,7 +488,6 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
   - `openai_native.py` - Native OpenAI (GPT-5.x, o-series, Codex via Responses API)
   - `gemini.py` - Native Gemini (google-genai SDK; native function_call/function_response tool threading)
   - `openai_compat.py` - OpenAI-compatible (local/vLLM, custom)
-  - `perplexity.py` - Perplexity (deprecated for chat 2026-09-27; its model facts live in `perplexity_facts.py`, which the web_search backend reads)
 - `ppxai/engine/model_facts.py` - per-model facts: wire protocol, tool mode, vision, tier (ADR 0012; replaced the deleted `model_profiles.py` in Item 65)
 - `ppxai/engine/tools/` - Tool system with builtins + brace-counting JSON parser
   - `network_policy.py` - AC-2 egress allowlist (fail-closed, https-only, SSRF guard)

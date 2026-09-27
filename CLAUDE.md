@@ -10,7 +10,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Release state:** **v1.19.2 is released** (2026-09-14), preceded by v1.19.1 (2026-09-10) and v1.19.0 (2026-07-12, agent platform Stage 2 as a PREVIEW surface). The `POST /v1/oneshot` gateway shape (bearer auth) that ppxai-sre's outlook-monitor agent consumes stays **byte-identical** across all of these, including the unreleased work below. See [docs/release-notes-v1.19.2.md](docs/release-notes-v1.19.2.md) and [docs/release-notes-v1.19.1.md](docs/release-notes-v1.19.1.md) (the v1.19.1 notes carry the ADR 0009/0010/0011/0012 migration detail and the opt-in Anthropic provider).
 
-**Active branch:** `bugfix/v1.19.3` (**not yet released** — version bumped, [docs/release-notes-v1.19.3.md](docs/release-notes-v1.19.3.md) written, no tag yet; `git rev-list --count master..HEAD` for how far ahead of master). Headline changes: ADR 0007's one command registry, Perplexity deprecated as a chat provider with **Gemini the default provider and `gemini-3.8-flash` its default model** (2026-09-27; two shipped Gemini prices corrected), the Sonar Responses-wire fixes, a turn-level tool strip in the web/VSCode transcripts, the 2026-09-26 VSCode smoke-defect fixes, and a test suite that runs offline and in parallel. [CHANGELOG.md](CHANGELOG.md) `[1.19.3]` is the list; don't restate it here, it rots.
+**Active branch:** `bugfix/v1.19.3` (**not yet released** — version bumped, [docs/release-notes-v1.19.3.md](docs/release-notes-v1.19.3.md) written, no tag yet; `git rev-list --count master..HEAD` for how far ahead of master). Headline changes: ADR 0007's one command registry, **Perplexity removed as a chat provider** (ADR 0015; kept as a web search backend, ADR 0014's `engine/search/` layer, with search-first grounding) with **Gemini the default provider and `gemini-3.8-flash` its default model** (2026-09-27; two shipped Gemini prices corrected), the Sonar Responses-wire fixes, a turn-level tool strip in the web/VSCode transcripts, the 2026-09-26 VSCode smoke-defect fixes, and a test suite that runs offline and in parallel. [CHANGELOG.md](CHANGELOG.md) `[1.19.3]` is the list; don't restate it here, it rots.
 
 ⚠️ **The command surface was renamed with NO aliases** (ADR 0011). If you see `/agent`, `/agentrun`, `/agentruns`, `/tools agent`, or `/task run` in older docs or comments, they are **gone**:
 
@@ -226,7 +226,7 @@ GH_TOKEN=$(cat .github/gh-token.env) gh release list
 3. **Event-based communication** — Engine emits events; clients render them
 4. **OpenAI SDK for all providers** — OpenAI-compatible API format
 5. **Hybrid config** — Secrets (`.env`) separate from settings (`ppxai-config.json`)
-6. **Default chat provider is Gemini** (since 2026-09-27). Perplexity is deprecated as a chat provider: selecting it warns (log + one INFO event, `/doctor` flags a Perplexity default) and never raises; it stays a web_search backend. Removal is phase 2, under a new ADR. The old "built-in providers" rule was already stale (`BUILTIN_PROVIDERS` removed in v1.13.10).
+6. **Default chat provider is Gemini** (since 2026-09-27). **Perplexity is not a chat provider** (ADR 0015): a `providers.perplexity` block is filtered out in `config/providers.py::_get_providers()`, `set_provider("perplexity")` returns False (never raises, never the generic fallback), `/doctor` reports the leftover. It stays a web_search and grounding backend under `engine/search/` (ADR 0014; default order gemini → perplexity → duckduckgo). The old "built-in providers" rule was already stale (`BUILTIN_PROVIDERS` removed in v1.13.10).
 7. **Transactional state management** — checkpoint/commit/rollback for atomic multi-step operations
 
 ## ppxaide / Terminal Images
@@ -241,7 +241,7 @@ For Hermes vs Harmony parsers, GPT-OSS quirks, Qwen3/2.5 setup, and the "I'll us
 
 ## Known Issues
 
-- Gemini (and the deprecated Perplexity chat provider) may use shell commands for web data instead of native search when tools enabled (accepted behavior).
+- Gemini may use shell commands for web data instead of native search when tools enabled (accepted behavior).
 
 ## Shell wrapper framework (v1.18.5)
 

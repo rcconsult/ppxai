@@ -1,6 +1,6 @@
 # ADR 0014: Web search is its own layer; grounding retrieves before the model call
 
-- **Status:** Accepted (2026-09-27): direction approved by the owner, open questions answered below
+- **Status:** Implemented (2026-09-27, `b3c66740` layer, `05bb0ddb` retrieval grounding): direction approved by the owner, open questions answered below; default backend order revised the same day (Decision 3)
 - **Deciders:** owner
 - **Target:** v1.19.3, together with ADR 0015 (owner, 2026-09-27).
 - **Related:** ADR 0009 (task execution profiles, the shared backend
@@ -119,9 +119,11 @@ the following:
 
 Consequences:
 
-- **Perplexity is the grounding backend by default.** It is first in
-  `AUTO_ORDER` and is used whenever `PERPLEXITY_API_KEY` is set, whichever
-  provider answers. An operator reorders or pins it with the existing
+- **Perplexity stays a grounding backend.** As accepted, it was first in
+  `AUTO_ORDER`. **Revised by the owner on 2026-09-27, the same day:** the
+  default order is Gemini, then Perplexity, then DuckDuckGo, each when its
+  key is set. Perplexity grounds whenever Gemini is unusable, or when an
+  operator puts it first. Order and pinning use the existing
   `tools.web_search.order` / `preferred` / `strict`. No new keys are needed.
 - **Every chat provider can be grounded**, not only those with a native
   hook.
@@ -190,8 +192,9 @@ events, like a web_search tool call.
 2. **`grounding: true` means `"retrieve"`.** `"native"` is the explicit
    opt-in for a provider's in-call search. An operator who set `true` and
    serves Gemini will see search move from Gemini's in-call Google Search
-   to the resolved backend, Perplexity first. The release notes carry this
-   as an upgrade note.
+   to a separate search before the model call, through the resolved
+   backend chain (Gemini's Google Search first under the revised order).
+   The release notes carry this as an upgrade note.
 3. **The query is the raw prompt.** No rewriting model call; it can be
    added later.
 

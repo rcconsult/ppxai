@@ -34,7 +34,7 @@ from typing import Any
 
 import ppxai.config as _config
 
-from ..config import DEPRECATED_CHAT_PROVIDERS, find_config_file
+from ..config import REMOVED_CHAT_PROVIDERS, find_config_file
 from ..config import execution as _execution
 from ..config.tls import resolve_tls_verify
 from ..engine.facts_config import (
@@ -50,7 +50,9 @@ from ..engine.model_deprecations import (
     classify_model,
     find_missing_recommended,
 )
+from ..engine.model_facts import shipped_facts_for_model
 from ..engine.search import get_backend as get_search_backend
+from ..engine.search.perplexity_facts import SEARCH_MODEL_FACTS
 from ..engine.search.resolver import resolve_web_search_backend
 from ..engine.tools.network_policy import NetworkPolicy
 from .factory import CommandFactory, CommandSpec
@@ -79,7 +81,9 @@ def _extract_provider_models(config_data: dict[str, Any]) -> dict[str, list[str]
     if not isinstance(providers, dict):
         return result
     for provider_name, provider_cfg in providers.items():
-        if not isinstance(provider_cfg, dict):
+        # A removed chat provider's block is reported once, as removed (see
+        # `_format_removed_provider_section`), not model by model.
+        if not isinstance(provider_cfg, dict) or provider_name in REMOVED_CHAT_PROVIDERS:
             continue
         models = provider_cfg.get("models", {})
         if not isinstance(models, dict):
@@ -100,7 +104,7 @@ def _extract_default_models(config_data: dict[str, Any]) -> dict[str, str]:
     if not isinstance(providers, dict):
         return defaults
     for provider_name, provider_cfg in providers.items():
-        if not isinstance(provider_cfg, dict):
+        if not isinstance(provider_cfg, dict) or provider_name in REMOVED_CHAT_PROVIDERS:
             continue
         default = provider_cfg.get("default_model")
         if default and isinstance(default, str):
@@ -752,6 +756,17 @@ def _format_web_search_backend_section() -> list[str]:
             "superset, WIDER than the old hard pin). Add "
             "tools.web_search.strict:true to keep the pin."
         )
+    # The Perplexity backend's model must be on the Responses wire: the
+    # chat-completions endpoint retired 2026-09-27, so a bare Sonar id
+    # (`sonar`, `sonar-pro`, ...) fails every Perplexity search and
+    # grounding call. The shipped config carried `sonar` until v1.19.3.
+    pplx_model = g.get("perplexity_model", "perplexity/sonar")
+    if shipped_facts_for_model(pplx_model, SEARCH_MODEL_FACTS).wire_protocol != "responses":
+        warnings.append(
+            f"tools.web_search.perplexity_model={pplx_model!r} is on "
+            "Perplexity's retired chat-completions wire, so every Perplexity "
+            "search and grounding call fails. Set it to \"perplexity/sonar\"."
+        )
 
     try:
         providers = _config.get_available_providers()
@@ -928,26 +943,83 @@ def _format_config_migration_section(config_data: dict[str, Any]) -> list[str]:
     return lines
 
 
-def deprecated_default_provider(config_data: dict[str, Any] | None) -> str | None:
-    """The deprecated chat provider this config or `MODEL_PROVIDER` selects.
+#: Where each model family a removed Perplexity block served should go
+#: (ADR 0015). Checked against the providers this release ships.
+_GATEWAY_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("openai/", "openai"),
+    ("anthropic/", "anthropic (opt-in [anthropic] extra; untested against the live API)"),
+    ("google/", "gemini"),
+    ("xai/", "openrouter"),
+    ("perplexity/", "no chat replacement; Perplexity stays the web_search and grounding backend"),
+)
 
-    `MODEL_PROVIDER` wins over the file's `default_provider`, as in
-    `get_default_provider()`. None when the selected provider is not
-    deprecated (or nothing is selected).
+
+def _gateway_replacement(model_id: str) -> str:
+    for prefix, replacement in _GATEWAY_REPLACEMENTS:
+        if model_id.startswith(prefix):
+            return replacement
+    return "another provider"
+
+
+def removed_chat_providers(config_data: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Removed chat providers (ADR 0015) this config or `MODEL_PROVIDER`
+    still names: as the selected default, or as a `providers.<id>` block.
+
+    One finding per provider: `{"provider", "selected_by", "has_block",
+    "models": {model_id: replacement}}`. `selected_by` is "MODEL_PROVIDER",
+    "default_provider" or None; `MODEL_PROVIDER` wins, as in
+    `get_default_provider()`.
     """
-    selected = os.getenv("MODEL_PROVIDER") or (config_data or {}).get("default_provider")
-    return selected if selected in DEPRECATED_CHAT_PROVIDERS else None
+    data = config_data or {}
+    providers = data.get("providers", {})
+    providers = providers if isinstance(providers, dict) else {}
+    env = os.getenv("MODEL_PROVIDER")
+    findings = []
+    for provider in REMOVED_CHAT_PROVIDERS:
+        if env == provider:
+            selected_by = "MODEL_PROVIDER"
+        elif not env and data.get("default_provider") == provider:
+            selected_by = "default_provider"
+        else:
+            selected_by = None
+        block = providers.get(provider)
+        has_block = isinstance(block, dict)
+        if not selected_by and not has_block:
+            continue
+        models = block.get("models", {}) if has_block else {}
+        findings.append({
+            "provider": provider,
+            "selected_by": selected_by,
+            "has_block": has_block,
+            "models": {
+                m: _gateway_replacement(m)
+                for m in (models if isinstance(models, dict) else {})
+                if not m.startswith("__comment")
+            },
+        })
+    return findings
 
 
-def _format_default_provider_section(config_data: dict[str, Any] | None) -> list[str]:
-    """Flag a default chat provider that is deprecated (Perplexity, 2026-09-27)."""
-    lines = ["Default chat provider:"]
-    provider = deprecated_default_provider(config_data)
-    if provider is None:
-        lines.append("   ✓ not deprecated")
+def _format_removed_provider_section(config_data: dict[str, Any] | None) -> list[str]:
+    """Flag a removed chat provider (ADR 0015) the config still names."""
+    lines = ["Removed chat providers:"]
+    findings = removed_chat_providers(config_data)
+    if not findings:
+        lines.append("   ✓ none configured")
         return lines
-    source = "MODEL_PROVIDER" if os.getenv("MODEL_PROVIDER") == provider else "default_provider"
-    lines.append(f"   ⚠ {source} is {provider!r}. {DEPRECATED_CHAT_PROVIDERS[provider]}")
+    for f in findings:
+        where = []
+        if f["selected_by"]:
+            where.append(f"{f['selected_by']} is {f['provider']!r}")
+        if f["has_block"]:
+            where.append(f"a providers.{f['provider']} block is present (ignored)")
+        lines.append(f"   ⚠ {'; '.join(where)}.")
+        lines.append(f"     {REMOVED_CHAT_PROVIDERS[f['provider']]}")
+        gateway = {m: r for m, r in f["models"].items() if "/" in m}
+        if gateway:
+            lines.append("     Replacements for the models that block lists:")
+            for model, replacement in gateway.items():
+                lines.append(f"       {model}  ->  {replacement}")
     return lines
 
 
@@ -1074,11 +1146,11 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
         report = report + "\n\n" + "\n".join(_format_facts_section(raw_config))
     except Exception:  # noqa: BLE001 — never fail /doctor over a scan
         pass
-    # Perplexity deprecated as a chat provider (2026-09-27): the one place an
-    # operator whose config still defaults to it is told, before the removal
-    # release turns the warning into an error.
-    deprecated_default = deprecated_default_provider(raw_config)
-    report = report + "\n\n" + "\n".join(_format_default_provider_section(raw_config))
+    # ADR 0015: a removed chat provider the config still names. The engine
+    # ignores the block and refuses the provider; this is where the operator
+    # is told why and what to use instead.
+    removed = removed_chat_providers(raw_config)
+    report = report + "\n\n" + "\n".join(_format_removed_provider_section(raw_config))
     probe_results: dict[str, dict[str, Any]] = {}
     drift: list[dict[str, Any]] = []
 
@@ -1108,7 +1180,7 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     # that color by status highlight the warning appropriately.
     has_dead = bool(audit["dead"])
     has_warnings = (
-        bool(audit["upcoming"]) or bool(audit["default_warnings"]) or bool(deprecated_default)
+        bool(audit["upcoming"]) or bool(audit["default_warnings"]) or bool(removed)
     )
     has_drift_overclaim = any(d["severity"] == "over-claim" for d in drift)
 
@@ -1127,7 +1199,7 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
             "upcoming_count": len(audit["upcoming"]),
             "missing_recommended_count": len(audit["missing_recommended"]),
             "default_warnings_count": len(audit["default_warnings"]),
-            "deprecated_default_provider": deprecated_default,
+            "removed_chat_providers": removed,
             "probed": do_probe,
             "drift_overclaim_count": sum(1 for d in drift if d["severity"] == "over-claim"),
             "drift_underclaim_count": sum(1 for d in drift if d["severity"] == "under-claim"),
