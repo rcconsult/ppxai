@@ -1,9 +1,8 @@
 # ADR 0014: Web search is its own layer; grounding retrieves before the model call
 
-- **Status:** Proposed (2026-09-27)
+- **Status:** Accepted (2026-09-27): direction approved by the owner, open questions answered below
 - **Deciders:** owner
-- **Target:** the v1.19.x cycle (owner, 2026-09-27). Which patch it lands in
-  is still open (question 1 below).
+- **Target:** v1.19.3, together with ADR 0015 (owner, 2026-09-27).
 - **Related:** ADR 0009 (task execution profiles, the shared backend
   resolver, the §4 oneshot gating table), ADR 0011 (`execution.run.*`,
   which owns `grounding`), ADR 0012 (per-model facts; Perplexity's two
@@ -180,26 +179,47 @@ events, like a web_search tool call.
   need its own special case, and grounding would stay outside the resolver
   that already carries order, strict and egress.
 
-## Open questions (owner)
+## Owner answers (2026-09-27)
 
-1. **Which patch release** carries this: v1.19.3 (prepared, not yet
-   released, already large) or v1.19.4. The recommendation is v1.19.4, so
-   v1.19.3 ships the phase-1 deprecation warning first.
-2. **What `grounding: true` means from now on.** Recommendation: `true`
-   means `"retrieve"`, and `"native"` is the explicit opt-in. That changes
-   behaviour for an operator who set `true` and serves Gemini: the search
-   moves from Gemini's in-call Google Search to the resolved backend,
-   Perplexity first. The alternative keeps `true` = `native` where
-   available and `retrieve` otherwise, which is more compatible and less
-   predictable.
-3. **The query.** The raw prompt (recommended to start), or a query
-   rewritten by a cheap model. Rewriting improves recall but adds a model
-   call, and a model-written query is a small step back toward the
-   model-steered surface Option A avoided.
-4. **Structured citations** on `/v1/oneshot` (an additive response
-   field): a separate decision on the stable surface, not bundled here.
-5. **Injected size.** The cap on retrieved text, and whether it comes from
-   `context.max_injection_size` or a new key.
+1. **Release:** v1.19.3, with ADR 0015 in the same release.
+2. **`grounding: true` means `"retrieve"`.** `"native"` is the explicit
+   opt-in for a provider's in-call search. An operator who set `true` and
+   serves Gemini will see search move from Gemini's in-call Google Search
+   to the resolved backend, Perplexity first. The release notes carry this
+   as an upgrade note.
+3. **The query is the raw prompt.** No rewriting model call; it can be
+   added later.
+
+4. **Per-request control: add the optional field.** Raised by ppxai-sre.
+   Their planned classifier sends email bodies as the prompt: often
+   confidential, and **untrusted**, since anyone can send mail. Under
+   server-wide retrieval grounding such a prompt would go to a third-party
+   search host, and an attacker's email would steer both the query and the
+   injected context. The egress ceiling and `strict` limit *where* the
+   prompt goes, not *whether*. `POST /v1/oneshot` therefore gains an
+   optional request field **`grounding: bool | null`**:
+   - `null` (or absent) uses the server default;
+   - `false` is always honoured, since it can only reduce exposure;
+   - `true` on a server with grounding disabled is refused with a 400
+     naming the setting, never silently ignored.
+
+   The v1 contract permits this (`OneshotRequest`: optional fields are
+   non-breaking), and the response is unchanged. Limit: pydantic ignores
+   unknown fields, so a server **older** than this change ignores the
+   field. A caller that depends on the opt-out gates on the server version
+   from `GET /health`. Older servers only do `native` grounding, which
+   reaches no new host.
+
+## Implementation defaults (the owner may override)
+
+- **Untrusted input.** `docs/api-gateway.md` states that retrieval
+  grounding sends the prompt text to the search backend, and that callers
+  with untrusted or confidential prompts should send `grounding: false`.
+  `/doctor` says the same when grounding is on server-wide.
+- **Citations** stay inside the answer text. A structured field is a
+  separate decision on the stable surface.
+- **Injected size** is capped by `context.max_injection_size`, the limit
+  file injection already uses, rather than a new key.
 
 ## Future / proper solution
 

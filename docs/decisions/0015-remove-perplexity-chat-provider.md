@@ -1,9 +1,9 @@
 # ADR 0015: Remove Perplexity as a chat provider
 
-- **Status:** Proposed (2026-09-27)
+- **Status:** Accepted (2026-09-27): owner chose option B; release and window answered below
 - **Deciders:** owner
-- **Target:** the v1.19.x cycle (owner, 2026-09-27). It lands after
-  ADR 0014, never before it.
+- **Target:** v1.19.3, together with ADR 0014 and after it in commit
+  order (owner, 2026-09-27).
 - **Depends on:** ADR 0014. Perplexity grounding must run through the
   search layer before the chat provider can go.
 - **Revises:** ADR 0012 in part (the facts table on the provider class,
@@ -132,21 +132,23 @@ INFO event. The owner's `~/.ppxai/session-state.json` records
   that select the configured default, which is exactly what phase 1
   promised not to do.
 
-## Open questions (owner)
+## Owner answers (2026-09-27)
 
-1. **The deprecation window.** Phase 1 warns only from the release that
-   ships it. If v1.19.3 ships the warning and v1.19.4 removes it, the
-   window is one patch release. If both land in the same release, there
-   is no window: operators meet the removal and the `/doctor` message
-   together. The recommendation is at least one release with the warning.
-2. **Semver.** Removing a provider in a patch release is a breaking change
-   for anyone who chats through Perplexity. The project has taken clean
-   breaks in patches before (ADR 0010 in v1.19.1), with the upgrade step
-   in the release notes. This record assumes the same, and the release
-   notes carry an upgrade step naming the replacement providers.
-3. **Gateway-model users.** Is a note enough ("move to the vendor's
-   provider or OpenRouter"), or does `/doctor` map each `openai/*`,
-   `anthropic/*`, ... id to a concrete replacement?
+1. **No deprecation window.** Phase 1 and this removal ship together in
+   v1.19.3, so operators meet the removal and the `/doctor` message at the
+   same time. Phase 1's warn-on-select code therefore never ships. It is
+   replaced by Decision 3's refusal before the tag, and the release notes
+   describe one change, the removal, with its upgrade step.
+
+## Implementation defaults (the owner may override)
+
+- **Semver.** A clean break in a patch release, as ADR 0010 did in
+  v1.19.1. The v1.19.3 release notes carry an upgrade step naming the
+  replacement providers.
+- **Gateway-model users.** `/doctor` names the vendor's own provider as the
+  replacement for each `openai/*`, `anthropic/*`, `google/*` and `xai/*` id
+  it finds in a leftover `providers.perplexity` block, noting that the
+  Anthropic provider is opt-in and untested (Item 71).
 
 ## Triggers to revisit
 
