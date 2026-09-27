@@ -50,6 +50,16 @@ def _table() -> DataTable:
     return table
 
 
+async def _await_focus_leaves_input(app, pilot, budget_s: float = 5.0) -> None:
+    """The panel focuses via `call_after_refresh`, so ONE `pilot.pause()` is
+    not always a refresh: under a loaded parallel run it failed 2 in 80.
+    Poll for the move instead, bounded, and let the assert say if it never came."""
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + budget_s
+    while isinstance(app.focused, Input) and loop.time() < deadline:
+        await pilot.pause(0.02)
+
+
 def test_focus_true_moves_focus_to_the_panel():
     """The existing contract, pinned so the opt-out can't silently invert it."""
     app = _Host()
@@ -58,7 +68,7 @@ def test_focus_true_moves_focus_to_the_panel():
         async with app.run_test() as pilot:
             panel = app.query_one("#side-panel", SidePanel)
             await panel.show_widget(_table(), title="runs", focus=True)
-            await pilot.pause()
+            await _await_focus_leaves_input(app, pilot)
             assert not isinstance(app.focused, Input), (
                 "focus=True should have moved focus off the chat input"
             )
@@ -109,7 +119,7 @@ def test_default_is_focus_for_backwards_compatibility():
         async with app.run_test() as pilot:
             panel = app.query_one("#side-panel", SidePanel)
             await panel.show_widget(_table(), title="runs")
-            await pilot.pause()
+            await _await_focus_leaves_input(app, pilot)
             assert not isinstance(app.focused, Input)
 
     asyncio.run(run())
