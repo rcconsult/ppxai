@@ -22,31 +22,8 @@ from __future__ import annotations
 
 import pytest
 
-from ppxai.engine.app_state import AppState
 from ppxai.engine.client import EngineClient
 from ppxai.engine.types import Message
-
-# -----------------------------------------------------------------------------
-# AppState field shape
-# -----------------------------------------------------------------------------
-
-
-class TestAppStateFieldDefinition:
-    def test_field_defaults_to_empty_string(self):
-        state = AppState()
-        assert state.get("last_message_role") == ""
-
-    def test_field_is_settable(self):
-        state = AppState()
-        assert state.set("last_message_role", "user") is True
-        assert state.get("last_message_role") == "user"
-
-    def test_field_set_short_circuits_on_equal_value(self):
-        state = AppState()
-        assert state.set("last_message_role", "user") is True
-        # Same value — dedup means no listener fires, no change reported.
-        assert state.set("last_message_role", "user") is False
-
 
 # -----------------------------------------------------------------------------
 # EngineClient wiring — field updates on every session mutation

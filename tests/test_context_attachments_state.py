@@ -19,41 +19,9 @@ import json
 
 import pytest
 
-from ppxai.engine.app_state import AppState
 from ppxai.engine.client import EngineClient
 from ppxai.engine.session import SessionManager
 from ppxai.engine.types import Message
-
-# -----------------------------------------------------------------------------
-# AppState field exists and has the documented shape
-# -----------------------------------------------------------------------------
-
-
-class TestAppStateFieldDefinition:
-    def test_field_defaults_to_empty_list(self):
-        state = AppState()
-        assert state.get("context_attachments") == []
-
-    def test_field_is_settable(self):
-        state = AppState()
-        changed = state.set("context_attachments", [{"name": "a.png", "kind": "image"}])
-        assert changed is True
-        assert state.get("context_attachments") == [{"name": "a.png", "kind": "image"}]
-
-    def test_field_set_short_circuits_on_equal_value(self):
-        state = AppState()
-        entry = [{"name": "a.png", "kind": "image", "media_type": "image/png", "turn_index": 0}]
-        assert state.set("context_attachments", entry) is True
-        # Same list value — should be detected as no-op.
-        assert state.set("context_attachments", list(entry)) is False
-
-    def test_field_listener_receives_new_value(self):
-        state = AppState()
-        received: list = []
-        state.on("context_attachments", lambda v: received.append(v))
-        state.set("context_attachments", [{"name": "x.png"}])
-        assert received == [[{"name": "x.png"}]]
-
 
 # -----------------------------------------------------------------------------
 # EngineClient wiring — callback fires on every session mutation

@@ -3592,7 +3592,7 @@ This release introduces **autonomous file editing** capabilities with a comprehe
 #### Testing
 - **NEW:** 36 comprehensive tests for file editing features:
   - 25 tests for file editing tools ([tests/test_file_editing_tools.py](tests/test_file_editing_tools.py))
-  - 11 tests for help commands and UI ([tests/test_ui.py](tests/test_ui.py), [tests/test_commands.py](tests/test_commands.py))
+  - 11 tests for help commands and UI (`tests/test_ui.py`, since deleted, [tests/test_commands.py](tests/test_commands.py))
 - **Total:** 273/278 tests passing (98.2%)
 - 5 pre-existing custom endpoint integration test failures (unrelated)
 

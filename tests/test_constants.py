@@ -1,4 +1,4 @@
-"""Tests for constants module - enum behavior and validation helpers."""
+"""Tests for constants module - enum behavior."""
 
 
 from ppxai.constants import (
@@ -8,17 +8,6 @@ from ppxai.constants import (
     ProviderName,
     ShellRiskLevel,
     SystemPromptMode,
-    get_enum_values,
-    is_valid_checkpoint_backend,
-    is_valid_consent_decision,
-    is_valid_consent_mode,
-    is_valid_consent_response,
-    is_valid_encoding,
-    is_valid_enum,
-    is_valid_prompt_mode,
-    is_valid_provider,
-    is_valid_risk_level,
-    is_valid_role,
 )
 
 
@@ -53,49 +42,8 @@ class TestStrEnumBehavior:
         assert len(ShellRiskLevel.DANGEROUS) == 9
 
 
-class TestValidationHelpers:
-    """Test validation helper functions."""
-
-    def test_is_valid_provider_valid(self):
-        """Valid provider names should return True."""
-        assert is_valid_provider("perplexity")
-        assert is_valid_provider("gemini")
-        assert is_valid_provider("openai")
-
-    def test_is_valid_provider_invalid(self):
-        """Invalid provider names should return False."""
-        assert not is_valid_provider("invalid")
-        assert not is_valid_provider("")
-        assert not is_valid_provider("Perplexity")  # Case sensitive
-
-    def test_is_valid_role(self):
-        """Test message role validation."""
-        assert is_valid_role("user")
-        assert is_valid_role("assistant")
-        assert not is_valid_role("admin")
-
-    def test_is_valid_consent_mode(self):
-        """Test consent mode validation."""
-        assert is_valid_consent_mode("always")
-        assert is_valid_consent_mode("never")
-        assert is_valid_consent_mode("prompt")
-        assert not is_valid_consent_mode("sometimes")
-
-    def test_is_valid_consent_response(self):
-        """Test consent response validation."""
-        assert is_valid_consent_response("y")
-        assert is_valid_consent_response("n")
-        assert is_valid_consent_response("always")
-        assert is_valid_consent_response("never")
-        assert not is_valid_consent_response("yes")  # Not "yes", it's "y"
-
-    def test_is_valid_consent_decision(self):
-        """Test consent decision validation."""
-        assert is_valid_consent_decision("yes")
-        assert is_valid_consent_decision("no")
-        assert is_valid_consent_decision("always")
-        assert is_valid_consent_decision("never")
-        assert not is_valid_consent_decision("y")  # Not "y", it's "yes"
+class TestConsentEnums:
+    """ConsentResponse (short forms) and ConsentDecision (long forms)."""
 
     def test_consent_decision_enum_values(self):
         """Test ConsentDecision enum values match expected strings."""
@@ -116,53 +64,6 @@ class TestValidationHelpers:
         assert ConsentResponse.ALWAYS == ConsentDecision.ALWAYS
         assert ConsentResponse.NEVER == ConsentDecision.NEVER
 
-    def test_is_valid_prompt_mode(self):
-        """Test system prompt mode validation."""
-        assert is_valid_prompt_mode("prepend")
-        assert is_valid_prompt_mode("append")
-        assert is_valid_prompt_mode("replace")
-        assert not is_valid_prompt_mode("insert")
-
-    def test_is_valid_risk_level(self):
-        """Test shell risk level validation."""
-        assert is_valid_risk_level("safe")
-        assert is_valid_risk_level("dangerous")
-        assert is_valid_risk_level("never")
-        assert not is_valid_risk_level("risky")
-
-    def test_is_valid_encoding(self):
-        """Test file encoding validation."""
-        assert is_valid_encoding("utf-8")
-        assert is_valid_encoding("utf-8-sig")
-        assert not is_valid_encoding("ascii")
-
-    def test_is_valid_checkpoint_backend(self):
-        """Test checkpoint backend validation."""
-        assert is_valid_checkpoint_backend("auto")
-        assert is_valid_checkpoint_backend("git")
-        assert is_valid_checkpoint_backend("file")
-        assert is_valid_checkpoint_backend("none")
-        assert not is_valid_checkpoint_backend("memory")
-
-
-class TestGenericHelpers:
-    """Test generic enum helper functions."""
-
-    def test_is_valid_enum_generic(self):
-        """Test generic is_valid_enum function."""
-        assert is_valid_enum(ProviderName, "perplexity")
-        assert not is_valid_enum(ProviderName, "invalid")
-
-    def test_get_enum_values(self):
-        """Test get_enum_values returns all values."""
-        values = get_enum_values(ConsentResponse)
-        assert values == {"y", "n", "always", "never"}
-
-        provider_values = get_enum_values(ProviderName)
-        assert "perplexity" in provider_values
-        assert "gemini" in provider_values
-        assert len(provider_values) == 5
-
 
 class TestEnumMembership:
     """Test enum membership and iteration."""
@@ -177,5 +78,4 @@ class TestEnumMembership:
         """Test membership check using 'in' operator."""
         # Note: 'in' checks enum members, not values
         assert ProviderName.PERPLEXITY in ProviderName
-        # For value check, use validation helper
-        assert is_valid_provider("perplexity")
+        assert "perplexity" in {p.value for p in ProviderName}

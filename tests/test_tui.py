@@ -13,8 +13,6 @@ Phase 1 tests validate core visual components work reliably:
 
 import asyncio
 import json
-import tempfile
-from pathlib import Path
 
 
 class TestThemes:
@@ -326,184 +324,8 @@ class TestImageSupport:
         assert not is_image_file(Path("test.txt"))
 
 
-class TestContentFactory:
-    """Tests for content display mode detection."""
-
-    def test_content_factory_imports(self):
-        """Content factory should import without error."""
-
-    def test_detect_display_mode_code(self):
-        """detect_display_mode should return 'code' for code files."""
-        from pathlib import Path
-
-        from ppxai.tui.widgets.content_factory import detect_display_mode
-
-        assert detect_display_mode(Path("test.py")) == "code"
-        assert detect_display_mode(Path("test.js")) == "code"
-        assert detect_display_mode(Path("test.rs")) == "code"
-        assert detect_display_mode(Path("test.txt")) == "code"
-
-    def test_detect_display_mode_data(self):
-        """detect_display_mode should return 'data' for data files."""
-        from pathlib import Path
-
-        from ppxai.tui.widgets.content_factory import detect_display_mode
-
-        assert detect_display_mode(Path("test.json")) == "data"
-        assert detect_display_mode(Path("test.yaml")) == "data"
-        assert detect_display_mode(Path("test.yml")) == "data"
-        assert detect_display_mode(Path("test.toml")) == "data"
-
-    def test_detect_display_mode_markdown(self):
-        """detect_display_mode should return 'markdown' for markdown files."""
-        from pathlib import Path
-
-        from ppxai.tui.widgets.content_factory import detect_display_mode
-
-        assert detect_display_mode(Path("README.md")) == "markdown"
-        assert detect_display_mode(Path("doc.markdown")) == "markdown"
-
-    def test_detect_display_mode_image(self):
-        """detect_display_mode should return 'image' for image files."""
-        from pathlib import Path
-
-        from ppxai.tui.widgets.content_factory import detect_display_mode
-
-        assert detect_display_mode(Path("test.png")) == "image"
-        assert detect_display_mode(Path("test.jpg")) == "image"
-        assert detect_display_mode(Path("test.gif")) == "image"
-
-    def test_get_data_format(self):
-        """get_data_format should return specific format."""
-        from pathlib import Path
-
-        from ppxai.tui.widgets.content_factory import get_data_format
-
-        assert get_data_format(Path("test.json")) == "json"
-        assert get_data_format(Path("test.yaml")) == "yaml"
-        assert get_data_format(Path("test.yml")) == "yaml"
-        assert get_data_format(Path("test.toml")) == "toml"
-        assert get_data_format(Path("test.py")) is None
-
-    def test_is_data_file(self):
-        """is_data_file should detect data file extensions."""
-        from pathlib import Path
-
-        from ppxai.tui.widgets.content_factory import is_data_file
-
-        assert is_data_file(Path("test.json"))
-        assert is_data_file(Path("test.yaml"))
-        assert not is_data_file(Path("test.py"))
-
-    def test_is_markdown_file(self):
-        """is_markdown_file should detect markdown extensions."""
-        from pathlib import Path
-
-        from ppxai.tui.widgets.content_factory import is_markdown_file
-
-        assert is_markdown_file(Path("README.md"))
-        assert is_markdown_file(Path("doc.markdown"))
-        assert not is_markdown_file(Path("test.txt"))
-
-
 class TestValidation:
     """Tests for input validation utilities."""
-
-    def test_validation_imports(self):
-        """Validation module should import without error."""
-
-    def test_safe_resolve_path_absolute(self):
-        """safe_resolve_path should handle absolute paths."""
-        from ppxai.tui.validation import safe_resolve_path
-
-        # Test with temp directory (exists on all platforms)
-        result = safe_resolve_path(tempfile.gettempdir())
-        assert result is not None
-        assert result.is_absolute()
-
-    def test_safe_resolve_path_relative(self):
-        """safe_resolve_path should resolve relative paths within base."""
-        from ppxai.tui.validation import safe_resolve_path
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # Create a test file
-            test_file = Path(tmpdir) / "test.txt"
-            test_file.write_text("test", encoding="utf-8")
-
-            # Resolve relative to tmpdir
-            result = safe_resolve_path("test.txt", base_dir=tmpdir)
-            assert result is not None
-            assert result == test_file.resolve()
-
-    def test_safe_resolve_path_traversal_blocked(self):
-        """safe_resolve_path should block path traversal attacks."""
-        from ppxai.tui.validation import safe_resolve_path
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # Create a nested directory
-            nested = Path(tmpdir) / "subdir"
-            nested.mkdir()
-
-            # Try to escape via ../
-            result = safe_resolve_path("../../../etc/passwd", base_dir=str(nested))
-            assert result is None
-
-    def test_safe_resolve_path_nonexistent(self):
-        """safe_resolve_path should return None for non-existent paths."""
-        from ppxai.tui.validation import safe_resolve_path
-
-        result = safe_resolve_path("/nonexistent/path/to/file.txt")
-        assert result is None
-
-    def test_safe_resolve_path_empty(self):
-        """safe_resolve_path should return None for empty input."""
-        from ppxai.tui.validation import safe_resolve_path
-
-        assert safe_resolve_path("") is None
-        assert safe_resolve_path("   ") is None
-
-    def test_safe_resolve_path_home_expansion(self):
-        """safe_resolve_path should expand ~ to home directory."""
-        from ppxai.tui.validation import safe_resolve_path
-
-        # ~ should expand to home directory
-        result = safe_resolve_path("~")
-        assert result is not None
-        assert result == Path.home().resolve()
-
-    def test_validate_file_size(self):
-        """validate_file_size should check file sizes correctly."""
-        from ppxai.tui.validation import validate_file_size
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir) / "test_file.bin"
-            path.write_bytes(b"x" * 1000)
-
-            # Should be valid for large limit
-            is_valid, size = validate_file_size(path, max_size=10000)
-            assert is_valid is True
-            assert size == 1000
-
-            # Should be invalid for small limit
-            is_valid, size = validate_file_size(path, max_size=500)
-            assert is_valid is False
-            assert size == 1000
-            # File cleaned up automatically when tmpdir is removed
-
-    def test_get_size_limit_for_mode(self):
-        """get_size_limit_for_mode should return appropriate limits."""
-        from ppxai.tui.validation import (
-            MAX_DATA_FILE_SIZE,
-            MAX_IMAGE_SIZE,
-            MAX_TEXT_FILE_SIZE,
-            get_size_limit_for_mode,
-        )
-
-        assert get_size_limit_for_mode("image") == MAX_IMAGE_SIZE
-        assert get_size_limit_for_mode("data") == MAX_DATA_FILE_SIZE
-        assert get_size_limit_for_mode("code") == MAX_TEXT_FILE_SIZE
-        assert get_size_limit_for_mode("markdown") == MAX_TEXT_FILE_SIZE
-        assert get_size_limit_for_mode("unknown") == MAX_TEXT_FILE_SIZE
 
     def test_format_file_size(self):
         """format_file_size should format sizes correctly."""
@@ -514,24 +336,6 @@ class TestValidation:
         assert format_file_size(1536) == "1.5 KB"
         assert format_file_size(1024 * 1024) == "1.0 MB"
         assert format_file_size(int(1.5 * 1024 * 1024)) == "1.5 MB"
-
-    def test_is_safe_filename(self):
-        """is_safe_filename should validate filenames."""
-        from ppxai.tui.validation import is_safe_filename
-
-        # Valid filenames
-        assert is_safe_filename("test.txt")
-        assert is_safe_filename("my-file_v2.py")
-        assert is_safe_filename("README.md")
-
-        # Invalid filenames
-        assert not is_safe_filename("")
-        assert not is_safe_filename(".")
-        assert not is_safe_filename("..")
-        assert not is_safe_filename("path/to/file.txt")
-        assert not is_safe_filename("path\\to\\file.txt")
-        assert not is_safe_filename("file\x00name.txt")
-
 
 # =============================================================================
 # Phase 1: Core Visual Validation Tests

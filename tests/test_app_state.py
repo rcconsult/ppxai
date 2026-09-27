@@ -2,6 +2,8 @@
 
 import threading
 
+import pytest
+
 from ppxai.engine.app_state import AppState
 
 
@@ -264,6 +266,27 @@ class TestAppStateFieldCoverage:
         a.get("context_attachments").append({"name": "x.png"})
         # b must remain empty
         assert b.get("context_attachments") == []
+
+    # One row per value SHAPE the schema uses (list, float, str). Replaces
+    # three per-field `TestAppStateFieldDefinition` copies that lived in the
+    # context_attachments / context_percentage / last_message_role test files.
+    @pytest.mark.parametrize("field, value, equal_copy", [
+        ("context_attachments",
+         [{"name": "a.png", "kind": "image", "media_type": "image/png", "turn_index": 0}],
+         lambda v: [dict(e) for e in v]),
+        ("context_percentage", 12.5, lambda v: float(v)),
+        ("last_message_role", "user", lambda v: "".join(v)),
+    ])
+    def test_set_notifies_once_and_dedups_an_equal_value(self, field, value, equal_copy):
+        state = AppState()
+        received = []
+        state.on(field, received.append)
+        assert state.set(field, value) is True
+        assert state.get(field) == value
+        # An equal value -- even a distinct object -- is a no-op: no change
+        # reported, no second notification.
+        assert state.set(field, equal_copy(value)) is False
+        assert received == [value]
 
 
 class TestSchemaDTO:

@@ -1,9 +1,10 @@
 /**
  * AgentRunController — web client driver for the /v1/agent/* run registry.
  *
- * Owns the /agentrun + /agentruns command behavior:
- *   - launches tool-free oneshot runs (POST /v1/agent/run),
- *   - renders each into its own right-panel AgentRunView (one pane per run_id),
+ * The base class of TaskController (and, through it, RunController): the
+ * /agentrun + /agentruns commands it was written for are retired (ADR 0011),
+ * and so is its launcher. What remains is the shared run-registry plumbing:
+ *   - renders each run into its own right-panel AgentRunView (one pane per run_id),
  *   - chat-side navigation: clickable breadcrumbs + a clickable run list that
  *     focus or reopen panes by run_id (recreating from the server if a pane was
  *     LRU-evicted), and pins non-terminal runs so a running pane survives.
@@ -14,42 +15,6 @@
  *
  * @version 1.19.0
  */
-
-/**
- * Parse a `/agentrun` argument line into `{task, provider, model}`.
- *
- * Unlike `/task`, the description does NOT have to lead: the two recognized
- * flags (`--provider` / `--model`) are pulled out wherever they appear and
- * everything else joins as the task. So these are equivalent:
- *   /agentrun weather today --provider perplexity
- *   /agentrun --provider perplexity weather today
- * An unrecognized `--flag` is left verbatim in the task text (no error), since
- * a one-shot task is free-form prose. `--provider`/`--model` with no following
- * value (or followed by another flag) are left in the task rather than eating it.
- */
-function parseAgentRunArgs(argline) {
-    const re = /"([^"]*)"|'([^']*)'|(\S+)/g;
-    const toks = [];
-    let m;
-    while ((m = re.exec((argline || '').trim())) !== null) {
-        toks.push(m[1] !== undefined ? m[1] : (m[2] !== undefined ? m[2] : m[3]));
-    }
-    const out = { task: '', provider: null, model: null };
-    const rest = [];
-    for (let i = 0; i < toks.length; i += 1) {
-        const t = toks[i];
-        if ((t === '--provider' || t === '--model')
-            && i + 1 < toks.length && !toks[i + 1].startsWith('--')) {
-            if (t === '--provider') out.provider = toks[i + 1];
-            else out.model = toks[i + 1];
-            i += 1;
-            continue;
-        }
-        rest.push(t);
-    }
-    out.task = rest.join(' ').trim();
-    return out;
-}
 
 class AgentRunController {
     /** @param {PpxaiApp} app */
@@ -187,49 +152,6 @@ class AgentRunController {
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────
-
-    /** /agentrun <task> [--provider p] [--model m] — launch a background oneshot run. */
-    async start(argline) {
-        const parsed = parseAgentRunArgs(argline);
-        const task = parsed.task;
-        if (!task) {
-            this.app.showSystemMessage('Usage: `/agentrun <task> [--provider <p>] [--model <m>]`');
-            return;
-        }
-        // Explicit --provider/--model are the run's per-run intent; otherwise
-        // inherit the UI's current selection. (Server falls back to
-        // execution.default_subagent if neither is present.)
-        const provider = parsed.provider || this.app.state.currentProvider;
-        // Model: an explicit --model always wins. Otherwise inherit the UI model
-        // ONLY when the run uses the UI's provider — a UI model belongs to the
-        // UI provider and is INVALID on a different --provider (e.g. a Qwen model
-        // id sent to Perplexity → 400). When --provider overrides without --model,
-        // send no model and let the server resolve that provider's default_model.
-        let model = parsed.model;
-        if (!model && (!parsed.provider || parsed.provider === this.app.state.currentProvider)) {
-            model = this.app.state.currentModel;
-        }
-        const body = { task, tools: [] };
-        if (provider) body.provider = provider;
-        if (model) body.model = model;
-        let started;
-        try {
-            started = await this.app.apiClient.post('/v1/agent/run', body);
-        } catch (e) {
-            this.app.showSystemMessage(`❌ Agent run rejected: ${this._errText(e)}`);
-            return;
-        }
-        const runId = started.run_id;
-        // Open a right-panel view for this run and drop a clickable breadcrumb in
-        // chat so history records it; the live result renders into the pane.
-        this._openPane(runId, task);
-        this._breadcrumb(runId, task, `🤖 ${runId} — running… (in panel; chat stays usable)`);
-        // Fire-and-forget: the run lives in the server's background registry, so
-        // we do NOT await it here — returning frees the prompt. The watcher
-        // resolves the run's CURRENT pane by run_id when it finishes (so a
-        // reopened pane still receives the result).
-        this._watchDetached(runId);
-    }
 
     /** ls — list recent runs (kind-filtered per family) as clickable rows. */
     async list() {
@@ -681,7 +603,7 @@ AgentRunController._TERMINAL_EVENTS = new Set([
 
 // CommonJS export for tests; window-global for browser.
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AgentRunController, parseAgentRunArgs };
+    module.exports = { AgentRunController };
 } else if (typeof window !== 'undefined') {
     window.AgentRunController = AgentRunController;
 }

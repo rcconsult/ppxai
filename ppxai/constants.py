@@ -7,46 +7,15 @@ the codebase to improve maintainability and type safety.
 String enums use `str, Enum` pattern for:
 - Type safety with IDE autocompletion
 - Seamless string comparison (no .value needed)
-- Validation via is_valid_*() helpers
 
 v1.13.10: Created as part of technical debt reduction
 v1.13.11: Converted to str, Enum with validation helpers
+v1.19.3: the is_valid_*() helpers are gone -- nothing outside this module
+         ever called them.
 """
 
 from enum import Enum
-from typing import Final, TypeVar
-
-T = TypeVar('T', bound=Enum)
-
-
-# =============================================================================
-# Validation Helpers
-# =============================================================================
-
-def is_valid_enum(enum_class: type[T], value: str) -> bool:
-    """Check if value is a valid member of the enum.
-
-    Args:
-        enum_class: The enum class to check against
-        value: String value to validate
-
-    Returns:
-        True if value matches an enum member's value
-    """
-    return value in {e.value for e in enum_class}
-
-
-def get_enum_values(enum_class: type[T]) -> set[str]:
-    """Get all valid values for an enum class.
-
-    Args:
-        enum_class: The enum class
-
-    Returns:
-        Set of all valid string values
-    """
-    return {e.value for e in enum_class}
-
+from typing import Final
 
 # =============================================================================
 # Provider Names
@@ -61,11 +30,6 @@ class ProviderName(str, Enum):
     CUSTOM = "custom"
 
 
-def is_valid_provider(value: str) -> bool:
-    """Check if value is a valid provider name."""
-    return is_valid_enum(ProviderName, value)
-
-
 # =============================================================================
 # Message Roles
 # =============================================================================
@@ -78,11 +42,6 @@ class MessageRole(str, Enum):
     TOOL = "tool"
 
 
-def is_valid_role(value: str) -> bool:
-    """Check if value is a valid message role."""
-    return is_valid_enum(MessageRole, value)
-
-
 # =============================================================================
 # Consent Modes
 # =============================================================================
@@ -92,11 +51,6 @@ class ConsentMode(str, Enum):
     ALWAYS = "always"
     NEVER = "never"
     PROMPT = "prompt"
-
-
-def is_valid_consent_mode(value: str) -> bool:
-    """Check if value is a valid consent mode."""
-    return is_valid_enum(ConsentMode, value)
 
 
 class ConsentResponse(str, Enum):
@@ -111,11 +65,6 @@ class ConsentResponse(str, Enum):
     NEVER = "never"
 
 
-def is_valid_consent_response(value: str) -> bool:
-    """Check if value is a valid consent response."""
-    return is_valid_enum(ConsentResponse, value)
-
-
 class ConsentDecision(str, Enum):
     """Consent decision constants - internal state values.
 
@@ -126,11 +75,6 @@ class ConsentDecision(str, Enum):
     NO = "no"
     ALWAYS = "always"
     NEVER = "never"
-
-
-def is_valid_consent_decision(value: str) -> bool:
-    """Check if value is a valid consent decision."""
-    return is_valid_enum(ConsentDecision, value)
 
 
 # =============================================================================
@@ -175,11 +119,6 @@ class SystemPromptMode(str, Enum):
     PREPEND = "prepend"
     APPEND = "append"
     REPLACE = "replace"
-
-
-def is_valid_prompt_mode(value: str) -> bool:
-    """Check if value is a valid system prompt mode."""
-    return is_valid_enum(SystemPromptMode, value)
 
 
 # =============================================================================
@@ -268,11 +207,6 @@ class ShellRiskLevel(str, Enum):
     NEVER = "never"
 
 
-def is_valid_risk_level(value: str) -> bool:
-    """Check if value is a valid shell risk level."""
-    return is_valid_enum(ShellRiskLevel, value)
-
-
 # =============================================================================
 # File Encodings
 # =============================================================================
@@ -281,11 +215,6 @@ class FileEncoding(str, Enum):
     """File encoding constants."""
     UTF8 = "utf-8"
     UTF8_WITH_BOM = "utf-8-sig"
-
-
-def is_valid_encoding(value: str) -> bool:
-    """Check if value is a valid file encoding."""
-    return is_valid_enum(FileEncoding, value)
 
 
 # =============================================================================
@@ -311,6 +240,3 @@ class CheckpointBackend(str, Enum):
     NONE = "none"
 
 
-def is_valid_checkpoint_backend(value: str) -> bool:
-    """Check if value is a valid checkpoint backend."""
-    return is_valid_enum(CheckpointBackend, value)
