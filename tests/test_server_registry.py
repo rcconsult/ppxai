@@ -28,6 +28,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from ppxai.server import http as server_http
 from ppxai.server import registry
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -136,23 +137,37 @@ def _cli(*args, timeout=60):
                           capture_output=True, text=True, timeout=timeout)
 
 
-class TestTheCliRefusesMisuse:
-    def test_announce_without_uds_is_refused(self):
-        proc = _cli("--announce")
-        assert proc.returncode == 2
-        assert "--uds" in proc.stderr
+def _refused(monkeypatch, capsys, *args) -> str:
+    """Run the CLI in-process and return stderr; it must exit 2.
 
-    def test_detach_without_announce_is_refused(self):
-        proc = _cli("--uds", "--detach")
-        assert proc.returncode == 2
+    Every refusal returns before anything is bound, forked or initialized,
+    so there is nothing to isolate -- and a subprocess would pay a full
+    server import (~11s on Windows) per case just to print one line.
+    """
+    monkeypatch.setattr(sys, "argv", ["ppxai-server", *args])
+    with pytest.raises(SystemExit) as exc:
+        server_http.run_server()
+    assert exc.value.code == 2
+    return capsys.readouterr().err
+
+
+class TestTheCliRefusesMisuse:
+    def test_announce_without_uds_is_refused(self, monkeypatch, capsys):
+        assert "--uds" in _refused(monkeypatch, capsys, "--announce")
+
+    def test_detach_without_announce_is_refused(self, monkeypatch, capsys):
+        assert "--announce" in _refused(monkeypatch, capsys, "--uds", "--detach")
+
+    def test_reload_with_uds_is_refused(self, monkeypatch, capsys):
+        assert "--reload" in _refused(monkeypatch, capsys, "--uds", "--reload")
 
     @pytest.mark.skipif(POSIX, reason="the Windows refusal")
-    def test_windows_refuses_uds_with_a_clear_message(self):
-        proc = _cli("--uds", "--announce")
-        assert proc.returncode == 2
-        assert "POSIX" in proc.stderr
+    def test_windows_refuses_uds_with_a_clear_message(self, monkeypatch, capsys):
+        assert "POSIX" in _refused(monkeypatch, capsys, "--uds", "--announce")
 
     def test_list_with_no_servers_says_so(self):
+        """The one subprocess case: it proves the real `python -m` entry
+        point, on every platform (the launch tests below are POSIX-only)."""
         proc = _cli("--list", "--json")
         assert proc.returncode == 0, proc.stderr
         assert json.loads(proc.stdout) == []
@@ -199,31 +214,38 @@ def _wait_gone(path: Path, deadline_s=20.0) -> bool:
     return False
 
 
+def _announce(workdir: Path):
+    """Launch an announced server; yield (proc, entry); always reap it."""
+    # A short path: AF_UNIX paths are capped (~104 bytes on macOS).
+    sock_dir = Path("/tmp") / f"ppxai-t-{os.getpid()}-{time.monotonic_ns() % 10**6}"
+    sock = sock_dir / "s.sock"
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "ppxai.server.http", "--uds", str(sock),
+         "--announce", "--label", "pytest"],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=str(workdir))
+    try:
+        entry = _read_json_block(proc.stdout)
+        _wait_healthy(entry["socket"], entry["token"])
+        yield proc, entry
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+        proc.stdout.close()
+
+
 @posix_only
 @pytest.mark.slow
 class TestAnnouncedServer:
-    @pytest.fixture
-    def announced(self, tmp_path):
-        # A short path: AF_UNIX paths are capped (~104 bytes on macOS).
-        sock_dir = Path("/tmp") / f"ppxai-t-{os.getpid()}-{time.monotonic_ns() % 10**6}"
-        sock = sock_dir / "s.sock"
-        proc = subprocess.Popen(
-            [sys.executable, "-m", "ppxai.server.http", "--uds", str(sock),
-             "--announce", "--label", "pytest"],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=str(tmp_path))
-        try:
-            entry = _read_json_block(proc.stdout)
-            _wait_healthy(entry["socket"], entry["token"])
-            yield proc, entry
-        finally:
-            if proc.poll() is None:
-                proc.terminate()
-                try:
-                    proc.wait(timeout=15)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    proc.wait()
-            proc.stdout.close()
+    """Read-only checks share ONE server: a boot is most of each test's cost."""
+
+    @pytest.fixture(scope="class")
+    def announced(self, tmp_path_factory):
+        yield from _announce(tmp_path_factory.mktemp("announced"))
 
     def test_the_printed_entry_is_the_registry_entry(self, announced):
         proc, entry = announced
@@ -257,6 +279,16 @@ class TestAnnouncedServer:
             assert c.get("http://localhost/state", headers=wrong).status_code == 401
             right = {"Authorization": f"Bearer {entry['token']}"}
             assert c.get("http://localhost/state", headers=right).status_code == 200
+
+
+@posix_only
+@pytest.mark.slow
+class TestAnnouncedServerEnds:
+    """Each test here ends its server, so each gets its own."""
+
+    @pytest.fixture
+    def announced(self, tmp_path):
+        yield from _announce(tmp_path)
 
     def test_list_shows_it_then_prunes_it_after_a_kill(self, announced):
         proc, entry = announced
