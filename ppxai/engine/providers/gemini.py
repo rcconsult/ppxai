@@ -763,7 +763,15 @@ class GeminiProvider(BaseProvider):
             return None
 
         prompt_tokens = getattr(usage_metadata, 'prompt_token_count', 0) or 0
-        completion_tokens = getattr(usage_metadata, 'candidates_token_count', 0) or 0
+        # Thinking tokens are billed as output but Gemini reports them apart
+        # from `candidates_token_count`; fold them in, as OpenAI's
+        # `completion_tokens` already includes its reasoning tokens. Without
+        # this, gemini-3.8-flash's cost missed most of the output: measured
+        # 2026-09-28, completion 55 against total 1262 for a 190-token prompt.
+        completion_tokens = (
+            (getattr(usage_metadata, 'candidates_token_count', 0) or 0)
+            + (getattr(usage_metadata, 'thoughts_token_count', 0) or 0)
+        )
         total_tokens = getattr(usage_metadata, 'total_token_count', 0) or 0
 
         # If total not provided, calculate it

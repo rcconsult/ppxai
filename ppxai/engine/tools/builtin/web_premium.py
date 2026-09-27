@@ -104,13 +104,22 @@ def get_premium_search_provider(provider_name: str | None = None) -> str | None:
 
 
 def _format_search_result(
-    backend: str, content: str, citations: list[str], fallback: bool = False
+    backend: str,
+    content: str,
+    citations: list[str],
+    fallback: bool = False,
+    titles: list[str] | None = None,
 ) -> str:
-    """Provider tag at the beginning for visibility (v1.15.3 — not truncated)."""
+    """Provider tag at the beginning for visibility (v1.15.3 — not truncated).
+
+    A source with a title (Gemini's domain, beside its opaque redirect URL)
+    is listed as `title url`."""
     tag = f"[via {backend} (fallback)]" if fallback else f"[via {backend}]"
     result = f"{tag}\n\n{content.lstrip()}\n\nSources:\n"
-    for url in citations:
-        result += f"- {url}\n"
+    titles = titles or []
+    for i, url in enumerate(citations):
+        title = titles[i] if i < len(titles) else ""
+        result += f"- {title} {url}\n" if title else f"- {url}\n"
     return result
 
 
@@ -157,7 +166,11 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: s
                 return result.answer
             _record_usage(result.usage)
             return _format_search_result(
-                result.backend, result.answer, result.citations, fallback=i > 0
+                result.backend,
+                result.answer,
+                result.citations,
+                fallback=i > 0,
+                titles=result.titles,
             )
         except Exception as e:
             last_error = e

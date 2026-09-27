@@ -9,7 +9,7 @@ class. Nothing here (or anywhere under `ppxai/engine/search/`) imports
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 from ..types import ToolUsage
@@ -17,12 +17,25 @@ from ..types import ToolUsage
 
 @dataclass(frozen=True)
 class SearchResult:
-    """One backend's answer to one query."""
+    """One backend's answer to one query.
+
+    `titles` runs parallel to `citations` and may be empty. Gemini fills it:
+    its citation URLs are opaque `vertexaisearch.cloud.google.com` redirects,
+    and the title (the source's domain) is the only readable part.
+    """
 
     backend: str
     answer: str
     citations: list[str]
     usage: ToolUsage | None
+    titles: list[str] = field(default_factory=list)
+
+    def sources(self, limit: int) -> list[tuple[str, str | None]]:
+        """The first `limit` citations as `(url, title-or-None)` pairs."""
+        return [
+            (url, self.titles[i] if i < len(self.titles) and self.titles[i] else None)
+            for i, url in enumerate(self.citations[:limit])
+        ]
 
 
 @runtime_checkable

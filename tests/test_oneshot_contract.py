@@ -102,6 +102,7 @@ class TestGeminiOneshot:
         um.prompt_token_count = 4
         um.candidates_token_count = 6
         um.total_token_count = 10
+        um.thoughts_token_count = None  # the SDK's value when nothing was thought
         resp.usage_metadata = um
         p.client.models.generate_content.return_value = resp
 
@@ -110,6 +111,18 @@ class TestGeminiOneshot:
         # Gemini's _parse_usage maps the differently-named fields.
         assert out["usage"] == {"prompt_tokens": 4, "completion_tokens": 6,
                                 "total_tokens": 10}
+
+    def test_thinking_tokens_count_as_completion(self):
+        # Billed as output, reported apart from candidates_token_count.
+        um = MagicMock()
+        um.prompt_token_count = 190
+        um.candidates_token_count = 55
+        um.thoughts_token_count = 1017
+        um.total_token_count = 1262
+        usage = self._provider()._parse_usage(um)
+        assert (usage.prompt_tokens, usage.completion_tokens, usage.total_tokens) == (
+            190, 1072, 1262,
+        )
 
     def test_usage_none_when_no_metadata(self):
         p = self._provider()

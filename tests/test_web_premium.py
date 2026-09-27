@@ -247,7 +247,7 @@ class TestGeminiSearch:
                 "content": {"parts": [{"text": "Test answer"}]},
                 "groundingMetadata": {
                     "groundingChunks": [
-                        {"web": {"uri": "https://example.com"}},
+                        {"web": {"uri": "https://example.com", "title": "example.com"}},
                         {"web": {"uri": "https://test.com"}}
                     ]
                 }
@@ -263,12 +263,14 @@ class TestGeminiSearch:
                 with patch.object(pricing_module, "get_tool_pricing") as mock_pricing:
                     mock_pricing.return_value = {"per_query": 0.035, "model": "per_query"}
 
-                    content, citations, usage = await gemini_backend.search_gemini(
+                    content, citations, usage, titles = await gemini_backend.search_gemini(
                         "test query", num_results=2
                     )
 
                     assert content == "Test answer"
                     assert citations == ["https://example.com", "https://test.com"]
+                    # Parallel to citations; a chunk without a title keeps its slot.
+                    assert titles == ["example.com", ""]
                     assert usage.provider == "gemini"
                     assert usage.estimated_cost == pytest.approx(0.035)
 

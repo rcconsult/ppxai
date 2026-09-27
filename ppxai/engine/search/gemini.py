@@ -20,7 +20,9 @@ from .resolver import BACKEND_HOSTS
 from .types import SearchResult
 
 
-async def search_gemini(query: str, num_results: int = 5) -> tuple[str, list[str], ToolUsage]:
+async def search_gemini(
+    query: str, num_results: int = 5
+) -> tuple[str, list[str], ToolUsage, list[str]]:
     """Search web using Gemini + Google Search Grounding.
 
     Uses REST API for simplicity (avoids extra google-genai dependency).
@@ -30,7 +32,9 @@ async def search_gemini(query: str, num_results: int = 5) -> tuple[str, list[str
         num_results: Maximum number of results to return
 
     Returns:
-        Tuple of (answer_text, list_of_citation_urls, tool_usage)
+        Tuple of (answer_text, citation_urls, tool_usage, citation_titles).
+        The URLs are Google's grounding redirects; each title is the
+        source's domain, the readable half of the pair.
 
     Raises:
         ValueError: If GEMINI_API_KEY not set
@@ -76,9 +80,11 @@ async def search_gemini(query: str, num_results: int = 5) -> tuple[str, list[str
         grounding = data["candidates"][0].get("groundingMetadata", {})
 
         citations = []
+        titles = []
         for chunk in grounding.get("groundingChunks", [])[:num_results]:
             if "web" in chunk:
                 citations.append(chunk["web"]["uri"])
+                titles.append(chunk["web"].get("title", ""))
 
         # Per-query pricing
         usage = ToolUsage(
@@ -87,7 +93,7 @@ async def search_gemini(query: str, num_results: int = 5) -> tuple[str, list[str
         )
         usage.estimated_cost = calculate_tool_cost("gemini_grounding", query_count=1)
 
-        return content, citations, usage
+        return content, citations, usage, titles
     except (KeyError, IndexError, TypeError) as e:
         raise ValueError(f"Failed to parse Gemini response: {e}")
 
@@ -102,5 +108,7 @@ class GeminiBackend:
         return bool(os.getenv("GEMINI_API_KEY"))
 
     async def search(self, query: str, n: int = 5) -> SearchResult:
-        content, citations, usage = await search_gemini(query, n)
-        return SearchResult(backend=self.id, answer=content, citations=citations, usage=usage)
+        content, citations, usage, titles = await search_gemini(query, n)
+        return SearchResult(
+            backend=self.id, answer=content, citations=citations, usage=usage, titles=titles
+        )

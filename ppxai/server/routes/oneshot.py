@@ -92,7 +92,7 @@ from ...engine import task_runner as _task_runner
 from ...engine.facts_resolver import get_effective_oneshot_path
 from ...engine.providers import create_provider
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
-from ...engine.search.grounding import Retrieval, grounded_prompt, retrieve
+from ...engine.search.grounding import NUM_RESULTS, Retrieval, grounded_prompt, retrieve
 from ...engine.search.resolver import resolve_web_search_backend
 from ...engine.task_authorizer import TIERS as _TIERS
 from ...engine.task_authorizer import TaskAuthorizationError, authorize_oneshot
@@ -164,6 +164,11 @@ class OneshotUsage(BaseModel):
     total_tokens: int = 0
 
 
+class OneshotSource(BaseModel):
+    url: str
+    title: str | None = None
+
+
 class OneshotGrounding(BaseModel):
     """Present ONLY when the request was served by the enriched search-loop
     path (ADR 0009 §4, F3/F4 facade) or by retrieval grounding (ADR 0014:
@@ -186,6 +191,12 @@ class OneshotGrounding(BaseModel):
     queries: list = Field(default_factory=list)
     backend: str | None = None
     search_cost: float = 0.0
+    # Retrieval grounding only (v1.19.3): the sources the model was shown,
+    # in order, so an answer's `[n]` resolves to `sources[n-1]`. Each is
+    # `{"url", "title"}`; `title` is null unless the backend gave one
+    # (Gemini's URLs are opaque redirects, its title is the domain). Unset
+    # on the search-loop path, so that record is unchanged.
+    sources: list[OneshotSource] | None = None
 
 
 class OneshotResponse(BaseModel):
@@ -540,6 +551,14 @@ def _grounding_record(retrieval: Retrieval, run_id: str) -> OneshotGrounding:
         queries=[retrieval.query] if retrieval.searched else [],
         backend=retrieval.backend,
         search_cost=retrieval.cost,
+        sources=[
+            OneshotSource(url=url, title=title)
+            for url, title in (
+                retrieval.result.sources(NUM_RESULTS)
+                if retrieval.searched and retrieval.result is not None
+                else []
+            )
+        ],
     )
 
 

@@ -470,10 +470,19 @@ Content-Type: application/json
     "run_id": "run_c02a3cbac2f0",    //   served the request (absent — not null —
     "queries": ["..."],              //   otherwise: a byte-identical envelope)
     "backend": "perplexity",         // premium backend, or "duckduckgo" (free)
-    "search_cost": 0.0000568         // premium-search USD cost of THIS request
+    "search_cost": 0.0000568,        // premium-search USD cost of THIS request
+    "sources": [                     // v1.19.3, retrieval grounding only: the
+      {"url": "https://...",         //   sources shown to the model, in order;
+       "title": "python.org"}        //   an answer's [n] is sources[n-1]. title
+    ]                                //   is null unless the backend gives one
   }
 }
 ```
+
+`grounding.sources` appears on the retrieval path only (the search-loop record
+has no such key). Gemini's URLs are Google's opaque
+`vertexaisearch.cloud.google.com/grounding-api-redirect/...` links; they
+redirect to the page, and `title` carries the source's domain.
 
 `grounding.run_id` is the debug handle: the enriched request executed as a
 real `kind=oneshot` run, so `~/.ppxai/runs/<run_id>/` holds its meta + event

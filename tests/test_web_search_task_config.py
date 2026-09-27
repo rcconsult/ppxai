@@ -478,7 +478,7 @@ def test_ordering_falls_back_along_the_resolved_chain(tools_cfg, monkeypatch):
 
     async def _gemini_ok(*a, **k):
         from ppxai.engine.types import ToolUsage
-        return "answer", ["https://x"], ToolUsage(call_count=1, provider="gemini")
+        return "answer", ["https://x"], ToolUsage(call_count=1, provider="gemini"), ["x"]
 
     def _ddg_must_not_run(*a, **k):
         raise AssertionError("chain must stop at gemini")

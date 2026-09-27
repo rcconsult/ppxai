@@ -251,10 +251,11 @@ class TestPremiumWebSearchIntegration:
                 tokens_out=0,
                 estimated_cost=0.014,
                 provider="gemini"
-            )
+            ),
+            ["example.com"],
         )
 
-        result, citations, usage = await mock_search("test query")
+        result, citations, usage, titles = await mock_search("test query")
 
         assert result == "Test result"
         assert usage.provider == "gemini"
