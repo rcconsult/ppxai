@@ -595,12 +595,16 @@ def test_command_lookup_performance():
     # Lookup should be instant even with many commands
     commands = CommandFactory.list_all()
 
-    start = time.perf_counter()
+    # CPU time, not wall time: under the parallel suite (-n auto) other
+    # workers compete for the CPU, and wall time counted that waiting as
+    # lookup cost (failed once at 0.1 s, 2026-09-27). What this bounds is
+    # the work done, which process_time measures.
+    start = time.process_time()
     for _ in range(1000):
         for cmd in commands:
             spec = CommandFactory.get(cmd)
             assert spec is not None
-    elapsed = time.perf_counter() - start
+    elapsed = time.process_time() - start
 
     # Should complete 1000 * 30 = 30,000 lookups in < 0.1 seconds
     assert elapsed < 0.1, f"Command lookup too slow: {elapsed:.3f}s"
