@@ -153,3 +153,6 @@ deploy/images/server/extra-certs/*.crt
 
 # .local is only for the local files not to be shared in git
 **/.local
+
+# Per-run test timings written by tests/conftest.py (compared run to run)
+.pytest_timings/

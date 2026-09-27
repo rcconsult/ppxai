@@ -441,6 +441,7 @@ class TestWorkspacePathResolution:
 # -----------------------------------------------------------------------------
 
 
+@pytest.mark.libreoffice
 class TestRenderPptxSlideArtifactFlow:
     """Rendered slide PNG must go into SessionFileStore, NOT inline as
     base64 — the inline approach cost ~100K tokens per call and blew

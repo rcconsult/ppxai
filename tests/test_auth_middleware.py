@@ -22,6 +22,12 @@ from fastapi.testclient import TestClient
 
 
 @pytest.fixture(autouse=True)
+def _no_real_provider(fake_providers):
+    """A request that passes the gate reaches /v1/oneshot's provider; these
+    tests are about the gate, so it answers locally, never billed."""
+
+
+@pytest.fixture(autouse=True)
 def _env_only_secret_provider(monkeypatch):
     """Pin the secret-provider chain to env-only for these tests.
 

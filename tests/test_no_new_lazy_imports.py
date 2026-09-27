@@ -42,6 +42,7 @@ clean tree as much as a modified one, so verify TUI modules with the suite.
 """
 
 import ast
+import functools
 import json
 import pathlib
 import subprocess
@@ -459,8 +460,13 @@ class TestEveryModuleImportsStandalone:
       per-package test cannot.
     """
 
-    def _failing_modules(self) -> dict[str, str]:
-        """{module: error} for every module that fails to import alone."""
+    @staticmethod
+    @functools.cache
+    def _failing_modules() -> dict[str, str]:
+        """{module: error} for every module that fails to import alone.
+
+        Cached: both tests read the same sweep, and it is the slowest thing
+        in the suite on Windows -- running it once per test doubled that."""
         proc = subprocess.run(
             [sys.executable, "-c", _SWEEP, str(PPXAI.parent)],
             capture_output=True,
@@ -1218,7 +1224,7 @@ BASELINE_TESTS_DIR = {
     "tests/test_markdown_tables.py": 12,
     "tests/test_model_facts_are_the_source.py": 2,
     "tests/test_model_vision.py": 2,
-    "tests/test_network_policy.py": 10,
+    "tests/test_network_policy.py": 9,
     "tests/test_oneshot_grounding.py": 19,
     "tests/test_oneshot_route.py": 20,
     "tests/test_openai_native.py": 2,
@@ -1264,7 +1270,7 @@ BASELINE_TESTS_DIR = {
     "tests/test_tui.py": 273,
     "tests/test_tui_command_factory.py": 7,
     "tests/test_undefined_names_are_bound.py": 3,
-    "tests/test_usage_integration.py": 8,
+    "tests/test_usage_integration.py": 7,
     "tests/test_usage_persistence.py": 2,
     "tests/test_v18_1_audited_commands.py": 2,
     "tests/test_v1_session_migration.py": 2,

@@ -363,20 +363,25 @@ class TestIntegration:
 
     @pytest.mark.asyncio
     async def test_web_search_premium_fallback_on_error(self):
-        """Test fallback to DuckDuckGo on premium API error."""
-        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
-            with patch.object(web_premium, "web_search_perplexity") as mock_perplexity:
-                mock_perplexity.side_effect = Exception("API Error")
+        """Every premium backend failing falls through to DuckDuckGo.
 
-                with patch.object(web_premium, "get_premium_search_provider", return_value="perplexity"):
-                    # Let it actually fall back to DuckDuckGo (real call)
-                    # Just verify it doesn't raise and returns something
-                    result = await web_premium.web_search_premium("test query")
+        The backends are all doubles: this used to "let it actually fall
+        back to DuckDuckGo (real call)" and let Gemini's search run for real
+        as well, asserting only that SOMETHING came back."""
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}), \
+                patch.object(web_premium, "web_search_perplexity",
+                             side_effect=Exception("API Error")) as mock_perplexity, \
+                patch.object(web_premium, "web_search_gemini",
+                             side_effect=Exception("API Error")), \
+                patch.object(web_premium.web, "web_search",
+                             return_value="ddg result") as mock_ddg, \
+                patch.object(web_premium, "get_premium_search_provider",
+                             return_value="perplexity"):
+            result = await web_premium.web_search_premium("test query")
 
-                    # Should have received some result from the fallback
-                    assert result is not None
-                    # The perplexity function was called and failed
-                    mock_perplexity.assert_called_once()
+        assert result == "ddg result"
+        mock_perplexity.assert_called_once()
+        mock_ddg.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_web_search_premium_with_provider_context(self):
@@ -384,11 +389,12 @@ class TestIntegration:
         with patch.dict(os.environ, {
             "PERPLEXITY_API_KEY": "test-key",
             "GEMINI_API_KEY": "test-key"
-        }):
-            with patch.object(web_premium, "web_search_perplexity") as mock_perplexity:
-                with patch.object(web_premium, "get_premium_search_provider", return_value="perplexity"):
-                    mock_perplexity.return_value = ("Test answer", [], ToolUsage(provider="perplexity"))
-
-                    # Simulate per-provider override via wrapper
-                    result = await web_premium.web_search_premium("test", _provider_name="openai")
-                    assert result is not None
+        }), patch.object(web_premium, "web_search_perplexity",
+                         return_value=("Test answer", [], ToolUsage(provider="perplexity"))), \
+                patch.object(web_premium, "web_search_gemini",
+                             return_value=("Test answer", [], ToolUsage(provider="gemini"))), \
+                patch.object(web_premium, "get_premium_search_provider",
+                             return_value="perplexity"):
+            # Simulate per-provider override via wrapper
+            result = await web_premium.web_search_premium("test", _provider_name="openai")
+        assert "Test answer" in result

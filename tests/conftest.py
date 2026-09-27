@@ -1,7 +1,11 @@
+import ipaddress
+import json
 import os
 import shutil
+import socket
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
@@ -222,9 +226,15 @@ def pytest_configure(config):
     We load user's .env here so SSL_VERIFY and other env vars are available
     when provider modules are imported.
     """
-    global FAKE_HOME
+    global FAKE_HOME, _pytest_config
 
-    config._test_durations = []
+    config._test_durations = {}  # nodeid -> {setup, call, teardown} seconds
+    _pytest_config = config
+    config.addinivalue_line(
+        "markers",
+        "network: the test deliberately reaches a non-loopback host "
+        "(exempt from the no-network guard below)",
+    )
 
     # Load user's .ppxai/.env for integration tests that need SSL_VERIFY=false
     # This must happen before any ppxai modules are imported -- and before the
@@ -271,9 +281,21 @@ def pytest_configure(config):
     # Set here rather than in a fixture because `initialize()` below reads
     # config during collection, before any fixture runs. Respects an explicit
     # override so a developer can still aim the suite at another config.
+    #
+    # The pin names a byte-identical COPY in the throwaway home, not the
+    # tracked file: `find_writable_config_file()` treats PPXAI_CONFIG_FILE as
+    # writable on purpose, so pinning the repo file let `/debug-log` (the
+    # route smoke test) rewrite it -- invisibly on POSIX, with CRLF on
+    # Windows (found 2026-09-27). Reads are identical; writes land in the
+    # copy. `pytest_sessionfinish` fails the run if the tracked file changes.
     # ---------------------------------------------------------------
     if not os.environ.get("PPXAI_CONFIG_FILE") and REPO_CONFIG_FILE.exists():
-        os.environ["PPXAI_CONFIG_FILE"] = str(REPO_CONFIG_FILE)
+        pinned = FAKE_HOME / "pinned" / "ppxai-config.json"
+        pinned.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO_CONFIG_FILE, pinned)
+        os.environ["PPXAI_CONFIG_FILE"] = str(pinned)
+    config._ppxai_repo_config_bytes = (
+        REPO_CONFIG_FILE.read_bytes() if REPO_CONFIG_FILE.exists() else None)
 
     # Initialize config system (v1.15.3: DAG-based init)
     from ppxai.config import initialize
@@ -284,6 +306,23 @@ def pytest_configure(config):
     # tests/test_home_hermeticity.py asserts the real-home set is empty);
     # recorded on `config` so that fence can report what had to be fixed up.
     config._ppxai_rebound = rebind_home_derived_paths()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Fail the run if any test rewrote the tracked ppxai-config.json."""
+    before = getattr(session.config, "_ppxai_repo_config_bytes", None)
+    if before is None or not REPO_CONFIG_FILE.exists():
+        return
+    if REPO_CONFIG_FILE.read_bytes() != before:
+        reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+        if reporter is not None:
+            reporter.ensure_newline()
+            reporter.write_line(
+                f"FAILED: the test run modified the tracked {REPO_CONFIG_FILE.name}. "
+                "Something wrote to it directly or through a PPXAI_CONFIG_FILE "
+                "pointing at it; restore it with `git checkout -- "
+                f"{REPO_CONFIG_FILE.name}` and find the writer.", red=True)
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED
 
 
 def pytest_unconfigure(config):
@@ -430,6 +469,166 @@ def _auth_off_by_default(monkeypatch):
         pass
 
 
+# ---------------------------------------------------------------------------
+# No test reaches the network.
+#
+# pytest_configure loads the developer's ~/.ppxai/.env, API keys included, so
+# a test that drives a real provider path makes a real, BILLED call -- and it
+# does so silently, because provider code turns the connection into an ERROR
+# event instead of raising. Measured 2026-09-27: 19 tests in three files
+# (test_auth_middleware, test_usage_integration, test_agent_task_validation)
+# called api.perplexity.ai, generativelanguage.googleapis.com and
+# api.openai.com on every run.
+#
+# The guard blocks name resolution AND connects to anything that is not
+# loopback or a unix socket. getaddrinfo is the one choke point every client
+# passes through: on Windows asyncio's proactor loop connects via ConnectEx
+# and never calls socket.connect. A blocked attempt is RECORDED and the test
+# fails at teardown naming the host -- the provider swallowing the error does
+# not hide it.
+#
+# Opt in deliberately: `@pytest.mark.network`, or PPXAI_TESTS_ALLOW_NETWORK=1
+# for the whole run. Subprocesses a test spawns are not covered.
+# ---------------------------------------------------------------------------
+
+_LOCAL_NAMES = frozenset({None, "", "localhost", "testserver", "testclient"})
+_network_allowed = os.environ.get("PPXAI_TESTS_ALLOW_NETWORK") == "1"
+_network_attempts: list[str] = []
+
+
+def _is_local(host) -> bool:
+    if isinstance(host, bytes):
+        host = host.decode("ascii", "replace")
+    if host in _LOCAL_NAMES:
+        return True
+    try:
+        return ipaddress.ip_address(str(host).split("%", 1)[0]).is_loopback
+    except ValueError:
+        return False
+
+
+class NetworkBlockedError(OSError):
+    """A test tried to reach a non-loopback host (see the guard in conftest)."""
+
+
+_real_getaddrinfo = socket.getaddrinfo
+_real_connect = socket.socket.connect
+_real_connect_ex = socket.socket.connect_ex
+
+
+def _refuse(target: str):
+    _network_attempts.append(target)
+    raise NetworkBlockedError(
+        f"test tried to reach {target}; tests must not call the network "
+        "(mark it @pytest.mark.network if that is the point)")
+
+
+def _guarded_getaddrinfo(host, port, *args, **kwargs):
+    if not _network_allowed and not _is_local(host):
+        _refuse(f"{host}:{port}")
+    return _real_getaddrinfo(host, port, *args, **kwargs)
+
+
+def _guarded_connect(self, address):
+    if (not _network_allowed and self.family != getattr(socket, "AF_UNIX", None)
+            and isinstance(address, tuple) and not _is_local(address[0])):
+        _refuse(f"{address[0]}:{address[1]}")
+    return _real_connect(self, address)
+
+
+def _guarded_connect_ex(self, address):
+    if (not _network_allowed and self.family != getattr(socket, "AF_UNIX", None)
+            and isinstance(address, tuple) and not _is_local(address[0])):
+        _refuse(f"{address[0]}:{address[1]}")
+    return _real_connect_ex(self, address)
+
+
+socket.getaddrinfo = _guarded_getaddrinfo
+socket.socket.connect = _guarded_connect
+socket.socket.connect_ex = _guarded_connect_ex
+
+
+@pytest.fixture(autouse=True)
+def _no_network(request):
+    global _network_allowed
+    opted_in = request.node.get_closest_marker("network") is not None
+    previous = _network_allowed
+    _network_allowed = previous or opted_in
+    _network_attempts.clear()
+    yield
+    _network_allowed = previous
+    if _network_attempts:
+        attempts = sorted(set(_network_attempts))
+        _network_attempts.clear()
+        pytest.fail(
+            "blocked network access: " + ", ".join(attempts) + ". Tests must "
+            "not call real services (they are billed, slow and flaky); use a "
+            "fake, or mark the test @pytest.mark.network if the network IS "
+            "the subject.", pytrace=False)
+
+
+@pytest.fixture(autouse=True)
+def _no_ssrf_dns(monkeypatch):
+    """The egress policy's SSRF guard resolves every allowlisted host
+    (`network_policy._host_resolves_to_blocked_ip`), so any test that drives
+    `NetworkPolicy.check` did live DNS for api.github.com, api.perplexity.ai,
+    wttr.in and friends. Default it to "not blocked", as test_network_policy
+    long did for itself; a test that exercises the guard patches it back
+    explicitly. The string target keeps this free of a function-level import.
+    """
+    monkeypatch.setattr(
+        "ppxai.engine.tools.network_policy._host_resolves_to_blocked_ip",
+        lambda host: False)
+
+
+_libreoffice_allowed = os.environ.get("PPXAI_TESTS_ALLOW_LIBREOFFICE") == "1"
+
+
+def pytest_collection_modifyitems(config, items):
+    """Real-LibreOffice tests are opt-in (see `_no_libreoffice`)."""
+    if _libreoffice_allowed:
+        return
+    skip = pytest.mark.skip(
+        reason="drives the real LibreOffice; set PPXAI_TESTS_ALLOW_LIBREOFFICE=1")
+    for item in items:
+        if item.get_closest_marker("libreoffice") is not None:
+            item.add_marker(skip)
+
+
+@pytest.fixture(autouse=True)
+def _no_libreoffice(request, monkeypatch):
+    """LibreOffice is invisible to tests unless they opt in.
+
+    A developer box with LibreOffice installed ran it headless from the
+    office-preview tests -- 38s for one PPTX render, several instances at
+    once under xdist, and on Windows a "Waiting for printer connection"
+    dialog when the default printer was an unreachable network (WSD) one
+    (2026-09-27). Discovery reads `_PATH_NAMES` and `_well_known_paths()` at
+    call time, so emptying both makes every caller take the documented
+    no-LibreOffice path -- the path CI takes anyway.
+
+    `@pytest.mark.libreoffice` tests render for real (and are skipped unless
+    PPXAI_TESTS_ALLOW_LIBREOFFICE=1); `@pytest.mark.libreoffice_discovery`
+    tests exercise the resolver itself with their own doubles.
+    """
+    node = request.node
+    if (node.get_closest_marker("libreoffice") is not None
+            or node.get_closest_marker("libreoffice_discovery") is not None):
+        return
+    monkeypatch.setattr("ppxai.common.libreoffice._PATH_NAMES", ())
+    monkeypatch.setattr("ppxai.common.libreoffice._well_known_paths", lambda: [])
+    monkeypatch.delenv("PPXAI_LIBREOFFICE", raising=False)
+
+
+@pytest.fixture
+def fake_providers(monkeypatch):
+    """Every provider the test builds answers locally ("pong", counted
+    tokens) -- for tests that drive a real chat/oneshot path but are not
+    ABOUT the provider. See tests/fake_provider.py."""
+    from tests import fake_provider
+    return fake_provider.install(monkeypatch)
+
+
 @pytest.fixture
 def isolated_working_dir(tmp_path):
     """A scratch working directory for tests that must not inherit the host's.
@@ -478,21 +677,58 @@ def pin_server_working_dir(base_url: str, path, timeout: float = 10.0) -> bool:
         return False
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    outcome = yield
-    report = outcome.get_result()
+# ---------------------------------------------------------------------------
+# Test timing report.
+#
+# Every phase is counted -- setup, call AND teardown. The previous summary
+# timed only `call`, and on 2026-09-27 73% of the Windows suite was fixture
+# SETUP (a server start per `with TestClient(app)`), so a suite that tripled
+# in length never showed a slow test. Collected in pytest_runtest_logreport,
+# which xdist replays on the controller, so parallel runs report too.
+#
+# Each run is saved to .pytest_timings/last.json (gitignored) and compared
+# with the previous one: a test that got much slower is listed by name.
+# ---------------------------------------------------------------------------
 
-    if report.when == "call":
-        item.config._test_durations.append({
-            "nodeid": item.nodeid,
-            "duration": report.duration,
-            "outcome": report.outcome
-        })
+_pytest_config = None  # set in pytest_configure; logreport gets no config
+_TIMINGS_DIR = Path(__file__).resolve().parent.parent / ".pytest_timings"
+_SLOWER_FACTOR = 2.0   # listed as a regression when this many times slower
+_SLOWER_MIN_S = 1.0    # ... and at least this slow now (ignore noise)
+
+
+def pytest_sessionstart(session):
+    session.config._ppxai_session_t0 = time.perf_counter()
+
+
+def pytest_runtest_logreport(report):
+    durations = getattr(_pytest_config, "_test_durations", None) if _pytest_config else None
+    if durations is None:
+        return
+    row = durations.setdefault(report.nodeid, {"setup": 0.0, "call": 0.0, "teardown": 0.0})
+    row[report.when] += report.duration
+
+
+def _write_timings(durations: dict) -> dict:
+    """Save this run; return the previous run's {nodeid: total} (or {})."""
+    previous = {}
+    try:
+        _TIMINGS_DIR.mkdir(exist_ok=True)
+        last = _TIMINGS_DIR / "last.json"
+        if last.exists():
+            previous = json.loads(last.read_text(encoding="utf-8"))
+            (_TIMINGS_DIR / "previous.json").write_text(
+                json.dumps(previous), encoding="utf-8")
+        last.write_text(json.dumps(
+            {k: round(sum(v.values()), 4) for k, v in durations.items()}),
+            encoding="utf-8")
+    except (OSError, ValueError):
+        pass
+    return previous
+
 
 def pytest_terminal_summary(terminalreporter: TerminalReporter, exitstatus, config):
-    durations = getattr(config, "_test_durations", [])
-    if not durations:
+    durations = getattr(config, "_test_durations", None)
+    if not durations or hasattr(config, "workerinput"):  # xdist worker: controller reports
         return
 
     fake_home = getattr(config, "_ppxai_fake_home", None)
@@ -503,23 +739,38 @@ def pytest_terminal_summary(terminalreporter: TerminalReporter, exitstatus, conf
             f"— the real {REAL_PPXAI_HOME} was never writable (Item 78)."
         )
 
-    terminalreporter.section("TEST TIMING SUMMARY", sep="=", blue=True)
+    w = terminalreporter.write_line
+    terminalreporter.section("TEST TIMING SUMMARY (setup + call + teardown)", sep="=", blue=True)
 
-    total_time = sum(d["duration"] for d in durations)
-    avg_time = total_time / len(durations)
+    totals = {k: sum(v.values()) for k, v in durations.items()}
+    phase = {p: sum(v[p] for v in durations.values()) for p in ("setup", "call", "teardown")}
+    spent = sum(totals.values())
+    wall = time.perf_counter() - getattr(config, "_ppxai_session_t0", time.perf_counter())
+    w(f"Tests: {len(totals)}   wall: {wall:.0f}s   test time: {spent:.0f}s "
+      f"(setup {phase['setup']:.0f}s / call {phase['call']:.0f}s / "
+      f"teardown {phase['teardown']:.0f}s)")
 
-    slowest = sorted(durations, key=lambda x: x["duration"], reverse=True)
+    w("\nSlowest tests (total = setup + call + teardown):")
+    for nodeid, total in sorted(totals.items(), key=lambda kv: kv[1], reverse=True)[:15]:
+        d = durations[nodeid]
+        w(f"  {total:7.2f}s  (setup {d['setup']:.2f} / call {d['call']:.2f} / "
+          f"teardown {d['teardown']:.2f})  {nodeid}", red=total > 5, yellow=1 < total <= 5)
 
-    terminalreporter.write_line(f"📊 Total Tests: {len(durations)}")
-    terminalreporter.write_line(f"⏱️  Total Time Spent: {total_time:.4f}s")
-    terminalreporter.write_line(f"📈 Average:        {avg_time:.4f}s")
+    by_file: dict[str, list[float]] = {}
+    for nodeid, total in totals.items():
+        by_file.setdefault(nodeid.split("::", 1)[0], []).append(total)
+    w("\nSlowest files:")
+    for path, ts in sorted(by_file.items(), key=lambda kv: sum(kv[1]), reverse=True)[:10]:
+        w(f"  {sum(ts):7.1f}s  {len(ts):5d} tests  {sum(ts) / len(ts):6.3f}s avg  {path}")
 
-    terminalreporter.write_line("\n🏎️  Top 5 SLOWEST tests:")
-    for i, d in enumerate(slowest[:5], 1):
-        color = "red" if d["duration"] > 0.5 else "yellow"
-        terminalreporter.write_line(
-            f"  {i}. {d['nodeid']} ({d['duration']:.4f}s)", **{color: True}
-        )
-
-    fastest = slowest[-1]
-    terminalreporter.write_line(f"\n🐇 Fastest: {fastest['nodeid']} ({fastest['duration']:.4f}s)", green=True)
+    previous = _write_timings(durations)
+    slower = sorted(
+        ((k, previous[k], t) for k, t in totals.items()
+         if k in previous and t >= _SLOWER_MIN_S
+         and t >= _SLOWER_FACTOR * max(previous[k], 0.001)),
+        key=lambda r: r[2] - r[1], reverse=True)
+    if slower:
+        w(f"\nSlower than the previous run (>= {_SLOWER_FACTOR:g}x and >= {_SLOWER_MIN_S:g}s):",
+          red=True)
+        for nodeid, before, now in slower[:15]:
+            w(f"  {before:7.2f}s -> {now:7.2f}s  {nodeid}", red=True)

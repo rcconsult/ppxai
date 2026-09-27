@@ -26,6 +26,7 @@ same shape as a tripwire that passes while the bug is live.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from unittest.mock import patch
@@ -37,14 +38,35 @@ from tests.conftest import REPO_CONFIG_FILE
 REAL_USER_CONFIG = Path.home() / ".ppxai" / "ppxai-config.json"
 
 
-class TestTheSourceIsPinned:
-    def test_the_env_var_names_the_repo_config(self):
-        assert os.environ.get("PPXAI_CONFIG_FILE") == str(REPO_CONFIG_FILE)
+def _pinned() -> Path:
+    return Path(os.environ["PPXAI_CONFIG_FILE"])
 
-    def test_resolution_lands_on_the_shipped_config(self):
+
+class TestTheSourceIsPinned:
+    def test_the_env_var_names_a_copy_of_the_repo_config(self):
+        """A COPY, never the tracked file: PPXAI_CONFIG_FILE is a WRITE
+        target too (`find_writable_config_file`), and pinning the tracked
+        file let `/debug-log` rewrite it on every run."""
+        pinned = _pinned()
+        assert pinned.resolve() != REPO_CONFIG_FILE.resolve()
+        assert REPO_CONFIG_FILE.parent.resolve() not in pinned.resolve().parents
+
+    def test_the_copy_reads_as_the_shipped_config(self):
+        """Same providers and models as the tracked file. Compared parsed,
+        not byte-for-byte: a test may legitimately persist a `tui.*` toggle
+        into the copy -- that is exactly where it should land."""
+        shipped = json.loads(REPO_CONFIG_FILE.read_text(encoding="utf-8"))
+        pinned = json.loads(_pinned().read_text(encoding="utf-8-sig"))
+        assert pinned.get("providers") == shipped.get("providers")
+        assert pinned.get("default_provider") == shipped.get("default_provider")
+
+    def test_resolution_lands_on_the_pinned_copy(self):
         resolved = loader.find_config_file()
         assert resolved is not None
-        assert resolved.resolve() == REPO_CONFIG_FILE.resolve()
+        assert resolved.resolve() == _pinned().resolve()
+
+    def test_a_setting_write_lands_in_the_copy_not_the_repo(self):
+        assert loader.find_writable_config_file().resolve() == _pinned().resolve()
 
     def test_the_fallback_constant_is_redirected_out_of_the_real_home(self):
         """The conftest fixture must actually be installed."""

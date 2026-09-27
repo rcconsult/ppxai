@@ -16,6 +16,10 @@ import pytest
 
 from ppxai.common import libreoffice as lo
 
+# The resolver IS the subject: conftest's _no_libreoffice must not empty
+# the discovery tables these tests read.
+pytestmark = pytest.mark.libreoffice_discovery
+
 
 def _make_exe(tmp_path, name="soffice"):
     p = tmp_path / name

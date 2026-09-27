@@ -333,10 +333,12 @@ async def chat(
     # before the lock acquisition / streaming setup. The message
     # the user sees is the same friendly nudge across TUI / web /
     # VSCode (single source: validate_agent_task in commands/agent.py).
-    msg_text = (request.message or "").strip()
+    # lstrip only: a full strip turned `/auto    ` into bare `/auto`, which
+    # missed the prefix test and went to the model as a chat message.
+    msg_text = (request.message or "").lstrip()
     if msg_text.startswith("/auto ") or msg_text.startswith("/auto\t"):
         # Strip the /auto prefix to get just the task body
-        task = msg_text.split(None, 1)[1] if " " in msg_text or "\t" in msg_text else ""
+        task = msg_text[len("/auto"):]
         agent_config = s.engine.get_agent_config()
         min_words = agent_config.get("min_task_words", DEFAULT_AGENT_MIN_TASK_WORDS)
         rejection = validate_agent_task(task.strip(), min_words)

@@ -17,14 +17,15 @@ Usage:
         # Use TableViewer
 """
 
-import mimetypes
 from enum import Enum, auto
 from pathlib import Path
 
 import filetype
 
-# Initialize mimetypes
-mimetypes.init()
+# No mimetypes.init() here (removed 2026-09-27): nothing in this module uses
+# mimetypes, and init() re-reads the whole Windows registry on EVERY call
+# (~0.15s) and wipes any add_type() registered before it, such as the
+# .webp/.md types commands/attach.py adds.
 
 
 class FileType(Enum):

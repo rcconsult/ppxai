@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import pytest
 
-# The autouse `_no_dns` fixture patches `_host_resolves_to_blocked_ip` to a
-# no-op for hermetic host-matching tests. The cache tests below exercise the
+# The suite-wide autouse `_no_ssrf_dns` fixture (conftest.py) patches
+# `_host_resolves_to_blocked_ip` to a no-op for hermetic host-matching tests. The cache tests below exercise the
 # REAL implementation, so they restore it from this import-time reference
 # (captured before any fixture runs).
 import ppxai.engine.tools.network_policy as _np_mod
@@ -28,21 +28,6 @@ from ppxai.engine.tools.network_policy import (
 )
 
 _REAL_HOST_RESOLVES = _np_mod._host_resolves_to_blocked_ip
-
-
-@pytest.fixture(autouse=True)
-def _no_dns(monkeypatch):
-    """Make NetworkPolicy.check hermetic by default (v1.19.0 Item 37f).
-
-    check() now resolves an allowlisted host and denies it if it maps to a
-    loopback/private IP (SSRF guard). That would make every host-matching
-    unit test depend on live DNS. Default the resolver to "not blocked" so
-    matching tests are deterministic + offline; the dedicated SSRF tests
-    (TestSsrfGuard) patch it explicitly to exercise the block.
-    """
-    import ppxai.engine.tools.network_policy as np
-
-    monkeypatch.setattr(np, "_host_resolves_to_blocked_ip", lambda host: False)
 
 
 # ---------------------------------------------------------------------------

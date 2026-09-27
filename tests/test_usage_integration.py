@@ -5,21 +5,21 @@ Tests that the /usage command produces correct results when called through:
 2. ServerCommandContext (server path — used by web app and VSCode)
 3. FastAPI POST /command/usage endpoint (HTTP path)
 
-All tests call a real AI provider endpoint to generate actual usage data,
-then verify the usage counters are non-zero, correctly structured, and
+Each test drives a real EngineClient chat turn so the engine records real
+usage, then verifies the counters are non-zero, correctly structured, and
 that the formatted table rows match the raw session data.
 
-Run with: pytest tests/test_usage_integration.py -v -s
-NOTE: Requires ~/.ppxai/.env with valid API keys and ~/.ppxai/ppxai-config.json.
-      These tests modify global config state and should be run in isolation.
+The provider is the shared fake (`fake_providers`, tests/fake_provider.py):
+these tests are about usage accounting and its three read paths, not about
+any provider. They used to call Perplexity, Gemini and OpenAI for real --
+billed on every run, and silently skipped wherever a key was missing, so CI
+never ran them at all.
 """
 
 import asyncio
-import os
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from dotenv import load_dotenv
 
 # Skip tests if server dependencies not installed
 pytest.importorskip("fastapi")
@@ -30,52 +30,21 @@ pytest.importorskip("httpx")
 # Fixtures
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="module", autouse=True)
-def load_env():
-    """Ensure env vars are loaded for this module.
-
-    conftest.py already loads ~/.ppxai/.env in pytest_configure and calls
-    initialize(). This fixture adds the project .env as fallback.
-    """
-    # Load user's .ppxai/.env for API keys and SSL settings
-    user_env_path = os.path.expanduser("~/.ppxai/.env")
-    if os.path.exists(user_env_path):
-        load_dotenv(dotenv_path=user_env_path, override=True)
-
-    # Also load project .env as fallback
-    env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
-    if os.path.exists(env_path):
-        load_dotenv(dotenv_path=env_path, override=True)
-
-    from ppxai.config import initialize
-    initialize()
-
-    yield
-
-
 def _create_engine(provider_id: str):
-    """Create a real EngineClient for the given provider.
+    """Create a real EngineClient on `provider_id`, answered by the fake.
 
-    Returns (engine, model_id) or calls pytest.skip if provider unavailable.
-    conftest.py already loads ~/.ppxai/.env and calls initialize() before collection.
+    Returns (engine, model_id). The provider must be in the shipped config
+    (conftest pins PPXAI_CONFIG_FILE to it); a missing one is a failure,
+    not a skip -- a skip is how these tests hid for months.
     """
-    from ppxai.config import PROVIDERS, initialize
+    from ppxai.config import PROVIDERS
     from ppxai.engine import EngineClient
 
-    # Ensure config is initialized (conftest does this but be safe)
-    initialize()
-
-    if provider_id not in PROVIDERS:
-        pytest.skip(f"Provider '{provider_id}' not configured")
-
+    assert provider_id in PROVIDERS, f"provider '{provider_id}' not configured"
     provider_cfg = PROVIDERS[provider_id]
-    api_key_env = provider_cfg.get("api_key_env", f"{provider_id.upper()}_API_KEY")
-    api_key = os.getenv(api_key_env, "")
-    if not api_key:
-        pytest.skip(f"{api_key_env} not set")
 
     engine = EngineClient()
-    engine.set_provider(provider_id)
+    assert engine.set_provider(provider_id), f"set_provider({provider_id!r}) refused"
 
     # Pick default model for the provider
     models = provider_cfg.get("models", {})
@@ -89,24 +58,21 @@ def _create_engine(provider_id: str):
 
 
 @pytest.fixture
-def perplexity_engine():
-    """Create a real EngineClient connected to Perplexity."""
-    engine, model = _create_engine("perplexity")
-    yield engine, model
+def perplexity_engine(fake_providers):
+    """An EngineClient on the perplexity provider id (fake wire)."""
+    return _create_engine("perplexity")
 
 
 @pytest.fixture
-def gemini_engine():
-    """Create a real EngineClient connected to Gemini."""
-    engine, model = _create_engine("gemini")
-    yield engine, model
+def gemini_engine(fake_providers):
+    """An EngineClient on the gemini provider id (fake wire)."""
+    return _create_engine("gemini")
 
 
 @pytest.fixture
-def openai_engine():
-    """Create a real EngineClient connected to OpenAI."""
-    engine, model = _create_engine("openai")
-    yield engine, model
+def openai_engine(fake_providers):
+    """An EngineClient on the openai provider id (fake wire)."""
+    return _create_engine("openai")
 
 
 # ---------------------------------------------------------------------------

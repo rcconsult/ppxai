@@ -122,6 +122,7 @@ tui = [
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-xdist>=3.5.0",
     "ruff>=0.1.0",
 ]
 
@@ -153,6 +154,7 @@ dev = [
     # Testing
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-xdist>=3.5.0",
     # Linting
     "ruff>=0.1.0",
     # Build tools
@@ -201,8 +203,16 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 # Exclude integration tests by default (they modify global config state)
 # Run them explicitly with: pytest tests/test_custom_endpoint_integration.py -v
-addopts = "--ignore=tests/test_custom_endpoint_integration.py"
+#
+# -n auto --dist loadfile: the suite runs in parallel, one worker per core,
+# each test FILE kept on one worker (module-scoped fixtures and the
+# per-file ordering some tests assume stay intact). Serial it took 32 min on
+# Windows vs ~3 min parallel (2026-09-27). `-n 0` runs serially -- use it
+# for a single file or a debugger.
+addopts = "--ignore=tests/test_custom_endpoint_integration.py -n auto --dist loadfile"
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
     "slow: marks tests that spawn subprocesses or otherwise take seconds (deselect with '-m \"not slow\"')",
+    "libreoffice: drives the real LibreOffice binary; skipped unless PPXAI_TESTS_ALLOW_LIBREOFFICE=1",
+    "libreoffice_discovery: tests the LibreOffice resolver itself; the conftest does not hide LibreOffice from it",
 ]

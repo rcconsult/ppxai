@@ -118,7 +118,9 @@ class TestValidateAgentTask:
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def http_client():
+def http_client(fake_providers):
+    """The real server with the fake provider: a task that passes the gate
+    reaches a provider, which must not be a real (billed) one."""
     import ppxai.server.http as http_module
     with TestClient(http_module.app, raise_server_exceptions=False) as client:
         yield client
@@ -191,7 +193,7 @@ class TestChatRouteAgentGate:
         body_text = first.get("data", "") if isinstance(first.get("data"), str) else ""
         assert rejection_marker not in body_text
 
-    def test_agent_with_only_whitespace_args_rejected(self, http_client):
+    def test_agent_with_only_whitespace_args_rejected(self, http_client, fake_providers):
         """`/auto    ` (just whitespace) reaches the gate with an
         empty task — should be rejected the same way."""
         resp = http_client.post(
@@ -205,6 +207,9 @@ class TestChatRouteAgentGate:
         # might short-circuit at the empty-message check earlier.
         # Either rejection is fine; both stop the LLM.)
         assert resp.status_code == 200
+        assert fake_providers.calls == [], (
+            "a whitespace-only /auto task reached the provider; the gate "
+            f"should have stopped it: {fake_providers.calls}")
 
 
 # ---------------------------------------------------------------------------
