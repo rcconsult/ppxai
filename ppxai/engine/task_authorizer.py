@@ -71,8 +71,8 @@ from .agent_spec import (
     load_spec_file,
     spec_from_mapping,
 )
+from .search.resolver import resolve_web_search_backend
 from .tools.network_policy import apply_egress_ceiling, grant_has_shell
-from .tools.search_backends import resolve_web_search_backend
 
 
 class TaskAuthorizationError(Exception):

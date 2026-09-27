@@ -23,13 +23,15 @@ from unittest.mock import patch
 
 import pytest
 
-from ppxai.engine.tools import search_backends as sb
-from ppxai.engine.tools.builtin import web_premium
-from ppxai.engine.tools.search_backends import (
+from ppxai.engine.search import gemini as gemini_backend
+from ppxai.engine.search import perplexity as pplx_backend
+from ppxai.engine.search import resolver as sb
+from ppxai.engine.search.resolver import (
     AUTO_ORDER,
     BACKEND_HOSTS,
     resolve_web_search_backend,
 )
+from ppxai.engine.tools.builtin import web_premium
 
 
 @pytest.fixture
@@ -162,8 +164,8 @@ class TestGeminiFirstThenDuckDuckGoThenPerplexity:
             calls.append("perplexity")
             return "answer", ["https://p.example"], web_premium.ToolUsage(call_count=1)
 
-        with patch.object(web_premium, "web_search_gemini", _gemini), patch.object(
-            web_premium, "web_search_perplexity", _pplx
+        with patch.object(gemini_backend, "search_gemini", _gemini), patch.object(
+            pplx_backend, "search_perplexity", _pplx
         ), patch.object(web_premium.web, "web_search", _ddg), patch.object(
             web_premium, "_record_usage", lambda *_a, **_k: None
         ):

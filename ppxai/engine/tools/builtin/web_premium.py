@@ -5,6 +5,12 @@ Provides web search via Perplexity Sonar API or Gemini Google Search Grounding,
 with graceful fallback to free DuckDuckGo if premium providers are unavailable.
 
 v1.13.4: Initial implementation
+ADR 0014 step 1: the backends themselves (Perplexity, Gemini, DuckDuckGo)
+and the resolver moved to `ppxai/engine/search/`, a package that knows
+nothing about chat providers. This module is now a thin adapter: resolve →
+walk the candidates → call `SearchBackend.search()` → format. Output
+format, fallback order, `strict` behaviour and usage recording are
+unchanged.
 """
 
 import contextvars
@@ -12,21 +18,8 @@ import logging
 import os
 from typing import Any
 
-import httpx
-from openai import AsyncOpenAI
-
-from ppxai.config import get_tool_config, get_tool_pricing
-from ppxai.config.tls import tls_verify
-from ppxai.constants import APIEndpoint
-
-from ...model_facts import shipped_facts_for_model
-from ...providers.perplexity_facts import AGENT_FLEET_FACTS
+from ...search import get_backend, resolve_web_search_backend
 from ...types import ToolUsage
-
-# ADR 0009 step ④: the ONE shared backend resolver (leaf module, top-level
-# import — retires the function-local `network_policy` import this module
-# used to reach the pin through).
-from ..search_backends import resolve_web_search_backend
 from . import web
 
 # Global to store usage from last tool execution (LEGACY channel — see
@@ -110,285 +103,6 @@ def get_premium_search_provider(provider_name: str | None = None) -> str | None:
     return first if first in ("perplexity", "gemini") else None
 
 
-def calculate_tool_cost(provider: str, tokens_in: int = 0, tokens_out: int = 0, query_count: int = 0) -> float:
-    """Calculate tool usage cost based on pricing model.
-
-    Args:
-        provider: Provider name ("perplexity" or "gemini_grounding")
-        tokens_in: Input tokens (for per-token pricing)
-        tokens_out: Output tokens (for per-token pricing)
-        query_count: Number of queries (for per-query pricing)
-
-    Returns:
-        Estimated cost in USD
-    """
-    pricing = get_tool_pricing("web_search", provider)
-
-    if not pricing:
-        return 0.0
-
-    pricing_model = pricing.get("model", "per_token")
-
-    if pricing_model == "per_token":
-        # Perplexity: per-million-token pricing
-        input_price = pricing.get("input", 0.0)
-        output_price = pricing.get("output", 0.0)
-        input_cost = (tokens_in / 1_000_000) * input_price if input_price else 0.0
-        output_cost = (tokens_out / 1_000_000) * output_price if output_price else 0.0
-        return input_cost + output_cost
-
-    elif pricing_model == "per_query":
-        # Gemini Grounding: per-query pricing
-        per_query_price = pricing.get("per_query", 0.0)
-        return (query_count / 1000) * per_query_price if per_query_price else 0.0
-
-    return 0.0
-
-
-#: Perplexity's two wires. The chat host is the shared constant; the
-#: Responses wire lives one path segment deeper (measured — the bare host
-#: 404s on `/responses`).
-PERPLEXITY_CHAT_BASE_URL = APIEndpoint.PERPLEXITY_API
-PERPLEXITY_RESPONSES_BASE_URL = APIEndpoint.PERPLEXITY_API.rstrip("/") + "/v1"
-
-
-def _output_item_url_rows(item: Any) -> list[Any]:
-    """Return the `results` rows of a `search_results` output item, if any.
-
-    Reads attributes directly off the SDK object instead of a dict — see
-    `_responses_answer_and_citations` for why `model_dump()` is avoided here.
-    Falls back to a dict-shaped item so a hand-built fake in tests still works.
-    """
-    if isinstance(item, dict):
-        if item.get("type") != "search_results":
-            return []
-        return list(item.get("results") or [])
-    if getattr(item, "type", None) != "search_results":
-        return []
-    return list(getattr(item, "results", None) or [])
-
-
-def _row_url(row: Any) -> str | None:
-    if isinstance(row, dict):
-        return row.get("url")
-    return getattr(row, "url", None)
-
-
-def _responses_answer_and_citations(response, num_results: int):
-    """Pull answer text and citation URLs out of a Responses reply.
-
-    MEASURED 2026-08-30 (plan W0 (c)): citations arrive as a
-    `search_results` OUTPUT ITEM carrying `{id, snippet, date, url}` rows.
-    The text block's `annotations` array stays **empty** on this wire, so
-    reading annotations — the obvious guess — silently yields no citations.
-
-    MEASURED 2026-09-16: Perplexity's `search_results` item type isn't in
-    the openai SDK's `Response.output` union (message / function_call /
-    reasoning / ...), so pydantic parses it via a best-effort fallback whose
-    declared `type` literal doesn't match the actual string. That's harmless
-    for reading attributes off the live object, but calling `.model_dump()`
-    (as this used to, to get a plain dict) makes pydantic re-validate the
-    mismatch and print a `PydanticSerializationUnexpectedValue` warning to
-    stderr on every call. Fix: walk `response.output` directly via getattr/
-    duck-typing instead of dumping the whole typed union to a dict.
-    """
-    output_items = list(getattr(response, "output", None) or [])
-
-    citations: list[str] = []
-    for item in output_items:
-        for row in _output_item_url_rows(item):
-            url = _row_url(row)
-            if url and url not in citations:
-                citations.append(url)
-
-    content = getattr(response, "output_text", None) or ""
-    if not content:
-        parts = []
-        for item in output_items:
-            item_type = item.get("type") if isinstance(item, dict) else getattr(item, "type", None)
-            if item_type != "message":
-                continue
-            item_content = item.get("content") if isinstance(item, dict) else getattr(item, "content", None)
-            for part in item_content or []:
-                part_type = part.get("type") if isinstance(part, dict) else getattr(part, "type", None)
-                if part_type == "output_text":
-                    part_text = part.get("text") if isinstance(part, dict) else getattr(part, "text", None)
-                    parts.append(part_text or "")
-        content = "".join(parts)
-
-    return content, citations[:num_results]
-
-
-async def web_search_perplexity(query: str, num_results: int = 5) -> tuple[str, list[str], ToolUsage]:
-    """Search web using Perplexity Sonar API.
-
-    Uses OpenAI-compatible API format.
-
-    Args:
-        query: Search query
-        num_results: Maximum number of results to return
-
-    Returns:
-        Tuple of (answer_text, list_of_citation_urls, tool_usage)
-
-    Raises:
-        ValueError: If PERPLEXITY_API_KEY not set
-    """
-    api_key = os.getenv("PERPLEXITY_API_KEY")
-    if not api_key:
-        raise ValueError("PERPLEXITY_API_KEY not set")
-
-    # Get model from config. Default is the Responses-wire id: the
-    # chat-completions `sonar` wire retires 2026-09-27, and a code default
-    # outlives every user's config (see TestCodeDefaultsAreNotDeprecatedModels
-    # in tests/test_web_premium_wire.py) — so the default must name the
-    # surviving wire, not the cheapest-looking legacy one.
-    tool_config = get_tool_config("web_search")
-    perplexity_model = tool_config.get("perplexity_model", "perplexity/sonar")
-
-    # ADR 0012 W3: which wire this model speaks is a per-model FACT, resolved
-    # from `perplexity_facts.AGENT_FLEET_FACTS`, the table the (deprecated)
-    # chat provider also reads; it lives outside the provider class so this
-    # backend survives the provider's removal. This tool used to build
-    # its own client hardcoded to `/chat/completions`, which meant the
-    # 2026-09-27 Sonar retirement would break web_search independently of the
-    # provider — a second path to patch instead of one path to fix. Reading
-    # the fact here is the root-cause fix: configure `perplexity/sonar` and
-    # this tool follows the provider onto the surviving wire with no code
-    # change.
-    wire = shipped_facts_for_model(
-        perplexity_model, AGENT_FLEET_FACTS
-    ).wire_protocol
-
-    # TLS via the shared resolver. This site previously honoured SSL_VERIFY
-    # but ignored SSL_CERT_FILE, so a custom-CA install silently verified
-    # against the system store here while every other client used the bundle.
-    #
-    # `async with` because AsyncOpenAI never closes a caller-supplied
-    # http_client — an unclosed AsyncClient here leaked its connection
-    # pool on every web_search call in a long-lived server. Same pattern
-    # as web_search_gemini below.
-    async with httpx.AsyncClient(verify=tls_verify()) as http_client:
-        if wire == "responses":
-            client = AsyncOpenAI(
-                api_key=api_key,
-                base_url=PERPLEXITY_RESPONSES_BASE_URL,
-                http_client=http_client,
-            )
-            # MEASURED 2026-08-30 (plan W0 (c)): on this wire search is an
-            # explicit TOOL, not implicit as it is on Sonar chat-completions.
-            # A plain request runs no search at all and returns no citations,
-            # so the tool must be requested by name — the migration is
-            # behavioural, not a change of parse site.
-            response = await client.responses.create(
-                model=perplexity_model,
-                input=query,
-                tools=[{"type": "web_search"}],
-            )
-            content, citations = _responses_answer_and_citations(
-                response, num_results
-            )
-            usage_obj = getattr(response, "usage", None)
-            tokens_in = getattr(usage_obj, "input_tokens", 0) or 0
-            tokens_out = getattr(usage_obj, "output_tokens", 0) or 0
-        else:
-            client = AsyncOpenAI(
-                api_key=api_key,
-                base_url=PERPLEXITY_CHAT_BASE_URL,
-                http_client=http_client,
-            )
-            response = await client.chat.completions.create(
-                model=perplexity_model,
-                messages=[{"role": "user", "content": query}]
-            )
-            content = response.choices[0].message.content
-            citations = list(getattr(response, "citations", None) or [])[:num_results]
-            tokens_in = response.usage.prompt_tokens
-            tokens_out = response.usage.completion_tokens
-
-    usage = ToolUsage(
-        call_count=1,
-        tokens_in=tokens_in,
-        tokens_out=tokens_out,
-        provider="perplexity"
-    )
-    usage.estimated_cost = calculate_tool_cost("perplexity", tokens_in, tokens_out)
-
-    return content, citations, usage
-
-
-async def web_search_gemini(query: str, num_results: int = 5) -> tuple[str, list[str], ToolUsage]:
-    """Search web using Gemini + Google Search Grounding.
-
-    Uses REST API for simplicity (avoids extra google-genai dependency).
-
-    Args:
-        query: Search query
-        num_results: Maximum number of results to return
-
-    Returns:
-        Tuple of (answer_text, list_of_citation_urls, tool_usage)
-
-    Raises:
-        ValueError: If GEMINI_API_KEY not set
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY not set")
-
-    # Get model from config. Default is gemini-3.6-flash since 2026-08-31:
-    # the 2.5 line has a sunset date (EARLIEST 2026-10-16, ai.google.dev), and
-    # this default is CODE, not user config — the web_search fallback backend
-    # would have died on sunset for everyone who never set the key. 3.6-flash
-    # is GA and was smoke-tested live on this path (generateContent +
-    # google_search, grounding chunks returned) before the swap. See debt
-    # Item 54.
-    tool_config = get_tool_config("web_search")
-    gemini_model = tool_config.get("gemini_model", "gemini-3.6-flash")
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent"
-
-    payload = {
-        "contents": [{"parts": [{"text": query}]}],
-        "tools": [{"google_search": {}}]
-    }
-
-    # TLS via the shared resolver — this site also used to collapse the
-    # setting to a bool, discarding any configured CA bundle.
-    try:
-        async with httpx.AsyncClient(verify=tls_verify()) as client:
-            resp = await client.post(
-                url,
-                params={"key": api_key},
-                json=payload,
-                timeout=30.0
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPError as e:
-        raise ValueError(f"Gemini API error: {e}")
-
-    try:
-        content = data["candidates"][0]["content"]["parts"][0]["text"]
-        grounding = data["candidates"][0].get("groundingMetadata", {})
-
-        citations = []
-        for chunk in grounding.get("groundingChunks", [])[:num_results]:
-            if "web" in chunk:
-                citations.append(chunk["web"]["uri"])
-
-        # Per-query pricing
-        usage = ToolUsage(
-            call_count=1,
-            provider="gemini"
-        )
-        usage.estimated_cost = calculate_tool_cost("gemini_grounding", query_count=1)
-
-        return content, citations, usage
-    except (KeyError, IndexError, TypeError) as e:
-        raise ValueError(f"Failed to parse Gemini response: {e}")
-
-
 def _format_search_result(
     backend: str, content: str, citations: list[str], fallback: bool = False
 ) -> str:
@@ -430,26 +144,30 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: s
     )
     last_error: Exception | None = None
 
-    for i, backend in enumerate(resolution.candidates):
+    for i, backend_id in enumerate(resolution.candidates):
         try:
-            if backend == "perplexity":
-                content, citations, usage = await web_search_perplexity(query, num_results)
-                _record_usage(usage)
-            elif backend == "gemini":
-                content, citations, usage = await web_search_gemini(query, num_results)
-                _record_usage(usage)
-            else:  # duckduckgo — free search, formats its own output
-                return web.web_search(query, num_results)
-            return _format_search_result(backend, content, citations, fallback=i > 0)
+            result = await get_backend(backend_id).search(query, num_results)
+            if backend_id == "duckduckgo":
+                # duckduckgo — free search, formats its own output; the
+                # backend's `answer` IS the complete string (see
+                # `search.duckduckgo.DuckDuckGoBackend`), so it is returned
+                # as-is, without `_format_search_result` and without a
+                # fallback tag — unchanged from before this module became
+                # an adapter.
+                return result.answer
+            _record_usage(result.usage)
+            return _format_search_result(
+                result.backend, result.answer, result.citations, fallback=i > 0
+            )
         except Exception as e:
             last_error = e
-            logger.warning(f"web_search backend failed ({backend}): {e}")
+            logger.warning(f"web_search backend failed ({backend_id}): {e}")
             if resolution.strict:
                 # Q5: an operator setting `strict` accepted "this backend or
                 # nothing"; the egress set covers only this backend's host.
                 return (
                     f"[web_search error] The configured search backend "
-                    f"'{backend}' failed and cross-backend fallback is "
+                    f"'{backend_id}' failed and cross-backend fallback is "
                     f"disabled (tools.web_search strict pin, scope "
                     f"{resolution.scope}): {e}"
                 )

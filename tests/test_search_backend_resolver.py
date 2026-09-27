@@ -19,7 +19,7 @@ from __future__ import annotations
 import pytest
 
 import ppxai.config as config_pkg
-from ppxai.engine.tools.search_backends import (
+from ppxai.engine.search.resolver import (
     ALL_HOSTS,
     BACKEND_HOSTS,
     resolve_web_search_backend,

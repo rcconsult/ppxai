@@ -318,7 +318,7 @@ class TestPerplexityClientLifecycle:
 
     @pytest.mark.asyncio
     async def test_http_client_is_closed_after_the_call(self, monkeypatch):
-        from ppxai.engine.tools.builtin import web_premium
+        from ppxai.engine.search import perplexity as pplx_backend
 
         monkeypatch.setenv("PERPLEXITY_API_KEY", "test-key")
         captured = {}
@@ -335,8 +335,8 @@ class TestPerplexityClientLifecycle:
                 create.create = _create
                 self.chat.completions = create
 
-        with patch.object(web_premium, "AsyncOpenAI", FakeAsyncOpenAI):
-            await web_premium.web_search_perplexity("q")
+        with patch.object(pplx_backend, "AsyncOpenAI", FakeAsyncOpenAI):
+            await pplx_backend.search_perplexity("q")
 
         assert captured["http_client"] is not None, (
             "an explicit http_client must be supplied (tls_verify() "
@@ -349,7 +349,7 @@ class TestPerplexityClientLifecycle:
 
     @pytest.mark.asyncio
     async def test_http_client_is_closed_when_the_request_raises(self, monkeypatch):
-        from ppxai.engine.tools.builtin import web_premium
+        from ppxai.engine.search import perplexity as pplx_backend
 
         monkeypatch.setenv("PERPLEXITY_API_KEY", "test-key")
         captured = {}
@@ -366,9 +366,9 @@ class TestPerplexityClientLifecycle:
                 create.create = _create
                 self.chat.completions = create
 
-        with patch.object(web_premium, "AsyncOpenAI", FakeAsyncOpenAI):
+        with patch.object(pplx_backend, "AsyncOpenAI", FakeAsyncOpenAI):
             with pytest.raises(RuntimeError):
-                await web_premium.web_search_perplexity("q")
+                await pplx_backend.search_perplexity("q")
 
         assert captured["http_client"].is_closed, (
             "the AsyncClient must be closed on the error path too"

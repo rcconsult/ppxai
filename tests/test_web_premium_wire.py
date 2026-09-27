@@ -21,12 +21,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from ppxai.engine.model_facts import shipped_facts_for_model
 from ppxai.engine.providers.perplexity import PerplexityProvider
-from ppxai.engine.tools.builtin import web_premium
-from ppxai.engine.tools.builtin.web_premium import (
+from ppxai.engine.search import gemini as gemini_backend
+from ppxai.engine.search import perplexity as pplx_backend
+from ppxai.engine.search.perplexity import (
     PERPLEXITY_CHAT_BASE_URL,
     PERPLEXITY_RESPONSES_BASE_URL,
     _responses_answer_and_citations,
-    web_search_perplexity,
+)
+from ppxai.engine.search.perplexity import (
+    search_perplexity as web_search_perplexity,
 )
 
 
@@ -93,11 +96,11 @@ class TestItFollowsTheConfiguredModelOntoItsWire:
         import asyncio
 
         with patch.dict("os.environ", {"PERPLEXITY_API_KEY": "k"}), patch.object(
-            web_premium, "AsyncOpenAI", _fake_client
+            pplx_backend, "AsyncOpenAI", _fake_client
         ), patch.object(
-            web_premium, "get_tool_config", return_value={"perplexity_model": model}
+            pplx_backend, "get_tool_config", return_value={"perplexity_model": model}
         ), patch.object(
-            web_premium, "calculate_tool_cost", return_value=0.0
+            pplx_backend, "calculate_tool_cost", return_value=0.0
         ):
             return asyncio.run(web_search_perplexity("q", num_results=5))
 
@@ -285,7 +288,7 @@ class TestCodeDefaultsAreNotDeprecatedModels:
 
         from ppxai.engine.model_deprecations import ALL_DEPRECATIONS
 
-        src = inspect.getsource(web_premium.web_search_gemini)
+        src = inspect.getsource(gemini_backend.search_gemini)
         m = re.search(r'tool_config\.get\("gemini_model",\s*"([^"]+)"\)', src)
         assert m, "the gemini_model default moved — update this fence"
         default = m.group(1)
@@ -312,7 +315,7 @@ class TestCodeDefaultsAreNotDeprecatedModels:
 
         from ppxai.engine.model_deprecations import ALL_DEPRECATIONS
 
-        src = inspect.getsource(web_premium.web_search_perplexity)
+        src = inspect.getsource(pplx_backend.search_perplexity)
         m = re.search(r'tool_config\.get\("perplexity_model",\s*"([^"]+)"\)', src)
         assert m, "the perplexity_model default moved — update this fence"
         default = m.group(1)
@@ -336,7 +339,7 @@ class TestCodeDefaultsAreNotDeprecatedModels:
         import inspect
         import re
 
-        src = inspect.getsource(web_premium.web_search_perplexity)
+        src = inspect.getsource(pplx_backend.search_perplexity)
         m = re.search(r'tool_config\.get\("perplexity_model",\s*"([^"]+)"\)', src)
         assert m, "the perplexity_model default moved — update this fence"
         default = m.group(1)
@@ -354,7 +357,7 @@ class TestEgressAllowlistCoversBothWires:
     """Plan W3 fence: "verified in W3, not assumed"."""
 
     def test_the_allowlist_is_host_level_so_the_v1_path_is_covered(self):
-        from ppxai.engine.tools.search_backends import BACKEND_HOSTS
+        from ppxai.engine.search.resolver import BACKEND_HOSTS
 
         hosts = BACKEND_HOSTS["perplexity"]
         assert hosts == ["https://api.perplexity.ai/"]

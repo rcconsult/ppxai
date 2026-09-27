@@ -9,6 +9,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from ppxai.engine.search import gemini as gemini_backend
+from ppxai.engine.search import perplexity as pplx_backend
+from ppxai.engine.search import pricing as pricing_module
 from ppxai.engine.tools.builtin import web_premium
 from ppxai.engine.types import ToolUsage
 
@@ -148,27 +151,27 @@ class TestCostCalculation:
 
     def test_perplexity_cost_per_token(self):
         """Test Perplexity per-token pricing calculation."""
-        with patch.object(web_premium, "get_tool_pricing") as mock_pricing:
+        with patch.object(pricing_module, "get_tool_pricing") as mock_pricing:
             mock_pricing.return_value = {"input": 0.20, "output": 0.20, "model": "per_token"}
             # 1000 input + 2000 output tokens
-            cost = web_premium.calculate_tool_cost("perplexity", tokens_in=1000, tokens_out=2000)
+            cost = pricing_module.calculate_tool_cost("perplexity", tokens_in=1000, tokens_out=2000)
             # (1000 / 1M * 0.20) + (2000 / 1M * 0.20) = 0.0002 + 0.0004 = 0.0006
             assert cost == pytest.approx(0.0006)
 
     def test_gemini_cost_per_query(self):
         """Test Gemini per-query pricing calculation."""
-        with patch.object(web_premium, "get_tool_pricing") as mock_pricing:
+        with patch.object(pricing_module, "get_tool_pricing") as mock_pricing:
             mock_pricing.return_value = {"per_query": 14.00, "model": "per_query"}
             # 5 queries
-            cost = web_premium.calculate_tool_cost("gemini_grounding", query_count=5)
+            cost = pricing_module.calculate_tool_cost("gemini_grounding", query_count=5)
             # (5 / 1000) * 14.00 = 0.07
             assert cost == pytest.approx(0.07)
 
     def test_cost_calculation_no_pricing_config(self):
         """Test cost calculation returns 0 when no pricing config."""
-        with patch.object(web_premium, "get_tool_pricing") as mock_pricing:
+        with patch.object(pricing_module, "get_tool_pricing") as mock_pricing:
             mock_pricing.return_value = None
-            cost = web_premium.calculate_tool_cost("perplexity", tokens_in=1000, tokens_out=2000)
+            cost = pricing_module.calculate_tool_cost("perplexity", tokens_in=1000, tokens_out=2000)
             assert cost == 0.0
 
 
@@ -186,15 +189,15 @@ class TestPerplexitySearch:
         mock_response.usage.completion_tokens = 200
 
         with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
-            with patch("ppxai.engine.tools.builtin.web_premium.AsyncOpenAI") as mock_client_class:
+            with patch("ppxai.engine.search.perplexity.AsyncOpenAI") as mock_client_class:
                 mock_client = AsyncMock()
                 mock_client_class.return_value = mock_client
                 mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-                with patch.object(web_premium, "get_tool_pricing") as mock_pricing:
+                with patch.object(pricing_module, "get_tool_pricing") as mock_pricing:
                     mock_pricing.return_value = {"input": 0.20, "output": 0.20, "model": "per_token"}
 
-                    content, citations, usage = await web_premium.web_search_perplexity(
+                    content, citations, usage = await pplx_backend.search_perplexity(
                         "test query", num_results=2
                     )
 
@@ -210,7 +213,7 @@ class TestPerplexitySearch:
         """Test Perplexity search fails without API key."""
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="PERPLEXITY_API_KEY not set"):
-                await web_premium.web_search_perplexity("test query")
+                await pplx_backend.search_perplexity("test query")
 
 
 class TestGeminiSearch:
@@ -237,10 +240,10 @@ class TestGeminiSearch:
                 mock_client_class.return_value.__aenter__.return_value = mock_client
                 mock_client.post = AsyncMock(return_value=MagicMock(json=MagicMock(return_value=mock_response)))
 
-                with patch.object(web_premium, "get_tool_pricing") as mock_pricing:
+                with patch.object(pricing_module, "get_tool_pricing") as mock_pricing:
                     mock_pricing.return_value = {"per_query": 14.00, "model": "per_query"}
 
-                    content, citations, usage = await web_premium.web_search_gemini(
+                    content, citations, usage = await gemini_backend.search_gemini(
                         "test query", num_results=2
                     )
 
@@ -254,7 +257,7 @@ class TestGeminiSearch:
         """Test Gemini search fails without API key."""
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="GEMINI_API_KEY not set"):
-                await web_premium.web_search_gemini("test query")
+                await gemini_backend.search_gemini("test query")
 
 
 class TestToolUsageTracking:
@@ -369,9 +372,9 @@ class TestIntegration:
         back to DuckDuckGo (real call)" and let Gemini's search run for real
         as well, asserting only that SOMETHING came back."""
         with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}), \
-                patch.object(web_premium, "web_search_perplexity",
+                patch.object(pplx_backend, "search_perplexity",
                              side_effect=Exception("API Error")) as mock_perplexity, \
-                patch.object(web_premium, "web_search_gemini",
+                patch.object(gemini_backend, "search_gemini",
                              side_effect=Exception("API Error")), \
                 patch.object(web_premium.web, "web_search",
                              return_value="ddg result") as mock_ddg, \
@@ -389,9 +392,9 @@ class TestIntegration:
         with patch.dict(os.environ, {
             "PERPLEXITY_API_KEY": "test-key",
             "GEMINI_API_KEY": "test-key"
-        }), patch.object(web_premium, "web_search_perplexity",
+        }), patch.object(pplx_backend, "search_perplexity",
                          return_value=("Test answer", [], ToolUsage(provider="perplexity"))), \
-                patch.object(web_premium, "web_search_gemini",
+                patch.object(gemini_backend, "search_gemini",
                              return_value=("Test answer", [], ToolUsage(provider="gemini"))), \
                 patch.object(web_premium, "get_premium_search_provider",
                              return_value="perplexity"):

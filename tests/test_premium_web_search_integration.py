@@ -217,7 +217,7 @@ class TestPremiumWebSearchIntegration:
         if pricing:
             assert pricing.get("cost", 0) == 0
 
-    @patch('ppxai.engine.tools.builtin.web_premium.web_search_perplexity')
+    @patch('ppxai.engine.search.perplexity.search_perplexity')
     async def test_perplexity_search_integration(self, mock_search):
         """Test Perplexity search function is called correctly."""
 
@@ -241,7 +241,7 @@ class TestPremiumWebSearchIntegration:
         assert usage.provider == "perplexity"
         assert usage.estimated_cost > 0
 
-    @patch('ppxai.engine.tools.builtin.web_premium.web_search_gemini')
+    @patch('ppxai.engine.search.gemini.search_gemini')
     async def test_gemini_search_integration(self, mock_search):
         """Test Gemini search function is called correctly."""
 
@@ -268,9 +268,9 @@ class TestPremiumWebSearchIntegration:
     def test_cost_calculation_per_token(self):
         """Test cost calculation for per-token pricing (Perplexity)."""
         try:
-            from ppxai.engine.tools.builtin import web_premium
+            from ppxai.engine.search.pricing import calculate_tool_cost
             # 100 input tokens + 200 output tokens at pricing config
-            cost = web_premium.calculate_tool_cost(
+            cost = calculate_tool_cost(
                 "perplexity",
                 tokens_in=100,
                 tokens_out=200
@@ -279,14 +279,14 @@ class TestPremiumWebSearchIntegration:
             assert cost >= 0
             assert cost < 1.0  # Should be reasonable
         except ImportError:
-            pytest.skip("web_premium module not available")
+            pytest.skip("search.pricing module not available")
 
     def test_cost_calculation_per_query(self):
         """Test cost calculation for per-query pricing (Gemini)."""
         try:
-            from ppxai.engine.tools.builtin import web_premium
+            from ppxai.engine.search.pricing import calculate_tool_cost
             # Gemini: $14 per 1000 queries = $0.014 per query
-            cost = web_premium.calculate_tool_cost(
+            cost = calculate_tool_cost(
                 "gemini",
                 query_count=1
             )
@@ -294,7 +294,7 @@ class TestPremiumWebSearchIntegration:
             assert cost >= 0
             assert cost < 1.0
         except ImportError:
-            pytest.skip("web_premium module not available")
+            pytest.skip("search.pricing module not available")
 
     def test_session_aggregates_tool_usage(self):
         """Test session manager properly aggregates tool usage."""

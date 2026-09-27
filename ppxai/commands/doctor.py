@@ -50,7 +50,7 @@ from ..engine.model_deprecations import (
     classify_model,
     find_missing_recommended,
 )
-from ..engine.tools.search_backends import resolve_web_search_backend
+from ..engine.search.resolver import resolve_web_search_backend
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (

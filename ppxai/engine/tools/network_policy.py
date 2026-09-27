@@ -174,17 +174,18 @@ def grant_has_shell(grant) -> bool:
 
 # web_search picks a backend at CALL time (web_premium.web_search_premium).
 # The backend catalog + the ONE resolver both modules consult live in the
-# `search_backends` leaf module (ADR 0009 step ④): the historical names below
+# `search.resolver` leaf module (ADR 0009 step ④, moved under
+# `ppxai/engine/search/` by ADR 0014 step 1): the historical names below
 # are re-exports so existing readers/tests keep working. Q5 semantics: in
 # "auto" AND in plain-`preferred` (ordering) mode the chain may hit ANY
 # backend, so the superset must be granted (confused-deputy defense); only an
 # explicit `strict: true` pins the chain to one backend and narrows the
 # egress set to its host(s).
 
-from .search_backends import (  # noqa: E402  (leaf module, no cycle)
+from ..search.resolver import (  # noqa: E402  (leaf module, no cycle)
     ALL_HOSTS as _WEB_SEARCH_ALL_HOSTS,
 )
-from .search_backends import (  # noqa: E402  (leaf module, no cycle)
+from ..search.resolver import (  # noqa: E402  (leaf module, no cycle)
     resolve_web_search_backend,
 )
 

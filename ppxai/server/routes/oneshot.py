@@ -85,9 +85,9 @@ from ...engine import task_runner as _task_runner
 from ...engine.facts_resolver import get_effective_oneshot_path
 from ...engine.providers import create_provider
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
+from ...engine.search.resolver import resolve_web_search_backend
 from ...engine.task_authorizer import TIERS as _TIERS
 from ...engine.task_authorizer import TaskAuthorizationError, authorize_oneshot
-from ...engine.tools.search_backends import resolve_web_search_backend
 from ...engine.types import ProviderCapabilities
 from ..state import get_agent_run_registry
 

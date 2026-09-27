@@ -2,10 +2,12 @@
 
 Two consumers read these: `PerplexityProvider` (chat, deprecated
 2026-09-27) and the `web_search` tool's Perplexity backend
-(`tools/builtin/web_premium.py`), which picks its wire from the same rows.
-The web_search backend stays when the chat provider goes, so the table
-cannot live on the provider class. Data only: nothing here imports a
-provider.
+(`engine/search/perplexity.py`, moved out of `tools/builtin/web_premium.py`
+by ADR 0014 step 1), which picks its wire from the same rows. The
+web_search backend stays when the chat provider goes, so the table cannot
+live on the provider class. Data only: nothing here imports a provider —
+this module lives under `ppxai/engine/search/` and is fenced by
+`tests/test_search_layer_imports_no_providers.py`.
 """
 
 from dataclasses import replace

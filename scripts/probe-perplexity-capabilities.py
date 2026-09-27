@@ -63,7 +63,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from ppxai.engine.providers.perplexity_facts import (  # noqa: E402
+from ppxai.engine.search.perplexity_facts import (  # noqa: E402
     PERPLEXITY_TOOL_REJECTING_MODELS,
 )
 

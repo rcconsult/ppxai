@@ -33,7 +33,7 @@ from pathlib import Path
 
 import pytest
 
-from ppxai.engine.providers.perplexity_facts import (
+from ppxai.engine.search.perplexity_facts import (
     PERPLEXITY_NATIVE_TOOL_MODELS as NATIVE_TOOL_MODELS,
 )
 

@@ -124,7 +124,7 @@ def test_soft_preferred_chain_matches_the_authorized_backend(tools_cfg, monkeypa
     # or the enumeration/chain divergence returns. With the run's egress
     # predicate installed (as ScopedToolManager does around each network tool),
     # the resolver the chain reads yields ONLY perplexity — it never tries DDG.
-    from ppxai.engine.tools.search_backends import resolve_web_search_backend
+    from ppxai.engine.search.resolver import resolve_web_search_backend
 
     tools_cfg["web_search"] = {"preferred": "perplexity"}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
@@ -225,7 +225,7 @@ def test_pinned_backend_does_not_fall_back(tools_cfg, monkeypatch):
     def _ddg_must_not_run(*a, **k):
         raise AssertionError("DuckDuckGo fallback must NOT run when pinned")
 
-    monkeypatch.setattr(web_premium, "web_search_perplexity", _boom)
+    monkeypatch.setattr("ppxai.engine.search.perplexity.search_perplexity", _boom)
     monkeypatch.setattr(web, "web_search", _ddg_must_not_run)
 
     out = asyncio.run(web_premium.web_search_premium("q"))
@@ -483,8 +483,8 @@ def test_ordering_falls_back_along_the_resolved_chain(tools_cfg, monkeypatch):
     def _ddg_must_not_run(*a, **k):
         raise AssertionError("chain must stop at gemini")
 
-    monkeypatch.setattr(web_premium, "web_search_perplexity", _boom)
-    monkeypatch.setattr(web_premium, "web_search_gemini", _gemini_ok)
+    monkeypatch.setattr("ppxai.engine.search.perplexity.search_perplexity", _boom)
+    monkeypatch.setattr("ppxai.engine.search.gemini.search_gemini", _gemini_ok)
     monkeypatch.setattr(web, "web_search", _ddg_must_not_run)
 
     out = asyncio.run(web_premium.web_search_premium("q"))

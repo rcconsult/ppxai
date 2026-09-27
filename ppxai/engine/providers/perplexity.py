@@ -27,9 +27,9 @@ from openai import OpenAI
 
 from ... import usage as _usage
 from ...config.tls import tls_verify
+from ..search.perplexity_facts import AGENT_FLEET_FACTS
 from ..types import Event, EventType, Message, ProviderCapabilities
 from .base import BaseProvider
-from .perplexity_facts import AGENT_FLEET_FACTS
 from .wire import get_handler
 
 

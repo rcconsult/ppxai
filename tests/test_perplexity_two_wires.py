@@ -31,12 +31,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from ppxai.engine.providers.perplexity import PerplexityProvider
-from ppxai.engine.providers.perplexity_facts import (
+from ppxai.engine.providers.wire.responses import ResponsesHandler
+from ppxai.engine.search.perplexity_facts import (
     AGENT_FLEET_GLOBS,
     AGENT_FLEET_MAX_TOKENS,
     AGENT_FLEET_TOOL_MODE,
 )
-from ppxai.engine.providers.wire.responses import ResponsesHandler
 from ppxai.engine.types import Message
 
 
