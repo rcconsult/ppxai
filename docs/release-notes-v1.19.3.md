@@ -494,6 +494,14 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   no longer reaches the fall-through exit, so its final text is the
   model's answer, not the canned line. The fall-through now runs only
   when `max_iterations <= 0`.
+- **An `EngineClient()` built before `ppxai.config.initialize()` had no
+  providers.** An embedder that skipped `initialize()` got an empty
+  provider table, and every `set_provider()` returned False silently.
+  `EngineClient.__init__` now calls the new
+  `ppxai.config.ensure_initialized()`, which runs `initialize()` once if
+  nothing has yet and never re-runs a completed one. The first call has
+  `initialize()`'s usual effects: it loads `.env`, seeds a missing
+  `~/.ppxai/ppxai-config.json`, and creates the `~/.ppxai` subdirectories.
 - **The server ignored `default_provider`.** `SessionManager` started
   every engine on the first provider block in the config file, so neither
   `default_provider` nor `MODEL_PROVIDER` reached web, VSCode or

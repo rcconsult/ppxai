@@ -236,11 +236,26 @@ def initialize():
     _initialized = True
 
 
+def ensure_initialized() -> None:
+    """Run `initialize()` unless something already has.
+
+    For embedders: an `EngineClient()` built before any entry point called
+    `initialize()` saw empty PROVIDERS, so every `set_provider()` returned
+    False with nothing said (ppxai-sre's manager, found 2026-09-27).
+    `EngineClient.__init__` calls this. It does not re-run a completed
+    `initialize()`, because that would re-read PROVIDERS from the store and
+    discard anything a caller has set in place since.
+    """
+    if not _initialized:
+        initialize()
+
+
 # =============================================================================
 # Public API Exports
 # =============================================================================
 
 __all__ = [
+    "ensure_initialized",
     "DEPRECATED_CHAT_PROVIDERS",
     "FALLBACK_PROVIDER",
     # Store

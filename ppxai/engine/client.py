@@ -17,6 +17,7 @@ from ..checkpoint import CheckpointManager
 from ..common.logger import get_logger
 from ..config import (
     PROVIDERS,
+    ensure_initialized,
     get_agent_config,
     get_api_key,
     get_base_url,
@@ -105,6 +106,11 @@ class EngineClient:
                              Returns: (approved: bool, response: str)
                              response can be: "y", "n", "always", "never"
         """
+        # Load .env and the config file if no entry point has yet, so an
+        # embedder's EngineClient() sees its providers instead of an empty
+        # table (every set_provider() then returned False, silently).
+        ensure_initialized()
+
         self.config = config or {}
         self.provider: BaseProvider | None = None
         self.provider_name: str = ""
