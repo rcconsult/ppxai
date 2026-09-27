@@ -70,6 +70,7 @@ quoting them** — this table is a map, not a source.
 | **76** | fold chat-shaped-ness into the command roster (`STREAMING_COMMANDS`) | debt item for now — owner decision 2026-09-21 (ADR 0007 open decision #4) |
 | **77** | dead client code left after the ADR 0007 step-5 VSCode migration | ~45min, verified by grep — no owner decision needed, extended 2026-09-21 with 4 more dead `httpClient.ts` methods |
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
+| **83** | the SERIAL test suite is ~2x slower per test than in July, cause unfound | owner decision 2026-09-27: record, not fix; the parallel default (~3 min) hides it |
 
 ---
 
@@ -2524,6 +2525,40 @@ asserting the notification string names the backend's REAL
 
 ---
 
+### Item 83 — the serial test suite got ~2x slower per test since July, and the cause is not found [tests / performance]
+
+**Filed 2026-09-27** (owner decision: record as debt, don't chase it now).
+
+**Measured:** Windows serial, 2026-07 (v1.19.1 session): ~5,078 tests in
+~10.5 min, ~0.12s per test. 2026-09-27 before the fixes: ~6,900 tests in
+45 min, ~0.39s per test. The owner remembers ~9 min for a serial run.
+
+**Explained and fixed on 2026-09-27** (`42bbabea`, `66fdbe29`, `10cff048`):
+google-genai 2.20 building its own certifi SSL contexts (~0.75s CPU each
+under Windows' OpenSSL 3.0); `mimetypes.init()` at import, re-reading the
+Windows registry 183 times per import sweep; the import sweep run twice.
+Serial dropped from 45 to 32 min. The default is now parallel
+(`-n auto --dist loadfile`, ~170s on Windows, ~100s on macOS).
+
+**Still unexplained:** summed test time is still ~1,240s (~0.18s per
+test), 42% of it fixture SETUP. The same tests do not cost that on macOS,
+and not on Windows in July.
+
+**How to find it:**
+1. Worktree at `v1.19.2` (2026-09-14) or a July tag, the CURRENT venv
+   (separates code from dependency drift), `pytest -n 0` on the ~240 test
+   files common to both. Compare the per-file "Slowest files" blocks of the
+   timing report.
+2. Bisect the commits between the fast and slow points on the worst files'
+   setup time.
+3. Suspects, unverified: the Item 78 HOME redirect (copies the repo config
+   and web assets once per session; is anything per-test?),
+   `with TestClient(app)` startup per test (a full server lifespan each
+   time), and google-genai's other client paths.
+
+**Why not now:** parallel runs make the absolute cost small, and the
+timing report added 2026-09-27 now names setup-heavy tests, so a
+regression of this kind shows up in the report instead of hiding.
 ## Closed (recent)
 
 One-liners only — full bodies + evidence trails in
