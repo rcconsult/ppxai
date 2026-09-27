@@ -8,6 +8,7 @@ counted them. Found 2026-09-27 while adding retrieval grounding.
 
 from __future__ import annotations
 
+import functools
 import time
 from unittest.mock import MagicMock
 
@@ -25,7 +26,7 @@ from ppxai.config import execution as exec_mod
 from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 from ppxai.server.routes import agent_v1
 from ppxai.server.routes import oneshot as oneshot_mod
-from ppxai.usage_events import TIER_ONESHOT, read_usage_events
+from ppxai.usage_events import TIER_ONESHOT, read_usage_events, record_usage
 
 USAGE = {"prompt_tokens": 1200, "completion_tokens": 300, "total_tokens": 1500}
 
@@ -97,11 +98,15 @@ class TestPlainOneshot:
 
     def test_the_event_reaches_the_real_sink(self, http_client, monkeypatch, tmp_path):
         """End to end through the real `record_usage`, read back the way
-        `/cost` reads it."""
-        monkeypatch.setenv("HOME", str(tmp_path))
+        `/cost` reads it. The log directory is passed explicitly: setting
+        HOME redirects nothing on Windows, where `Path.home()` reads
+        USERPROFILE, so the test read a log shared with earlier tests."""
+        sink = tmp_path / "usage"
+        monkeypatch.setattr(oneshot_mod, "record_usage",
+                            functools.partial(record_usage, usage_dir=sink))
         monkeypatch.setattr(oneshot_mod, "_build_provider", lambda n, **kw: _provider())
         assert http_client.post("/v1/oneshot", json={"prompt": "Hi"}).status_code == 200
-        events, skipped = read_usage_events(tier=TIER_ONESHOT)
+        events, skipped = read_usage_events(tier=TIER_ONESHOT, usage_dir=sink)
         assert skipped == 0
         [ev] = events
         assert ev.provider == "gemini" and ev.prompt_tokens == 1200
