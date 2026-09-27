@@ -187,8 +187,8 @@
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-3.5-flash",
-      "coding_model": "gemini-3.5-flash",
+      "default_model": "gemini-3.8-flash",
+      "coding_model": "gemini-3.8-flash",
       "__comment_benchmark": "Benchmark results (v1.15.3): gemini-3-flash-preview achieved 100% quality score with refined hints. Best model for code editing.",
       "system_prompt": "You are an expert AI coding assistant with web search capabilities. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices. Cite sources as markdown links when using web search.",
       "options": {
@@ -201,6 +201,27 @@
       },
       "__comment_deprecations": "Gemini deprecation timeline (verified 2026-04-12 against https://ai.google.dev/gemini-api/docs/deprecations; gemini-3.1-flash-lite GA migration verified 2026-05-14). The Gemini 2.0 and 2.5 families were REMOVED from this example file in v1.17.4 because all variants are scheduled for shutdown between 2026-06-01 and 2026-07-22. `/doctor` still knows about them via `ppxai/engine/model_deprecations.py` — users with old local configs get a warning with upgrade targets. Recommended replacements: gemini-3-flash-preview (best benchmark score, 100%) for general coding, gemini-3.1-pro-preview for complex reasoning, gemini-3.1-flash-lite (GA 2026-05) for high-volume cost-sensitive workloads. gemini-3-pro-preview was SHUT DOWN 2026-03-09. gemini-3.1-flash-lite-preview retires 2026-05-25 — use the GA name gemini-3.1-flash-lite.",
       "models": {
+        "gemini-3.8-flash": {
+          "name": "Gemini 3.8 Flash",
+          "description": "Newest GA flash model (2026-09). Measured 2026-09-13: native function calling, two parallel calls per turn, vision, 1M context / 65K output. Half the price of gemini-3.5-flash through 2026-12-31.",
+          "context_limit": 1048576,
+          "__comment_best_for": "Recommended default (2026-09-27). Everyday coding, editing, agentic tool loops.",
+          "__comment_benchmark_status": "Capabilities MEASURED 2026-09-13 (these facts mirror the built-in row); tier S is inherited from the 3.5 line, not benchmarked.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": true,
+            "wire_protocol": "generate_content",
+            "max_tokens": 65536,
+            "max_tool_iterations": 25,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "S"
+          }
+        },
         "gemini-3.1-pro-preview": {
           "name": "Gemini 3.1 Pro Preview",
           "description": "Advanced reasoning and agentic model with 1M context. SWE-Bench 80.6%, GPQA Diamond 94.3%.",
@@ -284,7 +305,7 @@
           "name": "Gemini 3.5 Flash",
           "description": "Google's newest GA flash model (2026) — most intelligent flash tier for agentic and coding tasks. Supersedes gemini-3-flash-preview. 1M context, text + image + video input.",
           "context_limit": 1048576,
-          "__comment_best_for": "Recommended default. Everyday coding, editing, agentic tool loops.",
+          "__comment_best_for": "Previous default (until 2026-09-27); gemini-3.8-flash is cheaper and newer.",
           "__comment_benchmark_status": "NOT YET BENCHMARKED — profile cloned from gemini-3-flash (Tier S). Run benchmarks/llm-eval before tuning.",
           "facts": {
             "tool_mode": "native",
@@ -303,13 +324,18 @@
         }
       },
       "pricing": {
+        "gemini-3.8-flash": {
+          "input": 0.75,
+          "output": 3.75,
+          "__comment": "Google list price (ai.google.dev/gemini-api/docs/pricing, checked 2026-09-27): $0.75 in / $3.75 out per 1M through 2026-12-31, then $1.50 / $7.50 from 2027-01-01."
+        },
         "gemini-3.1-pro-preview": {
           "input": 2,
           "output": 12
         },
         "gemini-3.1-flash-lite": {
-          "input": 0.1,
-          "output": 0.4
+          "input": 0.25,
+          "output": 1.5
         },
         "gemma-4-31b-it": {
           "input": 0,
@@ -322,9 +348,9 @@
           "__comment": "Free tier via Gemini API; self-host for unlimited"
         },
         "gemini-3.5-flash": {
-          "input": 0.5,
-          "output": 3,
-          "__comment": "approximate — verify against current Gemini pricing"
+          "input": 1.5,
+          "output": 9,
+          "__comment": "Google list price, checked 2026-09-27 (was 0.5/3, never verified)."
         }
       },
       "facts": {

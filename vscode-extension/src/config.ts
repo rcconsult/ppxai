@@ -53,12 +53,17 @@ const DEFAULT_CONFIG: PpxaiConfig = {
             name: "Google Gemini",
             base_url: "https://generativelanguage.googleapis.com/v1beta/openai",
             api_key_env: "GEMINI_API_KEY",
-            default_model: "gemini-3.5-flash",
-            coding_model: "gemini-3.5-flash",
+            default_model: "gemini-3.8-flash",
+            coding_model: "gemini-3.8-flash",
             models: {
+                "gemini-3.8-flash": {
+                    name: "Gemini 3.8 Flash",
+                    description: "Default chat model",
+                    facts: { wire_protocol: "generate_content", tool_mode: "native", max_tokens: 65536 }
+                },
                 "gemini-3.5-flash": {
                     name: "Gemini 3.5 Flash",
-                    description: "Default chat model",
+                    description: "Previous default chat model",
                     facts: { wire_protocol: "chat_completions", tool_mode: "native", max_tokens: 65536 }
                 },
                 "gemini-3.1-pro-preview": {
@@ -73,9 +78,10 @@ const DEFAULT_CONFIG: PpxaiConfig = {
                 }
             },
             pricing: {
-                "gemini-3.5-flash": { input: 0.5, output: 3.0 },
+                "gemini-3.8-flash": { input: 0.75, output: 3.75 },  // doubles 2027-01-01
+                "gemini-3.5-flash": { input: 1.5, output: 9.0 },
                 "gemini-3.1-pro-preview": { input: 2.0, output: 12.0 },
-                "gemini-3.1-flash-lite": { input: 0.1, output: 0.4 }
+                "gemini-3.1-flash-lite": { input: 0.25, output: 1.5 }
             }
         },
         // Deprecated as a chat provider 2026-09-27; removal in a later release.

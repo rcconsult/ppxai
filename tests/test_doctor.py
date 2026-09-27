@@ -298,7 +298,9 @@ class TestAuditUserConfig:
         warn = result["default_warnings"][0]
         assert warn["provider"] == "gemini"
         assert warn["default_model"] == "gemini-2.5-flash"
-        assert warn["recommended_default"] == "gemini-3.5-flash"
+        # Read from the table, not a literal: the pairing with the shipped
+        # config is pinned by test_recommended_default_matches_the_example_config.
+        assert warn["recommended_default"] == RECOMMENDED_DEFAULTS["gemini"]
 
     def test_comment_keys_excluded_from_model_list(self, tmp_path):
         # __comment_deprecations and similar keys must be filtered.

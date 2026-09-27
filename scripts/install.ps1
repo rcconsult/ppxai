@@ -397,13 +397,17 @@ function Get-ConfigTemplate {
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-3.5-flash",
+      "default_model": "gemini-3.8-flash",
       "coding_model": "gemini-3.1-pro-preview",
       "__comment_models": "The 2.5 line (2.5-flash / 2.5-pro) sunsets from 2026-10-16 - ai.google.dev deprecations. These are its successors; prices match ppxai-config.example.json, which is the reviewed source. See debt Item 54.",
       "models": {
+        "gemini-3.8-flash": {
+          "name": "Gemini 3.8 Flash",
+          "description": "Default. Newest GA flash; half the price of 3.5 Flash through 2026-12-31."
+        },
         "gemini-3.5-flash": {
           "name": "Gemini 3.5 Flash",
-          "description": "Fast model, best price/performance"
+          "description": "Previous default flash model"
         },
         "gemini-3.1-pro-preview": {
           "name": "Gemini 3.1 Pro (preview)",
@@ -415,9 +419,10 @@ function Get-ConfigTemplate {
         }
       },
       "pricing": {
-        "gemini-3.5-flash": {"input": 0.50, "output": 3.00},
+        "gemini-3.8-flash": {"input": 0.75, "output": 3.75},
+        "gemini-3.5-flash": {"input": 1.50, "output": 9.00},
         "gemini-3.1-pro-preview": {"input": 2.00, "output": 12.00},
-        "gemini-3.1-flash-lite": {"input": 0.10, "output": 0.40}
+        "gemini-3.1-flash-lite": {"input": 0.25, "output": 1.50}
       },
       "capabilities": {
         "web_search": true,
@@ -556,7 +561,7 @@ function Get-EnvTemplate {
 # GOOGLE GEMINI (Recommended default chat provider - free tier available)
 # =============================================================================
 # Google's multimodal AI with web search grounding.
-# Models: gemini-3.5-flash, gemini-3.1-pro-preview, gemini-3.1-flash-lite
+# Models: gemini-3.8-flash (default), gemini-3.5-flash, gemini-3.1-pro-preview, gemini-3.1-flash-lite
 #
 # GEMINI_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 

@@ -553,11 +553,20 @@ RECOMMENDED_NEW_MODELS: list[dict[str, str]] = [
     },
     {
         "provider": "gemini",
+        "model": "gemini-3.8-flash",
+        "reason": (
+            "Newest GA Gemini flash; recommended default for the Gemini "
+            "provider since 2026-09-27. Native tools, parallel calls, vision "
+            "and 1M context measured 2026-09-13. $0.75/$3.75 per MTok through "
+            "2026-12-31 -- half of gemini-3.5-flash -- then $1.50/$7.50."
+        ),
+    },
+    {
+        "provider": "gemini",
         "model": "gemini-3.5-flash",
         "reason": (
-            "Newest Gemini flash (GA 2026). Google's most intelligent flash "
-            "tier for agentic + coding work; supersedes gemini-3-flash-preview. "
-            "1M context, vision. Recommended default for the Gemini provider."
+            "Previous default (GA 2026), still supported. Costs more than "
+            "gemini-3.8-flash ($1.50/$9.00 per MTok)."
         ),
     },
     {
@@ -603,7 +612,7 @@ RECOMMENDED_NEW_MODELS: list[dict[str, str]] = [
 # Used both for "your default_model is deprecated, switch to this"
 # warnings and as the suggested default for a fresh config.
 RECOMMENDED_DEFAULTS: dict[str, str] = {
-    "gemini": "gemini-3.5-flash",     # Updated 2026-05-31 (was gemini-3-flash-preview; superseded by 3.5-flash GA)
+    "gemini": "gemini-3.8-flash",     # 2026-09-27 (owner decision): newest GA flash, half 3.5-flash's price
     "openai": "gpt-5.6-terra",        # 2026-08-31: parity with gpt-5.5 at 40% price
     "perplexity": "perplexity/sonar",  # ADR 0012: only Sonar on the surviving wire
     "nvidia": "moonshotai/kimi-k3",  # 2026-08-31: the qwen line hit EOL (410)

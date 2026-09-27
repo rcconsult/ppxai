@@ -341,8 +341,7 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   not measured**: same family, same parser, same endpoint as 3.5/3.6,
   pending a 3.8 benchmark run of its own — the source comment says so,
   so the next reader does not mistake inheritance for a measurement. The
-  existing vision/native test pins both 3.8 ids. This is the one
-  model-catalog change in the release. (`f5d2c078`)
+  existing vision/native test pins both 3.8 ids. (`f5d2c078`)
 
 - **The context-window badge no longer overshoots 100% in tool loops.**
   Measured on a live coder session (2026-09-16): a 13-request tool-loop
@@ -601,6 +600,22 @@ guesses. Tests pin both.
 
 ## Changed
 
+- **Gemini's default model is now `gemini-3.8-flash`** (owner decision,
+  2026-09-27): the newest generally available Gemini Flash model, at half
+  the price of `gemini-3.5-flash` through 2026-12-31 ($0.75 / $3.75 per 1M
+  tokens, then $1.50 / $7.50 from 2027-01-01). Capabilities were measured
+  2026-09-13; its tier is inherited from the 3.5 line, not benchmarked. It
+  changes in all six places the default is written: both shipped configs,
+  both install scripts, VSCode's built-in config and `/doctor`'s recommended
+  default. Existing configs keep their own default. Two shipped prices were
+  wrong and are corrected: `gemini-3.5-flash` is $1.50 / $9.00 (was
+  $0.50 / $3.00) and `gemini-3.1-flash-lite` is $0.25 / $1.50 (was
+  $0.10 / $0.40), so earlier cost estimates on those models were low.
+
+- **web_search's Gemini backend in the shipped config moves off
+  `gemini-2.5-flash`**, which Google shuts down on 2026-10-16. Debt Item 54
+  fixed the code default, but `ppxai-config.json` overrode it. It is now
+  `gemini-3.6-flash`, matching the code and the example config.
 - **Tool calls collapse into one strip per assistant turn** (web and
   VSCode). The transcript already grouped tool calls, but the engine
   emits one `TOOL_GROUP_START` per tool-loop **iteration**, and an
