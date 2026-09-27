@@ -35,7 +35,6 @@ from ..rich.themes import (
 )
 from ..rich.ui import (  # noqa: F401 — re-exported via commands/__init__.py
     console,
-    display_sessions,
     display_welcome,
     select_model,
     select_provider,

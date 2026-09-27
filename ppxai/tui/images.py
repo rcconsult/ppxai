@@ -11,7 +11,6 @@ Uses terminal capability detection to choose the best protocol.
 
 import base64
 import io
-import sys
 from pathlib import Path
 
 # Optional image library (not in any extras group)
@@ -346,24 +345,3 @@ def display_image(
     return None
 
 
-def print_image(
-    path: Path,
-    max_width: int | None = None,
-    max_height: int | None = None,
-) -> bool:
-    """Print an image to the terminal.
-
-    Args:
-        path: Path to image file
-        max_width: Maximum width
-        max_height: Maximum height
-
-    Returns:
-        True if image was displayed, False otherwise
-    """
-    escape_seq = display_image(path, max_width, max_height)
-    if escape_seq:
-        sys.stdout.write(escape_seq)
-        sys.stdout.flush()
-        return True
-    return False

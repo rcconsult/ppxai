@@ -29,7 +29,6 @@ from .handler import (
     CommandHandler,
     ConsentValidator,
     console,
-    display_sessions,
     display_welcome,
     get_api_key,
     get_base_url,
@@ -55,7 +54,6 @@ __all__ = [
     # Re-exports for test compatibility
     "select_model",
     "select_provider",
-    "display_sessions",
     "display_welcome",
     "get_coding_model",
     "get_api_key",

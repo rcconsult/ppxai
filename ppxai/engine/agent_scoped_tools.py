@@ -43,10 +43,6 @@ logger = get_logger("tui")
 _SHELL_TOOL_NAMES = SHELL_TOOL_NAMES
 
 
-class ToolDenied(Exception):
-    """Raised when a run attempts a tool outside its capability grant."""
-
-
 class ScopedToolManager:
     """Allowlist-scoped view over a base ToolManager (AC-1 seam).
 

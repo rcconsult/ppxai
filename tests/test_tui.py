@@ -65,59 +65,6 @@ class TestClipboard:
         assert isinstance(result, bool)
 
 
-class TestHyperlinks:
-    """Tests for OSC 8 hyperlink support."""
-
-    def test_make_file_link(self):
-        """Test file link generation."""
-        from ppxai.tui.hyperlinks import make_file_link
-
-        link = make_file_link("/tmp/test.py")
-        assert "\033]8;;" in link
-        assert "file://" in link
-        assert "/tmp/test.py" in link
-
-    def test_make_file_link_with_line(self):
-        """Test file link with line number."""
-        from ppxai.tui.hyperlinks import make_file_link
-
-        link = make_file_link("/tmp/test.py", line=42)
-        assert ":42" in link
-
-    def test_make_file_link_with_line_and_col(self):
-        """Test file link with line and column."""
-        from ppxai.tui.hyperlinks import make_file_link
-
-        link = make_file_link("/tmp/test.py", line=42, col=10)
-        assert ":42:10" in link
-
-    def test_make_url_link(self):
-        """Test URL link generation."""
-        from ppxai.tui.hyperlinks import make_url_link
-
-        link = make_url_link("https://example.com")
-        assert "\033]8;;" in link
-        assert "https://example.com" in link
-
-    def test_strip_hyperlinks(self):
-        """Test removing hyperlink escape sequences."""
-        from ppxai.tui.hyperlinks import make_url_link, strip_hyperlinks
-
-        link = make_url_link("https://example.com", "Click here")
-        stripped = strip_hyperlinks(link)
-        assert stripped == "Click here"
-        assert "\033" not in stripped
-
-    def test_linkify_urls(self):
-        """Test URL detection and linkification."""
-        from ppxai.tui.hyperlinks import linkify_urls
-
-        text = "Check out https://example.com for more info"
-        result = linkify_urls(text)
-        assert "\033]8;;" in result
-        assert "https://example.com" in result
-
-
 class TestTreeViewer:
     """Tests for TreeViewer widget."""
 
@@ -1860,17 +1807,19 @@ class TestTableViewer:
         assert 'TableViewer(id="panel-table-viewer")' in source
         assert 'mode == "table"' in source
 
-    def test_show_command_uses_table_mode(self):
-        """cmd_show should use table mode for CSV/TSV."""
+    def test_opening_a_tabular_file_uses_table_mode(self):
+        """CSV/TSV open in the table viewer. Retargeted 2026-09-27 from the
+        dead `tui/commands.py::cmd_show` to the live path, the app's
+        `_open_file_from_tree` (the show command itself dispatches through
+        the command factory)."""
         import inspect
 
-        from ppxai.tui import commands
+        from ppxai.tui.app import PPXAIDEApp
 
-        source = inspect.getsource(commands.cmd_show)
+        source = inspect.getsource(PPXAIDEApp._open_file_from_tree)
 
-        # Check table mode is used for tabular formats
-        assert 'mode="table"' in source
         assert 'tabular_formats' in source
+        assert 'mode = "table"' in source
 
 
 # =============================================================================

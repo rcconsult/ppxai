@@ -1037,15 +1037,6 @@ class SessionInfo:
 
 
 @dataclass
-class ToolCallInfo:
-    """Information about a tool call."""
-    tool_name: str
-    arguments: dict[str, Any]
-    result: str | None = None
-    error: str | None = None
-
-
-@dataclass
 class AgentBeatState:
     """Structured per-iteration heartbeat state for the agent tool loop (P0, v1.18.0).
 

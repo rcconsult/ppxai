@@ -1257,10 +1257,6 @@ def shipped_facts_for_model(
     return unmeasured if unmeasured is not None else UNMEASURED
 
 
-
-
-
-
 def can_drive_a_tool_loop(facts: ModelFacts) -> bool:
     """Whether a model can run a tool loop AT ALL — any strategy.
 
@@ -1280,10 +1276,6 @@ def can_drive_a_tool_loop(facts: ModelFacts) -> bool:
     one.
     """
     return facts.tool_mode in ("native", "prompt_based", "auto")
-
-
-
-
 
 
 def is_unmeasured(
@@ -1340,29 +1332,6 @@ LEGACY_KEY_TRANSLATIONS: dict[str, Any] = {
                    "auto": "chat_completions"}.get(v, "chat_completions"),
     ),
 }
-
-
-def translate_legacy(block: dict[str, Any]) -> dict[str, Any]:
-    """Map a legacy `capabilities`/`tool_calling` block onto fact keys.
-
-    Used by `/doctor` to compute a rewrite. **Not** used when resolving
-    operator config — see `LEGACY_KEY_TRANSLATIONS`.
-    """
-    out: dict[str, Any] = {}
-    for key, value in (block or {}).items():
-        if key.startswith("__comment"):
-            continue
-        if key in LEGACY_KEY_TRANSLATIONS:
-            new_key, convert = LEGACY_KEY_TRANSLATIONS[key]
-            out[new_key] = convert(value)
-        elif key in FACT_FIELDS or key in PROVIDER_FACT_FIELDS:
-            out[key] = value
-    return out
-
-
-def legacy_keys_in(block: dict[str, Any]) -> list[str]:
-    """Legacy keys present in `block` — what `/doctor` reports and rewrites."""
-    return [k for k in (block or {}) if k in LEGACY_KEY_TRANSLATIONS]
 
 
 def supports_vision(model: str) -> bool:

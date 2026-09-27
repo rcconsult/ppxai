@@ -1285,7 +1285,7 @@ BASELINE_TESTS_DIR = {
     "tests/test_tool_messages.py": 3,
     "tests/test_tool_security.py": 4,
     "tests/test_tool_usage.py": 6,
-    "tests/test_tui.py": 189,
+    "tests/test_tui.py": 183,
     "tests/test_tui_app_integration.py": 36,
     "tests/test_tui_edge_cases.py": 19,
     "tests/test_tui_keyboard_navigation.py": 16,

@@ -2,7 +2,6 @@
 UI/display functions for the ppxai terminal interface.
 """
 
-import json
 import sys
 
 from rich.console import Console
@@ -11,8 +10,7 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
 
-from ..config import PROVIDERS, USAGE_FILE, get_provider_config
-from ..prompts import SPEC_GUIDELINES, SPEC_TEMPLATES
+from ..config import PROVIDERS, get_provider_config
 
 # Initialize Rich console
 console = Console()
@@ -88,20 +86,6 @@ def display_welcome(commands):
 
     console.print(Panel(Markdown("\n".join(lines)),
                         title="Welcome", border_style="cyan"))
-
-
-def display_spec_help(spec_type: str | None = None):
-    """Display specification guidelines or specific template."""
-    if not spec_type:
-        # Show general guidelines
-        console.print(Panel(Markdown(SPEC_GUIDELINES), title="Specification Guidelines", border_style="green"))
-    elif spec_type in SPEC_TEMPLATES:
-        # Show specific template
-        console.print(Panel(Markdown(SPEC_TEMPLATES[spec_type]), title=f"{spec_type.upper()} Specification Template", border_style="green"))
-    else:
-        console.print(f"[red]Unknown specification type: {spec_type}[/red]")
-        console.print("[yellow]Available types: api, cli, lib, algo, ui[/yellow]")
-        console.print("[yellow]Use /spec without arguments for general guidelines[/yellow]\n")
 
 
 def display_models(provider: str = None):
@@ -180,102 +164,5 @@ def select_provider() -> str:
     selected_provider = provider_keys[int(choice) - 1]
     console.print(f"\n[green]Selected:[/green] {PROVIDERS[selected_provider]['name']}")
     return selected_provider
-
-
-def display_sessions(sessions):
-    """Display all saved sessions in a table."""
-    if not sessions:
-        console.print("\n[yellow]No saved sessions found.[/yellow]\n")
-        return
-
-    table = Table(title="Saved Sessions", show_header=True, header_style="bold magenta")
-    table.add_column("Session Name", style="cyan")
-    table.add_column("Created", style="green")
-    table.add_column("Last Saved", style="green")
-    table.add_column("Messages", style="yellow", justify="right")
-
-    for session in sessions:
-        created = session.get('created_at', '')
-        created = created[:19] if created and created != "Unknown" else "Unknown"
-        saved = session.get('saved_at', '')
-        saved = saved[:19] if saved and saved != "Unknown" else "Unknown"
-        table.add_row(
-            session.get('name', session.get('session_name', 'Unknown')),
-            created,
-            saved,
-            str(session.get('message_count', 0))
-        )
-
-    console.print(table)
-    console.print()
-
-
-def display_usage(usage):
-    """Display current session usage statistics."""
-    table = Table(title="Current Session Usage", show_header=True, header_style="bold magenta")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", style="green", justify="right")
-
-    table.add_row("Total Tokens", f"{usage['total_tokens']:,}")
-    table.add_row("Prompt Tokens", f"{usage['prompt_tokens']:,}")
-    table.add_row("Completion Tokens", f"{usage['completion_tokens']:,}")
-    table.add_row("Estimated Cost", f"${usage['estimated_cost']:.4f}")
-
-    console.print()
-    console.print(table)
-    console.print()
-
-
-def display_global_usage():
-    """Display global usage statistics from all time."""
-    if not USAGE_FILE.exists():
-        console.print("\n[yellow]No usage data available yet.[/yellow]\n")
-        return
-
-    with open(USAGE_FILE, 'r', encoding="utf-8") as f:
-        usage_data = json.load(f)
-
-    if not usage_data:
-        console.print("\n[yellow]No usage data available yet.[/yellow]\n")
-        return
-
-    table = Table(title="Global Usage Statistics", show_header=True, header_style="bold magenta")
-    table.add_column("Date", style="cyan")
-    table.add_column("Model", style="green")
-    table.add_column("Requests", style="yellow", justify="right")
-    table.add_column("Total Tokens", style="yellow", justify="right")
-
-    for date in sorted(usage_data.keys(), reverse=True)[:7]:  # Last 7 days
-        for model, stats in usage_data[date].items():
-            table.add_row(
-                date,
-                model,
-                str(stats['requests']),
-                f"{stats['total_tokens']:,}"
-            )
-
-    console.print()
-    console.print(table)
-    console.print("\n[dim]Showing last 7 days of usage[/dim]\n")
-
-
-def display_tools_table(tools_list):
-    """Display available tools in a table."""
-    table = Table(title="Available Tools", show_header=True, header_style="bold cyan")
-    table.add_column("Tool", style="green")
-    table.add_column("Source", style="yellow")
-    table.add_column("Description", style="white")
-
-    for tool_info in tools_list:
-        desc = tool_info['description']
-        table.add_row(
-            tool_info['name'],
-            tool_info['source'],
-            desc[:60] + "..." if len(desc) > 60 else desc
-        )
-
-    console.print()
-    console.print(table)
-    console.print()
 
 
