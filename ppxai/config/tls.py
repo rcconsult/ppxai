@@ -250,8 +250,10 @@ def _build_context(verify: VerifyValue) -> ssl.SSLContext:
     connections is the documented pattern; building one per request was
     re-parsing the whole OS trust store (~10 ms) at four per-request
     sites in web.py alone. A changed file at the SAME path is
-    deliberately not detected — call `reset_tls_context_cache()`
-    (tests, config reload) for that.
+    deliberately not detected: it takes a process restart. Nothing in
+    production calls `reset_tls_context_cache()` (only tests do), and
+    config reload must not -- the server reloads config per request, so
+    a reset there would rebuild the context constantly.
     """
     ctx = _system_roots_context()
     if verify is False:
@@ -264,7 +266,8 @@ def _build_context(verify: VerifyValue) -> ssl.SSLContext:
 
 
 def reset_tls_context_cache() -> None:
-    """Drop memoised contexts (config reload, tests)."""
+    """Drop memoised contexts. Tests only: production relies on a restart
+    to pick up a CA file replaced at the same path (see _build_context)."""
     _build_context.cache_clear()
 
 
