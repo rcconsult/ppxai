@@ -40,8 +40,12 @@ def calculate_tool_cost(
         return input_cost + output_cost
 
     elif pricing_model == "per_query":
-        # Gemini Grounding: per-query pricing
+        # Gemini grounding: `per_query` is USD per query, as the key says and
+        # every shipped config states ("$35/1000 queries = $0.035 per
+        # query"). Until v1.19.3 this divided by 1000 as if the value were a
+        # per-thousand price, so each search was logged at 1/1000 of its
+        # cost ($0.000035) and /cost under-reported Gemini grounding.
         per_query_price = pricing.get("per_query", 0.0)
-        return (query_count / 1000) * per_query_price if per_query_price else 0.0
+        return query_count * per_query_price if per_query_price else 0.0
 
     return 0.0

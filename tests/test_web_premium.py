@@ -4,7 +4,9 @@ Tests for premium web search tools (v1.13.4).
 Tests Perplexity Sonar API, Gemini Google Search Grounding, and fallback logic.
 """
 
+import json
 import os
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -162,11 +164,19 @@ class TestCostCalculation:
     def test_gemini_cost_per_query(self):
         """Test Gemini per-query pricing calculation."""
         with patch.object(pricing_module, "get_tool_pricing") as mock_pricing:
-            mock_pricing.return_value = {"per_query": 14.00, "model": "per_query"}
-            # 5 queries
+            mock_pricing.return_value = {"per_query": 0.035, "model": "per_query"}
+            # 5 queries at $0.035 each. `per_query` is a per-query price; it
+            # was divided by 1000 until v1.19.3 (1000x under-report).
             cost = pricing_module.calculate_tool_cost("gemini_grounding", query_count=5)
-            # (5 / 1000) * 14.00 = 0.07
-            assert cost == pytest.approx(0.07)
+            assert cost == pytest.approx(0.175)
+
+    def test_the_shipped_gemini_price_is_per_query(self):
+        """The shipped config's value, read the way the backend reads it: one
+        grounded search costs $0.035 (Google: $35 per 1,000)."""
+        shipped = json.loads((Path(__file__).resolve().parents[1] / "ppxai-config.json").read_text(encoding="utf-8"))
+        price = shipped["tools"]["web_search"]["pricing"]["gemini_grounding"]
+        with patch.object(pricing_module, "get_tool_pricing", return_value=price):
+            assert pricing_module.calculate_tool_cost("gemini_grounding", query_count=1) == pytest.approx(0.035)
 
     def test_cost_calculation_no_pricing_config(self):
         """Test cost calculation returns 0 when no pricing config."""
@@ -251,7 +261,7 @@ class TestGeminiSearch:
                 mock_client.post = AsyncMock(return_value=MagicMock(json=MagicMock(return_value=mock_response)))
 
                 with patch.object(pricing_module, "get_tool_pricing") as mock_pricing:
-                    mock_pricing.return_value = {"per_query": 14.00, "model": "per_query"}
+                    mock_pricing.return_value = {"per_query": 0.035, "model": "per_query"}
 
                     content, citations, usage = await gemini_backend.search_gemini(
                         "test query", num_results=2
@@ -260,7 +270,7 @@ class TestGeminiSearch:
                     assert content == "Test answer"
                     assert citations == ["https://example.com", "https://test.com"]
                     assert usage.provider == "gemini"
-                    assert usage.estimated_cost == pytest.approx(0.014)
+                    assert usage.estimated_cost == pytest.approx(0.035)
 
     @pytest.mark.asyncio
     async def test_gemini_search_no_api_key(self):

@@ -11,6 +11,8 @@ from unittest.mock import patch
 
 import pytest
 
+from ppxai.config import get_tool_pricing
+from ppxai.engine.search.pricing import calculate_tool_cost
 from ppxai.engine.types import ToolUsage, UsageStats
 
 
@@ -276,19 +278,14 @@ class TestPremiumWebSearchIntegration:
             pytest.skip("search.pricing module not available")
 
     def test_cost_calculation_per_query(self):
-        """Test cost calculation for per-query pricing (Gemini)."""
-        try:
-            from ppxai.engine.search.pricing import calculate_tool_cost
-            # Gemini: $14 per 1000 queries = $0.014 per query
-            cost = calculate_tool_cost(
-                "gemini",
-                query_count=1
-            )
-            # Cost should be non-negative and reasonable for Gemini
-            assert cost >= 0
-            assert cost < 1.0
-        except ImportError:
-            pytest.skip("search.pricing module not available")
+        """The shipped Gemini grounding price is per query, and one search
+        costs exactly that. The old form asserted only `0 <= cost < 1.0`
+        against a nonexistent "gemini" key, which passed on both the right
+        answer and the 1000x-low one this file's v1.19.3 fix corrects."""
+        price = get_tool_pricing("web_search", "gemini_grounding")["per_query"]
+        assert price == pytest.approx(0.035)
+        assert calculate_tool_cost("gemini_grounding", query_count=1) == pytest.approx(price)
+        assert calculate_tool_cost("gemini_grounding", query_count=3) == pytest.approx(3 * price)
 
     def test_session_aggregates_tool_usage(self):
         """Test session manager properly aggregates tool usage."""

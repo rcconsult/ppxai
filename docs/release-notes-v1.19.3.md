@@ -233,6 +233,14 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
 
 ## Fixed
 
+- **Gemini grounded searches were logged at 1/1000 of their cost.**
+  `tools.web_search.pricing.gemini_grounding.per_query` is a per-query
+  price ($0.035, "$35/1000 queries" in the shipped configs), but the cost
+  function divided it by 1000. Since v1.13.0 each Gemini grounded search
+  was logged at $0.000035, so `/cost` under-reported Gemini web search
+  and grounding. If you had written a per-thousand value into
+  `per_query` to compensate, divide it by 1000.
+
 - **`/cost` now counts plain `/v1/oneshot` calls and tool-free
   `/v1/agent/run` runs.** The cross-tier usage log behind `/cost` (ADR
   0008) was written by the chat path, `/task` runs and the oneshot
