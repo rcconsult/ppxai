@@ -306,9 +306,9 @@ class TestRetrieveRoute:
     def test_the_search_cost_is_recorded_under_the_oneshot_tier(self, http_client, monkeypatch):
         rt = _Route(monkeypatch)
         body = http_client.post("/v1/oneshot", json={"prompt": "Q?"}).json()
-        [ev] = rt.usage_calls
+        # Two events: the search, and the model call itself.
+        [ev] = [e for e in rt.usage_calls if e["provider"] == "perplexity"]
         assert ev["tier"] == oneshot_mod.TIER_ONESHOT
-        assert ev["provider"] == "perplexity"
         assert ev["estimated_cost"] == pytest.approx(0.004)
         assert (ev["prompt_tokens"], ev["completion_tokens"]) == (12, 34)
         assert ev["run_id"] == body["grounding"]["run_id"]

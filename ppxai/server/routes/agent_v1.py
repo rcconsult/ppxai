@@ -132,6 +132,7 @@ from .oneshot import (  # noqa: F401 — ONESHOT_SEARCH_ITERATIONS read by tests
     _grounded,
     _grounding_egress_allows_or_400,
     _record_grounding_usage,
+    _record_oneshot_usage,
     _retrieve_for_grounding,
     _validate_provider_or_400,
 )
@@ -441,6 +442,7 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
             provider.oneshot, prompt=prompt, model=auth.model,
             system=auth.system,
         )
+        _record_oneshot_usage(auth.provider, auth.model, result, owner, m.run_id)
         return result.get("content", "")
 
     registry.run_in_background(meta, _runner)

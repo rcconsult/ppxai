@@ -612,9 +612,11 @@ def build_task_runner(
             # ADR 0008 / debt Item 49: the SAME numbers, into the cross-tier
             # sink. The audit event above is per-run and lives on the run's
             # own trail, which is why `/cost` never saw it — nothing
-            # aggregates run trails. One tap here covers BOTH background
-            # tiers, because the FU unification made /v1/oneshot execute as a
-            # kind=oneshot registry run through this same builder.
+            # aggregates run trails. This tap covers `/task` runs and the
+            # oneshot SEARCH-LOOP path, which run through this builder. The
+            # tool-free oneshot paths (plain and retrieve, `/v1/oneshot` and
+            # `/v1/agent/run`) do not; they record through
+            # `server/routes/oneshot.py::_record_oneshot_usage`.
             #
             # `kind` maps 1:1 onto the sink's tier, and getattr guards it
             # because RunMetaLike declares only run_id + owner — a substitute

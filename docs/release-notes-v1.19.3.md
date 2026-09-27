@@ -205,6 +205,14 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
 
 ## Fixed
 
+- **`/cost` now counts plain `/v1/oneshot` calls and tool-free
+  `/v1/agent/run` runs.** The cross-tier usage log behind `/cost` (ADR
+  0008) was written by the chat path, `/task` runs and the oneshot
+  search-loop path only. A plain oneshot call recorded nothing, so it was
+  missing from `/cost`. The model call's tokens are now logged under the
+  oneshot tier, priced by the requested model id. The response is
+  unchanged, and an accounting failure never fails the request.
+
 - **A discarded parallel tool call now says so in the log.** When a
   model's facts row says `parallel_tool_calls=False`, `chat_with_tools`
   keeps only the first native call:

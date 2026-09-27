@@ -72,6 +72,7 @@ import ppxai.server.routes.agent_v1 as _agent_v1
 
 from ...common.logger import get_logger
 from ...config import (
+    calculate_cost,
     get_api_key,
     get_available_providers,
     get_base_url,
@@ -499,6 +500,35 @@ def _record_grounding_usage(retrieval: Retrieval, owner, run_id: str) -> None:
         pass
 
 
+def _record_oneshot_usage(
+    provider_name: str, model: str, result: dict | None, owner, run_id: str
+) -> None:
+    """Put a tool-free oneshot call's own tokens in the usage log under the
+    oneshot tier (ADR 0008). The search-loop path records through the task
+    runner; this is the plain and retrieve path, which recorded nothing, so
+    `/cost` missed every plain `/v1/oneshot` and tool-free `/v1/agent/run`.
+    Priced by the requested model id, the key the pricing table uses. Never
+    fails the request."""
+    usage = (result or {}).get("usage") or {}
+    try:
+        prompt_tokens = int(usage.get("prompt_tokens") or 0)
+        completion_tokens = int(usage.get("completion_tokens") or 0)
+        record_usage(
+            provider=provider_name,
+            model=model,
+            tier=TIER_ONESHOT,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            estimated_cost=calculate_cost(
+                prompt_tokens, completion_tokens, model, provider_name
+            ),
+            owner=owner,
+            run_id=run_id,
+        )
+    except Exception:  # noqa: BLE001 — accounting must never fail a request
+        pass
+
+
 def _grounding_record(retrieval: Retrieval, run_id: str) -> OneshotGrounding:
     """The response's optional `grounding` record for a retrieval-grounded
     call, every field set explicitly (the route serializes with
@@ -772,6 +802,7 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
             )
         )
         envelope.update(result or {})
+        _record_oneshot_usage(provider_name, model, result, owner, m.run_id)
         return (result or {}).get("content", "")
 
     registry.run_in_background(meta, _runner)
