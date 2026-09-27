@@ -30,8 +30,11 @@ import base64
 import os
 from typing import Any
 
+import httpx
+
 from ..common.logger import get_logger
 from ..config import get_vision_model_config
+from ..config.tls import tls_verify
 from .artifact_projector import ContextAttachmentProjector
 from .types import ImageAttachmentRef, OfficeAttachmentRef, PdfAttachmentRef
 from .uploaded_file import (
@@ -691,6 +694,10 @@ def caption_image(
             base_url=endpoint if endpoint.endswith("/v1") else f"{endpoint}/v1",
             api_key=api_key,
             timeout=float(cfg.get("timeout", 30)),
+            # The shared TLS policy and its cached context, like every
+            # provider -- the SDK's own default is a fresh certifi context
+            # per client (~0.75s of CPU under OpenSSL 3.0).
+            http_client=httpx.Client(verify=tls_verify()),
         )
         response = client.chat.completions.create(
             model=cfg["model"],

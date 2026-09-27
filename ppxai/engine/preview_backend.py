@@ -43,6 +43,8 @@ from pathlib import Path
 
 import httpx
 
+from ..config.tls import tls_verify
+
 logger = logging.getLogger(__name__)
 
 
@@ -207,7 +209,10 @@ async def wait_for_port(port: int, timeout: float = 10.0) -> bool:
     url = f"http://localhost:{port}/"
     while time.time() < deadline:
         try:
-            async with httpx.AsyncClient(timeout=1.0) as client:
+            # verify=tls_verify(): the cached context. httpx's default builds
+            # a fresh certifi context per client -- ~0.75s of CPU under
+            # OpenSSL 3.0, on EVERY 0.2s poll, even for plain http.
+            async with httpx.AsyncClient(timeout=1.0, verify=tls_verify()) as client:
                 await client.get(url)
                 return True
         except Exception:

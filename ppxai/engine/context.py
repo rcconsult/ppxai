@@ -22,6 +22,7 @@ import pyperclip
 
 from ..common.logger import get_logger
 from ..config import get_bootstrap_files, get_max_injection_size, is_bootstrap_enabled
+from ..config.tls import tls_verify
 from .bootstrap import BootstrapContext, find_bootstrap_files_by_scope
 
 logger = get_logger("tui")
@@ -720,7 +721,8 @@ class ContextInjector:
             headers = {
                 'User-Agent': 'Mozilla/5.0 (compatible; ppxai/1.14.2; +https://github.com/rcconsult/ppxai)'
             }
-            with httpx.Client(timeout=30.0, follow_redirects=True) as client:
+            with httpx.Client(timeout=30.0, follow_redirects=True,
+                              verify=tls_verify()) as client:
                 response = client.get(url, headers=headers)
                 response.raise_for_status()
                 content = response.text

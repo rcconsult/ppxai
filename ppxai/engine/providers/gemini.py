@@ -307,10 +307,22 @@ class GeminiProvider(BaseProvider):
         # shared resolver (env SSL_VERIFY/SSL_CERT_FILE, then network.ssl.*).
         # tls_verify() returns False (off) or an SSLContext — never True — so
         # the explicit httpx client is always supplied.
+        #
+        # The same (cached) context must ALSO go in client_args and
+        # async_client_args ("ssl" is the websocket key): google-genai builds
+        # its own async + websocket contexts from certifi whenever those
+        # carry none, even with httpx_client set. That was two
+        # create_default_context(cafile=certifi) calls per provider -- ~0.75s
+        # of CPU EACH under OpenSSL 3.0 (the Windows CPython build), 2.0s of
+        # a 2.76s server startup -- and it left async/websocket calls on
+        # certifi instead of the resolved TLS policy.
+        verify = tls_verify()
         self.client = genai.Client(
             api_key=api_key,
             http_options=genai_types.HttpOptions(
-                httpx_client=httpx.Client(verify=tls_verify())
+                httpx_client=httpx.Client(verify=verify),
+                client_args={"verify": verify},
+                async_client_args={"verify": verify, "ssl": verify},
             ),
         )
 

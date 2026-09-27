@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 
 from ...common.logger import get_logger
 from ...common.preview import inject_reload_script, resolve_preview_path, rewrite_asset_paths
+from ...config.tls import tls_verify
 from ...engine.preview_backend import (  # noqa: F401 — patched/read by tests
     PreviewBackendError,
     start_proxied_backend,
@@ -261,7 +262,9 @@ async def preview_proxy_passthrough(
         headers.pop(h, None)
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        # verify=tls_verify(): the cached context, not a fresh certifi one per
+        # proxied request (~0.75s of CPU each under OpenSSL 3.0).
+        async with httpx.AsyncClient(timeout=30.0, verify=tls_verify()) as client:
             response = await client.request(
                 method=request.method,
                 url=target_url,
