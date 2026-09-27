@@ -474,13 +474,26 @@ class _PpxaiServer(uvicorn.Server):
     """
 
     _loop: asyncio.AbstractEventLoop | None = None
+    _first_signal_at: float | None = None
+
+    #: A repeat within this window is the SAME stop delivered twice, not a
+    #: request to force: a terminal's Ctrl+C reaches the whole process group,
+    #: and the PyInstaller bootloader also forwards it to this child
+    #: (`bootloader_ignore_signals=False` in ppxai-server.spec).
+    DUPLICATE_SIGNAL_S = 0.5
 
     async def serve(self, sockets=None):
         self._loop = asyncio.get_running_loop()
         await super().serve(sockets)
 
     def handle_exit(self, sig, frame):
+        now = time.monotonic()
         first = not self.should_exit
+        if first:
+            self._first_signal_at = now
+        elif (self._first_signal_at is not None
+              and now - self._first_signal_at < self.DUPLICATE_SIGNAL_S):
+            return
         super().handle_exit(sig, frame)
         try:
             name = signal.Signals(sig).name
@@ -556,6 +569,7 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
         server.should_exit = True
 
     # Run both server and shutdown listener concurrently
+    workers = _install_worker_executor()
     shutdown_task = asyncio.create_task(shutdown_listener())
     try:
         await server.serve()
@@ -565,7 +579,7 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
             await shutdown_task
         except asyncio.CancelledError:
             pass
-        await _release_worker_threads(0.0 if server.force_exit else grace_s)
+        await _release_worker_threads(workers, 0.0 if server.force_exit else grace_s)
 
 
 #: Set when provider calls were still running in worker threads at shutdown.
@@ -573,22 +587,43 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
 _workers_hung = False
 
 
-async def _release_worker_threads(grace_s: float) -> None:
-    """Wait at most `grace_s` for `asyncio.to_thread` work, then let go.
+def _install_worker_executor() -> concurrent.futures.ThreadPoolExecutor:
+    """Give the running loop a default executor this module holds.
 
-    Provider calls run in the loop's default executor. `asyncio.run` joins
-    it without a limit on exit (and the interpreter joins its threads again
-    at exit), so a call that never returns kept the process alive after the
-    server had stopped. `shutdown_default_executor(timeout=)` is 3.12+ only;
-    `wait_for` bounds it on every supported Python (>= 3.10).
+    `asyncio.to_thread` (every provider call) runs on the loop's default
+    executor. Owning it lets shutdown wait for it with a real bound instead
+    of through `loop.shutdown_default_executor()`, which on Python 3.10/3.11
+    ends in an UNBOUNDED `thread.join()` on the loop thread, so no
+    `wait_for` around it could ever time out (found on macOS 3.11).
+    """
+    executor = concurrent.futures.ThreadPoolExecutor(thread_name_prefix="ppxai-worker")
+    asyncio.get_running_loop().set_default_executor(executor)
+    return executor
+
+
+async def _release_worker_threads(executor: concurrent.futures.ThreadPoolExecutor,
+                                  grace_s: float) -> None:
+    """Wait at most `grace_s` for `executor`'s work, then let go of it.
+
+    A call that never returns used to keep the process alive after the
+    server stopped: `asyncio.run` joins the default executor without a
+    limit on exit. The join here runs in a daemon thread the loop polls, so
+    the bound holds on every supported Python (>= 3.10).
     """
     global _workers_hung
+    joined = threading.Event()
+
+    def _join():
+        executor.shutdown(wait=True)
+        joined.set()
+
+    threading.Thread(target=_join, name="ppxai-worker-join", daemon=True).start()
     loop = asyncio.get_running_loop()
-    try:
-        await asyncio.wait_for(loop.shutdown_default_executor(), timeout=max(grace_s, 0.05))
+    deadline = loop.time() + max(grace_s, 0.05)
+    while not joined.is_set() and loop.time() < deadline:
+        await asyncio.sleep(0.05)
+    if joined.is_set():
         return
-    except asyncio.TimeoutError:
-        pass
     _workers_hung = True
     _warn_console(
         f"Provider call(s) still running {grace_s:.0f}s after shutdown; "

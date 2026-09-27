@@ -279,7 +279,14 @@ exe = EXE(
     [],
     name='ppxai-server',
     debug=False,
-    bootloader_ignore_signals=True,
+    # False (the default, as in the other three specs): the onefile
+    # bootloader is the PID an operator sees, and with True it swallowed
+    # SIGTERM without forwarding it, so `kill <pid>` or a systemd stop did
+    # nothing, and a SIGKILL orphaned the Python child on its port (found on
+    # WSL, 2026-09-28). Forwarding can deliver a terminal's Ctrl+C twice (to
+    # the group and via the bootloader); the server treats a repeat within
+    # 0.5 s as the same stop. POSIX only; Windows ignores this option.
+    bootloader_ignore_signals=False,
     strip=False,
     upx=False,
     upx_exclude=[],

@@ -94,11 +94,13 @@ _RELEASE_CHILD = textwrap.dedent("""
     block = threading.Event()
 
     async def main():
-        loop = asyncio.get_running_loop()
+        workers = h._install_worker_executor()  # as _run_server_with_graceful_shutdown does
         if hang:
-            loop.run_in_executor(None, block.wait)  # never returns
+            asyncio.ensure_future(asyncio.to_thread(block.wait))  # never returns
             await asyncio.sleep(0.1)
-        await h._release_worker_threads(0.5)
+        else:
+            await asyncio.to_thread(lambda: None)  # the executor has run work
+        await h._release_worker_threads(workers, 0.5)
         print("HUNG", h._workers_hung, flush=True)
 
     asyncio.run(main())
@@ -116,7 +118,10 @@ def _run_child(*args: str, timeout: float = 60) -> subprocess.CompletedProcess:
 class TestWorkerThreadsAreReleased:
     def test_a_hung_call_no_longer_blocks_exit(self):
         """Before the fix this child never exited: asyncio.run joined the
-        executor without a limit (the subprocess timeout would fire)."""
+        executor without a limit (the subprocess timeout would fire). The
+        first fix still hung on Python 3.10/3.11, whose
+        `shutdown_default_executor` ends in an unbounded `thread.join()`;
+        run this on 3.11 too (macOS did)."""
         started = time.monotonic()
         proc = _run_child("hang")
         assert proc.returncode == 0, proc.stderr
@@ -158,13 +163,13 @@ _SERVER_CHILD = textwrap.dedent("""
         return {}
 
     @app.post("/ctrl-c")
-    async def ctrl_c(times: int = 1):
+    async def ctrl_c(times: int = 1, gap: float = 1.0):
         # Ctrl+C as the process sees it (SIGINT to itself) -- works on
         # Windows too, where a parent cannot signal a child this way.
         def fire():
             for _ in range(times):
                 signal.raise_signal(signal.SIGINT)
-                time.sleep(1.0)
+                time.sleep(gap)
         threading.Thread(target=fire, daemon=True).start()
         return {}
 
@@ -240,6 +245,18 @@ class TestCtrlCStopsItDespiteAHungCall:
         assert exited, f"a second Ctrl+C did not force the exit:\n{out}"
         assert time.monotonic() - started < 15  # not the 120 s grace
         assert "forcing shutdown" in out
+
+    def test_a_doubled_delivery_is_one_stop_not_a_force(self):
+        """A terminal Ctrl+C reaches the process group AND is forwarded by the
+        PyInstaller bootloader, so the child can see it twice within
+        milliseconds. That must stay a graceful stop, not a forced one."""
+        proc, port = _start_hung_server(grace_s=2.0)
+        httpx.post(f"http://127.0.0.1:{port}/ctrl-c", params={"times": 2, "gap": 0.05},
+                   timeout=10)
+        exited, out = _exit_within(proc, 30)
+        assert exited, out
+        assert "forcing shutdown" not in out
+        assert "still running 2s" in out  # the graceful path, full grace
 
 
 @pytest.mark.skipif(not POSIX, reason="delivers SIGTERM to a child process")
