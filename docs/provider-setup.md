@@ -564,13 +564,15 @@ PERPLEXITY_API_KEY=pplx-xxxxx  # Uses Perplexity Sonar API
 GEMINI_API_KEY=AIza-xxxxx      # Uses Gemini with Google Search Grounding
 ```
 
-Priority (default auto-detect order): Perplexity > Gemini > DuckDuckGo (free fallback)
+Priority (default auto-detect order): Gemini > Perplexity > DuckDuckGo (free fallback).
+Gemini first since v1.19.3; before that the default was Perplexity > Gemini > DuckDuckGo.
+Set `tools.web_search.order` to `["perplexity", "gemini", "duckduckgo"]` to keep the old chain.
 
 ### Web Search Backend Ordering (v1.19.1)
 
-The Perplexity > Gemini > DuckDuckGo priority above is the **default**
-auto-detect chain (`AUTO_ORDER` in `ppxai/engine/tools/search_backends.py`).
-As of v1.19.1 it can be overridden per-scope via `resolve_web_search_backend()`:
+The Gemini > Perplexity > DuckDuckGo priority above is the **default**
+auto-detect chain (`AUTO_ORDER` in `ppxai/engine/search/resolver.py`).
+It can be overridden per-scope via `resolve_web_search_backend()`:
 
 - `tools.web_search.preferred` (global) or
   `providers.<name>.web_search.preferred` (per-provider, takes priority when

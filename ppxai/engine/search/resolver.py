@@ -57,13 +57,15 @@ BACKEND_ENV: dict[str, str | None] = {
     "duckduckgo": None,  # key-free
 }
 
-# Auto-detect order (Perplexity > Gemini > DuckDuckGo) — the historical chain,
-# and the DEFAULT for `tools.web_search.order` (see `_read_order`). It is the
-# fallback when no order is configured, not a hardcoded chain: an operator who
-# writes `"order": ["gemini", "duckduckgo", "perplexity"]` gets exactly that
-# sequence, in the one resolver both the call-time chain and the egress
-# enumeration consume.
-AUTO_ORDER: tuple[str, ...] = ("perplexity", "gemini", "duckduckgo")
+# Auto-detect order (Gemini > Perplexity > DuckDuckGo) — the DEFAULT for
+# `tools.web_search.order` (see `_read_order`). Gemini first since 2026-09-27
+# (owner decision; Gemini is the default chat provider, and Perplexity is
+# deprecated as one); before that it was Perplexity > Gemini > DuckDuckGo.
+# It is the fallback when no order is configured, not a hardcoded chain: an
+# operator who writes `"order": ["perplexity", "duckduckgo", "gemini"]` gets
+# exactly that sequence, in the one resolver both the call-time chain and the
+# egress enumeration consume.
+AUTO_ORDER: tuple[str, ...] = ("gemini", "perplexity", "duckduckgo")
 
 ALL_HOSTS: list[str] = [
     "https://duckduckgo.com/",

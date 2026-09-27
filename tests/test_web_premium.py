@@ -64,18 +64,19 @@ class TestProviderDetection:
             result = web_premium.get_premium_search_provider()
             assert result == "gemini"
 
-    def test_detect_both_keys_perplexity_priority(self):
-        """Test Perplexity takes priority when both keys set."""
+    def test_detect_both_keys_gemini_priority(self):
+        """Gemini takes priority when both keys are set (default order since 2026-09-27)."""
         with patch.dict(os.environ, {
             "PERPLEXITY_API_KEY": "test-key",
             "GEMINI_API_KEY": "test-key"
         }):
             result = web_premium.get_premium_search_provider()
-            assert result == "perplexity"
+            assert result == "gemini"
 
     def test_detect_with_global_config_auto(self):
-        """Test auto-detect with global config set to auto."""
+        """Auto with only a Perplexity key: Gemini is skipped, Perplexity used."""
         with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            os.environ.pop("GEMINI_API_KEY", None)  # restored by patch.dict
             with patch("ppxai.config.get_tool_config") as mock_config:
                 mock_config.return_value = {"preferred": "auto"}
                 result = web_premium.get_premium_search_provider()

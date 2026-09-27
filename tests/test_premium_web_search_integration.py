@@ -78,9 +78,10 @@ class TestPremiumWebSearchIntegration:
         except ImportError:
             pytest.skip("web_premium module not available")
 
-    @patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"})
-    def test_auto_detect_prefers_perplexity(self):
-        """Test auto-detection prefers Perplexity when key is available."""
+    @patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}, clear=True)
+    def test_auto_detect_uses_perplexity_without_gemini(self):
+        """Gemini is first by default (2026-09-27), but with no GEMINI_API_KEY
+        auto-detection falls through to Perplexity."""
         try:
             from ppxai.engine.tools.builtin import web_premium
             provider = web_premium.get_premium_search_provider()

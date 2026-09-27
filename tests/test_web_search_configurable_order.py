@@ -57,7 +57,9 @@ def all_keys_present():
 
 
 class TestTheOrderIsConfigurable:
-    def test_default_is_the_historical_chain(self, tools_cfg, all_keys_present):
+    def test_default_is_gemini_first(self, tools_cfg, all_keys_present):
+        """Owner decision 2026-09-27; was perplexity > gemini > duckduckgo."""
+        assert AUTO_ORDER == ("gemini", "perplexity", "duckduckgo")
         assert resolve_web_search_backend().candidates == AUTO_ORDER
 
     def test_a_configured_order_is_the_chain(self, tools_cfg, all_keys_present):
@@ -75,17 +77,17 @@ class TestTheOrderIsConfigurable:
         way to say it — otherwise a short list would silently become a pin
         and a failure would return an error instead of falling back.
         """
-        tools_cfg["order"] = ["gemini"]
+        tools_cfg["order"] = ["duckduckgo"]
         assert resolve_web_search_backend().candidates == (
+            "duckduckgo",
             "gemini",
             "perplexity",
-            "duckduckgo",
         )
 
     def test_an_unknown_id_is_warned_and_ignored(self, tools_cfg, all_keys_present):
-        tools_cfg["order"] = ["bing", "gemini"]
+        tools_cfg["order"] = ["bing", "duckduckgo"]
         res = resolve_web_search_backend()
-        assert res.candidates[0] == "gemini"
+        assert res.candidates[0] == "duckduckgo"
         assert any("bing" in w for w in res.warnings)
 
     def test_a_non_list_order_is_warned_and_ignored(self, tools_cfg, all_keys_present):
@@ -195,15 +197,18 @@ class TestGeminiFirstThenDuckDuckGoThenPerplexity:
         assert "answer" in out
 
     def test_the_configured_order_is_what_decides(self, tools_cfg, all_keys_present):
-        """Mutation guard: the DEFAULT order would try perplexity first.
+        """Mutation guard: the configured chain must differ from the DEFAULT.
 
-        Without this the two tests above could pass on the historical chain
-        by coincidence — `AUTO_ORDER` starts with perplexity, so a reversed
-        or ignored `order` key changes who is contacted first.
+        Both start with gemini (AUTO_ORDER is gemini-first since 2026-09-27),
+        so the first contact alone proves nothing: the tests above hold
+        because ORDER tries duckduckgo SECOND where the default tries
+        perplexity. Pin that difference, and a reversed order, so an ignored
+        `order` key cannot pass by coincidence.
         """
         tools_cfg["order"] = self.ORDER
-        assert resolve_web_search_backend().candidates[0] == "gemini"
-        assert AUTO_ORDER[0] == "perplexity"
+        assert resolve_web_search_backend().candidates == tuple(self.ORDER)
+        assert tuple(self.ORDER) != AUTO_ORDER
+        assert AUTO_ORDER[1] == "perplexity" and self.ORDER[1] == "duckduckgo"
 
         tools_cfg["order"] = list(reversed(self.ORDER))
         assert resolve_web_search_backend().candidates == (

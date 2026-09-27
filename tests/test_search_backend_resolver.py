@@ -59,7 +59,7 @@ class TestScopedTupleMatrix:
         res = resolve_web_search_backend("prov")
         assert res.scope == "default"
         assert res.preferred == "auto" and res.strict is False
-        assert res.candidates == ("perplexity", "gemini", "duckduckgo")
+        assert res.candidates == ("gemini", "perplexity", "duckduckgo")
         assert set(res.egress_hosts) == set(ALL_HOSTS)
 
     def test_global_ordering_no_strict(self, cfg, monkeypatch):
