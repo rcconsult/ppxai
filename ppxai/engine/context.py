@@ -77,9 +77,6 @@ def _get_max_injection_size() -> int:
         return 100_000  # Default fallback
 
 
-# Module-level constant for backwards compatibility
-MAX_FILE_SIZE = _get_max_injection_size()
-
 
 class ContextInjector:
     """Detects and injects file/URL content into messages."""
@@ -620,8 +617,12 @@ class ContextInjector:
 
         # Truncate if too large (v1.13.8)
         truncated = False
-        if len(content) > MAX_FILE_SIZE:
-            content = content[:MAX_FILE_SIZE] + "\n\n... (tree truncated)"
+        # The live, configured limit. This used the module-level
+        # MAX_FILE_SIZE constant, read once at import: config reloads never
+        # reached @tree, and on a fresh HOME it held the pre-seed value.
+        max_size = self.MAX_FILE_SIZE
+        if len(content) > max_size:
+            content = content[:max_size] + "\n\n... (tree truncated)"
             truncated = True
 
         return InjectedContext(

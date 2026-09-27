@@ -205,11 +205,14 @@ def initialize():
     global _initialized
 
     # First, load .env files (from loader.py). On the call that does that
-    # work, reload the store: anything that read config before now (the
-    # `ppxai` package import does, e.g. engine/context.py's MAX_FILE_SIZE)
-    # loaded it lazily with no seeded file and no .env, and the store keeps
-    # that result. On a fresh HOME that left PROVIDERS empty for the whole
-    # first process (found by ppxai-sre 2026-09-27; the second run worked).
+    # work, reload the store: anything that read config before now loaded
+    # it lazily with no seeded file and no .env, and the store keeps that
+    # result. On a fresh HOME that left PROVIDERS empty for the whole first
+    # process (found by ppxai-sre 2026-09-27; the second run worked). The
+    # read that caused it, engine/context.py's module-level MAX_FILE_SIZE,
+    # is gone and tests/test_no_config_read_at_import.py keeps new ones out;
+    # this reload stays as the backstop for a caller that reads config
+    # before initialize().
     if _loader_initialize():
         ConfigStore.get_instance().reload()
 

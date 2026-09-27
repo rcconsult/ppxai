@@ -12,7 +12,12 @@ from pathlib import Path
 
 import pytest
 
-from ppxai.engine.context import MAX_FILE_SIZE, ContextInjector
+from ppxai.engine.context import ContextInjector
+
+# The configured per-file limit, read the way ContextInjector reads it.
+# (A module-level `ppxai.engine.context.MAX_FILE_SIZE` constant used to
+# exist; it read config at import and was removed 2026-09-27.)
+MAX_FILE_SIZE = ContextInjector().MAX_FILE_SIZE
 
 
 class TestContextInjector:

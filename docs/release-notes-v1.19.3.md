@@ -493,6 +493,12 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   no longer reaches the fall-through exit, so its final text is the
   model's answer, not the canned line. The fall-through now runs only
   when `max_iterations <= 0`.
+- **No module reads config at import any more.** The one that did,
+  `engine/context.py`'s module-level `MAX_FILE_SIZE`, is removed. `@tree`
+  now uses the live configured limit, which previously ignored config
+  reloads. A new test fails on any future import-time config read. The
+  module attribute `ppxai.engine.context.MAX_FILE_SIZE` is gone; use
+  `ContextInjector().MAX_FILE_SIZE`.
 - **Five more defects from the 2026-09-26 VSCode smoke run.**
   `/context clear` now actually removes injected content (defect 5,
   broken since v1.13.9). Six VSCode webview elements that the CSP left
