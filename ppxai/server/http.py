@@ -50,6 +50,7 @@ from .session_manager import SessionManager
 # Re-export for backward compatibility (tests, PyInstaller specs, entry points)
 from .state import (  # noqa: F401
     all_preview_backends,
+    get_agent_run_registry,
     get_or_create_session,
     get_secret_provider,
     get_server_start_time,
@@ -162,6 +163,12 @@ async def lifespan(app: FastAPI):
             _shutdown_event.set()
 
     await sm.start_idle_monitor(idle_timeout, idle_shutdown_callback)
+
+    # Build the run registry now, not on the first /v1 call: building it runs
+    # the restart sweep, so runs this host's previous server left `running`
+    # read `interrupted` from the moment the server is up. The sweep skips
+    # runs another live server owns (RunMeta.server_pid).
+    get_agent_run_registry()
 
     startup_time = time.time() - startup_start
     set_server_start_time(time.time())
@@ -514,6 +521,42 @@ class _PpxaiServer(uvicorn.Server):
         for task in list(self.server_state.tasks):
             task.cancel()
 
+    async def shutdown(self, sockets=None):
+        await super().shutdown(sockets)
+        if not self.force_exit:
+            return
+        # uvicorn skips the app's lifespan shutdown on a forced stop, so
+        # sessions were not saved, preview backends not stopped, and the
+        # "stopped" line never printed; the orphaned lifespan task was then
+        # cancelled with a traceback. Run it anyway, bounded.
+        try:
+            await asyncio.wait_for(self.lifespan.shutdown(),
+                                   timeout=self.config.timeout_graceful_shutdown or 10)
+        except asyncio.TimeoutError:
+            _warn_console("Application shutdown did not finish; exiting anyway")
+
+
+class _AbandonedRequestFilter(logging.Filter):
+    """At shutdown, a cancelled in-flight request is expected, not a crash.
+
+    uvicorn logs it as "Exception in ASGI application" with a CancelledError
+    traceback, which read like a crash to operators. While the server is
+    stopping, that record becomes one warning line; any other error passes
+    through unchanged.
+    """
+
+    def __init__(self, server: uvicorn.Server):
+        super().__init__()
+        self._server = server
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        exc = record.exc_info[1] if record.exc_info else None
+        if self._server.should_exit and isinstance(exc, asyncio.CancelledError):
+            record.levelno, record.levelname = logging.WARNING, "WARNING"
+            record.msg = "Abandoned an in-flight request at shutdown (it never finished)"
+            record.args, record.exc_info, record.exc_text = (), None, None
+        return True
+
 
 async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_level: str = "info",
                                              fd: int | None = None):
@@ -570,10 +613,14 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
 
     # Run both server and shutdown listener concurrently
     workers = _install_worker_executor()
+    abandoned = _AbandonedRequestFilter(server)
+    uvicorn_error = logging.getLogger("uvicorn.error")
+    uvicorn_error.addFilter(abandoned)
     shutdown_task = asyncio.create_task(shutdown_listener())
     try:
         await server.serve()
     finally:
+        uvicorn_error.removeFilter(abandoned)
         shutdown_task.cancel()
         try:
             await shutdown_task

@@ -148,9 +148,17 @@ _SERVER_CHILD = textwrap.dedent("""
     from fastapi import FastAPI
     from ppxai.server import http as h
 
+    from contextlib import asynccontextmanager
+
     port, grace = int(sys.argv[1]), float(sys.argv[2])
     h.get_shutdown_grace_s = lambda: grace
-    app = FastAPI()
+
+    @asynccontextmanager
+    async def lifespan(app):
+        yield
+        print("APP-SHUTDOWN-RAN", flush=True)  # ppxai saves sessions here
+
+    app = FastAPI(lifespan=lifespan)
     block = threading.Event()
 
     @app.get("/ok")
@@ -236,6 +244,10 @@ class TestCtrlCStopsItDespiteAHungCall:
         assert time.monotonic() - started < 15
         assert proc.returncode == 0, out
         assert "still running" in out
+        assert "APP-SHUTDOWN-RAN" in out
+        # The cancelled request is one warning line, not a crash traceback.
+        assert "Abandoned an in-flight request" in out
+        assert "Traceback" not in out, out
 
     def test_a_second_ctrl_c_forces_it(self):
         proc, port = _start_hung_server(grace_s=120.0)
@@ -245,6 +257,11 @@ class TestCtrlCStopsItDespiteAHungCall:
         assert exited, f"a second Ctrl+C did not force the exit:\n{out}"
         assert time.monotonic() - started < 15  # not the 120 s grace
         assert "forcing shutdown" in out
+        # uvicorn skips the app's shutdown on a force; ppxai runs it anyway
+        # (sessions saved, the "stopped" line printed), and nothing is left
+        # to be cancelled with a traceback.
+        assert "APP-SHUTDOWN-RAN" in out
+        assert "Traceback" not in out, out
 
     def test_a_doubled_delivery_is_one_stop_not_a_force(self):
         """A terminal Ctrl+C reaches the process group AND is forwarded by the

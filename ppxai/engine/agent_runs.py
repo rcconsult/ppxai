@@ -49,6 +49,7 @@ from typing import Any, Protocol
 # EngineClient, tools or config belongs in engine/task_runner.py instead;
 # do not "tidy" them back in here.
 from ..common.logger import get_logger
+from ..common.process import pid_alive  # stdlib-only: keeps the footprint above
 
 logger = get_logger("tui")
 
@@ -118,6 +119,13 @@ class RunMeta:
     # (server.working_dir config, else home). Sealed runs never record one —
     # the per-run jail always wins. Persisted so resume rebuilds faithfully.
     workdir: str | None = None
+    # The pid of the process driving the run (set at start and on resume).
+    # Several servers can share one <PPXAI_HOME>/runs (the VSCode server, the
+    # desktop app, ADR 0013 announced servers); the restart sweep leaves a run
+    # alone while this pid is alive, so one server starting no longer
+    # interrupts another's live runs. None on metas written before
+    # 2026-09-28: those are swept as before.
+    server_pid: int | None = None
     created_at: float = 0.0
     started_at: float | None = None  # set when execution begins (Inc 2 background)
     finished_at: float | None = None
@@ -623,6 +631,7 @@ class AgentRunRegistry:
             system=system,
             read_roots=list(read_roots or []),
             workdir=workdir,
+            server_pid=os.getpid(),
             created_at=time.time(),
         )
         self._store.persist_meta(meta)
@@ -923,7 +932,10 @@ class AgentRunRegistry:
         A server kill/restart strands any in-flight run's meta at
         pending/running/waiting/cancelling with nothing to move it forward
         (tasks, controls, and consent futures are all in-memory). Called once
-        at registry construction: every stranded run becomes `interrupted`
+        at registry construction, which the server does at startup. A run
+        whose `server_pid` is another LIVE process is left alone: the runs
+        dir can be shared by several servers. Every other stranded run
+        becomes `interrupted`
         ("server restarted…"), resumable IFF it is a top-level /task run
         (`hold_result`) whose rebuild inputs survive — the same conditions
         `resume_refusal` checks. Returns the number swept."""
@@ -933,6 +945,9 @@ class AgentRunRegistry:
                 continue
             if meta.run_id in self._run_tasks:
                 continue  # actually in flight (same-process sweep) — leave it
+            if (meta.server_pid is not None and meta.server_pid != os.getpid()
+                    and pid_alive(meta.server_pid)):
+                continue  # another live server owns it (shared runs dir)
             meta.status = "interrupted"
             meta.error = "server restarted while the run was in flight"
             meta.waiting = None  # a park cannot outlive its in-memory future
@@ -980,6 +995,7 @@ class AgentRunRegistry:
         meta.finished_at = None
         meta.resumable = False
         meta.waiting = None
+        meta.server_pid = os.getpid()  # this process drives it now
         now = time.time()
         self._store.persist_state(meta.run_id, {
             "schema": 1,
@@ -1037,6 +1053,7 @@ class AgentRunRegistry:
         """
         meta.status = "running"
         meta.started_at = time.time()
+        meta.server_pid = os.getpid()
         self._store.persist_meta(meta)
         self._index_active(meta)  # pending → running (in-place status update)
         # Inc 6: register the cooperative control so cancel/budget can reach

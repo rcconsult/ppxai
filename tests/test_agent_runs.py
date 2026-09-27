@@ -10,6 +10,9 @@ directly through the registry.
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -24,6 +27,8 @@ from ppxai.engine.agent_runs import (
 from ppxai.engine import task_authorizer as _authz
 from ppxai.config import execution as _exec_cfg
 from ppxai.config import providers as _providers_cfg
+from ppxai.server import http as _server_http
+from ppxai.server import state as _server_state
 
 # Captured BEFORE any fixture patches it. `_enable_task_tier` below now
 # overrides the config module itself (v1.19.1: one binding, one patch
@@ -2593,6 +2598,68 @@ class TestSweepOrphans:
         self._strand(registry, "running", hold_result=True)
         assert registry.sweep_orphans() == 1
         assert registry.sweep_orphans() == 0  # already interrupted
+
+    # --- several servers share one runs dir (2026-09-28) -------------------
+
+    def test_start_records_the_driving_process(self, registry):
+        assert registry.start_run(task="t", tools=[]).server_pid == os.getpid()
+
+    def test_a_live_other_servers_run_is_left_alone(self, registry):
+        """The sweep now runs at every server start; it must not interrupt a
+        run another LIVE server on this host is driving."""
+        other = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+        try:
+            m = self._strand(registry, "running", hold_result=True)
+            m.server_pid = other.pid
+            registry._store.persist_meta(m)
+            assert registry.sweep_orphans() == 0
+            assert registry.get_run(m.run_id).status == "running"
+        finally:
+            other.kill()
+            other.wait()
+
+    def test_a_dead_other_servers_run_is_swept(self, registry):
+        gone = subprocess.Popen([sys.executable, "-c", "pass"])
+        gone.wait()
+        m = self._strand(registry, "running", hold_result=True)
+        m.server_pid = gone.pid
+        registry._store.persist_meta(m)
+        assert registry.sweep_orphans() == 1
+        assert registry.get_run(m.run_id).status == "interrupted"
+
+    def test_a_meta_without_an_owner_is_swept_as_before(self, registry):
+        """Metas written before server_pid existed read as None."""
+        m = self._strand(registry, "running", hold_result=True)
+        m.server_pid = None
+        registry._store.persist_meta(m)
+        assert registry.sweep_orphans() == 1
+
+    async def test_resume_takes_ownership(self, registry):
+        """A run resumed here is driven by THIS process from then on."""
+        m = self._strand(registry, "interrupted", hold_result=True)
+        m.server_pid = -1  # an earlier, gone process
+        registry._store.persist_meta(m)
+
+        async def runner(meta):
+            return "done"
+
+        registry.resume_run(m, runner)
+        assert registry.get_run(m.run_id).server_pid == os.getpid()
+        task = registry.get_run_task(m.run_id)
+        if task is not None:
+            await task
+
+    def test_server_startup_runs_the_sweep(self, registry, monkeypatch):
+        """The sweep used to wait for the first /v1 call (the registry was
+        built lazily), so a run the last server left `running` read
+        `running`, or `cancelling`, after a restart until then."""
+        m = self._strand(registry, "running", hold_result=True)
+        m.server_pid = None
+        registry._store.persist_meta(m)
+        monkeypatch.setattr(_server_state, "_agent_run_registry", None)
+        monkeypatch.setattr(_server_state, "default_run_registry", lambda: registry)
+        with TestClient(_server_http.app, base_url="http://127.0.0.1"):
+            assert registry.get_run(m.run_id).status == "interrupted"
 
 
 class TestResumeRoute:
