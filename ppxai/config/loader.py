@@ -144,7 +144,7 @@ def _seed_config_on_first_run() -> bool:
         return False
 
 
-def initialize() -> None:
+def initialize() -> bool:
     """Initialize the configuration system.
 
     This function should be called explicitly by application entry points
@@ -154,10 +154,15 @@ def initialize() -> None:
     3. Creates required directories
 
     Safe to call multiple times - only initializes once.
+
+    Returns:
+        True on the call that did the work, False on every later call. The
+        caller reloads the ConfigStore on True: a store read before this ran
+        saw no seeded file and none of the .env variables.
     """
     global _initialized
     if _initialized:
-        return
+        return False
 
     # Seed config on first run (before loading .env)
     _seed_config_on_first_run()
@@ -176,6 +181,7 @@ def initialize() -> None:
     # read inside the resolver cannot recurse. Disabled TLS is otherwise
     # completely silent — it stayed unnoticed on a dev box for months.
     _warn_if_tls_insecure()
+    return True
 
 
 def _warn_if_tls_insecure() -> None:

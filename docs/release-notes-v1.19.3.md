@@ -494,6 +494,13 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   no longer reaches the fall-through exit, so its final text is the
   model's answer, not the canned line. The fall-through now runs only
   when `max_iterations <= 0`.
+- **The first process on a fresh HOME had no providers.** Importing
+  `ppxai` reads config at module level, which loaded the store before
+  `initialize()` seeded `~/.ppxai/ppxai-config.json`. The store kept that
+  empty result for the whole first process, and only the second run
+  worked. Any container that starts with an empty HOME hit this.
+  `initialize()` now reloads the store on the call that seeds the file and
+  loads `.env`.
 - **An `EngineClient()` built before `ppxai.config.initialize()` had no
   providers.** An embedder that skipped `initialize()` got an empty
   provider table, and every `set_provider()` returned False silently.

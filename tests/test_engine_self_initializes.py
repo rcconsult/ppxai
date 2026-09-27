@@ -57,6 +57,39 @@ def test_a_fresh_process_engine_sees_its_providers(tmp_path):
     assert proc.stdout.strip().splitlines()[-1].startswith("OK gemini ")
 
 
+_FRESH_HOME_PROBE = textwrap.dedent("""
+    import ppxai.config as c
+    from ppxai.engine import EngineClient
+    engine = EngineClient()
+    assert c.find_config_file() is not None, "first run should seed a config"
+    print("PROVIDERS", len(engine.providers_config))
+""")
+
+
+def test_the_first_process_on_a_fresh_home_sees_the_seeded_config(tmp_path):
+    """No config anywhere: the first `initialize()` seeds one.
+
+    Importing `ppxai` reads config at module level
+    (`engine/context.py`'s MAX_FILE_SIZE), which loaded the store before
+    the seed existed; the store kept that empty result, so the first
+    process on a fresh HOME had zero providers and only the second run
+    worked. Found by ppxai-sre 2026-09-27: its containers start with an
+    empty HOME, so every container's first process was affected.
+    """
+    env = {
+        k: v for k, v in os.environ.items()
+        if k not in ("PPXAI_CONFIG_FILE", "MODEL_PROVIDER") and not k.endswith("_API_KEY")
+    }
+    env.update({"HOME": str(tmp_path), "USERPROFILE": str(tmp_path)})
+    proc = subprocess.run(
+        [sys.executable, "-c", _FRESH_HOME_PROBE],
+        cwd=tmp_path, env=env, capture_output=True, text=True, timeout=120,
+    )
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    count = int(proc.stdout.strip().splitlines()[-1].split()[-1])
+    assert count > 0, proc.stdout
+
+
 def test_ensure_initialized_does_not_rerun_a_completed_initialize(monkeypatch):
     """Re-running would re-read PROVIDERS and discard in-place changes."""
     assert config_pkg._initialized is True

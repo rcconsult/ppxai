@@ -204,8 +204,14 @@ def initialize():
     """
     global _initialized
 
-    # First, load .env files (from loader.py)
-    _loader_initialize()
+    # First, load .env files (from loader.py). On the call that does that
+    # work, reload the store: anything that read config before now (the
+    # `ppxai` package import does, e.g. engine/context.py's MAX_FILE_SIZE)
+    # loaded it lazily with no seeded file and no .env, and the store keeps
+    # that result. On a fresh HOME that left PROVIDERS empty for the whole
+    # first process (found by ppxai-sre 2026-09-27; the second run worked).
+    if _loader_initialize():
+        ConfigStore.get_instance().reload()
 
     # Then populate PROVIDERS/MODELS from config
     _refresh_module_dicts()
