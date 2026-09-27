@@ -255,6 +255,17 @@ class TestNoNewLazyImports:
         )
 
 
+#: Package roots each imported in a fresh interpreter.
+PACKAGES = (
+    "ppxai",
+    "ppxai.commands",
+    "ppxai.config",
+    "ppxai.engine",
+    "ppxai.rendering",
+    "ppxai.server",
+)
+
+
 class TestEveryPackageImportsStandalone:
     """Each top-level package must import on its own, in a fresh interpreter.
 
@@ -268,27 +279,12 @@ class TestEveryPackageImportsStandalone:
     earlier import can prime `sys.modules` and hide the cycle entirely.
     """
 
-    @pytest.mark.parametrize(
-        "module",
-        [
-            "ppxai",
-            "ppxai.commands",
-            "ppxai.config",
-            "ppxai.engine",
-            "ppxai.rendering",
-            "ppxai.server",
-        ],
-    )
+    @pytest.mark.parametrize("module", PACKAGES)
     def test_the_package_imports_in_a_fresh_interpreter(self, module):
-        proc = subprocess.run(
-            [sys.executable, "-c", f"import {module}"],
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
-        tail = (proc.stderr or "").strip().splitlines()
+        returncode, _, stderr = _subprocess_probes()[module]
+        tail = (stderr or "").strip().splitlines()
         detail = tail[-1] if tail else "(no stderr)"
-        assert proc.returncode == 0, f"`import {module}` fails standalone: {detail}"
+        assert returncode == 0, f"`import {module}` fails standalone: {detail}"
 
 
 class TestRetentionReasonsStayHonest:
@@ -437,6 +433,37 @@ print(json.dumps({"count": len(mods), "fails": fails}))
 """
 
 
+@functools.cache
+def _subprocess_probes() -> dict[str, tuple[int, str, str]]:
+    """Run every fresh-interpreter probe in this file AT ONCE, once per session.
+
+    {name: (returncode, stdout, stderr)} for each package in PACKAGES and
+    for the module sweep ("sweep"). They are independent processes, so
+    starting them together costs the slowest one (~35s) instead of their
+    sum (~100s). Run one after another, this file was the longest single
+    file in the suite, and with `--dist loadfile` that set the whole run's
+    wall-clock floor (2026-09-27). Isolation is unchanged: each probe is
+    still its own interpreter.
+    """
+    commands = {m: [sys.executable, "-c", f"import {m}"] for m in PACKAGES}
+    commands["sweep"] = [sys.executable, "-c", _SWEEP, str(PPXAI.parent)]
+    procs = {
+        name: subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               text=True, encoding="utf-8", errors="replace")
+        for name, cmd in commands.items()
+    }
+    results = {}
+    for name, proc in procs.items():
+        try:
+            out, err = proc.communicate(timeout=600)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            out, err = proc.communicate()
+            err = f"timed out after 600s\n{err}"
+        results[name] = (proc.returncode, out, err)
+    return results
+
+
 class TestEveryModuleImportsStandalone:
     """Every module -- not just every package -- must import on its own.
 
@@ -461,22 +488,13 @@ class TestEveryModuleImportsStandalone:
     """
 
     @staticmethod
-    @functools.cache
     def _failing_modules() -> dict[str, str]:
-        """{module: error} for every module that fails to import alone.
-
-        Cached: both tests read the same sweep, and it is the slowest thing
-        in the suite on Windows -- running it once per test doubled that."""
-        proc = subprocess.run(
-            [sys.executable, "-c", _SWEEP, str(PPXAI.parent)],
-            capture_output=True,
-            text=True,
-            timeout=600,
+        """{module: error} for every module that fails to import alone."""
+        returncode, stdout, stderr = _subprocess_probes()["sweep"]
+        assert returncode == 0, (
+            f"the sweep itself failed, so it proves nothing: {stderr[-500:]}"
         )
-        assert proc.returncode == 0, (
-            f"the sweep itself failed, so it proves nothing: {proc.stderr[-500:]}"
-        )
-        payload = json.loads(proc.stdout.strip().splitlines()[-1])
+        payload = json.loads(stdout.strip().splitlines()[-1])
         assert payload["count"] > 150, (
             f"the sweep walked only {payload['count']} modules -- it is not "
             "finding the tree, and a green result would mean nothing"
