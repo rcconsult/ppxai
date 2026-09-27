@@ -1,0 +1,16 @@
+{
+  "__comment": "ADR 0013 S3 registry entry, CONTRACT 1: the field set a hub may rely on. Changing ppxai/server/registry.py::ENTRY_FIELDS without bumping CONTRACT (and adding a server_registry_contract_<N>.json beside this one) fails tests/test_server_registry.py. Never edit this file for a field change: add the next contract's file.",
+  "contract": 1,
+  "fields": [
+    "contract",
+    "id",
+    "pid",
+    "socket",
+    "token",
+    "version",
+    "app_state_schema",
+    "workdir",
+    "started_at",
+    "label"
+  ]
+}

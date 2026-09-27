@@ -31,6 +31,8 @@ in the repo.
 
 ## Phase 1 — S3, the remote-side contract (`ppxai-server` only)
 
+**Status (2026-09-27): implemented** — `ppxai/server/registry.py`, `ppxai-server --uds/--announce/--detach/--list`, `tests/test_server_registry.py`. Two findings shaped it: uvicorn makes a socket it binds itself 0666, so the server binds it and passes the fd; and `/health` is NOT exempt from auth (only from the Host check), so liveness probes and `--list` present the entry's token. The POSIX launch tests run on Ubuntu 24.04 (WSL2) and macOS before the owner trial.
+
 - `--uds <path>`: `uvicorn.Config(uds=...)`, socket dir 0700, socket 0600
   before the first accept.
 - `--announce`: per-launch token into the process's `PPXAI_API_TOKEN`,

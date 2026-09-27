@@ -12,6 +12,7 @@ Usage:
 
 import argparse
 import asyncio
+import json
 import os
 import signal
 import sys
@@ -25,6 +26,7 @@ import types as _types  # noqa: E402
 import webbrowser
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -36,9 +38,11 @@ import ppxai.config.loader as _loader
 from ..common.logger import get_logger
 from ..config import get_idle_timeout, initialize
 from ..version import __version__
+from . import registry
 from . import state as _state  # noqa: F401 — backing store for session_manager
 from .auth import check_request as _auth_check_request
 from .routes import all_routers
+from .secrets import EnvSecretProvider
 from .session_manager import SessionManager
 
 # Re-export for backward compatibility (tests, PyInstaller specs, entry points)
@@ -144,8 +148,11 @@ async def lifespan(app: FastAPI):
     logger.info(f"EngineClient initialized - provider: {default_engine.provider_name}, model: {default_engine.model}")
     logger.info("Session management initialized (v1.13.10, v1.13.10 thread-safe)")
 
-    # Start idle shutdown monitor (v1.13.10)
-    idle_timeout = get_idle_timeout()
+    # Start idle shutdown monitor (v1.13.10). An announced server (ADR 0013)
+    # overrides it to 0: a remote server that exits after 5 idle minutes
+    # would vanish from the hub's view on its own.
+    idle_timeout = (get_idle_timeout() if _IDLE_TIMEOUT_OVERRIDE is None
+                    else _IDLE_TIMEOUT_OVERRIDE)
 
     def idle_shutdown_callback():
         """Callback to trigger graceful shutdown from idle monitor."""
@@ -447,7 +454,12 @@ def _forwarded_allow_ips() -> str:
     return os.environ.get("PPXAI_FORWARDED_ALLOW_IPS", "")
 
 
-async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_level: str = "info"):
+#: Set by `--announce` (ADR 0013): the idle monitor's timeout, 0 = never.
+_IDLE_TIMEOUT_OVERRIDE: int | None = None
+
+
+async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_level: str = "info",
+                                             fd: int | None = None):
     """Run uvicorn server with graceful shutdown support (v1.13.10).
 
     This uses uvicorn.Server directly to enable graceful shutdown via
@@ -458,11 +470,14 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
         host: Host to bind to
         port: Port to bind to
         log_level: Logging level
+        fd: An already-listening socket to serve on instead of host/port
+            (the `--uds` path binds it itself, 0600 before the first accept).
     """
     config = uvicorn.Config(
         app_ref,
         host=host,
         port=port,
+        fd=fd,
         log_level=log_level,
         # Don't trust proxy client-IP headers by default — see _forwarded_allow_ips.
         forwarded_allow_ips=_forwarded_allow_ips(),
@@ -516,8 +531,26 @@ def run_server():
     parser.add_argument("--host", default=DEFAULT_HOST, help="Host to bind to")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port to bind to")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
+    # ADR 0013 S3 -- the remote-side contract a hub drives over SSH.
+    parser.add_argument("--uds", nargs="?", const="", metavar="PATH",
+                        help="Serve on a private unix socket (0600, POSIX) instead of TCP; "
+                             "no PATH = $XDG_RUNTIME_DIR/ppxai/<id>.sock")
+    parser.add_argument("--announce", action="store_true",
+                        help="With --uds: generate a per-launch token, write a registry "
+                             "entry (~/.ppxai/run/servers/<id>.json) and print it as JSON")
+    parser.add_argument("--detach", action="store_true",
+                        help="With --announce: run in the background (POSIX)")
+    parser.add_argument("--label", default=None, help="Human label stored in the registry entry")
+    parser.add_argument("--list", action="store_true", dest="list_servers",
+                        help="List live announced servers (pruning dead entries) and exit")
+    parser.add_argument("--json", action="store_true", help="With --list: print JSON")
 
     args = parser.parse_args()
+
+    if args.list_servers:
+        sys.exit(_list_servers(as_json=args.json))
+    if args.uds is not None or args.announce or args.detach:
+        sys.exit(_run_announced(args))
 
     # Tell the Host-validation middleware the real bind host (debt (u)): a
     # loopback bind stays strict; a wide bind relaxes per PPXAI_TRUSTED_HOSTS.
@@ -589,6 +622,137 @@ def run_server():
                 port=args.port,
                 log_level="info",
             ))
+
+
+def _list_servers(as_json: bool) -> int:
+    """`--list`: live registry entries only; dead ones are deleted."""
+    live = registry.list_live(prune=True)
+    if as_json:
+        print(json.dumps(live, indent=2))
+    elif not live:
+        print("No announced ppxai servers are running.")
+    else:
+        for e in live:
+            label = f"  [{e['label']}]" if e.get("label") else ""
+            print(f"{e['id']}  pid {e['pid']}  {e['socket']}  {e['workdir']}{label}")
+    return 0
+
+
+def _usage_error(message: str) -> int:
+    print(f"ppxai-server: {message}", file=sys.stderr)
+    return 2
+
+
+def _run_announced(args) -> int:
+    """`--uds [PATH] [--announce [--detach]]` (ADR 0013 S3).
+
+    Order matters and is the contract:
+    1. (--detach) fork away from the launcher, which waits for step 5's JSON;
+    2. bind the socket 0600 in a 0700 dir -- before anything can connect;
+    3. (--announce) put a fresh token in THIS process's PPXAI_API_TOKEN and
+       make sure the auth chain reads it, so auth is on even though every
+       request arrives over the socket;
+    4. write the registry entry with THIS process's pid;
+    5. print the entry (or hand it to the waiting launcher), then serve.
+    The entry and socket are removed when the server exits.
+    """
+    if args.detach and not args.announce:
+        return _usage_error("--detach needs --announce (otherwise nothing can find the server)")
+    if args.announce and args.uds is None:
+        return _usage_error("--announce needs --uds: the contract is socket-only, never TCP")
+    if args.reload:
+        return _usage_error("--reload cannot be combined with --uds/--announce")
+    if sys.platform == "win32":
+        return _usage_error("--uds/--announce/--detach need a POSIX host; "
+                            "use --host/--port on Windows")
+
+    server_id = registry.new_server_id()
+    socket_path = (registry.default_socket_path(server_id) if args.uds == ""
+                   else Path(os.path.abspath(os.path.expanduser(args.uds))))
+    report_fd = _detach() if args.detach else None
+    try:
+        sock = registry.bind_uds(socket_path)
+    except OSError as exc:
+        _report(report_fd, {"error": str(exc)})
+        return 1
+
+    global _IDLE_TIMEOUT_OVERRIDE
+    token = None
+    if args.announce:
+        token = registry.new_token()
+        os.environ["PPXAI_API_TOKEN"] = token
+        _IDLE_TIMEOUT_OVERRIDE = 0
+
+    # Loopback bind semantics for Host validation: the hub forwards to the
+    # socket and names the server as localhost.
+    _set_bind_host("127.0.0.1")
+    initialize()
+    if args.announce:
+        chain = get_secret_provider()
+        if not any(isinstance(p, EnvSecretProvider) and p.var == "PPXAI_API_TOKEN"
+                   for p in chain.providers):
+            chain.providers.insert(0, EnvSecretProvider())
+
+    entry = None
+    if args.announce:
+        entry = registry.build_entry(server_id=server_id, socket_path=socket_path,
+                                     token=token, workdir=os.getcwd(), label=args.label)
+        registry.write_entry(entry)
+    _report(report_fd, entry or {"socket": str(socket_path), "pid": os.getpid()})
+
+    try:
+        app_ref = app if getattr(sys, "frozen", False) else "ppxai.server.http:app"
+        asyncio.run(_run_server_with_graceful_shutdown(
+            app_ref, host="127.0.0.1", port=0, log_level="info", fd=sock.fileno()))
+    finally:
+        if entry is not None:
+            registry.remove_entry(server_id)
+        try:
+            socket_path.unlink()
+        except OSError:
+            pass
+    return 0
+
+
+def _report(fd: int | None, payload: dict) -> None:
+    """Print the entry JSON, or hand it to the detached launcher's pipe."""
+    text = json.dumps(payload, indent=2)
+    if fd is None:
+        print(text, flush=True)
+        return
+    with os.fdopen(fd, "w", encoding="utf-8") as pipe:
+        pipe.write(text)
+
+
+def _detach() -> int:
+    """Double-fork away from the launcher (POSIX). Returns, in the daemon, the
+    write end of a pipe; the launcher prints what arrives on it and exits
+    (1 if the daemon reported an error or died without announcing).
+    """
+    read_fd, write_fd = os.pipe()
+    if os.fork() > 0:  # the launcher
+        os.close(write_fd)
+        with os.fdopen(read_fd, encoding="utf-8") as pipe:
+            payload = pipe.read()
+        if not payload:
+            print("ppxai-server: the detached server exited before announcing", file=sys.stderr)
+            os._exit(1)
+        print(payload, flush=True)
+        os._exit(1 if "error" in json.loads(payload) else 0)
+    os.close(read_fd)
+    os.setsid()
+    if os.fork() > 0:
+        os._exit(0)
+    # The daemon: no controlling terminal; stdio goes to a server log.
+    log_dir = Path.home() / ".ppxai" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_fd = os.open(log_dir / f"server-detached-{os.getpid()}.log",
+                     os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    null_fd = os.open(os.devnull, os.O_RDONLY)
+    os.dup2(null_fd, 0)
+    os.dup2(log_fd, 1)
+    os.dup2(log_fd, 2)
+    return write_fd
 
 
 def run_desktop():

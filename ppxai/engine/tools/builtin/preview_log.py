@@ -26,15 +26,13 @@ Per Inspection Triplet pattern (ADR 0005):
 
 from __future__ import annotations
 
-import ctypes
 import json
 import logging
-import os
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
+from ....common.process import pid_alive as _is_pid_alive
 from ...types import ToolManagerProtocol
 
 logger = logging.getLogger(__name__)
@@ -71,51 +69,6 @@ def _parse_pid_from_log_filename(path: Path) -> int | None:
     """Extract the pid from `preview-backend-<pid>.log`."""
     match = re.match(r"^preview-backend-(\d+)\.log$", path.name)
     return int(match.group(1)) if match else None
-
-
-_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-_STILL_ACTIVE = 259
-_ERROR_ACCESS_DENIED = 5
-
-
-def _is_pid_alive_windows(pid: int) -> bool:
-    """Query the process instead of signalling it.
-
-    `os.kill(pid, 0)` is NOT a probe on Windows: signal 0 is
-    `signal.CTRL_C_EVENT`, so it sends Ctrl+C to `pid`'s console process
-    group. Handed a pid in our own console (the test suite passes
-    `os.getpid()`), it interrupts this process and every sibling sharing
-    the console -- it killed whole pytest runs silently at ~62%.
-    """
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-    handle = kernel32.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-    if not handle:
-        # ERROR_ACCESS_DENIED: the process exists but belongs to someone else.
-        return ctypes.get_last_error() == _ERROR_ACCESS_DENIED
-    try:
-        code = ctypes.c_ulong()
-        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
-            return False
-        return code.value == _STILL_ACTIVE
-    finally:
-        kernel32.CloseHandle(handle)
-
-
-def _is_pid_alive(pid: int) -> bool:
-    if pid <= 0:
-        return False
-    if sys.platform == "win32":
-        return _is_pid_alive_windows(pid)
-    try:
-        os.kill(pid, 0)
-        return True
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        # Process exists but is owned by another user — treat as alive.
-        return True
-    except OSError:
-        return False
 
 
 def read_preview_log(
