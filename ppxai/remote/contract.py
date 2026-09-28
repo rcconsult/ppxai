@@ -102,7 +102,11 @@ def parse_entry(host: str, raw: Any) -> RemoteServer:
         if not isinstance(raw[name], kind) or isinstance(raw[name], bool):
             raise MalformedEntryError(f"{host}: {sid}: {name} must be {kind.__name__}")
     if not raw["socket"].startswith("/"):
-        raise MalformedEntryError(f"{host}: {sid}: socket must be an absolute path")
+        # `ppxai-server --uds` refuses to start on Windows, so only a POSIX
+        # host can announce; anything else is a foreign or corrupt entry.
+        raise MalformedEntryError(
+            f"{host}: {sid}: socket {raw['socket']!r} is not an absolute POSIX path; "
+            "remote hosts must be POSIX (ADR 0013 serves over a unix socket)")
     return RemoteServer(
         host=host, id=sid, pid=raw["pid"], socket=raw["socket"], token=raw["token"],
         version=raw["version"],

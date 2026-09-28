@@ -19,7 +19,7 @@ import stat
 import sys
 import tempfile
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
@@ -174,7 +174,8 @@ class TestContract:
             "teach ppxai/remote/contract.py the new one (keep the old one too)")
 
     def test_a_real_server_entry_parses(self, tmp_path):
-        raw = registry.build_entry(server_id=SID, socket_path=Path(SOCK),
+        # PurePosixPath: the remote is POSIX even when the test runs on Windows.
+        raw = registry.build_entry(server_id=SID, socket_path=PurePosixPath(SOCK),
                                    token="t", workdir=str(tmp_path), label="lab")
         server = parse_entry("gpu01", raw)
         assert (server.id, server.token, server.label) == (SID, "t", "lab")
@@ -194,6 +195,10 @@ class TestContract:
     def test_a_malformed_entry_is_refused(self, change):
         with pytest.raises(MalformedEntryError):
             parse_entry("gpu01", entry(**change))
+
+    def test_a_windows_socket_path_is_refused_as_a_non_posix_host(self):
+        with pytest.raises(MalformedEntryError, match="POSIX"):
+            parse_entry("gpu01", entry(socket=r"C:\Users\u\.ppxai\run\sock\x.sock"))
 
     def test_a_missing_field_is_refused(self):
         raw = entry()
