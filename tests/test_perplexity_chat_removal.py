@@ -37,7 +37,7 @@ from ppxai.commands.doctor import (
 )
 from ppxai.commands.provider import handle_provider
 from ppxai.config import FALLBACK_PROVIDER, REMOVED_CHAT_PROVIDERS
-from ppxai.engine import EngineClient, session_ops
+from ppxai.engine import EngineClient, provider_ops, session_ops
 from ppxai.engine.providers import create_provider, get_provider_class
 from ppxai.engine.search import perplexity as search_backend
 from ppxai.engine.task_authorizer import TaskAuthorizationError, validate_provider_or_error
@@ -165,6 +165,20 @@ class TestSetProviderRefuses:
         monkeypatch.setattr("ppxai.engine.provider_ops.logger.warning", seen.append)
         engine.set_provider("perplexity")
         assert seen == [REMOVED_CHAT_PROVIDERS["perplexity"]]
+
+    def test_refuses_before_any_config_lookup(self):
+        """A contract ppxai-sre fences (its 33f08c5): the removed-name check
+        comes BEFORE `providers_config` is read. The stand-in engine has no
+        `providers_config`, so moving the check below the lookup turns this
+        False into an AttributeError."""
+        bare = SimpleNamespace(state={})
+        assert provider_ops.set_provider(bare, "perplexity") is False
+
+    def test_the_bare_engine_really_has_no_config(self):
+        """Control for the test above: any other name does reach the lookup,
+        so that test's False cannot come from somewhere else."""
+        with pytest.raises(AttributeError, match="providers_config"):
+            provider_ops.set_provider(SimpleNamespace(state={}), "gemini")
 
 
 class TestARestoredPerplexitySession:
