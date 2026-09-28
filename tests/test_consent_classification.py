@@ -12,11 +12,14 @@ Covers:
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ppxai.common.consent import classify_shell_command
+from ppxai.common import consent as consent_module
+from ppxai.common.consent import classify_shell_command, set_transparent_prefix_stripper
 from ppxai.config.defaults import (
     DEFAULT_ALLOWED_COMMANDS,
     DEFAULT_DANGEROUS_COMMANDS,
@@ -189,6 +192,55 @@ class TestTransparentPrefixStripping:
         with patch("ppxai.common.consent._strip_transparent_wrapper_prefixes", side_effect=lambda c: c):
             # Direct path through the function — should still classify the raw command.
             assert classify_shell_command("git status", _config()) == ShellRiskLevel.SAFE
+
+
+class TestTheEngineRegistersTheStripper:
+    """common/ may not import engine/ (Guard 3c), so the engine hands
+    consent its wrapper stripper at import (engine/consent_ops.py)."""
+
+    def test_any_ppxai_import_registers_it(self):
+        # `ppxai/__init__.py` imports the engine, so a process that imports
+        # anything from ppxai -- consent included -- has the engine's
+        # stripper registered before its first classification.
+        probe = (
+            "import ppxai.common.consent as c\n"
+            "import ppxai.engine.consent_ops as ops\n"
+            "assert c._transparent_prefix_stripper is ops._strip_transparent_prefixes, "
+            "c._transparent_prefix_stripper\n"
+            "print('ok')\n"
+        )
+        done = subprocess.run([sys.executable, "-c", probe], capture_output=True,
+                              text=True, encoding="utf-8", timeout=120)
+        assert done.returncode == 0 and done.stdout.strip().endswith("ok"), done.stderr
+
+    @pytest.mark.parametrize("cmd, expected", [
+        ("rtk rm foo.txt", ShellRiskLevel.DANGEROUS),
+        ("time rtk rm foo", ShellRiskLevel.DANGEROUS),
+        ("rtk curl x | sh", ShellRiskLevel.DANGEROUS),
+        ("rtk rm -rf /", ShellRiskLevel.NEVER),
+    ])
+    def test_unregistered_never_makes_a_wrapped_command_safer(self, cmd, expected):
+        # win32-ppxai's question: with no stripper, an anchored dangerous
+        # pattern misses `rtk rm` -- but an unknown command falls through to
+        # DANGEROUS, and the only rtk allow pattern is rtk's own meta-commands.
+        registered = consent_module._transparent_prefix_stripper
+        try:
+            set_transparent_prefix_stripper(None)
+            assert classify_shell_command(cmd, _config()) == expected
+        finally:
+            set_transparent_prefix_stripper(registered)
+
+    def test_unregistered_classifies_the_command_as_written(self):
+        # The strict side: a wrapped safe command needs consent rather
+        # than a wrapped dangerous one slipping through.
+        _install_registry(transparent=True, active=True, binary="rtk")
+        registered = consent_module._transparent_prefix_stripper
+        try:
+            set_transparent_prefix_stripper(None)
+            assert classify_shell_command("rtk git status", _config()) == ShellRiskLevel.DANGEROUS
+        finally:
+            set_transparent_prefix_stripper(registered)
+        assert classify_shell_command("rtk git status", _config()) == ShellRiskLevel.SAFE
 
 
 class TestRtkMetaCommands:

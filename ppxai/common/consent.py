@@ -26,10 +26,26 @@ from ..constants import (
     ConsentResponse,
     ShellRiskLevel,
 )
-from ..engine.tools.wrappers import get_registry
 from .logger import get_logger
 
 logger = get_logger("tui")
+
+# The engine's wrapper registry strips transparent wrapper prefixes (e.g.
+# `rtk git status` -> `git status`) before a shell command is classified.
+# `common/` may not import `engine/` (fenced by
+# tests/test_no_new_lazy_imports.py::TestCommonImportsNothingAbove), so the
+# engine registers the stripper here instead: `engine/consent_ops.py` does it
+# at import, and `ppxai/__init__.py` loads the engine, so any ppxai import
+# registers it.
+# Unregistered, commands are classified as written: a wrapped safe command
+# then needs consent, which is the strict side to fail on.
+_transparent_prefix_stripper: Callable[[str], str] | None = None
+
+
+def set_transparent_prefix_stripper(stripper: Callable[[str], str] | None) -> None:
+    """Register (or clear, with None) the wrapper-prefix stripper."""
+    global _transparent_prefix_stripper
+    _transparent_prefix_stripper = stripper
 
 
 def normalize_consent_response(response: str) -> str:
@@ -158,16 +174,17 @@ def classify_shell_command(command: str, config: dict[str, list[str]]) -> str:
 
 
 def _strip_transparent_wrapper_prefixes(command: str) -> str:
-    """Best-effort strip of transparent wrapper prefixes via the registry.
+    """Best-effort strip of transparent wrapper prefixes via the registered
+    stripper (see `set_transparent_prefix_stripper`).
 
-    Lazy-imported to avoid a circular dependency: the wrapper framework
-    pulls in config code that imports parts of common; importing
-    consent at module load from inside the framework would cycle.
-    Falls back to the raw command on any error so safety classification
-    is never blocked by a misconfigured registry.
+    Falls back to the raw command when none is registered or it raises, so
+    safety classification is never blocked by a misconfigured registry.
     """
+    stripper = _transparent_prefix_stripper
+    if stripper is None:
+        return command
     try:
-        return get_registry().strip_transparent_prefixes(command)
+        return stripper(command)
     except Exception:
         return command
 

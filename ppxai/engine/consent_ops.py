@@ -7,12 +7,22 @@ All functions take an engine reference as first parameter.
 
 from pathlib import Path
 
-from ..common.consent import classify_shell_command
+from ..common.consent import classify_shell_command, set_transparent_prefix_stripper
 from ..common.logger import get_logger
 from ..constants import ConsentMode, ConsentResponse, ShellRiskLevel
+from .tools.wrappers import get_registry
 from .types import Event, EventType
 
 logger = get_logger("tui")
+
+
+def _strip_transparent_prefixes(command: str) -> str:
+    return get_registry().strip_transparent_prefixes(command)
+
+
+# common/consent.py classifies shell commands but may not import engine/;
+# the engine hands it the wrapper registry's stripper instead.
+set_transparent_prefix_stripper(_strip_transparent_prefixes)
 
 
 async def request_file_edit_consent(engine, file_path: str) -> bool:

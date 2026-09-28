@@ -952,6 +952,72 @@ class TestRemoteImportsNoEngineOrCommands:
 
 
 # ===========================================================================
+# Guard 3c — `ppxai/common/` must not import any layer above it
+# ===========================================================================
+#
+# `common/` (logger, consent, file types) sits under engine, commands, the
+# server and the clients. Found 2026-09-28 by win32-ppxai while checking
+# docs/architecture.md: `common/consent.py` imported
+# `engine.tools.wrappers.get_registry` at module top (it had been a lazy
+# import until the no-lazy-imports rule hoisted it). Fixed by inversion:
+# `engine/consent_ops.py` registers the stripper via
+# `common.consent.set_transparent_prefix_stripper`. Held at zero from then,
+# walking the whole AST so a function-level import counts too.
+
+_COMMON_FORBIDDEN = tuple(f"ppxai.{p}" for p in (
+    "engine", "commands", "server", "tui", "rich", "remote", "rendering"))
+
+
+def _common_upward_edges():
+    """`(module, target, lineno)` for every `common -> <higher layer>` import."""
+    def forbidden(name):
+        return any(name == p or name.startswith(p + ".") for p in _COMMON_FORBIDDEN)
+
+    found = []
+    for path in sorted((PPXAI / "common").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        module = _module_name(path)
+        is_init = path.name == "__init__.py"
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                found += [(module, a.name, node.lineno)
+                          for a in node.names if forbidden(a.name)]
+            elif isinstance(node, ast.ImportFrom):
+                target = _resolve(node, module, is_init)
+                if target and forbidden(target):
+                    found.append((module, target, node.lineno))
+                elif target == "ppxai":
+                    found += [(module, f"ppxai.{a.name}", node.lineno)
+                              for a in node.names if forbidden(f"ppxai.{a.name}")]
+    return found
+
+
+class TestCommonImportsNothingAbove:
+    """Guards FIRST — a detector that stops matching would pass forever."""
+
+    def test_the_detector_resolves_the_edge_that_was_there(self):
+        tree = ast.parse("from ..engine.tools.wrappers import get_registry\n")
+        node = next(n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom))
+        assert _resolve(node, "ppxai.common.consent", False) == "ppxai.engine.tools.wrappers"
+
+    def test_the_common_package_is_where_we_think(self):
+        assert (PPXAI / "common" / "consent.py").exists(), "wrong root?"
+
+    def test_common_imports_nothing_from_a_higher_layer(self):
+        edges = _common_upward_edges()
+        assert not edges, (
+            "a module under ppxai/common/ now imports a layer above it "
+            "(engine, commands, server, a client, remote, rendering). common/ "
+            "is what those layers build on; an edge back up makes them "
+            "mutually dependent. Invert it instead: define a hook or a "
+            "Protocol in common/ and let the higher layer register the "
+            "implementation (see common.consent.set_transparent_prefix_stripper "
+            "and docs/patterns/protocol-dependency-inversion.md):\n  "
+            + "\n  ".join(f"{m}:{line} -> {t}" for m, t, line in edges)
+        )
+
+
+# ===========================================================================
 # Guard 4 — tests/ must not GAIN new function-level `ppxai` imports
 # ===========================================================================
 #

@@ -99,10 +99,10 @@ ppxai/
 │   └── …              # paths, providers, tools, features, prompts, context, defaults
 ├── constants.py       # LEAF: Enums and constants
 ├── prompts.py         # LEAF: No ppxai imports
-├── common/            # Low-level utilities — near-leaf (see consent.py for the one exception)
+├── common/            # Low-level utilities — imports only constants.py and version.py (fenced)
 │   ├── logger.py      # Imports only ppxai.version (enable_all/disable_all v1.15.4)
 │   ├── preview.py     # Preview utilities (v1.15.4)
-│   ├── consent.py     # Uses logger + constants, AND engine.tools.wrappers (get_registry) — an upward import
+│   ├── consent.py     # Uses logger + constants; the engine registers its wrapper-prefix stripper (set_transparent_prefix_stripper)
 │   ├── format.py      # format_tokens / format_usage_badge (v1.18.0 Phase 4 — canonical Python source for the JS/TS mirrors in web/shared and vscode/src/shared)
 │   ├── autosave_guard.py  # AutosaveFailureGuard state machine (v1.18.0 Phase 5f — surfaces sustained auto-save failures to the user)
 │   ├── atomic_file.py     # atomic_replace with Windows lock-retry (v1.18.0 Phase 5g — extracted from editor.py)
