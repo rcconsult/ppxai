@@ -4,8 +4,10 @@
 and 5; 3 and 4 measured against a WSL2 sshd the same day)
 **Status:** 🚧 **In progress.** Phase 1 (S3, the remote-side contract) was
 implemented on 2026-09-27 (`78e34b8e`): `ppxai-server --uds/--announce/--detach/--list`,
-the contract-1 registry, verified on Windows, macOS and Ubuntu 24.04. Phases 2
-and later (the hub and SSH transport) are not started. Revise in place.
+the contract-1 registry, verified on Windows, macOS and Ubuntu 24.04. Phase 2
+(S2, the transport) was implemented on 2026-09-28 on `feature/v1.19.4`:
+`ppxai/remote/transport.py` + `openssh.py`. Phases 3 and later (session
+manager, hub proxy, picker) are not started. Revise in place.
 **Related:**
 - [`../plan-ssh-remote-backend.md`](../plan-ssh-remote-backend.md) — the phased plan that implements this record
 - [`../patterns/protocol-dependency-inversion.md`](../patterns/protocol-dependency-inversion.md) — the `Protocol`-in-leaf-module pattern the transport seam uses
@@ -122,8 +124,14 @@ class LocalEndpoint:  kind: Literal["tcp", "uds"]; address: str  # "127.0.0.1:53
 - `forward()` returns an endpoint the hub proxies to. On Windows the local end
   is a loopback TCP port (OpenSSH for Windows forwards TCP→remote-UDS); on
   POSIX it may be a local UDS.
-- Errors are typed (`HostUnreachable`, `AuthFailed`, `HostKeyRejected`,
-  `RemoteCommandFailed`, `ForwardFailed`) and carry OpenSSH's stderr verbatim.
+- Errors are typed (`HostUnreachableError`, `AuthFailedError`,
+  `HostKeyRejectedError`, `RemoteCommandFailedError`, `ForwardFailedError`,
+  plus `TransportTimeoutError`; all subclass `RemoteTransportError`) and carry
+  OpenSSH's stderr verbatim. `run()` returns a non-zero *remote* exit as a
+  `RunResult` (`.check()` raises `RemoteCommandFailedError`); only ssh's own
+  failures raise. ssh exits 255 for both its own failures and a remote command
+  that exits 255, so a 255 is an ssh failure only when stderr carries a
+  recognised OpenSSH message.
   The transport never prompts: it runs `ssh -o BatchMode=yes`, so a missing
   key or unknown host key fails fast instead of hanging the hub.
 

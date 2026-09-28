@@ -894,6 +894,64 @@ class TestConfigDoesNotImportEngine:
 
 
 # ===========================================================================
+# Guard 3b — `ppxai/remote/` must not import `engine/` or `commands/`
+# ===========================================================================
+#
+# ADR 0013 S4 (2026-09-28): the hub package moves bytes between a local
+# browser and a remote `ppxai-server`; it never interprets a chat. Held at
+# zero from the package's first commit, walking the whole AST like Guards 2
+# and 3 so a function-level import counts.
+
+_REMOTE_FORBIDDEN = ("ppxai.engine", "ppxai.commands")
+
+
+def _remote_forbidden_edges():
+    """`(module, target, lineno)` for every `remote -> engine|commands` import."""
+    def forbidden(name):
+        return any(name == p or name.startswith(p + ".") for p in _REMOTE_FORBIDDEN)
+
+    found = []
+    for path in sorted((PPXAI / "remote").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        module = _module_name(path)
+        is_init = path.name == "__init__.py"
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                found += [(module, a.name, node.lineno)
+                          for a in node.names if forbidden(a.name)]
+            elif isinstance(node, ast.ImportFrom):
+                target = _resolve(node, module, is_init)
+                if target and forbidden(target):
+                    found.append((module, target, node.lineno))
+                elif target == "ppxai":
+                    found += [(module, f"ppxai.{a.name}", node.lineno)
+                              for a in node.names if forbidden(f"ppxai.{a.name}")]
+    return found
+
+
+class TestRemoteImportsNoEngineOrCommands:
+    """Guards FIRST — a detector that stops matching would pass forever."""
+
+    def test_the_detector_resolves_a_relative_engine_import(self):
+        tree = ast.parse("from ..engine.types import Event\n")
+        node = next(n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom))
+        assert _resolve(node, "ppxai.remote.openssh", False) == "ppxai.engine.types"
+
+    def test_the_remote_package_is_where_we_think(self):
+        assert (PPXAI / "remote" / "transport.py").exists(), "wrong root?"
+
+    def test_remote_imports_nothing_from_engine_or_commands(self):
+        edges = _remote_forbidden_edges()
+        assert not edges, (
+            "a module under ppxai/remote/ now imports ppxai/engine/ or "
+            "ppxai/commands/. ADR 0013 S4: the hub moves bytes and never "
+            "interprets a chat, so it must not know those layers exist. "
+            "Pass plain data in from the caller instead:\n  "
+            + "\n  ".join(f"{m}:{line} -> {t}" for m, t, line in edges)
+        )
+
+
+# ===========================================================================
 # Guard 4 — tests/ must not GAIN new function-level `ppxai` imports
 # ===========================================================================
 #

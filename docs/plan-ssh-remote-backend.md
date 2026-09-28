@@ -47,6 +47,16 @@ kill → list prunes. All local, POSIX-gated where the OS demands it.
 
 ## Phase 2 — S2, `RemoteTransport` + `OpenSSHTransport`
 
+**Status (2026-09-28): implemented** on `feature/v1.19.4` — `ppxai/remote/{transport,openssh}.py`, `tests/test_remote_transport.py`, `tests/remote_fakes.py` (`FakeTransport`), `tests/fake_ssh.py` (a stand-in ssh binary: runs the command through a real local `sh`, so the quoting table is end-to-end, and relays `-L` forwards to a unix socket), and Guard 3b in `tests/test_no_new_lazy_imports.py`. Decisions made while building it:
+
+- **Local end of a forward:** a unix socket in a private 0700 `mkdtemp` dir on POSIX (`StreamLocalBindMask=0177`), loopback TCP on Windows. The hub is then the only local process that can reach a forward on POSIX.
+- **CR/LF refused in argv**, not quoted: `sh` accepts them inside single quotes, csh-family login shells do not, and no ppxai command needs one.
+- **Destination validation:** one `ssh` word, never starting with `-` (option injection such as `-oProxyCommand=…`).
+- **A forward's readiness is "the local end accepts"**, not "the remote socket answers". Real ssh accepts locally and only fails the channel; liveness is S4's `/health` probe.
+- **Exception names end in `Error`** (repo lint, N818); the ADR's S2 text is updated to match.
+
+Verified against the real OpenSSH 8.6 client on macOS: unknown host → `HostUnreachableError`, closed port → the same. The opt-in live class runs with `PPXAI_TEST_SSH_DEST=<destination>`. **Not yet run:** a live forward against a real sshd, and anything on Windows (the forward and quoting classes are POSIX-gated; the TCP forward path was exercised on macOS with `local_forward_kind="tcp"`).
+
 - `ppxai/remote/transport.py`: the Protocol, `RunResult`, `LocalEndpoint`,
   typed errors.
 - `OpenSSHTransport`: `BatchMode=yes`, argv quoting in one function,

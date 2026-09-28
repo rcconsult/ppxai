@@ -5,6 +5,14 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.4] - unreleased
+
+Branch: `feature/v1.19.4`. Work stream: ADR 0013's SSH remote backend.
+
+### Groundwork (not yet a supported feature) — SSH transport (ADR 0013 phase 2)
+
+- New package `ppxai/remote/`, used by nothing yet. `RemoteTransport` is the Protocol the hub will reach remote hosts through: run a command, forward a local endpoint to a remote unix socket, close. `OpenSSHTransport` implements it over the user's own `ssh`, so SSH config aliases, the agent, `ProxyJump`, hardware keys and `known_hosts` work unchanged and ppxai stores none of them. Every invocation uses `BatchMode=yes`, so a missing key or an unknown host key fails at once instead of waiting on a prompt. The remote command is quoted in one place and refuses line breaks. OpenSSH's failures map to typed errors that keep its stderr verbatim. On POSIX a forward's local end is a unix socket in a private directory. The package may not import the engine or the command layer (fenced).
+
 ## [1.19.3] - 2026-09-28
 
 Branch: `bugfix/v1.19.3` (commits ahead of master: `git rev-list --count master..HEAD` — not pinned here, it moves until the tag). Nine fixes, a turn-level tool strip in the web and VSCode transcripts, a refreshed deployment example, and ADR 0007's one-command-registry work (`CommandSpec` as the single source of truth for completion/`/help`/the roster, `GET /commands`, and a run of same-day follow-ups). Two of the fixes make an existing silent degradation VISIBLE, without changing what the send path does or changing a resolved fact value. Two close out the 2026-09-27 Sonar chat-completions retirement on the web_search tool's own code path. Two correct `/doctor` (it probed outside the TLS resolver, and its facts scan could describe a different config file than the one it named). Two are resolution and display: the shipped Qwen 27B-FP8 row now covers the in-place 3.8 upgrade, and the context-window badge stops multiplying its baseline by the tool-loop iteration count. The last is a web/VSCode transcript defect fixed alongside the turn-level tool strip below.
