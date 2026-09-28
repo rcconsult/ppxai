@@ -114,7 +114,10 @@ async def http_request(endpoint: LocalEndpoint, token: str, method: str, path: s
         base = f"http://{endpoint.address}"
     headers = {"Authorization": f"Bearer {token}", "Host": "localhost"}
     try:
-        async with httpx.AsyncClient(transport=transport, timeout=_HTTP_TIMEOUT_S) as client:
+        # trust_env=False: an HTTP(S)_PROXY in the environment must never
+        # route a request meant for a local forward through a proxy.
+        async with httpx.AsyncClient(transport=transport, timeout=_HTTP_TIMEOUT_S,
+                                     trust_env=False) as client:
             response = await client.request(method, base + path, headers=headers)
             return response.status_code
     except (httpx.HTTPError, OSError):

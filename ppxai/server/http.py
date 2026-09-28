@@ -41,12 +41,13 @@ from starlette.datastructures import Headers
 import ppxai.config.loader as _loader
 
 from ..common.logger import get_logger
-from ..config import get_idle_timeout, get_shutdown_grace_s, initialize
+from ..config import get_idle_timeout, get_remote_config, get_shutdown_grace_s, initialize
 from ..version import __version__
 from . import registry
 from . import state as _state  # noqa: F401 — backing store for session_manager
 from .auth import check_request as _auth_check_request
 from .routes import all_routers
+from .routes.remote_hub import start_hub, stop_hub
 from .secrets import EnvSecretProvider
 from .session_manager import SessionManager
 
@@ -173,6 +174,12 @@ async def lifespan(app: FastAPI):
     # runs another live server owns (RunMeta.server_pid).
     get_agent_run_registry()
 
+    # ADR 0013 S5: the remote hub. Off unless remote.hosts names a host, and
+    # never on an announced (remote-side) server -- that one is a hub's
+    # TARGET, reached over its own socket.
+    if _HUB_ALLOWED:
+        await start_hub(get_remote_config())
+
     startup_time = time.time() - startup_start
     set_server_start_time(time.time())
 
@@ -189,6 +196,9 @@ async def lifespan(app: FastAPI):
         print("Auto-shutdown: disabled")
 
     yield
+
+    # Shutdown: drop the hub's forwards first; remote servers keep running.
+    await stop_hub()
 
     # Shutdown: Kill preview backends (v1.17.1)
     for sid, backend in list(all_preview_backends().items()):
@@ -598,6 +608,9 @@ def _forwarded_allow_ips() -> str:
     return os.environ.get("PPXAI_FORWARDED_ALLOW_IPS", "")
 
 
+#: False on an announced server (ADR 0013): a hub's target never runs a hub.
+_HUB_ALLOWED = True
+
 #: Set by `--announce` (ADR 0013): the idle monitor's timeout, 0 = never.
 _IDLE_TIMEOUT_OVERRIDE: int | None = None
 
@@ -1003,7 +1016,8 @@ def _run_announced(args) -> int:
         _report(report_fd, {"error": str(exc)})
         return 1
 
-    global _IDLE_TIMEOUT_OVERRIDE
+    global _IDLE_TIMEOUT_OVERRIDE, _HUB_ALLOWED
+    _HUB_ALLOWED = False
     token = None
     if args.announce:
         token = registry.new_token()

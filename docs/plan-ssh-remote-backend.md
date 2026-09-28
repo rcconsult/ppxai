@@ -84,6 +84,18 @@ failure → degraded → recovery, and a transport dying mid-forward.
 
 ## Phase 4 — S5, the hub proxy
 
+**Status (2026-09-28): implemented** on `feature/v1.19.4` — `ppxai/server/routes/remote_hub.py` (the `/h/<host>/<id>/…` proxy plus a `/hub/*` control API the picker will use), `ppxai/config/remote.py` + the `remote` key in the loader's top-level whitelist, and the lifespan hook in `ppxai/server/http.py`. Built on top of the v1.19.4 websocket guard (`fix/v1.19.4`, merged in), which the investigation for this phase found. Decisions:
+
+- **Off means absent.** Without `remote.hosts`, every hub path answers byte-for-byte like an unknown path, no manager exists and nothing is spawned. An announced (remote-side) server never runs a hub. A malformed `remote` block is logged and leaves the hub off; it never stops the server. The owner required that the k8s coder pods be unaffected: `tests/test_remote_hub_coder_fence.py` runs the real app with the coder pods' env and pins all of this, including that a pod which *had* `remote.hosts` still shows nothing to the ingress.
+- **Loopback only, same-origin for writes.** The hub answers a direct loopback peer (no forwarding headers) only. A proxied non-GET, a websocket and every control POST must be same-origin (Origin equal to the hub's own, `Sec-Fetch-Site` not cross/same-site); control POSTs also need `application/json`, which forces a preflight.
+- **Auto-attach on first proxied request**, so a reload after a hub restart works; a non-healthy attachment is a 503 with `Retry-After: 5`, a dead forward a 502.
+- **Proxy details:** streamed both ways (SSE measured unbuffered), keep-alive client pooled per attachment (ADR Q4), `Host: localhost`, token injected, the browser's `Authorization`/`Cookie`/`Origin`/`Referer`/forwarding headers dropped; relative `Location` and cookie `Path` get the prefix; repeated `Set-Cookie` preserved. `trust_env=False` / `proxy=None` everywhere: an `HTTP(S)_PROXY` in the environment must never route a loopback or socket hop through a corporate proxy.
+- **Control API:** `GET /hub/hosts`, `GET /hub/hosts/<host>/servers`, `POST /hub/hosts/<host>/servers` (launch), `POST /hub/hosts/<host>/servers/<id>/attach|detach|stop`. Errors are typed: 404 unknown host/server, 409 unsupported/old/unknown-contract, 502 transport, with OpenSSH's text in `detail`.
+
+Tests: `tests/test_remote_hub.py` (two real uvicorn servers — the hub router and a fake remote on a unix socket and on TCP — 25 cases × 2 transports; mutation-checked: a buffering proxy and a missing loopback gate both fail it), the coder fence (22 cases; mutation-checked: dropping `remote` from the loader whitelist or the loopback gate fails it), and `tests/test_remote_hub_e2e.py` (slow): a real `ppxai-server` hub, configured by a real config file, launches a second real `ppxai-server` through the production `OpenSSHTransport` (its `ssh` a PATH shim around `tests/fake_ssh.py`), serves the remote's own web UI and terminal through `/h/lab/<id>/`, and stops it.
+
+Live results recorded for Phases 2–3 (2026-09-28): a Windows hub (TCP local end) and a Linux hub (real OpenSSH, unix-socket local end: socket 0600 in a 0700 dir) each ran launch → attach (healthy) → stop (gone) against a real WSL2 sshd, with nothing left behind.
+
 - `/h/<host>/<server-id>/…` → forwarded endpoint, prefix stripped.
 - Streaming for SSE and chunked bodies; websocket upgrade for `/ws/terminal`.
 - `Authorization` injected; `Host: localhost`; no `X-Forwarded-*`.

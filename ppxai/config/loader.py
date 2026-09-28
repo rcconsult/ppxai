@@ -490,6 +490,11 @@ def load_config() -> dict[str, Any]:
             # happily. tests/test_tls_config.py drives the real loader for
             # exactly this reason; stubbing the block reader cannot see it.
             "network": json_config.get("network", {}),
+            # ADR 0013 S1: the hub's host inventory. Fifth occurrence of the
+            # whitelist trap above -- without this line `remote.hosts` would be
+            # dead config and the hub silently off (tests/test_remote_hub_coder_fence.py
+            # drives the real loader).
+            "remote": json_config.get("remote", {}),
         }
 
     else:

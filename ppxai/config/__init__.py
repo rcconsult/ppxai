@@ -140,6 +140,7 @@ from .providers import (
     removed_providers_in_config,
     validate_config,
 )
+from .remote import get_remote_config
 from .store import ConfigStore, get_config, register_reload_callback, reload_config
 
 # Tool, shell, agent, container
@@ -325,6 +326,7 @@ __all__ = [
     # Tool functions
     "get_execution_collect",
     "get_execution_config",
+    "get_remote_config",
     "get_execution_default_subagent",
     "get_execution_egress_ceiling",
     "get_execution_profiles",

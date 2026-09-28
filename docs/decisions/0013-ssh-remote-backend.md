@@ -8,8 +8,9 @@ the contract-1 registry, verified on Windows, macOS and Ubuntu 24.04. Phase 2
 (S2, the transport) was implemented on 2026-09-28 on `feature/v1.19.4`:
 `ppxai/remote/transport.py` + `openssh.py`. Phase 3 (S1 parsing + S4, the
 session manager) the same day: `ppxai/remote/{inventory,contract,manager}.py`.
-Phases 4 and later (hub proxy, picker, config wiring) are not started.
-Revise in place.
+Phase 4 (S5, the hub proxy and `/hub/*` control API, wired to `remote.hosts`)
+the same day: `ppxai/server/routes/remote_hub.py`. Phases 5 (picker, web
+client) and 6 (owner trial) are not started. Revise in place.
 **Related:**
 - [`../plan-ssh-remote-backend.md`](../plan-ssh-remote-backend.md) — the phased plan that implements this record
 - [`../patterns/protocol-dependency-inversion.md`](../patterns/protocol-dependency-inversion.md) — the `Protocol`-in-leaf-module pattern the transport seam uses

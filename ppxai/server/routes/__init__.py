@@ -21,6 +21,7 @@ from . import (
     oneshot,
     preview,
     providers,
+    remote_hub,
     schema,
     sessions,
     state,
@@ -52,5 +53,6 @@ all_routers: list[APIRouter] = [
     oneshot.router,     # v1.18.3: POST /v1/oneshot — stateless gateway primitive
     agent_v1.router,    # v1.19.0: /v1/agent/* — agent run registry (ADR 0003 Stage 2, Inc 1)
     tokens_v1.router,   # v1.19.0: /v1/tokens — pluggable secret-source CRUD (Inc 8a)
+    remote_hub.router,  # ADR 0013 S5: /h/* proxy + /hub/* API; answers 404 unless remote.hosts is set
     static.router,
 ]
