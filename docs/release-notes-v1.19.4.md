@@ -54,6 +54,13 @@ was running, **any web page the user visited could open
 The guard wraps the whole app, so a websocket route added later is covered
 without further work.
 
+**What this does not change.** "The same auth as HTTP" includes HTTP's
+loopback rule. A process on the same machine that sends no `Origin` (not a
+browser) still opens the terminal without a token, just as it can already
+call the local chat API, tools included, without one. Browsers always send
+`Origin`, so a web page can no longer get in. On a machine shared with other
+users, the loopback trust model is unchanged by this release.
+
 **What keeps working** (each case is pinned by `tests/test_websocket_guard.py`):
 
 | Client | Result |
@@ -70,7 +77,17 @@ without further work.
 - Against a live `ppxai-server` over TCP (uvicorn, not the test client):
   the UI's own origins get a working shell; `http://evil.example` gets
   HTTP 403.
-- Full suite on macOS: 6,935 passed, 5 skipped.
+- Full suite: macOS 6,935 passed / 5 skipped; Linux (WSL2 Ubuntu 24.04)
+  6,933 passed / 7 skipped; Windows 6,890 passed / 50 skipped (platform
+  gates); 0 failed anywhere.
+- Linux, live: the fixed server gives the UI's origins a shell and refuses
+  `http://evil.example` with 403. The unfixed v1.19.3 binary on the same
+  host gave `http://evil.example` a shell, which reproduces the hole.
+- Windows, live: the same results with and without `PPXAI_API_TOKEN`. Origin
+  `null` and a rebinding Host are refused too, a wrong bearer from the UI's
+  own origin is refused, and a right bearer from a foreign origin is still
+  refused. The desktop app's terminal view, in a real Chromium, still
+  connects and shows its "requires a Unix host" message.
 
 ## Upgrade
 
