@@ -5,7 +5,7 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.19.3] - unreleased
+## [1.19.3] - 2026-09-28
 
 Branch: `bugfix/v1.19.3` (commits ahead of master: `git rev-list --count master..HEAD` — not pinned here, it moves until the tag). Nine fixes, a turn-level tool strip in the web and VSCode transcripts, a refreshed deployment example, and ADR 0007's one-command-registry work (`CommandSpec` as the single source of truth for completion/`/help`/the roster, `GET /commands`, and a run of same-day follow-ups). Two of the fixes make an existing silent degradation VISIBLE, without changing what the send path does or changing a resolved fact value. Two close out the 2026-09-27 Sonar chat-completions retirement on the web_search tool's own code path. Two correct `/doctor` (it probed outside the TLS resolver, and its facts scan could describe a different config file than the one it named). Two are resolution and display: the shipped Qwen 27B-FP8 row now covers the in-place 3.8 upgrade, and the context-window badge stops multiplying its baseline by the tool-loop iteration count. The last is a web/VSCode transcript defect fixed alongside the turn-level tool strip below.
 
