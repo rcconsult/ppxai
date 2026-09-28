@@ -1354,10 +1354,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#disabling-consent" class="md-nav__link">
+  <a href="#bypassing-consent-three-ways" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Disabling Consent
+        Bypassing consent (three ways)
       
     </span>
   </a>
@@ -2112,10 +2112,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#disabling-consent" class="md-nav__link">
+  <a href="#bypassing-consent-three-ways" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Disabling Consent
+        Bypassing consent (three ways)
       
     </span>
   </a>
@@ -2304,7 +2304,14 @@
 
 <h1 id="container-kubernetes-tools-user-guide">Container &amp; Kubernetes Tools User Guide<a class="headerlink" href="#container-kubernetes-tools-user-guide" title="Permanent link">&para;</a></h1>
 <p><strong>Version:</strong> v1.13.10+
-<strong>Last Updated:</strong> 2026-01-14</p>
+<strong>Last verified:</strong> 2026-09-20 against <code>bugfix/v1.19.3</code> — full re-check, not
+a date bump. All 16 tools, every parameter schema, both timeout tiers, the
+consent-gated set, and every quoted consent string were re-derived from
+<code>ppxai/engine/tools/builtin/container.py</code>. One defect found and fixed: the
+"consent cannot be disabled" claim (see
+<a href="#bypassing-consent-three-ways">Bypassing consent</a>). <code>git log</code> shows no
+functional change to <code>container.py</code> since the v1.13.10 refactor — later
+touches are ruff and import-hoisting only.</p>
 <p>This guide covers ppxai's built-in tools for managing Docker, Podman, and Kubernetes resources through natural language commands.</p>
 <hr />
 <h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
@@ -2486,8 +2493,12 @@ is detected) and are <strong>not</strong> configurable via <code>ppxai-config.js
   <strong>60s</strong> applies to the remaining consent-gated operations (start/stop,
   <code>kube apply</code>). The split is <code>CLITool</code> vs <code>ConsentCLITool</code> in
   <code>ppxai/engine/tools/builtin/container.py</code>, not read-vs-logs.</li>
-<li><strong>Consent is always required</strong> for destructive operations (start, stop,
-  restart, exec, <code>kubectl apply</code>, <code>pod_exec</code>) — it cannot be disabled.</li>
+<li><strong>Consent is required by default</strong> for destructive operations (start,
+  stop, restart, exec, <code>kubectl apply</code>, <code>pod_exec</code>) — but it is <strong>not
+  unconditional</strong>; see <a href="#bypassing-consent-three-ways">Bypassing consent</a>
+  below. These tools do not implement their own gate: they delegate to the
+  <strong>shared shell-consent classifier</strong>, and anything that makes that
+  classifier say SAFE makes the container prompt disappear too.</li>
 </ul>
 <p><code>ppxai-config.json</code> does accept a <code>tools.container</code> block with <code>enabled</code>,
 <code>require_consent</code>, <code>default_runtime</code>, and <code>timeout</code> keys, but these are
@@ -2789,12 +2800,59 @@ any of these keys today has <strong>zero effect</strong>.</p>
 <li>User can: <strong>Allow</strong>, <strong>Deny</strong>, <strong>Always Allow</strong>, or <strong>Never Allow</strong></li>
 <li>Session-level preferences are remembered</li>
 </ol>
-<h3 id="disabling-consent">Disabling Consent<a class="headerlink" href="#disabling-consent" title="Permanent link">&para;</a></h3>
-<p>Not currently possible. Consent for destructive operations
-(<code>container_start</code>, <code>container_stop</code>, <code>container_restart</code>, <code>container_exec</code>,
-<code>kubectl_apply</code>, <code>pod_exec</code>) is unconditional in code — the
-<code>tools.container.require_consent</code> config key is reserved but not read by
-<code>ppxai/engine/tools/builtin/container.py</code>. See <a href="#configuration">Configuration</a>.</p>
+<h3 id="bypassing-consent-three-ways">Bypassing consent (three ways)<a class="headerlink" href="#bypassing-consent-three-ways" title="Permanent link">&para;</a></h3>
+<p><strong>Corrected 2026-09-20.</strong> This section used to say disabling consent was
+"not currently possible" and that it is "unconditional in code". <strong>That is
+wrong</strong>, and it was wrong in a way that mattered: it described the
+<em>container-specific</em> key correctly and then generalised from it.</p>
+<p>The narrow part is true — <code>tools.container.require_consent</code> <strong>is</strong> inert,
+parsed by <code>get_container_config()</code> (<code>ppxai/config/tools.py:193</code>) and never
+called by anything. But the six consent-gated tools have no gate of their
+own. <code>ConsentCLITool.execute()</code>
+(<code>ppxai/engine/tools/builtin/container.py:129-142</code>) calls
+<code>engine.request_shell_consent()</code>, and <code>request_shell_consent</code>
+(<code>ppxai/engine/consent_ops.py:100-142</code>) returns <strong>True with no prompt</strong> in
+three cases:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Bypass</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The command classifies <strong>SAFE</strong></td>
+<td><code>classify_command()</code> → <code>classify_shell_command()</code> (<code>ppxai/common/consent.py:92-157</code>). SAFE means "matched a regex in <code>tools.shell.allowed_commands</code>".</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Session shell-consent mode is <strong>ALWAYS</strong></td>
+<td><code>consent_ops.py:131-132</code> — this is what the <strong>"Always Allow"</strong> button in the prompt above sets.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The exact command string is already in the session's allowed set</td>
+<td><code>consent_ops.py:137-138</code> — set by a prior per-command approval.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>(1) is the one to know about</strong>, because it is durable and silent.
+<code>tools.shell.allowed_commands</code> is a live, user-editable regex list
+(<code>ppxai/config/tools.py:86</code>; defaults at <code>ppxai/config/defaults.py:42-73</code>).
+The shipped defaults contain <strong>no</strong> docker, podman or kubectl pattern —
+verified 2026-09-20, so out of the box every destructive container
+operation does prompt. But adding, say, <code>^docker\s+(start|stop|restart)</code>
+to that list permanently silences the prompt for those operations, and
+<strong>nothing validates or warns about it</strong>: there is no container-specific
+check to fall back on. If you edit <code>allowed_commands</code>, you are editing
+container consent too, whether or not you meant to.</p>
+<p>Fail-safe directions still hold: a <code>NEVER</code>-classified command is refused
+outright, and with no consent callback registered the default is <strong>deny</strong>
+(<code>consent_ops.py:143-144</code>).</p>
+<p>See <a href="#configuration">Configuration</a>.</p>
 <hr />
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="error-no-container-runtime-found">"Error: No container runtime found"<a class="headerlink" href="#error-no-container-runtime-found" title="Permanent link">&para;</a></h3>

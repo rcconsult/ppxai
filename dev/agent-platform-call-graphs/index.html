@@ -1458,10 +1458,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tool-registration-depth-gate-routesagent_v1py-build_task_runner" class="md-nav__link">
+  <a href="#tool-registration-depth-gate-enginetask_runnerpy-build_task_runner-moved-there-in-v1191-agent_v1-only-re-exports" class="md-nav__link">
     <span class="md-ellipsis">
       
-        tool registration (depth gate) [routes/agent_v1.py build_task_runner]
+        tool registration (depth gate) [engine/task_runner.py build_task_runner — moved there in v1.19.1; agent_v1 only re-exports]
       
     </span>
   </a>
@@ -1655,13 +1655,53 @@
 
 <h1 id="agent-platform-endpoint-call-graphs-per-increment">Agent platform — endpoint call graphs (per increment)<a class="headerlink" href="#agent-platform-endpoint-call-graphs-per-increment" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p>⚠️ <strong>Partially stale (flagged 2026-08-15).</strong> These graphs predate the
-admission-boundary unification (<code>135abf48</code>), so they do not show
-<code>ppxai/engine/task_authorizer.py::authorize_task()</code> — today the single
-admission point every client passes through, with the HTTP route reduced to
-a thin adapter. The per-endpoint routing below is still accurate; the
-authorization step drawn inside each route now lives in front of all of
-them. Redrawing is open work.</p>
+<p>⚠️ <strong>Partially stale — re-surveyed 2026-09-20, and the gap is now
+itemised rather than gestured at.</strong> The per-endpoint <em>routing</em> below is
+still accurate and the endpoint set is complete (all 9 <code>/v1/agent/*</code> plus
+the 3 <code>/v1/tokens</code> paths verified present). What has drifted is <strong>where
+the work happens inside a route</strong>, plus two web-client sections that
+describe commands which no longer exist.</p>
+<p><strong>1. Admission moved out of the routes (<code>135abf48</code>).</strong>
+<code>ppxai/engine/task_authorizer.py::authorize_task()</code> (<code>:1274</code>) is the
+single admission point for the task tier, called from
+<code>routes/agent_v1.py:714</code>. <code>authorize_oneshot()</code> is its <code>/run</code> sibling,
+called at <code>:364</code>. These graphs draw those gates inline in the route.
+Specifically superseded: <strong>Increment 4</strong> (provider/model resolution —
+<code>create_agent_task</code> no longer calls <code>_v1_provider_or_400</code> at all; that
+now happens inside <code>authorize()</code> via <code>validate_provider_or_error</code>),
+<strong>Increment 5</strong> (the <code>grant_has_shell</code> reject, now at
+<code>task_authorizer.py:1139</code>), and <strong>§N</strong> (the workdir/seal decision, now
+gate 7 of <code>authorize()</code>, read back as <code>auth.workdir_ignored</code>).
+<strong>Increment 6 is NOT affected</strong> — the budget dict is still built in the
+route and passed through unchanged.</p>
+<p><strong>Worth knowing for the redraw:</strong> the in-process TUI path does <em>not</em> call
+<code>authorize_task</code>. <code>task_backend.py</code> requires an <code>AuthorizedTask</code> <strong>as a
+parameter</strong>, so admission is enforced by the type rather than by a call —
+"was this authorized?" is unanswerable-in-the-negative at that seam. That
+is a genuinely different topology from the HTTP route and is why a
+mechanical find-and-replace of the gate boxes would be wrong.</p>
+<p><strong>2. <code>build_task_runner</code> moved</strong> to <code>ppxai/engine/task_runner.py:152</code>
+(v1.19.1, for the T8b in-process port). Inc 7 and T2 still attribute it
+to <code>routes/agent_v1.py</code>, which now only re-exports it — and its own
+comment says <em>"NOT a patch point… Patch
+<code>ppxai.engine.task_runner.build_task_runner</code> instead."</em></p>
+<p><strong>3. Two web-client sections describe deleted code.</strong> ADR 0011 hard-removed
+<code>/agentrun</code> and <code>/agentruns</code> with no aliases; <code>_dispatchAgentRun</code>,
+<code>_watchAgentRunDetached</code> and <code>_dispatchAgentRunsList</code> return <strong>zero</strong> hits
+under <code>ppxai/web/</code>. The command is <code>/run</code>, handled by <code>RunController</code>
+(<code>ppxai/web/shared/run-controller.js</code>, extends <code>TaskController</code>). Affects
+the Inc 2 and Inc 3 web-client surfaces and <strong>§K</strong> in its entirety.</p>
+<p><strong>4. Undocumented branch:</strong> <code>/v1/agent/run</code> has a U3 grant rule (ADR 0011)
+— when <code>execution.run.web_search</code> is on, <code>auth.tools</code> is non-empty and the
+run goes through the <strong>full task-tier sandbox</strong> with a hardwired
+<code>{web_search}</code> grant, not the plain oneshot path Inc 1/2 draw
+(<code>agent_v1.py:385-410</code>). No section covers this.</p>
+<p><strong>5. <code>NetworkPolicy</code> gained <code>provider_name</code></strong> (<code>network_policy.py:364</code>) and
+<code>tool_targets()</code> now resolves web_search hosts per-provider via
+<code>resolve_web_search_backend()</code> rather than the fixed four-host superset
+Inc 5 shows. The allow-list is also passed through <code>apply_egress_ceiling()</code>
+before construction (<code>task_runner.py:305-315</code>).</p>
+<p>Redrawing remains open work; this banner is the map of what to redraw.</p>
 </blockquote>
 <p><strong>Purpose:</strong> a reference map of what each <code>/v1/agent/*</code> endpoint actually
 calls, traced from code, maintained <strong>per increment</strong>. Use it for
@@ -1798,6 +1838,17 @@ task; the done-callback removes it. Cancel-by-id + shutdown drain = Inc 6.</p>
 <code>_drive</code> has called <code>finish_run</code>. <code>started_at</code> is populated once
 background execution begins.</p>
 <h3 id="web-client-surface-consumer-of-the-above-no-new-endpoints">Web client surface (consumer of the above — no new endpoints)<a class="headerlink" href="#web-client-surface-consumer-of-the-above-no-new-endpoints" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>🚫 <strong>Describes deleted code (marked 2026-09-20).</strong> ADR 0011 hard-removed
+<code>/agentrun</code> and <code>/agentruns</code> with <strong>no aliases</strong>, and the three functions
+below went with them — <code>_dispatchAgentRun</code>, <code>_watchAgentRunDetached</code> and
+<code>_dispatchAgentRunsList</code> return <strong>zero</strong> hits under <code>ppxai/web/</code>.
+<code>command-dispatcher.js:93-94</code> carries the epitaph: <em>"Replaces the retired
+/agentrun + /agentruns (hard removal)."</em> The command is now <strong><code>/run</code></strong>,
+dispatched to <code>RunController</code> (<code>ppxai/web/shared/run-controller.js</code>,
+which extends <code>TaskController</code>). Kept as the historical Inc-2/Inc-3 shape
+per this doc's append-only rule; do not use it to find code.</p>
+</blockquote>
 <p>Added alongside Inc 2 so the live <code>running → completed</code> status is
 trialable in-app, not just via curl.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>chat input "/agentrun &lt;task&gt;"            [web/app.js sendMessage]
@@ -1869,6 +1920,17 @@ lifecycle/result events. Store Protocol grew (additive).</p>
 replay backlog and the live tail. Always-persist / filter-on-read: the
 file has everything; the endpoint subsets it.</p>
 <h3 id="web-client-inc-3-upgrade">Web client (Inc 3 upgrade)<a class="headerlink" href="#web-client-inc-3-upgrade" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>🚫 <strong>Describes deleted code (marked 2026-09-20).</strong> ADR 0011 hard-removed
+<code>/agentrun</code> and <code>/agentruns</code> with <strong>no aliases</strong>, and the three functions
+below went with them — <code>_dispatchAgentRun</code>, <code>_watchAgentRunDetached</code> and
+<code>_dispatchAgentRunsList</code> return <strong>zero</strong> hits under <code>ppxai/web/</code>.
+<code>command-dispatcher.js:93-94</code> carries the epitaph: <em>"Replaces the retired
+/agentrun + /agentruns (hard removal)."</em> The command is now <strong><code>/run</code></strong>,
+dispatched to <code>RunController</code> (<code>ppxai/web/shared/run-controller.js</code>,
+which extends <code>TaskController</code>). Kept as the historical Inc-2/Inc-3 shape
+per this doc's append-only rule; do not use it to find code.</p>
+</blockquote>
 <p><code>/agentrun</code> switches from poll-loop to the SSE tail: after POST, open
 <code>GET …/events?live=1</code> and render frames as they arrive; close on the
 terminal <code>agent_run_complete</code>/<code>agent_run_error</code> event. (Verbosity slider +
@@ -2063,7 +2125,7 @@ is NOT task.cancel()'d; it stops at the next tool-loop checkpoint.</p>
 spawn tool for top-level granted runs). Execution model: a parent run's tool
 call mints + runs ONE child run (own run_id, linked by parent_run_id) and
 blocks on it.</p>
-<h3 id="tool-registration-depth-gate-routesagent_v1py-build_task_runner">tool registration (depth gate)  [routes/agent_v1.py build_task_runner]<a class="headerlink" href="#tool-registration-depth-gate-routesagent_v1py-build_task_runner" title="Permanent link">&para;</a></h3>
+<h3 id="tool-registration-depth-gate-enginetask_runnerpy-build_task_runner-moved-there-in-v1191-agent_v1-only-re-exports">tool registration (depth gate)  [engine/task_runner.py build_task_runner — moved there in v1.19.1; agent_v1 only re-exports]<a class="headerlink" href="#tool-registration-depth-gate-enginetask_runnerpy-build_task_runner-moved-there-in-v1191-agent_v1-only-re-exports" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>build_task_runner(registry, ..., tools, allow_outbound, allow_spawn):
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>  _runner(m):
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    engine.enable_tools()
@@ -2232,8 +2294,9 @@ call flow without adding endpoints; debt Item 37 a–j tracks the residue.</p>
 <code>_build_provider</code> (400 only on unknown/no-key). The old
 <code>isinstance(provider, OpenAICompatibleProvider)</code> guard on <code>/run</code> + <code>/task</code> +
 <code>/v1/oneshot</code> is gone. <code>oneshot()</code> is now <code>@abstractmethod</code> on <code>BaseProvider</code>,
-implemented on all 4 providers (native ones compose their existing
-<code>chat_sync_simple</code> + per-vendor usage parser). <code>/task</code> uses <code>engine.chat</code>
+implemented on all 4 providers (native ones composed their then-existing
+<code>chat_sync_simple</code> + per-vendor usage parser; <code>chat_sync_simple</code> was
+deleted 2026-09-20 as dead code, and <code>oneshot</code> now stands on its own). <code>/task</code> uses <code>engine.chat</code>
 (abstract on all); <code>/run</code> + <code>/v1/oneshot</code> use <code>oneshot</code>. Any configured
 provider works. (commits 18373e31←removed, cbb8c536)</p>
 <p><strong>§B — agent system-prompt framing.</strong> <code>EngineClient.system_prompt_override</code>
@@ -2347,7 +2410,10 @@ list, cancel, and unknown-run reads all still 401. Remote never exempt.
 Verified live (rebuilt server): web launch→tail→read all succeed token-less;
 <code>/task</code>+<code>/runs</code>+<code>/cancel</code>+ghost-read all 401. Tests: 14 new in
 <code>test_tokens_v1_route.py::TestLoopbackUIExemption</code>.</p>
-<p><strong>§K — web <code>/agentrun</code> fire-and-forget (web client only).</strong> <code>/agentrun</code>
+<p><strong>§K — web <code>/agentrun</code> fire-and-forget (web client only).</strong> 🚫 <strong>Entire
+section describes deleted code</strong> — <code>/agentrun</code> and both helper functions
+were hard-removed by ADR 0011 (marked 2026-09-20); the behaviour lives on
+in <code>RunController</code> under <code>/run</code>. <code>/agentrun</code>
 previously AWAITED its own SSE tail inline, blocking the chat prompt until the
 run completed — defeating the background run registry. <code>_dispatchAgentRun</code> now
 launches, prints <code>🤖 run_xxx — running… (chat stays usable…)</code>, and RETURNS
@@ -2493,7 +2559,8 @@ spawn ctor-contract updated.</p>
 <h2 id="build-plan-t1-task-command-family-web-client-surface">Build plan T1 — <code>/task</code> command family (web client surface)<a class="headerlink" href="#build-plan-t1-task-command-family-web-client-surface" title="Permanent link">&para;</a></h2>
 <p>Added: <code>web/shared/task-controller.js</code> (<code>TaskController extends AgentRunController</code>),
 <code>web/components/views/task-run-view.js</code> (<code>TaskRunView extends AgentRunView</code>).
-Changed: <code>command-dispatcher.js</code> (route <code>/task</code>), <code>commands.js</code> + <code>app.js</code> (catalog),
+Changed: <code>command-dispatcher.js</code> (route <code>/task</code>), <code>commands.js</code> + <code>app.js</code> (catalog
+— both catalogs deleted by ADR 0007 step 3a; <code>/task</code> now routes off the fetched roster),
 <code>index.html</code> (script includes), <code>styles/right-panel-frame.css</code>. <strong>No new endpoints</strong> —
 the tool-capable tier's client, entirely over the Inc-4→9 <code>/v1/agent/*</code> routes.
 (build plan: <code>plan-task-command-sequencing.md</code>.)</p>
@@ -2548,7 +2615,7 @@ Live-verified: launch → tool loop → <code>completed</code>; <code>cancel</co
 (per-run workdir + policy wiring), <code>task-run-view.js</code> (<code>path_denied</code> in the log).
 <strong>Off by default</strong> — the jail engages only on <code>enforcement:"in_process"</code>, so an
 unconfigured tool-capable run reads/writes as before (non-breaking).</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>build_task_runner._runner(m):                         [routes/agent_v1.py]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>build_task_runner._runner(m):                   [engine/task_runner.py]
 </span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>  sandbox = get_execution_task_config()["sandbox"]      [config/execution.py]
 </span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>  if sandbox.enforcement == "in_process":
 </span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>     workdir = &lt;sandbox.workdir.root&gt;/&lt;run_id&gt;/work    (mkdir)
@@ -2718,9 +2785,15 @@ inspectable, not a mid-conversation snapshot.</p>
 <p>Added: <code>vscode-extension/src/taskController.ts</code> (IoC controller, VSCode-free),
 <code>/v1/agent/*</code> typed slice in <code>httpClient.ts</code>, <code>/task</code> route + UI adapter in
 <code>chatPanel.ts</code>, <code>/task</code> in the completion catalog. <strong>No server changes</strong> — the
-whole increment is a second client over the T1–T7 surface. T8b (TUI) is split
-out pending the transport decision (in-process registry = debt (t) vs HTTP
-client in the TUIs) — see the plan doc §T8.</p>
+whole increment is a second client over the T1–T7 surface. ~~T8b (TUI) is
+split out pending the transport decision (in-process registry = debt (t) vs
+HTTP client in the TUIs)~~ — <strong>decided and shipped 2026-08-08: in-process.</strong>
+<code>ppxai/engine/task_runner.py</code> builds the runner and the TUIs never grew an
+HTTP client. All four client families have <code>/task</code> and <code>/run</code>; the one
+nuance is that <code>launch</code> and <code>resume</code> need a live asyncio loop (<code>_NEEDS_LOOP</code>,
+<code>ppxai/commands/task.py:52</code>), so the Rich TUI rejects those two verbs with an
+actionable error while every read verb works everywhere. See the plan doc
+§T8b. (This paragraph said "pending" until 2026-09-20.)</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>webview input "/task &lt;verb&gt; …"                    [chatPanel.handleSlashCommand]
 </span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>└─ command === 'task' → getTaskController().handle(argsText)   [BEFORE factory
 </span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>   │                                                    dispatch — factory has no /task]

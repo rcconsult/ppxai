@@ -1267,7 +1267,16 @@
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>tree-sitter-css&gt;=0.25.0
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>tree-sitter-markdown&gt;=0.5.1
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>tree-sitter-bash&gt;=0.25.1
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>tree-sitter-go&gt;=0.23.0
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>tree-sitter-rust&gt;=0.23.0
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>tree-sitter-java&gt;=0.23.0
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>tree-sitter-sql&gt;=0.3.0
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>tree-sitter-xml&gt;=0.7.0
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>tree-sitter-regex&gt;=0.25.0
 </span></code></pre></div>
+<p>Fifteen language grammars, all wired into <code>EXTENSION_TO_LANGUAGE</code>
+(<code>ppxai/tui/widgets/code_editor.py:69-104</code>). The last six (go, rust, java,
+sql, xml, regex) were missing from this list until 2026-09-20.</p>
 <p>Without these packages, TextArea shows plain text with no syntax colors.</p>
 <h2 id="two-theme-systems">Two theme systems<a class="headerlink" href="#two-theme-systems" title="Permanent link">&para;</a></h2>
 <p>The TUI has <strong>two separate theme systems</strong> that must stay synchronized:</p>
@@ -1416,7 +1425,7 @@ send CSI u sequences:
 </tr>
 </tbody>
 </table>
-<p><strong>Textual TUI:</strong> <code>image_handlers.py::get_image_widget_class()</code> selects on
+<p><strong>Textual TUI:</strong> <code>widgets/image_handlers.py::_get_image_widget_class()</code> (private) selects on
 <code>TERM_PROGRAM</code> — <code>wezterm</code> and <code>iterm.app</code> <strong>both</strong> get <code>ITerm2ImageWidget</code>
 (OSC 1337); everything else falls to <code>textual-image</code>. The widget uses a
 <code>render_lines()</code> override to inject escape sequences. Cannot use Rich renderables directly because Textual processes segments differently. See <code>ppxai/tui/widgets/iterm2_widget.py</code>.</p>

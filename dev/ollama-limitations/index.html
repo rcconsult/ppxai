@@ -1038,10 +1038,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1-tool-loop-detection-v11310" class="md-nav__link">
+  <a href="#1-tool-loop-detection-v11310-reworked-v1193" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Tool Loop Detection (v1.13.10)
+        1. Tool Loop Detection (v1.13.10, reworked v1.19.3)
       
     </span>
   </a>
@@ -1609,10 +1609,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1-tool-loop-detection-v11310" class="md-nav__link">
+  <a href="#1-tool-loop-detection-v11310-reworked-v1193" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Tool Loop Detection (v1.13.10)
+        1. Tool Loop Detection (v1.13.10, reworked v1.19.3)
       
     </span>
   </a>
@@ -1975,8 +1975,8 @@
 - Model-specific hints refine behavior for each model size
 - Use <code>/context hints</code> to verify which hints are active</p>
 <p>See <a href="../bootstrap-context-guide/">Bootstrap Context Guide</a> for full documentation.</p>
-<h3 id="1-tool-loop-detection-v11310">1. Tool Loop Detection (v1.13.10)<a class="headerlink" href="#1-tool-loop-detection-v11310" title="Permanent link">&para;</a></h3>
-<p>Small models sometimes get stuck calling the same tool repeatedly without synthesizing results. ppxai v1.13.10 adds automatic loop detection:</p>
+<h3 id="1-tool-loop-detection-v11310-reworked-v1193">1. Tool Loop Detection (v1.13.10, reworked v1.19.3)<a class="headerlink" href="#1-tool-loop-detection-v11310-reworked-v1193" title="Permanent link">&para;</a></h3>
+<p>Small models sometimes get stuck calling the same tool repeatedly without synthesizing results. ppxai v1.13.10 added automatic loop detection:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">"agent"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1985,11 +1985,28 @@
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">}</span>
 </span></code></pre></div>
-<p>When a model calls the same tool 3+ times consecutively, ppxai:
-1. Stops the tool execution
-2. Injects a message asking the model to synthesize
-3. Forces the model to respond with available data</p>
-<p>This prevents infinite loops like <code>get_weather → get_weather → get_weather → ...</code></p>
+<p><strong>Updated 2026-09-23 (v1.19.3):</strong> the original rule only counted a
+<em>trailing streak</em> of byte-identical calls — a model that interleaves its
+repeats with other calls (paraphrasing the same query instead of asking
+it verbatim) could loop past this threshold undetected. It now counts
+occurrences of the same tool + arguments <strong>anywhere in the turn</strong>, not
+just back-to-back:</p>
+<ol>
+<li>Stops the tool execution once the same tool has been called with
+   byte-identical arguments <code>max_same_tool_calls</code> times in the turn</li>
+<li>Injects a message asking the model to synthesize from what it already
+   has</li>
+<li>Does <strong>not</strong> withdraw the tool — the model may call it again with
+   different arguments next iteration</li>
+</ol>
+<p>A second, argument-independent per-turn call budget now catches the
+paraphrase case the rule above cannot: <code>web_search</code> and <code>fetch_url</code> are
+each capped at 10 calls per turn by default
+(<code>tools.agent.tool_call_budgets</code>; absent or 0 = unlimited; every other
+tool is uncapped). Unlike the rule above, a budget trip is terminal —
+tools are withdrawn for the rest of the turn and a synthesis pass is
+forced, since rephrasing the arguments won't reopen the budget.</p>
+<p>This prevents infinite loops like <code>get_weather → get_weather → get_weather → ...</code>, including ones where the arguments change slightly on every call.</p>
 <h3 id="2-use-cloud-providers-for-complex-tasks">2. Use Cloud Providers for Complex Tasks<a class="headerlink" href="#2-use-cloud-providers-for-complex-tasks" title="Permanent link">&para;</a></h3>
 <p>For queries requiring synthesis (research, explanations, complex reasoning):
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>/provider perplexity  # or gemini

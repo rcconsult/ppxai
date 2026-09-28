@@ -2260,14 +2260,23 @@
 <li><strong>Project scope</strong> - <code>{git_root}/AGENTS.md</code> (repository-specific)</li>
 <li><strong>Subdirectory scope</strong> - <code>{cwd}/AGENTS.md</code> (directory-specific overrides)</li>
 </ol>
-<p>Within each scope, it looks for these files in order:
-1. <code>AGENTS.md</code> (default, compatible with Claude Code)
-2. <code>CLAUDE.md</code> (fallback)</p>
+<p>Within each scope, it looks for these files in order
+(<code>DEFAULT_BOOTSTRAP_FILES</code>, <code>ppxai/config/context.py:58</code> and
+<code>ppxai/engine/bootstrap.py:63</code>):</p>
+<ol>
+<li><code>AGENTS.md</code> (default, compatible with Claude Code)</li>
+<li><code>CLAUDE.md</code> (fallback)</li>
+<li><code>INSTRUCTIONS.md</code> (fallback)</li>
+</ol>
+<p>All three are defaults — <code>INSTRUCTIONS.md</code> is <strong>not</strong> a customization you
+have to add, which is how this guide described it until 2026-09-20. The
+first file found in a scope wins for that scope.</p>
 <p>Files from all scopes are <strong>merged</strong> - hints are additive, base instructions concatenate with source markers.</p>
-<p>You can customize the file list via configuration:</p>
+<p>You can customize the file list via configuration — for example to add a
+fourth name, or to drop one:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"bootstrap"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">"files"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"AGENTS.md"</span><span class="p">,</span><span class="w"> </span><span class="s2">"CLAUDE.md"</span><span class="p">,</span><span class="w"> </span><span class="s2">"INSTRUCTIONS.md"</span><span class="p">]</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">"files"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"AGENTS.md"</span><span class="p">,</span><span class="w"> </span><span class="s2">"CLAUDE.md"</span><span class="p">,</span><span class="w"> </span><span class="s2">"INSTRUCTIONS.md"</span><span class="p">,</span><span class="w"> </span><span class="s2">"CONTRIBUTING.md"</span><span class="p">]</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -2617,17 +2626,32 @@
 </span></code></pre></div>
 <h2 id="interaction-with-system-prompts">Interaction with System Prompts<a class="headerlink" href="#interaction-with-system-prompts" title="Permanent link">&para;</a></h2>
 <p>Bootstrap context works alongside <code>system_prompt</code> in <code>ppxai-config.json</code>:</p>
+<p><strong>Bootstrap is always first, and <code>system_prompt_mode</code> does not move it.</strong>
+This is the opposite of what this guide said until 2026-09-20. Reading
+<code>ppxai/engine/chat.py:436-449</code>, the assembly is:</p>
 <ol>
-<li>Bootstrap context is added first</li>
-<li>Config <code>system_prompt</code> is added according to <code>system_prompt_mode</code>:</li>
-<li><code>prepend</code> (default): Config prompt before bootstrap</li>
-<li><code>append</code>: Config prompt after bootstrap</li>
-<li><code>replace</code>: Config prompt replaces bootstrap (not recommended)</li>
+<li><code>system_prompt</code> and <code>tool_prompt</code> are combined <strong>according to
+   <code>system_prompt_mode</code></strong> — that mode orders those two against each other,
+   and nothing else:</li>
+<li><code>prepend</code> (default): <code>system_prompt</code> then <code>tool_prompt</code></li>
+<li><code>append</code>: <code>tool_prompt</code> then <code>system_prompt</code></li>
+<li><code>replace</code>: <code>system_prompt</code> only — the <strong>tool prompt</strong> is dropped</li>
+<li>The bootstrap prompt is then prepended to whatever step 1 produced,
+   <strong>unconditionally</strong>:</li>
 </ol>
-<p>For most cases, let bootstrap handle project-specific instructions and use config <code>system_prompt</code> only for global preferences.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># Prepend bootstrap prompt if present (always first)</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="k">if</span> <span class="n">bootstrap_prompt</span><span class="p">:</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>    <span class="n">final_prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">bootstrap_prompt</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">---</span><span class="se">\n\n</span><span class="si">{</span><span class="n">final_prompt</span><span class="si">}</span><span class="s2">"</span>
+</span></code></pre></div>
+<p>So <code>replace</code> does <strong>not</strong> remove bootstrap context — it removes the tool
+prompt. If you set <code>replace</code> expecting to suppress project context, you did
+not; use <code>bootstrap.enabled: false</code> or an empty <code>bootstrap.files</code> list for
+that.</p>
+<p>For most cases, let bootstrap handle project-specific instructions and use
+config <code>system_prompt</code> only for global preferences.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="no-bootstrap-context-loaded">"No bootstrap context loaded"<a class="headerlink" href="#no-bootstrap-context-loaded" title="Permanent link">&para;</a></h3>
-<p><strong>Cause:</strong> No <code>AGENTS.md</code> or <code>CLAUDE.md</code> found in working directory.</p>
+<p><strong>Cause:</strong> No <code>AGENTS.md</code>, <code>CLAUDE.md</code> or <code>INSTRUCTIONS.md</code> found in working directory.</p>
 <p><strong>Solution:</strong>
 1. Create an <code>AGENTS.md</code> file in your project root
 2. Or set working directory with <code>/cd /path/to/project</code></p>
@@ -2645,17 +2669,17 @@
 3. Remove redundant hints</p>
 <h2 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h2>
 <h3 id="engineclient-methods">EngineClient Methods<a class="headerlink" href="#engineclient-methods" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># Get bootstrap loading status</span>
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="n">status</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_bootstrap_status</span><span class="p">()</span>
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="c1"># Returns: {"loaded": True, "sources": [...], "char_count": 1234, ...}</span>
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>
-</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="c1"># Get active hints for current provider/model</span>
-</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="n">hints</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_active_hints</span><span class="p">()</span>
-</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="c1"># Returns: {"loaded": True, "provider_hints": [...], "model_hints": [...], ...}</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Get bootstrap loading status</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="n">status</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_bootstrap_status</span><span class="p">()</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="c1"># Returns: {"loaded": True, "sources": [...], "char_count": 1234, ...}</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="c1"># Get active hints for current provider/model</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="n">hints</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_active_hints</span><span class="p">()</span>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="c1"># Returns: {"loaded": True, "provider_hints": [...], "model_hints": [...], ...}</span>
 </span></code></pre></div>
 <h3 id="http-endpoints">HTTP Endpoints<a class="headerlink" href="#http-endpoints" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>GET /context/hints
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>Returns active hints for current session
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>GET /context/hints
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>Returns active hints for current session
 </span></code></pre></div>
 <h2 id="related-documentation">Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h2>
 <ul>

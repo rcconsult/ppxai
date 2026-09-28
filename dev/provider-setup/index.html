@@ -2889,11 +2889,13 @@ see which rule actually applied.</p>
 </span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="nv">PERPLEXITY_API_KEY</span><span class="o">=</span>pplx-xxxxx<span class="w">  </span><span class="c1"># Uses Perplexity Sonar API</span>
 </span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="nv">GEMINI_API_KEY</span><span class="o">=</span>AIza-xxxxx<span class="w">      </span><span class="c1"># Uses Gemini with Google Search Grounding</span>
 </span></code></pre></div>
-<p>Priority (default auto-detect order): Perplexity &gt; Gemini &gt; DuckDuckGo (free fallback)</p>
+<p>Priority (default auto-detect order): Gemini &gt; Perplexity &gt; DuckDuckGo (free fallback).
+Gemini first since v1.19.3; before that the default was Perplexity &gt; Gemini &gt; DuckDuckGo.
+Set <code>tools.web_search.order</code> to <code>["perplexity", "gemini", "duckduckgo"]</code> to keep the old chain.</p>
 <h3 id="web-search-backend-ordering-v1191">Web Search Backend Ordering (v1.19.1)<a class="headerlink" href="#web-search-backend-ordering-v1191" title="Permanent link">&para;</a></h3>
-<p>The Perplexity &gt; Gemini &gt; DuckDuckGo priority above is the <strong>default</strong>
-auto-detect chain (<code>AUTO_ORDER</code> in <code>ppxai/engine/tools/search_backends.py</code>).
-As of v1.19.1 it can be overridden per-scope via <code>resolve_web_search_backend()</code>:</p>
+<p>The Gemini &gt; Perplexity &gt; DuckDuckGo priority above is the <strong>default</strong>
+auto-detect chain (<code>AUTO_ORDER</code> in <code>ppxai/engine/search/resolver.py</code>).
+It can be overridden per-scope via <code>resolve_web_search_backend()</code>:</p>
 <ul>
 <li><code>tools.web_search.preferred</code> (global) or
   <code>providers.&lt;name&gt;.web_search.preferred</code> (per-provider, takes priority when

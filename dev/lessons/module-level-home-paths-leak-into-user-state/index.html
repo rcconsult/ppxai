@@ -1190,10 +1190,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#still-unguarded-the-same-class" class="md-nav__link">
+  <a href="#update-2026-09-21-all-of-still-unguarded-is-now-guarded-suite-wide" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Still unguarded — the same class
+        Update (2026-09-21): all of "still unguarded" is now guarded, suite-wide
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#corollary-3-an-in-process-patch-does-not-survive-a-spawned-subprocess" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Corollary 3: an in-process patch does not survive a spawned subprocess
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sharpened-what-monkeypatch-home-does-nothing-actually-means" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sharpened: what "monkeypatch HOME does nothing" actually means
       
     </span>
   </a>
@@ -1334,9 +1356,31 @@ only the guilty test leaves the next one free to reintroduce it, and this had
 recurred often enough to be a class rather than an incident. Tests that need
 their own pointer still patch it themselves — an inner patch wins and unwinds
 back to the tmp path.</p>
-<h2 id="still-unguarded-the-same-class">Still unguarded — the same class<a class="headerlink" href="#still-unguarded-the-same-class" title="Permanent link">&para;</a></h2>
-<p>Only <code>SESSION_STATE_FILE</code> is protected today. These resolve <code>Path.home()</code> at
-import time too, and tests write through them:</p>
+<h2 id="update-2026-09-21-all-of-still-unguarded-is-now-guarded-suite-wide">Update (2026-09-21): all of "still unguarded" is now guarded, suite-wide<a class="headerlink" href="#update-2026-09-21-all-of-still-unguarded-is-now-guarded-suite-wide" title="Permanent link">&para;</a></h2>
+<p>Debt Item 78 (<code>docs/debt-inventory.md</code>, closed 2026-09-21) measured what the
+table below only warned about: one clean-tree suite run touched <strong>214
+entries</strong> in a developer's real <code>~/.ppxai</code> — the logger's interleaved debug
+logs, <code>PPXAI_HOME</code>-rooted checkpoint directories, real session files, the
+<code>/cost</code> usage sink, <code>.preview-cache</code> PNGs, a staged upload, AND (see the
+fourth instance below) <code>session-state.json</code> again, despite the guard that
+was supposed to already cover it.</p>
+<p>The fix is not a longer list of by-name fixtures. <code>tests/conftest.py</code>'s
+<code>_redirect_home_to_tmp()</code> now moves <code>HOME</code> itself (and <code>USERPROFILE</code> for
+Windows) to a fresh throwaway directory in <code>pytest_configure</code>, asserted to
+run <strong>before any <code>ppxai</code> module has been imported</strong> — every constant in the
+table below, and every other module-level <code>Path.home()</code> site the table
+didn't get around to listing, resolves into the throwaway home from then on,
+with no per-constant patch required. <code>tests/test_home_hermeticity.py</code>
+fences it with an <strong>empty</strong> exemption list (a row there is a claim that a
+path is read-only everywhere a test can reach it — exactly the claim that
+looked true for the checkpoint directory below until someone read its
+constructor) and is mutation-verified: reverting the redirect fails it by
+naming the real path a component was still aimed at. Verified macOS only;
+the <code>USERPROFILE</code>/<code>HOMEDRIVE</code>/<code>HOMEPATH</code> handling is unverified on Windows
+and Linux.</p>
+<p>The original table is kept below for the historical record of what was
+unguarded and why each one mattered — every row is now covered by the
+<code>HOME</code>-at-configure redirect, not by an added fixture per row.</p>
 <table>
 <thead>
 <tr>
@@ -1367,9 +1411,49 @@ import time too, and tests write through them:</p>
 </tr>
 </tbody>
 </table>
-<p>The logs one is not hypothetical: it made monitoring a live trial nearly
+<p>The logs one was not hypothetical: it made monitoring a live trial nearly
 useless, because fixture runs (<code>task='x'</code>, <code>task='secret'</code>) appeared in the
 same file as the user's session.</p>
+<h2 id="corollary-3-an-in-process-patch-does-not-survive-a-spawned-subprocess">Corollary 3: an in-process patch does not survive a spawned subprocess<a class="headerlink" href="#corollary-3-an-in-process-patch-does-not-survive-a-spawned-subprocess" title="Permanent link">&para;</a></h2>
+<p>The most surprising instance of the class. <code>_isolate_session_state_pointer</code>
+— an autouse fixture that has patched <code>engine.session.SESSION_STATE_FILE</code>
+since 2026-08-09, specifically to stop the exact regression the main lesson
+above describes — kept failing to stop it. <code>session-state.json</code> was still
+being rewritten by the suite as of 2026-09-21, a FOURTH instance of this
+same class found in the same repo.</p>
+<p>The reason: that fixture's patch lives inside the <strong>pytest process</strong>. The
+actual writer was a <strong>spawned <code>ppxai-server</code> subprocess</strong>
+(<code>tests/test_server_smoke_e2e.py</code>), which gets its own fresh interpreter and
+its own real, unpatched <code>HOME</code> — an in-process <code>monkeypatch.setattr</code> has no
+way to reach into a child process's module table. Fixed the same way as the
+rest of Item 78: moving <code>HOME</code> itself, in the environment, before any import
+— since environment variables ARE inherited by spawned subprocesses, unlike
+an in-process attribute patch.</p>
+<p><strong>The general form:</strong> an autouse fixture that patches an attribute is
+isolation for the test process only. If anything under test spawns a real
+subprocess (a smoke test launching <code>ppxai-server</code>, an integration test
+shelling out), that subprocess re-resolves every module-level constant
+against its own inherited environment — so the fixture's protection ends at
+the process boundary, silently, with no error to say so.</p>
+<h2 id="sharpened-what-monkeypatch-home-does-nothing-actually-means">Sharpened: what "monkeypatch HOME does nothing" actually means<a class="headerlink" href="#sharpened-what-monkeypatch-home-does-nothing-actually-means" title="Permanent link">&para;</a></h2>
+<p>The main lesson's <code>env HOME=/scratch pytest ...</code> example and Item 78's fix
+are not in tension, and the distinction is worth stating precisely, because
+getting it backwards is how this class of bug recurs:</p>
+<ul>
+<li><strong>Patching <code>HOME</code> (or the constant) AFTER a module has already imported
+  and resolved <code>Path.home()</code> does nothing.</strong> The constant is a plain string
+  by then; nothing reads <code>HOME</code> again to produce it. This is what "monkeypatch
+  HOME does not work" has always meant in this file.</li>
+<li><strong>Setting <code>HOME</code> in the environment BEFORE the first <code>ppxai</code> import is the
+  one case that does work</strong> — and it is not a special case, it is the
+  general rule working normally: every module-level <code>Path.home()</code> site
+  resolves against whatever <code>HOME</code> says at THAT moment, so moving <code>HOME</code>
+  first means every one of them resolves into the throwaway home, including
+  ones nobody remembered to list. <code>tests/conftest.py::_redirect_home_to_tmp</code>
+  does exactly this, and asserts the ordering premise instead of trusting
+  it (<code>tests/test_home_hermeticity.py::TestTheRedirectIsInstalled::
+  test_no_ppxai_module_was_imported_before_the_redirect</code>).</li>
+</ul>
 <h2 id="the-rule">The rule<a class="headerlink" href="#the-rule" title="Permanent link">&para;</a></h2>
 <ul>
 <li>A path constant resolved at import time <strong>cannot</strong> be redirected by

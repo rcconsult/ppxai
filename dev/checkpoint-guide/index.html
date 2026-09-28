@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#checkpoint-system-user-guide-v1124-current-through-v1190" class="md-skip">
+        <a href="#checkpoint-system-user-guide-v1124" class="md-skip">
           Skip to content
         </a>
       
@@ -960,6 +960,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-commits-not-one-git-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two commits, not one (git backend)
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2008,6 +2019,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#two-commits-not-one-git-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two commits, not one (git backend)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2182,7 +2204,17 @@
   
 
 
-<h1 id="checkpoint-system-user-guide-v1124-current-through-v1190">Checkpoint System User Guide (v1.12.4+, current through v1.19.0)<a class="headerlink" href="#checkpoint-system-user-guide-v1124-current-through-v1190" title="Permanent link">&para;</a></h1>
+<h1 id="checkpoint-system-user-guide-v1124">Checkpoint System User Guide (v1.12.4+)<a class="headerlink" href="#checkpoint-system-user-guide-v1124" title="Permanent link">&para;</a></h1>
+<p><strong>Last verified:</strong> 2026-09-20 against <code>bugfix/v1.19.3</code> — full re-check,
+not a date bump. Subcommands, the <code>/checkpoint clear</code> semantics, the
+dead <code>checkpoint_message</code> key, the hardcoded commit message, backend
+selection and the interrupt/rollback flow all verified against source.
+<strong>Four defects found and fixed:</strong> the file-snapshot path was wrong
+everywhere (it is <code>~/.ppxai/sessions/checkpoints/</code>, and the top-level
+<code>~/.ppxai/checkpoints/</code> is an empty directory nothing writes to), there
+is no <code>Confirm undo? (y/n)</code> prompt, the status line is a <code>↶</code> glyph
+rather than <code>Checkpoints: &lt;backend&gt;</code> text, and the two-commit mechanism
+(<code>ppxai checkpoint:</code> vs <code>ppxai agent:</code>) was undocumented.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>The checkpoint system provides <strong>atomic multi-file rollback</strong> for agent mode tasks. Works with both <strong>ppxai</strong> (Rich TUI) and <strong>ppxaide</strong> (Textual TUI). Before executing autonomous tasks, a checkpoint is created that lets you undo all changes with a single <code>/undo</code> command.</p>
 <p><strong>Key Features:</strong>
@@ -2202,8 +2234,10 @@
 </li>
 <li>
 <p><strong>Check status</strong> (see checkpoint backend in status line):
-   <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: git]
-</span></code></pre></div></p>
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | ↶]
+</span></code></pre></div>
+   The checkpoint indicator is the compact <code>↶</code> glyph, not the words
+   <code>Checkpoints: git</code> — see the table below.</p>
 </li>
 <li>
 <p><strong>Undo if needed</strong>:
@@ -2244,7 +2278,7 @@
 <p>When git is not available, ppxai uses <strong>file-based snapshots</strong>:</p>
 <ol>
 <li><strong>Before Agent Task:</strong></li>
-<li>Copies all modified files to <code>~/.ppxai/checkpoints/{session_id}/cp-{timestamp}/</code></li>
+<li>Copies all modified files to <code>~/.ppxai/sessions/checkpoints/{session_id}/cp-{timestamp}/</code></li>
 <li>
 <p>Preserves directory structure</p>
 </li>
@@ -2328,45 +2362,63 @@ brevity, not a valid top-level snippet):</p>
 2. Agent executes the task using available tools
 3. Notification shown: <code>✓ Checkpoint created: abc123de (refactor auth module)</code></p>
 <p><strong>Status Line Indicators:</strong></p>
+<p><strong>Corrected 2026-09-20.</strong> The Rich TUI shows a compact glyph, not
+backend text, and it does <strong>not</strong> show a disabled state at all
+(<code>checkpoint_str</code>, <code>ppxai/rich/main.py:66-74</code>; rendered by
+<code>render_status_panel</code>, <code>ppxai/rich/ui_components.py:644-650</code>):</p>
 <table>
 <thead>
 <tr>
-<th>Status</th>
+<th>Indicator</th>
 <th>Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>Checkpoints: git</code></td>
-<td>Git backend active (green)</td>
+<td><code>↶</code></td>
+<td>A checkpoint exists and is <strong>valid</strong> — <code>/undo</code> should work</td>
 </tr>
 <tr>
-<td><code>Checkpoints: file</code></td>
-<td>File backend active (yellow)</td>
+<td><code>↶!</code></td>
+<td>A checkpoint exists but is <strong>stale/invalid</strong> — <code>/undo</code> may not restore cleanly</td>
 </tr>
 <tr>
-<td><code>Checkpoints: OFF</code></td>
-<td>Disabled (red warning)</td>
+<td><em>(nothing)</em></td>
+<td>No checkpoint yet this session, checkpoints disabled, or agent mode off. <strong>There is no <code>OFF</code> warning</strong> — absence is the only signal.</td>
 </tr>
 </tbody>
 </table>
+<p>The glyph appears only while agent mode is on and a checkpoint has
+actually been created. The backend in use is not encoded in the status
+line; run <code>/checkpoint backend</code> or <code>/checkpoint status</code> to see it.
+This table claimed <code>Checkpoints: git</code> / <code>file</code> / <code>OFF</code> text with colour
+coding until 2026-09-20 — none of those strings exist in the code.</p>
 <hr />
 <h3 id="undo-revert-last-agent-task"><code>/undo</code> - Revert Last Agent Task<a class="headerlink" href="#undo-revert-last-agent-task" title="Permanent link">&para;</a></h3>
 <p>Reverts all changes from the last agent task:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>/undo
 </span></code></pre></div>
-<p><strong>Confirmation Prompt:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>⚠️  Undo Last Agent Task
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>Backend: git
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>Checkpoint: abc123de
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>Confirm undo? (y/n):
-</span></code></pre></div></p>
+<blockquote>
+<p>⚠️ <strong>There is no confirmation prompt. <code>/undo</code> acts immediately.</strong>
+Corrected 2026-09-20 — this section showed a <code>Confirm undo? (y/n):</code>
+gate that does not exist. <code>handle_undo</code>
+(<code>ppxai/commands/agent.py:254-343</code>) performs the undo directly; its own
+comment says so: <em>"Interactive confirmation is handled by the old
+handler for now… For now, perform the undo directly."</em>
+<code>grep -rn "Confirm undo" ppxai/</code> returns nothing. What you see is a
+<strong>post-hoc</strong> <code>ConfirmationResult</code> reporting what already happened, not
+a prompt asking whether to proceed.</p>
+<p><strong>One pre-flight check does stand between you and a surprise</strong>, and it
+is not a consent gate: with the git backend, <code>/undo</code> refuses outright
+if <code>git status --porcelain</code> is non-empty — <em>"Cannot undo: uncommitted
+changes in working directory"</em> (<code>ppxai/commands/agent.py:298-316</code>).
+Commit or stash first.</p>
+</blockquote>
 <p><strong>What happens:</strong>
 - <strong>Git backend:</strong> Runs <code>git revert HEAD --no-edit</code>
 - <strong>File backend:</strong> Restores files from last snapshot</p>
 <p><strong>Success:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>✓ Changes reverted using git revert (checkpoint: abc123de)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>✓ Changes reverted using git revert (checkpoint: abc123de)
 </span></code></pre></div></p>
 <p><strong>Limitations:</strong>
 - Only reverts the <strong>last</strong> checkpoint
@@ -2376,7 +2428,7 @@ brevity, not a valid top-level snippet):</p>
 <hr />
 <h3 id="checkpoint-checkpoint-management-v1124"><code>/checkpoint</code> - Checkpoint Management (v1.12.4)<a class="headerlink" href="#checkpoint-checkpoint-management-v1124" title="Permanent link">&para;</a></h3>
 <p>The <code>/checkpoint</code> command provides checkpoint status, listing, and configuration:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>/checkpoint [subcommand] [args]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>/checkpoint [subcommand] [args]
 </span></code></pre></div>
 <p><strong>Subcommands:</strong></p>
 <table>
@@ -2418,55 +2470,55 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 <hr />
 <h4 id="checkpoint-status"><code>/checkpoint status</code><a class="headerlink" href="#checkpoint-status" title="Permanent link">&para;</a></h4>
 <p>Show current checkpoint configuration:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>/checkpoint status
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>/checkpoint status
 </span></code></pre></div>
 <p><strong>Output:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>📍 Checkpoint Status
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>  Backend: git
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>  Session: default
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>  Working Dir: /path/to/project
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>  Last Checkpoint: abc123de
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>📍 Checkpoint Status
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>  Backend: git
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>  Session: default
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>  Working Dir: /path/to/project
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>  Last Checkpoint: abc123de
 </span></code></pre></div></p>
 <hr />
 <h4 id="checkpoint-list"><code>/checkpoint list</code><a class="headerlink" href="#checkpoint-list" title="Permanent link">&para;</a></h4>
 <p>List recent checkpoints (up to 10):</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>/checkpoint list
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>/checkpoint list
 </span></code></pre></div>
 <p><strong>Output (Git Backend):</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>📋 Recent Checkpoints
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>  abc123de  refactor auth module           2025-12-31 14:30:22
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>  def456gh  add user registration          2025-12-31 12:15:00
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>  ghi789jk  update dependencies            2025-12-30 16:45:33
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>📋 Recent Checkpoints
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>  abc123de  refactor auth module           2025-12-31 14:30:22
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>  def456gh  add user registration          2025-12-31 12:15:00
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>  ghi789jk  update dependencies            2025-12-30 16:45:33
 </span></code></pre></div></p>
 <p><strong>Output (File Backend):</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>📋 Recent Checkpoints
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>  cp-20251231-143022  refactor auth module    2025-12-31T14:30:22
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>  cp-20251231-121500  add user registration   2025-12-31T12:15:00
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>📋 Recent Checkpoints
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>  cp-20251231-143022  refactor auth module    2025-12-31T14:30:22
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>  cp-20251231-121500  add user registration   2025-12-31T12:15:00
 </span></code></pre></div></p>
 <hr />
 <h4 id="checkpoint-backend-mode"><code>/checkpoint backend &lt;mode&gt;</code><a class="headerlink" href="#checkpoint-backend-mode" title="Permanent link">&para;</a></h4>
 <p>Change checkpoint backend for the current session:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>/checkpoint backend git    # Use git commits
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>/checkpoint backend file   # Use file snapshots
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>/checkpoint backend auto   # Auto-detect best backend
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>/checkpoint backend none   # Disable checkpoints
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>/checkpoint backend git    # Use git commits
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>/checkpoint backend file   # Use file snapshots
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>/checkpoint backend auto   # Auto-detect best backend
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>/checkpoint backend none   # Disable checkpoints
 </span></code></pre></div>
 <p><strong>Note:</strong> This only affects the current session. To persist the setting, edit <code>ppxai-config.json</code>.</p>
 <p><strong>Output:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>✓ Checkpoint backend set to: git
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>✓ Checkpoint backend set to: git
 </span></code></pre></div></p>
 <p><strong>Error (no git repo):</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>⚠️  Git repository not found. Falling back to file backend.
+<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>⚠️  Git repository not found. Falling back to file backend.
 </span></code></pre></div></p>
 <hr />
 <h4 id="checkpoint-clear"><code>/checkpoint clear</code><a class="headerlink" href="#checkpoint-clear" title="Permanent link">&para;</a></h4>
 <p>Delete <strong>all</strong> file-based checkpoint snapshots (not a "keep recent N" prune —
 it calls <code>cleanup_old_checkpoints(keep_last=0)</code>, which removes every
 snapshot):</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>/checkpoint clear
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>/checkpoint clear
 </span></code></pre></div>
 <p><strong>Output:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>🗑️  Cleared 8 old checkpoint snapshots
+<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>🗑️  Cleared 8 old checkpoint snapshots
 </span></code></pre></div></p>
 <p><strong>Note:</strong> This only affects file-based checkpoints and deletes them all —
 there is no partial/automatic cleanup. Git checkpoints are managed by git
@@ -2474,175 +2526,169 @@ history and are unaffected.</p>
 <hr />
 <h4 id="checkpoint-info-id"><code>/checkpoint info &lt;id&gt;</code><a class="headerlink" href="#checkpoint-info-id" title="Permanent link">&para;</a></h4>
 <p>Show details about a specific checkpoint:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>/checkpoint info abc123de
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>/checkpoint info abc123de
 </span></code></pre></div>
 <p><strong>Output (Git Backend):</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>📍 Checkpoint: abc123de
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>  Full Hash: abc123de456789...
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>  Description: refactor auth module
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>  Timestamp: 2025-12-31 14:30:22
-</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>  Valid: ✓ (HEAD~1)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>📍 Checkpoint: abc123de
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>  Full Hash: abc123de456789...
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>  Description: refactor auth module
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>  Timestamp: 2025-12-31 14:30:22
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>  Valid: ✓ (HEAD~1)
 </span></code></pre></div></p>
 <p><strong>Output (File Backend):</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>📍 Checkpoint: cp-20251231-143022
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>  Description: refactor auth module
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>  Timestamp: 2025-12-31T14:30:22
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>  Files: 3 files snapshotted
+<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>📍 Checkpoint: cp-20251231-143022
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>  Description: refactor auth module
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>  Timestamp: 2025-12-31T14:30:22
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>  Files: 3 files snapshotted
 </span></code></pre></div></p>
 <hr />
 <h4 id="checkpoint-undo"><code>/checkpoint undo</code><a class="headerlink" href="#checkpoint-undo" title="Permanent link">&para;</a></h4>
 <p>Alias for the <code>/undo</code> command:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>/checkpoint undo
+<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>/checkpoint undo
 </span></code></pre></div>
 <p>This is equivalent to running <code>/undo</code> directly.</p>
 <hr />
 <h2 id="workflow-examples">Workflow Examples<a class="headerlink" href="#workflow-examples" title="Permanent link">&para;</a></h2>
 <h3 id="example-1-git-project-with-undo">Example 1: Git Project with Undo<a class="headerlink" href="#example-1-git-project-with-undo" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a># Status shows git checkpoints
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: git]
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a># Run agent task
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>You: /auto add user registration endpoint
-</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>
-</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>🔒 Agent Mode enabled with Git checkpoints
-</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>   • Changes will be auto-committed before each task
-</span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>   • Use /undo to revert the last agent task atomically
-</span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a>
-</span><span id="__span-26-11"><a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a>✓ Checkpoint created: f3a7b2c1 (add user registration endpoint)
-</span><span id="__span-26-12"><a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a>
-</span><span id="__span-26-13"><a id="__codelineno-26-13" name="__codelineno-26-13" href="#__codelineno-26-13"></a>🤖 Starting autonomous agent...
-</span><span id="__span-26-14"><a id="__codelineno-26-14" name="__codelineno-26-14" href="#__codelineno-26-14"></a>[Agent executes task, creates files, edits code...]
-</span><span id="__span-26-15"><a id="__codelineno-26-15" name="__codelineno-26-15" href="#__codelineno-26-15"></a>
-</span><span id="__span-26-16"><a id="__codelineno-26-16" name="__codelineno-26-16" href="#__codelineno-26-16"></a># Realize there's an issue
-</span><span id="__span-26-17"><a id="__codelineno-26-17" name="__codelineno-26-17" href="#__codelineno-26-17"></a>You: /undo
-</span><span id="__span-26-18"><a id="__codelineno-26-18" name="__codelineno-26-18" href="#__codelineno-26-18"></a>
-</span><span id="__span-26-19"><a id="__codelineno-26-19" name="__codelineno-26-19" href="#__codelineno-26-19"></a>⚠️  Undo Last Agent Task
-</span><span id="__span-26-20"><a id="__codelineno-26-20" name="__codelineno-26-20" href="#__codelineno-26-20"></a>Backend: git
-</span><span id="__span-26-21"><a id="__codelineno-26-21" name="__codelineno-26-21" href="#__codelineno-26-21"></a>Checkpoint: f3a7b2c1
-</span><span id="__span-26-22"><a id="__codelineno-26-22" name="__codelineno-26-22" href="#__codelineno-26-22"></a>
-</span><span id="__span-26-23"><a id="__codelineno-26-23" name="__codelineno-26-23" href="#__codelineno-26-23"></a>Confirm undo? (y/n): y
-</span><span id="__span-26-24"><a id="__codelineno-26-24" name="__codelineno-26-24" href="#__codelineno-26-24"></a>
-</span><span id="__span-26-25"><a id="__codelineno-26-25" name="__codelineno-26-25" href="#__codelineno-26-25"></a>✓ Changes reverted using git revert (checkpoint: f3a7b2c1)
-</span><span id="__span-26-26"><a id="__codelineno-26-26" name="__codelineno-26-26" href="#__codelineno-26-26"></a>
-</span><span id="__span-26-27"><a id="__codelineno-26-27" name="__codelineno-26-27" href="#__codelineno-26-27"></a># All changes undone! Git history shows:
-</span><span id="__span-26-28"><a id="__codelineno-26-28" name="__codelineno-26-28" href="#__codelineno-26-28"></a># - abc123de: ppxai checkpoint: add user registration endpoint
-</span><span id="__span-26-29"><a id="__codelineno-26-29" name="__codelineno-26-29" href="#__codelineno-26-29"></a># - f3a7b2c1: Revert "ppxai checkpoint: add user registration endpoint"
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a># Status shows git checkpoints
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: git]
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a># Run agent task
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>You: /auto add user registration endpoint
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>
+</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>🔒 Agent Mode enabled with Git checkpoints
+</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a>   • Changes will be auto-committed before each task
+</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>   • Use /undo to revert the last agent task atomically
+</span><span id="__span-25-10"><a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a>
+</span><span id="__span-25-11"><a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a>✓ Checkpoint created: f3a7b2c1 (add user registration endpoint)
+</span><span id="__span-25-12"><a id="__codelineno-25-12" name="__codelineno-25-12" href="#__codelineno-25-12"></a>
+</span><span id="__span-25-13"><a id="__codelineno-25-13" name="__codelineno-25-13" href="#__codelineno-25-13"></a>🤖 Starting autonomous agent...
+</span><span id="__span-25-14"><a id="__codelineno-25-14" name="__codelineno-25-14" href="#__codelineno-25-14"></a>[Agent executes task, creates files, edits code...]
+</span><span id="__span-25-15"><a id="__codelineno-25-15" name="__codelineno-25-15" href="#__codelineno-25-15"></a>
+</span><span id="__span-25-16"><a id="__codelineno-25-16" name="__codelineno-25-16" href="#__codelineno-25-16"></a># Realize there's an issue
+</span><span id="__span-25-17"><a id="__codelineno-25-17" name="__codelineno-25-17" href="#__codelineno-25-17"></a>You: /undo
+</span><span id="__span-25-18"><a id="__codelineno-25-18" name="__codelineno-25-18" href="#__codelineno-25-18"></a>
+</span><span id="__span-25-19"><a id="__codelineno-25-19" name="__codelineno-25-19" href="#__codelineno-25-19"></a>✓ Changes reverted using git revert (checkpoint: f3a7b2c1)
+</span><span id="__span-25-20"><a id="__codelineno-25-20" name="__codelineno-25-20" href="#__codelineno-25-20"></a>
+</span><span id="__span-25-21"><a id="__codelineno-25-21" name="__codelineno-25-21" href="#__codelineno-25-21"></a># All changes undone! Git history shows:
+</span><span id="__span-25-22"><a id="__codelineno-25-22" name="__codelineno-25-22" href="#__codelineno-25-22"></a># - abc123de: ppxai checkpoint: add user registration endpoint
+</span><span id="__span-25-23"><a id="__codelineno-25-23" name="__codelineno-25-23" href="#__codelineno-25-23"></a># - f3a7b2c1: Revert "ppxai checkpoint: add user registration endpoint"
 </span></code></pre></div>
 <hr />
 <h3 id="example-2-non-git-project">Example 2: Non-Git Project<a class="headerlink" href="#example-2-non-git-project" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a># No git repo, file backend active
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: file]
-</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
-</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a># Run agent task
-</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>You: /auto refactor config.py to use environment variables
-</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>
-</span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>⚠️  Agent Mode enabled with File checkpoints
-</span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>   • Snapshots will be saved to ~/.ppxai/checkpoints
-</span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>   • Use /undo to restore from snapshot
-</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a>   • Tip: Initialize git repo for atomic commits
-</span><span id="__span-27-11"><a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a>
-</span><span id="__span-27-12"><a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a>✓ Checkpoint created: cp-20251227-143022 (refactor config.py)
-</span><span id="__span-27-13"><a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a>
-</span><span id="__span-27-14"><a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a>🤖 Starting autonomous agent...
-</span><span id="__span-27-15"><a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a>[Agent modifies files...]
-</span><span id="__span-27-16"><a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a>
-</span><span id="__span-27-17"><a id="__codelineno-27-17" name="__codelineno-27-17" href="#__codelineno-27-17"></a># Undo the changes
-</span><span id="__span-27-18"><a id="__codelineno-27-18" name="__codelineno-27-18" href="#__codelineno-27-18"></a>You: /undo
-</span><span id="__span-27-19"><a id="__codelineno-27-19" name="__codelineno-27-19" href="#__codelineno-27-19"></a>
-</span><span id="__span-27-20"><a id="__codelineno-27-20" name="__codelineno-27-20" href="#__codelineno-27-20"></a>✓ Changes restored from snapshot (checkpoint: cp-20251227-143022)
-</span><span id="__span-27-21"><a id="__codelineno-27-21" name="__codelineno-27-21" href="#__codelineno-27-21"></a>
-</span><span id="__span-27-22"><a id="__codelineno-27-22" name="__codelineno-27-22" href="#__codelineno-27-22"></a># Files restored from ~/.ppxai/checkpoints/default/cp-20251227-143022/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a># No git repo, file backend active
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: file]
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a># Run agent task
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>You: /auto refactor config.py to use environment variables
+</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>
+</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>⚠️  Agent Mode enabled with File checkpoints
+</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>   • Snapshots will be saved to ~/.ppxai/sessions/checkpoints
+</span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>   • Use /undo to restore from snapshot
+</span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a>   • Tip: Initialize git repo for atomic commits
+</span><span id="__span-26-11"><a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a>
+</span><span id="__span-26-12"><a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a>✓ Checkpoint created: cp-20251227-143022 (refactor config.py)
+</span><span id="__span-26-13"><a id="__codelineno-26-13" name="__codelineno-26-13" href="#__codelineno-26-13"></a>
+</span><span id="__span-26-14"><a id="__codelineno-26-14" name="__codelineno-26-14" href="#__codelineno-26-14"></a>🤖 Starting autonomous agent...
+</span><span id="__span-26-15"><a id="__codelineno-26-15" name="__codelineno-26-15" href="#__codelineno-26-15"></a>[Agent modifies files...]
+</span><span id="__span-26-16"><a id="__codelineno-26-16" name="__codelineno-26-16" href="#__codelineno-26-16"></a>
+</span><span id="__span-26-17"><a id="__codelineno-26-17" name="__codelineno-26-17" href="#__codelineno-26-17"></a># Undo the changes
+</span><span id="__span-26-18"><a id="__codelineno-26-18" name="__codelineno-26-18" href="#__codelineno-26-18"></a>You: /undo
+</span><span id="__span-26-19"><a id="__codelineno-26-19" name="__codelineno-26-19" href="#__codelineno-26-19"></a>
+</span><span id="__span-26-20"><a id="__codelineno-26-20" name="__codelineno-26-20" href="#__codelineno-26-20"></a>✓ Changes restored from snapshot (checkpoint: cp-20251227-143022)
+</span><span id="__span-26-21"><a id="__codelineno-26-21" name="__codelineno-26-21" href="#__codelineno-26-21"></a>
+</span><span id="__span-26-22"><a id="__codelineno-26-22" name="__codelineno-26-22" href="#__codelineno-26-22"></a># Files restored from ~/.ppxai/sessions/checkpoints/default/cp-20251227-143022/
 </span></code></pre></div>
 <hr />
 <h3 id="example-3-disabled-checkpoints">Example 3: Disabled Checkpoints<a class="headerlink" href="#example-3-disabled-checkpoints" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a># Checkpoints explicitly disabled
-</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: OFF]
-</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
-</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a># Warning shown when running agent
-</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>You: /auto update dependencies
-</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>
-</span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>⚠️  Agent Mode enabled WITHOUT checkpoints
-</span><span id="__span-28-8"><a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>   • Changes CANNOT be undone
-</span><span id="__span-28-9"><a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>   • Initialize git repo or enable file backend for safety
-</span><span id="__span-28-10"><a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a>
-</span><span id="__span-28-11"><a id="__codelineno-28-11" name="__codelineno-28-11" href="#__codelineno-28-11"></a>🤖 Starting autonomous agent...
-</span><span id="__span-28-12"><a id="__codelineno-28-12" name="__codelineno-28-12" href="#__codelineno-28-12"></a>[Agent runs but no checkpoint created]
-</span><span id="__span-28-13"><a id="__codelineno-28-13" name="__codelineno-28-13" href="#__codelineno-28-13"></a>
-</span><span id="__span-28-14"><a id="__codelineno-28-14" name="__codelineno-28-14" href="#__codelineno-28-14"></a># /undo not available
-</span><span id="__span-28-15"><a id="__codelineno-28-15" name="__codelineno-28-15" href="#__codelineno-28-15"></a>You: /undo
-</span><span id="__span-28-16"><a id="__codelineno-28-16" name="__codelineno-28-16" href="#__codelineno-28-16"></a>⚠️  Checkpoints are not enabled
+<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a># Checkpoints explicitly disabled
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: OFF]
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a># Warning shown when running agent
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>You: /auto update dependencies
+</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>
+</span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>⚠️  Agent Mode enabled WITHOUT checkpoints
+</span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>   • Changes CANNOT be undone
+</span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>   • Initialize git repo or enable file backend for safety
+</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a>
+</span><span id="__span-27-11"><a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a>🤖 Starting autonomous agent...
+</span><span id="__span-27-12"><a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a>[Agent runs but no checkpoint created]
+</span><span id="__span-27-13"><a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a>
+</span><span id="__span-27-14"><a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a># /undo not available
+</span><span id="__span-27-15"><a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a>You: /undo
+</span><span id="__span-27-16"><a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a>⚠️  Checkpoints are not enabled
 </span></code></pre></div>
 <hr />
 <h3 id="example-4-interrupt-handling-ctrl-c">Example 4: Interrupt Handling (Ctrl-C)<a class="headerlink" href="#example-4-interrupt-handling-ctrl-c" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a># Agent task in progress
-</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>You: /auto refactor authentication module
-</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>
-</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>✓ Checkpoint created: d4b8f2a1 (refactor authentication module)
-</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>
-</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>🤖 Starting autonomous agent...
-</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a>━━━ Iteration 1/10 ━━━
-</span><span id="__span-29-8"><a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a>
-</span><span id="__span-29-9"><a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a>[Agent starts making changes...]
-</span><span id="__span-29-10"><a id="__codelineno-29-10" name="__codelineno-29-10" href="#__codelineno-29-10"></a>  → Modified: auth/login.py
-</span><span id="__span-29-11"><a id="__codelineno-29-11" name="__codelineno-29-11" href="#__codelineno-29-11"></a>  → Created: auth/jwt_utils.py
-</span><span id="__span-29-12"><a id="__codelineno-29-12" name="__codelineno-29-12" href="#__codelineno-29-12"></a>
-</span><span id="__span-29-13"><a id="__codelineno-29-13" name="__codelineno-29-13" href="#__codelineno-29-13"></a># User presses Ctrl-C (realizes agent is going wrong direction)
-</span><span id="__span-29-14"><a id="__codelineno-29-14" name="__codelineno-29-14" href="#__codelineno-29-14"></a>^C
-</span><span id="__span-29-15"><a id="__codelineno-29-15" name="__codelineno-29-15" href="#__codelineno-29-15"></a>
-</span><span id="__span-29-16"><a id="__codelineno-29-16" name="__codelineno-29-16" href="#__codelineno-29-16"></a>⚠️  Agent interrupted by user (Ctrl-C)
-</span><span id="__span-29-17"><a id="__codelineno-29-17" name="__codelineno-29-17" href="#__codelineno-29-17"></a>
-</span><span id="__span-29-18"><a id="__codelineno-29-18" name="__codelineno-29-18" href="#__codelineno-29-18"></a>Agent task incomplete due to interrupt.
-</span><span id="__span-29-19"><a id="__codelineno-29-19" name="__codelineno-29-19" href="#__codelineno-29-19"></a>
-</span><span id="__span-29-20"><a id="__codelineno-29-20" name="__codelineno-29-20" href="#__codelineno-29-20"></a>Checkpoint: d4b8f2a1
-</span><span id="__span-29-21"><a id="__codelineno-29-21" name="__codelineno-29-21" href="#__codelineno-29-21"></a>Backend: git
-</span><span id="__span-29-22"><a id="__codelineno-29-22" name="__codelineno-29-22" href="#__codelineno-29-22"></a>
-</span><span id="__span-29-23"><a id="__codelineno-29-23" name="__codelineno-29-23" href="#__codelineno-29-23"></a>Rollback all changes from this task?
-</span><span id="__span-29-24"><a id="__codelineno-29-24" name="__codelineno-29-24" href="#__codelineno-29-24"></a>  y - Rollback to checkpoint (undo all changes)
-</span><span id="__span-29-25"><a id="__codelineno-29-25" name="__codelineno-29-25" href="#__codelineno-29-25"></a>  n - Keep partial changes
-</span><span id="__span-29-26"><a id="__codelineno-29-26" name="__codelineno-29-26" href="#__codelineno-29-26"></a>
-</span><span id="__span-29-27"><a id="__codelineno-29-27" name="__codelineno-29-27" href="#__codelineno-29-27"></a>Rollback? (y/n): y
-</span><span id="__span-29-28"><a id="__codelineno-29-28" name="__codelineno-29-28" href="#__codelineno-29-28"></a>
-</span><span id="__span-29-29"><a id="__codelineno-29-29" name="__codelineno-29-29" href="#__codelineno-29-29"></a>Rolling back changes...
-</span><span id="__span-29-30"><a id="__codelineno-29-30" name="__codelineno-29-30" href="#__codelineno-29-30"></a>✓ Checkpoint reverted successfully
-</span><span id="__span-29-31"><a id="__codelineno-29-31" name="__codelineno-29-31" href="#__codelineno-29-31"></a>
-</span><span id="__span-29-32"><a id="__codelineno-29-32" name="__codelineno-29-32" href="#__codelineno-29-32"></a>⚠️  Uncommitted changes detected in working directory
-</span><span id="__span-29-33"><a id="__codelineno-29-33" name="__codelineno-29-33" href="#__codelineno-29-33"></a>These are partial changes from the interrupted agent task.
-</span><span id="__span-29-34"><a id="__codelineno-29-34" name="__codelineno-29-34" href="#__codelineno-29-34"></a>
-</span><span id="__span-29-35"><a id="__codelineno-29-35" name="__codelineno-29-35" href="#__codelineno-29-35"></a>Clean working directory?
-</span><span id="__span-29-36"><a id="__codelineno-29-36" name="__codelineno-29-36" href="#__codelineno-29-36"></a>  y - Remove all uncommitted changes (git reset --hard)
-</span><span id="__span-29-37"><a id="__codelineno-29-37" name="__codelineno-29-37" href="#__codelineno-29-37"></a>  n - Keep uncommitted changes for manual review
-</span><span id="__span-29-38"><a id="__codelineno-29-38" name="__codelineno-29-38" href="#__codelineno-29-38"></a>
-</span><span id="__span-29-39"><a id="__codelineno-29-39" name="__codelineno-29-39" href="#__codelineno-29-39"></a>Clean working directory? (y/n): y
-</span><span id="__span-29-40"><a id="__codelineno-29-40" name="__codelineno-29-40" href="#__codelineno-29-40"></a>
-</span><span id="__span-29-41"><a id="__codelineno-29-41" name="__codelineno-29-41" href="#__codelineno-29-41"></a>Running git reset --hard...
-</span><span id="__span-29-42"><a id="__codelineno-29-42" name="__codelineno-29-42" href="#__codelineno-29-42"></a>✓ Working directory cleaned
-</span><span id="__span-29-43"><a id="__codelineno-29-43" name="__codelineno-29-43" href="#__codelineno-29-43"></a>Removing untracked files...
-</span><span id="__span-29-44"><a id="__codelineno-29-44" name="__codelineno-29-44" href="#__codelineno-29-44"></a>✓ All changes removed
-</span><span id="__span-29-45"><a id="__codelineno-29-45" name="__codelineno-29-45" href="#__codelineno-29-45"></a>
-</span><span id="__span-29-46"><a id="__codelineno-29-46" name="__codelineno-29-46" href="#__codelineno-29-46"></a># All clean! Back to state before /auto command
+<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a># Agent task in progress
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>You: /auto refactor authentication module
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>✓ Checkpoint created: d4b8f2a1 (refactor authentication module)
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>
+</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>🤖 Starting autonomous agent...
+</span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>━━━ Iteration 1/10 ━━━
+</span><span id="__span-28-8"><a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>
+</span><span id="__span-28-9"><a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>[Agent starts making changes...]
+</span><span id="__span-28-10"><a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a>  → Modified: auth/login.py
+</span><span id="__span-28-11"><a id="__codelineno-28-11" name="__codelineno-28-11" href="#__codelineno-28-11"></a>  → Created: auth/jwt_utils.py
+</span><span id="__span-28-12"><a id="__codelineno-28-12" name="__codelineno-28-12" href="#__codelineno-28-12"></a>
+</span><span id="__span-28-13"><a id="__codelineno-28-13" name="__codelineno-28-13" href="#__codelineno-28-13"></a># User presses Ctrl-C (realizes agent is going wrong direction)
+</span><span id="__span-28-14"><a id="__codelineno-28-14" name="__codelineno-28-14" href="#__codelineno-28-14"></a>^C
+</span><span id="__span-28-15"><a id="__codelineno-28-15" name="__codelineno-28-15" href="#__codelineno-28-15"></a>
+</span><span id="__span-28-16"><a id="__codelineno-28-16" name="__codelineno-28-16" href="#__codelineno-28-16"></a>⚠️  Agent interrupted by user (Ctrl-C)
+</span><span id="__span-28-17"><a id="__codelineno-28-17" name="__codelineno-28-17" href="#__codelineno-28-17"></a>
+</span><span id="__span-28-18"><a id="__codelineno-28-18" name="__codelineno-28-18" href="#__codelineno-28-18"></a>Agent task incomplete due to interrupt.
+</span><span id="__span-28-19"><a id="__codelineno-28-19" name="__codelineno-28-19" href="#__codelineno-28-19"></a>
+</span><span id="__span-28-20"><a id="__codelineno-28-20" name="__codelineno-28-20" href="#__codelineno-28-20"></a>Checkpoint: d4b8f2a1
+</span><span id="__span-28-21"><a id="__codelineno-28-21" name="__codelineno-28-21" href="#__codelineno-28-21"></a>Backend: git
+</span><span id="__span-28-22"><a id="__codelineno-28-22" name="__codelineno-28-22" href="#__codelineno-28-22"></a>
+</span><span id="__span-28-23"><a id="__codelineno-28-23" name="__codelineno-28-23" href="#__codelineno-28-23"></a>Rollback all changes from this task?
+</span><span id="__span-28-24"><a id="__codelineno-28-24" name="__codelineno-28-24" href="#__codelineno-28-24"></a>  y - Rollback to checkpoint (undo all changes)
+</span><span id="__span-28-25"><a id="__codelineno-28-25" name="__codelineno-28-25" href="#__codelineno-28-25"></a>  n - Keep partial changes
+</span><span id="__span-28-26"><a id="__codelineno-28-26" name="__codelineno-28-26" href="#__codelineno-28-26"></a>
+</span><span id="__span-28-27"><a id="__codelineno-28-27" name="__codelineno-28-27" href="#__codelineno-28-27"></a>Rollback? (y/n): y
+</span><span id="__span-28-28"><a id="__codelineno-28-28" name="__codelineno-28-28" href="#__codelineno-28-28"></a>
+</span><span id="__span-28-29"><a id="__codelineno-28-29" name="__codelineno-28-29" href="#__codelineno-28-29"></a>Rolling back changes...
+</span><span id="__span-28-30"><a id="__codelineno-28-30" name="__codelineno-28-30" href="#__codelineno-28-30"></a>✓ Checkpoint reverted successfully
+</span><span id="__span-28-31"><a id="__codelineno-28-31" name="__codelineno-28-31" href="#__codelineno-28-31"></a>
+</span><span id="__span-28-32"><a id="__codelineno-28-32" name="__codelineno-28-32" href="#__codelineno-28-32"></a>⚠️  Uncommitted changes detected in working directory
+</span><span id="__span-28-33"><a id="__codelineno-28-33" name="__codelineno-28-33" href="#__codelineno-28-33"></a>These are partial changes from the interrupted agent task.
+</span><span id="__span-28-34"><a id="__codelineno-28-34" name="__codelineno-28-34" href="#__codelineno-28-34"></a>
+</span><span id="__span-28-35"><a id="__codelineno-28-35" name="__codelineno-28-35" href="#__codelineno-28-35"></a>Clean working directory?
+</span><span id="__span-28-36"><a id="__codelineno-28-36" name="__codelineno-28-36" href="#__codelineno-28-36"></a>  y - Remove all uncommitted changes (git reset --hard)
+</span><span id="__span-28-37"><a id="__codelineno-28-37" name="__codelineno-28-37" href="#__codelineno-28-37"></a>  n - Keep uncommitted changes for manual review
+</span><span id="__span-28-38"><a id="__codelineno-28-38" name="__codelineno-28-38" href="#__codelineno-28-38"></a>
+</span><span id="__span-28-39"><a id="__codelineno-28-39" name="__codelineno-28-39" href="#__codelineno-28-39"></a>Clean working directory? (y/n): y
+</span><span id="__span-28-40"><a id="__codelineno-28-40" name="__codelineno-28-40" href="#__codelineno-28-40"></a>
+</span><span id="__span-28-41"><a id="__codelineno-28-41" name="__codelineno-28-41" href="#__codelineno-28-41"></a>Running git reset --hard...
+</span><span id="__span-28-42"><a id="__codelineno-28-42" name="__codelineno-28-42" href="#__codelineno-28-42"></a>✓ Working directory cleaned
+</span><span id="__span-28-43"><a id="__codelineno-28-43" name="__codelineno-28-43" href="#__codelineno-28-43"></a>Removing untracked files...
+</span><span id="__span-28-44"><a id="__codelineno-28-44" name="__codelineno-28-44" href="#__codelineno-28-44"></a>✓ All changes removed
+</span><span id="__span-28-45"><a id="__codelineno-28-45" name="__codelineno-28-45" href="#__codelineno-28-45"></a>
+</span><span id="__span-28-46"><a id="__codelineno-28-46" name="__codelineno-28-46" href="#__codelineno-28-46"></a># All clean! Back to state before /auto command
 </span></code></pre></div>
 <p><strong>File Backend (Non-Git):</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a># Same interrupt scenario, but with file backend
-</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>^C
-</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>
-</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>⚠️  Agent interrupted by user (Ctrl-C)
-</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>
-</span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>Agent task incomplete due to interrupt.
-</span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a>
-</span><span id="__span-30-8"><a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a>Checkpoint: cp-20251227-153045
-</span><span id="__span-30-9"><a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a>Backend: file
-</span><span id="__span-30-10"><a id="__codelineno-30-10" name="__codelineno-30-10" href="#__codelineno-30-10"></a>
-</span><span id="__span-30-11"><a id="__codelineno-30-11" name="__codelineno-30-11" href="#__codelineno-30-11"></a>Rollback all changes from this task?
-</span><span id="__span-30-12"><a id="__codelineno-30-12" name="__codelineno-30-12" href="#__codelineno-30-12"></a>  y - Rollback to checkpoint (undo all changes)
-</span><span id="__span-30-13"><a id="__codelineno-30-13" name="__codelineno-30-13" href="#__codelineno-30-13"></a>  n - Keep partial changes
-</span><span id="__span-30-14"><a id="__codelineno-30-14" name="__codelineno-30-14" href="#__codelineno-30-14"></a>
-</span><span id="__span-30-15"><a id="__codelineno-30-15" name="__codelineno-30-15" href="#__codelineno-30-15"></a>Rollback? (y/n): y
-</span><span id="__span-30-16"><a id="__codelineno-30-16" name="__codelineno-30-16" href="#__codelineno-30-16"></a>
-</span><span id="__span-30-17"><a id="__codelineno-30-17" name="__codelineno-30-17" href="#__codelineno-30-17"></a>Rolling back changes...
-</span><span id="__span-30-18"><a id="__codelineno-30-18" name="__codelineno-30-18" href="#__codelineno-30-18"></a>✓ Checkpoint reverted successfully
-</span><span id="__span-30-19"><a id="__codelineno-30-19" name="__codelineno-30-19" href="#__codelineno-30-19"></a>
-</span><span id="__span-30-20"><a id="__codelineno-30-20" name="__codelineno-30-20" href="#__codelineno-30-20"></a># File backend restores all snapshotted files automatically
-</span><span id="__span-30-21"><a id="__codelineno-30-21" name="__codelineno-30-21" href="#__codelineno-30-21"></a># No additional cleanup needed
+<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a># Same interrupt scenario, but with file backend
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>^C
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>⚠️  Agent interrupted by user (Ctrl-C)
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>Agent task incomplete due to interrupt.
+</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a>
+</span><span id="__span-29-8"><a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a>Checkpoint: cp-20251227-153045
+</span><span id="__span-29-9"><a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a>Backend: file
+</span><span id="__span-29-10"><a id="__codelineno-29-10" name="__codelineno-29-10" href="#__codelineno-29-10"></a>
+</span><span id="__span-29-11"><a id="__codelineno-29-11" name="__codelineno-29-11" href="#__codelineno-29-11"></a>Rollback all changes from this task?
+</span><span id="__span-29-12"><a id="__codelineno-29-12" name="__codelineno-29-12" href="#__codelineno-29-12"></a>  y - Rollback to checkpoint (undo all changes)
+</span><span id="__span-29-13"><a id="__codelineno-29-13" name="__codelineno-29-13" href="#__codelineno-29-13"></a>  n - Keep partial changes
+</span><span id="__span-29-14"><a id="__codelineno-29-14" name="__codelineno-29-14" href="#__codelineno-29-14"></a>
+</span><span id="__span-29-15"><a id="__codelineno-29-15" name="__codelineno-29-15" href="#__codelineno-29-15"></a>Rollback? (y/n): y
+</span><span id="__span-29-16"><a id="__codelineno-29-16" name="__codelineno-29-16" href="#__codelineno-29-16"></a>
+</span><span id="__span-29-17"><a id="__codelineno-29-17" name="__codelineno-29-17" href="#__codelineno-29-17"></a>Rolling back changes...
+</span><span id="__span-29-18"><a id="__codelineno-29-18" name="__codelineno-29-18" href="#__codelineno-29-18"></a>✓ Checkpoint reverted successfully
+</span><span id="__span-29-19"><a id="__codelineno-29-19" name="__codelineno-29-19" href="#__codelineno-29-19"></a>
+</span><span id="__span-29-20"><a id="__codelineno-29-20" name="__codelineno-29-20" href="#__codelineno-29-20"></a># File backend restores all snapshotted files automatically
+</span><span id="__span-29-21"><a id="__codelineno-29-21" name="__codelineno-29-21" href="#__codelineno-29-21"></a># No additional cleanup needed
 </span></code></pre></div></p>
 <hr />
 <h2 id="safety-and-best-practices">Safety and Best Practices<a class="headerlink" href="#safety-and-best-practices" title="Permanent link">&para;</a></h2>
@@ -2705,9 +2751,46 @@ history and are unaffected.</p>
      <strong>no</strong> automatic cleanup</li>
 <li><code>/checkpoint clear</code> deletes <strong>all</strong> file-based snapshots (not a
      keep-last-10 prune)</li>
-<li>Manual cleanup: <code>rm -rf ~/.ppxai/checkpoints/*</code></li>
+<li>Manual cleanup: <code>rm -rf ~/.ppxai/sessions/checkpoints/*</code></li>
 </ol>
 <hr />
+<h2 id="two-commits-not-one-git-backend">Two commits, not one (git backend)<a class="headerlink" href="#two-commits-not-one-git-backend" title="Permanent link">&para;</a></h2>
+<p><strong>Added 2026-09-20 — the one-commit mental model above is incomplete, and
+the difference decides what <code>/undo</code> actually reverts.</strong></p>
+<p>The git backend writes <strong>two</strong> kinds of commit, and both are revertible:</p>
+<table>
+<thead>
+<tr>
+<th>Commit</th>
+<th>Prefix</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pre-task checkpoint</td>
+<td><code>ppxai checkpoint: &lt;desc&gt;</code></td>
+<td>Before the task — <strong>but only if the tree is dirty</strong></td>
+</tr>
+<tr>
+<td>Post-task auto-commit</td>
+<td><code>ppxai agent: &lt;desc&gt;</code></td>
+<td>After the task completes, or on max-iterations</td>
+</tr>
+</tbody>
+</table>
+<p>The catch is the pre-task one. <code>create_checkpoint()</code> is guarded by
+<code>_has_changes()</code> (<code>ppxai/checkpoint.py:132-136</code>) and returns an <strong>empty
+checkpoint id</strong> when the working tree is already clean — which is the
+normal case at the start of a task. So in ordinary use <strong>no pre-task
+commit is created at all</strong>, and what <code>/undo</code> reverts is the post-task
+<code>ppxai agent:</code> commit written by <code>commit_agent_changes()</code>
+(<code>ppxai/engine/checkpoint_ops.py:79-129</code>, called from
+<code>ppxai/engine/chat.py:1271</code> on completion and <code>:1349</code> on max-iterations).</p>
+<p>The feature works either way — <code>is_valid_checkpoint()</code> and the listing
+grep both accept <strong>both</strong> prefixes (<code>ppxai/checkpoint.py:163,178</code>) — but
+if you go looking in <code>git log</code> for a "checkpoint" commit that was never
+created, this is why.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="checkpoints-are-not-enabled">"Checkpoints are not enabled"<a class="headerlink" href="#checkpoints-are-not-enabled" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom:</strong> Status line shows <code>Checkpoints: OFF</code></p>
@@ -2716,18 +2799,18 @@ history and are unaffected.</p>
 2. Explicitly set to <code>"checkpoint_backend": "none"</code>
 3. Git backend selected but no <code>.git</code> directory</p>
 <p><strong>Solutions:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="c1"># Option 1: Initialize git</span>
-</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="nb">cd</span><span class="w"> </span>/path/to/project
-</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>git<span class="w"> </span>init
-</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>git<span class="w"> </span>add<span class="w"> </span>.
-</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"Initial commit"</span>
-</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>
-</span><span id="__span-31-7"><a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a><span class="c1"># Option 2: Enable file backend</span>
-</span><span id="__span-31-8"><a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a><span class="c1"># Edit ppxai-config.json (nested under tools.agent):</span>
-</span><span id="__span-31-9"><a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a><span class="o">{</span><span class="s2">"tools"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"agent"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"checkpoint_backend"</span>:<span class="w"> </span><span class="s2">"file"</span><span class="o">}}}</span>
-</span><span id="__span-31-10"><a id="__codelineno-31-10" name="__codelineno-31-10" href="#__codelineno-31-10"></a>
-</span><span id="__span-31-11"><a id="__codelineno-31-11" name="__codelineno-31-11" href="#__codelineno-31-11"></a><span class="c1"># Option 3: Use auto-detection</span>
-</span><span id="__span-31-12"><a id="__codelineno-31-12" name="__codelineno-31-12" href="#__codelineno-31-12"></a><span class="o">{</span><span class="s2">"tools"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"agent"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"checkpoint_backend"</span>:<span class="w"> </span><span class="s2">"auto"</span><span class="o">}}}</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c1"># Option 1: Initialize git</span>
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="nb">cd</span><span class="w"> </span>/path/to/project
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>git<span class="w"> </span>init
+</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>git<span class="w"> </span>add<span class="w"> </span>.
+</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"Initial commit"</span>
+</span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>
+</span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a><span class="c1"># Option 2: Enable file backend</span>
+</span><span id="__span-30-8"><a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a><span class="c1"># Edit ppxai-config.json (nested under tools.agent):</span>
+</span><span id="__span-30-9"><a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a><span class="o">{</span><span class="s2">"tools"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"agent"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"checkpoint_backend"</span>:<span class="w"> </span><span class="s2">"file"</span><span class="o">}}}</span>
+</span><span id="__span-30-10"><a id="__codelineno-30-10" name="__codelineno-30-10" href="#__codelineno-30-10"></a>
+</span><span id="__span-30-11"><a id="__codelineno-30-11" name="__codelineno-30-11" href="#__codelineno-30-11"></a><span class="c1"># Option 3: Use auto-detection</span>
+</span><span id="__span-30-12"><a id="__codelineno-30-12" name="__codelineno-30-12" href="#__codelineno-30-12"></a><span class="o">{</span><span class="s2">"tools"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"agent"</span>:<span class="w"> </span><span class="o">{</span><span class="s2">"checkpoint_backend"</span>:<span class="w"> </span><span class="s2">"auto"</span><span class="o">}}}</span>
 </span></code></pre></div></p>
 <hr />
 <h3 id="undo-does-nothing">"/undo does nothing"<a class="headerlink" href="#undo-does-nothing" title="Permanent link">&para;</a></h3>
@@ -2743,10 +2826,10 @@ history and are unaffected.</p>
 <hr />
 <h3 id="permission-denied-file-backend">"Permission denied" (file backend)<a class="headerlink" href="#permission-denied-file-backend" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom:</strong> Cannot create checkpoint directory</p>
-<p><strong>Cause:</strong> <code>~/.ppxai/checkpoints/</code> not writable</p>
+<p><strong>Cause:</strong> <code>~/.ppxai/sessions/checkpoints/</code> not writable</p>
 <p><strong>Solution:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.ppxai/checkpoints
-</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>chmod<span class="w"> </span><span class="m">755</span><span class="w"> </span>~/.ppxai/checkpoints
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.ppxai/sessions/checkpoints
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>chmod<span class="w"> </span><span class="m">755</span><span class="w"> </span>~/.ppxai/sessions/checkpoints
 </span></code></pre></div></p>
 <hr />
 <h3 id="git-revert-failed">"Git revert failed"<a class="headerlink" href="#git-revert-failed" title="Permanent link">&para;</a></h3>
@@ -2756,60 +2839,60 @@ history and are unaffected.</p>
 2. Working directory not clean
 3. Checkpoint commit modified manually</p>
 <p><strong>Solutions:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="c1"># Check git status</span>
-</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>git<span class="w"> </span>status
-</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>
-</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a><span class="c1"># If conflicts, resolve manually or abort</span>
-</span><span id="__span-33-5"><a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a>git<span class="w"> </span>revert<span class="w"> </span>--abort
-</span><span id="__span-33-6"><a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a>
-</span><span id="__span-33-7"><a id="__codelineno-33-7" name="__codelineno-33-7" href="#__codelineno-33-7"></a><span class="c1"># Try manual revert</span>
-</span><span id="__span-33-8"><a id="__codelineno-33-8" name="__codelineno-33-8" href="#__codelineno-33-8"></a>git<span class="w"> </span>log<span class="w">  </span><span class="c1"># Find checkpoint commit hash</span>
-</span><span id="__span-33-9"><a id="__codelineno-33-9" name="__codelineno-33-9" href="#__codelineno-33-9"></a>git<span class="w"> </span>revert<span class="w"> </span>&lt;commit-hash&gt;
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="c1"># Check git status</span>
+</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>git<span class="w"> </span>status
+</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>
+</span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a><span class="c1"># If conflicts, resolve manually or abort</span>
+</span><span id="__span-32-5"><a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>git<span class="w"> </span>revert<span class="w"> </span>--abort
+</span><span id="__span-32-6"><a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>
+</span><span id="__span-32-7"><a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a><span class="c1"># Try manual revert</span>
+</span><span id="__span-32-8"><a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a>git<span class="w"> </span>log<span class="w">  </span><span class="c1"># Find checkpoint commit hash</span>
+</span><span id="__span-32-9"><a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a>git<span class="w"> </span>revert<span class="w"> </span>&lt;commit-hash&gt;
 </span></code></pre></div></p>
 <hr />
 <h2 id="advanced-usage">Advanced Usage<a class="headerlink" href="#advanced-usage" title="Permanent link">&para;</a></h2>
 <h3 id="manual-checkpoint-inspection">Manual Checkpoint Inspection<a class="headerlink" href="#manual-checkpoint-inspection" title="Permanent link">&para;</a></h3>
 <p><strong>Git Backend:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># List checkpoint commits</span>
-</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>git<span class="w"> </span>log<span class="w"> </span>--grep<span class="o">=</span><span class="s2">"ppxai checkpoint:"</span>
-</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>
-</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="c1"># View specific checkpoint</span>
-</span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>git<span class="w"> </span>show<span class="w"> </span>&lt;commit-hash&gt;
-</span><span id="__span-34-6"><a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a>
-</span><span id="__span-34-7"><a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a><span class="c1"># Manually revert (same as /undo)</span>
-</span><span id="__span-34-8"><a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a>git<span class="w"> </span>revert<span class="w"> </span>&lt;commit-hash&gt;<span class="w"> </span>--no-edit
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="c1"># List checkpoint commits</span>
+</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>git<span class="w"> </span>log<span class="w"> </span>--grep<span class="o">=</span><span class="s2">"ppxai checkpoint:"</span>
+</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>
+</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a><span class="c1"># View specific checkpoint</span>
+</span><span id="__span-33-5"><a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a>git<span class="w"> </span>show<span class="w"> </span>&lt;commit-hash&gt;
+</span><span id="__span-33-6"><a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a>
+</span><span id="__span-33-7"><a id="__codelineno-33-7" name="__codelineno-33-7" href="#__codelineno-33-7"></a><span class="c1"># Manually revert (same as /undo)</span>
+</span><span id="__span-33-8"><a id="__codelineno-33-8" name="__codelineno-33-8" href="#__codelineno-33-8"></a>git<span class="w"> </span>revert<span class="w"> </span>&lt;commit-hash&gt;<span class="w"> </span>--no-edit
 </span></code></pre></div></p>
 <p><strong>File Backend:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="c1"># List checkpoint snapshots</span>
-</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.ppxai/checkpoints/default/
-</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>
-</span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a><span class="c1"># View checkpoint metadata</span>
-</span><span id="__span-35-5"><a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a>cat<span class="w"> </span>~/.ppxai/checkpoints/default/cp-20251227-143022/metadata.txt
-</span><span id="__span-35-6"><a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a>
-</span><span id="__span-35-7"><a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a><span class="c1"># Manually restore file</span>
-</span><span id="__span-35-8"><a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a>cp<span class="w"> </span>~/.ppxai/checkpoints/default/cp-20251227-143022/config.py<span class="w"> </span>./
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># List checkpoint snapshots</span>
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.ppxai/sessions/checkpoints/default/
+</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>
+</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="c1"># View checkpoint metadata</span>
+</span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>cat<span class="w"> </span>~/.ppxai/sessions/checkpoints/default/cp-20251227-143022/metadata.txt
+</span><span id="__span-34-6"><a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a>
+</span><span id="__span-34-7"><a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a><span class="c1"># Manually restore file</span>
+</span><span id="__span-34-8"><a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a>cp<span class="w"> </span>~/.ppxai/sessions/checkpoints/default/cp-20251227-143022/config.py<span class="w"> </span>./
 </span></code></pre></div></p>
 <hr />
 <h3 id="integration-with-git-workflow">Integration with Git Workflow<a class="headerlink" href="#integration-with-git-workflow" title="Permanent link">&para;</a></h3>
 <p>Checkpoint commits work with standard git workflows:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="c1"># After agent task, inspect changes</span>
-</span><span id="__span-36-2"><a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a>git<span class="w"> </span>log<span class="w"> </span>-1<span class="w"> </span>--stat
-</span><span id="__span-36-3"><a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a>git<span class="w"> </span>diff<span class="w"> </span>HEAD~1
-</span><span id="__span-36-4"><a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a>
-</span><span id="__span-36-5"><a id="__codelineno-36-5" name="__codelineno-36-5" href="#__codelineno-36-5"></a><span class="c1"># Keep the changes - push normally</span>
-</span><span id="__span-36-6"><a id="__codelineno-36-6" name="__codelineno-36-6" href="#__codelineno-36-6"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>main
-</span><span id="__span-36-7"><a id="__codelineno-36-7" name="__codelineno-36-7" href="#__codelineno-36-7"></a>
-</span><span id="__span-36-8"><a id="__codelineno-36-8" name="__codelineno-36-8" href="#__codelineno-36-8"></a><span class="c1"># Revert the changes - use /undo or git revert</span>
-</span><span id="__span-36-9"><a id="__codelineno-36-9" name="__codelineno-36-9" href="#__codelineno-36-9"></a>git<span class="w"> </span>revert<span class="w"> </span>HEAD<span class="w"> </span>--no-edit
-</span><span id="__span-36-10"><a id="__codelineno-36-10" name="__codelineno-36-10" href="#__codelineno-36-10"></a>
-</span><span id="__span-36-11"><a id="__codelineno-36-11" name="__codelineno-36-11" href="#__codelineno-36-11"></a><span class="c1"># Squash checkpoint commits before merge</span>
-</span><span id="__span-36-12"><a id="__codelineno-36-12" name="__codelineno-36-12" href="#__codelineno-36-12"></a>git<span class="w"> </span>rebase<span class="w"> </span>-i<span class="w"> </span>HEAD~5<span class="w">  </span><span class="c1"># Mark checkpoint commits as 'fixup'</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="c1"># After agent task, inspect changes</span>
+</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>git<span class="w"> </span>log<span class="w"> </span>-1<span class="w"> </span>--stat
+</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>git<span class="w"> </span>diff<span class="w"> </span>HEAD~1
+</span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a>
+</span><span id="__span-35-5"><a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a><span class="c1"># Keep the changes - push normally</span>
+</span><span id="__span-35-6"><a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>main
+</span><span id="__span-35-7"><a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>
+</span><span id="__span-35-8"><a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a><span class="c1"># Revert the changes - use /undo or git revert</span>
+</span><span id="__span-35-9"><a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a>git<span class="w"> </span>revert<span class="w"> </span>HEAD<span class="w"> </span>--no-edit
+</span><span id="__span-35-10"><a id="__codelineno-35-10" name="__codelineno-35-10" href="#__codelineno-35-10"></a>
+</span><span id="__span-35-11"><a id="__codelineno-35-11" name="__codelineno-35-11" href="#__codelineno-35-11"></a><span class="c1"># Squash checkpoint commits before merge</span>
+</span><span id="__span-35-12"><a id="__codelineno-35-12" name="__codelineno-35-12" href="#__codelineno-35-12"></a>git<span class="w"> </span>rebase<span class="w"> </span>-i<span class="w"> </span>HEAD~5<span class="w">  </span><span class="c1"># Mark checkpoint commits as 'fixup'</span>
 </span></code></pre></div>
 <hr />
 <h3 id="checkpoint-commit-message-format">Checkpoint Commit Message Format<a class="headerlink" href="#checkpoint-commit-message-format" title="Permanent link">&para;</a></h3>
 <p>The git checkpoint commit message is <strong>not customizable</strong> — it is hardcoded
 in <code>ppxai/checkpoint.py</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="n">commit_message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"ppxai checkpoint: </span><span class="si">{</span><span class="n">description</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">[</span><span class="si">{</span><span class="n">timestamp</span><span class="si">}</span><span class="s2">]"</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="n">commit_message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"ppxai checkpoint: </span><span class="si">{</span><span class="n">description</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">[</span><span class="si">{</span><span class="n">timestamp</span><span class="si">}</span><span class="s2">]"</span>
 </span></code></pre></div>
 <p><code>ppxai-config.json</code> ships a <code>tools.agent.checkpoint_message</code> key
 (<code>"ppxai checkpoint: {task}"</code> by default), but it has <strong>zero effect</strong> —
@@ -2833,8 +2916,8 @@ the commit message that gets created.</p>
 A: Currently, checkpoints are only created for <code>/auto</code> tasks. File editing tools (apply_patch, etc.) require manual consent but don't auto-checkpoint. This may change in future versions.</p>
 <p><strong>Q: Can I undo multiple tasks?</strong>
 A: No, <code>/undo</code> only reverts the last checkpoint. Use git commands directly for multiple undos:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>git<span class="w"> </span>log<span class="w"> </span>--grep<span class="o">=</span><span class="s2">"ppxai checkpoint:"</span><span class="w">  </span><span class="c1"># Find checkpoints</span>
-</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>git<span class="w"> </span>revert<span class="w"> </span>&lt;commit1&gt;<span class="w"> </span>&lt;commit2&gt;<span class="w"> </span>&lt;commit3&gt;<span class="w">  </span><span class="c1"># Revert multiple</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>git<span class="w"> </span>log<span class="w"> </span>--grep<span class="o">=</span><span class="s2">"ppxai checkpoint:"</span><span class="w">  </span><span class="c1"># Find checkpoints</span>
+</span><span id="__span-37-2"><a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>git<span class="w"> </span>revert<span class="w"> </span>&lt;commit1&gt;<span class="w"> </span>&lt;commit2&gt;<span class="w"> </span>&lt;commit3&gt;<span class="w">  </span><span class="c1"># Revert multiple</span>
 </span></code></pre></div></p>
 <p><strong>Q: What happens if I push checkpoint commits?</strong>
 A: Checkpoint commits are normal git commits. They can be pushed, merged, and shared like any commit. Team members will see them in git history.</p>
@@ -2842,7 +2925,7 @@ A: Checkpoint commits are normal git commits. They can be pushed, merged, and sh
 A: ppxai does <strong>not</strong> auto-clean — file-based checkpoints accumulate
 indefinitely until you act. Run <code>/checkpoint clear</code> (deletes <strong>all</strong>
 file-based snapshots, not just old ones), or manually:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>rm<span class="w"> </span>-rf<span class="w"> </span>~/.ppxai/checkpoints/*
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>rm<span class="w"> </span>-rf<span class="w"> </span>~/.ppxai/sessions/checkpoints/*
 </span></code></pre></div></p>
 <p><strong>Q: Can I use checkpoints with remote git repos?</strong>
 A: Yes! Checkpoint commits are local until you push. They work with <code>git pull</code>, <code>git push</code>, and <code>git merge</code> normally.</p>

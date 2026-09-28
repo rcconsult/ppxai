@@ -1665,7 +1665,13 @@ baseline on all <code>/v1/*</code> artifacts byte for byte. The single differing
 </ul>
 <h2 id="open-at-time-of-writing">Open at time of writing<a class="headerlink" href="#open-at-time-of-writing" title="Permanent link">&para;</a></h2>
 <ul>
-<li>The ADR 0010 grep above has <strong>never been run</strong> against ppxai-sre.</li>
+<li>~~The ADR 0010 grep above has <strong>never been run</strong> against ppxai-sre.~~
+  <strong>Run and clean, repeatedly.</strong> ppxai-sre's own <code>AGENTS.md</code> and
+  <code>docs/cross-repo-dialog-log.md</code> record clean runs on 2026-08-15 and
+  2026-09-05, and it was re-run live on 2026-09-20 against
+  <code>~/git/utils/ppxai-sre</code> — zero hits. ppxai-sre never adopted the
+  <code>tools.agent.*</code> tier keys, so ADR 0010's clean break cost it nothing.
+  This line was the last "open at time of writing" item and is now closed.</li>
 </ul>
 
 

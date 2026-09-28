@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/debug-logging/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/decisions/0015-remove-perplexity-chat-provider/">
       
       
       
@@ -18,19 +18,19 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Debug Logging - ppxai Documentation</title>
+        <title>ADR 0015: Remove Perplexity as a chat provider - ppxai Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#debug-logging" class="md-skip">
+        <a href="#adr-0015-remove-perplexity-as-a-chat-provider" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +94,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Debug Logging
+              ADR 0015: Remove Perplexity as a chat provider
             
           </span>
         </div>
@@ -232,7 +232,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -262,7 +262,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -343,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   
@@ -371,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../provider-setup/" class="md-nav__link">
+      <a href="../../provider-setup/" class="md-nav__link">
         
   
   
@@ -460,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../task-agent-guide/" class="md-nav__link">
+      <a href="../../task-agent-guide/" class="md-nav__link">
         
   
   
@@ -488,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../session-agent-guide/" class="md-nav__link">
+      <a href="../../session-agent-guide/" class="md-nav__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../bootstrap-context-guide/" class="md-nav__link">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
         
   
   
@@ -544,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../context-injection/" class="md-nav__link">
+      <a href="../../context-injection/" class="md-nav__link">
         
   
   
@@ -572,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../checkpoint-guide/" class="md-nav__link">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
         
   
   
@@ -600,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../file-editing-guide/" class="md-nav__link">
+      <a href="../../file-editing-guide/" class="md-nav__link">
         
   
   
@@ -628,7 +628,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../shell-consent-guide/" class="md-nav__link">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
         
   
   
@@ -717,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom-tool-development-guide/" class="md-nav__link">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
         
   
   
@@ -745,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom-command-development-guide/" class="md-nav__link">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
         
   
   
@@ -773,7 +773,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
+      <a href="../../architecture/" class="md-nav__link">
         
   
   
@@ -862,7 +862,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ollama-limitations/" class="md-nav__link">
+      <a href="../../ollama-limitations/" class="md-nav__link">
         
   
   
@@ -890,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
         
   
   
@@ -918,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../container-tools-guide/" class="md-nav__link">
+      <a href="../../container-tools-guide/" class="md-nav__link">
         
   
   
@@ -946,7 +946,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../autorouter-config/" class="md-nav__link">
+      <a href="../../autorouter-config/" class="md-nav__link">
         
   
   
@@ -1035,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
         
   
   
@@ -1063,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
         
   
   
@@ -1091,7 +1091,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
         
   
   
@@ -1146,10 +1146,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#default-off" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Default: OFF
+        Context
       
     </span>
   </a>
@@ -1157,33 +1157,66 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#turning-it-on-off" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Turning it on / off
+        Decision
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#persistence" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Persistence
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Persistence">
+    <nav class="md-nav" aria-label="Decision">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-persistence-matters" class="md-nav__link">
+  <a href="#1-what-is-removed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why persistence matters
+        1. What is removed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-what-stays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. What stays
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-a-config-that-still-names-perplexity-is-refused-loudly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. A config that still names Perplexity is refused, loudly
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-sessions-that-recorded-perplexity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Sessions that recorded Perplexity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-order-of-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Order of work
       
     </span>
   </a>
@@ -1196,10 +1229,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#disabling-it-cleanly" class="md-nav__link">
+  <a href="#why-this-and-not-the-alternatives" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Disabling it cleanly
+        Why this and not the alternatives
       
     </span>
   </a>
@@ -1207,10 +1240,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation-notes-for-contributors" class="md-nav__link">
+  <a href="#owner-answers-2026-09-27" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Implementation notes (for contributors)
+        Owner answers (2026-09-27)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-defaults-the-owner-may-override" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation defaults (the owner may override)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#triggers-to-revisit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers to revisit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-notes-2026-09-27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation notes (2026-09-27)
       
     </span>
   </a>
@@ -1237,151 +1303,178 @@
   
 
 
-<h1 id="debug-logging">Debug Logging<a class="headerlink" href="#debug-logging" title="Permanent link">&para;</a></h1>
-<p>ppxai writes detailed runtime logs (message flow, API requests/responses,
-tool invocations, session-recovery decisions) to files under
-<code>~/.ppxai/logs/</code> when debug logging is <strong>enabled</strong>.</p>
-<p><strong>Filenames are derived, not fixed.</strong> Each logger writes to
-<code>~/.ppxai/logs/{logger-name}-debug.log</code> (<code>ppxai/common/logger.py</code>), so the
-set of files depends on which components ran — a working install commonly
-has 20-35 of them, not a fixed list. The ones you will usually want:</p>
-<table>
-<thead>
-<tr>
-<th>Log file</th>
-<th>Emitted by</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>tui-debug.log</code></td>
-<td>Rich TUI (<code>ppxai</code>) and Textual TUI (<code>ppxaide</code>)</td>
-</tr>
-<tr>
-<td><code>server-debug.log</code></td>
-<td><code>ppxai-server</code> + <code>ppxai-desktop</code></td>
-</tr>
-<tr>
-<td><code>chat-debug.log</code>, <code>session-debug.log</code>, <code>engine-debug.log</code></td>
-<td>Engine components</td>
-</tr>
-<tr>
-<td><code>config-debug.log</code></td>
-<td>Config resolution — first stop for "it read the wrong config"</td>
-</tr>
-<tr>
-<td><code>gemini-debug.log</code>, <code>openai_native-debug.log</code>, …</td>
-<td>One per provider that was used</td>
-</tr>
-<tr>
-<td><code>ppxai.server.secrets*-debug.log</code></td>
-<td>Token/secret store (dotted logger names keep their dots)</td>
-</tr>
-<tr>
-<td><code>preview-backend-&lt;pid&gt;.log</code></td>
-<td>Office/preview subprocess — <strong>one per PID</strong>, not rotated</td>
-</tr>
-<tr>
-<td><code>keys.log</code></td>
-<td>Key-handling diagnostics</td>
-</tr>
-</tbody>
-</table>
-<p>To see what a given run actually produced: <code>ls -lt ~/.ppxai/logs/ | head</code>.</p>
-<h2 id="default-off">Default: OFF<a class="headerlink" href="#default-off" title="Permanent link">&para;</a></h2>
-<p>A fresh install has debug logging <strong>disabled</strong>. The verbose payloads
-(full API request bodies, tool outputs) aren't what a new user wants in
-their home directory by default. Turn it on deliberately.</p>
-<h2 id="turning-it-on-off">Turning it on / off<a class="headerlink" href="#turning-it-on-off" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Client</th>
-<th>Command</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Rich TUI (<code>ppxai</code>)</td>
-<td><code>/debug-log on</code> &nbsp;·&nbsp; <code>/debug-log off</code> &nbsp;·&nbsp; <code>/debug-log show</code></td>
-</tr>
-<tr>
-<td>Textual TUI (<code>ppxaide</code>)</td>
-<td><code>/debug-log on</code> &nbsp;·&nbsp; <code>/debug-log off</code></td>
-</tr>
-<tr>
-<td>Web / VSCode</td>
-<td><code>POST /config/debug-log</code> with <code>{"enabled": true|false}</code></td>
-</tr>
-<tr>
-<td>Any client</td>
-<td><code>PPXAI_DEBUG=1</code> env var (per-process, not persisted)</td>
-</tr>
-</tbody>
-</table>
-<p>The command writes <code>tui.debug_log: true|false</code> to
-<code>~/.ppxai/ppxai-config.json</code> and flips the active logger immediately.</p>
-<h2 id="persistence">Persistence<a class="headerlink" href="#persistence" title="Permanent link">&para;</a></h2>
-<p>The <code>tui.debug_log</code> flag is <strong>global and persistent</strong> — not per-session.</p>
+<h1 id="adr-0015-remove-perplexity-as-a-chat-provider">ADR 0015: Remove Perplexity as a chat provider<a class="headerlink" href="#adr-0015-remove-perplexity-as-a-chat-provider" title="Permanent link">&para;</a></h1>
 <ul>
-<li>Set once with <code>/debug-log on</code>, and every subsequent ppxai startup
-  (Rich, Textual, web server, benchmarks) has logging enabled from
-  the very first line of execution.</li>
-<li>Restored inside <code>config.initialize()</code>, which every client calls
-  first — so the logger is writing <strong>before</strong> the session-recovery
-  prompt, provider selection, or any other interactive step.</li>
-<li>Turning debug off (<code>/debug-log off</code>) persists the same way.</li>
-<li><code>PPXAI_DEBUG=1</code> is a per-process override that does <strong>not</strong> write
-  to config. Useful for one-off runs.</li>
+<li><strong>Status:</strong> Implemented (2026-09-27, <code>bugfix/v1.19.3</code>): owner chose option B; release and window answered below; implementation notes at the end</li>
+<li><strong>Deciders:</strong> owner</li>
+<li><strong>Target:</strong> v1.19.3, together with ADR 0014 and after it in commit
+  order (owner, 2026-09-27).</li>
+<li><strong>Depends on:</strong> ADR 0014. Perplexity grounding must run through the
+  search layer before the chat provider can go.</li>
+<li><strong>Revises:</strong> ADR 0012 in part (the facts table on the provider class,
+  Perplexity on two wires). Design decision #6 in CLAUDE.md ("built-in
+  providers") was already corrected in phase 1.</li>
 </ul>
-<h3 id="why-persistence-matters">Why persistence matters<a class="headerlink" href="#why-persistence-matters" title="Permanent link">&para;</a></h3>
-<p>Several classes of early-startup bug — silent session-recovery
-regressions, provider-selection Ctrl+C paths, config-load failures —
-happen <strong>before</strong> the user has a chance to type <code>/debug-log on</code>. If
-logging were transient, these regressions would leave no trace.</p>
-<p>Because the flag survives restarts, the workflow for reproducing an
-early-startup bug is:</p>
-<ol>
-<li><code>/debug-log on</code> (in any working session)</li>
-<li>Quit ppxai.</li>
-<li>Reproduce the bug on next launch.</li>
-<li><code>~/.ppxai/logs/tui-debug.log</code> contains the full decision path.</li>
-</ol>
-<p>The regression pattern this catches: debug-log state is restored inside
-<code>config.initialize()</code>, so logging is active <strong>before</strong> any client code
-runs — critical for diagnosing early-startup regressions like silent
-session-recovery failures (where recovery must run before
-provider/model selection). See the "Debug Logging" section of
-<a href="../CLAUDE.md">CLAUDE.md</a> for the ordering invariant.</p>
-<h2 id="disabling-it-cleanly">Disabling it cleanly<a class="headerlink" href="#disabling-it-cleanly" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># From inside ppxai</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>/debug-log<span class="w"> </span>off
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Or edit the config directly</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># ~/.ppxai/ppxai-config.json → "tui": { "debug_log": false }</span>
-</span></code></pre></div>
-<p>Log files are <strong>not</strong> auto-pruned. Delete them manually if they grow
-large: <code>rm ~/.ppxai/logs/*.log</code>.</p>
-<h2 id="implementation-notes-for-contributors">Implementation notes (for contributors)<a class="headerlink" href="#implementation-notes-for-contributors" title="Permanent link">&para;</a></h2>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The owner decided on 2026-09-27, option B, that Perplexity stops being a
+chat provider and stays as a web-search backend. The reasons were
+measured:</p>
 <ul>
-<li><strong>Flag lives in config</strong>, not in <code>AppState</code> or session state, because
-  it's a cross-session preference (like <code>tui.theme</code>), not per-session
-  state.</li>
-<li><strong>Restored in <code>ppxai/config/__init__.py::initialize()</code></strong>, which calls
-  <code>common.logger.Logger.enable_all()</code>. <code>Logger</code> itself is imported
-  <strong>top-level</strong> (<code>ppxai/config/__init__.py:23</code>) — there is no circular
-  dependency with the logger module, contrary to what this doc said until
-  2026-09-20. The one deferred import inside <code>initialize()</code> is
-  <code>get_debug_log_enabled</code> from <code>.features</code>, and it defers to avoid a cycle
-  with <code>.features</code>, not with the logger.</li>
-<li><strong>Every client calls <code>initialize()</code> first</strong> — Rich
-  (<code>ppxai/rich/main.py</code>), Textual (<code>ppxai/tui/__init__.py</code>), server
-  (<code>ppxai/server/http.py</code>), benchmark runner
-  (<code>benchmarks/llm-eval/engine_runner.py</code>). Adding a new entry point?
-  Call <code>initialize()</code> before anything else.</li>
-<li><strong>Writes go through <code>set_tui_config("debug_log", bool)</code></strong> which uses
-  <code>ensure_ascii=False</code> + trailing newline so em-dashes and other
-  non-ASCII content in <code>ppxai-config.json</code> aren't mangled on save.</li>
+<li>Perplexity's chat-completions API retired on 2026-09-27, leaving one
+  Sonar id, <code>perplexity/sonar</code>, on the Responses wire.</li>
+<li>That id needed two wire fixes found the day before, both failing every
+  affected turn (<code>1bafc270</code>): attachment part types, and three reserved
+  tool names.</li>
+<li>Credits ran out during the smoke retest.</li>
+<li>The known issue stands: with tools on, it reaches for shell commands to
+  get web data.</li>
+</ul>
+<p><strong>Phase 1</strong> (<code>a6500041</code>, on <code>bugfix/v1.19.3</code>, unreleased) removed nothing:</p>
+<ul>
+<li>Gemini is the default everywhere a default ships.</li>
+<li>Selecting Perplexity for chat warns and never raises (a promise made to
+  ppxai-sre).</li>
+<li><code>/doctor</code> flags a Perplexity default.</li>
+<li>The web_search backend stopped importing the provider class.</li>
+</ul>
+<p>This record is <strong>phase 2</strong>: the removal.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<h3 id="1-what-is-removed">1. What is removed<a class="headerlink" href="#1-what-is-removed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>PerplexityProvider</code> (<code>ppxai/engine/providers/perplexity.py</code>) and its
+  registration in <code>providers/__init__.py</code>.</li>
+<li>The <strong>gateway models</strong> it served with a Perplexity key: <code>openai/*</code>,
+  <code>anthropic/*</code>, <code>google/*</code>, <code>xai/*</code>, and the namespaced <code>perplexity/*</code> as
+  a chat model. Users of those move to the vendor's own provider or
+  OpenRouter.</li>
+<li>The <code>providers.perplexity</code> block in <code>ppxai-config.json</code>,
+  <code>ppxai-config.example.json</code>, the configs <code>install.sh</code> and
+  <code>scripts/install.ps1</code> generate, and VSCode's built-in <code>config.ts</code>.</li>
+<li>Chat-only data and code:</li>
+<li><code>PERPLEXITY_DEPRECATIONS</code> and <code>RECOMMENDED_DEFAULTS["perplexity"]</code> in
+    <code>model_deprecations.py</code>;</li>
+<li>the Perplexity chat system prompt (<code>config/prompts.py</code>);</li>
+<li>the <code>perplexity:</code> hints section in <code>AGENTS.md</code>;</li>
+<li>the <code>provider == "perplexity"</code> skip and <code>provider_excluded</code> entries in
+    <code>web_premium.py</code>;</li>
+<li><code>_apply_oneshot_grounding</code>'s Perplexity branch;</li>
+<li>phase 1's warn-on-select code.</li>
+<li><strong>About 13 test files</strong> that exercise Perplexity as a chat provider (the
+  list is in the phase-1 footprint, 2026-09-27); they are deleted or
+  rewritten.</li>
+</ul>
+<h3 id="2-what-stays">2. What stays<a class="headerlink" href="#2-what-stays" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The Perplexity <strong>search backend</strong> (ADR 0014 <code>search/</code> layer),
+  <code>PERPLEXITY_API_KEY</code>, <code>tools.web_search.perplexity_model</code>, its search
+  pricing (<code>tools.web_search.pricing.perplexity</code>), and its first place in
+  the backend order.</li>
+<li><code>providers/perplexity_facts.py</code>, shrunk to the rows the search backend
+  needs: the Responses-wire fact for <code>perplexity/sonar</code>. It moves next to
+  the backend under <code>engine/search/</code>.</li>
+<li><code>ResponsesHandler</code>'s reserved-name aliasing (<code>1bafc270</code>). It is a
+  generic mechanism; after removal no provider declares reserved names,
+  and it stays for the next provider that does.</li>
+</ul>
+<h3 id="3-a-config-that-still-names-perplexity-is-refused-loudly">3. A config that still names Perplexity is refused, loudly<a class="headerlink" href="#3-a-config-that-still-names-perplexity-is-refused-loudly" title="Permanent link">&para;</a></h3>
+<p>This is the trap to close. When a provider id is not registered,
+<code>provider_ops.set_provider</code> falls back to a generic
+<code>OpenAICompatibleProvider</code> for any <code>providers.&lt;id&gt;</code> block it finds. A
+leftover <code>providers.perplexity</code> block, such as the owner's own
+<code>~/.ppxai/ppxai-config.json</code> today, would therefore keep "working" against
+the retired chat-completions endpoint and fail every turn with a 400.
+Therefore:</p>
+<ul>
+<li><strong><code>set_provider("perplexity")</code> returns False with a clear log line</strong>,
+  and never builds the generic fallback. It does not raise: a raise would
+  fail every caller that selects the configured default at start-up
+  (ppxai-sre's <code>initialize()</code>). It is the same False an unconfigured
+  provider returns.</li>
+<li><strong>The server falls back to the next configured provider.</strong> This is
+  already built: <code>SessionManager._select_default_provider</code> tries the
+  default, then each configured provider in file order.</li>
+<li><strong><code>/doctor</code> says "removed" and names the fix</strong> for a <code>default_provider</code>
+  or <code>MODEL_PROVIDER</code> of <code>perplexity</code>, or a <code>providers.perplexity</code> block.
+  Status is warning, not error: nothing else is broken.</li>
+<li><strong>Startup logs one warning</strong> when the loaded config still carries the
+  block, so a headless deployment sees it without running <code>/doctor</code>.</li>
+<li>The block is <strong>ignored, not rewritten</strong>. ppxai never edits an operator's
+  config file.</li>
+</ul>
+<h3 id="4-sessions-that-recorded-perplexity">4. Sessions that recorded Perplexity<a class="headerlink" href="#4-sessions-that-recorded-perplexity" title="Permanent link">&para;</a></h3>
+<p><code>session_ops.restore_session</code> calls <code>set_provider(stored_provider)</code>. On
+False, today it silently stays on the current provider and drops to that
+provider's default model. That behaviour is right; the silence is not.
+Restoring a session recorded on Perplexity keeps the history, lands on
+the current provider, and says so once, in the restore result and as an
+INFO event. The owner's <code>~/.ppxai/session-state.json</code> records
+<code>provider: perplexity</code> today, so this is a real path, not a hypothetical.</p>
+<h3 id="5-order-of-work">5. Order of work<a class="headerlink" href="#5-order-of-work" title="Permanent link">&para;</a></h3>
+<ol>
+<li>ADR 0014 lands: the search layer, then retrieval grounding.</li>
+<li>Phase-1 warnings ship to users in a release (question 1).</li>
+<li>This removal lands.</li>
+<li>Before it merges, <strong>ppxai-sre is told</strong>: <code>set_provider("perplexity")</code>
+   then returns False on any host still configured that way, and they have
+   asked for time to add a seam test for it, as they did for
+   <code>ModelSwitchInFlightError</code>.</li>
+</ol>
+<h2 id="why-this-and-not-the-alternatives">Why this and not the alternatives<a class="headerlink" href="#why-this-and-not-the-alternatives" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Keep the chat provider, deprecated indefinitely.</strong> Every future
+  Responses-wire change, Perplexity API change or reserved name costs
+  maintenance, for a provider the owner no longer wants for chat.</li>
+<li><strong>Remove it and let the generic fallback serve old configs.</strong> That is
+  the trap in Decision 3: it fails later, on every turn, with an HTTP 400
+  that names nothing ppxai did.</li>
+<li><strong>Remove it and raise on select.</strong> This breaks start-up for embedders
+  that select the configured default, which is exactly what phase 1
+  promised not to do.</li>
+</ul>
+<h2 id="owner-answers-2026-09-27">Owner answers (2026-09-27)<a class="headerlink" href="#owner-answers-2026-09-27" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>No deprecation window.</strong> Phase 1 and this removal ship together in
+   v1.19.3, so operators meet the removal and the <code>/doctor</code> message at the
+   same time. Phase 1's warn-on-select code therefore never ships. It is
+   replaced by Decision 3's refusal before the tag, and the release notes
+   describe one change, the removal, with its upgrade step.</li>
+</ol>
+<h2 id="implementation-defaults-the-owner-may-override">Implementation defaults (the owner may override)<a class="headerlink" href="#implementation-defaults-the-owner-may-override" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Semver.</strong> A clean break in a patch release, as ADR 0010 did in
+  v1.19.1. The v1.19.3 release notes carry an upgrade step naming the
+  replacement providers.</li>
+<li><strong>Gateway-model users.</strong> <code>/doctor</code> names the vendor's own provider as the
+  replacement for each <code>openai/*</code>, <code>anthropic/*</code>, <code>google/*</code> and <code>xai/*</code> id
+  it finds in a leftover <code>providers.perplexity</code> block, noting that the
+  Anthropic provider is opt-in and untested (Item 71).</li>
+</ul>
+<h2 id="triggers-to-revisit">Triggers to revisit<a class="headerlink" href="#triggers-to-revisit" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Perplexity restores a stable chat API with feature parity (tools,
+  attachments) and the owner wants it back. That would be a new record
+  adding a provider, not a revert of this one.</li>
+<li>The search backend needs something only the chat client provided, such
+  as a Perplexity-only request option. It then belongs in the
+  <code>SearchBackend</code> implementation, not a revived provider.</li>
+</ul>
+<h2 id="implementation-notes-2026-09-27">Implementation notes (2026-09-27)<a class="headerlink" href="#implementation-notes-2026-09-27" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>The block is filtered in one place.</strong> <code>config/providers.py::
+  _get_providers()</code> drops removed providers, so the provider list, the
+  default, <code>config.PROVIDERS</code>, <code>set_provider</code>, <code>/v1/oneshot</code> and the task
+  tier agree without each checking. <code>set_provider</code> also refuses by name,
+  with the message; the filter alone already made it return False (no API
+  key resolves for a filtered provider), so the trap in Decision 3 is
+  closed twice.</li>
+<li><strong>Found while doing it:</strong> the shipped <code>ppxai-config.json</code> set
+  <code>tools.web_search.perplexity_model</code> to bare <code>sonar</code>, a chat-completions
+  id, so Perplexity search from the shipped config failed from
+  2026-09-27. Fixed, and <code>/doctor</code> flags such a value.</li>
+<li><strong>Decision 1's <code>PERPLEXITY_DEPRECATIONS</code> removal</strong> also removes the
+  migration hint for bare Sonar ids in a leftover provider block. That
+  block is reported as removed as a whole instead; the search model is
+  checked by wire, above.</li>
 </ul>
 
 
@@ -1454,10 +1547,10 @@ large: <code>rm ~/.ppxai/logs/*.log</code>.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

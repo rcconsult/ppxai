@@ -1293,6 +1293,17 @@
 
 
 <h1 id="item-65-implementation-plan-auditor-builder">Item 65 — implementation plan (auditor → builder)<a class="headerlink" href="#item-65-implementation-plan-auditor-builder" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>✅ <strong>DONE — this plan was executed; it is a record, not outstanding work.</strong>
+Item 65 completed 2026-08-31: <code>BUILTIN_PROFILES</code> retired and
+<code>ppxai/engine/model_profiles.py</code> <strong>deleted entirely</strong> (step 2, <code>ed3c069a</code>,
+net −1,035 lines). <code>supports_vision()</code> moved to
+<code>ppxai/engine/model_facts.py:1368</code> with the data it reads. Every
+<code>model_profiles.py:NN</code> citation below is to a file that no longer exists,
+and the §"are corrected there and here" note was never actually applied to
+this file — <code>git log -- docs/handoff-item-65.md</code> shows only the original
+commit. Marked 2026-09-20.</p>
+</blockquote>
 <p><strong>Written 2026-08-31 by the auditor session (ppxai-28) for the builder
 (ppxai-c7), against branch <code>bugfix/v1.19.1</code> @ <code>4b49e960</code>.</strong></p>
 <p>Item 65 = retire <code>BUILTIN_PROFILES</code> as the seed vocabulary for

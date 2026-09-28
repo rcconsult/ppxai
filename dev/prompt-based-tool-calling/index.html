@@ -1377,7 +1377,7 @@
 <p>When using vLLM with <code>--enable-auto-tool-choice</code> and GPT-OSS models, you may encounter:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>openai_harmony.HarmonyError: unexpected tokens remaining in message header
 </span></code></pre></div>
-<p>This error occurs because GPT-OSS model outputs don't consistently follow the Harmony response format that vLLM attempts to parse. See <a href="https://github.com/vllm-project/vllm/issues/23567">vLLM issue #23567</a>.</p>
+<p>This error occurs because GPT-OSS model outputs don't consistently follow the Harmony response format that vLLM attempts to parse. See <a href="https://github.com/vllm-project/vllm/issues/23567">vLLM issue #23567</a> — <strong>closed as <em>not planned</em></strong> (staled out after 90 days, never fixed; checked 2026-09-20), which is why the prompt-based fallback is still the answer.</p>
 <p><strong>Related issues:</strong>
 - <a href="https://github.com/openai/harmony/issues/80">harmony issue #80</a> - Refusal parsing failures
 - <a href="https://github.com/vllm-project/vllm/pull/30205">vLLM PR #30205</a> - Streaming fix (merged Dec 2025)</p>
@@ -1723,7 +1723,7 @@ def try_parse(json_str, tool_names):
 </table>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="https://github.com/vllm-project/vllm/issues/23567">vLLM Issue #23567</a> - HarmonyError discussion</li>
+<li><a href="https://github.com/vllm-project/vllm/issues/23567">vLLM Issue #23567</a> - HarmonyError discussion (closed as <em>not planned</em> 2026; never resolved)</li>
 <li><a href="https://github.com/vllm-project/recipes/blob/main/OpenAI/GPT-OSS.md">vLLM GPT-OSS Recipe</a> - Official guide</li>
 <li><a href="https://github.com/openai/harmony">OpenAI Harmony Library</a> - Token format spec</li>
 </ul>

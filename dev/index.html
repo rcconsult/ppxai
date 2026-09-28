@@ -1504,7 +1504,7 @@
 
 <h1 id="ppxai-documentation">ppxai Documentation<a class="headerlink" href="#ppxai-documentation" title="Permanent link">&para;</a></h1>
 <p><strong>Multi-LLM Interface for Developers</strong> - Use your favorite AI provider in terminal or VSCode with zero vendor lock-in.</p>
-<p><a href="https://github.com/rcconsult/ppxai/releases"><img alt="Version" src="https://img.shields.io/badge/version-1.19.2-blue" /></a>
+<p><a href="https://github.com/rcconsult/ppxai/releases"><img alt="Version" src="https://img.shields.io/badge/version-1.19.3-blue" /></a>
 <a href="https://github.com/rcconsult/ppxai/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-brightgreen" /></a></p>
 <h2 id="why-ppxai">Why ppxai?<a class="headerlink" href="#why-ppxai" title="Permanent link">&para;</a></h2>
 <table>
@@ -1571,8 +1571,9 @@
 <h3 id="multi-provider-support">Multi-Provider Support<a class="headerlink" href="#multi-provider-support" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Perplexity AI</strong> - Real-time web search with citations</li>
-<li><strong>Google Gemini</strong> - 1M token context, search grounding</li>
-<li><strong>OpenAI</strong> - GPT-4o, o1 reasoning models</li>
+<li><strong>Google Gemini</strong> - 1M token context, search grounding; 3.5 Flash by default</li>
+<li><strong>OpenAI</strong> - GPT-5.6-terra by default, plus the GPT-5.5/5.4 lines and GPT-5.3-codex</li>
+<li><strong>Anthropic (Claude)</strong> - opt-in via the <code>[anthropic]</code> extra; ships untested against the live API</li>
 <li><strong>OpenRouter</strong> - 100+ models including Claude</li>
 <li><strong>Local Models</strong> - Ollama, vLLM, LMStudio</li>
 </ul>

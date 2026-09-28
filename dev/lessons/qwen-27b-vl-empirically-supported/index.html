@@ -23,7 +23,7 @@
     
     
       
-        <title>Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 empirically accept image_url content — FIXED 2026-06-08 - ppxai Documentation</title>
+        <title>The 27B-FP8 Qwen line empirically accepts image_url content — FIXED 2026-06-08 - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#qwen35-27b-fp8-and-qwen36-27b-fp8-empirically-accept-image_url-content-fixed-2026-06-08" class="md-skip">
+        <a href="#the-27b-fp8-qwen-line-empirically-accepts-image_url-content-fixed-2026-06-08" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 empirically accept image_url content — FIXED 2026-06-08
+              The 27B-FP8 Qwen line empirically accepts image_url content — FIXED 2026-06-08
             
           </span>
         </div>
@@ -1226,23 +1226,36 @@
   
 
 
-<h1 id="qwen35-27b-fp8-and-qwen36-27b-fp8-empirically-accept-image_url-content-fixed-2026-06-08">Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 empirically accept image_url content — FIXED 2026-06-08<a class="headerlink" href="#qwen35-27b-fp8-and-qwen36-27b-fp8-empirically-accept-image_url-content-fixed-2026-06-08" title="Permanent link">&para;</a></h1>
-<p><strong>TL;DR:</strong> <code>ppxai/engine/model_profiles.py</code> had no entry for either
-<code>Qwen/Qwen3.5-27B-FP8</code> or <code>Qwen/Qwen3.6-27B-FP8</code>, so both fell through to
-the default <code>supports_vision=False</code> even though the models genuinely accept
-<code>image_url</code> content through vLLM. <strong>Fixed 2026-06-08</strong> — see
-<code>model_profiles.py:481-505</code> for the glob entry and the resolved evidence
-trail below.</p>
+<h1 id="the-27b-fp8-qwen-line-empirically-accepts-image_url-content-fixed-2026-06-08">The 27B-FP8 Qwen line empirically accepts image_url content — FIXED 2026-06-08<a class="headerlink" href="#the-27b-fp8-qwen-line-empirically-accepts-image_url-content-fixed-2026-06-08" title="Permanent link">&para;</a></h1>
+<p><strong>TL;DR:</strong> the shipped facts table had no entry for <code>Qwen/Qwen3.5-27B-FP8</code>
+or <code>Qwen/Qwen3.6-27B-FP8</code>, so both fell through to the default
+<code>supports_vision=False</code> even though the models genuinely accept <code>image_url</code>
+content through vLLM. <strong>Fixed 2026-06-08</strong> as a single glob; the glob has
+since been widened twice as the deployment moved. Evidence trail below.</p>
+<blockquote>
+<p><strong>Where this lives now.</strong> This lesson originally cited
+<code>ppxai/engine/model_profiles.py</code> and a <code>ModelProfile</code> class. <strong>That module
+is gone</strong> — ADR 0012 unified resolution on <code>ModelFacts</code>, and Item 65 step 2
+deleted the profile vocabulary (<code>ed3c069a</code>). The entry and the
+<code>supports_vision()</code> reader both live in <code>ppxai/engine/model_facts.py</code> now.
+The lesson itself — a model card can be empirically wrong, and a
+conservative default silently sides with the card — is unchanged.</p>
+</blockquote>
 <p><strong>Verify with:</strong></p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># In ppxai repo — the entry exists as a single glob covering both models:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>grep<span class="w"> </span>-n<span class="w"> </span><span class="s2">"Qwen/Qwen3.\[56\]-27B-FP8"</span><span class="w"> </span>ppxai/engine/model_profiles.py
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Expected: model_profiles.py:481:    "Qwen/Qwen3.[56]-27B-FP8*": ModelProfile(</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">#           ...with supports_vision=True at the entry (~line 505)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># One glob covers the whole 27B-FP8 line (3.5, 3.6 and 3.8):</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>grep<span class="w"> </span>-n<span class="w"> </span><span class="s1">'Qwen/Qwen3\.\[568\]-27B-FP8'</span><span class="w"> </span>ppxai/engine/model_facts.py
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Expected: 706:    "Qwen/Qwen3.[568]-27B-FP8*": ModelFacts(</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">#           ...with supports_vision=True at line 716 and tier='A' at 718</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># The reader moved out of the retired module with the data it reads:</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>grep<span class="w"> </span>-n<span class="w"> </span><span class="s1">'def supports_vision'</span><span class="w"> </span>ppxai/engine/model_facts.py
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Expected: 1368:def supports_vision(model: str) -&gt; bool:</span>
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Confirms current (fixed) ppxai detection — verified by execution:</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.engine.model_profiles</span><span class="w"> </span><span class="kn">import</span> <span class="n">supports_vision</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Confirms current ppxai detection:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.engine.model_facts</span><span class="w"> </span><span class="kn">import</span> <span class="n">supports_vision</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">assert</span> <span class="n">supports_vision</span><span class="p">(</span><span class="s2">"Qwen/Qwen3.5-27B-FP8"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">assert</span> <span class="n">supports_vision</span><span class="p">(</span><span class="s2">"Qwen/Qwen3.6-27B-FP8"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">assert</span> <span class="n">supports_vision</span><span class="p">(</span><span class="s2">"Qwen/Qwen3.8-27B-FP8"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span>   <span class="c1"># added 2026-09-16</span>
 </span></code></pre></div>
 <h2 id="why-this-tripped-people-up">Why this tripped people up<a class="headerlink" href="#why-this-tripped-people-up" title="Permanent link">&para;</a></h2>
 <p>Before the fix, the chat-attach pipeline sent a text placeholder for image
@@ -1252,16 +1265,26 @@ confident-looking but fabricated description. The HuggingFace card for 3.5
 says "Text-only" — that label was (and remains) empirically wrong for how
 the model behaves through vLLM, which is exactly the trap: the obvious
 source of truth (the model card) disagreed with observed behavior, and
-<code>model_profiles.py</code>'s default (<code>supports_vision=False</code>) silently sided with
+the facts table's default (<code>supports_vision=False</code>) silently sided with
 the card.</p>
 <p>The user's first reaction to a wrong description was "ppxai lied about VL
 support." The chat warning did say "sent as a text placeholder," but the
 model's confident hallucination on top of that was the failure mode that
 got reported.</p>
 <h2 id="whats-actually-true-fix-evidence">What's actually true (fix + evidence)<a class="headerlink" href="#whats-actually-true-fix-evidence" title="Permanent link">&para;</a></h2>
-<p>The fix is the one-glob <code>ModelProfile</code> entry at
-<code>ppxai/engine/model_profiles.py:481-505</code> — <code>"Qwen/Qwen3.[56]-27B-FP8*"</code>
-with <code>supports_vision=True</code> — backed by the empirical evidence below.</p>
+<p>The fix is the one-glob <code>ModelFacts</code> entry at
+<code>ppxai/engine/model_facts.py:706-719</code> — <code>"Qwen/Qwen3.[568]-27B-FP8*"</code> with
+<code>supports_vision=True</code> — backed by the empirical evidence below.</p>
+<p><strong>The glob has moved twice, and both moves are the same hazard.</strong> It was
+<code>[56]</code> when this lesson was written. On 2026-09-16 the codeai and in-cluster
+27B-FP8 deployments were upgraded <strong>in place</strong> to Qwen3.8, keeping the 3.6
+ids served as aliases — so a config naming the <em>real</em> 3.8 id matched nothing
+and fell back to the UNMEASURED floor (prompt-based tools, <strong>no vision</strong> —
+this exact bug again), while a config naming the alias kept working. The
+glob is now <code>[568]</code>. <strong>An in-place model upgrade behind an unchanged
+endpoint does not announce itself</strong>: nothing fails loudly, the alias keeps
+serving, and only the config that names the new id degrades. When a served
+model is bumped in place, widen the glob in the same change.</p>
 <h3 id="empirical-evidence-cross-repo">Empirical evidence (cross-repo)<a class="headerlink" href="#empirical-evidence-cross-repo" title="Permanent link">&para;</a></h3>
 <p>The sister <code>trad-ai-chat</code> repo has a self-contained 9-test VL probe that
 generates 3 fixture images inline via Pillow and POSTs OpenAI-style
@@ -1305,8 +1328,8 @@ generates 3 fixture images inline via Pillow and POSTs OpenAI-style
 <p>The architecture-comparison doc at
 <code>trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md</code> (2026-04-30)
 states Qwen3.6-27B-FP8 has an <strong>explicit vision encoder</strong> in the
-architecture ("Text + image + video"). The fix comment block in
-<code>model_profiles.py</code> (immediately above the entry) records a third,
+architecture ("Text + image + video"). The comment block in
+<code>model_facts.py</code> (immediately above the entry) records a third,
 in-cluster confirmation on 2026-06-08: a 256x128 PNG containing
 "VL TEST 8472" returned the correct <code>"8472"</code> from both endpoints
 (<code>chat_template_kwargs={"enable_thinking": False}</code>, finish_reason=stop) —

@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/debug-logging/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/decisions/0014-web-search-layer-and-retrieval-grounding/">
       
       
       
@@ -18,19 +18,19 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Debug Logging - ppxai Documentation</title>
+        <title>ADR 0014: Web search is its own layer; grounding retrieves before the model call - ppxai Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#debug-logging" class="md-skip">
+        <a href="#adr-0014-web-search-is-its-own-layer-grounding-retrieves-before-the-model-call" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +94,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Debug Logging
+              ADR 0014: Web search is its own layer; grounding retrieves before the model call
             
           </span>
         </div>
@@ -232,7 +232,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -262,7 +262,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -343,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   
@@ -371,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../provider-setup/" class="md-nav__link">
+      <a href="../../provider-setup/" class="md-nav__link">
         
   
   
@@ -460,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../task-agent-guide/" class="md-nav__link">
+      <a href="../../task-agent-guide/" class="md-nav__link">
         
   
   
@@ -488,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../session-agent-guide/" class="md-nav__link">
+      <a href="../../session-agent-guide/" class="md-nav__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../bootstrap-context-guide/" class="md-nav__link">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
         
   
   
@@ -544,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../context-injection/" class="md-nav__link">
+      <a href="../../context-injection/" class="md-nav__link">
         
   
   
@@ -572,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../checkpoint-guide/" class="md-nav__link">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
         
   
   
@@ -600,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../file-editing-guide/" class="md-nav__link">
+      <a href="../../file-editing-guide/" class="md-nav__link">
         
   
   
@@ -628,7 +628,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../shell-consent-guide/" class="md-nav__link">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
         
   
   
@@ -717,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom-tool-development-guide/" class="md-nav__link">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
         
   
   
@@ -745,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom-command-development-guide/" class="md-nav__link">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
         
   
   
@@ -773,7 +773,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
+      <a href="../../architecture/" class="md-nav__link">
         
   
   
@@ -862,7 +862,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ollama-limitations/" class="md-nav__link">
+      <a href="../../ollama-limitations/" class="md-nav__link">
         
   
   
@@ -890,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
         
   
   
@@ -918,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../container-tools-guide/" class="md-nav__link">
+      <a href="../../container-tools-guide/" class="md-nav__link">
         
   
   
@@ -946,7 +946,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../autorouter-config/" class="md-nav__link">
+      <a href="../../autorouter-config/" class="md-nav__link">
         
   
   
@@ -1035,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
         
   
   
@@ -1063,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
         
   
   
@@ -1091,7 +1091,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
         
   
   
@@ -1146,44 +1146,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#default-off" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Default: OFF
+        Context
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#turning-it-on-off" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Turning it on / off
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#persistence" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Persistence
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Persistence">
+    <nav class="md-nav" aria-label="Context">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-persistence-matters" class="md-nav__link">
+  <a href="#what-already-exists" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why persistence matters
+        What already exists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-still-tangled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is still tangled
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-the-current-design-was-chosen-and-what-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why the current design was chosen, and what changes
       
     </span>
   </a>
@@ -1196,10 +1196,93 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#disabling-it-cleanly" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Disabling it cleanly
+        Decision
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-a-search-layer-ppxaienginesearch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. A search layer: ppxai/engine/search/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-the-web_search-tool-becomes-an-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. The web_search tool becomes an adapter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-grounding-retrieves-before-the-model-call" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Grounding retrieves before the model call
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-egress-and-data-flow-rules-for-retrieval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Egress and data-flow rules for retrieval
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-wire-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Wire contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-and-not-the-alternatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this and not the alternatives
       
     </span>
   </a>
@@ -1207,10 +1290,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation-notes-for-contributors" class="md-nav__link">
+  <a href="#owner-answers-2026-09-27" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Implementation notes (for contributors)
+        Owner answers (2026-09-27)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-defaults-the-owner-may-override" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation defaults (the owner may override)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-proper-solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future / proper solution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#triggers-to-revisit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers to revisit
       
     </span>
   </a>
@@ -1237,151 +1353,259 @@
   
 
 
-<h1 id="debug-logging">Debug Logging<a class="headerlink" href="#debug-logging" title="Permanent link">&para;</a></h1>
-<p>ppxai writes detailed runtime logs (message flow, API requests/responses,
-tool invocations, session-recovery decisions) to files under
-<code>~/.ppxai/logs/</code> when debug logging is <strong>enabled</strong>.</p>
-<p><strong>Filenames are derived, not fixed.</strong> Each logger writes to
-<code>~/.ppxai/logs/{logger-name}-debug.log</code> (<code>ppxai/common/logger.py</code>), so the
-set of files depends on which components ran — a working install commonly
-has 20-35 of them, not a fixed list. The ones you will usually want:</p>
-<table>
-<thead>
-<tr>
-<th>Log file</th>
-<th>Emitted by</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>tui-debug.log</code></td>
-<td>Rich TUI (<code>ppxai</code>) and Textual TUI (<code>ppxaide</code>)</td>
-</tr>
-<tr>
-<td><code>server-debug.log</code></td>
-<td><code>ppxai-server</code> + <code>ppxai-desktop</code></td>
-</tr>
-<tr>
-<td><code>chat-debug.log</code>, <code>session-debug.log</code>, <code>engine-debug.log</code></td>
-<td>Engine components</td>
-</tr>
-<tr>
-<td><code>config-debug.log</code></td>
-<td>Config resolution — first stop for "it read the wrong config"</td>
-</tr>
-<tr>
-<td><code>gemini-debug.log</code>, <code>openai_native-debug.log</code>, …</td>
-<td>One per provider that was used</td>
-</tr>
-<tr>
-<td><code>ppxai.server.secrets*-debug.log</code></td>
-<td>Token/secret store (dotted logger names keep their dots)</td>
-</tr>
-<tr>
-<td><code>preview-backend-&lt;pid&gt;.log</code></td>
-<td>Office/preview subprocess — <strong>one per PID</strong>, not rotated</td>
-</tr>
-<tr>
-<td><code>keys.log</code></td>
-<td>Key-handling diagnostics</td>
-</tr>
-</tbody>
-</table>
-<p>To see what a given run actually produced: <code>ls -lt ~/.ppxai/logs/ | head</code>.</p>
-<h2 id="default-off">Default: OFF<a class="headerlink" href="#default-off" title="Permanent link">&para;</a></h2>
-<p>A fresh install has debug logging <strong>disabled</strong>. The verbose payloads
-(full API request bodies, tool outputs) aren't what a new user wants in
-their home directory by default. Turn it on deliberately.</p>
-<h2 id="turning-it-on-off">Turning it on / off<a class="headerlink" href="#turning-it-on-off" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Client</th>
-<th>Command</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Rich TUI (<code>ppxai</code>)</td>
-<td><code>/debug-log on</code> &nbsp;·&nbsp; <code>/debug-log off</code> &nbsp;·&nbsp; <code>/debug-log show</code></td>
-</tr>
-<tr>
-<td>Textual TUI (<code>ppxaide</code>)</td>
-<td><code>/debug-log on</code> &nbsp;·&nbsp; <code>/debug-log off</code></td>
-</tr>
-<tr>
-<td>Web / VSCode</td>
-<td><code>POST /config/debug-log</code> with <code>{"enabled": true|false}</code></td>
-</tr>
-<tr>
-<td>Any client</td>
-<td><code>PPXAI_DEBUG=1</code> env var (per-process, not persisted)</td>
-</tr>
-</tbody>
-</table>
-<p>The command writes <code>tui.debug_log: true|false</code> to
-<code>~/.ppxai/ppxai-config.json</code> and flips the active logger immediately.</p>
-<h2 id="persistence">Persistence<a class="headerlink" href="#persistence" title="Permanent link">&para;</a></h2>
-<p>The <code>tui.debug_log</code> flag is <strong>global and persistent</strong> — not per-session.</p>
+<h1 id="adr-0014-web-search-is-its-own-layer-grounding-retrieves-before-the-model-call">ADR 0014: Web search is its own layer; grounding retrieves before the model call<a class="headerlink" href="#adr-0014-web-search-is-its-own-layer-grounding-retrieves-before-the-model-call" title="Permanent link">&para;</a></h1>
 <ul>
-<li>Set once with <code>/debug-log on</code>, and every subsequent ppxai startup
-  (Rich, Textual, web server, benchmarks) has logging enabled from
-  the very first line of execution.</li>
-<li>Restored inside <code>config.initialize()</code>, which every client calls
-  first — so the logger is writing <strong>before</strong> the session-recovery
-  prompt, provider selection, or any other interactive step.</li>
-<li>Turning debug off (<code>/debug-log off</code>) persists the same way.</li>
-<li><code>PPXAI_DEBUG=1</code> is a per-process override that does <strong>not</strong> write
-  to config. Useful for one-off runs.</li>
+<li><strong>Status:</strong> Implemented and <strong>closed</strong> (2026-09-28). Built 2026-09-27 (<code>b3c66740</code> layer, <code>05bb0ddb</code> retrieval grounding): direction approved by the owner, open questions answered below; default backend order revised the same day (Decision 3). Closed by the owner on 2026-09-28, which also accepted the <code>grounding.sources</code> field added in <code>c3e56736</code> as the structured-citations decision §5 had deferred.</li>
+<li><strong>Deciders:</strong> owner</li>
+<li><strong>Target:</strong> v1.19.3, together with ADR 0015 (owner, 2026-09-27).</li>
+<li><strong>Related:</strong> ADR 0009 (task execution profiles, the shared backend
+  resolver, the §4 oneshot gating table), ADR 0011 (<code>execution.run.*</code>,
+  which owns <code>grounding</code>), ADR 0012 (per-model facts; Perplexity's two
+  wires), ADR 0008 (cross-tier cost), and ADR 0015 (removal of the Perplexity
+  chat provider, which depends on this record).</li>
 </ul>
-<h3 id="why-persistence-matters">Why persistence matters<a class="headerlink" href="#why-persistence-matters" title="Permanent link">&para;</a></h3>
-<p>Several classes of early-startup bug — silent session-recovery
-regressions, provider-selection Ctrl+C paths, config-load failures —
-happen <strong>before</strong> the user has a chance to type <code>/debug-log on</code>. If
-logging were transient, these regressions would leave no trace.</p>
-<p>Because the flag survives restarts, the workflow for reproducing an
-early-startup bug is:</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>On 2026-09-27 the owner deprecated Perplexity as a chat provider and kept
+it as a web-search backend (phase 1, <code>a6500041</code>). Two instructions came
+with the next step:</p>
 <ol>
-<li><code>/debug-log on</code> (in any working session)</li>
-<li>Quit ppxai.</li>
-<li>Reproduce the bug on next launch.</li>
-<li><code>~/.ppxai/logs/tui-debug.log</code> contains the full decision path.</li>
+<li>Perplexity must stay available <strong>as the grounding option</strong>.</li>
+<li>Web search should be an abstraction <strong>separate from calling a provider's
+   model API</strong>.</li>
 </ol>
-<p>The regression pattern this catches: debug-log state is restored inside
-<code>config.initialize()</code>, so logging is active <strong>before</strong> any client code
-runs — critical for diagnosing early-startup regressions like silent
-session-recovery failures (where recovery must run before
-provider/model selection). See the "Debug Logging" section of
-<a href="../CLAUDE.md">CLAUDE.md</a> for the ordering invariant.</p>
-<h2 id="disabling-it-cleanly">Disabling it cleanly<a class="headerlink" href="#disabling-it-cleanly" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># From inside ppxai</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>/debug-log<span class="w"> </span>off
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Or edit the config directly</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># ~/.ppxai/ppxai-config.json → "tui": { "debug_log": false }</span>
-</span></code></pre></div>
-<p>Log files are <strong>not</strong> auto-pruned. Delete them manually if they grow
-large: <code>rm ~/.ppxai/logs/*.log</code>.</p>
-<h2 id="implementation-notes-for-contributors">Implementation notes (for contributors)<a class="headerlink" href="#implementation-notes-for-contributors" title="Permanent link">&para;</a></h2>
+<h3 id="what-already-exists">What already exists<a class="headerlink" href="#what-already-exists" title="Permanent link">&para;</a></h3>
+<p>Half of the separation is built:</p>
 <ul>
-<li><strong>Flag lives in config</strong>, not in <code>AppState</code> or session state, because
-  it's a cross-session preference (like <code>tui.theme</code>), not per-session
-  state.</li>
-<li><strong>Restored in <code>ppxai/config/__init__.py::initialize()</code></strong>, which calls
-  <code>common.logger.Logger.enable_all()</code>. <code>Logger</code> itself is imported
-  <strong>top-level</strong> (<code>ppxai/config/__init__.py:23</code>) — there is no circular
-  dependency with the logger module, contrary to what this doc said until
-  2026-09-20. The one deferred import inside <code>initialize()</code> is
-  <code>get_debug_log_enabled</code> from <code>.features</code>, and it defers to avoid a cycle
-  with <code>.features</code>, not with the logger.</li>
-<li><strong>Every client calls <code>initialize()</code> first</strong> — Rich
-  (<code>ppxai/rich/main.py</code>), Textual (<code>ppxai/tui/__init__.py</code>), server
-  (<code>ppxai/server/http.py</code>), benchmark runner
-  (<code>benchmarks/llm-eval/engine_runner.py</code>). Adding a new entry point?
-  Call <code>initialize()</code> before anything else.</li>
-<li><strong>Writes go through <code>set_tui_config("debug_log", bool)</code></strong> which uses
-  <code>ensure_ascii=False</code> + trailing newline so em-dashes and other
-  non-ASCII content in <code>ppxai-config.json</code> aren't mangled on save.</li>
+<li><strong>The search backends are provider-independent.</strong>
+  <code>web_search_perplexity(query, n)</code> and <code>web_search_gemini(query, n)</code> in
+  <code>ppxai/engine/tools/builtin/web_premium.py</code> build their own clients and
+  return <code>(answer, citations, ToolUsage)</code>. DuckDuckGo lives in
+  <code>tools/builtin/web.py</code>. None of them call a chat provider. Since
+  <code>a6500041</code> the web_search tool no longer imports the Perplexity provider
+  class either; its wire fact comes from <code>providers/perplexity_facts.py</code>.</li>
+<li><strong>One resolver picks the backend.</strong> <code>tools/search_backends.py::
+  resolve_web_search_backend()</code> (ADR 0009 step 4) applies
+  <code>tools.web_search.order</code>, per-provider <code>preferred</code>/<code>strict</code>, backend
+  usability (keys), and the egress predicate. Its <code>BACKEND_HOSTS</code> feeds
+  egress enumeration. <code>web_search_premium()</code> walks the resolved candidates.</li>
+</ul>
+<h3 id="what-is-still-tangled">What is still tangled<a class="headerlink" href="#what-is-still-tangled" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Grounding belongs to the chat provider.</strong> <code>execution.run.grounding</code>
+  (ADR 0011 Q5) resolves to the <code>native</code> path in
+  <code>facts_resolver.get_effective_oneshot_path</code>: <em>grounding on AND the
+  provider's <code>capabilities.web_search</code></em>. <code>oneshot.py::
+  _apply_oneshot_grounding</code> then flips the provider's own search:
+  <code>enable_grounding = True</code> for Gemini, and nothing for Perplexity, because
+  Sonar always searches. <strong>For Perplexity, grounding IS the chat
+  provider.</strong> Removing the chat provider (ADR 0015) would remove Perplexity
+  grounding with it, which the owner has ruled out.</li>
+<li><strong>Grounding is provider-limited.</strong> Only providers with a native search
+  hook can ground. An OpenAI, NVIDIA, local vLLM or Anthropic model cannot,
+  even though the search layer could serve it.</li>
+<li><strong>The search backends live in a tool module.</strong> They are functions inside
+  <code>web_premium.py</code>, reached by the tool, and have no home that grounding,
+  <code>/doctor</code> or a future consumer can depend on without importing a tool
+  module.</li>
+</ul>
+<h3 id="why-the-current-design-was-chosen-and-what-changes">Why the current design was chosen, and what changes<a class="headerlink" href="#why-the-current-design-was-chosen-and-what-changes" title="Permanent link">&para;</a></h3>
+<p>The native path ("Option A", <code>docs/archive/plan-oneshot-grounding.md</code>)
+was chosen for its <strong>egress property</strong>: retrieval happens inside the
+provider's own API call, so a grounded oneshot reaches no host beyond the
+one it already calls, and no model-named URL is ever fetched. Retrieval
+before the call gives that up in one specific way. The prompt, or a query
+derived from it, now also goes to the <strong>search backend's host</strong>. If the
+chat model is a local vLLM and the search backend is Perplexity, a
+grounded prompt leaves the machine where before it did not. This is the
+central trade-off of this record. It is handled by the rules in Decision 4.
+It does not re-open the tool-loop exfiltration surface: no model-named URL
+fetch, no <code>fetch_url</code>, no model-chosen query.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<h3 id="1-a-search-layer-ppxaienginesearch">1. A search layer: <code>ppxai/engine/search/</code><a class="headerlink" href="#1-a-search-layer-ppxaienginesearch" title="Permanent link">&para;</a></h3>
+<p>A package that owns web search and knows nothing about chat providers.</p>
+<ul>
+<li><strong><code>SearchBackend</code></strong> (a <code>Protocol</code>): <code>id: str</code>, <code>hosts: tuple[str, ...]</code>,
+  <code>usable() -&gt; bool</code> (key present, etc.), and
+  <code>async search(query: str, n: int) -&gt; SearchResult</code>.</li>
+<li><strong><code>SearchResult</code></strong>: <code>backend</code>, <code>answer: str</code>, <code>citations: list[str]</code>,
+  <code>usage: ToolUsage | None</code>.</li>
+<li><strong>Backends:</strong> <code>perplexity</code> (Sonar, wire from <code>perplexity_facts</code>),
+  <code>gemini</code> (Google Search over REST, as today; not the chat provider), and
+  <code>duckduckgo</code>. The code moves out of <code>web_premium.py</code> and <code>web.py</code>
+  unchanged in behaviour.</li>
+<li><strong>The resolver moves in</strong>: <code>search_backends.py</code> becomes
+  <code>search/resolver.py</code>, with the same function and the same semantics
+  (order, preferred, strict, egress predicate). Internal module: every
+  importer is updated, with no re-export shim. It is not on ppxai-sre's
+  pinned import surface (<code>tests/test_consumer_import_surface.py</code>), which
+  was checked on 2026-09-27.</li>
+<li><strong>A fence:</strong> <code>ppxai/engine/search/</code> imports nothing from
+  <code>ppxai.engine.providers</code>, pinned by a test in the style of
+  <code>TestEngineImportsNoCommands</code>.</li>
+</ul>
+<h3 id="2-the-web_search-tool-becomes-an-adapter">2. The <code>web_search</code> tool becomes an adapter<a class="headerlink" href="#2-the-web_search-tool-becomes-an-adapter" title="Permanent link">&para;</a></h3>
+<p><code>web_search_premium()</code> becomes: resolve, walk the candidates, format. The
+walk calls <code>SearchBackend.search()</code>. Output format, fallback, <code>strict</code>,
+usage recording and the per-turn budgets (<code>tool_call_budgets</code>) are
+unchanged. The tool, grounding and <code>/task</code> grants then share one
+implementation, one cost record and one egress check.</p>
+<h3 id="3-grounding-retrieves-before-the-model-call">3. Grounding retrieves before the model call<a class="headerlink" href="#3-grounding-retrieves-before-the-model-call" title="Permanent link">&para;</a></h3>
+<p>With grounding on, the oneshot tier (<code>/v1/oneshot</code>, <code>/v1/agent/run</code>) does
+the following:</p>
+<ol>
+<li>Resolves the backend chain exactly as <code>web_search</code> does, scoped to the
+   request's provider.</li>
+<li>Searches once with the user's prompt as the query, walking the chain on
+   failure unless the resolution is <code>strict</code>.</li>
+<li>Adds the result to the request as context: the backend's answer plus a
+   numbered source list, inside a clearly delimited block the model is
+   told to use and cite.</li>
+<li>Makes the model call with <strong>no tools</strong>, exactly as the ungrounded
+   oneshot does.</li>
+</ol>
+<p>Consequences:</p>
+<ul>
+<li><strong>Perplexity stays a grounding backend.</strong> As accepted, it was first in
+  <code>AUTO_ORDER</code>. <strong>Revised by the owner on 2026-09-27, the same day:</strong> the
+  default order is Gemini, then Perplexity, then DuckDuckGo, each when its
+  key is set. Perplexity grounds whenever Gemini is unusable, or when an
+  operator puts it first. Order and pinning use the existing
+  <code>tools.web_search.order</code> / <code>preferred</code> / <code>strict</code>. No new keys are needed.</li>
+<li><strong>Every chat provider can be grounded</strong>, not only those with a native
+  hook.</li>
+<li><strong>Grounding is guaranteed</strong>: the search always runs, unlike the tool
+  loop, where the model decides whether to call it.</li>
+<li><strong>The gating table</strong> (<code>get_effective_oneshot_path</code>) gains the new path,
+  <code>"retrieve"</code>, and keeps "enrichment XOR grounding, never both" from
+  ADR 0009 §4.</li>
+<li><strong>Provider-native search becomes an explicit option.</strong> Gemini's
+  in-call Google Search remains available as <code>grounding: "native"</code>, with
+  today's egress property, for operators who want it. It is no longer what
+  <code>grounding: true</code> means (question 2).</li>
+</ul>
+<h3 id="4-egress-and-data-flow-rules-for-retrieval">4. Egress and data-flow rules for retrieval<a class="headerlink" href="#4-egress-and-data-flow-rules-for-retrieval" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Default OFF, unchanged.</strong> No grounding config means no search.</li>
+<li><strong>The backend host must pass the egress ceiling.</strong> <code>execution.
+  egress_ceiling</code> and the per-request egress predicate apply to the
+  backend's <code>hosts</code>, exactly as they do for the web_search tool. A
+  resolution with no allowed backend grounds nothing and says so. It never
+  falls back to an unchecked host.</li>
+<li><strong><code>strict</code> pins one backend</strong>, so a run can be held to one known search
+  host.</li>
+<li><strong>Only the prompt text is sent</strong>, never history, attachments or
+  retrieved content from another call. The query is not model-written
+  (question 3).</li>
+<li><strong><code>/doctor</code> shows it</strong>: the effective grounding path per configured
+  model, the backend it would use, and the host the prompt would reach.</li>
+</ul>
+<h3 id="5-wire-contract">5. Wire contract<a class="headerlink" href="#5-wire-contract" title="Permanent link">&para;</a></h3>
+<p>The response keeps its fields. The one addition is the optional request
+field of question 4. Citations reach the caller inside the answer text:
+the model is told to cite sources as <code>[n]</code>, and ppxai does <strong>not</strong> append a
+source list to the model's content, since that would break a JSON
+<code>response_format</code>. The existing optional <code>grounding</code> response record
+(<code>searched</code>, <code>run_id</code>, <code>queries</code>, <code>backend</code>, <code>search_cost</code>) is set on the
+retrieve path, as it already is on the search-loop path.</p>
+<p><strong>Amended 2026-09-28 (owner, on closing this record).</strong> The structured
+citations field that this section first deferred shipped as
+<code>grounding.sources</code> (<code>c3e56736</code>): <code>[{url, title}]</code>, the sources shown to the
+model, in order, so an answer's <code>[n]</code> is <code>sources[n-1]</code>. It is an additive
+key on the retrieval path only (the search-loop record has no such key), and
+<code>title</code> is null unless the backend gives one. Gemini's URLs are Google's
+opaque grounding redirects, so <code>title</code> carries the source's domain. The
+answer text still carries the <code>[n]</code> markers, and ppxai still appends no
+source list to the content. ppxai-sre checked the change against its
+consumer and reported no impact. <code>docs/api-gateway.md</code> is the wire
+reference.</p>
+<h3 id="6-cost">6. Cost<a class="headerlink" href="#6-cost" title="Permanent link">&para;</a></h3>
+<p>Retrieval usage is recorded through the existing <code>ToolUsage</code> path, so it
+appears in <code>/cost</code> under the run tier (ADR 0008) and in the run's usage
+events, like a web_search tool call.</p>
+<p>Two cost corrections landed after this record was built. <code>16ccbd98</code>:
+<code>gemini_grounding.per_query</code> is a per-query price, but it had been divided by
+1000 since v1.13.0, so each Gemini search was logged at a thousandth of its
+cost. <code>8f031e60</code>: a Perplexity search records the <code>usage.cost.total_cost</code>
+Perplexity reports, which includes its per-search and cache fees. The
+configured token prices ($0.25 in / $2.50 out per 1M) are now only the
+fallback.</p>
+<h2 id="why-this-and-not-the-alternatives">Why this and not the alternatives<a class="headerlink" href="#why-this-and-not-the-alternatives" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Keep grounding on the chat provider (status quo).</strong> This is what makes
+  ADR 0015 impossible without losing Perplexity grounding, and it limits
+  grounding to providers with a native hook.</li>
+<li><strong>Grounding through the tool loop (<code>execution.run.web_search</code>).</strong> It
+  already exists, but the model may answer without searching. It costs a
+  second model's tokens and a round trip, and the citations are whatever
+  the model chooses to repeat. Retrieval before the call is deterministic
+  and cheaper, and it keeps the oneshot model call tool-free.</li>
+<li><strong>A dedicated "Perplexity grounding" call, special-cased.</strong> This solves
+  the owner's first instruction but not the second. Every backend would
+  need its own special case, and grounding would stay outside the resolver
+  that already carries order, strict and egress.</li>
+</ul>
+<h2 id="owner-answers-2026-09-27">Owner answers (2026-09-27)<a class="headerlink" href="#owner-answers-2026-09-27" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Release:</strong> v1.19.3, with ADR 0015 in the same release.</li>
+<li><strong><code>grounding: true</code> means <code>"retrieve"</code>.</strong> <code>"native"</code> is the explicit
+   opt-in for a provider's in-call search. An operator who set <code>true</code> and
+   serves Gemini will see search move from Gemini's in-call Google Search
+   to a separate search before the model call, through the resolved
+   backend chain (Gemini's Google Search first under the revised order).
+   The release notes carry this as an upgrade note.</li>
+<li>
+<p><strong>The query is the raw prompt.</strong> No rewriting model call; it can be
+   added later.</p>
+</li>
+<li>
+<p><strong>Per-request control: add the optional field.</strong> Raised by ppxai-sre.
+   Their planned classifier sends email bodies as the prompt: often
+   confidential, and <strong>untrusted</strong>, since anyone can send mail. Under
+   server-wide retrieval grounding such a prompt would go to a third-party
+   search host, and an attacker's email would steer both the query and the
+   injected context. The egress ceiling and <code>strict</code> limit <em>where</em> the
+   prompt goes, not <em>whether</em>. <code>POST /v1/oneshot</code> therefore gains an
+   optional request field <strong><code>grounding: bool | null</code></strong>:</p>
+</li>
+<li><code>null</code> (or absent) uses the server default;</li>
+<li><code>false</code> is always honoured, since it can only reduce exposure;</li>
+<li><code>true</code> on a server with grounding disabled is refused with a 400
+     naming the setting, never silently ignored.</li>
+</ol>
+<p>The v1 contract permits this (<code>OneshotRequest</code>: optional fields are
+   non-breaking), and the response is unchanged. Limit: pydantic ignores
+   unknown fields, so a server <strong>older</strong> than this change ignores the
+   field. A caller that depends on the opt-out gates on the server version
+   from <code>GET /health</code>. Older servers only do <code>native</code> grounding, which
+   reaches no new host.</p>
+<h2 id="implementation-defaults-the-owner-may-override">Implementation defaults (the owner may override)<a class="headerlink" href="#implementation-defaults-the-owner-may-override" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Untrusted input.</strong> <code>docs/api-gateway.md</code> states that retrieval
+  grounding sends the prompt text to the search backend, and that callers
+  with untrusted or confidential prompts should send <code>grounding: false</code>.
+  <code>/doctor</code> says the same when grounding is on server-wide.</li>
+<li><strong>Citations</strong> stay inside the answer text as <code>[n]</code> markers, which resolve
+  through <code>grounding.sources</code> (§5, amended 2026-09-28).</li>
+<li><strong>Injected size</strong> is capped by <code>context.max_injection_size</code>, the limit
+  file injection already uses, rather than a new key.</li>
+</ul>
+<h2 id="future-proper-solution">Future / proper solution<a class="headerlink" href="#future-proper-solution" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>fetch_url</code> and the weather tool on the same layer, if a second consumer
+  appears.</li>
+<li>Result caching per (backend, query) within a run.</li>
+<li>Grounding for the interactive chat path (<code>/chat</code>), which today relies on
+  the tool loop, if the owner wants the same guarantee there.</li>
+</ul>
+<h2 id="triggers-to-revisit">Triggers to revisit<a class="headerlink" href="#triggers-to-revisit" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A search backend whose API cannot be called standalone, only as part of a
+  chat call. It would not fit <code>SearchBackend</code> as defined.</li>
+<li>An operator requirement that grounded prompts never leave the chat
+  provider's host. That is <code>native</code>, and would make it a first-class
+  default again.</li>
+<li>ppxai-sre's Pattern-A classifier landing on <code>/v1/oneshot</code> with grounding.
+  Check the query and citation choices against real use.</li>
 </ul>
 
 
@@ -1454,10 +1678,10 @@ large: <code>rm ~/.ppxai/logs/*.log</code>.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

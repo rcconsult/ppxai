@@ -1261,7 +1261,7 @@
 <p>Always use the correct parser for your model family. Wrong parser → tool calling fails completely.</p>
 <h2 id="gpt-oss-harmony-format">GPT-OSS (Harmony format)<a class="headerlink" href="#gpt-oss-harmony-format" title="Permanent link">&para;</a></h2>
 <p>Harmony format is <strong>mandatory</strong> for GPT-OSS — the model is trained on Harmony's response format with control tokens (<code>&lt;|recipient|&gt;</code>, <code>&lt;|thinking|&gt;</code>, <code>&lt;|call|&gt;</code>, ...). If vLLM doesn't parse them, they leak into responses causing <code>HarmonyError</code>.</p>
-<p>vLLM with GPT-OSS can hit <code>HarmonyError: unexpected tokens remaining in message header</code> when using native tool calling. Known vLLM/Harmony issue (<a href="https://github.com/vllm-project/vllm/issues/23567">vLLM #23567</a>).</p>
+<p>vLLM with GPT-OSS can hit <code>HarmonyError: unexpected tokens remaining in message header</code> when using native tool calling. Known vLLM/Harmony issue (<a href="https://github.com/vllm-project/vllm/issues/23567">vLLM #23567</a> — <strong>closed as <em>not planned</em></strong>, staled out rather than fixed; checked 2026-09-20).</p>
 <p><strong>ppxai supports two modes:</strong></p>
 <table>
 <thead>

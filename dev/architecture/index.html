@@ -2849,6 +2849,71 @@ UI-agnostic — they receive a <code>CommandContext</code> and return typed
 TUIs call the factory in-process; web and VSCode call it over
 HTTP via <code>POST /command/&lt;name&gt;</code>, which wraps the result in a v1
 envelope.</p>
+<p>The READ half of the same resource is <code>GET /commands</code> (ADR 0007 step
+2): <code>CommandFactory.roster(client)</code> is the one serializer for the
+command roster, so web/VSCode fetch what commands exist instead of
+restating them in a hand-written JS catalog. Its <code>version</code> moves only
+when the registry does, and <code>/reload</code> — the only thing that changes the
+roster at runtime — emits a <code>refresh_command_roster</code> side effect
+carrying that version.</p>
+<p><strong>Web consumes it (ADR 0007 step 3a).</strong> <code>web/shared/command-roster.js</code>
+fetches <code>GET /commands?client=web</code> once at startup, refetches on the
+<code>refresh_command_roster</code> signal, and <code>CommandDispatcher</code> routes from the
+roster's per-command <code>dispatch</code> field rather than a hardcoded <code>if</code>-chain;
+<code>web/shared/commands.js</code> is deleted. With NO roster the dispatcher fails
+closed — it refuses slash commands instead of forwarding the ones it
+cannot classify, because a forwarded <code>/token set &lt;value&gt;</code> would put a
+secret in a request body and in the debug log.</p>
+<p><strong>VSCode consumes it the same way (ADR 0007 step 3b).</strong>
+<code>vscode-extension/src/commandRoster.ts</code> fetches
+<code>GET /commands?client=vscode</code> as soon as the backend is reachable,
+drops the roster when the connection goes away, and refetches on the
+<code>refresh_command_roster</code> signal;
+<code>vscode-extension/src/commandRouter.ts</code> routes from the roster's
+<code>dispatch</code> field, with a <code>client_action</code> → implementation registry
+(<code>CLIENT_ACTIONS</code>) in place of <code>chatPanel.ts</code>'s twelve hardcoded
+intercepts, and the same fail-closed gate. <code>src/shared/commands.ts</code> —
+the SIXTH roster the record counts — is deleted. Five commands
+(<code>/tools</code>, <code>/checkpoint</code>, <code>/context</code>, <code>/ls</code>, <code>/tree</code>) are still
+intercepted without a declared action, as the named, shrinking
+<code>LEGACY_INTERCEPTS</code> baseline for step 5's parity fence. Both modules are
+<code>vscode</code>-free by design (the <code>taskController.ts</code> idiom), so the
+behavioural tests compile and drive the real TypeScript under Node.</p>
+<blockquote>
+<p><strong>Update (2026-09-21, commit <code>beffa197</code>).</strong> The fifth command,
+<code>checkpoint</code>, migrated too, and <code>LEGACY_INTERCEPTS</code> — along with
+<code>LEGACY_HANDLERS</code>, the router's legacy branch, <code>handlers/commands.ts</code>
+and <code>handlers/types.ts</code> — is deleted, not merely emptied. <code>/checkpoint
+clear</code> now asks first via <code>prompt_quick_pick</code> in all four clients
+(<code>ppxai/commands/agent.py::_checkpoint_clear</code>), and both TUIs consume
+command <code>side_effects</code> for the first time. See
+<code>docs/plan-adr-0007-completion-service.md</code> open owner decision 7.</p>
+</blockquote>
+<p><strong>Completion derives from the same declaration too (ADR 0007 step 4,
+2026-09-21).</strong> The seven hand-written <code>_*_SUBCOMMANDS</code> tables in
+<code>engine/completion.py</code> — the LAST of the six hand-written rosters the
+record counted — are gone: a command's first-level subcommands are
+<code>CommandSpec.subcommands</code>, and each of the three <code>complete()</code> callers
+(<code>rich/main.py</code>, <code>tui/completer.py</code>, <code>server/routes/completion.py</code>)
+passes <code>CommandFactory.roster(&lt;its client&gt;)["commands"]</code> in. The side
+effect is the layer inversion the record was originally filed for:
+<code>ppxai/engine/</code> now imports nothing from <code>ppxai.commands</code>. See
+§Cross-Client Autocomplete.</p>
+<p><strong>Secrets ride the same declaration (ADR 0007 step 3a-sec).</strong> A spec may
+mark subcommands whose ARGUMENT is a secret
+(<code>CommandSpec.sensitive_subcommands</code>; <code>/token set</code> is the only one
+today), and the roster publishes a <code>sensitive</code> flag on each subcommand
+entry. <code>CommandFactory.redact_sensitive()</code> is the one server-side
+implementation of the rule, and <code>CommandRoster.isSensitive/redact()</code> the
+one client-side implementation — so the web client masks the <code>&gt; &lt;input&gt;</code>
+chat echo, skips <code>POST /complete</code> and keeps the line out of its input
+history WITHOUT hardcoding <code>/token</code> or <code>set</code>, and <code>POST /client-log</code>,
+<code>POST /complete</code> and <code>POST /command/&lt;name&gt;</code> redact again server-side for
+stale assets. <strong>Step 3b closed the VSCode client half</strong>: the webview
+echo is masked, <code>POST /complete</code> is skipped, and the raw line is purged
+from the webview's ↑ history (the host tells it to forget, so the
+webview holds no copy of the rule). With no roster the client fails
+closed: every slash command's args are treated as secret.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>                  ┌────────────────────────┐
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>                  │  CommandFactory         │  Single registry
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>                  │  N CommandSpec entries  │  (self-registered at import)
@@ -2898,17 +2963,18 @@ envelope.</p>
 </span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
 </span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="p">}</span>
 </span></code></pre></div>
-<p><strong>Side-effect kinds (v1.18.1)</strong> — see <code>ppxai/commands/results.py::SideEffectKind</code>
-for the full taxonomy. Categories:
+<p><strong>Side-effect kinds (v1.18.1; <code>prompt_text</code> added 2026-05-03)</strong> — see
+<code>ppxai/commands/results.py::SideEffectKind</code> for the full taxonomy. All 17
+(<code>refresh_command_roster</code> added by ADR 0007 step 2), by category:
 - File handling: <code>open_editor</code>, <code>open_viewer</code>, <code>show_image</code>,
   <code>show_pdf</code>, <code>reveal_in_explorer</code>
 - Terminals: <code>open_terminal</code>, <code>run_shell</code>
 - Live previews: <code>open_html_preview</code>
-- Workspace: <code>refresh_file_tree</code>
+- Workspace: <code>refresh_file_tree</code>, <code>refresh_command_roster</code>
 - Preferences: <code>set_theme</code>
 - Clipboard: <code>copy_to_clipboard</code>
 - Session/engine: <code>attach_file</code>
-- Interactive: <code>prompt_quick_pick</code>
+- Interactive: <code>prompt_quick_pick</code>, <code>prompt_text</code>
 - Messages: <code>notify</code>
 - VSCode escape hatch: <code>vscode_delegate</code></p>
 <p>Open enum — clients ignore unknown kinds. Adding a new kind is
@@ -3186,13 +3252,13 @@ Error messages should explain what failed, why, and what was attempted.</p>
 <h3 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>ppxai/web/
 </span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>├── index.html                          # Single-page app shell
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>├── app.js                              # PpxaiApp root class (~3,850 lines as of v1.18.8)
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>├── app.js                              # PpxaiApp root class (~4,160 lines as of v1.19.3)
 </span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>├── shared/                             # Framework-level modules (flat, not per-group folders)
 </span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>│   ├── api-client.js                   # ApiClient — all fetch() calls, timeout, error shape
 </span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>│   ├── app-state.js                    # AppState — centralised state with listener notifications
 </span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>│   ├── stream-handler.js               # StreamHandler — SSE buffer, RAF rendering, typed events
-</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>│   ├── command-dispatcher.js           # CommandDispatcher — slash command routing
-</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>│   ├── commands.js                     # Slash command handlers (flattened — no per-group commands/ folder)
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>│   ├── command-dispatcher.js           # CommandDispatcher — roster-driven slash command routing
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>│   ├── command-roster.js               # CommandRoster — cache over GET /commands (ADR 0007 step 3a)
 </span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>│   ├── formatters.js                   # Shared output/value formatters
 </span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>│   ├── result-renderer.js              # CommandResult → DOM rendering (incl. CompositeResult)
 </span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>│   ├── side-effects.js                 # SideEffectKind handlers (prompt_text, etc.)
@@ -3337,7 +3403,12 @@ stability contract</strong> until sealed; only <code>/v1/oneshot</code> is froze
 <tr>
 <td><code>/command/{name}</code></td>
 <td>POST</td>
-<td>CommandFactory server pattern (unified <code>/usage</code>, <code>/status</code>, etc.)</td>
+<td>CommandFactory server pattern (unified <code>/usage</code>, <code>/status</code>, etc.). Optional <code>client</code> body field (<code>rich</code>|<code>textual</code>|<code>web</code>|<code>vscode</code>) gates per-client output exactly; absent = the <code>{web, vscode}</code> candidate set</td>
+</tr>
+<tr>
+<td><code>/commands</code></td>
+<td>GET</td>
+<td>Command roster snapshot — <code>{version, commands[]}</code> from <code>CommandFactory.roster()</code>, one entry per canonical command with aliases as a field. Optional <code>?client=</code> (400 if unknown); weak <code>ETag</code> + <code>If-None-Match</code> → 304 (ADR 0007 step 2)</td>
 </tr>
 <tr>
 <td><code>/context/working_dir</code></td>
@@ -3363,17 +3434,29 @@ stability contract</strong> until sealed; only <code>/v1/oneshot</code> is froze
 </table>
 <h2 id="cross-client-autocomplete-v117x">Cross-Client Autocomplete (v1.17.x)<a class="headerlink" href="#cross-client-autocomplete-v117x" title="Permanent link">&para;</a></h2>
 <p><code>ppxai/engine/completion.py</code> is the <strong>single source of truth</strong> for
-autocomplete across all four clients. Rich and Textual call it in-
-process; Web and VSCode call it via <code>POST /complete</code>. Client completers
-are pure glue layers — no client owns any subcommand tables, no client
-scans its own buffer to decide completion mode.</p>
+autocomplete BEHAVIOUR across all four clients. Rich and Textual call it
+in-process; Web and VSCode call it via <code>POST /complete</code>. Client
+completers are pure glue layers — no client owns any subcommand tables,
+no client scans its own buffer to decide completion mode.</p>
+<p><strong>The command DATA comes from the registry, not from here (ADR 0007
+step 4, 2026-09-21).</strong> <code>complete()</code> takes a required <code>roster=</code>
+argument: the caller passes
+<code>CommandFactory.roster(&lt;its client&gt;)["commands"]</code> — plain dicts, already
+filtered for that client. So <code>ppxai/engine/completion.py</code> <strong>imports
+nothing from <code>ppxai.commands</code></strong> (fenced at zero by
+<code>tests/test_no_new_lazy_imports.py::TestEngineImportsNoCommands</code>), the
+<code>engine → commands → engine</code> package cycle is closed, and client gating
+is structural: a command the client may not see is simply absent from
+the data. Every first-level subcommand is read off
+<code>CommandSpec.subcommands</code>; with no roster, completion offers no slash
+commands while path and <code>@file</code> completion still work.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>                  ┌──────────────────────────────────────────┐
 </span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>                  │  engine/completion.py  ::  complete()    │
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>                  │  ──────────────────────────────────────  │
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>                  │  • slash commands (CommandFactory)       │
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>                  │  • slash commands (from roster= data)    │
 </span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>                  │  • aliases + /quit /exit                 │
 </span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>                  │  • path args (/attach, /cd, ...)         │
-</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>                  │  • subcommands (/tools, /usage, ...)     │
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>                  │  • subcommands (declared on the spec)    │
 </span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>                  │  • /model + /provider (dynamic)          │
 </span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>                  │  • /tools help &lt;tool&gt;                    │
 </span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>                  │  • @file refs + @git/@tree/@clipboard/   │
@@ -3430,13 +3513,18 @@ had <code>@git</code>/<code>@tree</code>/<code>@clipboard</code>/<code>@url</cod
 <code>/model</code> + <code>/provider</code> lookups but the others showed nothing. Adding
 a new subcommand meant editing five files and guessing which clients
 to retest.</p>
-<p>After the unification, adding a new subcommand or context provider
-is a one-file change in <code>engine/completion.py</code>. The web client picks
-it up for free (no recompile needed, just a server restart). VSCode
-picks it up on the next extension reload. Rich and Textual get it
-immediately because they call the engine in-process. Tests live next
-to the engine logic in <code>tests/test_completion_provider.py</code> (66 tests
-covering every source).</p>
+<p>After the unification, adding a new subcommand or context provider is a
+one-file change. Since ADR 0007 step 4 that file is the COMMAND's own
+module, not the engine: a subcommand is a row in its
+<code>CommandSpec(subcommands=[...])</code>, and completion, <code>GET /commands</code> and
+every client derive it. (Only completion BEHAVIOUR a flat declaration
+cannot express — second-level arguments like <code>/usage show &lt;mode&gt;</code>,
+and live sources like <code>/model</code> ids or <code>/task</code> run ids — still lives in
+<code>engine/completion.py</code>.) The web client picks it up for free (no
+recompile needed, just a server restart). VSCode picks it up on the
+next extension reload. Rich and Textual get it immediately because
+they call the engine in-process. Tests live next to the engine logic
+in <code>tests/test_completion_provider.py</code>.</p>
 <h2 id="schema-driven-appstate-dto-v1174">Schema-Driven AppState DTO (v1.17.4)<a class="headerlink" href="#schema-driven-appstate-dto-v1174" title="Permanent link">&para;</a></h2>
 <p>Every client's observable application state (provider, model, tools,
 tokens, context attachments, etc.) derives from <strong>one</strong> JSON schema
@@ -3526,7 +3614,9 @@ references a schema-declared field — drift surfaces at CI time.</p>
 <li><strong><code>doc</code></strong>: optional human-readable description.</li>
 </ul>
 <h3 id="drift-protection">Drift protection<a class="headerlink" href="#drift-protection" title="Permanent link">&para;</a></h3>
-<p>Four layers, in increasing severity:</p>
+<p><strong>Updated 2026-09-21 (commit <code>1953c29c</code>):</strong> what used to be layer 2
+(byte-for-byte DATA copy) now has a TYPE-layer counterpart, and a fifth,
+run-time layer was added. Five layers, in increasing severity:</p>
 <ol>
 <li><strong>Schema format tests</strong> (<code>tests/test_app_state.py::TestSchemaDTO</code>)
    pin that every entry has the required properties, types match
@@ -3535,34 +3625,99 @@ references a schema-declared field — drift surfaces at CI time.</p>
    comparison between the canonical JSON and the copy bundled with
    the extension. CI fails if someone edits one without running
    <code>npm run sync-schema</code>.</li>
+<li><strong>VSCode generated-type equality</strong> (added 2026-09-21).
+   <code>tests/test_app_state_generated_types.py</code> regenerates
+   <code>vscode-extension/src/appState.generated.ts</code> in memory from the
+   canonical schema and fails on any difference from the tracked file,
+   in either direction — the TYPE-layer analogue of layer 2. Before
+   this, the TypeScript <code>AppStateFields</code> interface was hand-written and
+   had silently drifted two fields behind the schema (<code>lastMessageRole</code>
+   since v1.18.0, <code>modelSupportsVision</code> since v1.18.6); no test compared
+   the two.</li>
 <li><strong>TUI field-name scan</strong> test pins that Rich + Textual source code
    only accesses state fields declared in the schema.</li>
-<li><strong>Runtime drift warnings</strong> in both Web + VSCode <code>updateFromPython()</code>
-   fire if the server pushes an unknown field — covers the case where
-   server and client are running different ppxai versions.</li>
+<li><strong>Runtime drift checks</strong>, split by client:</li>
+<li><strong>Web</strong> — <code>updateFromPython()</code> in <code>web/shared/app-state.js</code> warns
+     to the console if the server pushes an unknown field. No
+     connect-time check; see the caveat below.</li>
+<li><strong>VSCode</strong> (added 2026-09-21) — <code>vscode-extension/src/schemaGuard.ts</code>
+     fetches <code>GET /schema/app-state</code> on every (re)connect and compares
+     FIELDS with the bundled schema: identical is silent, extra server
+     fields are adopted (stored, never rendered) with one log line, a
+     compiled-against field missing or retyped gets one visible
+     warning naming the fields and both versions, and a 404/fetch
+     failure logs once without blocking — the connect-time case layers
+     2–3 cannot cover, since server and extension version
+     independently (VSIX vs. pip/PyInstaller). Deliberately the
+     opposite posture from the command roster's fail-closed gate:
+     <code>AppState</code> exists before any server does, so there is nothing to
+     withhold. <code>tests/test_vscode_schema_guard_behavior.py</code>.</li>
 </ol>
+<p><strong>Update (2026-09-21): web now has a connect-time equivalent too.</strong>
+<code>docs/plan-adr-0007-completion-service.md</code> §"Open owner decisions" item
+9 is DECIDED and built. <code>_reanchorFromServer()</code> (<code>ppxai/web/app.js</code>)
+grew an opt-in <code>checkSchema</code> parameter, passed <code>true</code> only from the two
+RECONNECT-shaped boundaries — heartbeat recovery and
+<code>visibilitychange</code>→visible — never from first page load (same-process
+injected schema) or a plain provider/model switch. When true,
+<code>_checkSchemaDrift()</code> fetches <code>GET /schema/app-state</code> and classifies it
+with <code>ppxai/web/shared/app-state-schema-diff.js::compareSchemas</code>, a
+pure-JS re-implementation of <code>schemaGuard.ts</code>'s classifier (web loads
+no compiled TypeScript) held to identical verdicts by
+<code>tests/test_schema_diff_cross_language_parity.py</code> over 10 shared
+fixtures. <code>identical</code> is silent; <code>extra-only</code> adopts
+(<code>AppState.adoptSchema()</code> — unlike VSCode's add-only <code>adoptFields</code>,
+this fully re-derives the field map, since web has no compile-time
+types to protect) with one <code>console.info</code>; <code>incompatible</code> adopts and
+shows ONE chat notice; a fetch failure logs one <code>console.warn</code> and
+blocks nothing. Tests: <code>tests/test_web_schema_drift_behavior.py</code>,
+<code>tests/test_web_schema_drift_reanchor.py</code>. Full account:
+<code>docs/patterns/appstate.md</code> §"Run-time skew (VSCode)".</p>
+<p><strong>Version-history fence (layer 6, added 2026-09-21).</strong> The schema's
+<code>"version"</code> field is now maintained — MAJOR for a field
+removed/renamed/retyped, MINOR for a field added or its <code>default</code>
+changed, starting at <code>"1.1"</code> (<code>"1.0"</code> never moved across five earlier
+field-adding commits, so it is an unmeasured historical marker, not a
+signal). <code>tests/test_app_state_schema_version.py</code> enforces it against
+an append-only <code>ppxai/engine/app_state_schema_history.json</code>, one row
+per version with pinned fingerprint hashes so a past row can't be
+silently edited. Neither run-time classifier above treats <code>version</code> as
+the verdict — both decide on FIELDS and report <code>version</code> only as
+context; a version pre-check ahead of the field diff was deliberately
+not added, since it would hide exactly the failure mode this fence
+exists to catch (a field change landing with no bump).</p>
 <h3 id="adding-a-new-field">Adding a new field<a class="headerlink" href="#adding-a-new-field" title="Permanent link">&para;</a></h3>
 <p>One edit: add an entry to <code>ppxai/engine/app_state_schema.json</code>. Then
 bump the sentinel count in
-<code>tests/test_app_state.py::TestSchemaDTO::test_schema_has_fields_dict</code>
-and (until v1.18.x codegen lands) add the camelCase name to the
-<code>AppStateFields</code> TypeScript interface in
-<code>vscode-extension/src/appState.ts</code>. Everything else propagates
-automatically:</p>
+<code>tests/test_app_state.py::TestSchemaDTO::test_schema_has_fields_dict</code>.
+<strong>No hand-edit to a TypeScript interface is needed</strong> — this section
+said otherwise before 2026-09-21 ("until v1.18.x codegen lands, add the
+camelCase name to the <code>AppStateFields</code> TypeScript interface"); that
+interface no longer exists. Everything else propagates automatically:</p>
 <ul>
 <li>Python <code>AppState.FIELDS</code> picks it up at next import</li>
 <li><code>GET /schema/app-state</code> returns the updated schema</li>
 <li><code>serve_index</code> injects the updated schema into <code>index.html</code></li>
 <li>Web <code>AppState</code> reads it from <code>window.APP_STATE_SCHEMA</code></li>
 <li><code>sync-schema.js</code> copies the new JSON to <code>vscode-extension/resources/</code>
-  on the next <code>npm run compile</code></li>
-<li>VSCode <code>AppState</code> reads the bundled copy</li>
+  <strong>and regenerates <code>vscode-extension/src/appState.generated.ts</code></strong> on
+  the next <code>npm run compile</code> (or <code>npm run sync-schema</code> directly) —
+  commit the regenerated file; <code>tests/test_app_state_generated_types.py</code>
+  fails CI otherwise</li>
+<li>VSCode <code>AppState</code> reads the bundled JSON copy; VSCode code that wants
+  to read the new field by name imports the regenerated
+  <code>AppStateFields</code> type</li>
 </ul>
-<p>The schema-generator work proposed in <code>docs/archive/TODO-appstate-codegen.md</code>
-would have built on this (runtime loading is the architecture; codegen would
-add compile-time type generation for TypeScript so the <code>AppStateFields</code>
-interface becomes an artifact instead of hand-maintained), but it was never
-pursued — see that doc's Status line (archived 2026-07-12, superseded).</p>
+<p><strong>Corrected 2026-09-21:</strong> the schema-generator work proposed in
+<code>docs/archive/TODO-appstate-codegen.md</code> was archived as "superseded /
+not pursued" on 2026-07-12, and this section previously repeated that
+verdict ("until v1.18.x codegen lands ... it was never pursued"). The
+TYPE-generation half of that proposal <strong>was</strong> built, on 2026-09-21,
+under ADR 0007 (<code>vscode-extension/scripts/sync-schema.js</code> emitting
+<code>src/appState.generated.ts</code>) — driven by a real drift, not by that
+archived TODO being revived. The archived doc's YAML-schema and
+runtime-schemas-for-k8s/desktop proposals are unrelated and remain not
+pursued.</p>
 <h2 id="agent-heartbeat-primitives-v1180">Agent Heartbeat Primitives (v1.18.0)<a class="headerlink" href="#agent-heartbeat-primitives-v1180" title="Permanent link">&para;</a></h2>
 <p>Before v1.18.0 the agent tool loop had no structured progress signal
 of its own. Every client scraped <code>TOOL_CALL</code> / <code>TOOL_RESULT</code> / <code>ERROR</code>
@@ -3606,6 +3761,35 @@ is always immediately followed by <code>AGENT_RUN_ERROR</code>.</p>
 backward compatibility, but every new observer should subscribe to
 <code>AGENT_RUN_COMPLETE</code> instead — it's mode-agnostic and strictly
 paired with <code>AGENT_RUN_START</code>.</p>
+<p><strong>2026-09-23:</strong> <code>/task</code> audit files (<code>events.jsonl</code>) now carry
+<code>turn_degraded</code> and <code>turn_end</code> records mirroring this contract (debt
+Item 82, <code>59702221</code>) — one <code>turn_degraded</code> per tool-guard degradation
+and one <code>turn_end</code> per engine <code>AGENT_RUN_COMPLETE</code>/<code>AGENT_RUN_ERROR</code>,
+carrying <code>degraded</code>/<code>degradation_reasons</code> verbatim from the engine. A
+run's own <code>agent_run_complete</code>/<code>agent_run_error</code> records are unaffected
+— <code>turn_end</code> is a separate per-turn record. A missing <code>turn_end</code> for a
+turn means its outcome is unknown, not clean.</p>
+<p><strong>2026-09-26 (debt Item 80):</strong> "max-iterations reached" no longer ends
+the turn on the fall-through exit. After the last tool iteration, one
+extra pass runs with tools withdrawn (an INFO carrying
+<code>ToolGuardReason.ITERATION_CAP</code> and the turn's <code>call_pattern</code>), and its
+answer leaves through the normal completion exit. That exit's
+<code>AGENT_RUN_COMPLETE</code> then carries <code>max_iterations_reached: true</code>. The
+fall-through exit is still fenced as an exit, but a positive cap never
+reaches it now; only <code>max_iterations &lt;= 0</code> does. At ~70% of the cap an
+INFO with <code>metadata.notice = "iteration_warning"</code> precedes it. That
+INFO is not a degradation.</p>
+<p><strong>2026-09-23, same day:</strong> the contract above had three exceptions until
+the "every tool-loop exit ends with a run terminal" fix: the
+prompt-based fallback's provider error, the retry-synthesis provider
+error, and the tool-interrupt return all ended with no terminal. All
+three now yield <code>AGENT_RUN_ERROR</code>, and
+<code>tests/test_agent_run_terminal_contract.py</code> fences it structurally:
+every <code>return</code> in <code>chat_with_tools</code>, and the fall-through at the end
+of its body (the max-iterations exit), must be immediately preceded by
+<code>AGENT_RUN_ERROR</code>/<code>AGENT_RUN_COMPLETE</code>, or by a final <code>STREAM_END</code> with
+the run terminal earlier in the same block (the zombie exit). An
+uncaught exception is the only way a turn still ends without one.</p>
 <h3 id="agentbeatstate-ppxaienginetypespy"><code>AgentBeatState</code> (<code>ppxai/engine/types.py</code>)<a class="headerlink" href="#agentbeatstate-ppxaienginetypespy" title="Permanent link">&para;</a></h3>
 <p>The dataclass is the single source of truth for the heartbeat
 payload shape. Treat it as the wire contract: serialize only via

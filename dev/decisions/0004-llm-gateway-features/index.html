@@ -1372,7 +1372,7 @@
 
 <h1 id="adr-0004-llm-gateway-features-v1183">ADR 0004 — LLM gateway features (v1.18.3)<a class="headerlink" href="#adr-0004-llm-gateway-features-v1183" title="Permanent link">&para;</a></h1>
 <p><strong>Date:</strong> 2026-05-03
-<strong>Status:</strong> Accepted — implemented (<code>server/routes/oneshot.py</code>, <code>server/routes/auth.py</code>; §4 of ADR 0009 revises the "no tool loop in oneshot" property for enriched requests, perimeter preserved — <strong>implemented v1.19.1</strong> as the F3/F4 facade over the run tier: opt-in <code>execution.run.web_search</code>, byte-identical wire when off, additive <code>grounding</code> field when on; behavior table in <a href="../../api-gateway/">docs/api-gateway.md</a>)
+<strong>Status:</strong> Accepted — implemented (<code>server/routes/oneshot.py</code>, <code>server/auth.py</code>; §4 of ADR 0009 revises the "no tool loop in oneshot" property for enriched requests, perimeter preserved — <strong>implemented v1.19.1</strong> as the F3/F4 facade over the run tier: opt-in <code>execution.run.web_search</code>, byte-identical wire when off, additive <code>grounding</code> field when on; behavior table in <a href="../../api-gateway/">docs/api-gateway.md</a>)
 <strong>Related:</strong>
 - <a href="../../api-gateway/"><code>docs/api-gateway.md</code></a> — user-facing spec for the v1 gateway
 - <code>ppxai/server/routes/oneshot.py</code> — first gateway endpoint

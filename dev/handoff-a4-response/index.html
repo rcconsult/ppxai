@@ -1158,6 +1158,11 @@
 
 
 <h1 id="handoff-response-to-a4-custom-tool-registration-the-autonomy-questions">Handoff — response to A4 (custom-tool registration) + the autonomy questions<a class="headerlink" href="#handoff-response-to-a4-custom-tool-registration-the-autonomy-questions" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>ℹ️ <strong>Still open as a design</strong> (A4 custom-tool registration is genuinely
+unimplemented), but one citation below has drifted: <code>handle_reload</code> is at
+<code>ppxai/commands/utility.py:187</code>, not <code>:309</code>. Checked 2026-09-20.</p>
+</blockquote>
 <p><strong>Written:</strong> 2026-08-09, from the Windows host, at <code>f3b42a63</code> on
 <code>bugfix/v1.19.1</code>.
 <strong>For:</strong> the ppxai-sre session.
@@ -1426,7 +1431,7 @@ reconcile them — better it is a documented property than a future bug report.<
 <hr />
 <h1 id="part-2-the-autonomy-questions">Part 2 — the autonomy questions<a class="headerlink" href="#part-2-the-autonomy-questions" title="Permanent link">&para;</a></h1>
 <h2 id="correction-first-reload-is-not-the-pattern-you-want">Correction first: <code>/reload</code> is not the pattern you want<a class="headerlink" href="#correction-first-reload-is-not-the-pattern-you-want" title="Permanent link">&para;</a></h2>
-<p><code>handle_reload</code> (<code>ppxai/commands/utility.py:309</code>) re-imports <strong>user command
+<p><code>handle_reload</code> (<code>ppxai/commands/utility.py:187</code>) re-imports <strong>user command
 modules</strong> from <code>~/.ppxai/commands/*.py</code>. It has no config or steering
 semantics. Borrowing it gives you a command-module reloader.</p>
 <p>The nearer pattern is <code>config.register_reload_callback</code> / <code>reload_config</code>.

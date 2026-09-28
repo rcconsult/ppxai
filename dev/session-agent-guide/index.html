@@ -2351,7 +2351,14 @@
 <h1 id="session-agent-mode-user-guide-auto">Session Agent Mode User Guide (<code>/auto</code>)<a class="headerlink" href="#session-agent-mode-user-guide-auto" title="Permanent link">&para;</a></h1>
 <p><strong>Applies to</strong>: v1.14.2+ (agent mode introduced v1.13.0; this guide tracks the v1.14.2+ shape)
 <strong>Status</strong>: Production Ready
-<strong>Last verified against</strong>: v1.19.1 (command renamed <code>/agent</code> → <code>/auto</code> per ADR 0011 — <strong>no alias</strong>; behavior unchanged)
+<strong>Last verified against</strong>: 2026-09-20 on <code>bugfix/v1.19.3</code> — full
+re-check, not a date bump. Commands, context providers, config defaults
+(<code>max_iterations=10</code>, <code>context_char_limit=2000</code>, <code>min_task_words=3</code> —
+confirmed NOT among ADR 0010's moved keys), shell-safety defaults and
+the <code>/agent/*</code> HTTP endpoints all verified against source. <strong>Three
+defects found and fixed:</strong> <code>/auto continue</code> does not exist, the Ctrl-C
+double-tap belongs to the REPL rather than to <code>/auto</code>, and the VSCode
+badge has no purple state — its colour reports the checkpoint backend.
 <strong>Renamed</strong> from <code>agent-mode-guide.md</code> (v1.19.0) to disambiguate the three agent surfaces.</p>
 <blockquote>
 <p><strong>⚠️ Three different "agents" — this guide covers only the first:</strong></p>
@@ -2625,12 +2632,46 @@
 <h2 id="vscode-extension">VSCode Extension<a class="headerlink" href="#vscode-extension" title="Permanent link">&para;</a></h2>
 <p>The VSCode extension provides a graphical interface for agent mode.</p>
 <h3 id="agent-toggle-button">Agent Toggle Button<a class="headerlink" href="#agent-toggle-button" title="Permanent link">&para;</a></h3>
-<p>In the ppxai chat panel, you'll see an <strong>Agent</strong> button next to the <strong>Tools</strong> button:</p>
-<ul>
-<li><strong>Gray (OFF)</strong>: Agent mode disabled</li>
-<li><strong>Purple (ON)</strong>: Agent mode enabled</li>
-</ul>
-<p>Click to toggle. When enabled, tools are automatically enabled.</p>
+<p>In the ppxai chat panel, you'll see an <strong>Agent</strong> badge next to the
+<strong>Tools</strong> button, labelled <code>Agent: off</code> / <code>Agent: on</code>
+(<code>vscode-extension/src/chatPanel.ts:2927</code>).</p>
+<p><strong>Corrected 2026-09-20 — there is no purple, and the colour is not a
+simple on/off.</strong> When enabled, the badge colour reports the <strong>checkpoint
+backend</strong>, which makes it a safety indicator rather than a toggle state
+(<code>vscode-extension/media/webview/styles.css:159-181</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Appearance</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dimmed (<code>opacity: 0.6</code>)</td>
+<td>Agent mode <strong>off</strong></td>
+</tr>
+<tr>
+<td>Blue (<code>#3794ff</code>)</td>
+<td>On, backend not yet resolved</td>
+</tr>
+<tr>
+<td><strong>Green</strong> (<code>#89d185</code>)</td>
+<td>On with <strong>git</strong> checkpoints — atomic <code>/undo</code></td>
+</tr>
+<tr>
+<td><strong>Orange</strong> (<code>#ff9800</code>)</td>
+<td>On with <strong>file</strong> snapshots — weaker guarantee</td>
+</tr>
+<tr>
+<td><strong>Red</strong> (<code>#f44336</code>)</td>
+<td>On with <strong>no</strong> checkpoints — <code>/undo</code> will not save you</td>
+</tr>
+</tbody>
+</table>
+<p>Click to toggle. When enabled, tools are automatically enabled. Treat red
+as a warning, not decoration: it means the task is about to run with no
+rollback.</p>
 <h3 id="using-agent-mode-in-vscode">Using Agent Mode in VSCode<a class="headerlink" href="#using-agent-mode-in-vscode" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Click the <strong>Agent</strong> button to enable agent mode</li>
@@ -2705,17 +2746,36 @@
 <p><strong>Tip:</strong> For fully autonomous execution, respond <code>always</code> to the first consent prompt.</p>
 <h3 id="handling-interrupts">Handling Interrupts<a class="headerlink" href="#handling-interrupts" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Ctrl-C (once)</strong>: Gracefully stops the current iteration</li>
-<li><strong>Ctrl-C (twice within 2s)</strong>: Force stops immediately</li>
+<li><strong>Ctrl-C (once)</strong>: stops the run <strong>immediately</strong> and offers rollback.</li>
 </ul>
-<p>After interrupting, the agent will summarize progress made.</p>
+<p><strong>Corrected 2026-09-20.</strong> This said one press "gracefully stops the
+current iteration" and that two presses within 2s "force stops" — that is
+not how <code>/auto</code> behaves. A single Ctrl-C raises <code>KeyboardInterrupt</code>,
+which <code>handle_agent</code> catches (<code>ppxai/commands/agent.py:788-799</code>) and
+takes straight to <code>_handle_agent_interrupt</code> — the rollback prompt — on
+the <strong>first</strong> press. There is no second-press escalation inside <code>/auto</code>
+(<code>grep -rn "force_stop\|double_interrupt\|interrupt_count" ppxai/</code>
+returns nothing).</p>
+<p>The 2-second double-tap is real but belongs to the <strong>top-level chat
+REPL</strong> — press Ctrl-C twice to exit the application
+(<code>ppxai/rich/main.py:452-483</code>, <code>ctrl_c_timeout = 2.0</code>). It is unrelated
+to agent iterations.</p>
 <h3 id="iteration-limits">Iteration Limits<a class="headerlink" href="#iteration-limits" title="Permanent link">&para;</a></h3>
 <p>The default max is 10 iterations (configurable via <code>tools.agent.max_iterations</code>). If your task needs more:</p>
 <ol>
 <li>Let the agent complete its iterations</li>
 <li>Review the output</li>
-<li>Run <code>/auto continue</code> or issue a follow-up task</li>
+<li>Issue a follow-up task describing what still needs doing</li>
 </ol>
+<blockquote>
+<p><code>/auto continue</code> does <strong>not</strong> work, despite appearing here until
+2026-09-20. There is no <code>continue</code> special case
+(<code>grep -n '"continue"' ppxai/commands/agent.py</code> returns nothing), and
+the word is a single token, so <code>validate_agent_task()</code> rejects it
+against the <code>min_task_words</code> floor (default 3,
+<code>ppxai/commands/agent.py:185-210</code>). Restate the remaining work as a
+normal task instead.</p>
+</blockquote>
 <hr />
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Agent mode behavior can be customized in <code>ppxai-config.json</code>:</p>

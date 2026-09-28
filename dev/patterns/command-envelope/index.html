@@ -1201,6 +1201,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#client_round_trip_kinds-kinds-a-client-may-not-ignore-v1193" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLIENT_ROUND_TRIP_KINDS — kinds a client may not ignore (v1.19.3)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#buttons-are-command-call-sites-too-v1191" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1267,7 +1278,7 @@
    <code>result</code> is the rendered payload (TableResult, MarkdownResult, FileViewResult, etc.). <code>side_effects</code> are orthogonal UI directives. <strong><code>events</code></strong> carries any engine side-channel events the handler enqueued (<code>state_sync</code>, <code>working_dir_changed</code>, …), drained into the response by <code>with_drained_events()</code> — without that piggyback they would sit in <code>engine._event_queue</code> until the next SSE turn. It is part of the envelope, not an extra.</p>
 </li>
 <li>
-<p><strong>Side-effect kinds name the user's intent, not the rendering.</strong> Web builds panels (xterm.js, CodeMirror, iframe); VSCode delegates to first-party APIs (<code>createTerminal</code>, <code>showTextDocument</code>, <code>executeCommand('vscode.open')</code>). The kind is the contract; the rendering is the client's choice. See <code>ppxai/commands/results.py::SideEffectKind</code> for the canonical list (<strong>16 kinds</strong> as of v1.19.1; 15 at v1.18.1).</p>
+<p><strong>Side-effect kinds name the user's intent, not the rendering.</strong> Web builds panels (xterm.js, CodeMirror, iframe); VSCode delegates to first-party APIs (<code>createTerminal</code>, <code>showTextDocument</code>, <code>executeCommand('vscode.open')</code>). The kind is the contract; the rendering is the client's choice. See <code>ppxai/commands/results.py::SideEffectKind</code> for the canonical list (<strong>17 kinds</strong> as of v1.19.3; 16 at v1.19.1, 15 at v1.18.1).</p>
 </li>
 <li>
 <p><strong>Open-enum invariant.</strong> Clients ignore unknown kinds gracefully. Adding a new kind is non-breaking. <code>vscode_delegate</code> is the escape hatch for VSCode-only features (e.g. <code>workbench.action.openGlobalKeybindings</code>); web ignores it.</p>
@@ -1286,9 +1297,22 @@
 <ul>
 <li><strong>Web</strong> — renders an inline form below the notification; on submit, dispatches <code>/&lt;command_to_resume&gt; &lt;args&gt;</code>.</li>
 <li><strong>VSCode</strong> — <code>vscode.window.showInputBox({prompt: question, placeHolder})</code>; on non-empty reply, dispatches via <code>dispatchCommandFromSideEffect</code>.</li>
-<li><strong>TUI</strong> — ignores the kind (open-enum invariant). The notification message that accompanies the side-effect serves as the user-visible nudge; the user retypes <code>/auto</code> themselves with more detail.</li>
+<li><strong>TUI</strong> — as of v1.19.3 (commit <code>beffa197</code>) both Rich and Textual consume this kind too, they no longer ignore it. Rich uses <code>Prompt.ask</code>; Textual shows a <code>PromptDialog</code> modal. An empty reply cancels instead of resuming. See <code>prompt_quick_pick</code> below — <code>prompt_text</code> moved into <code>CLIENT_ROUND_TRIP_KINDS</code> alongside it, so this section is no longer the open-enum exception it used to be.</li>
 </ul>
-<p>First user: <code>validate_agent_task</code> rejection. <code>/auto fix</code> → engine returns <code>NotificationResult(WARNING)</code> + <code>prompt_text</code> side-effect → web/VSCode auto-resume the elaboration without the user retyping the slash command.</p>
+<p>First user: <code>validate_agent_task</code> rejection. <code>/auto fix</code> → engine returns <code>NotificationResult(WARNING)</code> + <code>prompt_text</code> side-effect → web/VSCode auto-resume the elaboration without the user retyping the slash command; Rich/Textual now show the free-text prompt in-place instead of leaving the user to retype <code>/auto</code> from scratch.</p>
+<h2 id="client_round_trip_kinds-kinds-a-client-may-not-ignore-v1193"><code>CLIENT_ROUND_TRIP_KINDS</code> — kinds a client may not ignore (v1.19.3)<a class="headerlink" href="#client_round_trip_kinds-kinds-a-client-may-not-ignore-v1193" title="Permanent link">&para;</a></h2>
+<p>The open-enum invariant (rule 4 above) says clients may ignore a kind they
+don't understand. <code>prompt_quick_pick</code> and <code>prompt_text</code> are the exception:
+dropping either dead-ends the command — the user sees a notification and
+nothing else ever happens, indistinguishable at runtime from a command that
+had nothing more to say. <code>ppxai/commands/results.py::CLIENT_ROUND_TRIP_KINDS</code>
+names the two kinds every client (rich, textual, web, vscode) must consume,
+and <code>tests/test_command_parity_fence.py::TestPromptKindsAreConsumedEverywhere</code>
+fails if any client stops. Until 2026-09-21 (commit <code>beffa197</code>) neither TUI
+read <code>CommandResult.side_effects</code> at all, so <code>prompt_quick_pick</code> and
+<code>prompt_text</code> dead-ended silently there — see the TUI bullet above and
+<code>docs/plan-adr-0007-completion-service.md</code> open owner decision 7 for the
+history.</p>
 <h2 id="buttons-are-command-call-sites-too-v1191">Buttons are command call sites too (v1.19.1)<a class="headerlink" href="#buttons-are-command-call-sites-too-v1191" title="Permanent link">&para;</a></h2>
 <p>Rule 1 below is usually read as "don't add new endpoints." The other half is
 easier to miss: <strong>a UI affordance that performs a command must dispatch that

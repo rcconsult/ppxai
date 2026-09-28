@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/debug-logging/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/plan-ssh-remote-backend/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>Debug Logging - ppxai Documentation</title>
+        <title>Plan — SSH remote backend (ADR 0013) - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#debug-logging" class="md-skip">
+        <a href="#plan-ssh-remote-backend-adr-0013" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Debug Logging
+              Plan — SSH remote backend (ADR 0013)
             
           </span>
         </div>
@@ -1146,10 +1146,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#default-off" class="md-nav__link">
+  <a href="#phase-0-resolve-the-adrs-open-questions-no-code" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Default: OFF
+        Phase 0 — Resolve the ADR's open questions (no code)
       
     </span>
   </a>
@@ -1157,10 +1157,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#turning-it-on-off" class="md-nav__link">
+  <a href="#phase-1-s3-the-remote-side-contract-ppxai-server-only" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Turning it on / off
+        Phase 1 — S3, the remote-side contract (ppxai-server only)
       
     </span>
   </a>
@@ -1168,38 +1168,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#persistence" class="md-nav__link">
+  <a href="#phase-2-s2-remotetransport-opensshtransport" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Persistence
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Persistence">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#why-persistence-matters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why persistence matters
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#disabling-it-cleanly" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Disabling it cleanly
+        Phase 2 — S2, RemoteTransport + OpenSSHTransport
       
     </span>
   </a>
@@ -1207,10 +1179,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation-notes-for-contributors" class="md-nav__link">
+  <a href="#phase-3-s4-remotesessionmanager" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Implementation notes (for contributors)
+        Phase 3 — S4, RemoteSessionManager
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-s5-the-hub-proxy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 — S5, the hub proxy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-s6-web-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5 — S6, web client
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-6-owner-trial" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6 — Owner trial
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-in-this-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not in this plan
       
     </span>
   </a>
@@ -1237,152 +1253,123 @@
   
 
 
-<h1 id="debug-logging">Debug Logging<a class="headerlink" href="#debug-logging" title="Permanent link">&para;</a></h1>
-<p>ppxai writes detailed runtime logs (message flow, API requests/responses,
-tool invocations, session-recovery decisions) to files under
-<code>~/.ppxai/logs/</code> when debug logging is <strong>enabled</strong>.</p>
-<p><strong>Filenames are derived, not fixed.</strong> Each logger writes to
-<code>~/.ppxai/logs/{logger-name}-debug.log</code> (<code>ppxai/common/logger.py</code>), so the
-set of files depends on which components ran — a working install commonly
-has 20-35 of them, not a fixed list. The ones you will usually want:</p>
+<h1 id="plan-ssh-remote-backend-adr-0013">Plan — SSH remote backend (ADR 0013)<a class="headerlink" href="#plan-ssh-remote-backend-adr-0013" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-09-26
+<strong>Status:</strong> Draft, not started. Implements
+<a href="../decisions/0013-ssh-remote-backend/">ADR 0013</a> once the ADR's open questions
+are resolved.
+<strong>Scope:</strong> web client first. VSCode and the TUIs follow only after the web
+path is proven.</p>
+<p>Each phase is a gate: it lands with its tests, is tried by the owner, and the
+next phase starts on instruction.</p>
+<hr />
+<h2 id="phase-0-resolve-the-adrs-open-questions-no-code">Phase 0 — Resolve the ADR's open questions (no code)<a class="headerlink" href="#phase-0-resolve-the-adrs-open-questions-no-code" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Log file</th>
-<th>Emitted by</th>
+<th>#</th>
+<th>Question</th>
+<th>How it is decided</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>tui-debug.log</code></td>
-<td>Rich TUI (<code>ppxai</code>) and Textual TUI (<code>ppxaide</code>)</td>
+<td>Q1</td>
+<td>Where the hub runs</td>
+<td>✅ Owner: mounted in the local <code>ppxai-server</code></td>
 </tr>
 <tr>
-<td><code>server-debug.log</code></td>
-<td><code>ppxai-server</code> + <code>ppxai-desktop</code></td>
+<td>Q2</td>
+<td>Config key for the host inventory</td>
+<td>✅ Owner: new top-level <code>remote.*</code></td>
 </tr>
 <tr>
-<td><code>chat-debug.log</code>, <code>session-debug.log</code>, <code>engine-debug.log</code></td>
-<td>Engine components</td>
+<td>Q3</td>
+<td>Windows OpenSSH → remote unix-socket forward</td>
+<td>✅ Measured 2026-09-26 against WSL2 sshd: works with the stock Windows client</td>
 </tr>
 <tr>
-<td><code>config-debug.log</code></td>
-<td>Config resolution — first stop for "it read the wrong config"</td>
+<td>Q4</td>
+<td>Connection reuse</td>
+<td>✅ Measured: one long-lived forward per server; the proxy must pool keep-alive connections. The 6-vs-61 ms spread is undiagnosed — re-measure against uvicorn in Phase 4</td>
 </tr>
 <tr>
-<td><code>gemini-debug.log</code>, <code>openai_native-debug.log</code>, …</td>
-<td>One per provider that was used</td>
-</tr>
-<tr>
-<td><code>ppxai.server.secrets*-debug.log</code></td>
-<td>Token/secret store (dotted logger names keep their dots)</td>
-</tr>
-<tr>
-<td><code>preview-backend-&lt;pid&gt;.log</code></td>
-<td>Office/preview subprocess — <strong>one per PID</strong>, not rotated</td>
-</tr>
-<tr>
-<td><code>keys.log</code></td>
-<td>Key-handling diagnostics</td>
+<td>Q5</td>
+<td>Hosts without the S3 contract</td>
+<td>✅ Owner: refuse</td>
 </tr>
 </tbody>
 </table>
-<p>To see what a given run actually produced: <code>ls -lt ~/.ppxai/logs/ | head</code>.</p>
-<h2 id="default-off">Default: OFF<a class="headerlink" href="#default-off" title="Permanent link">&para;</a></h2>
-<p>A fresh install has debug logging <strong>disabled</strong>. The verbose payloads
-(full API request bodies, tool outputs) aren't what a new user wants in
-their home directory by default. Turn it on deliberately.</p>
-<h2 id="turning-it-on-off">Turning it on / off<a class="headerlink" href="#turning-it-on-off" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Client</th>
-<th>Command</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Rich TUI (<code>ppxai</code>)</td>
-<td><code>/debug-log on</code> &nbsp;·&nbsp; <code>/debug-log off</code> &nbsp;·&nbsp; <code>/debug-log show</code></td>
-</tr>
-<tr>
-<td>Textual TUI (<code>ppxaide</code>)</td>
-<td><code>/debug-log on</code> &nbsp;·&nbsp; <code>/debug-log off</code></td>
-</tr>
-<tr>
-<td>Web / VSCode</td>
-<td><code>POST /config/debug-log</code> with <code>{"enabled": true|false}</code></td>
-</tr>
-<tr>
-<td>Any client</td>
-<td><code>PPXAI_DEBUG=1</code> env var (per-process, not persisted)</td>
-</tr>
-</tbody>
-</table>
-<p>The command writes <code>tui.debug_log: true|false</code> to
-<code>~/.ppxai/ppxai-config.json</code> and flips the active logger immediately.</p>
-<h2 id="persistence">Persistence<a class="headerlink" href="#persistence" title="Permanent link">&para;</a></h2>
-<p>The <code>tui.debug_log</code> flag is <strong>global and persistent</strong> — not per-session.</p>
+<p>Exit: ADR 0013 revised in place with the answers, still Proposed. <strong>Phase 0 is complete.</strong></p>
+<p><strong>Test rig for every later phase:</strong> Ubuntu 24.04 on WSL2 with sshd on port 2222
+(<code>ssh -p 2222 &lt;user&gt;@localhost</code>-style), which has <code>ppxai-server</code> installed. The live
+opt-in tests read the destination from an env var; nothing host-specific goes
+in the repo.</p>
+<h2 id="phase-1-s3-the-remote-side-contract-ppxai-server-only">Phase 1 — S3, the remote-side contract (<code>ppxai-server</code> only)<a class="headerlink" href="#phase-1-s3-the-remote-side-contract-ppxai-server-only" title="Permanent link">&para;</a></h2>
+<p><strong>Status (2026-09-27): implemented</strong> — <code>ppxai/server/registry.py</code>, <code>ppxai-server --uds/--announce/--detach/--list</code>, <code>tests/test_server_registry.py</code>. Two findings shaped it: uvicorn makes a socket it binds itself 0666, so the server binds it and passes the fd; and <code>/health</code> is NOT exempt from auth (only from the Host check), so liveness probes and <code>--list</code> present the entry's token. The POSIX launch tests run on Ubuntu 24.04 (WSL2) and macOS before the owner trial.</p>
 <ul>
-<li>Set once with <code>/debug-log on</code>, and every subsequent ppxai startup
-  (Rich, Textual, web server, benchmarks) has logging enabled from
-  the very first line of execution.</li>
-<li>Restored inside <code>config.initialize()</code>, which every client calls
-  first — so the logger is writing <strong>before</strong> the session-recovery
-  prompt, provider selection, or any other interactive step.</li>
-<li>Turning debug off (<code>/debug-log off</code>) persists the same way.</li>
-<li><code>PPXAI_DEBUG=1</code> is a per-process override that does <strong>not</strong> write
-  to config. Useful for one-off runs.</li>
+<li><code>--uds &lt;path&gt;</code>: <code>uvicorn.Config(uds=...)</code>, socket dir 0700, socket 0600
+  before the first accept.</li>
+<li><code>--announce</code>: per-launch token into the process's <code>PPXAI_API_TOKEN</code>,
+  registry entry written 0600, JSON echoed on stdout.</li>
+<li><code>--detach</code>: daemonise (POSIX); refuse with a clear message on Windows.</li>
+<li><code>--list --json</code>: live entries only; dead pid or dead socket → entry removed.</li>
+<li>Registry schema pinned by a JSON fixture and a test that fails on an
+  unversioned change (<code>contract</code> must bump).</li>
 </ul>
-<h3 id="why-persistence-matters">Why persistence matters<a class="headerlink" href="#why-persistence-matters" title="Permanent link">&para;</a></h3>
-<p>Several classes of early-startup bug — silent session-recovery
-regressions, provider-selection Ctrl+C paths, config-load failures —
-happen <strong>before</strong> the user has a chance to type <code>/debug-log on</code>. If
-logging were transient, these regressions would leave no trace.</p>
-<p>Because the flag survives restarts, the workflow for reproducing an
-early-startup bug is:</p>
-<ol>
-<li><code>/debug-log on</code> (in any working session)</li>
-<li>Quit ppxai.</li>
-<li>Reproduce the bug on next launch.</li>
-<li><code>~/.ppxai/logs/tui-debug.log</code> contains the full decision path.</li>
-</ol>
-<p>The regression pattern this catches: debug-log state is restored inside
-<code>config.initialize()</code>, so logging is active <strong>before</strong> any client code
-runs — critical for diagnosing early-startup regressions like silent
-session-recovery failures (where recovery must run before
-provider/model selection). See the "Debug Logging" section of
-<a href="../CLAUDE.md">CLAUDE.md</a> for the ordering invariant.</p>
-<h2 id="disabling-it-cleanly">Disabling it cleanly<a class="headerlink" href="#disabling-it-cleanly" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># From inside ppxai</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>/debug-log<span class="w"> </span>off
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Or edit the config directly</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># ~/.ppxai/ppxai-config.json → "tui": { "debug_log": false }</span>
-</span></code></pre></div>
-<p>Log files are <strong>not</strong> auto-pruned. Delete them manually if they grow
-large: <code>rm ~/.ppxai/logs/*.log</code>.</p>
-<h2 id="implementation-notes-for-contributors">Implementation notes (for contributors)<a class="headerlink" href="#implementation-notes-for-contributors" title="Permanent link">&para;</a></h2>
+<p>Tests: launch → list → <code>/health</code> over the socket with and without the token →
+kill → list prunes. All local, POSIX-gated where the OS demands it.</p>
+<h2 id="phase-2-s2-remotetransport-opensshtransport">Phase 2 — S2, <code>RemoteTransport</code> + <code>OpenSSHTransport</code><a class="headerlink" href="#phase-2-s2-remotetransport-opensshtransport" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Flag lives in config</strong>, not in <code>AppState</code> or session state, because
-  it's a cross-session preference (like <code>tui.theme</code>), not per-session
-  state.</li>
-<li><strong>Restored in <code>ppxai/config/__init__.py::initialize()</code></strong>, which calls
-  <code>common.logger.Logger.enable_all()</code>. <code>Logger</code> itself is imported
-  <strong>top-level</strong> (<code>ppxai/config/__init__.py:23</code>) — there is no circular
-  dependency with the logger module, contrary to what this doc said until
-  2026-09-20. The one deferred import inside <code>initialize()</code> is
-  <code>get_debug_log_enabled</code> from <code>.features</code>, and it defers to avoid a cycle
-  with <code>.features</code>, not with the logger.</li>
-<li><strong>Every client calls <code>initialize()</code> first</strong> — Rich
-  (<code>ppxai/rich/main.py</code>), Textual (<code>ppxai/tui/__init__.py</code>), server
-  (<code>ppxai/server/http.py</code>), benchmark runner
-  (<code>benchmarks/llm-eval/engine_runner.py</code>). Adding a new entry point?
-  Call <code>initialize()</code> before anything else.</li>
-<li><strong>Writes go through <code>set_tui_config("debug_log", bool)</code></strong> which uses
-  <code>ensure_ascii=False</code> + trailing newline so em-dashes and other
-  non-ASCII content in <code>ppxai-config.json</code> aren't mangled on save.</li>
+<li><code>ppxai/remote/transport.py</code>: the Protocol, <code>RunResult</code>, <code>LocalEndpoint</code>,
+  typed errors.</li>
+<li><code>OpenSSHTransport</code>: <code>BatchMode=yes</code>, argv quoting in one function,
+  <code>ssh -N -L</code> for forwards, stderr mapped to typed errors.</li>
+<li><code>FakeTransport</code> for every later phase's tests.</li>
+<li>Layering fence: <code>ppxai/remote/</code> imports nothing from <code>engine/</code> or
+  <code>commands/</code>.</li>
 </ul>
+<p>Tests: argv quoting table (spaces, quotes, <code>$</code>, newlines); stderr → error-type
+table from captured real OpenSSH messages; one opt-in live test against a host
+named by an env var, skipped otherwise.</p>
+<h2 id="phase-3-s4-remotesessionmanager">Phase 3 — S4, <code>RemoteSessionManager</code><a class="headerlink" href="#phase-3-s4-remotesessionmanager" title="Permanent link">&para;</a></h2>
+<ul>
+<li>State machine exactly as drawn in the ADR; every transition an event the
+  picker can render.</li>
+<li><code>servers(host)</code> parses S3 <code>--list --json</code>; unknown <code>contract</code> → typed
+  refusal naming both numbers.</li>
+<li><code>detach</code> never stops a remote server; <code>stop</code> is explicit.</li>
+</ul>
+<p>Tests: every transition driven through <code>FakeTransport</code>, including health
+failure → degraded → recovery, and a transport dying mid-forward.</p>
+<h2 id="phase-4-s5-the-hub-proxy">Phase 4 — S5, the hub proxy<a class="headerlink" href="#phase-4-s5-the-hub-proxy" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>/h/&lt;host&gt;/&lt;server-id&gt;/…</code> → forwarded endpoint, prefix stripped.</li>
+<li>Streaming for SSE and chunked bodies; websocket upgrade for <code>/ws/terminal</code>.</li>
+<li><code>Authorization</code> injected; <code>Host: localhost</code>; no <code>X-Forwarded-*</code>.</li>
+<li>Host id validated against the inventory before any lookup.</li>
+</ul>
+<p>Tests: an in-process fake remote (a real <code>ppxai-server</code> app on a UDS or a
+loopback port) behind <code>FakeTransport</code>: an SSE chat stream arrives unbuffered;
+the terminal websocket round-trips; a request never carries the token back to
+the browser; an unknown host id is a 404, never a forward.</p>
+<h2 id="phase-5-s6-web-client">Phase 5 — S6, web client<a class="headerlink" href="#phase-5-s6-web-client" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>app.js</code> prefix recognition: <code>/h/&lt;host&gt;/&lt;id&gt;</code> alongside <code>/s/&lt;user&gt;</code>.</li>
+<li><code>handleQuit()</code>: under <code>/h/</code>, detach and return to the picker.</li>
+<li>Picker view: hosts + state, servers per host, sessions and runs per server
+  via the remote's existing <code>/sessions</code> and <code>/v1/agent/runs</code>.</li>
+<li>Playwright: picker renders a fake inventory; attaching navigates into
+  <code>/h/&lt;host&gt;/&lt;id&gt;/</code>; Leave returns to the picker without a stop call.</li>
+</ul>
+<h2 id="phase-6-owner-trial">Phase 6 — Owner trial<a class="headerlink" href="#phase-6-owner-trial" title="Permanent link">&para;</a></h2>
+<p>Real hosts, real keys: launch from the picker, chat with tools, open the
+terminal, detach, re-attach from another tab, see the session still there,
+stop. Findings feed back into the ADR before acceptance.</p>
+<hr />
+<h2 id="not-in-this-plan">Not in this plan<a class="headerlink" href="#not-in-this-plan" title="Permanent link">&para;</a></h2>
+<p>VSCode/TUI clients of the hub, remote tool execution from a local engine,
+multi-user hubs, a hub reachable beyond loopback.</p>
 
 
 

@@ -1702,7 +1702,17 @@ the whole chain (<code>ppxai/server/auth.py::_provider_enforces_auth</code>):</p
 <li>The exact path <code>POST /v1/agent/run</code> (the tool-free oneshot run
     tier) — behaviorally identical to <code>/v1/oneshot</code>, so it's exempted
     the same way; the tool-capable <code>/v1/agent/task</code> tier and
-    <code>/runs/{id}/cancel</code> stay protected.</li>
+    <code>/runs/{id}/cancel</code> stay protected. <strong>This one is conditional
+    (ADR 0011 U3).</strong> The carve-out's whole justification is "no tools,
+    no egress", so with <strong><code>execution.run.web_search</code> ON</strong> the exemption
+    <strong>closes</strong> and the bearer rule applies — an enriched <code>/v1/agent/run</code>
+    launches a <code>web_search</code>-granted run, and that is a capability. A
+    config-read error also fails <strong>closed</strong>. See
+    <code>ppxai/server/auth.py:247-262</code>. So enabling oneshot web_search
+    changes who can reach this endpoint from the local browser: if your
+    desktop client stops being able to launch runs after you turn it on,
+    this is why, and the fix is to give the client a token rather than to
+    turn the enrichment back off.</li>
 <li>Loopback <code>GET</code> of an <strong>unowned</strong> run's metadata or event stream
     (<code>/v1/agent/runs/{id}</code> and <code>/v1/agent/runs/{id}/events</code>) — i.e. a
     run the token-less local browser itself created via the exempt
@@ -1920,8 +1930,9 @@ its meaning: no <em>session</em> side effects, the response is the collect.</p>
 </span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="err">    "type": "json_object"                       //   or "json_schema" with json_schema field</span>
 </span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="err">  },</span>
 </span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="err">  "max_tokens": 512,                            // optional, &gt; 0</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="err">  "temperature": 0.0                            // optional, 0.0–2.0</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="err">}</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="err">  "temperature": 0.0,                           // optional, 0.0–2.0</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="err">  "grounding": false                            // optional (v1.19.3); see "Grounding" below</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="err">}</span>
 </span></code></pre></div>
 <h4 id="response">Response<a class="headerlink" href="#response" title="Permanent link">&para;</a></h4>
 <div class="language-http highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
@@ -1938,14 +1949,22 @@ its meaning: no <em>session</em> side effects, the response is the collect.</p>
 </span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="nt">"total_tokens"</span><span class="p">:</span><span class="w"> </span><span class="mi">510</span>
 </span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">  </span><span class="p">},</span>
 </span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">  </span><span class="nt">"grounding"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">                     </span><span class="c1">// v1.19.1, ADDITIVE: present ONLY when the</span>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="nt">"searched"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">                </span><span class="c1">//   search-loop enrichment served the request</span>
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">    </span><span class="nt">"run_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"run_c02a3cbac2f0"</span><span class="p">,</span><span class="w">    </span><span class="c1">//   (absent — not null — otherwise, so existing</span>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">    </span><span class="nt">"queries"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"..."</span><span class="p">],</span><span class="w">              </span><span class="c1">//   consumers see a byte-identical envelope)</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="nt">"searched"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">                </span><span class="c1">//   search-loop or (v1.19.3) retrieval grounding</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">    </span><span class="nt">"run_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"run_c02a3cbac2f0"</span><span class="p">,</span><span class="w">    </span><span class="c1">//   served the request (absent — not null —</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">    </span><span class="nt">"queries"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"..."</span><span class="p">],</span><span class="w">              </span><span class="c1">//   otherwise: a byte-identical envelope)</span>
 </span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">    </span><span class="nt">"backend"</span><span class="p">:</span><span class="w"> </span><span class="s2">"perplexity"</span><span class="p">,</span><span class="w">         </span><span class="c1">// premium backend, or "duckduckgo" (free)</span>
-</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">    </span><span class="nt">"search_cost"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0000568</span><span class="w">         </span><span class="c1">// premium-search USD cost of THIS request</span>
-</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="p">}</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">    </span><span class="nt">"search_cost"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0000568</span><span class="p">,</span><span class="w">        </span><span class="c1">// premium-search USD cost of THIS request</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">    </span><span class="nt">"sources"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">                     </span><span class="c1">// v1.19.3, retrieval grounding only: the</span>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="w">      </span><span class="p">{</span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://..."</span><span class="p">,</span><span class="w">         </span><span class="c1">//   sources shown to the model, in order;</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="w">       </span><span class="nt">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python.org"</span><span class="p">}</span><span class="w">        </span><span class="c1">//   an answer's [n] is sources[n-1]. title</span>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="w">    </span><span class="p">]</span><span class="w">                                </span><span class="c1">//   is null unless the backend gives one</span>
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="p">}</span>
 </span></code></pre></div>
+<p><code>grounding.sources</code> appears on the retrieval path only (the search-loop record
+has no such key). Gemini's URLs are Google's opaque
+<code>vertexaisearch.cloud.google.com/grounding-api-redirect/...</code> links; they
+redirect to the page, and <code>title</code> carries the source's domain.</p>
 <p><code>grounding.run_id</code> is the debug handle: the enriched request executed as a
 real <code>kind=oneshot</code> run, so <code>~/.ppxai/runs/&lt;run_id&gt;/</code> holds its meta + event
 log (queries, egress allow/deny audit, usage) and the run-inspection
@@ -1962,7 +1981,7 @@ trail — concurrent requests cannot cross-attribute cost.</p>
 <tbody>
 <tr>
 <td>400</td>
-<td>Unknown provider, missing model with no default, no API key for provider, provider doesn't support oneshot in v1</td>
+<td>Unknown provider, missing model with no default, no API key for provider, provider doesn't support oneshot in v1; <code>"grounding": true</code> on a server that cannot ground the request (the detail names <code>execution.run.grounding</code>); a malformed <code>execution.egress_ceiling</code> on the retrieval path</td>
 </tr>
 <tr>
 <td>422</td>
@@ -1971,6 +1990,10 @@ trail — concurrent requests cannot cross-attribute cost.</p>
 <tr>
 <td>502</td>
 <td>Provider call raised — wraps the upstream error as <code>{"detail": "Provider call failed: &lt;message&gt;"}</code>; on the enrichment path, a failed/cancelled run — the detail carries the <code>run_id</code> for post-mortem</td>
+</tr>
+<tr>
+<td>503</td>
+<td>(v1.19.3) The server stopped while the request was in flight: past <code>server.shutdown_grace_s</code> (default 10 s) on a single SIGTERM or Ctrl+C, or at once on a second one. The response carries <code>Retry-After: 5</code> and <code>{"detail": "server is shutting down; retry"}</code>. Safe to retry against a restarted server; before v1.19.3 the same case was a <code>500</code></td>
 </tr>
 <tr>
 <td>504</td>
@@ -2016,13 +2039,16 @@ the wrong keys is a handled failure, not a parse.</p>
   This means vendor knobs (NIM <code>chat_template_kwargs.enable_thinking</code>,
   Qwen3 <code>enable_thinking</code>, etc.) carry through without the caller
   having to know about them.
-- <strong>Grounding (opt-in, v1.19.1 — two independent switches under
-  <code>execution.run.*</code>).</strong> Both default <strong>off</strong>; with both off the endpoint is
-  a <strong>pure closed-book LLM call</strong> — no context enrichment, no egress beyond
-  the provider API itself (with a local provider this is fully
-  air-gap-safe). The decision is made <strong>per request</strong> per the ADR 0009 §4
-  gating table, logged to the server debug log, and reported per configured
-  model by <code>/doctor</code>:</p>
+- <strong>Grounding (opt-in — two independent switches under <code>execution.run.*</code>,
+  plus a per-request override).</strong> Both default <strong>off</strong>; with both off the
+  endpoint is a <strong>pure closed-book LLM call</strong> — no context enrichment, no
+  egress beyond the provider API itself (with a local provider this is
+  fully air-gap-safe). The decision is made <strong>per request</strong> per the ADR
+  0009 §4 gating table (extended by ADR 0014), logged to the server debug
+  log, and reported per configured model by <code>/doctor</code>.</p>
+<p><code>execution.run.grounding</code> takes <code>false</code>/<code>"off"</code>, <code>true</code>/<code>"retrieve"</code>, or
+  <code>"native"</code>. <strong>Since v1.19.3, <code>true</code> means <code>"retrieve"</code></strong> (ADR 0014); an
+  unrecognised value is treated as off and named by <code>/doctor</code>.</p>
 <table>
 <thead>
 <tr>
@@ -2038,9 +2064,14 @@ the wrong keys is a handled failure, not a parse.</p>
 <td><strong>Closed-book</strong> (default): training-data answer only.</td>
 </tr>
 <tr>
+<td>any</td>
+<td><code>true</code> / <code>"retrieve"</code></td>
+<td><strong>Retrieve</strong> (v1.19.3): ppxai searches <strong>once, with the prompt as the query</strong> (capped at 2,000 characters), through the same backend chain the <code>web_search</code> tool uses (<code>tools.web_search.order</code>/<code>preferred</code>/<code>strict</code>; by default Gemini, then Perplexity, then DuckDuckGo, each when its key is set), then makes the tool-free model call with the result framed ahead of the prompt as reference material. Works for <strong>every provider</strong>. The <code>grounding</code> response record appears (<code>searched: false</code> when no backend was usable or every backend failed — the model then answers without it). The search cost is logged under the oneshot tier.</td>
+</tr>
+<tr>
 <td>off</td>
-<td>on</td>
-<td><strong>Native</strong>: the provider's own search (Gemini grounding, Perplexity Sonar) retrieves <em>inside the provider's API call</em>. No new egress and no tool exposed. It still executes as a <code>kind=oneshot</code> registry run like every other oneshot (see the run-record section above) — native retrieval changes what the provider does, not whether the call is recorded. Non-search providers degrade gracefully to closed-book.</td>
+<td><code>"native"</code></td>
+<td><strong>Native</strong>: the provider's own search (Gemini grounding) retrieves <em>inside the provider's API call</em>. No new egress and no tool exposed. Non-search providers degrade to closed-book. This was the meaning of <code>true</code> before v1.19.3.</td>
 </tr>
 <tr>
 <td>on</td>
@@ -2049,12 +2080,46 @@ the wrong keys is a handled failure, not a parse.</p>
 </tr>
 <tr>
 <td>on</td>
-<td>on</td>
-<td><strong>Best available per provider</strong>: native wins when the provider has it (never both — retrieval is never done or billed twice); the search loop is the fallback for providers without native search.</td>
+<td><code>"native"</code></td>
+<td><strong>Best available per provider</strong>: native wins when the provider has it (never both); the search loop is the fallback for providers without native search.</td>
 </tr>
 </tbody>
 </table>
+<p>Every path executes as a <code>kind=oneshot</code> registry run (see the run-record
+  section above).</p>
+<p><strong>Per request: <code>"grounding": true | false | null</code></strong> (v1.19.3, optional):</p>
 <ul>
+<li><code>null</code> or absent — the server's configuration decides (the table above).</li>
+<li><code>false</code> — <strong>no web search of any kind</strong> for this request: no
+    retrieval, no native search, no search loop. Always honoured, since it
+    can only reduce exposure.</li>
+<li><code>true</code> — grounding is required: a server whose configuration cannot
+    ground this request (grounding off, or <code>"native"</code> for a provider with
+    no native search) answers <strong>400</strong> instead of silently answering
+    closed-book.</li>
+</ul>
+<blockquote>
+<p><strong>Untrusted or confidential prompts: send <code>"grounding": false</code>.</strong>
+Retrieval sends the prompt text to a third-party search host
+(<code>/doctor</code> names it), and the search results reach the model. A prompt
+built from untrusted input — an email body, a web form — would steer
+both the query and the injected context. The egress ceiling limits
+<em>where</em> the prompt goes, not <em>whether</em>.</p>
+<p>A server <strong>older than v1.19.3 ignores the field</strong> (unknown request
+fields are dropped). A caller that depends on the opt-out should check
+the server version from <code>GET /health</code> first. Older servers only do
+native grounding, which reaches no new host.</p>
+</blockquote>
+<ul>
+<li><strong>Retrieval perimeter.</strong> Only the prompt text is sent — never the
+    system message, history or attachments; the query is never
+    model-written; no model-named URL is fetched. The backend's hosts must
+    pass <code>execution.egress_ceiling</code> (a backend outside it is skipped; none
+    left means no search, never an unchecked host), and <code>strict</code> pins one
+    backend. The injected result is capped by <code>context.max_injection_size</code>.
+    Citations are asked for as <code>[n]</code> in the answer text; ppxai never
+    appends to the model's content (that would break a JSON
+    <code>response_format</code>).</li>
 <li><strong>No combination errors out</strong> — the switches only change where the
     answer's knowledge comes from, and every unmet precondition degrades
     gracefully toward closed-book.</li>
@@ -2062,7 +2127,7 @@ the wrong keys is a handled failure, not a parse.</p>
     <code>{web_search}</code> (nothing can widen it); <code>NetworkPolicy</code> clamps egress to
     the search-backend hosts; a small iteration budget bounds the loop.
     Host/filesystem-safe, not injection-proof: retrieved text can influence
-    the answer — inherent to grounding, including the native path.</li>
+    the answer — inherent to grounding, on every path.</li>
 <li><strong>ADR 0004 revision.</strong> v1 originally promised "no tool loop in
     oneshot". That purity claim is revised (ADR 0009 §4 / ADR 0011): the
     search-loop path drives the <em>same</em> sandboxed run tier as

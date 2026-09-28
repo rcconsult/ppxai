@@ -1871,11 +1871,11 @@ trust boundary; the assistant works your repo), <strong>k8s coder pod = seal off
 </tr>
 <tr>
 <td>Perplexity <code>/task</code> refuses, confabulates, or summarizes an <em>external</em> URL</td>
-<td><code>sonar-pro</code> is prompt-based and does not reliably call granted tools on <code>/task</code> (<strong>Item 43</strong>). Use a native-tool provider (e.g. <code>nvidia/deepseek-v4-pro</code>) for tool-capable runs.</td>
+<td><strong>Fixed — Item 43, closed 2026-08-24 (<code>0490ce87</code>).</strong> The cause was ours, not Perplexity's: a hardcoded <code>native_tool_calling=False</code> gone stale plus a profile row pinning <code>prompt_based</code>. Sonar tool-calls on <code>/v1/responses</code>, which is where <code>ModelFacts</code> now routes it. If you still see this, check <code>/model info</code> for the resolved <code>tool_mode</code>.</td>
 </tr>
 <tr>
 <td>Gemini 3.x <code>/task</code> fails with <code>400 … missing a thought_signature</code></td>
-<td>Known gap (<strong>Item 45</strong>): ppxai doesn't yet replay Gemini 3.x <code>thought_signature</code>. Use Gemini 2.5 or another native-tool provider for now.</td>
+<td><strong>Fixed — Item 45, closed 2026-07-22 (<code>edb74500</code>).</strong> ppxai preserves and replays the Gemini 3.x <code>thought_signature</code> on the tool-response turn. Native-tool <code>/task</code> runs on Gemini 3.x are supported.</td>
 </tr>
 <tr>
 <td>Run stuck <code>waiting</code></td>

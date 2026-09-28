@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/debug-logging/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/lessons/exact-match-loop-guards-miss-paraphrase-loops/">
       
       
       
@@ -18,19 +18,19 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Debug Logging - ppxai Documentation</title>
+        <title>A trailing-streak, byte-exact loop guard detects almost nothing real models do - ppxai Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#debug-logging" class="md-skip">
+        <a href="#a-trailing-streak-byte-exact-loop-guard-detects-almost-nothing-real-models-do" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +94,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Debug Logging
+              A trailing-streak, byte-exact loop guard detects almost nothing real models do
             
           </span>
         </div>
@@ -232,7 +232,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -262,7 +262,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -343,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   
@@ -371,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../provider-setup/" class="md-nav__link">
+      <a href="../../provider-setup/" class="md-nav__link">
         
   
   
@@ -460,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../task-agent-guide/" class="md-nav__link">
+      <a href="../../task-agent-guide/" class="md-nav__link">
         
   
   
@@ -488,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../session-agent-guide/" class="md-nav__link">
+      <a href="../../session-agent-guide/" class="md-nav__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../bootstrap-context-guide/" class="md-nav__link">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
         
   
   
@@ -544,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../context-injection/" class="md-nav__link">
+      <a href="../../context-injection/" class="md-nav__link">
         
   
   
@@ -572,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../checkpoint-guide/" class="md-nav__link">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
         
   
   
@@ -600,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../file-editing-guide/" class="md-nav__link">
+      <a href="../../file-editing-guide/" class="md-nav__link">
         
   
   
@@ -628,7 +628,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../shell-consent-guide/" class="md-nav__link">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
         
   
   
@@ -717,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom-tool-development-guide/" class="md-nav__link">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
         
   
   
@@ -745,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom-command-development-guide/" class="md-nav__link">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
         
   
   
@@ -773,7 +773,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
+      <a href="../../architecture/" class="md-nav__link">
         
   
   
@@ -862,7 +862,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ollama-limitations/" class="md-nav__link">
+      <a href="../../ollama-limitations/" class="md-nav__link">
         
   
   
@@ -890,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
         
   
   
@@ -918,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../container-tools-guide/" class="md-nav__link">
+      <a href="../../container-tools-guide/" class="md-nav__link">
         
   
   
@@ -946,7 +946,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../autorouter-config/" class="md-nav__link">
+      <a href="../../autorouter-config/" class="md-nav__link">
         
   
   
@@ -1035,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
         
   
   
@@ -1063,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
         
   
   
@@ -1091,7 +1091,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
         
   
   
@@ -1146,10 +1146,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#default-off" class="md-nav__link">
+  <a href="#why-this-trips-people-up" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Default: OFF
+        Why this trips people up
       
     </span>
   </a>
@@ -1157,10 +1157,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#turning-it-on-off" class="md-nav__link">
+  <a href="#what-to-do" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Turning it on / off
+        What to do
       
     </span>
   </a>
@@ -1168,38 +1168,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#persistence" class="md-nav__link">
+  <a href="#what-not-to-do" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Persistence
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Persistence">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#why-persistence-matters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why persistence matters
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#disabling-it-cleanly" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Disabling it cleanly
+        What NOT to do
       
     </span>
   </a>
@@ -1207,10 +1179,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation-notes-for-contributors" class="md-nav__link">
+  <a href="#related" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Implementation notes (for contributors)
+        Related
       
     </span>
   </a>
@@ -1237,151 +1209,108 @@
   
 
 
-<h1 id="debug-logging">Debug Logging<a class="headerlink" href="#debug-logging" title="Permanent link">&para;</a></h1>
-<p>ppxai writes detailed runtime logs (message flow, API requests/responses,
-tool invocations, session-recovery decisions) to files under
-<code>~/.ppxai/logs/</code> when debug logging is <strong>enabled</strong>.</p>
-<p><strong>Filenames are derived, not fixed.</strong> Each logger writes to
-<code>~/.ppxai/logs/{logger-name}-debug.log</code> (<code>ppxai/common/logger.py</code>), so the
-set of files depends on which components ran — a working install commonly
-has 20-35 of them, not a fixed list. The ones you will usually want:</p>
-<table>
-<thead>
-<tr>
-<th>Log file</th>
-<th>Emitted by</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>tui-debug.log</code></td>
-<td>Rich TUI (<code>ppxai</code>) and Textual TUI (<code>ppxaide</code>)</td>
-</tr>
-<tr>
-<td><code>server-debug.log</code></td>
-<td><code>ppxai-server</code> + <code>ppxai-desktop</code></td>
-</tr>
-<tr>
-<td><code>chat-debug.log</code>, <code>session-debug.log</code>, <code>engine-debug.log</code></td>
-<td>Engine components</td>
-</tr>
-<tr>
-<td><code>config-debug.log</code></td>
-<td>Config resolution — first stop for "it read the wrong config"</td>
-</tr>
-<tr>
-<td><code>gemini-debug.log</code>, <code>openai_native-debug.log</code>, …</td>
-<td>One per provider that was used</td>
-</tr>
-<tr>
-<td><code>ppxai.server.secrets*-debug.log</code></td>
-<td>Token/secret store (dotted logger names keep their dots)</td>
-</tr>
-<tr>
-<td><code>preview-backend-&lt;pid&gt;.log</code></td>
-<td>Office/preview subprocess — <strong>one per PID</strong>, not rotated</td>
-</tr>
-<tr>
-<td><code>keys.log</code></td>
-<td>Key-handling diagnostics</td>
-</tr>
-</tbody>
-</table>
-<p>To see what a given run actually produced: <code>ls -lt ~/.ppxai/logs/ | head</code>.</p>
-<h2 id="default-off">Default: OFF<a class="headerlink" href="#default-off" title="Permanent link">&para;</a></h2>
-<p>A fresh install has debug logging <strong>disabled</strong>. The verbose payloads
-(full API request bodies, tool outputs) aren't what a new user wants in
-their home directory by default. Turn it on deliberately.</p>
-<h2 id="turning-it-on-off">Turning it on / off<a class="headerlink" href="#turning-it-on-off" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Client</th>
-<th>Command</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Rich TUI (<code>ppxai</code>)</td>
-<td><code>/debug-log on</code> &nbsp;·&nbsp; <code>/debug-log off</code> &nbsp;·&nbsp; <code>/debug-log show</code></td>
-</tr>
-<tr>
-<td>Textual TUI (<code>ppxaide</code>)</td>
-<td><code>/debug-log on</code> &nbsp;·&nbsp; <code>/debug-log off</code></td>
-</tr>
-<tr>
-<td>Web / VSCode</td>
-<td><code>POST /config/debug-log</code> with <code>{"enabled": true|false}</code></td>
-</tr>
-<tr>
-<td>Any client</td>
-<td><code>PPXAI_DEBUG=1</code> env var (per-process, not persisted)</td>
-</tr>
-</tbody>
-</table>
-<p>The command writes <code>tui.debug_log: true|false</code> to
-<code>~/.ppxai/ppxai-config.json</code> and flips the active logger immediately.</p>
-<h2 id="persistence">Persistence<a class="headerlink" href="#persistence" title="Permanent link">&para;</a></h2>
-<p>The <code>tui.debug_log</code> flag is <strong>global and persistent</strong> — not per-session.</p>
+<h1 id="a-trailing-streak-byte-exact-loop-guard-detects-almost-nothing-real-models-do">A trailing-streak, byte-exact loop guard detects almost nothing real models do<a class="headerlink" href="#a-trailing-streak-byte-exact-loop-guard-detects-almost-nothing-real-models-do" title="Permanent link">&para;</a></h1>
+<p><strong>TL;DR:</strong> A guard that only counts a <strong>trailing streak</strong> of <strong>byte-identical</strong>
+arguments misses the loop shape models actually produce — paraphrased
+repeats interleaved with other calls — and both properties had to go: count
+occurrences anywhere in the turn, and add an argument-independent budget.</p>
+<p><strong>Verify with:</strong> <code>git show 2514ba55^:ppxai/engine/tools/manager.py</code> — the
+retired <code>is_tool_loop_detected</code> (then at line 519) walked
+<code>reversed(self._tool_call_history)</code> and <code>break</code>s at the first non-matching
+call, so one differing call anywhere resets the count to zero. Compare
+against the current <code>is_tool_loop_detected</code>
+(<code>ppxai/engine/tools/manager.py:591</code>), which sums matches over the whole
+turn instead, and <code>_hash_args</code> (<code>ppxai/engine/tools/manager.py:548</code>), which
+is unchanged: <code>json.dumps(args, sort_keys=True, default=str)</code> — still
+byte-exact, so two differently-worded queries still count as different
+calls.</p>
+<h2 id="why-this-trips-people-up">Why this trips people up<a class="headerlink" href="#why-this-trips-people-up" title="Permanent link">&para;</a></h2>
+<p>"Detects the same tool called repeatedly" sounds like one property. It is
+two, and a guard can satisfy either without satisfying both:</p>
 <ul>
-<li>Set once with <code>/debug-log on</code>, and every subsequent ppxai startup
-  (Rich, Textual, web server, benchmarks) has logging enabled from
-  the very first line of execution.</li>
-<li>Restored inside <code>config.initialize()</code>, which every client calls
-  first — so the logger is writing <strong>before</strong> the session-recovery
-  prompt, provider selection, or any other interactive step.</li>
-<li>Turning debug off (<code>/debug-log off</code>) persists the same way.</li>
-<li><code>PPXAI_DEBUG=1</code> is a per-process override that does <strong>not</strong> write
-  to config. Useful for one-off runs.</li>
+<li><strong>Exact-match</strong> on arguments — catches <code>get_weather(city="Boston")</code> called
+  twice, misses <code>get_weather(city="Boston, MA")</code> right after.</li>
+<li><strong>Trailing-streak</strong> counting — catches three calls in a row, misses three
+  calls spread across a turn with anything else between them.</li>
 </ul>
-<h3 id="why-persistence-matters">Why persistence matters<a class="headerlink" href="#why-persistence-matters" title="Permanent link">&para;</a></h3>
-<p>Several classes of early-startup bug — silent session-recovery
-regressions, provider-selection Ctrl+C paths, config-load failures —
-happen <strong>before</strong> the user has a chance to type <code>/debug-log on</code>. If
-logging were transient, these regressions would leave no trace.</p>
-<p>Because the flag survives restarts, the workflow for reproducing an
-early-startup bug is:</p>
+<p>A model in a real loop rarely repeats an identical call back-to-back N
+times; it rephrases. The 2026-09-22 incident measured this directly: one
+turn ran <code>web_search</code> 15 times in 113 seconds hunting one IMDb image id,
+every call succeeding, "Loop detected" logged <strong>zero</strong> times. Four of the
+fifteen queries were byte-identical, but interleaved with ten paraphrases —
+never three in a row — so the trailing-streak counter reset before it ever
+reached the threshold of 3.</p>
+<h2 id="what-to-do">What to do<a class="headerlink" href="#what-to-do" title="Permanent link">&para;</a></h2>
 <ol>
-<li><code>/debug-log on</code> (in any working session)</li>
-<li>Quit ppxai.</li>
-<li>Reproduce the bug on next launch.</li>
-<li><code>~/.ppxai/logs/tui-debug.log</code> contains the full decision path.</li>
+<li><strong>Count per turn, not per streak.</strong> <code>is_tool_loop_detected</code> now sums
+   <code>record.tool == tool_name and record.args_hash == args_hash</code> over the
+   whole turn's history (<code>manager.py:591-624</code>), instead of walking
+   backward and resetting at the first mismatch. The old streak rule was
+   deleted rather than kept as an earlier-firing check beside it: a
+   trailing streak of N is also N occurrences in the turn, so it can
+   never fire before the occurrence count does — keeping it would have
+   been dead code.</li>
+<li><strong>Add an argument-independent per-tool budget for retrieval tools
+   only, generous.</strong> <code>is_tool_budget_exceeded</code> (<code>manager.py:645</code>) caps
+   <code>web_search</code> and <code>fetch_url</code> at 10 calls per turn by default
+   (<code>Default.TOOL_CALL_BUDGETS</code>, <code>ppxai/constants.py:242-245</code>; absent or
+   0 = unlimited; every other tool stays uncapped). This is the guard
+   that catches the incident's ten <em>paraphrased</em> calls, which
+   exact-match matching structurally cannot see no matter how it counts.
+   The number comes from tau-bench's published trajectories
+   (<code>sierra-research/tau-bench</code>, 1,960 real GPT-4o/Sonnet runs scanned
+   locally): one tool is called once in 83.6% of turns and five times or
+   fewer in 99.3%, but 32 of the 76 turns that called one tool six-plus
+   times were successful (reward 1.0) — a low cap would have cut real
+   work.</li>
+<li><strong>Exclude failed calls from both guards.</strong> <code>record_tool_call</code>
+   (<code>manager.py:562</code>) only increments guard B's count, and only appends a
+   <code>success=True</code> record for guard A to match against, when the call
+   actually succeeded. A retry after a transient failure is recovery,
+   not a loop — telling a model to "synthesize from the results you
+   already have" is wrong advice when there are no results, and a tool
+   that keeps failing is the zombie circuit breaker's job, not this
+   guard's.</li>
+<li><strong>Give each trip its own user-visible text.</strong> <code>get_loop_message</code>
+   (guard A) and <code>get_budget_message</code> (guard B, <code>manager.py:679</code>) are two
+   different strings. The old single message said "called Nx with same
+   args" — reusing it for a budget trip would tell the model its
+   arguments were the problem, so it rephrases, which is the paraphrase
+   loop guard B exists to stop.</li>
+<li><strong>Make the refusal terminal.</strong> A second attempt at an already-budget-
+   exhausted tool sets <code>force_synthesis = True</code> (<code>ppxai/engine/chat.py</code>,
+   in <code>chat_with_tools</code>'s <code>if budget_refusals[tool_name] &gt;= 2:</code> block —
+   line 998 as committed at <code>2514ba55</code>), which withdraws all tools for
+   the rest of the turn and forces a synthesis pass. Without this, a
+   model that doesn't take the hint burns every remaining iteration
+   re-offering arguments to a tool that will never run again this turn.
+   Guard A (the repeat rule) has <strong>no equivalent escalation</strong> — only
+   guard B's budget trip is terminal; see Item 80 in
+   <code>docs/debt-inventory.md</code> for the gap this leaves.</li>
 </ol>
-<p>The regression pattern this catches: debug-log state is restored inside
-<code>config.initialize()</code>, so logging is active <strong>before</strong> any client code
-runs — critical for diagnosing early-startup regressions like silent
-session-recovery failures (where recovery must run before
-provider/model selection). See the "Debug Logging" section of
-<a href="../CLAUDE.md">CLAUDE.md</a> for the ordering invariant.</p>
-<h2 id="disabling-it-cleanly">Disabling it cleanly<a class="headerlink" href="#disabling-it-cleanly" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># From inside ppxai</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>/debug-log<span class="w"> </span>off
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Or edit the config directly</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># ~/.ppxai/ppxai-config.json → "tui": { "debug_log": false }</span>
-</span></code></pre></div>
-<p>Log files are <strong>not</strong> auto-pruned. Delete them manually if they grow
-large: <code>rm ~/.ppxai/logs/*.log</code>.</p>
-<h2 id="implementation-notes-for-contributors">Implementation notes (for contributors)<a class="headerlink" href="#implementation-notes-for-contributors" title="Permanent link">&para;</a></h2>
+<p>A guard limited to only the old two properties (exact-match, trailing
+streak) is provably weaker than the five-item version above — it is a
+strict subset of what the per-turn, budgeted, escalating guard catches.</p>
+<h2 id="what-not-to-do">What NOT to do<a class="headerlink" href="#what-not-to-do" title="Permanent link">&para;</a></h2>
+<p><strong>Fuzzy/semantic argument matching was considered and declined.</strong> It needs
+a tuned per-tool similarity threshold, and it blocks two deliberately
+different queries as readily as one rephrased one — there's no threshold
+that reliably tells "same hunt, reworded" from "genuinely next question."
+The accepted gap this leaves — an alternating two-tool cycle with
+non-repeating arguments (<code>A, B, A, B, …</code>, never twice with the same
+arguments) — is recorded in
+<code>tests/fixtures/tool_loops/call-graph-cycle-alternating-distinct-args.json</code>
+rather than hidden, and is bounded only by the iteration cap and the
+zombie circuit breaker.</p>
+<h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Flag lives in config</strong>, not in <code>AppState</code> or session state, because
-  it's a cross-session preference (like <code>tui.theme</code>), not per-session
-  state.</li>
-<li><strong>Restored in <code>ppxai/config/__init__.py::initialize()</code></strong>, which calls
-  <code>common.logger.Logger.enable_all()</code>. <code>Logger</code> itself is imported
-  <strong>top-level</strong> (<code>ppxai/config/__init__.py:23</code>) — there is no circular
-  dependency with the logger module, contrary to what this doc said until
-  2026-09-20. The one deferred import inside <code>initialize()</code> is
-  <code>get_debug_log_enabled</code> from <code>.features</code>, and it defers to avoid a cycle
-  with <code>.features</code>, not with the logger.</li>
-<li><strong>Every client calls <code>initialize()</code> first</strong> — Rich
-  (<code>ppxai/rich/main.py</code>), Textual (<code>ppxai/tui/__init__.py</code>), server
-  (<code>ppxai/server/http.py</code>), benchmark runner
-  (<code>benchmarks/llm-eval/engine_runner.py</code>). Adding a new entry point?
-  Call <code>initialize()</code> before anything else.</li>
-<li><strong>Writes go through <code>set_tui_config("debug_log", bool)</code></strong> which uses
-  <code>ensure_ascii=False</code> + trailing newline so em-dashes and other
-  non-ASCII content in <code>ppxai-config.json</code> aren't mangled on save.</li>
+<li><a href="../a-check-that-never-ran-reports-success/">a-check-that-never-ran-reports-success.md</a> —
+  same family of trap: a guard that looks like it's checking something but
+  structurally cannot see the failure mode in front of it</li>
+<li><a href="../mutation-tests-that-never-ran/">mutation-tests-that-never-ran.md</a> —
+  the trailing-streak rule is the same shape as a mutation on an
+  unreachable line: it "worked" on every case anyone tested it against,
+  because no test constructed an interleaved repeat</li>
 </ul>
 
 
@@ -1454,10 +1383,10 @@ large: <code>rm ~/.ppxai/logs/*.log</code>.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

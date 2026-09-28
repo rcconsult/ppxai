@@ -1352,9 +1352,10 @@ discoverable later.</p>
   environmental noise or keep passing against a renamed surface while
   guarding nothing. Invert, retarget, or delete — and mutation-test the fence</li>
 <li><a href="qwen-27b-vl-empirically-supported/">qwen-27b-vl-empirically-supported.md</a> —
-  Qwen3.5/3.6-27B-FP8 empirically accept <code>image_url</code> content via vLLM;
-  ppxai's <code>model_profiles.py</code> lacked <code>supports_vision=True</code> entries for them
-  (fixed 2026-06-08, <code>model_profiles.py:481-505</code>)</li>
+  the 27B-FP8 Qwen line empirically accepts <code>image_url</code> content via vLLM;
+  the shipped facts table lacked <code>supports_vision=True</code> entries for them
+  (fixed 2026-06-08; now <code>model_facts.py:706-719</code>, glob widened to
+  <code>Qwen/Qwen3.[568]-27B-FP8*</code> when 3.8 replaced 3.6 in place)</li>
 <li><a href="web-assets-served-from-ppxai-home/">web-assets-served-from-ppxai-home.md</a> —
   clients serve the web UI from <code>~/.ppxai/web</code>, not the repo source tree;
   editing <code>web/</code> in-repo has no effect on a running server without
@@ -1425,6 +1426,25 @@ discoverable later.</p>
   statement — dead code that still executes. A 384-file bulk <code>--fix</code> also
   regressed <code>F811</code> and <code>E402</code> from zero, caught by the CI ratchet rather
   than by a green suite (2026-09-01).</li>
+<li><a href="measure-against-a-clean-export-not-a-dirty-tree/">measure-against-a-clean-export-not-a-dirty-tree.md</a>
+  — a measurement taken against a tree with uncommitted changes describes
+  code no commit contains; stamp a sha next to it and it becomes a
+  confident wrong number about that sha. <code>git status --short</code> before
+  trusting any "measured on this tree" claim; to pin a number to a commit,
+  export it clean first (<code>git archive &lt;sha&gt; | tar -x</code>) and measure there.</li>
+<li><a href="a-doc-comment-promising-a-mechanism-is-not-the-mechanism/">a-doc-comment-promising-a-mechanism-is-not-the-mechanism.md</a>
+  — <code>vscode-extension/src/appState.ts</code>'s header claimed a runtime
+  constructor assertion and a promised schema generator; neither existed,
+  and the hand-written interface sat two fields behind the schema
+  (<code>lastMessageRole</code>, <code>modelSupportsVision</code>) for four minor versions with
+  nothing to catch it. Verify a cross-file invariant claimed in a comment
+  before repeating it.</li>
+<li><a href="exact-match-loop-guards-miss-paraphrase-loops/">exact-match-loop-guards-miss-paraphrase-loops.md</a>
+  — a tool-loop guard that counts only a trailing streak of byte-identical
+  arguments misses the loop shape models actually produce (paraphrased
+  repeats interleaved with other calls); catching it needs BOTH a per-turn
+  occurrence count and an argument-independent per-tool budget, not either
+  alone (2026-09-22 incident: 15 <code>web_search</code> calls, 0 loop-detector hits).</li>
 </ul>
 
 

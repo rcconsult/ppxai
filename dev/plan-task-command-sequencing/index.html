@@ -1311,6 +1311,17 @@
 §8–§9). Same contract as the Stage-2 increment plan
 (<a href="../archive/plan-v1.19.0-sequencing/">plan-v1.19.0-sequencing.md</a>):</p>
 <blockquote>
+<p>⚠️ <strong>Syntax note (added 2026-09-20).</strong> This plan was written before ADR
+0011 U2 fixed the grammar, and its trial commands originally read
+<code>/task run "&lt;desc&gt;"</code>. <strong><code>run</code> is not a verb</strong> in the shipped grammar
+(<code>TASK_VERBS</code> in <code>ppxai/engine/task_grammar.py</code> — <code>help</code>, <code>ls</code>, <code>list</code>,
+<code>get</code>, <code>show</code>, <code>open</code>, <code>watch</code>, <code>cancel</code>, <code>respond</code>, <code>collect</code>, <code>ack</code>,
+<code>resume</code>). A line whose first token is not a recognised verb is
+classified as <strong>LAUNCH with the whole remainder as the prompt</strong>, so
+<code>/task run "summarize X"</code> silently launches a task whose description is
+the literal string <code>run "summarize X"</code> — no error, just a wrong task.
+The trial commands below have been rewritten to the shipped form
+<code>/task "&lt;desc&gt;"</code>; the surrounding narrative is left as written.</p>
 <p><strong>Build contract.</strong> Each increment is a <strong>vertical slice</strong> that brings
 exactly the server + client bits needed to <strong>live-trial it end-to-end</strong>,
 nothing speculative. Bring a seam early only when it's the right shape
@@ -1337,7 +1348,7 @@ seal needs it (T2).</p>
 live-trial-verified in-browser (run/ls/cancel; pane with chips + live log +
 result). <code>TaskController extends AgentRunController</code>, <code>TaskRunView extends
 AgentRunView</code>; <code>/agentrun</code> unchanged.</p>
-<p><strong>Capability:</strong> <code>/task run "&lt;desc&gt;" --tools …</code> mints a tool-capable run and
+<p><strong>Capability:</strong> <code>/task "&lt;desc&gt;" --tools …</code> mints a tool-capable run and
 renders it in a right-panel pane; <code>/task ls</code> lists runs; <code>show</code>/<code>watch</code> focus +
 live-tail a pane; <code>cancel</code> stops one. All over <strong>existing</strong> endpoints.</p>
 <p><strong>Build (client only):</strong>
@@ -1357,11 +1368,11 @@ live-tail a pane; <code>cancel</code> stops one. All over <strong>existing</stro
   <strong>Cancel</strong> button while non-terminal.
 - Surface the tier errors verbatim: 403 (tier disabled + enable hint), 400
   (shell grant), 400 (missing provider/model).</p>
-<p><strong>Trial:</strong> enable the tier; <code>/task run "list the files under docs and count the
+<p><strong>Trial:</strong> enable the tier; <code>/task "list the files under docs and count the
 markdown ones" --tools read_file,grep,list_directory</code>; watch the tool loop in
 the pane; <code>/task ls</code>; <code>/task cancel &lt;id&gt;</code> mid-run and confirm it stops.</p>
 <p><strong>Tests:</strong> flag-parser unit tests (grant/allow/budget parsing, bad input);
-dispatcher routing test (<code>/task run|ls|cancel</code> → controller); a Node
+dispatcher routing test (<code>/task</code> launch | <code>ls</code> | <code>cancel</code> → controller); a Node
 behavioral test mirroring <code>test_agent_run_controller_behavior.py</code>.</p>
 <p><strong>Deliberately NOT yet:</strong> spec/skill files, read-scope, <code>respond</code>/<code>ack</code>/<code>resume</code>.</p>
 <hr />
@@ -1393,8 +1404,8 @@ Brought early so every later increment is trialed confined.</p>
   session working dir by default; the server only honors it when this T2
   seal is OFF — sealed runs keep their jail regardless, and the launch
   response flags <code>workdir_ignored</code> so the client can surface it.</p>
-<p><strong>Trial:</strong> set <code>read_paths.allow: ["~/.ppxai/skills"]</code>; <code>/task run "read
-/etc/hosts" --tools read_file</code> → denied; <code>/task run "read the file
+<p><strong>Trial:</strong> set <code>read_paths.allow: ["~/.ppxai/skills"]</code>; <code>/task "read
+/etc/hosts" --tools read_file</code> → denied; <code>/task "read the file
 ~/.ppxai/skills/x.md" --tools read_file</code> → ok; a <code>write_file</code> outside
 <code>workdir</code> → denied.</p>
 <p><strong>Tests:</strong> path-jail unit suite (allow/deny/symlink-escape/<code>..</code>-escape/absolute
@@ -1435,7 +1446,7 @@ body), <code>.json</code>/<code>.yaml</code>, or <code>.jsonl</code> (batch fan-
   (<code>execution.default_subagent</code>); clamped by the operator ceiling (allowed
   grant · no-shell · <code>execution.task.enabled</code>).</p>
 <p><strong>Trial:</strong> author <code>specs/triage.md</code> (front-matter grant+budget, body =
-instructions); <code>/task run --spec triage "the CI job is red"</code>; confirm the
+instructions); <code>/task --spec triage "the CI job is red"</code>; confirm the
 pane shows the grant/budget from the file. <code>--batch three.jsonl</code> mints 3 runs.</p>
 <p><strong>Trial-verified 2026-07-12 (macOS, auth-ON):</strong> API trial against the installed
 server with a <code>server.secrets</code> file token store. Bootstrap-minted a bearer
@@ -1466,7 +1477,7 @@ those through <code>build_task_runner(extra_read_paths=…)</code> →
 shell-reject/non-empty/provider guards run on the MERGED grant). Web client:
 <code>--skill</code> flag (repeatable + comma-split, de-duped) in <code>task-controller.js</code>.</p>
 <p><strong>Trial:</strong> point <code>sandbox.skills_dir</code> at <code>examples/task-skills/</code> (with
-<code>enforcement:"in_process"</code>); <code>/task run --skill ci-triage</code>; confirm the agent
+<code>enforcement:"in_process"</code>); <code>/task --skill ci-triage</code>; confirm the agent
 reads <code>references/checklist.md</code> but a read of a sibling outside the skill dir is
 denied. <code>--skill needs-scripts</code> → 400 (scripts gate). Examples ship in
 <a href="../examples/task-skills/">examples/task-skills/</a> (ci-triage, secrets-scan,
@@ -1531,7 +1542,7 @@ retires debt (r) as a standalone item.</p>
    consent card): <code>PPXAI_WEB_DIR=$PWD/ppxai/web uv run ppxai-server</code>, then
    open the web UI. (Config/env shadowing gotchas: see the T1 "trialing from
    source" note in <a href="../agent-platform-call-graphs/">agent-platform-call-graphs.md</a>.)</li>
-<li><strong>Park:</strong> <code>/task run "spawn a child to summarize docs/README.md" --tools
+<li><strong>Park:</strong> <code>/task "spawn a child to summarize docs/README.md" --tools
    read_file,spawn_subagent</code> → pane status flips to ✋ waiting and the consent
    card appears (prompt = the spawn summary); <code>/task ls</code> shows ✋.</li>
 <li><strong>Approve:</strong> click Approve (or <code>/task respond &lt;id&gt; approve</code>) →
@@ -1604,7 +1615,7 @@ checkpoint (resume = reload <code>state.json</code>).</p>
 <code>default_subagent</code> set); serve the checkout (<code>PPXAI_WEB_DIR=$PWD/ppxai/web
 uv run ppxai-server</code>).</p>
 <ol>
-<li><code>/task run "summarize docs/README.md" --tools read_file</code> → on finish the
+<li><code>/task "summarize docs/README.md" --tools read_file</code> → on finish the
    pane shows 📬 result ready + the held result + a Collect button;
    <code>/task ls</code> shows 📬.</li>
 <li><strong>Close the pane, reopen via <code>/task ls</code></strong> — the result is still there
@@ -1673,7 +1684,7 @@ AND is the consumer. The Inspection Triplet is complete on the flat <code>agent-
 slot (the multi-slot/service Triplet remains (q)/<code>agent_n</code> nesting).</p>
 <p><strong>Trial (concrete recipe):</strong> config as in T5/T6 (tier on, <code>default_subagent</code>).</p>
 <ol>
-<li><strong>Restart-interrupt:</strong> start a run that stays busy (e.g. <code>/task run
+<li><strong>Restart-interrupt:</strong> start a run that stays busy (e.g. <code>/task
    "spawn a child to summarize docs/README.md" --tools
    read_file,spawn_subagent</code> and leave the consent card unanswered, or any
    long run), then kill the server mid-flight. Restart it → <code>/task ls</code> shows
@@ -1683,7 +1694,7 @@ slot (the multi-slot/service Triplet remains (q)/<code>agent_n</code> nesting).<
    the run re-executes with the same grant/egress/budget/system and lands
    📬 result ready (T6 hold) — same run_id, same event log (<code>agent_run_resume</code>
    visible in it).</li>
-<li><strong>Budget-interrupt path:</strong> <code>/task run "…" --tools read_file --budget
+<li><strong>Budget-interrupt path:</strong> <code>/task "…" --tools read_file --budget
    iters=1</code> → lands ⏸️ interrupted (resumable); <code>/task resume &lt;id&gt;</code> gives it a
    fresh budget window and it completes.</li>
 <li><strong>Refusals:</strong> <code>/task resume</code> a completed/held run → 409 "not resumable";
@@ -1781,10 +1792,10 @@ consecutive GET failures); terminal renders include the 📬 <code>/task ack</co
 <code>default_subagent</code>); <code>code --install-extension</code> a fresh VSIX or F5 the
 extension; point <code>ppxai.serverUrl</code> at the server.</p>
 <ol>
-<li>In the VSCode chat panel: <code>/task run "summarize docs/README.md" --tools
+<li>In the VSCode chat panel: <code>/task "summarize docs/README.md" --tools
    read_file</code> → launch line, then (poll) 📬 result ready + the result +
    the <code>/task ack</code> hint; <code>/task ack &lt;id&gt;</code> → ✅ collected.</li>
-<li><code>/task run "spawn a child to summarize docs/README.md" --tools
+<li><code>/task "spawn a child to summarize docs/README.md" --tools
    read_file,spawn_subagent</code> → when the run parks, a <strong>QuickPick pops</strong>
    (✋ Agent run … needs consent) → Approve → child spawns, parent holds;
    Deny → refusal text; Escape → hint line + TTL backstop
@@ -1854,7 +1865,7 @@ resume need a live event loop; <code>ls</code>/<code>get</code>/<code>cancel</co
 synchronous registry operations. So Textual has the full set today, and Rich
 has everything except launch/resume — with a message naming the reason rather
 than the command being absent. Rich's remaining half is its blocking prompt
-(<code>main.py:477</code>) plus five <code>asyncio.run()</code> call sites; that is a main-loop
+(<code>ppxai/rich/main.py:475</code>) plus five <code>asyncio.run()</code> call sites; that is a main-loop
 decision, not a <code>/task</code> decision, and it is still open.</p>
 <p>Two things found while unparking, both fixed: the engine-level egress-ceiling
 gap (<code>82ae0bcb</code> — the ceiling was route-only, so an embedded run escaped it),

@@ -1372,6 +1372,20 @@
 
 <h1 id="multimodal-api-models-reference">Multimodal API Models Reference<a class="headerlink" href="#multimodal-api-models-reference" title="Permanent link">&para;</a></h1>
 <p><em>Research date: April 3, 2026 — for ppxai provider integration</em></p>
+<blockquote>
+<p>⚠️ <strong>Model-catalog snapshot, ~6 months stale. Verified 2026-09-20.</strong> The
+<em>capability</em> research here (which modalities each API family accepts, how
+PDFs and video are handled, the unified-architecture point) still holds.
+The <strong>model ids and tier claims do not</strong>: this file presents <code>gpt-5.4</code> as
+OpenAI's flagship and <code>gemini-3.1-*</code> as Gemini's newest line, while the
+shipped defaults are <strong><code>gpt-5.6-terra</code></strong> and <strong><code>gemini-3.5-flash</code></strong>, with
+measured <code>gemini-3.6/3.7/3.8-flash</code> rows in <code>ppxai/engine/model_facts.py</code>
+and an Anthropic provider that did not exist when this was written.</p>
+<p><strong>For what a given model can actually do today, read
+<code>ppxai/engine/model_facts.py</code> or run <code>/model info</code></strong> — those are the
+resolution sources; this document is not, and nothing in the code reads
+it. Treat the matrices below as a research record.</p>
+</blockquote>
 <hr />
 <h2 id="gemini-api-most-comprehensive-multimodal">Gemini API — Most Comprehensive Multimodal<a class="headerlink" href="#gemini-api-most-comprehensive-multimodal" title="Permanent link">&para;</a></h2>
 <p>Built multimodal from day one. All major models handle text, image, audio, video, and PDF in a unified architecture.</p>

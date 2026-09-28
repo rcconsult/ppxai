@@ -1190,6 +1190,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#run-time-skew-vscode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run-time skew (VSCode)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema version
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reading-the-graphify-signal-about-this-pattern-dont-misdiagnose" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1230,7 +1252,7 @@
 <p>Any piece of state that more than one client needs to render or react to must live in <code>AppState.FIELDS</code> with these invariants:</p>
 <ol>
 <li>
-<p><strong>Stable JSON-serializable schema</strong> — plain dicts, not dataclasses. The field round-trips through SSE <code>state_sync</code> events to <code>ppxai/web/shared/app-state.js</code> and <code>vscode-extension/src/appState.ts</code>, which mirror the same field names in camelCase. Cross-language schema drift is a production bug.</p>
+<p><strong>Stable JSON-serializable schema</strong> — plain dicts, not dataclasses. The field round-trips through SSE <code>state_sync</code> events to <code>ppxai/web/shared/app-state.js</code> and <code>vscode-extension/src/appState.ts</code>, both of which DERIVE the same camelCase field names from <code>ppxai/engine/app_state_schema.json</code> at construction (web) or module init (VSCode) — neither hand-restates them. Cross-language schema drift is a production bug; see "Run-time skew (VSCode)" below for the one gap that derivation alone cannot close.</p>
 </li>
 <li>
 <p><strong>Engine-owned invalidation</strong> — <code>EngineClient</code> recomputes the field on mutation via a session callback. For <code>session.messages</code>, the callback is <code>SessionManager.on_messages_changed</code>, installed once and fired from every mutation site (<code>add_message</code>, <code>remove_last_message</code>, <code>clear</code>, <code>load</code>, <code>reset_for_model_switch</code>, <code>validate_and_fix_alternation</code>). When adding a new mutable store in the engine, give it an analogous <code>on_&lt;thing&gt;_changed</code> callback hook — never expect clients to poll.</p>
@@ -1274,11 +1296,158 @@
 <ol>
 <li><strong>Ask "does more than one client need this?"</strong> before inventing per-client state. If yes, it goes in AppState.</li>
 <li><strong>Schemas must be JSON-serializable plain dicts</strong> — no dataclasses, no enums, no custom types. Document the schema inline in <code>FIELDS</code>.</li>
-<li><strong>Mirror the field in <code>web/shared/app-state.js</code> and <code>vscode-extension/src/appState.ts</code></strong> when adding to Python. Use camelCase. The three implementations are copies of the same contract.</li>
+<li><strong>No mirror to maintain by hand, on either JS client.</strong> Adding a field to <code>ppxai/engine/app_state_schema.json</code> is the only edit — <code>web/shared/app-state.js</code> reads <code>window.APP_STATE_SCHEMA</code> (injected at serve time) and derives its camelCase names/defaults at construction; VSCode's <code>AppState</code> class reads the bundled JSON copy the same way, and (since 2026-09-21) its TypeScript TYPE layer — <code>AppStateFields</code>, historically the one hand-written restatement in this contract — is generated too: <code>npm run sync-schema</code> regenerates <code>vscode-extension/src/appState.generated.ts</code> from the schema, and <code>tests/test_app_state_generated_types.py</code> fails the build if the tracked generated file and a fresh regeneration ever differ. Commit the regenerated file when you touch the schema.</li>
 <li><strong>Invalidation is engine-side</strong>, triggered by a single observable callback on the mutable store. Never have clients call a "refresh state" method manually.</li>
 <li><strong>Test the dedup path</strong> — write a test that verifies a no-op mutation does NOT fire the field's listeners. Without this test, regressions that spam SSE events go unnoticed until production.</li>
 <li><strong>Bump <code>len(AppState.FIELDS)</code> sentinel test</strong> in <code>tests/test_app_state.py</code> when adding a new field — intentional friction so every addition gets reviewed against the cross-client schema contract.</li>
 </ol>
+<h2 id="run-time-skew-vscode">Run-time skew (VSCode)<a class="headerlink" href="#run-time-skew-vscode" title="Permanent link">&para;</a></h2>
+<p>Build-time derivation (rule 3 above) guarantees the extension's bundled
+schema matches the schema it was compiled against — it says nothing
+about the SERVER it connects to at run time, since a VSIX and a
+<code>ppxai-server</code> install version independently. Since 2026-09-21,
+<code>vscode-extension/src/schemaGuard.ts</code> closes that gap: on every
+(re)connect it fetches <code>GET /schema/app-state</code> and compares FIELDS with
+the bundled schema (<code>chatPanel.ts::initializeBackend</code>, right after the
+roster load).</p>
+<table>
+<thead>
+<tr>
+<th>Server declares</th>
+<th>Verdict</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Same fields</td>
+<td><code>identical</code></td>
+<td>Silent — the normal case must produce no log line</td>
+</tr>
+<tr>
+<td>Extra fields this build doesn't know</td>
+<td><code>extra-only</code></td>
+<td>Adopted for the connection (<code>AppState.adoptFields</code>) + one log line; state is stored, never rendered, because rendering code is compiled in</td>
+</tr>
+<tr>
+<td>A compiled-against field missing, or retyped</td>
+<td><code>incompatible</code></td>
+<td>ONE visible <code>showWarningMessage</code>, naming the fields and both versions</td>
+</tr>
+<tr>
+<td>404 / fetch failure</td>
+<td><code>unverified</code></td>
+<td>One log line, nothing blocked — state must NOT fail closed (opposite posture from the command roster's fail-closed gate, deliberately: <code>AppState</code> is constructed before any server exists)</td>
+</tr>
+</tbody>
+</table>
+<p><code>version</code> is not the signal — see "Schema version" below for the
+maintained-from-2026-09-21 rule; the guard compares fields and reports
+the version strings only as context, deliberately, even now that the
+field is trustworthy. <code>tests/test_vscode_schema_guard_behavior.py</code>
+drives the real compiled module under Node.</p>
+<p><strong>Note:</strong> <code>chatPanel.ts::_reanchorFromServer</code> updates the
+extension-host <code>AppState</code> but (since 2026-09-21) also forwards the
+mapped changes to the webview via <code>postMessage({type: 'stateSync',
+changes})</code> — without that forward, the webview's own field mirror
+(e.g. <code>activeModelSupportsVision</code> in <code>media/webview/main.js</code>) never
+learns about a re-anchor and stays stale until the next SSE push. A
+public <code>reanchorState()</code> wraps this for callers outside the class
+(<code>extension.ts</code>'s <code>ppxai.switchProvider</code>/<code>ppxai.switchModel</code> handlers).</p>
+<p><strong>Update (2026-09-21).</strong> Web now has a run-time check too, closing the
+gap described below — <code>docs/plan-adr-0007-completion-service.md</code>
+§"Open owner decisions" item 9, DECIDED and built.</p>
+<p>The web page still gets the schema injected once at page load
+(<code>server/routes/static.py</code>); it recovers from a server restart WITHOUT a
+page reload (<code>app.js</code>'s heartbeat watchdog → <code>connectToServer(true)</code> /
+<code>_reanchorFromServer()</code>). <code>_reanchorFromServer()</code> grew an opt-in
+<code>checkSchema</code> parameter: the heartbeat-recovery path and the
+<code>visibilitychange</code>→visible path (state-sync Phase A) both pass <code>true</code> —
+both are RECONNECT boundaries, where the server on the other end may
+have changed underneath the tab. <code>handleProviderChange</code>/
+<code>handleModelChange</code> (a same-connection value refresh, not a reconnect)
+and first page load (the injected schema is from the same process, so
+nothing to verify against) do not pass it.</p>
+<p>When <code>checkSchema</code> is true, <code>_checkSchemaDrift()</code> fetches
+<code>GET /schema/app-state</code> and classifies it with
+<code>ppxai/web/shared/app-state-schema-diff.js::compareSchemas</code> — a plain-JS
+re-implementation of <code>schemaGuard.ts</code>'s classifier (web never loads
+compiled TypeScript), held to identical verdicts and field lists against
+<code>schemaGuard.ts</code> by <code>tests/test_schema_diff_cross_language_parity.py</code>
+over 10 shared fixtures, so the two cannot drift from each other
+silently.</p>
+<table>
+<thead>
+<tr>
+<th>Server declares</th>
+<th>Verdict</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Same fields</td>
+<td><code>identical</code></td>
+<td>Silent</td>
+</tr>
+<tr>
+<td>Extra fields this tab doesn't know</td>
+<td><code>extra-only</code></td>
+<td>Adopted (<code>AppState.adoptSchema()</code>) + one <code>console.info</code></td>
+</tr>
+<tr>
+<td>A field this tab has missing, or retyped, on the server</td>
+<td><code>incompatible</code></td>
+<td>Adopted + ONE chat notice: "The server changed while this tab was open … State was refreshed — reload the page to get the matching UI."</td>
+</tr>
+<tr>
+<td>Fetch fails</td>
+<td><code>unverified</code></td>
+<td>One <code>console.warn</code>, nothing blocked</td>
+</tr>
+</tbody>
+</table>
+<p>Unlike VSCode's <code>AppState.adoptFields</code> — which only ADDS fields a newer
+server declares, because its <code>_data</code> is typed against a compiled
+<code>AppStateFields</code> interface — web's <code>AppState.adoptSchema()</code> fully
+re-derives the entire canonical field map, since JS has no compile-time
+field types to protect: a canonical field whose python name survives
+keeps its current value under the (possibly renamed) new client name; a
+new field gets its declared default; a dropped field's value and mapping
+go away. Never fires listeners itself — it re-anchors the schema, not a
+value. Re-entrancy-guarded (<code>_schemaCheckInFlight</code>) so an overlapping
+heartbeat-recovery and visibility-change pair can't double-fire the
+notice. Tests: <code>tests/test_web_schema_drift_behavior.py</code>,
+<code>tests/test_web_schema_drift_reanchor.py</code>.</p>
+<p>As on the VSCode side, <code>version</code> is not the signal for either
+classifier — see "Schema version" below.</p>
+<h2 id="schema-version">Schema version<a class="headerlink" href="#schema-version" title="Permanent link">&para;</a></h2>
+<p><strong>Added 2026-09-21.</strong> <code>ppxai/engine/app_state_schema.json</code>'s
+<code>"version"</code> field is now maintained, starting at <code>"1.1"</code>. <code>"1.0"</code> sat
+unchanged across five earlier field-adding/renaming commits — an
+unenforced rule is exactly how that happened — so treat any <code>"1.0"</code>
+schema as an unmeasured historical marker, not a real signal; <code>"1.1"</code>
+is the first value anyone should trust.</p>
+<p>Format is <code>MAJOR.MINOR</code>. Bump MAJOR when a field is removed, or its
+Python name or <code>client</code> (camelCase) name is renamed, or its <code>type</code>
+changes — any of these breaks a consumer compiled/written against the
+old shape, the same combination both run-time classifiers above call
+<code>incompatible</code>. Bump MINOR when a field is added, or only its <code>default</code>
+changes.</p>
+<p>This is enforced, not just documented: <code>tests/test_app_state_schema_version.py</code>
+checks the live schema against an append-only, per-version field
+history at <code>ppxai/engine/app_state_schema_history.json</code> (one row per
+version, <code>[python_name, client, type, default]</code> tuples per field) —
+failing on a fields-changed-without-a-bump, a bump-without-a-new-row, a
+retroactively edited row (pinned fingerprint hashes), and a bump
+smaller than the field-shape change demands.</p>
+<p><strong>Neither run-time classifier treats <code>version</code> as the verdict</strong> — both
+<code>schemaGuard.ts::compareSchemas</code> and web's <code>compareSchemas</code>
+(<code>app-state-schema-diff.js</code>) decide compatibility on FIELDS and report
+<code>version</code> strings only as context for whoever fixes a real mismatch. A
+version pre-check ahead of the field diff was deliberately not added:
+it would hide exactly the failure mode the versioning rule exists to
+catch — a field change landing with no bump.</p>
 <h2 id="reading-the-graphify-signal-about-this-pattern-dont-misdiagnose">Reading the graphify signal about this pattern (don't misdiagnose)<a class="headerlink" href="#reading-the-graphify-signal-about-this-pattern-dont-misdiagnose" title="Permanent link">&para;</a></h2>
 <p>The community-detection graph at <code>graphify-out/GRAPH_REPORT.md</code> consistently shows AppState's host community (typically the largest one, e.g. "Engine + AppState Core") with <strong>cohesion ≈ 0.0</strong> and ~1,000–1,500 nodes pulled into it. This is <strong>expected, not a smell.</strong></p>
 <p>Why it shows that way: AppState is hub-and-spoke by design (one canonical engine-side store, four renderers subscribing). Louvain sees no internal subgroup boundaries inside the hub and assigns minimum cohesion. The graph is correctly describing the topology — it is <em>not</em> labelling the design as broken.</p>

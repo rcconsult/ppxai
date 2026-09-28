@@ -1297,10 +1297,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#capability-flags" class="md-nav__link">
+  <a href="#where-the-answer-lives-now" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Capability Flags
+        Where the answer lives now
       
     </span>
   </a>
@@ -1308,10 +1308,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#provider-specific-settings" class="md-nav__link">
+  <a href="#overriding-a-models-facts" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Provider-Specific Settings
+        Overriding a model's facts
       
     </span>
   </a>
@@ -1580,10 +1580,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#q-how-do-i-know-which-method-my-provider-uses" class="md-nav__link">
+  <a href="#q-how-do-i-know-which-method-my-model-uses" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Q: How do I know which method my provider uses?
+        Q: How do I know which method my model uses?
       
     </span>
   </a>
@@ -1701,41 +1701,55 @@ hard pin (no fallback, egress narrowed to just that backend). See
 <td><strong>Gemini</strong></td>
 <td>Native</td>
 <td>✅ Yes</td>
-<td>Uses <code>function_declarations</code> API</td>
+<td><code>generate_content</code> wire, <code>function_declarations</code></td>
 </tr>
 <tr>
 <td><strong>Perplexity</strong></td>
-<td>Prompt-Based</td>
-<td>❌ No</td>
-<td>Injects tools in prompt, parses JSON</td>
+<td><strong>Per-model, per-wire</strong></td>
+<td>✅ on <code>/v1/responses</code></td>
+<td><strong>Not "no" any more.</strong> Bare <code>sonar</code> on chat-completions is <code>prompt_based</code>; the namespaced <code>perplexity/sonar</code> on the Responses wire is <code>auto</code> and <strong>measured calling the tool</strong> (2026-08-31, <code>scripts/probe-perplexity-capabilities.py --api-path responses</code>). The gateway fleet (<code>anthropic/*</code>, <code>openai/*</code>, <code>google/*</code>, <code>xai/*</code>) is <code>auto</code> on Responses too.</td>
+</tr>
+<tr>
+<td><strong>Anthropic</strong></td>
+<td>Native</td>
+<td>✅ Yes</td>
+<td><code>messages</code> wire (ADR 0012 §6). <strong>Opt-in and untested against the live API</strong> — debt Item 71</td>
 </tr>
 <tr>
 <td><strong>OpenAI</strong></td>
 <td>Per-model</td>
 <td>✅ Yes</td>
-<td><code>OpenAINativeProvider</code> with model-specific routing (v1.15.6)</td>
+<td><code>OpenAINativeProvider</code>; <code>chat_completions</code> or <code>responses</code> per <code>ModelFacts.wire_protocol</code></td>
 </tr>
 <tr>
 <td><strong>Custom</strong></td>
 <td>Native</td>
 <td>✅ Yes</td>
-<td>Uses standard <code>tools</code> parameter (OpenRouter, other OpenAI-compat)</td>
+<td>Standard <code>tools</code> parameter (OpenRouter, other OpenAI-compat)</td>
 </tr>
 <tr>
 <td><strong>vLLM</strong></td>
-<td>Native</td>
-<td>✅ Yes (with --enable-auto-tool-choice)</td>
-<td>Uses standard <code>tools</code> parameter</td>
+<td>Per-model</td>
+<td>✅ Yes (with <code>--enable-auto-tool-choice</code>)</td>
+<td>Standard <code>tools</code> parameter — but <code>openai/gpt-oss*</code> is pinned <code>prompt_based</code> in the facts table regardless of your vLLM version</td>
 </tr>
 <tr>
 <td><strong>Ollama</strong></td>
 <td>Native</td>
 <td>✅ Yes (Qwen models only)</td>
-<td>Uses standard <code>tools</code> parameter</td>
+<td>Standard <code>tools</code> parameter</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Note (v1.15.6):</strong> The OpenAI provider now uses a dedicated <code>OpenAINativeProvider</code> that routes models to their optimal tool calling mode. Some models (o4-mini, gpt-4.1-mini) use prompt-based mode even though the provider supports native tool calling, because benchmarks showed significantly better results. See <a href="../model-behavior-analysis/">model-behavior-analysis.md</a> for details.</p>
+<blockquote>
+<p>This table is <strong>per provider</strong>, which is a simplification that ADR 0012
+retired: tool mode is a property of the <strong>model and the endpoint serving
+it</strong>, and the same model id reached through two providers can legitimately
+differ. <code>/model info</code> is the authority for any specific model; the rows
+above say what the provider's models typically do. Row-verified against
+<code>SHIPPED_MODEL_FACTS</code> on 2026-09-20.</p>
+</blockquote>
+<p><strong>Note:</strong> <code>OpenAINativeProvider</code> routes each model to its measured tool mode. Some models (o4-mini, gpt-4.1-mini) use prompt-based mode even though the provider supports native tool calling, because benchmarks showed significantly better results. Since ADR 0012 that decision is table data (<code>ModelFacts.tool_mode</code>), not a prefix branch. See <a href="../model-behavior-analysis/">model-behavior-analysis.md</a> — note that file self-flags as stale on model ids.</p>
 <hr />
 <h2 id="method-details">Method Details<a class="headerlink" href="#method-details" title="Permanent link">&para;</a></h2>
 <h3 id="native-tool-calling">Native Tool Calling<a class="headerlink" href="#native-tool-calling" title="Permanent link">&para;</a></h3>
@@ -1752,8 +1766,10 @@ hard pin (no fallback, egress narrowed to just that backend). See
 <p><strong>Providers:</strong>
 - Gemini (2.5+)
 - OpenAI (all models with function calling)
+- Anthropic (opt-in; untested against the live API — Item 71)
+- Perplexity, on <code>/v1/responses</code> only (<code>perplexity/sonar</code> and the gateway fleet)
 - OpenRouter (varies by model)
-- vLLM (requires <code>--enable-auto-tool-choice</code>)
+- vLLM (requires <code>--enable-auto-tool-choice</code>; <code>gpt-oss</code> is pinned prompt-based anyway)
 - Ollama (Qwen2.5 models only)</p>
 <hr />
 <h3 id="prompt-based-tool-calling">Prompt-Based Tool Calling<a class="headerlink" href="#prompt-based-tool-calling" title="Permanent link">&para;</a></h3>
@@ -1795,19 +1811,20 @@ hard pin (no fallback, egress narrowed to just that backend). See
 </ol>
 <p><strong>This works reliably</strong> for interactive chat and is transparent to users.</p>
 <blockquote>
-<p>⚠️ <strong>Prompt-based tool calling is NOT reliable for the <code>/task</code> agent tier.</strong>
-A 2026-07-13 web-app trial (8 runs, same task <code>summarize docs/README.md</code>)
-found that under a <code>/task</code> run, <code>sonar-pro</code> <strong>never produced a real
-tool call in 6 attempts</strong> (no <code>tool_call</code> event, no validator
-<code>Recorded tool call</code> line). It nondeterministically <strong>refused</strong>,
-<strong>confabulated</strong> a summary, or ran an <strong>intrinsic web search</strong> and
-summarized an <em>unrelated external repo</em> while citing its URL
-(<code>github.com/steipete/summarize</code>) — never reading the granted local file.
-The same task on native-tool providers (<code>deepseek-ai/deepseek-v4-pro</code> on the <code>nvidia</code> provider) worked
-correctly. Do not grant tool-capable <code>/task</code> runs to Perplexity until this
-is gated/routed. See <strong>Item 43</strong> in
-<a href="../debt-inventory/">debt-inventory.md</a> and
-<a href="../task-agent-guide/">task-agent-guide.md §10</a> for the wire evidence.</p>
+<p>ℹ️ <strong>Resolved — Item 43, closed 2026-08-24.</strong> A 2026-07-13 web-app trial
+(8 runs, <code>summarize docs/README.md</code>) found <code>sonar-pro</code> never produced a
+real tool call under <code>/task</code> in 6 attempts — it refused, confabulated a
+summary, or ran an intrinsic web search and summarized an unrelated repo
+while citing its URL, never reading the granted local file. <strong>The premise
+was overturned twice, and the cause turned out to be ours, not
+Perplexity's:</strong> a hardcoded <code>native_tool_calling=False</code> that was true when
+it was written and false by 2026-08-13, plus a <code>model_profiles</code> row
+pinning <code>prompt_based</code> that would have made the capability table
+decorative on its own. Fixed under ADR 0012 plan I3 (<code>0490ce87</code>).
+Perplexity tool-capable <code>/task</code> runs are no longer discouraged; Sonar
+tool-calls on <code>/v1/responses</code>, which is the wire <code>ModelFacts</code> now routes
+it to. Kept here because the failure shape — a <em>model</em> blamed for a
+<em>resolution</em> bug — is the reusable part.</p>
 </blockquote>
 <hr />
 <h2 id="gemini-native">Gemini (Native)<a class="headerlink" href="#gemini-native" title="Permanent link">&para;</a></h2>
@@ -1821,64 +1838,83 @@ is gated/routed. See <strong>Item 43</strong> in
 - ✅ Reliable tool selection
 - ✅ Works with ppxai without modification</p>
 <blockquote>
-<p>⚠️ <strong>Gemini 3.x (<code>gemini-3.1-pro-preview</code>) tool round-trips currently 400.</strong>
-A 2026-07-13 <code>/task</code> trial confirmed the model enters native mode and emits
-a real <code>read_file</code> call, then the follow-up turn fails with
-<code>400 INVALID_ARGUMENT — Function call is missing a thought_signature in
-functionCall parts</code>. Gemini 3.x requires each returned <code>functionCall</code> part
-to carry an opaque <code>thought_signature</code> that the client must echo back on
-the tool-response turn; ppxai's Gemini provider does not yet preserve or
-replay it (<code>grep -ri thought_signature ppxai/</code> → empty). Blocks all
-native-tool <code>/task</code> runs on Gemini 3.x models. Gemini 2.5 is unaffected.
-See <strong>Item 45</strong> in <a href="../debt-inventory/">debt-inventory.md</a>.</p>
+<p>ℹ️ <strong>Resolved — Item 45, closed 2026-07-22 (<code>edb74500</code>).</strong> Gemini 3.x tool
+round-trips used to fail with <code>400 INVALID_ARGUMENT — Function call is
+missing a thought_signature in functionCall parts</code>: Gemini 3.x requires
+each returned <code>functionCall</code> part to carry an opaque <code>thought_signature</code>
+that the client echoes back on the tool-response turn, and ppxai's Gemini
+provider did not preserve it. It does now. Native-tool <code>/task</code> runs on
+Gemini 3.x are supported.</p>
 </blockquote>
 <h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">"options"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="c1">// Enable in provider</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">}</span>
-</span></code></pre></div>
+<p>No per-provider flag turns this on any more — see the Configuration
+Reference below.</p>
 <hr />
 <h2 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
-<h3 id="capability-flags">Capability Flags<a class="headerlink" href="#capability-flags" title="Permanent link">&para;</a></h3>
-<p>The <code>native_tool_calling</code> capability flag indicates whether a provider supports native tool calling:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Provider has native API support</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">}</span>
+<blockquote>
+<p>⚠️ <strong><code>capabilities.native_tool_calling</code> and <code>tool_calling.mode</code> are dead
+keys.</strong> ADR 0012 replaced them with per-model facts, as a <strong>clean break</strong>:
+<code>grep -rn "native_tool_calling" ppxai/ --include="*.py"</code> returns only
+comments, docstrings and migration notes — <strong>no live read</strong>. A config that
+still sets them is parsed and ignored, which is exactly the failure mode
+that made Item 43 look like a Perplexity defect for six weeks. <code>/doctor</code>
+reports them as migration keys. <code>ppxai-config.example.json</code> carried a
+leftover <code>native_tool_calling</code> under <code>gemini</code> until 2026-09-20; if you
+copied that file before then, delete the key.</p>
+</blockquote>
+<h3 id="where-the-answer-lives-now">Where the answer lives now<a class="headerlink" href="#where-the-answer-lives-now" title="Permanent link">&para;</a></h3>
+<p>Tool mode is resolved <strong>per model</strong>, not per provider, because it is a
+property of the model and the endpoint serving it — the same model id
+reached through two providers legitimately answers differently.</p>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Read from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Does this model tool-call natively?</td>
+<td><code>ModelFacts.tool_mode</code> (<code>"native"</code> / <code>"prompt_based"</code>) in <code>ppxai/engine/model_facts.py</code></td>
+</tr>
+<tr>
+<td>Which wire does it speak?</td>
+<td><code>ModelFacts.wire_protocol</code> (<code>chat_completions</code> / <code>responses</code> / <code>generate_content</code> / <code>messages</code>)</td>
+</tr>
+<tr>
+<td>Can it emit several calls per turn?</td>
+<td><code>ModelFacts.parallel_tool_calls</code></td>
+</tr>
+<tr>
+<td>What does the <em>account</em> support?</td>
+<td><code>ProviderCapabilities</code> — key, base URL, prices; no tool-mode opinion</td>
+</tr>
+</tbody>
+</table>
+<p>The dispatch site is one line, <code>ppxai/engine/chat.py:646</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">use_native_tools</span> <span class="o">=</span> <span class="n">facts</span><span class="o">.</span><span class="n">tool_mode</span> <span class="o">!=</span> <span class="s2">"prompt_based"</span>
 </span></code></pre></div>
-<h3 id="provider-specific-settings">Provider-Specific Settings<a class="headerlink" href="#provider-specific-settings" title="Permanent link">&para;</a></h3>
-<p><strong>Perplexity:</strong>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">"perplexity"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">  </span><span class="c1">// Uses prompt-based fallback</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>Gemini:</strong>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Uses native function calling</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>vLLM:</strong>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">"vllm-gpt-oss"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Requires --enable-auto-tool-choice</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>Ollama:</strong>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">"ollama"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">   </span><span class="c1">// Qwen2.5 models only</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
-</span></code></pre></div></p>
+<h3 id="overriding-a-models-facts">Overriding a model's facts<a class="headerlink" href="#overriding-a-models-facts" title="Permanent link">&para;</a></h3>
+<p>Put a <code>facts</code> block on the model, not a capability flag on the provider:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"vllm-gpt-oss"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">"openai/gpt-oss-120b"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="nt">"facts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">          </span><span class="nt">"wire_protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chat_completions"</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">          </span><span class="nt">"tool_mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"prompt_based"</span><span class="p">,</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">          </span><span class="nt">"parallel_tool_calls"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">        </span><span class="p">}</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Run <code>/doctor</code> after editing: it validates facts blocks, names incomplete
+ones (ADR 0012 Q0d), and prints the old→new mapping for any dead key it
+still finds. <code>/model info</code> shows the resolved value per field and marks
+which came from a measurement rather than the unmeasured floor.</p>
 <hr />
 <h2 id="benchmark-implications">Benchmark Implications<a class="headerlink" href="#benchmark-implications" title="Permanent link">&para;</a></h2>
 <h3 id="why-this-matters">Why This Matters<a class="headerlink" href="#why-this-matters" title="Permanent link">&para;</a></h3>
@@ -1937,15 +1973,19 @@ See <strong>Item 45</strong> in <a href="../debt-inventory/">debt-inventory.md</
 3. Response format consistency
 4. Per-model routing — some models score higher with prompt-based mode</p>
 <h3 id="benchmark-metadata">Benchmark Metadata<a class="headerlink" href="#benchmark-metadata" title="Permanent link">&para;</a></h3>
-<p>Starting with v1.15.3, benchmark results include tool calling method metadata:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">"tool_calling_method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"native"</span><span class="p">,</span><span class="w">  </span><span class="c1">// or "prompt_based"</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">"provider_capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="p">}</span>
+<p>Starting with v1.15.3, benchmark results include tool calling method
+metadata. The <code>provider_capabilities.native_tool_calling</code> field below is the
+shape <strong>as emitted then</strong> — that key is dead in config since ADR 0012 (see
+the Configuration Reference above); this block records the historical
+benchmark payload, not a key you should set:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">"tool_calling_method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"native"</span><span class="p">,</span><span class="w">  </span><span class="c1">// or "prompt_based"</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">"provider_capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">      </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>This allows fair comparison between providers.</p>
 <hr />
@@ -1963,9 +2003,9 @@ See <strong>Item 45</strong> in <a href="../debt-inventory/">debt-inventory.md</
 <ol>
 <li>
 <p><strong>Add model-specific hints</strong> in <code>AGENTS.md</code>:
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">sonar*</span><span class="p">:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"CRITICAL:</span><span class="nv"> </span><span class="s">For</span><span class="nv"> </span><span class="s">code</span><span class="nv"> </span><span class="s">editing,</span><span class="nv"> </span><span class="s">call</span><span class="nv"> </span><span class="s">apply_patch</span><span class="nv"> </span><span class="s">ONCE</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">detected</span><span class="nv"> </span><span class="s">issue:</span><span class="nv"> </span><span class="s">you</span><span class="nv"> </span><span class="s">make</span><span class="nv"> </span><span class="s">5-6</span><span class="nv"> </span><span class="s">duplicate</span><span class="nv"> </span><span class="s">calls."</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Do</span><span class="nv"> </span><span class="s">NOT</span><span class="nv"> </span><span class="s">output</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">call</span><span class="nv"> </span><span class="s">JSON</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">response</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">use</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">calling</span><span class="nv"> </span><span class="s">directly."</span>
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">sonar*</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"CRITICAL:</span><span class="nv"> </span><span class="s">For</span><span class="nv"> </span><span class="s">code</span><span class="nv"> </span><span class="s">editing,</span><span class="nv"> </span><span class="s">call</span><span class="nv"> </span><span class="s">apply_patch</span><span class="nv"> </span><span class="s">ONCE</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">detected</span><span class="nv"> </span><span class="s">issue:</span><span class="nv"> </span><span class="s">you</span><span class="nv"> </span><span class="s">make</span><span class="nv"> </span><span class="s">5-6</span><span class="nv"> </span><span class="s">duplicate</span><span class="nv"> </span><span class="s">calls."</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Do</span><span class="nv"> </span><span class="s">NOT</span><span class="nv"> </span><span class="s">output</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">call</span><span class="nv"> </span><span class="s">JSON</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">response</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">use</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">calling</span><span class="nv"> </span><span class="s">directly."</span>
 </span></code></pre></div></p>
 </li>
 <li>
@@ -2005,21 +2045,21 @@ See <strong>Item 45</strong> in <a href="../debt-inventory/">debt-inventory.md</
 <p>Tool results displayed to users are truncated for readability, but <strong>full results are always sent to the LLM</strong>. This ensures the AI has complete information while keeping the UI clean.</p>
 <h3 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h3>
 <p>Display limits are configured in <code>ToolManager</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Default limit for all tools</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">manager</span><span class="o">.</span><span class="n">default_display_limit</span> <span class="o">=</span> <span class="mi">2000</span>  <span class="c1"># characters</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Tool-specific limits</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">manager</span><span class="o">.</span><span class="n">tool_display_limits</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="s2">"get_weather"</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        <span class="s2">"short"</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>      <span class="c1"># One-line format</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        <span class="s2">"detailed"</span><span class="p">:</span> <span class="mi">1500</span><span class="p">,</span>  <span class="c1"># Current weather</span>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="s2">"forecast"</span><span class="p">:</span> <span class="mi">5000</span><span class="p">,</span>  <span class="c1"># Full 2-day forecast</span>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>        <span class="s2">"default"</span><span class="p">:</span> <span class="mi">2000</span>
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    <span class="p">},</span>
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="s2">"fetch_url"</span><span class="p">:</span> <span class="mi">5000</span><span class="p">,</span>     <span class="c1"># Web pages</span>
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>    <span class="s2">"web_search"</span><span class="p">:</span> <span class="mi">3000</span><span class="p">,</span>    <span class="c1"># Search results</span>
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    <span class="s2">"read_file"</span><span class="p">:</span> <span class="mi">10000</span><span class="p">,</span>    <span class="c1"># Code files</span>
-</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="p">}</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Default limit for all tools</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">manager</span><span class="o">.</span><span class="n">default_display_limit</span> <span class="o">=</span> <span class="mi">2000</span>  <span class="c1"># characters</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Tool-specific limits</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">manager</span><span class="o">.</span><span class="n">tool_display_limits</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="s2">"get_weather"</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="s2">"short"</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>      <span class="c1"># One-line format</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="s2">"detailed"</span><span class="p">:</span> <span class="mi">1500</span><span class="p">,</span>  <span class="c1"># Current weather</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="s2">"forecast"</span><span class="p">:</span> <span class="mi">5000</span><span class="p">,</span>  <span class="c1"># Full 2-day forecast</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="s2">"default"</span><span class="p">:</span> <span class="mi">2000</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="p">},</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="s2">"fetch_url"</span><span class="p">:</span> <span class="mi">5000</span><span class="p">,</span>     <span class="c1"># Web pages</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="s2">"web_search"</span><span class="p">:</span> <span class="mi">3000</span><span class="p">,</span>    <span class="c1"># Search results</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="s2">"read_file"</span><span class="p">:</span> <span class="mi">10000</span><span class="p">,</span>    <span class="c1"># Code files</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="format-aware-limits">Format-Aware Limits<a class="headerlink" href="#format-aware-limits" title="Permanent link">&para;</a></h3>
 <p>The <code>get_weather</code> tool uses <strong>format-aware limits</strong> - different truncation based on the selected format:</p>
@@ -2054,27 +2094,27 @@ See <strong>Item 45</strong> in <a href="../debt-inventory/">debt-inventory.md</
 </tbody>
 </table>
 <p><strong>Example:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Short format uses 500 char limit</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">get_weather</span><span class="p">(</span><span class="s2">"Geneva"</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"short"</span><span class="p">)</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># → "Geneva: ☁️  +5°C"</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># Forecast format uses 5000 char limit</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">get_weather</span><span class="p">(</span><span class="s2">"Geneva"</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"forecast"</span><span class="p">)</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># → Full 2-day forecast (4300 chars displayed)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Short format uses 500 char limit</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">get_weather</span><span class="p">(</span><span class="s2">"Geneva"</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"short"</span><span class="p">)</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># → "Geneva: ☁️  +5°C"</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># Forecast format uses 5000 char limit</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">get_weather</span><span class="p">(</span><span class="s2">"Geneva"</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"forecast"</span><span class="p">)</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># → Full 2-day forecast (4300 chars displayed)</span>
 </span></code></pre></div></p>
 <h3 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h3>
 <p>Display limits are applied where <code>get_tool_display_limit()</code> is called in
 <a href="../ppxai/engine/chat.py"><code>ppxai/engine/chat.py</code></a> (line numbers drift; search
 for <code>display_limit</code> rather than citing a fixed range):</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Get tool-specific limit</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">display_limit</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">tool_manager</span><span class="o">.</span><span class="n">get_tool_display_limit</span><span class="p">(</span><span class="n">tool_name</span><span class="p">,</span> <span class="n">tool_args</span><span class="p">)</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">truncated_result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[:</span><span class="n">display_limit</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"..."</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">display_limit</span> <span class="k">else</span> <span class="n">result</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Display to user (truncated)</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="k">yield</span> <span class="n">Event</span><span class="p">(</span><span class="n">EventType</span><span class="o">.</span><span class="n">TOOL_RESULT</span><span class="p">,</span> <span class="p">{</span><span class="s2">"tool"</span><span class="p">:</span> <span class="n">tool_name</span><span class="p">,</span> <span class="s2">"result"</span><span class="p">:</span> <span class="n">truncated_result</span><span class="p">})</span>
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="c1"># Send to LLM (full result)</span>
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="s2">"user"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Tool returned:</span><span class="se">\n\n</span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">"</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Get tool-specific limit</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">display_limit</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">tool_manager</span><span class="o">.</span><span class="n">get_tool_display_limit</span><span class="p">(</span><span class="n">tool_name</span><span class="p">,</span> <span class="n">tool_args</span><span class="p">)</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">truncated_result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[:</span><span class="n">display_limit</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"..."</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">display_limit</span> <span class="k">else</span> <span class="n">result</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># Display to user (truncated)</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="k">yield</span> <span class="n">Event</span><span class="p">(</span><span class="n">EventType</span><span class="o">.</span><span class="n">TOOL_RESULT</span><span class="p">,</span> <span class="p">{</span><span class="s2">"tool"</span><span class="p">:</span> <span class="n">tool_name</span><span class="p">,</span> <span class="s2">"result"</span><span class="p">:</span> <span class="n">truncated_result</span><span class="p">})</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># Send to LLM (full result)</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="s2">"user"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Tool returned:</span><span class="se">\n\n</span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">"</span><span class="p">))</span>
 </span></code></pre></div>
 <h3 id="key-points">Key Points<a class="headerlink" href="#key-points" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2093,8 +2133,13 @@ for <code>display_limit</code> rather than citing a fixed range):</p>
 <p>No. The Perplexity API does not return <code>tool_calls</code>, so native calling is not possible.</p>
 <h3 id="q-which-method-is-better">Q: Which method is better?<a class="headerlink" href="#q-which-method-is-better" title="Permanent link">&para;</a></h3>
 <p>Native tool calling is more reliable and faster, but prompt-based works well with proper hints in <code>AGENTS.md</code>.</p>
-<h3 id="q-how-do-i-know-which-method-my-provider-uses">Q: How do I know which method my provider uses?<a class="headerlink" href="#q-how-do-i-know-which-method-my-provider-uses" title="Permanent link">&para;</a></h3>
-<p>Check the <code>native_tool_calling</code> capability flag in <code>ppxai-config.json</code> or see the table at the top of this document.</p>
+<h3 id="q-how-do-i-know-which-method-my-model-uses">Q: How do I know which method my model uses?<a class="headerlink" href="#q-how-do-i-know-which-method-my-model-uses" title="Permanent link">&para;</a></h3>
+<p>Run <strong><code>/model info</code></strong> — it prints the resolved <code>tool_mode</code> for the current
+model and marks whether each field is a measurement or the unmeasured
+floor. It is per <em>model</em>, not per provider: the same model id reached
+through two providers can legitimately answer differently. (Do not look for
+a <code>native_tool_calling</code> flag in <code>ppxai-config.json</code> — it is a dead key, see
+the Configuration Reference above.)</p>
 <hr />
 <h2 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h2>
 <h3 id="v1153-2026-02-08">v1.15.3 (2026-02-08)<a class="headerlink" href="#v1153-2026-02-08" title="Permanent link">&para;</a></h3>
@@ -2117,7 +2162,7 @@ for <code>display_limit</code> rather than citing a fixed range):</p>
 <li>Responses API for Codex and Pro models</li>
 <li>404 auto-fallback between API paths</li>
 <li><code>PROMPT_BASED_MODEL_PREFIXES</code> routes o4-mini, gpt-4.1-mini to prompt-based mode</li>
-<li>✅ <strong>Model profiles</strong> — <code>ModelProfile</code> dataclass in <code>model_profiles.py</code> with 37 profiles</li>
+<li>✅ <strong>Per-model facts</strong> — <code>ModelFacts</code> dataclass in <code>model_facts.py</code> with 68 shipped rows (ADR 0012; superseded the 37-profile <code>ModelProfile</code> table, deleted in Item 65)</li>
 <li>Per-model <code>tool_calling.mode</code>, <code>fallback_on_empty</code>, <code>strip_json_from_text</code></li>
 <li><code>max_tool_iterations</code> per model (gemini: 25, sonar/codex-mini: 20)</li>
 <li>✅ <strong>Codex native tool calling</strong> — belt-and-suspenders: native API tools + tool hints in <code>instructions</code></li>

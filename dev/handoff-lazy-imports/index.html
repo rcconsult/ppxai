@@ -1243,6 +1243,18 @@
 
 
 <h1 id="lazy-imports-sequenced-cleanup-plan-auditor-builder">Lazy imports — sequenced cleanup plan (auditor → builder)<a class="headerlink" href="#lazy-imports-sequenced-cleanup-plan-auditor-builder" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>✅ <strong>DONE — this plan was executed; it is a record, not outstanding work.</strong>
+The fence landed (<code>bc42103a</code>), followed by five hoist batches and the
+cycle fixes; debt Item 68 closed 2026-09-01. The live fence
+(<code>tests/test_no_new_lazy_imports.py</code>) now baselines a different, smaller
+set than the 143-import / 12-cycle figures quoted below, and Item 73 later
+widened it from six package roots to a sweep of <strong>every module</strong> under
+<code>ppxai/</code>. One real cycle survives (<code>rendering.textual_renderer</code> ↔
+<code>tui.app</code>, Item 73), carried as the single <code>KNOWN_IMPORT_CYCLES</code> row.
+Read the numbers below as the starting state, not the current one.
+Marked 2026-09-20.</p>
+</blockquote>
 <p><strong>Written 2026-08-31 by the auditor session (ppxai-28) for the builder
 (ppxai-c7). Owner authorised: "we fix the imports issues one after
 another as proposed, go".</strong></p>

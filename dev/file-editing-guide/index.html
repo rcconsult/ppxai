@@ -2946,10 +2946,19 @@ model happily continues against a file that no longer parses.</p>
 </tr>
 <tr>
 <td>TypeScript</td>
-<td><code>.ts</code>, <code>.tsx</code></td>
+<td><code>.ts</code>, <code>.tsx</code> — <strong>recognised but NOT validated</strong>; see below</td>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p>⚠️ <strong>TypeScript is detected but never checked.</strong>
+<code>syntax_validator.py:157</code> returns early for <code>kind == "typescript"</code>
+unconditionally — <code>tsc</code> integration is still TBD, and <code>node --check</code>
+cannot parse TS. <code>.ts</code>/<code>.tsx</code> edits are written through with <strong>no</strong>
+syntax validation, whether or not <code>node</code> is on PATH. The table above
+listed them alongside JavaScript until 2026-09-20; the error came from
+the module's own docstring table, which had the same mistake.</p>
+</blockquote>
 <p>Any other extension is written through unchecked — the validator is a
 safety net for the formats it knows, not a gate on every file. An error
 names the failing line, so the usual recovery is to re-read the region and

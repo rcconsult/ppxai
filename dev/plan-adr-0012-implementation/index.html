@@ -1353,7 +1353,11 @@
 
 
 <h1 id="plan-adr-0012-implementation-protocol-handlers-under-the-sonar-deadline">Plan: ADR 0012 implementation — protocol handlers, under the Sonar deadline<a class="headerlink" href="#plan-adr-0012-implementation-protocol-handlers-under-the-sonar-deadline" title="Permanent link">&para;</a></h1>
-<p><strong>Status: DRAFT — awaiting owner review. Nothing below is started.</strong>
+<p><strong>Status: ✅ COMPLETE — W0 through W5 all shipped in v1.19.1. ADR 0012 is
+Implemented.</strong> This file is kept as the execution record; its header said
+"DRAFT — awaiting owner review, nothing below is started" until 2026-09-20,
+while every phase in its own body was already marked <code>✅ DONE</code>. Read the
+per-phase marks, not any forward-looking prose that survived from the draft.
 <strong>Owner decisions 2026-08-30:</strong> (1) capabilities + profiles <strong>unify first</strong>
 (W1); wire protocol lives in the unified model-facts system, not in a third
 parallel resolver. (2) That design is <strong>folded into ADR 0012 in place</strong> —
@@ -1362,7 +1366,7 @@ rule makes in-place revision the way a design converges; the unification IS
 0012's core question converging, not a second decision. <strong>ADR 0012 §2 now
 carries the full design (<code>ModelFacts</code>, Q0a–Q0c) and is what you sign off.</strong>
 <strong>Drives:</strong> <a href="../decisions/0012-wire-protocol-as-per-model-capability/">ADR 0012</a>
-(Proposed) · closes debt <strong>Item 61</strong> (W2) and <strong>Item 62</strong> (W4) · absorbs
+(Implemented v1.19.1; it was Proposed when this plan was written) · closes debt <strong>Item 61</strong> (W2) and <strong>Item 62</strong> (W4) · absorbs
 <strong>I4b</strong> from <a href="../plan-per-model-capabilities/">plan-per-model-capabilities.md</a>
 as W3.</p>
 <h2 id="why-the-stated-goal-not-a-side-effect">Why (the stated goal, not a side effect)<a class="headerlink" href="#why-the-stated-goal-not-a-side-effect" title="Permanent link">&para;</a></h2>
@@ -1911,7 +1915,7 @@ LoC delta + deleted-override list.</p>
 <tbody>
 <tr>
 <td>Q0a</td>
-<td>Boolean-vs-mode: does <code>tool_calling.mode</code> subsume <code>native_tool_calling</code>, with the boolean derived, or the reverse? (decided in ADR 0013)</td>
+<td>Boolean-vs-mode: does <code>tool_calling.mode</code> subsume <code>native_tool_calling</code>, with the boolean derived, or the reverse? (decided in ADR 0012 §2 — there is no ADR 0013; see the owner decision at the top of this file)</td>
 <td>mode wins; boolean becomes derived</td>
 </tr>
 <tr>
@@ -1989,10 +1993,12 @@ LoC delta + deleted-override list.</p>
 </tbody>
 </table>
 <h2 id="sequencing-summary">Sequencing summary<a class="headerlink" href="#sequencing-summary" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code>W0 ✅ DONE → W1 ✅ DONE
-  → W2 (extract handler + routing from facts, ~1.5d)
-  → W3 (Perplexity Responses, ~2d, DONE BY 09-20)
-  → W4 (remaining handlers) → W5 (closeout)
+<div class="language-text highlight"><pre><span></span><code>W0 ✅ DONE → W1 ✅ DONE → W2 ✅ DONE
+  → W3 ✅ DONE (Perplexity Responses, ahead of the 09-27 cutover)
+  → W4 ✅ DONE (remaining handlers) → W5 ✅ DONE (closeout)
+
+All shipped in v1.19.1. The estimates below are what was planned, kept
+for calibration; they are not outstanding work.
 </code></pre></div>
 <p>~7 working days to deadline safety (W0–W3) against ~14 available before
 09-20 — buffer holds. Owner gate + green suite + call-graph refresh after

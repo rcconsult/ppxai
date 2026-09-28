@@ -1421,8 +1421,17 @@
 
 
 <h1 id="plan-per-model-capabilities-as-a-shared-framework">Plan — per-model capabilities as a shared framework<a class="headerlink" href="#plan-per-model-capabilities-as-a-shared-framework" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> proposed, not started. Written 2026-08-15 on <code>bugfix/v1.19.1</code>.
-Every claim below was verified against the tree at <code>fbb23225</code>; the
+<p><strong>Status: ✅ SUPERSEDED — delivered as ADR 0012, shipped v1.19.1.</strong> Written
+2026-08-15 on <code>bugfix/v1.19.1</code> and marked "proposed, not started" until
+2026-09-20, by which point the framework it argues for had shipped whole.
+The two functions it proposes fixing, <code>get_capabilities_for_model</code> and
+<code>get_tool_calling_config</code>, <strong>no longer exist</strong> —
+<code>grep -rn "def get_capabilities_for_model\|def get_tool_calling_config" ppxai/</code>
+returns nothing; ADR 0012 deleted them along with the parallel resolvers.
+Read this as the <strong>argument</strong> that produced ADR 0012, not as a plan with
+outstanding steps. Its per-claim verification commands are pinned to
+<code>fbb23225</code> and many no longer resolve at HEAD.</p>
+<p>Every claim below was verified against the tree at <code>fbb23225</code>; the
 verification command is given so a reader can re-check rather than trust.</p>
 <h2 id="why-this-is-not-a-perplexity-patch">Why this is not a Perplexity patch<a class="headerlink" href="#why-this-is-not-a-perplexity-patch" title="Permanent link">&para;</a></h2>
 <p>Item 43 looks like one line on one provider. It is not. Three findings, in

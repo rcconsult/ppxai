@@ -1277,7 +1277,7 @@ passes on CI, where no user config exists.</p>
 <li>
 <p><strong>A red test can be your config, not the code.</strong> Before debugging, check
   what the suite is actually reading:
-  <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"from ppxai.config.facts_config import find_config_file; print(find_config_file())"</span>
+  <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"from ppxai.config.loader import find_config_file; print(find_config_file())"</span>
 </span></code></pre></div>
   Run it <em>inside</em> pytest if the answer looks surprising — <code>initialize()</code> may
   not have run in your shell, so a bare invocation can report the

@@ -1231,13 +1231,13 @@
 </tr>
 <tr>
 <td><a href="0007-completion-first-class-service/">0007</a></td>
-<td>Completion as a first-class service</td>
-<td>🟡 Proposed — step 1 shipped v1.18.8; <strong>step 2 open</strong> (revised 2026-08-15: one residual import, not SDK-blocking)</td>
+<td>One command registry: completion, help and the roster from a single declaration</td>
+<td>✅ Accepted 2026-09-21 — implemented (all five steps, on <code>bugfix/v1.19.3</code>, unreleased). <strong>Revised 2026-09-20: goal restated (define once, derive everywhere); roster decision changed from AppState push to a <code>GET /commands</code> pull endpoint.</strong> <strong>2026-09-21: all six hand-written rosters are gone (steps 3a/3b/4), and step 4 removed the <code>engine → commands</code> import — <code>ppxai/engine/</code> imports nothing from <code>ppxai.commands</code>, fenced at zero by <code>TestEngineImportsNoCommands</code>, which replaces the retired <code>TestEngineCompletionStaysALeaf</code>. Step 5 closed the SEVENTH roster (<code>rich/ui.py::display_welcome</code>, 18 commands out of date) and added <code>tests/test_command_parity_fence.py</code> — both-directions action coverage per client, two shrinking baselines, a generic re-added-catalog detector, and side-effect kinds derived from Python.</strong> <strong>Same-day follow-up: the <code>LEGACY_INTERCEPTS</code> baseline shrank from five rows to one (<code>checkpoint</code>) as <code>/tools</code>, <code>/context</code>, <code>/ls</code>, <code>/tree</code> migrated to factory routing; the Textual-<code>"q"</code> baseline emptied out as <code>/q</code> became a registered <code>/quit</code> alias. <code>checkpoint</code> stayed pending a cross-client confirmation build for <code>/checkpoint clear</code> (owner decided option B 2026-09-21).</strong> <strong>Later the same day (commit <code>beffa197</code>): <code>checkpoint</code> migrated too and <code>LEGACY_INTERCEPTS</code>/<code>LEGACY_HANDLERS</code> are deleted, not emptied — <code>/checkpoint clear</code> asks first (<code>prompt_quick_pick</code>) in all four clients and both TUIs consume prompt side effects for the first time. The parity fence now asserts the mechanism's absence instead of tracking a shrinking baseline.</strong></td>
 </tr>
 <tr>
 <td><a href="0008-cross-tier-cost-and-resource-accounting/">0008</a></td>
 <td>Cross-tier cost + shared-resource accounting</td>
-<td>🟡 Proposed — <strong>not implemented</strong> (debt Item 49); premise updated 2026-08-15, tiers 2+3 merged</td>
+<td>✅ Accepted 2026-09-06 — Option A implemented (<code>ppxai/usage_events.py</code>, taps in <code>engine/task_runner.py</code> + <code>engine/session.py</code>, rollup in <code>/cost</code>). <strong>Debt Item 49 closed.</strong></td>
 </tr>
 <tr>
 <td><a href="0009-task-execution-profiles/">0009</a></td>
@@ -1257,12 +1257,27 @@
 <tr>
 <td><a href="0012-wire-protocol-as-per-model-capability/">0012</a></td>
 <td>Per-model facts: one resolution system, wire protocol included</td>
-<td>✅ Implemented v1.19.1 — all four migration steps: unified <code>ModelFacts</code>/<code>ProviderCapabilities</code> split, <code>ProtocolHandler</code> + three wire handlers, <code>wire_protocol</code> routing, Perplexity on two wires. <strong>Items 61 + 62 closed.</strong> §6 (Anthropic Messages) designed, ships with <code>feat/anthropic-provider</code></td>
+<td>✅ Implemented v1.19.1 — all four migration steps: unified <code>ModelFacts</code>/<code>ProviderCapabilities</code> split, <code>ProtocolHandler</code> + <strong>four</strong> wire handlers, <code>wire_protocol</code> routing, Perplexity on two wires. <strong>Items 61 + 62 closed.</strong> §6 (Anthropic <code>messages</code>) <strong>shipped in v1.19.1</strong>, opt-in and untested against the live API (Item 71). Resolution logic moved from <code>config/facts_config.py</code> to <code>engine/facts_config.py</code> on 2026-09-20</td>
+</tr>
+<tr>
+<td><a href="0013-ssh-remote-backend/">0013</a></td>
+<td>SSH remote backend: a local hub reaching remote ppxai servers</td>
+<td>🚧 In progress: proposed 2026-09-26 (seams S1–S7). <strong>Phase 1 implemented 2026-09-27</strong> (<code>78e34b8e</code>: S3, <code>ppxai-server --uds/--announce/--detach/--list</code>, the contract-1 registry). The hub and SSH transport (phases 2+) are not started. Plan: <a href="../plan-ssh-remote-backend/"><code>../plan-ssh-remote-backend.md</code></a></td>
+</tr>
+<tr>
+<td><a href="0014-web-search-layer-and-retrieval-grounding/">0014</a></td>
+<td>Web search is its own layer; grounding retrieves before the model call</td>
+<td>✅ Implemented 2026-09-27 — <code>engine/search/</code> layer, retrieval grounding (default order Gemini → Perplexity → DuckDuckGo, revised same day), web_search tool as an adapter, per-request <code>grounding</code> opt-out on <code>/v1/oneshot</code> (from ppxai-sre), <code>grounding.sources</code> for resolvable <code>[n]</code> citations. <strong>Closed 2026-09-28.</strong> Ships in v1.19.3</td>
+</tr>
+<tr>
+<td><a href="0015-remove-perplexity-chat-provider/">0015</a></td>
+<td>Remove Perplexity as a chat provider</td>
+<td>✅ Implemented 2026-09-27 — phase 2 of the deprecation; after 0014, same release (v1.19.3, no deprecation window); explicit refusal of leftover config, session-restore notice</td>
 </tr>
 </tbody>
 </table>
-<p>The open records are <strong>0007 step 2</strong> and <strong>0008</strong>; everything else is
-implemented. Numbering is sequential — the next record is <code>0013</code>.</p>
+<p>Records 0001–0012 are accepted and implemented; 0013 is in progress (phase 1 implemented); 0014–0015 are accepted and implemented.
+Numbering is sequential — the next record is <code>0016</code>.</p>
 <h2 id="about-these-records">About these records<a class="headerlink" href="#about-these-records" title="Permanent link">&para;</a></h2>
 <p>Short, dated records of architecture decisions where the chosen
 option is non-obvious or where we deliberately deferred a "proper"

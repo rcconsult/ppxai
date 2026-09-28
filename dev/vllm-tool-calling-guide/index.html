@@ -1288,10 +1288,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#vllm-harmony-fix" class="md-nav__link">
+  <a href="#vllm-harmony-fix-read-the-fine-print" class="md-nav__link">
     <span class="md-ellipsis">
       
-        vLLM Harmony Fix
+        vLLM Harmony Fix — read the fine print
       
     </span>
   </a>
@@ -1914,10 +1914,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#vllm-harmony-fix" class="md-nav__link">
+  <a href="#vllm-harmony-fix-read-the-fine-print" class="md-nav__link">
     <span class="md-ellipsis">
       
-        vLLM Harmony Fix
+        vLLM Harmony Fix — read the fine print
       
     </span>
   </a>
@@ -2044,7 +2044,7 @@
 <p>When using vLLM with <code>--enable-auto-tool-choice</code> and GPT-OSS models, you may encounter:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>openai_harmony.HarmonyError: unexpected tokens remaining in message header
 </span></code></pre></div>
-<p>This error occurs when Harmony control tokens aren't properly parsed. Since GPT-OSS was trained on Harmony format, the model always outputs these tokens. See <a href="https://github.com/vllm-project/vllm/issues/23567">vLLM issue #23567</a>.</p>
+<p>This error occurs when Harmony control tokens aren't properly parsed. Since GPT-OSS was trained on Harmony format, the model always outputs these tokens. See <a href="https://github.com/vllm-project/vllm/issues/23567">vLLM issue #23567</a> — <strong>closed as <em>not planned</em></strong>, not fixed (checked 2026-09-20).</p>
 <h2 id="ppxais-solution-two-tool-calling-modes">ppxai's Solution: Two Tool Calling Modes<a class="headerlink" href="#ppxais-solution-two-tool-calling-modes" title="Permanent link">&para;</a></h2>
 <p>ppxai supports two distinct approaches:</p>
 <table>
@@ -2444,21 +2444,53 @@ def normalize_tool_call(data):
 </tr>
 </tbody>
 </table>
-<h3 id="vllm-harmony-fix">vLLM Harmony Fix<a class="headerlink" href="#vllm-harmony-fix" title="Permanent link">&para;</a></h3>
-<p>The Harmony parsing issue has been fixed in vLLM (PR #30205). Check your vLLM version to determine which mode to use.</p>
+<h3 id="vllm-harmony-fix-read-the-fine-print">vLLM Harmony Fix — read the fine print<a class="headerlink" href="#vllm-harmony-fix-read-the-fine-print" title="Permanent link">&para;</a></h3>
+<p><strong>Checked upstream 2026-09-20. Two different things get conflated here, and
+the difference decides whether upgrading vLLM helps you.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Upstream</th>
+<th>State</th>
+<th>What it actually covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/vllm-project/vllm/pull/30205">PR #30205</a></td>
+<td><strong>Merged</strong> 2025-12-22 (<code>bd6d5a7</code>)</td>
+<td><em>"[gpt-oss] Fix harmony parser in streaming responses"</em> — final streaming tokens were being dropped under speculative decoding. A real fix, for <strong>token loss in streaming</strong>.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/vllm-project/vllm/issues/23567">Issue #23567</a></td>
+<td><strong>Closed as <em>not planned</em></strong> — auto-staled after 90 days of inactivity</td>
+<td><code>HarmonyError: unexpected tokens remaining in message header</code> on multi-turn gpt-oss. <strong>Nobody fixed this.</strong> It was closed by the stale bot, not by a patch.</td>
+</tr>
+</tbody>
+</table>
+<p>So: <strong>a closed issue is not a fixed issue here.</strong> #23567 going closed means
+the report went quiet, and #30205 fixes a <em>different</em> symptom. Do not read
+"upgrade past #30205" as "the HarmonyError is gone" — this guide said the
+Harmony parsing issue "has been fixed in vLLM (PR #30205)" until 2026-09-20,
+which overclaims on both counts.</p>
 <h3 id="recommended-configuration">Recommended Configuration<a class="headerlink" href="#recommended-configuration" title="Permanent link">&para;</a></h3>
 <blockquote>
 <p>⚠️ <strong>ppxai overrides this today, whatever your vLLM version.</strong> The
-<code>openai/gpt-oss*</code> model profile pins <code>mode="prompt_based"</code>
-(<code>ppxai/engine/model_profiles.py</code>), and profile mode takes precedence
-over provider capabilities in <code>ppxai/engine/chat.py</code> — setting
+<code>openai/gpt-oss*</code> facts row pins <code>tool_mode='prompt_based'</code>
+(<code>ppxai/engine/model_facts.py:944</code>), and since ADR 0012 that row answers
+the whole question at dispatch (<code>ppxai/engine/chat.py:646</code>,
+<code>use_native_tools = facts.tool_mode != "prompt_based"</code>) — so setting
 <code>native_tool_calling: true</code> for a gpt-oss model is accepted by config and
-then ignored at dispatch. Upstream issue #23567 is still open. Treat the
-block below as what to use <em>once that pin is lifted</em>, not as a working
-configuration; the prompt-based block underneath is what actually runs.</p>
+then ignored. (This used to be a <code>model_profiles.py</code> profile; that module
+was deleted in Item 65 and the pin moved to the facts table with it.)
+Treat the block below as what to use <em>once that pin is lifted</em>, not as a
+working configuration; the prompt-based block underneath is what actually
+runs. On upstream state, see the table above — #23567 is closed <strong>as not
+planned</strong>, which is not the same as fixed.</p>
 </blockquote>
-<p><strong>With fixed vLLM (PR #30205+), once the profile pin is lifted:</strong> native
-tool calling gives the best performance:</p>
+<p><strong>With vLLM past PR #30205, once the facts-row pin is lifted:</strong> native tool
+calling gives the best performance — but see the caveat above; #30205 is not
+a fix for #23567's HarmonyError:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p">{</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nt">"vllm-gpt-oss"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>

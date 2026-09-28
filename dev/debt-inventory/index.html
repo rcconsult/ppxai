@@ -1202,6 +1202,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#item-74-preview-serve-cannot-start-any-node-project-on-windows-preview-windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 74 — /preview --serve cannot start ANY Node project on Windows [preview / windows]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#item-73-renderingtextual_renderer-tuiapp-import-cycle-hidden-by-import-order-imports-tui" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1261,17 +1272,6 @@
     <span class="md-ellipsis">
       
         Item 29 — engine.completion imports commands.factory and reads its internals [layer inversion]
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#item-34-office-preview-deps-buildci-half-closed-only-the-python-docx-dep-remains-packaging" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Item 34 — office-preview deps: build/CI half ✅ CLOSED — only the python-docx dep remains [packaging]
       
     </span>
   </a>
@@ -1455,6 +1455,61 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#item-75-second-level-argument-kinds-schema-for-command-completion-commands-completion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 75 — second-level "argument kinds" schema for command completion [commands / completion]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-76-fold-chat-shaped-ness-into-the-command-roster-commands-web" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 76 — fold chat-shaped-ness into the command roster [commands / web]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-77-dead-client-code-left-after-the-adr-0007-step-5-vscode-migration-commands-vscode-rich" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 77 — dead client code left after the ADR 0007 step-5 VSCode migration [commands / vscode / rich]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-79-engineclients-agent-mode-notification-reads-a-checkpoint_dir-attribute-checkpointmanager-doesnt-have-checkpoint-dead-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 79 — EngineClient's Agent Mode notification reads a checkpoint_dir attribute CheckpointManager doesn't have [checkpoint / dead code]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-83-the-serial-test-suite-got-2x-slower-per-test-since-july-and-the-cause-is-not-found-tests-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 83 — the serial test suite got ~2x slower per test since July, and the cause is not found [tests / performance]
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1563,7 +1618,12 @@ quoting them</strong> — this table is a map, not a source.</p>
 <tr>
 <td><strong>73</strong></td>
 <td><code>rendering.textual_renderer</code> ↔ <code>tui.app</code> import cycle, hidden by import order</td>
-<td>fails to collect standalone; passes in the full suite only because an earlier module imports <code>tui.app</code> first</td>
+<td><strong>fenced 2026-09-20</strong> — a module-wide standalone-import sweep now catches any NEW cycle; the cycle itself is still open</td>
+</tr>
+<tr>
+<td><strong>74</strong></td>
+<td><code>/preview --serve</code> cannot start ANY Node project on Windows</td>
+<td>auto-detect returns <code>npm start</code>, which CreateProcess cannot launch because <code>npm</code> is a <code>.cmd</code>/<code>.ps1</code>, not an <code>.exe</code></td>
 </tr>
 <tr>
 <td><strong>54</strong></td>
@@ -1593,12 +1653,7 @@ quoting them</strong> — this table is a map, not a source.</p>
 <tr>
 <td><strong>29</strong></td>
 <td><code>engine.completion</code> imports <code>commands.factory</code> (layer inversion)</td>
-<td>~1–1.5 d remaining</td>
-</tr>
-<tr>
-<td><strong>34</strong></td>
-<td>add <code>python-docx</code> to the <code>[data]</code> extra (Word text fallback)</td>
-<td>~1 h — the CI/build half closed 2026-06-14; verified again 2026-09-06</td>
+<td><strong>the import is GONE (ADR 0007 step 4, 2026-09-21)</strong> — see the note; what is left is optional and cosmetic</td>
 </tr>
 <tr>
 <td><strong>35</strong></td>
@@ -1649,6 +1704,31 @@ quoting them</strong> — this table is a map, not a source.</p>
 <td><strong>47</strong></td>
 <td>VSCode <code>/task</code> lacks the web split-pane</td>
 <td>deliberate T8a scope</td>
+</tr>
+<tr>
+<td><strong>75</strong></td>
+<td>second-level "argument kinds" schema for command completion</td>
+<td>debt item, not now — owner decision 2026-09-21 (ADR 0007 open decision #3)</td>
+</tr>
+<tr>
+<td><strong>76</strong></td>
+<td>fold chat-shaped-ness into the command roster (<code>STREAMING_COMMANDS</code>)</td>
+<td>debt item for now — owner decision 2026-09-21 (ADR 0007 open decision #4)</td>
+</tr>
+<tr>
+<td><strong>77</strong></td>
+<td>dead client code left after the ADR 0007 step-5 VSCode migration</td>
+<td>~45min, verified by grep — no owner decision needed, extended 2026-09-21 with 4 more dead <code>httpClient.ts</code> methods</td>
+</tr>
+<tr>
+<td><strong>79</strong></td>
+<td><code>EngineClient</code>'s file-backend notification reads a <code>checkpoint_dir</code> attribute <code>CheckpointManager</code> doesn't have</td>
+<td>harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge</td>
+</tr>
+<tr>
+<td><strong>83</strong></td>
+<td>the SERIAL test suite is ~2x slower per test than in July, cause unfound</td>
+<td>owner decision 2026-09-27: record, not fix; the parallel default (~3 min) hides it</td>
 </tr>
 </tbody>
 </table>
@@ -1769,6 +1849,63 @@ behaviour, or a report of a custom CA replacing the trust store in the
 field.</p>
 <p><strong>Effort:</strong> ~1–2 h for option 2 or 3.</p>
 <hr />
+<h3 id="item-74-preview-serve-cannot-start-any-node-project-on-windows-preview-windows">Item 74 — <code>/preview --serve</code> cannot start ANY Node project on Windows [preview / windows]<a class="headerlink" href="#item-74-preview-serve-cannot-start-any-node-project-on-windows-preview-windows" title="Permanent link">&para;</a></h3>
+<p><strong>Filed 2026-09-20.</strong> Hit live in a web-app session on a project whose
+<code>package.json</code> declares <code>"start": "node server.js"</code>.</p>
+<p><strong>What's wrong:</strong> <code>detect_command()</code> returns the STRING <code>"npm start"</code> whenever
+package.json has a start script (<code>ppxai/engine/preview_backend.py:128</code>). The
+launcher then splits that string and starts it directly, with no shell
+involved (<code>preview_backend.py:363</code>). On Windows <code>npm</code> is not an executable —
+it is <code>npm.cmd</code>, or a PowerShell script under a version manager — and the
+direct path cannot launch either:</p>
+<div class="language-text highlight"><pre><span></span><code>14:28:49 | ERROR | CLIENT[web]: Failed to start backend:
+          Command not found: [WinError 2] The system cannot find the file specified
+</code></pre></div>
+<p>Reproduced outside ppxai on the same host, to rule out our own resolution:
+<code>Get-Command npm</code> returns <code>C:\nvm4w\nodejs\npm.ps1</code>, and starting <code>npm</code>
+through the same OS call fails with the same WinError 2, while <code>node</code> (a real
+<code>.exe</code>) starts fine.</p>
+<p><strong>Blast radius is every non-<code>.exe</code> name the detector can emit</strong>, which on
+Windows is most of them: <code>npm</code>, and by the same mechanism <code>npx</code>, <code>yarn</code>,
+<code>pnpm</code>, plus the <code>make run</code> branch (<code>preview_backend.py:147</code>). The Python
+branch survives only by accident — it resolves an absolute <code>python.exe</code> from a
+venv, or falls back to bare <code>python</code>, which IS an <code>.exe</code> when on PATH.</p>
+<p><strong>Why it went unnoticed:</strong> POSIX has no equivalent failure (<code>npm</code> is a real
+executable there), the detector never runs on Windows in CI, and
+<code>grep -n "npm start\|detect_command" tests/test_preview.py</code> returns
+<strong>nothing</strong> — <code>detect_command</code> has no test at all, on any platform.</p>
+<p><strong>Workaround (verified working the same session):</strong> name a real executable and
+skip the detector —</p>
+<div class="language-text highlight"><pre><span></span><code>/preview frontend/index.html --serve "node server.js"
+</code></pre></div>
+<p>Argument order matters: the command must FOLLOW <code>--serve</code>, and <code>--serve</code> only
+treats the next token as a command when it looks shell-like
+(<code>ppxai/commands/display.py:578-596</code>). Putting the filepath after <code>--serve</code>
+yields <code>Expected one filepath</code>.</p>
+<p><strong>Two candidate fixes, and the second is better:</strong></p>
+<ol>
+<li>Resolve before launching. <code>shutil.which("npm")</code> returns the full <code>npm.cmd</code>
+   path on Windows. Do it once at the launch site so every detector branch is
+   covered rather than patching each one — a detector that can emit a name the
+   platform cannot start is the defect. <strong>Measure</strong> what actually starts a
+   <code>.cmd</code>/<code>.ps1</code> on this platform rather than assuming the absolute path is
+   enough; that is the step this bug shows we skipped.</li>
+<li><strong>Prefer the runtime over the launcher.</strong> We read <code>scripts.start</code> to decide
+   <code>npm start</code> is available, and then throw its VALUE away. <code>"node server.js"</code>
+   is already a directly-startable command with no launcher in the middle.
+   Using the script's value instead of <code>npm start</code> sidesteps the whole class on
+   every platform, and only falls back to the launcher when the value itself
+   references one (<code>npm-run-all</code>, <code>concurrently</code>).</li>
+</ol>
+<p>Whichever is chosen, ship it with the first test <code>detect_command</code> has ever
+had, including a Windows case asserting the returned command is actually
+startable — not merely that the string equals <code>"npm start"</code>, which is the
+assertion that would have passed while the feature was broken.</p>
+<p><strong>Planned:</strong> v1.19.x — small, self-contained, and it makes an advertised
+feature work on a supported platform.</p>
+<p><strong>Trigger to revisit:</strong> active.</p>
+<p><strong>Effort:</strong> ~1 h including the tests.</p>
+<hr />
 <h3 id="item-73-renderingtextual_renderer-tuiapp-import-cycle-hidden-by-import-order-imports-tui">Item 73 — <code>rendering.textual_renderer</code> ↔ <code>tui.app</code> import cycle, hidden by import order [imports / tui]<a class="headerlink" href="#item-73-renderingtextual_renderer-tuiapp-import-cycle-hidden-by-import-order-imports-tui" title="Permanent link">&para;</a></h3>
 <p><strong>Filed 2026-09-14.</strong> Found while running <code>tests/test_preview_tui_renderer_gap.py</code>
 on its own after the v1.19.2 model-switch fix. It fails to COLLECT standalone,
@@ -1805,7 +1942,26 @@ them (Protocol-based inversion, <code>docs/patterns/protocol-dependency-inversio
 <code>TestEveryPackageImportsStandalone</code> to every MODULE under <code>ppxai/</code> in a
 fresh interpreter, so the next cycle of this shape fails the suite instead
 of waiting for an unlucky import order.</p>
-<p><strong>Planned:</strong> v1.19.x cleanup — (3) first so the fence exists, then (1) or (2).</p>
+<p><strong>Option (3) DONE 2026-09-20 — the fence exists.</strong>
+<code>TestEveryModuleImportsStandalone</code> in <code>tests/test_no_new_lazy_imports.py</code>
+imports every module under <code>ppxai/</code> (excluding <code>ppxai.tui.*</code>, which sets up
+the terminal and can hang — the exclusion this file's own docstring already
+documents) in one subprocess, purging every <code>ppxai*</code> entry from <code>sys.modules</code>
+between imports so each internal graph is rebuilt while third-party imports
+stay cached. ~30s for ~180 modules. This cycle is the single row in
+<code>KNOWN_IMPORT_CYCLES</code>, and a second test asserts that row still FAILS — so
+fixing the cycle turns the exemption into a failure telling you to delete it.
+Mutation-verified both ways: removing the row fails the sweep test, and a
+bogus row for a healthy module fails the rot guard.</p>
+<p><strong>Still open: (1) or (2), the cycle itself.</strong> Note for whoever takes it —
+both ends lead to the same place. <code>rendering/textual_renderer.py:51</code> imports
+<code>..tui.widgets.dialog</code>, and importing ANY submodule of <code>ppxai.tui</code> runs
+<code>ppxai/tui/__init__.py:22</code>, which imports <code>tui.app</code> eagerly. Nothing outside
+that file does <code>from ppxai.tui import PPXAIDEApp</code> (verified by grep — every
+consumer imports <code>ppxai.tui.app</code> directly), so dropping the eager re-export
+is viable; it costs one function-level import in <code>main()</code>, which the lazy-import
+fence would require a <code>RETAINED_ON_PURPOSE</code> row for.</p>
+<p><strong>Planned:</strong> v1.19.x cleanup — (1) or (2).</p>
 <p><strong>Trigger to revisit:</strong> any standalone collection error mentioning
 <code>partially initialized module</code>, or a new module importing
 <code>ppxai.rendering.textual_renderer</code> directly.</p>
@@ -1953,10 +2109,36 @@ extract at that point).</p>
 <p><strong>Surfaced by:</strong> CRG analysis on bugfix/v1.18.7.</p>
 <hr />
 <h3 id="item-29-enginecompletion-imports-commandsfactory-and-reads-its-internals-layer-inversion">Item 29 — <code>engine.completion</code> imports <code>commands.factory</code> and reads its internals [layer inversion]<a class="headerlink" href="#item-29-enginecompletion-imports-commandsfactory-and-reads-its-internals-layer-inversion" title="Permanent link">&para;</a></h3>
-<p><strong>Affected files:</strong> <code>ppxai/engine/completion.py</code> (import at line <strong>48</strong>).
-Shared entrypoint <code>complete()</code> is called from <code>ppxai/tui/completer.py:25</code>,
-<code>ppxai/rich/main.py:34</code>, and <code>ppxai/server/routes/completion.py:17</code>.</p>
+<p><strong>Affected files:</strong> <code>ppxai/engine/completion.py</code> (the import was at line
+<strong>48</strong>). Shared entrypoint <code>complete()</code> is called from
+<code>ppxai/tui/completer.py</code>, <code>ppxai/rich/main.py</code>, and
+<code>ppxai/server/routes/completion.py</code>.</p>
 <blockquote>
+<p><strong>THE INVERSION IS CLOSED — 2026-09-21, ADR 0007 step 4, on
+<code>bugfix/v1.19.3</code> (unreleased).</strong> <code>from ..commands.factory import
+CommandFactory</code> is deleted;
+<code>grep -rnE "from \.\.commands|from ppxai\.commands|import ppxai\.commands" ppxai/engine/</code>
+returns nothing, function-level imports included. <code>complete()</code> now takes
+a REQUIRED <code>roster=</code> argument and each of the three callers passes
+<code>CommandFactory.roster(&lt;its client&gt;)["commands"]</code> — plain data, already
+filtered for that client — so the <code>engine → commands → engine</code> package
+cycle is closed and client gating is structural. The seven hand-written
+<code>_*_SUBCOMMANDS</code> tables moved onto <code>CommandSpec.subcommands</code> in the same
+step, which is what made the data hand-off sufficient.</p>
+<p><strong>Deliberately NOT done, and no longer required by this item:</strong> no
+<code>CommandRegistryProtocol</code>, no <code>CompletionService</code>, no <code>ppxai/completion/</code>
+package. Steps 1–2 made them unnecessary — <code>roster()</code> already returns
+plain data, so there is no collaborator to abstract. Relocating the
+module is cosmetic (ADR 0007 §Explicitly not in the path).</p>
+<p><strong>Fenced:</strong> <code>tests/test_no_new_lazy_imports.py::TestEngineImportsNoCommands</code>
+holds <code>engine → commands</code> at ZERO — module scope and function level —
+replacing <code>TestEngineCompletionStaysALeaf</code>, which defended the leaf status
+that made the dormant cycle survivable. Mutation-verified: the module-scope
+edge is SILENT (the suite collects and passes with it restored), so the
+fence is the only thing that sees it.</p>
+<p><strong>Still open under ADR 0007:</strong> step 5 (the parity fence) only. Whether
+this item is now closed is the owner's call; nothing in it is a code
+change any more.</p>
 <p><strong>Re-verified 2026-08-15 — half of this item is already closed.</strong> The
 private-registry access is <strong>gone</strong>: completion now reads the public
 <code>iter_completion_specs()</code> snapshot and <code>CommandFactory.get()</code> for alias
@@ -2000,59 +2182,22 @@ layer — not engine-owned data. Decision recorded in
   <code>CompletionContextProtocol</code> (leaf), injected at each composition root
   (preloaded at startup); publish the command <strong>roster</strong> through AppState
   <code>state_sync</code> for palettes/help/menus. This is what removes the import.</p>
-<p><strong>Planned:</strong> seed <strong>done</strong> in v1.18.8; first-class service + AppState roster
-<strong>→ v1.19.x</strong> per ADR 0007.</p>
+<p><strong>Planned:</strong> seed <strong>done</strong> in v1.18.8; the import itself <strong>removed
+2026-09-21</strong> by ADR 0007 step 4 — by handing completion the roster as DATA,
+not by building the service/AppState design this paragraph predicted (see
+the note at the top of this item).</p>
 <p><strong>Branch when ready:</strong> v1.19.x (new branch — pairs with any "ship engine
 standalone" goal).</p>
 <p><strong>Trigger to revisit:</strong> see ADR 0007 triggers (engine-as-standalone-library
 goal; a second client surface needing the live roster; a second cross-layer
 capability of the same shape).</p>
-<p><strong>Effort (remaining, v1.19.x):</strong> ~1–1.5 d — two Protocols, the service
-package, composition-root wiring at 3 entry points, AppState roster field +
-4-mirror DTO update, cross-client completion tests.</p>
-<hr />
-<h3 id="item-34-office-preview-deps-buildci-half-closed-only-the-python-docx-dep-remains-packaging">Item 34 — office-preview deps: build/CI half ✅ CLOSED — only the <code>python-docx</code> dep remains [packaging]<a class="headerlink" href="#item-34-office-preview-deps-buildci-half-closed-only-the-python-docx-dep-remains-packaging" title="Permanent link">&para;</a></h3>
-<p><strong>Heading corrected 2026-09-06.</strong> It described the whole original
-problem long after two thirds of it was fixed, and the index row
-inherited that — the same heading-vs-body drift that made Items 65, 67
-and 54 read as more open than they were. Re-verified today: all five
-<code>build.yml</code> PyInstaller jobs AND <code>tests.yml:61</code> run
-<code>uv sync --frozen --all-extras</code>. What is actually open is the last
-paragraph: <code>python-docx</code>.</p>
-<p><strong>Affected:</strong> <code>.claude/skills/build-install/SKILL.md</code>, the release CI build
-step, <code>pyproject.toml [data]</code> extra (<code>pypdfium2</code>, <code>openpyxl</code>, <code>python-pptx</code>;
-NB <strong>no <code>python-docx</code></strong> → Word <em>text</em> fallback can't extract).</p>
-<p><strong>What's wrong:</strong> the office-preview pipeline needs <code>pypdfium2</code> (PDF→PNG) and
-<code>python-pptx</code>, which live in the <code>[data]</code> optional extra. The <code>/build-install</code>
-skill builds with <code>uv run --no-sync pyinstaller</code>, so if the venv lacks
-<code>[data]</code> the binaries ship <strong>without</strong> office support — LibreOffice is detected
-but <code>render_pptx_slides</code> returns <code>[]</code> ("No slides rendered"). Found live on a
-2026-06-14 local build. Also: <code>python-docx</code> is absent from <code>[data]</code>, and the
-frozen binary can't use a <code>pip install 'ppxai[data]'</code> hint.</p>
-<p><strong>Release CI verified SAFE (2026-06-14) — NOT a release blocker.</strong>
-<code>.github/workflows/build.yml</code> runs <code>uv sync --frozen --all-extras</code> before
-<strong>every</strong> PyInstaller job (ppxai / ppxai-server / ppxaide / ppxai-desktop,
-lines 95/155/209/264); the server-job comment documents exactly this trap
-("Without <code>--all-extras</code>, PyInstaller silently drops … pypdfium2 … python-pptx
-… missing PDF rasterization"). So <strong>released binaries bundle the office deps</strong>.
-The gap is local-only: the <code>/build-install</code> SKILL uses <code>--no-sync</code>. (Local
-v1.18.8 build re-run WITH <code>[data]</code> synced renders previews correctly — verified
-HTTP 200 image/png.)</p>
-<p><strong>Release-script test step fixed (2026-06-14):</strong> <code>scripts/release.py::run_tests</code>
-ran <code>uv run pytest</code> (no <code>--all-extras</code>), which synced to default deps and
-stripped the <code>[data]</code> extras → office/upload suites skipped → ~150-short count
-written into the README <code>tests-NNNN</code> badge (it had regressed to 3844). Now
-<code>uv run --all-extras pytest</code> so the count matches the all-extras suite (3989).</p>
-<p><strong>Build-install skill fixed (2026-06-14):</strong> <code>.claude/skills/build-install/SKILL.md</code>
-Step 1 now runs <code>uv sync --all-extras</code> before PyInstaller (the per-build
-<code>--no-sync</code> reuses that env), with a precondition note and a Step-8
-office-preview acceptance check (curl <code>/files/preview</code> → expect <code>image/png</code>).</p>
-<p><strong>Remaining (v1.19.x, non-blocking):</strong> add <code>python-docx</code> to the <code>[data]</code> extra
-so the Word <em>text</em> fallback can extract without LibreOffice. (Word <em>raster</em>
-preview already works via LibreOffice.)</p>
-<p><strong>Branch when ready:</strong> <code>bugfix/v1.18.8</code> (skill) / v1.19.x (docx dep).</p>
-<p><strong>Trigger to revisit:</strong> active for the skill edit; docx is v1.19.x.</p>
-<p><strong>Effort:</strong> ~1 h (skill <code>uv sync --all-extras</code> + docx dep).</p>
+<p><strong>Effort (remaining):</strong> none for the inversion — it is done. The estimate
+below is what the SUPERSEDED design would have cost, kept as the record of
+how far off a plan can be when it targets the symptom: <em>"~1–1.5 d — two
+Protocols, the service package, composition-root wiring at 3 entry points,
+AppState roster field + 4-mirror DTO update, cross-client completion
+tests."</em> What it actually took, once the roster existed, was a keyword
+argument.</p>
 <hr />
 <h3 id="item-35-pluggable-memorylogknowledge-persistence-channel-abstraction-architecture">Item 35 — pluggable memory/log/knowledge persistence channel abstraction [architecture]<a class="headerlink" href="#item-35-pluggable-memorylogknowledge-persistence-channel-abstraction-architecture" title="Permanent link">&para;</a></h3>
 <p><strong>Affected (future):</strong> a new <code>ppxai/persistence/</code> (or <code>ppxai/memory/</code>)
@@ -2305,6 +2450,11 @@ the shipped table. <code>/models</code> still 404, so enumeration remains imposs
 and this probe stays the only check that can see a capability change.
 <code>sonar-deep-research</code> (dropped from the roster at I3) still returns its
 distinct parameter-SHAPE 400, unchanged.</p>
+<p><strong>Probe deleted 2026-09-27 (ADR 0015).</strong> Perplexity is no longer a chat
+provider, so its chat tool-calling capabilities no longer route anything
+and <code>scripts/probe-perplexity-capabilities.py</code> went with the provider.
+The Perplexity watch in this item now covers only the search backend's
+model (<code>tools.web_search.perplexity_model</code>, default <code>perplexity/sonar</code>).</p>
 <hr />
 <h3 id="item-39-rtk-discover-false-negatives-under-hook-rewriting-rtk-gain-is-ground-truth-tooling">Item 39 — <code>rtk discover</code> false-negatives under hook rewriting; <code>rtk gain</code> is ground truth [tooling]<a class="headerlink" href="#item-39-rtk-discover-false-negatives-under-hook-rewriting-rtk-gain-is-ground-truth-tooling" title="Permanent link">&para;</a></h3>
 <p><strong>What's wrong:</strong> the 2026-07-11 <code>rtk discover</code> run reported "2.2% rtk
@@ -3820,12 +3970,249 @@ NetworkPolicy + optional app-layer bearer for cross-tenant coder isolation, with
 Item 3</strong>; (d) with an SSE rework; (i) with a per-model capability-hint pass (cheap,
 anytime).</p>
 <hr />
+<h3 id="item-75-second-level-argument-kinds-schema-for-command-completion-commands-completion">Item 75 — second-level "argument kinds" schema for command completion [commands / completion]<a class="headerlink" href="#item-75-second-level-argument-kinds-schema-for-command-completion-commands-completion" title="Permanent link">&para;</a></h3>
+<p><strong>Filed 2026-09-21.</strong> Owner decision at ADR 0007 step 5 close-out — debt
+item, not now (<code>docs/plan-adr-0007-completion-service.md</code> §"Open owner
+decisions", item 3).</p>
+<p><strong>What's wrong:</strong> <code>CommandSpec.subcommands: list[tuple[str, str]]</code>
+(<code>ppxai/commands/factory.py:189</code>, restated at <code>:277</code>) can express only ONE
+argument position. Five static tables stay hardcoded in
+<code>ppxai/engine/completion.py</code> because a real SECOND argument position has
+nowhere to live in the spec without publishing its values as first-level
+subcommands in <code>GET /commands</code> and <code>/help</code>, which they are not:</p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Line</th>
+<th>Feeds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_USAGE_DISPLAY_MODES</code></td>
+<td><code>completion.py:94</code></td>
+<td><code>/usage show &lt;mode&gt;</code></td>
+</tr>
+<tr>
+<td><code>_CHECKPOINT_BACKENDS</code></td>
+<td><code>completion.py:101</code></td>
+<td><code>/checkpoint backend &lt;backend&gt;</code></td>
+</tr>
+<tr>
+<td><code>_THEME_NAMES</code></td>
+<td><code>completion.py:108</code></td>
+<td><code>/theme &lt;name&gt;</code></td>
+</tr>
+<tr>
+<td><code>_EMOJI_OPTIONS</code></td>
+<td><code>completion.py:124</code></td>
+<td><code>/theme emoji &lt;on\|off&gt;</code></td>
+</tr>
+<tr>
+<td><code>_TASK_RESPOND_ANSWERS</code></td>
+<td><code>completion.py:144</code></td>
+<td><code>/task respond &lt;id&gt; &lt;answer&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>_THEME_NAMES</code> is a separate sub-problem layered on top of the same
+symptom: it restates a RUNTIME registry (<code>CUSTOM_THEMES</code> /
+<code>DEFAULT_THEME</code> / <code>CYCLE_THEMES</code> in <code>ppxai/tui/themes/themes.py</code>), not a
+second argument position — <code>_complete_theme</code> merges it into the FIRST
+argument alongside the declared <code>list</code>/<code>emoji</code> subcommands
+(<code>completion.py:597-608</code>). Pointing the engine at the real theme registry
+to de-duplicate it would be a NEW <code>engine -&gt; tui</code> import, which
+<code>tests/test_no_new_lazy_imports.py</code> fences at zero
+(<code>ppxai/engine/</code> imports nothing from <code>ppxai.commands</code>, and by the same
+principle nothing from <code>ppxai.tui</code>) — so fixing the duplication and fixing
+the schema gap are two different changes, not one.</p>
+<p><strong>Blast radius:</strong> none today — the five tables work, are exercised by
+<code>ppxai/engine/completion.py</code>'s own tests, and only drift if a command's
+second-level values change without the table being updated by hand (which
+is the actual cost: five places someone has to remember, not five bugs).
+<code>GET /commands</code> and <code>/help</code> do not currently advertise second-level
+values for any command, declared or not, so there is no missing-feature
+symptom visible to a user — only the duplication cost to a maintainer.</p>
+<p><strong>Trigger to revisit:</strong> a sixth command needing a second argument
+position, or <code>/help &lt;cmd&gt;</code> growing subcommand-argument display (tracked as
+its own open owner decision, plan doc item 2) — either would be a natural
+place to design the schema extension once, instead of bolting on a sixth
+static table.</p>
+<p><strong>Effort:</strong> ~1–2 d for the schema extension (a typed second-level shape on
+<code>CommandSpec</code>, threaded through <code>GET /commands</code>, <code>/help</code>, and the five
+completion call sites) + a separate, smaller pass to point <code>_THEME_NAMES</code>
+at the real registry once the <code>engine -&gt; tui</code> inversion question is
+answered on its own terms.</p>
+<hr />
+<h3 id="item-76-fold-chat-shaped-ness-into-the-command-roster-commands-web">Item 76 — fold chat-shaped-ness into the command roster [commands / web]<a class="headerlink" href="#item-76-fold-chat-shaped-ness-into-the-command-roster-commands-web" title="Permanent link">&para;</a></h3>
+<p><strong>Filed 2026-09-21.</strong> Owner decision at ADR 0007 step 5 close-out — debt
+item for now (<code>docs/plan-adr-0007-completion-service.md</code> §"Open owner
+decisions", item 4).</p>
+<p><strong>What's wrong:</strong> web's <code>STREAMING_COMMANDS</code>
+(<code>ppxai/web/shared/command-dispatcher.js:51-54</code>) is a literal set of 8
+command names (<code>/generate</code>, <code>/explain</code>, <code>/test</code>, <code>/docs</code>, <code>/debug</code>,
+<code>/implement</code>, <code>/convert</code>, <code>/spec</code>) whose response IS the chat stream
+rather than a <code>POST /command/&lt;name&gt;</code> result — it is the ONE literal the
+parity fence's generic catalog detector deliberately exempts
+(<code>tests/test_command_parity_fence.py:177-196</code>, <code>STREAMING_COMMANDS</code>
+listed by name in the exemption table with its own explanatory comment).
+Every other hand-written command roster in the client layer was deleted by
+ADR 0007 steps 1–5; this is the one restatement of command DATA (which
+commands are chat-shaped) that survived, because <code>CommandSpec</code> has no
+field for it.</p>
+<p><strong>Fix shape:</strong> a <code>chat_shaped: bool</code> (or similarly named) field on
+<code>CommandSpec</code>, published through <code>GET /commands</code>, would let
+<code>command-dispatcher.js</code> derive the set from the fetched roster instead of
+hardcoding it — deleting <code>STREAMING_COMMANDS</code> and its fence exemption
+the same way steps 3a/3b deleted <code>commands.js</code>/<code>commands.ts</code>. This is a
+schema change to a published payload (<code>GET /commands</code>), not a refactor —
+every consumer of that endpoint (web, and anything else that fetches the
+roster) starts seeing a new field, which is why it wants an owner
+decision rather than being folded into step 5 silently.</p>
+<p><strong>Blast radius:</strong> low and contained — one file, one 8-name set, one fence
+exemption row. Nothing currently reads <code>STREAMING_COMMANDS</code> from outside
+<code>command-dispatcher.js</code>. The risk is entirely in the schema addition
+being done sloppily (e.g. a field that doesn't generalize to VSCode's
+own streaming-shaped commands, <code>coding.stream</code> in the client_action
+table), not in the deletion itself.</p>
+<p><strong>Trigger to revisit:</strong> the next time <code>GET /commands</code>'s schema changes for
+an unrelated reason (natural place to add a field in the same breaking
+change), or if a second client grows its own hardcoded chat-shaped set —
+two independent restatements of the same fact would be the point where
+"debt item for now" should become "do it now".</p>
+<p><strong>Effort:</strong> ~2–4 h — add the field to <code>CommandSpec</code> and the roster
+serializer, mark the 8 commands, update <code>command-dispatcher.js</code> to read it
+off the fetched roster, delete <code>STREAMING_COMMANDS</code> and its fence
+exemption row, confirm the parity fence still passes with one fewer
+exemption.</p>
+<hr />
+<h3 id="item-77-dead-client-code-left-after-the-adr-0007-step-5-vscode-migration-commands-vscode-rich">Item 77 — dead client code left after the ADR 0007 step-5 VSCode migration [commands / vscode / rich]<a class="headerlink" href="#item-77-dead-client-code-left-after-the-adr-0007-step-5-vscode-migration-commands-vscode-rich" title="Permanent link">&para;</a></h3>
+<p><strong>Filed 2026-09-21.</strong> Found while auditing the step-5 follow-ups above.</p>
+<p><strong>What's wrong, verified by grep:</strong>
+- <code>vscode-extension/src/httpClient.ts</code> methods <code>listFiles</code>, <code>getFileTree</code>,
+  <code>reloadBootstrapContext</code>, <code>getBootstrapStatus</code> have zero callers.
+  <code>grep -rn "\.&lt;method&gt;(" vscode-extension/src ppxai tests</code> and a second
+  pass, <code>grep -rn "&lt;method&gt;" vscode-extension --include="*.ts" --include="*.js" | grep -v node_modules | grep -v httpClient.ts</code>,
+  both return nothing outside their own definitions in <code>httpClient.ts</code>.
+  These four were the HTTP-client half of the <code>/ls</code>/<code>/tree</code>/<code>/context
+  reload</code>/<code>/context show</code> VSCode intercepts that step 5 replaced with
+  factory routing (<code>POST /command/&lt;name&gt;</code>) — the intercepts calling them
+  were deleted, the client methods were not.
+- <code>ppxai/rich/ui.py::display_tool_help</code> has no production caller.
+  <code>grep -rn "display_tool_help" ppxai --include="*.py"</code> matches only its
+  own <code>def</code> line; every other hit is in <code>tests/test_ui.py</code> (7 test
+  methods exercising it directly).</p>
+<p><strong>Update (2026-09-21, commit <code>beffa197</code>).</strong> Four more <code>httpClient.ts</code>
+methods went dead the same way, this time from the <code>/checkpoint</code>
+migration (open owner decision 7): <code>getCheckpointStatus</code>,
+<code>listCheckpoints</code>, <code>setCheckpointBackend</code>, <code>clearFileCheckpoints</code>.
+Verified: <code>grep -rn "\.&lt;method&gt;(" vscode-extension/src ppxai tests</code>
+for each of the four returns nothing outside their own <code>def</code> in
+<code>httpClient.ts</code>. These were the HTTP-client half of the old
+<code>/checkpoint</code> modal/list/backend-switch flow that the deleted
+<code>LEGACY_INTERCEPTS</code> mechanism drove; the intercepts calling them
+(<code>handlers/commands.ts</code>) are gone, the client methods were not.
+<code>undoCheckpoint</code> is NOT dead — it still has real callers
+(<code>chatPanel.ts:2106</code>, <code>chatPanel.ts:2184</code>, <code>ppxai/web/app.js:651</code>,
+<code>ppxai/web/app.js:1981</code>) and stays out of this item.</p>
+<p><strong>Blast radius:</strong> none — dead code, not reachable from any command path.</p>
+<p><strong>Trigger to revisit:</strong> next pass through either file; cheap to delete
+whenever someone is already editing nearby (same shape as the
+<code>display_file_editing_help</code> deletion in the step-5 follow-ups above,
+which removed a sibling dead function the same day this was found).</p>
+<p><strong>Effort:</strong> ~45min — eight method deletions in <code>httpClient.ts</code> (four
+original plus the four <code>/checkpoint</code> wrappers above, plus their TS type
+declarations if any), one function deletion in <code>ui.py</code> plus its
+<code>tests/test_ui.py::TestToolHelp</code> class.</p>
+<hr />
+<h3 id="item-79-engineclients-agent-mode-notification-reads-a-checkpoint_dir-attribute-checkpointmanager-doesnt-have-checkpoint-dead-code">Item 79 — <code>EngineClient</code>'s Agent Mode notification reads a <code>checkpoint_dir</code> attribute <code>CheckpointManager</code> doesn't have [checkpoint / dead code]<a class="headerlink" href="#item-79-engineclients-agent-mode-notification-reads-a-checkpoint_dir-attribute-checkpointmanager-doesnt-have-checkpoint-dead-code" title="Permanent link">&para;</a></h3>
+<p><strong>Filed 2026-09-21.</strong> Found while auditing debt Item 78 (test-suite
+hermeticity, closed — see "Closed (recent)" below).</p>
+<p><strong>What's wrong, verified by reading the code:</strong> <code>EngineClient</code>'s Agent
+Mode notification (<code>ppxai/engine/client.py</code>, inside the
+<code>backend == "file"</code> branch, ~line 807) does:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">checkpoint_path</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_checkpoint_manager</span><span class="p">,</span> <span class="s2">"checkpoint_dir"</span><span class="p">,</span> <span class="kc">None</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">)</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">"~/.ppxai/sessions/checkpoints/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">session_name</span><span class="si">}</span><span class="s2">"</span>
+</span></code></pre></div>
+<p><code>self._checkpoint_manager</code> is a <code>CheckpointManager</code>
+(<code>ppxai/checkpoint.py:376</code>), and <code>CheckpointManager.__init__</code> sets
+<code>self.working_dir</code>, <code>self.session_id</code>, <code>self.backend_mode</code>, and
+<code>self.backend</code> — no <code>checkpoint_dir</code>. <code>checkpoint_dir</code> exists only on
+<code>FileCheckpointBackend</code>, one layer down, at
+<code>self._checkpoint_manager.backend.checkpoint_dir</code>. So the <code>getattr</code>
+always returns <code>None</code>, the <code>or</code> always falls through to the literal,
+and the literal branch is the ONLY branch that has ever run — a
+comment right above it already explains a previous, similar bug this
+literal replaced (it used to hardcode the wrong parent directory,
+<code>~/.ppxai/checkpoints/&lt;session&gt;</code> instead of
+<code>~/.ppxai/sessions/checkpoints/&lt;session&gt;</code>), which is presumably how a
+<code>getattr</code> that never resolves went unnoticed: the fallback was tested
+against the OLD wrong path being fixed, not against whether the
+<code>getattr</code> itself ever fires.</p>
+<p><strong>Blast radius:</strong> none today — the literal fallback happens to be
+correct, since it duplicates <code>FileCheckpointBackend.checkpoint_dir</code>'s
+own construction (<code>Path(SESSIONS_DIR) / "checkpoints" / session_id</code>).
+It becomes a real bug the moment the two expressions diverge (e.g. a
+future per-backend override, a session-id transform), because nothing
+would fail — the message shown to the user would just quietly start
+naming the wrong directory again, the exact failure class this code's
+own comment was written to prevent.</p>
+<p><strong>Fix:</strong> read the attribute off <code>self._checkpoint_manager.backend</code>
+instead of <code>self._checkpoint_manager</code> itself — e.g.
+<code>getattr(getattr(self._checkpoint_manager, "backend", None), "checkpoint_dir", None)</code>
+— or, more simply, drop the <code>getattr</code> entirely and read the string
+<code>self._checkpoint_manager.backend.checkpoint_dir</code> behind an
+<code>isinstance(self._checkpoint_manager.backend, FileCheckpointBackend)</code>
+guard, matching the <code>backend == "file"</code> check the branch is already
+inside.</p>
+<p><strong>Trigger to revisit:</strong> cheap, no urgency — next pass through
+<code>client.py</code>'s agent-mode notification code, or whenever this file is
+already open for something else.</p>
+<p><strong>Effort:</strong> ~10min — one attribute path fix plus a regression test
+asserting the notification string names the backend's REAL
+<code>checkpoint_dir</code>, not just a plausible-looking literal.</p>
+<hr />
+<h3 id="item-83-the-serial-test-suite-got-2x-slower-per-test-since-july-and-the-cause-is-not-found-tests-performance">Item 83 — the serial test suite got ~2x slower per test since July, and the cause is not found [tests / performance]<a class="headerlink" href="#item-83-the-serial-test-suite-got-2x-slower-per-test-since-july-and-the-cause-is-not-found-tests-performance" title="Permanent link">&para;</a></h3>
+<p><strong>Filed 2026-09-27</strong> (owner decision: record as debt, don't chase it now).</p>
+<p><strong>Measured:</strong> Windows serial, 2026-07 (v1.19.1 session): ~5,078 tests in
+~10.5 min, ~0.12s per test. 2026-09-27 before the fixes: ~6,900 tests in
+45 min, ~0.39s per test. The owner remembers ~9 min for a serial run.</p>
+<p><strong>Explained and fixed on 2026-09-27</strong> (<code>42bbabea</code>, <code>66fdbe29</code>, <code>10cff048</code>):
+google-genai 2.20 building its own certifi SSL contexts (~0.75s CPU each
+under Windows' OpenSSL 3.0); <code>mimetypes.init()</code> at import, re-reading the
+Windows registry 183 times per import sweep; the import sweep run twice.
+Serial dropped from 45 to 32 min. The default is now parallel
+(<code>-n auto --dist loadfile</code>, ~170s on Windows, ~100s on macOS).</p>
+<p><strong>Still unexplained:</strong> summed test time is still ~1,240s (~0.18s per
+test), 42% of it fixture SETUP. The same tests do not cost that on macOS,
+and not on Windows in July.</p>
+<p><strong>How to find it:</strong>
+1. Worktree at <code>v1.19.2</code> (2026-09-14) or a July tag, the CURRENT venv
+   (separates code from dependency drift), <code>pytest -n 0</code> on the ~240 test
+   files common to both. Compare the per-file "Slowest files" blocks of the
+   timing report.
+2. Bisect the commits between the fast and slow points on the worst files'
+   setup time.
+3. Suspects, unverified: the Item 78 HOME redirect (copies the repo config
+   and web assets once per session; is anything per-test?),
+   <code>with TestClient(app)</code> startup per test (a full server lifespan each
+   time), and google-genai's other client paths.</p>
+<p><strong>Why not now:</strong> parallel runs make the absolute cost small, and the
+timing report added 2026-09-27 now names setup-heavy tests, so a
+regression of this kind shows up in the report instead of hiding.</p>
 <h2 id="closed-recent">Closed (recent)<a class="headerlink" href="#closed-recent" title="Permanent link">&para;</a></h2>
 <p>One-liners only — full bodies + evidence trails in
 <a href="../archive/DEBT-INVENTORY-CLOSED/">docs/archive/DEBT-INVENTORY-CLOSED.md</a>;
 older per-version detail in the v1.18.2/v1.18.3 snapshots.</p>
 <ul>
-<li><strong>Item 69</strong> — a test's verdict depended on a config file OUTSIDE the repo — closed 2026-09-06. The READ half of the same resolution rule as Item 70: nothing pinned <code>find_config_file()</code>, so any test reaching provider config read whichever file the cwd offered, and a stale personal config had already MASKED a real regression (2026-09-01, <code>sonar-pro</code> retired in <code>e6c366b9</code>). Pinned <code>PPXAI_CONFIG_FILE</code> to the shipped config in <code>pytest_configure</code> (before <code>initialize()</code>, which reads config during collection) and redirected <code>loader.USER_CONFIG_FILE</code> out of the real home, closing the cleared-environment fallthrough. <code>tests/test_config_source_is_pinned.py</code> proves it: deleting both halves fails 4 of its 6 tests.</li>
+<li><strong>Item 80</strong> — a non-repeating multi-tool cycle trips neither guard — closed 2026-09-26 by making its outcome better and its shape visible, not by detecting it (owner chose options B+C+logging). The iteration cap used to end every such turn on a canned "limit reached" line. Now one tools-withdrawn answer pass runs after the last tool iteration (<code>ToolGuardReason.ITERATION_CAP</code>, additive; <code>max_iterations_reached</code> still set), a single converge notice goes out at ~70% of the cap, and the cap, the notice, both guards and the zombie breaker log <code>ToolManager.describe_call_pattern()</code> (shape, repeating cycle, per-tool distinct-args counts, tail). A detector that refuses the alternating shape is still declined, because exploration looks the same. The logged pattern is the evidence for designing one if an incident recurs. Fenced by <code>tests/test_tool_loop_guard.py::TestIterationCap</code> / <code>TestCallPattern</code> and the reason-vocabulary fence. Full body archived in <a href="../archive/DEBT-INVENTORY-CLOSED/">docs/archive/DEBT-INVENTORY-CLOSED.md</a>.</li>
+<li><strong>Item 81</strong> — test-order provider-class leak — closed 2026-09-26. <code>test_custom_endpoint_integration.py::custom_engine</code> purged <code>ppxai.engine.providers*</code> from <code>sys.modules</code> without restoring them, even on its skip path, so later modules compared classes from two imports. The purge was obsolete, because <code>tls_verify()</code> resolves at client build, so it is deleted. Fenced by <code>tests/test_no_sys_modules_purge.py</code> (AST check against computed-name <code>sys.modules</code> deletes in-process, mutation-verified). Full body archived in <a href="../archive/DEBT-INVENTORY-CLOSED/">docs/archive/DEBT-INVENTORY-CLOSED.md</a>.</li>
+<li><strong>Item 82</strong> — a <code>/task</code> run's <code>events.jsonl</code> now records a degraded turn — closed 2026-09-23, <code>59702221</code>. Narrow option, owner's call: persist only events carrying a <code>ToolGuardReason</code>, plus the terminal pair. <code>turn_degraded</code> (one per tool-guard degradation) and <code>turn_end</code> (one per turn, <code>degraded</code>/<code>degradation_reasons</code> copied verbatim from the engine, never defaulted) are new record types, additive; existing records and the run's own <code>agent_run_complete</code>/<code>agent_run_error</code> are unchanged. <strong>Correction to how the item was filed:</strong> the "four types persisted" list was built from the loop's branch CONDITIONS (<code>if event.type == …</code>) without reading the branch BODIES, and carried unchecked through two sessions. Four branches exist; only the <code>TOOL_CALL</code> body called <code>emit_event</code>. To audit what a loop persists, read what each branch DOES, not which branches exist. Fenced by 13 tests (<code>tests/test_task_run_degradation_audit.py</code>). The no-terminal hole it also recorded — three <code>chat_with_tools</code> exits that emit no terminal event, plus paths where <code>ERROR</code> arrives before <code>AGENT_RUN_ERROR</code> so the runner raises before reading it — was not closed by <code>59702221</code>; the owner chose to fix it rather than file it, and it was fixed the same day on this branch ("fix(engine): every tool-loop exit ends with a run terminal"): all three exits now emit <code>AGENT_RUN_ERROR</code>, and the runner holds an <code>ERROR</code>'s raise until the terminal has been persisted as <code>turn_end</code>. Full body archived in <a href="../archive/DEBT-INVENTORY-CLOSED/">docs/archive/DEBT-INVENTORY-CLOSED.md</a>.</li>
+<li><strong>Item 78</strong> — the test suite leaked into the real <code>~/.ppxai</code> — closed 2026-09-21, and it was much bigger than filed: not just empty checkpoint directories (the filed leak), but also real session files, interleaved debug logs, <code>.preview-cache</code> PNGs, a staged upload, <code>usage.json</code>/<code>usage-events.jsonl</code> (the <code>/cost</code> sink) appended to, and the TUI's <code>session-state.json</code> restore pointer rewritten by a spawned <code>ppxai-server</code> subprocess that a pre-existing in-process guard could not reach. One clean-tree marker-file run measured <strong>214 → 0</strong> entries touched in the developer's real <code>~/.ppxai</code>. Fixed on both ends: <code>tests/conftest.py</code> redirects <code>HOME</code> to a throwaway directory before the first <code>ppxai</code> import (the one point at which that works), and <code>FileCheckpointBackend</code> no longer creates its directory at construction — only on the first real snapshot, which also means a session that never checkpoints leaves nothing behind in production, not just in tests. Fenced by <code>tests/test_home_hermeticity.py</code> and <code>tests/test_checkpoint.py::TestTheDirectoryIsCreatedLazily</code>. Existing empty directories on developer hosts were <strong>not</strong> deleted — cleanup command recorded in the archived body, owner's call. Full body archived in <a href="../archive/DEBT-INVENTORY-CLOSED/">docs/archive/DEBT-INVENTORY-CLOSED.md</a>.</li>
+<li><strong>Item 34</strong> — office-preview deps; the <code>python-docx</code> half was <strong>obsolete</strong>, not deferred — closed 2026-09-20 (<code>99ca13f7</code>). The Word text fallback never used python-docx: <code>docx_tools.py</code> extracts with stdlib <code>zipfile</code> + <code>xml.etree</code> and <code>files.py:868</code> calls it for the <code>.docx</code> path; <code>grep -rn "import docx"</code> over <code>ppxai/</code> and <code>tests/</code> returns nothing, so the dependency would have grown every binary by a package nothing imports. The other two thirds (release-CI <code>--all-extras</code>) were verified fixed on 2026-06-14. Full body archived in <a href="../archive/DEBT-INVENTORY-CLOSED/">docs/archive/DEBT-INVENTORY-CLOSED.md</a>.</li>
+<li><strong>Item 69</strong> — a test's verdict depended on a config file OUTSIDE the repo — closed 2026-09-06. The READ half of the same resolution rule as Item 70: nothing pinned <code>find_config_file()</code>, so any test reaching provider config read whichever file the cwd offered, and a stale personal config had already MASKED a real regression (2026-09-01, <code>sonar-pro</code> retired in <code>e6c366b9</code>). Pinned <code>PPXAI_CONFIG_FILE</code> to the shipped config in <code>pytest_configure</code> (before <code>initialize()</code>, which reads config during collection) and redirected <code>loader.USER_CONFIG_FILE</code> out of the real home, closing the cleared-environment fallthrough. <code>tests/test_config_source_is_pinned.py</code> proves it: deleting both halves fails 4 of its 6 tests. <strong>Sharpened 2026-09-14 — the RUNTIME half is still open, and it makes <code>/doctor</code> lie.</strong> Item 69 pinned the config source for TESTS; nothing pinned it for the tool whose whole job is auditing the operator's config. <code>find_config_file()</code> prefers <code>./ppxai-config.json</code>, so <code>/doctor</code> run from the ppxai repo root audits ppxai's OWN project config and reports a clean bill of health on a file it never opened. Measured 2026-09-14, same tree, same code, opposite verdict — the only variable is cwd: <code>cwd=&lt;repo root&gt;</code> → <code>find_config_file()</code> = <code>ppxai-config.json</code>, <code>incomplete_blocks_in_config()</code> = <code>{}</code> (0 partial records); <code>cwd=/tmp</code> + <code>PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json</code> → <code>/Users/…/.ppxai/ppxai-config.json</code>, <strong>1 partial record, 11 unstated fields named</strong>. So the ADR 0012 Q0d enforcement path returns a FALSE NEGATIVE for anyone running <code>/doctor</code> from a checkout — the failure mode Item 69 closed for tests, reproduced in the enforcement tool itself. Found by the ppxai-sre session cross-checking a HOME-config edit; the <code>0</code> was only trustworthy because the identical command had returned <code>1</code> on the same file minutes earlier (an empty result is not a measurement). Not reopened and not scheduled: recorded here so the next person to touch <code>/doctor</code>'s file resolution knows the test-side pin did not cover them.</li>
 <li><strong>Item 33</strong> — command-layer <code>console.print</code> sweep — closed 2026-09-09. The audit is the result: of 111 sites, <strong>39 were dead code</strong> (<code>_show_active_hints</code> / <code>_show_bootstrap_hierarchy</code>, orphaned by <code>f7ebd004</code> in v1.15.0 when <code>/context</code> moved to typed results — removed), 65 are TUI-only by construction, and the rest restate what the result already carries. <strong>One</strong> carried information a non-Rich caller could not learn — the no-checkpoint warning, a safety property — now in <code>message</code> + <code>metadata</code>. The audit also found a REAL BUG the sweep framing would have missed: <code>POST /command/auto</code> answered <strong>500</strong>, not bad output, because <code>handle_agent</code> called a bare <code>asyncio.run()</code> from inside the server's running event loop. Guarded with the <code>is_event_loop_running()</code> + threadpool pattern already in <code>commands/coding.py</code>.</li>
 <li><strong>Item 64</strong> — re-probe Perplexity's pro line on the Responses wire — closed 2026-09-10 at the owner's direction, 17 days before the 2026-09-27 cutover. <strong>FOUR probes</strong> (08-31, 09-01, 09-06, 09-10) all returned byte-identical <code>400 validation failed: model "..." is not supported</code> for all three ids, so the shipped <code>PERPLEXITY_DEPRECATIONS</code> rows are correct as written and no code changed. The dated obligation in <code>tests/test_dated_obligations.py</code> is deleted, which is the part worth knowing: <strong>the last 17 days before the cutover are now unobserved by design.</strong> See the archived body for what that costs.</li>
 <li><strong>Item 49</strong> — <code>/cost</code> under-reported true provider spend across tiers — closed 2026-09-06, <strong>ADR 0008 Accepted, Option A implemented</strong>. <code>usage.json</code>'s sole writer was reachable only from interactive paths, so every <code>/v1/oneshot</code> and <code>/v1/agent/task</code> token the provider billed for was absent from the local number users budget with. New append-only sink <code>ppxai/usage_events.py</code>; one tap at the run-registry boundary covers both background tiers (they share <code>build_task_runner</code> since the FU unification, and tier reads <code>RunMeta.kind</code>), one at the interactive path. <code>/cost</code> adds the log's background tiers to <code>usage.json</code> and excludes its <code>chat</code> bucket — chat is written to both, so summing totals would double-count it. Gap #2 (KV-cache) stays acknowledge-only as proposed.</li>

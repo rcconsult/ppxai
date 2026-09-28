@@ -1673,8 +1673,8 @@
 <tbody>
 <tr>
 <td><strong>Perplexity</strong></td>
-<td><code>sonar-pro</code></td>
-<td>Advanced reasoning for complex coding tasks</td>
+<td><code>perplexity/sonar</code></td>
+<td>The Responses-wire id; the bare <code>sonar</code> chat-wire id retires 2026-09-27</td>
 </tr>
 <tr>
 <td><strong>Gemini</strong></td>
@@ -1683,8 +1683,8 @@
 </tr>
 <tr>
 <td><strong>OpenAI</strong></td>
-<td><code>gpt-5.4-mini</code></td>
-<td>Balanced cost/performance, current default in the shipped config</td>
+<td><code>gpt-5.6-terra</code></td>
+<td>Current default in the shipped config</td>
 </tr>
 <tr>
 <td><strong>Custom</strong></td>
@@ -1814,8 +1814,8 @@ file is found at all. In practice, first-run seeding copies the bundled
 <code>~/.ppxai/ppxai-config.json</code>, which currently ships:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">"perplexity"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sonar-pro"</span><span class="p">,</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sonar-pro"</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"perplexity/sonar"</span><span class="p">,</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"perplexity/sonar"</span>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span><span class="p">},</span>
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.5-flash"</span><span class="p">,</span>

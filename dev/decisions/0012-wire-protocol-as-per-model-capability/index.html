@@ -1504,14 +1504,17 @@ defect class this record exists to remove)
 <code>ProtocolHandler</code> contract + Responses handler + <code>wire_protocol</code> routing
 (steps 1–2 / W2, <code>1bf93de7</code>), Perplexity over the Responses wire (step 3 /
 W3, <code>a0d924ea</code> + <code>b15dd1aa</code>), and all three wires as handlers (step 4 / W4).
-<strong>Debt Items 61 and 62 are both closed.</strong> §6 (Messages) remains designed but
-unbuilt, by construction — it ships with <code>feat/anthropic-provider</code> on that
-work's own schedule, and this record exists so it lands as a handler rather
-than a fifth bespoke provider.</p>
-<p>One user-facing item is deliberately <strong>not</strong> shipped and needs an owner
-decision before 2026-09-27: the <code>sonar</code> → <code>perplexity/sonar</code> ID rename and
-the <code>/v1</code> base-url suffix in the shipped install scripts and VSCode
-bootstrap config. The code supports both IDs today, so nothing is blocked.
+<strong>Debt Items 61 and 62 are both closed.</strong> §6 (Messages) shipped as the fourth
+handler (<code>wire/messages.py</code>) with <code>feat/anthropic-provider</code> in v1.19.1 —
+a handler, not a fifth bespoke provider, as this record intended.</p>
+<p>The <code>sonar</code> → <code>perplexity/sonar</code> ID rename <strong>shipped in v1.19.1</strong>
+(<code>066dc22b</code>): example config, both install scripts, the VSCode bootstrap,
+<code>CODING_MODEL</code> and <code>RECOMMENDED_DEFAULTS["perplexity"]</code> all point at the
+Responses-wire ID, and the three bare IDs carry <code>/doctor</code> deprecation rows
+dated 2026-09-27. The <code>/v1</code> base-url suffix needs no install-script change:
+<code>PerplexityProvider._responses_base_url()</code> appends it, tolerating a
+trailing slash or an existing <code>/v1</code>. Nothing about the cutover remains
+pending on the ppxai side.
 Supersedes the <code>api_path</code> routing sketch in
 <a href="../../plan-per-model-capabilities/"><code>../plan-per-model-capabilities.md</code></a> §I4b,
 which assumed the slot merely needed filling in.
@@ -2565,6 +2568,9 @@ gated on the owner's explicit go, per the arc's standing rule.</p>
 <li>✅ <strong>DONE</strong> (W2, 2026-08-30) — <strong>Make the protocol field load-bearing.</strong>
    <code>_wire_for(model)</code> is the single reader; all four dispatch sites (<code>chat</code>,
    <code>chat_sync_simple</code>, <code>oneshot</code>, the 404 auto-fallback) consult it.
+   <em>(Three as of 2026-09-20: <code>chat_sync_simple</code> was deleted as dead code —
+   it had no caller anywhere in the repo's history, and its four provider
+   implementations had silently diverged. W2's claim was true when written.)</em>
    <code>RESPONSES_API_PREFIXES</code> is now seed data for <code>RESPONSES_WIRE_GLOBS</code>;
    <code>_is_responses_api_model</code> routes nothing. <strong>Closes debt Item 61.</strong></li>
 </ol>

@@ -1367,8 +1367,18 @@
 <h1 id="consent-contract">Consent Contract<a class="headerlink" href="#consent-contract" title="Permanent link">&para;</a></h1>
 <p><strong>Status:</strong> Reference. Update when consent layer behavior changes.
 <strong>Audience:</strong> ppxai contributors and security reviewers.
-<strong>Last verified:</strong> 2026-04-26 (covered by <code>tests/test_tool_security.py</code> +
-<code>tests/test_file_editing_tools.py</code>).</p>
+<strong>Last verified:</strong> 2026-09-20 against <code>bugfix/v1.19.3</code> — full re-check,
+not a date bump. Both consent flows were re-derived from
+<code>ppxai/engine/consent_ops.py</code>; enforcement files, the fail-safe
+asymmetry (file-edit allows without a callback, shell denies), the
+editor/shell/container caller sets, and the <code>execution.task.consent.*</code>
+defaults all verified. <strong>Six defects found and fixed</strong> — <code>ConsentMode</code>
+has no <code>NORMAL</code> member, the <code>AGENT_WAITING</code> field is <code>token</code> not
+<code>resume_token</code>, two named consent callbacks never existed, the
+<code>reload_config</code> claim held only for the server path, the MCP entry
+described a gap that cannot exist yet, and the timeout kill became a
+process-group kill in v1.18.3. Still covered by
+<code>tests/test_tool_security.py</code> + <code>tests/test_file_editing_tools.py</code>.</p>
 <p>This doc is the single source of truth for what triggers a consent
 prompt in ppxai, what the prompt covers, what bypasses it, and what
 remains the user's responsibility outside the consent layer.</p>
@@ -1479,7 +1489,7 @@ remains the user's responsibility outside the consent layer.</p>
   user picks ALWAYS.</li>
 <li><strong>Session-wide modes</strong> — ALWAYS and NEVER persist across all
   subsequent file edits in the current session, but NOT across sessions
-  (the next ppxai run starts fresh in mode NORMAL).</li>
+  (the next ppxai run starts fresh in mode <code>PROMPT</code>).</li>
 <li><strong>Agent-mode checkpoint</strong> — first file edit in agent_mode creates a
   recovery checkpoint before the change. <code>/undo</code> rolls back to the
   pre-edit state.</li>
@@ -1493,7 +1503,7 @@ remains the user's responsibility outside the consent layer.</p>
   what's accessible is controlled by the <strong>OS-level permissions</strong> of
   the user running ppxai, not the consent layer.</li>
 <li><strong>Cross-session memory</strong> — ALWAYS in session A does not affect
-  session B. Each new session boots into mode NORMAL.</li>
+  session B. Each new session boots into mode <code>PROMPT</code>.</li>
 <li><strong>Per-edit checkpoints in non-agent mode</strong> — <code>/undo</code> works only
   inside agent_mode and only for the first edit per file. For
   long edit chains the user is expected to use git.</li>
@@ -1546,11 +1556,15 @@ remains the user's responsibility outside the consent layer.</p>
 </tr>
 </tbody>
 </table>
-<p>Shell-tool callers in production ALWAYS install a callback (Rich
-TUI's <code>console_consent_callback</code>, Textual TUI's
-<code>textual_consent_callback</code>, web's HTTP callback). The "no callback"
-branch is a safety net for embedding contexts where the host
-forgot to wire it.</p>
+<p>Shell-tool callers in production ALWAYS install a callback: the Rich
+TUI passes <code>tui_shell_consent_handler</code>
+(<code>ppxai/commands/handler.py:124</code>), the Textual TUI passes its own
+<code>_shell_consent_handler</code> method (<code>ppxai/tui/app.py:494</code>), and web /
+VSCode wire an HTTP callback. The "no callback" branch is a safety
+net for embedding contexts where the host forgot to wire it.
+(This paragraph named <code>console_consent_callback</code> and
+<code>textual_consent_callback</code> until 2026-09-20 — neither identifier has
+ever existed in the repo.)</p>
 <h3 id="never-patterns-catastrophic-cant-be-overridden">NEVER patterns (catastrophic — can't be overridden)<a class="headerlink" href="#never-patterns-catastrophic-cant-be-overridden" title="Permanent link">&para;</a></h3>
 <p>Configured in <code>~/.ppxai/ppxai-config.json</code> under <code>tools.shell.never_allow</code>.
 Default install ships with patterns for:</p>
@@ -1600,8 +1614,15 @@ silently grant it free execution.</p>
   in args are the user's risk surface</strong>. Don't put broad regex
   patterns in <code>allowed_commands</code>.</li>
 <li><strong>Process group escapes</strong> — <code>nohup</code>, <code>setsid</code>, etc., backgrounded
-  processes outlive the timeout. Subprocess timeout (default 30s)
-  kills the immediate child, not detached descendants.</li>
+  processes outlive the timeout. <strong>The mechanism changed in v1.18.3:</strong>
+  the timeout path now SIGTERMs (then SIGKILLs) the whole <strong>process
+  group</strong> via <code>os.killpg()</code>, not just the immediate child
+  (<code>ppxai/engine/tools/builtin/shell.py:54-83</code>; children are started
+  with <code>start_new_session=True</code>). The exposure is still real, but for a
+  different reason: <code>_is_backgrounded()</code> deliberately never waits for or
+  kills a trailing-<code>&amp;</code> / <code>nohup</code> command, so those outlive the call by
+  design rather than by escaping the kill. This bullet described the
+  pre-v1.18.3 immediate-child kill until 2026-09-20.</li>
 <li><strong>Working directory traversal</strong> — the <code>working_dir</code> argument is
   not validated against the engine's tracked working directory.
   Tools can be invoked with any cwd; this is intentional (LLM might
@@ -1656,7 +1677,8 @@ in <code>test_pdf_tools.py</code>, <code>test_csv_tools.py</code>, <code>test_ex
   refusal. Setting <code>auto</code> approves without a human in the loop
   (delegated trust, not an unattended default).</li>
 <li><strong>T5 run park:</strong> a run needing a human decision emits <code>AGENT_WAITING</code>
-  (<code>resume_token</code>, <code>ttl_s</code>) and halts at <code>status=waiting</code>. The human answers
+  (<code>token</code>, <code>ttl_s</code> — the field is <code>token</code>, not <code>resume_token</code>; see
+  <code>ppxai/engine/agent_runs.py:769</code>) and halts at <code>status=waiting</code>. The human answers
   via <code>POST /v1/agent/runs/{id}/respond</code> (<code>RespondRequest{token, approved?,
   text?}</code>); a consent park requires <code>approved: true</code> to proceed — a
   text-only answer is a denial. If the TTL lapses before a response, the
@@ -1676,27 +1698,48 @@ separate review/hardening:</p>
    they configure the provider.</p>
 </li>
 <li>
-<p><strong>Plugin/MCP tools</strong> — third-party MCP servers register tools
-   with arbitrary semantics. The consent layer doesn't classify
-   them. Plugin authors are responsible for their own prompts.
-   (A dedicated <code>docs/mcp-trust-model.md</code> is planned but <strong>not yet
-   written</strong> — kept as plain text rather than a link so it doesn't
-   render as a dead reference. Tracks with the MCP Day-0 work in
-   <code>docs/mcp-integration-plan.md</code>.)</p>
+<p><strong>Plugin/MCP tools — a future gap, not a present one.</strong> This entry
+   read as though third-party MCP servers are registering tools today.
+   <strong>They are not: MCP is not integrated at all.</strong> <code>grep -r "from mcp\|import mcp" ppxai/</code>
+   returns nothing, and <code>ppxai/engine/tools/manager.py:200</code> hardcodes
+   <code>"source": "engine"</code> with no extension point — there is no mechanism
+   for any external tool source to register with the engine. So the
+   consent layer not classifying MCP tools is not a live exposure; it is
+   a requirement for whoever wires MCP up. Planned for v1.20.x per
+   <code>docs/mcp-integration-plan.md</code>. (A dedicated <code>docs/mcp-trust-model.md</code>
+   is planned but <strong>not yet written</strong> — kept as plain text rather than a
+   link so it doesn't render as a dead reference.)</p>
 </li>
 <li>
-<p><strong>Engine reload of config</strong> — <code>engine.reload_config()</code> re-reads
-   <code>ppxai-config.json</code> on every chat. A user-edited config takes
-   effect immediately, including changes to <code>never_allow</code> and
-   <code>allowed_commands</code>. There is no signature-checking — the user
-   is trusted to manage their own config file.</p>
+<p><strong>Engine reload of config — per request on the server, not in the
+   TUIs.</strong> Refined 2026-09-20; this said "on every chat" without
+   qualification, which is true for only two of the four clients.</p>
 </li>
+<li>
+<p><strong>Web and VSCode:</strong> every route taking <code>Depends(get_session)</code> —
+     <code>/chat</code> included (<code>ppxai/server/routes/chat.py:282,469</code>) — resolves
+     through <code>get_or_create_session()</code>, which calls
+     <code>engine.reload_config()</code> on <strong>each call</strong>
+     (<code>ppxai/server/state.py:290</code>, a v1.17.1 consolidation). So a
+     user-edited config does take effect on the next message, including
+     changes to <code>never_allow</code> and <code>allowed_commands</code>.</p>
+</li>
+<li><strong>Rich and Textual TUIs:</strong> no reload on the send path. Config is
+     re-read on session restore (<code>engine/session_ops.py:29</code>), on a
+     provider/model switch (<code>commands/provider.py:63,151</code>), and on an
+     explicit <code>/config reload</code> (<code>commands/utility.py:149</code>). Editing
+     <code>ppxai-config.json</code> mid-session does <strong>not</strong> change consent
+     behaviour in a running TUI until one of those fires.</li>
+</ol>
+<p>Either way there is no signature-checking — the user is trusted to
+   manage their own config file.</p>
+<ol>
 <li>
 <p><strong>Session restore</strong> — loading a previously-saved session restores
    the message history but <strong>not</strong> <code>allowed_files</code> or
    <code>allowed_commands</code>. Restored sessions start with empty allow-lists
    so prior consent decisions don't silently carry forward into a
-   new working context. Session-wide mode (ALWAYS/NEVER/NORMAL) is
+   new working context. Session-wide mode (<code>ALWAYS</code>/<code>NEVER</code>/<code>PROMPT</code>) is
    also reset.</p>
 </li>
 <li>

@@ -1218,10 +1218,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#graph-2d-the-end-state-4-providers-3-wires-adr-0012-w4" class="md-nav__link">
+  <a href="#graph-2d-the-end-state-5-providers-4-wires-adr-0012-w4-6" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Graph 2d — the end state: 4 providers, 3 wires (ADR 0012 W4)
+        Graph 2d — the end state: 5 providers, 4 wires (ADR 0012 W4 + §6)
       
     </span>
   </a>
@@ -1301,10 +1301,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#not-yet-consumed" class="md-nav__link">
+  <a href="#not-yet-consumed-consumed-since-w2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Not yet consumed
+        ~~Not yet consumed~~ — consumed since W2
       
     </span>
   </a>
@@ -1398,7 +1398,7 @@ structurally impossible rather than merely tested against.</p>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>  │              └─ apply_overrides(shipped, model_fact_overrides(...))
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>  │                   └─ reads providers.&lt;p&gt;.models.&lt;m&gt;.facts FROM THE FILE
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>  │
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>  ├─ use_native_tools = facts.tool_mode != "prompt_based"       [chat.py:637]
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>  ├─ use_native_tools = facts.tool_mode != "prompt_based"       [chat.py:646]
 </span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>  │
 </span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>  └─ facts.fallback_on_empty / .fallback_on_failure /
 </span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>     .strip_json_from_text / .parallel_tool_calls / .max_tool_iterations
@@ -1432,9 +1432,9 @@ in the new code.</p>
 It is now one reader over the per-model fact, which is what makes an operator
 override reach the wire at all (debt Item 61).</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>              ┌─ chat()                  ─┐
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>              ├─ chat_sync_simple()       │   self._wire_for(model)
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>call sites ───┤                           ├──   = get_facts_for_model(model)
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>              ├─ oneshot()                │       .wire_protocol
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>              │                           │   self._wire_for(model)
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>call sites ───┤  oneshot()                ├──   = get_facts_for_model(model)
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>              │                           │       .wire_protocol
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>              └─ 404 auto-fallback       ─┘            │
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>                                                       │
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>                        ┌──────────────────────────────┴───────────┐
@@ -1449,9 +1449,25 @@ override reach the wire at all (debt Item 61).</p>
 </span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>                       ├─ convert_tools()
 </span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>                       └─ build_tool_hint()
 </span></code></pre></div>
-<p>Four call sites, ONE resolver — that is the fix. The four branches themselves
-collapse in W4, when <code>chat_completions</code> becomes a handler and dispatch is a
-dict lookup with no <code>if</code> at all.</p>
+<p>Three call sites, ONE resolver — that is the fix. (It was four until
+2026-09-20; <code>chat_sync_simple</code> was deleted as dead code — never called
+anywhere in the repo's history. See the note below on what did NOT happen
+in W4.)</p>
+<blockquote>
+<p><strong>This paragraph used to predict that the branches "collapse in W4, when
+<code>chat_completions</code> becomes a handler and dispatch is a dict lookup with
+no <code>if</code> at all". W4 shipped; that did not happen</strong> (checked 2026-09-20).
+Dispatch is still five explicit <code>if self._wire_for(model) == "responses"</code>
+branches — <code>openai_native.py:278,303,355</code> and <code>perplexity.py:325,534</code>.</p>
+<p>The reason is deliberate and documented in
+<code>wire/chat_completions.py</code>: only <code>ResponsesHandler</code> owns send paths
+(7 methods); <code>ChatCompletionsHandler</code> and <code>MessagesHandler</code> implement
+<code>convert_messages</code> <strong>only</strong> (1 method each), because <em>"the send paths
+still live on their providers… Moving the send paths is a separate
+change with its own risk, and pretending otherwise would make this
+'extraction' a rewrite."</em> The dict-lookup end state is still the right
+target; it is simply not where the code is.</p>
+</blockquote>
 <p><code>get_handler()</code> raises <code>KeyError</code> for an unregistered protocol rather than
 falling back to a default. A silent fallback is precisely how <code>api_path</code> sat
 declared, config-overridable and inert for three releases: nothing consumed
@@ -1514,7 +1530,7 @@ defect shape — a declared value the wire never sees</strong>:</p>
 the wire never sees is <em>exactly</em> debt Item 61, reproduced inside the handler
 built to fix Item 61. Two sources for one value is the bug; <code>_budget_for</code>
 now reads config first, then the fact, in one place.</p>
-<h2 id="graph-2d-the-end-state-4-providers-3-wires-adr-0012-w4">Graph 2d — the end state: 4 providers, 3 wires (ADR 0012 W4)<a class="headerlink" href="#graph-2d-the-end-state-4-providers-3-wires-adr-0012-w4" title="Permanent link">&para;</a></h2>
+<h2 id="graph-2d-the-end-state-5-providers-4-wires-adr-0012-w4-6">Graph 2d — the end state: 5 providers, 4 wires (ADR 0012 W4 + §6)<a class="headerlink" href="#graph-2d-the-end-state-5-providers-4-wires-adr-0012-w4-6" title="Permanent link">&para;</a></h2>
 <p>Every wire is a handler. Conversion is protocol-owned, so there is no shared
 method left for two protocols to disagree about — the shape debt Item 62 (b)
 described.</p>
@@ -1539,7 +1555,7 @@ described.</p>
 </span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>              └──────────────────────┴────────────────────────┘
 </span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>                                     │
 </span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>                        assert_wire_blocks_clean()
-</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>                        ADR 0006 · 3 of 3 wires · was 1 of 3
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>                        ADR 0006 · 4 of 4 wires · was 1 of 3
 </span></code></pre></div>
 <p><strong>Three return types, deliberately.</strong> <code>ProtocolHandler.convert_messages</code> is
 typed <code>-&gt; Any</code> because each wire's request shape is genuinely its own. While
@@ -1563,7 +1579,7 @@ at admission time, and <code>/doctor</code> has no session at all. They share <s
 set of entry points, and the sharing is the point: the guard that refuses a
 run and the message that suggests an alternative read the same resolution,
 so the suggestion cannot recommend a model the guard would reject.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>model_facts.provider_class_for(provider)          ← WHOSE class serves this?
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>facts_resolver.provider_class_for(provider)       ← WHOSE class serves this?
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  ├─ providers.get_provider_class(provider)
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  └─ fallback: OpenAICompatibleProvider
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>       (get_provider_class() returns None for every openai_compat-TYPE
@@ -1572,22 +1588,35 @@ so the suggestion cannot recommend a model the guard would reject.</p>
 </span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        back the same way, so a caller that stops at None disagrees with
 </span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        the deployment about what a provider is.)
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>model_facts.facts_without_an_instance(provider, model)   → ModelFacts
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>facts_resolver.facts_without_an_instance(provider, model)  → ModelFacts
 </span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>  ├─ provider_class_for(provider)
 </span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>  ├─ shipped_facts_for_model(model, cls.shipped_model_facts,
 </span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>  │                          cls.unmeasured_facts)
 </span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>  └─ facts_config.resolve_model_facts(...)
 </span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>model_facts.capabilities_without_an_instance(provider)   → ProviderCapabilities
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>facts_resolver.capabilities_without_an_instance(provider)  → ProviderCapabilities
 </span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>  ├─ provider_class_for(provider).default_capabilities
 </span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>  └─ facts_config.apply_provider_overrides(...)
 </span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>
 </span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>  callers:
 </span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>    task_authorizer._reject_tool_incapable_model()   ← the admission guard
 </span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>    task_authorizer._tool_capable_models_hint()      ← its error message
-</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>    config/execution.py::get_effective_oneshot_path()  ← both records
-</span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>    config/facts_config.py::complete_record_for()    ← /doctor's scaffold
+</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>    facts_resolver.get_effective_oneshot_path()      ← both records
+</span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>    facts_resolver.complete_record_for()             ← /doctor's scaffold
 </span></code></pre></div>
+<blockquote>
+<p><strong>Module attribution corrected 2026-09-20.</strong> This graph named all five
+of these <code>model_facts.*</code> / <code>config.*</code>. They live in
+<strong><code>ppxai/engine/facts_resolver.py</code></strong> (lines 26, 35, 43, 149, 184) and
+<code>grep -c</code> finds none of them in <code>model_facts.py</code> or <code>facts_config.py</code>.
+The split is deliberate and its own docstring explains why:
+<em>"Split from <code>model_facts</code> to make the dependency point one way… This
+module is the RESOLVER, which imports <code>providers</code>."</em> Same reason
+<code>get_effective_oneshot_path</code> sits here rather than in <code>config.execution</code>
+— <em>"that single edge was what forced every <code>config -&gt; engine</code> import to
+be lazy."</em> If you are looking for these by the old names, that is why
+you cannot find them.</p>
+</blockquote>
 <p>Extracted in W1 because the same four-line sequence had been written out at
 each site, and <em>that repetition is the bug</em>: four copies of one ladder is how
 a fifth caller gets a rung wrong.</p>
@@ -1630,7 +1659,7 @@ scan can tell an operator their setting stopped applying.</p>
 </span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>  ├─ facts_config.wrong_typed_fields_in_config()→ values no coercion rescues
 </span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>  └─ facts_config.incomplete_blocks_in_config() → Q0d: records must be complete
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>commands/doctor.py  →  facts_config.complete_record_for(provider, model)
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>commands/doctor.py  →  facts_resolver.complete_record_for(provider, model)
 </span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>                          └─ facts_without_an_instance()   [Graph 3]
 </span></code></pre></div>
 <p><code>migration_plan()</code> <strong>pushes provider-level model facts DOWN</strong>: a legacy
@@ -1645,13 +1674,35 @@ leaves the operator demoted and warned. Fenced by a property test:
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>  ├─ shipped_facts_for_model(model_id, cls.shipped_model_facts)
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>  ├─ facts_config.model_fact_overrides(provider, model_id)
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>  ├─ apply_overrides(...)              → the effective record
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  └─ is_unmeasured(...)                → "(unmeasured)" rather than a false tier
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  ├─ is_unmeasured(model_id)           → has_global_row   [provider.py:356]
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>  └─ _source(field)                    → per-field label  [provider.py:363]
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>       ├─ has_global_row      → "(built-in)" on EVERY field, unconditionally
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>       └─ provider-row only   → compare each field to UNMEASURED,
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>                                label the matches "(unmeasured)"
 </span></code></pre></div>
 <p>This display used to re-implement the merge a <strong>third</strong> time, with its own
 layer order and field list — which is how <code>api_path</code> came to be shown here
 while nothing routed on it (debt Item 61). It now reports what the send path
 will actually do, and labels each field's source (<code>config</code> / <code>built-in</code> /
 <code>unmeasured</code>).</p>
+<blockquote>
+<p><strong>Redrawn 2026-09-20 for the v1.19.3 fix (<code>6d29451b</code>).</strong> The graph showed
+a flat <code>is_unmeasured(...)</code> leaf, which was the pre-v1.19.3 shape: one
+boolean deciding the label for all twelve fields at once. That answered
+<em>"did a row match"</em>, not <em>"is this value measured"</em> — and
+<code>PerplexityProvider</code> seeds its gateway rows from
+<code>shipped_facts_for_model("openai/")</code> and four sibling globs that match
+<strong>nothing</strong>, so the seed IS <code>UNMEASURED</code> with three fields then set
+deliberately. The other nine printed <code>(built-in)</code> for every model those
+globs serve, across four vendors.</p>
+<p>The <code>has_global_row</code> guard is what keeps the fix from over-reaching:
+comparing a value to <code>UNMEASURED</code> cannot by itself tell a guess from a
+measurement that happens to agree with the guess, so a model with its own
+row in <code>SHIPPED_MODEL_FACTS</code> keeps <code>(built-in)</code> on every field. <code>o3*</code>'s
+measured-serial <code>parallel_tool_calls=False</code> is a finding, not a floor,
+and is never relabelled. <strong>Reporting only</strong> — resolution, the send path
+and <code>is_unmeasured</code> itself are untouched.</p>
+</blockquote>
 <hr />
 <h2 id="where-the-answer-comes-from-precedence-in-one-table">Where the answer comes from — precedence, in one table<a class="headerlink" href="#where-the-answer-comes-from-precedence-in-one-table" title="Permanent link">&para;</a></h2>
 <table>
@@ -1719,12 +1770,26 @@ field-level merge and nothing to arbitrate.</p>
 <code>chat_completions</code> on OpenRouter, so one global row cannot state its
 <code>wire_protocol</code> correctly for both. That is the seam W3's fleet rows land in.</p>
 <hr />
-<h2 id="not-yet-consumed">Not yet consumed<a class="headerlink" href="#not-yet-consumed" title="Permanent link">&para;</a></h2>
-<p><code>wire_protocol</code> is <strong>resolved but not yet routed on</strong> — W2 makes
-<code>openai_native</code>'s three <code>_is_responses_api_model()</code> branches read it, which
-is what finally closes debt Item 61. Until then the field is data with one
-reader (<code>/provider</code>), and this doc should be updated the same day that
-changes.</p>
+<h2 id="not-yet-consumed-consumed-since-w2">~~Not yet consumed~~ — consumed since W2<a class="headerlink" href="#not-yet-consumed-consumed-since-w2" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>This section described <code>wire_protocol</code> as resolved-but-not-routed-on. That
+stopped being true when <strong>W2 shipped and closed debt Item 61 on
+2026-08-31</strong> (<code>1bf93de7</code>); the text survived as a leftover pre-W2 draft
+until 2026-09-20, contradicting the W2–W4 sections above it in the same
+file.</p>
+</blockquote>
+<p><code>wire_protocol</code> <strong>is</strong> the routing key. <code>openai_native</code>'s three
+<code>_is_responses_api_model()</code> branches were replaced by one reader,
+<code>get_facts_for_model(model).wire_protocol</code>, consumed by all four dispatch
+sites; the prefix tuple that used to decide is now seed data only. The
+fences are declared-vs-routed across every built-in row, plus an operator
+override proven to change the <strong>outgoing request</strong> in both directions,
+asserted at the client spy rather than at the resolver.</p>
+<p>The fifth provider (Anthropic) and the fourth wire (<code>messages</code>) landed in
+v1.19.1 under ADR 0012 §6 — see <code>ppxai/engine/providers/anthropic.py</code> and
+<code>ppxai/engine/providers/wire/messages.py</code>. The Anthropic provider ships
+<strong>opt-in and untested against the live API</strong> (debt Item 71, an accepted
+limitation).</p>
 
 
 

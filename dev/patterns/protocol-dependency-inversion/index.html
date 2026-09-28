@@ -1260,16 +1260,45 @@
 <td><code>EngineClient</code></td>
 <td>All command modules</td>
 </tr>
+<tr>
+<td><code>ProtocolHandler</code></td>
+<td><code>engine/providers/wire/protocol.py</code></td>
+<td>the four wire handlers</td>
+<td><code>BaseProvider</code> + each provider</td>
+</tr>
+<tr>
+<td><code>SessionRestoreHost</code></td>
+<td><code>tui/session_restore_ops.py</code></td>
+<td><code>PPXAIDEApp</code></td>
+<td><code>tui/session_restore_ops.py</code></td>
+</tr>
 </tbody>
 </table>
 <h2 id="rules">Rules<a class="headerlink" href="#rules" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>NEVER use <code>TYPE_CHECKING</code></strong> — it's a lazy import in disguise</li>
-<li><strong>NEVER use <code>Any</code> to dodge a circular import</strong> unless the parameter is truly duck-typed (e.g., thin adapter wrapping an opaque object)</li>
-<li>When a direct import would create a cycle, define a <code>Protocol</code> in a leaf module</li>
-<li>Protocols go in <code>engine/types.py</code> (for engine-layer types) or the appropriate leaf module</li>
-<li>Use <code>@runtime_checkable</code> so protocols can be used with <code>isinstance()</code> checks</li>
 </ol>
+<blockquote>
+<p><strong>Enforced by a test since 2026-09-20</strong> —
+<code>tests/test_no_new_lazy_imports.py::TestTypeCheckingIsBanned</code>. It is
+AST-based, so the two legitimate <em>prose</em> mentions of the identifier
+(this repo's fence module and <code>providers/wire/protocol.py</code>'s docstring)
+do not trip it, and <code>import typing; if typing.TYPE_CHECKING:</code> does.
+As of 2026-09-20 production code has
+<strong>zero</strong> <code>if TYPE_CHECKING:</code> blocks: <code>grep -rn "TYPE_CHECKING" ppxai/</code>
+returns two hits, both prose in docstrings explaining why the idiom is
+<em>not</em> used. The last real one lived in
+<code>ppxai/tui/session_restore_ops.py</code>, which imported <code>PPXAIDEApp</code> that
+way from 2026-06 until it was replaced with the <code>SessionRestoreHost</code>
+protocol above — the exact circular-import case this pattern exists to
+solve, sitting inside the layer the pattern was written for, unnoticed
+for three months. If you are adding one, you are one <code>Protocol</code> away
+from not needing it.
+2. <strong>NEVER use <code>Any</code> to dodge a circular import</strong> unless the parameter is truly duck-typed (e.g., thin adapter wrapping an opaque object)
+3. When a direct import would create a cycle, define a <code>Protocol</code> in a leaf module
+4. Protocols go in <code>engine/types.py</code> (for engine-layer types) or the appropriate leaf module
+5. Use <code>@runtime_checkable</code> so protocols can be used with <code>isinstance()</code> checks</p>
+</blockquote>
 
 
 
