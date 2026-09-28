@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Branch: `bugfix/v1.19.3` (commits ahead of master: `git rev-list --count master..HEAD` — not pinned here, it moves until the tag). Nine fixes, a turn-level tool strip in the web and VSCode transcripts, a refreshed deployment example, and ADR 0007's one-command-registry work (`CommandSpec` as the single source of truth for completion/`/help`/the roster, `GET /commands`, and a run of same-day follow-ups). Two of the fixes make an existing silent degradation VISIBLE, without changing what the send path does or changing a resolved fact value. Two close out the 2026-09-27 Sonar chat-completions retirement on the web_search tool's own code path. Two correct `/doctor` (it probed outside the TLS resolver, and its facts scan could describe a different config file than the one it named). Two are resolution and display: the shipped Qwen 27B-FP8 row now covers the in-place 3.8 upgrade, and the context-window badge stops multiplying its baseline by the tool-loop iteration count. The last is a web/VSCode transcript defect fixed alongside the turn-level tool strip below.
 
+**Smoke tests pending:** the VSCode manual smoke checklist (real extension host) and the Rich/Textual smoke runs have not been run for this release; see Known limitations in `docs/release-notes-v1.19.3.md`.
+
 ### Added — one command registry (ADR 0007), landed and Accepted 2026-09-21
 
 `CommandSpec` is now the only place a command is declared; completion, `/help`, and both JS clients' command menus all derive from it instead of restating it by hand. See [docs/decisions/0007-completion-first-class-service.md](docs/decisions/0007-completion-first-class-service.md).

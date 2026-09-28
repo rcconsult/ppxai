@@ -1010,6 +1010,11 @@ Item 78 closes and Item 79 files in this same session, net unchanged).
 
 ## Known limitations
 
+- **Manual smoke tests are pending for this release.** The VSCode manual
+  smoke checklist has not been run in a real extension host, and the Rich
+  and Textual TUIs have not had a smoke run. The automated suite, the
+  gateway smoke and the 2026-09-26 VSCode-web smoke run did pass; the
+  manual runs follow after the tag.
 - **Not every fix here was confirmed live; the split is deliberate.**
   Four were measured against a real endpoint on 2026-09-16 — the
   `perplexity/sonar` default (a real search returning answer plus
