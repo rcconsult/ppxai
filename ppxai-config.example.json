@@ -1356,8 +1356,8 @@
       "preferred": "auto",
       "__comment_preferred": "Search provider: 'auto' (detect), 'perplexity', 'gemini', 'duckduckgo'",
       "order": [
-        "perplexity",
         "gemini",
+        "perplexity",
         "duckduckgo"
       ],
       "__comment_order": "Fallback chain, tried in this sequence. `preferred` still names the first choice and folds into this order. Omitted backends are appended in the default order, so a short list is 'try these first', not 'only these' - use `strict: true` to pin a single backend. The egress allowlist is derived from this same list.",

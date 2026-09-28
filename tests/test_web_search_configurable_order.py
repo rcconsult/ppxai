@@ -19,6 +19,8 @@ after it.
 """
 
 import asyncio
+import json
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -61,6 +63,15 @@ class TestTheOrderIsConfigurable:
         """Owner decision 2026-09-27; was perplexity > gemini > duckduckgo."""
         assert AUTO_ORDER == ("gemini", "perplexity", "duckduckgo")
         assert resolve_web_search_backend().candidates == AUTO_ORDER
+
+    def test_the_shipped_example_config_pins_the_same_order(self):
+        """Owner decision 2026-09-28 (docs audit N19): new installs are
+        seeded from ppxai-config.example.json, whose explicit order stayed
+        Perplexity-first after AUTO_ORDER moved to Gemini-first. Keep the
+        pin, keep it equal to the default."""
+        example = Path(__file__).resolve().parents[1] / "ppxai-config.example.json"
+        order = json.loads(example.read_text(encoding="utf-8"))["tools"]["web_search"]["order"]
+        assert tuple(order) == AUTO_ORDER
 
     def test_a_configured_order_is_the_chain(self, tools_cfg, all_keys_present):
         tools_cfg["order"] = ["gemini", "duckduckgo", "perplexity"]

@@ -19,6 +19,10 @@ Branch: `feature/v1.19.4` (the branch name predates the 1.19.4 security patch; t
 - A proxied request with `X-Ppxai-Hub-Attach: no` never attaches a server; the hub answers 503 instead. The launcher's count reads use it, so a refresh cannot undo a Detach.
 - A packaged `ppxai-server --uds --announce` now runs in, and reports as its `workdir`, the directory it was launched in. It used to use the binary's own directory, because the packaged entry script changes into it.
 
+### Changed
+
+- The shipped example config (`ppxai-config.example.json`, which seeds new installs) now lists web search backends Gemini first: `tools.web_search.order` = `gemini`, `perplexity`, `duckduckgo`. It still pinned Perplexity first after the built-in default moved to Gemini first on 2026-09-27, so a fresh install tried Perplexity before Gemini. An existing config is not changed. A test now keeps the example's order equal to the built-in default.
+
 ## [1.19.4] - unreleased
 
 Branch: `fix/v1.19.4` (from master @ v1.19.3). Security patch, one fix.
