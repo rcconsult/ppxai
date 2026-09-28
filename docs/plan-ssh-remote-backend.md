@@ -94,6 +94,8 @@ failure → degraded → recovery, and a transport dying mid-forward.
 
 Tests: `tests/test_remote_hub.py` (two real uvicorn servers — the hub router and a fake remote on a unix socket and on TCP — 25 cases × 2 transports; mutation-checked: a buffering proxy and a missing loopback gate both fail it), the coder fence (22 cases; mutation-checked: dropping `remote` from the loader whitelist or the loopback gate fails it), and `tests/test_remote_hub_e2e.py` (slow): a real `ppxai-server` hub, configured by a real config file, launches a second real `ppxai-server` through the production `OpenSSHTransport` (its `ssh` a PATH shim around `tests/fake_ssh.py`), serves the remote's own web UI and terminal through `/h/lab/<id>/`, and stops it.
 
+**Windows note:** "`ssh` from PATH" means `ssh.exe`. `CreateProcess` appends only `.exe` and ignores PATHEXT, so an `ssh.cmd`/`ssh.bat` wrapper earlier on PATH is never run (measured by win32-ppxai, 2026-09-28). Host-specific options belong in `~/.ssh/config`, as S1 says.
+
 Live results recorded for Phases 2–3 (2026-09-28): a Windows hub (TCP local end) and a Linux hub (real OpenSSH, unix-socket local end: socket 0600 in a 0700 dir) each ran launch → attach (healthy) → stop (gone) against a real WSL2 sshd, with nothing left behind.
 
 - `/h/<host>/<server-id>/…` → forwarded endpoint, prefix stripped.

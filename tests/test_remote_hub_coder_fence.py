@@ -62,10 +62,24 @@ def _pod_client():
     return TestClient(http_module.app, client=POD_PEER, base_url=f"https://{HOST}")
 
 
+@pytest.fixture(scope="class")
+def off_pod():
+    """ONE app start shared by the read-only checks below: a start is ~3 s on
+    Windows, and these tests only send requests. The env is re-applied per
+    test by `coder_pod`; this fixture pins what the lifespan reads at startup."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(http_module, "_BIND_HOST", "0.0.0.0")
+        mp.setenv("PPXAI_TRUSTED_HOSTS", HOST)
+        mp.setenv("PPXAI_ALLOWED_ORIGINS", ORIGIN)
+        mp.delenv("PPXAI_API_TOKEN", raising=False)
+        mp.setattr(http_module, "get_remote_config", lambda: {})
+        with _pod_client() as client:
+            yield client
+
+
 class TestHubIsOffWithoutRemoteHosts:
-    def test_no_hub_exists(self):
-        with _pod_client():
-            assert remote_hub.hub() is None
+    def test_no_hub_exists(self, off_pod):
+        assert remote_hub.hub() is None
 
     @pytest.mark.parametrize("method,path", [
         ("GET", "/h/gpu01/9f2c0000aaaa1111/"),
@@ -77,24 +91,21 @@ class TestHubIsOffWithoutRemoteHosts:
         ("POST", "/hub/hosts/gpu01/servers"),
         ("POST", "/hub/hosts/gpu01/servers/9f2c0000aaaa1111/attach"),
     ])
-    def test_hub_paths_answer_exactly_like_an_unknown_path(self, method, path):
-        with _pod_client() as c:
-            unknown = c.request(method, "/no/such/route/here", headers={"origin": ORIGIN})
-            hub = c.request(method, path, headers={"origin": ORIGIN})
+    def test_hub_paths_answer_exactly_like_an_unknown_path(self, off_pod, method, path):
+        unknown = off_pod.request(method, "/no/such/route/here", headers={"origin": ORIGIN})
+        hub = off_pod.request(method, path, headers={"origin": ORIGIN})
         assert (hub.status_code, hub.content) == (unknown.status_code, unknown.content) \
             == (404, b'{"detail":"Not Found"}')
 
-    def test_a_hub_websocket_is_refused(self):
-        with _pod_client() as c:
-            with pytest.raises(WebSocketDisconnect):
-                with c.websocket_connect("/h/gpu01/9f2c0000aaaa1111/ws/terminal",
-                                         headers={"host": HOST, "origin": ORIGIN}):
-                    pass
-
-    def test_the_pods_own_terminal_still_opens(self):
-        with _pod_client() as c:
-            with c.websocket_connect("/ws/terminal", headers={"host": HOST, "origin": ORIGIN}):
+    def test_a_hub_websocket_is_refused(self, off_pod):
+        with pytest.raises(WebSocketDisconnect):
+            with off_pod.websocket_connect("/h/gpu01/9f2c0000aaaa1111/ws/terminal",
+                                           headers={"host": HOST, "origin": ORIGIN}):
                 pass
+
+    def test_the_pods_own_terminal_still_opens(self, off_pod):
+        with off_pod.websocket_connect("/ws/terminal", headers={"host": HOST, "origin": ORIGIN}):
+            pass
 
     def test_nothing_is_spawned(self, no_subprocesses):
         with _pod_client() as c:
@@ -103,10 +114,9 @@ class TestHubIsOffWithoutRemoteHosts:
             c.get("/health")
         assert no_subprocesses == []
 
-    def test_health_and_ready_are_unchanged(self):
-        with _pod_client() as c:
-            assert c.get("/health", headers={"host": "10.1.2.3:54320"}).status_code == 200
-            assert c.get("/ready", headers={"host": HOST}).status_code in (200, 503)
+    def test_health_and_ready_are_unchanged(self, off_pod):
+        assert off_pod.get("/health", headers={"host": "10.1.2.3:54320"}).status_code == 200
+        assert off_pod.get("/ready", headers={"host": HOST}).status_code in (200, 503)
 
 
 class TestEvenWithRemoteHostsTheIngressSeesNothing:
