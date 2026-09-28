@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ..common.atomic_file import write_json_atomic
+from ..common.atomic_file import read_json, write_json_atomic
 from ..common.logger import get_logger
 from ..constants import ConsentMode
 from ..usage import save_session_usage
@@ -1717,8 +1717,7 @@ class SessionManager:
         # store while leaving messages intact (finding #3). Only after a
         # valid parse do we mutate any state.
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+            data = read_json(filepath)
         except (json.JSONDecodeError, OSError, ValueError) as e:
             logger.warning(f"Failed to read session '{name}': {e}")
             return False
@@ -2089,8 +2088,7 @@ class SessionManager:
         seen_names: set = set()
         for filepath, fallback_name in candidates:
             try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    data = json.load(f)
+                data = read_json(filepath)
 
                 session_name = data.get("session_name", fallback_name)
                 if session_name in seen_names:
@@ -2382,8 +2380,7 @@ class SessionManager:
             return None
 
         try:
-            with open(SESSION_STATE_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+            data = read_json(SESSION_STATE_FILE)
             return data.get("last_session")
         except Exception as e:
             logger.debug(f"State file read failed: {e}")
@@ -2474,8 +2471,7 @@ class SessionManager:
         # Any field that's missing or unreadable falls back to a sane
         # default so the caller never has to defend against KeyError.
         try:
-            with open(best_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            data = read_json(best_path)
         except Exception as e:
             logger.debug(f"Session file read failed for scan fallback: {e}")
             return None

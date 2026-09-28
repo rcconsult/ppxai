@@ -18,11 +18,16 @@ import os
 import re
 import sys
 import threading
+import time
+from pathlib import Path
 
 import pytest
 
-from ppxai.common.atomic_file import write_json_atomic
+from ppxai import usage as usage_module
+from ppxai.common import atomic_file
+from ppxai.common.atomic_file import read_json, write_json_atomic
 from ppxai.config import features
+from ppxai.config.store import ConfigStore
 from ppxai.engine.session import SessionManager
 from ppxai.usage import UsageStorage
 
@@ -91,16 +96,64 @@ class TestWriteJsonAtomic:
                     bad.append(str(exc))
                 except PermissionError:
                     pass  # Windows: open raced the rename; not a partial read
+                time.sleep(0.001)  # a real reader re-reads, it does not spin
 
         t = threading.Thread(target=reader)
         t.start()
+        saved = 0
         try:
             for i in range(300):
-                write_json_atomic(target, {**payload, "i": i})
+                try:
+                    write_json_atomic(target, {**payload, "i": i})
+                    saved += 1
+                except PermissionError:
+                    # Windows: the reader held the file through every retry.
+                    # The save failed whole; the old file is intact.
+                    if sys.platform != "win32":
+                        raise
         finally:
             stop.set()
             t.join()
         assert bad == [], bad[:3]
+        assert saved > 0
+        assert json.loads(target.read_text(encoding="utf-8"))["k"] == payload["k"]
+
+    def test_windows_raises_and_keeps_the_old_file_when_the_rename_stays_denied(
+            self, tmp_path, monkeypatch):
+        # ppxai-64, 2026-09-28: on Windows os.replace over a file a reader
+        # holds open is denied. More, jittered retries -- then raise with the
+        # target intact. Never write in place: that truncates under the very
+        # reader holding the file (win32-ppxai).
+        target = tmp_path / "c.json"
+        target.write_text('{"old": 1}', encoding="utf-8")
+        attempts = []
+
+        def denied(self_path, target_path):
+            attempts.append(1)
+            raise PermissionError(13, "[WinError 5] Access is denied")
+
+        monkeypatch.setattr(atomic_file.sys, "platform", "win32")
+        monkeypatch.setattr(atomic_file.time, "sleep", lambda s: None)
+        monkeypatch.setattr(Path, "replace", denied)
+        with pytest.raises(PermissionError):
+            write_json_atomic(target, {"new": 1})
+        assert target.read_text(encoding="utf-8") == '{"old": 1}'
+        assert len(attempts) == atomic_file._WINDOWS_JSON_RETRIES
+        assert [p.name for p in tmp_path.iterdir()] == ["c.json"]
+
+    def test_off_windows_a_denied_rename_still_raises(self, tmp_path, monkeypatch):
+        target = tmp_path / "c.json"
+        target.write_text('{"old": 1}', encoding="utf-8")
+
+        def denied(self_path, target_path):
+            raise PermissionError(13, "Permission denied")
+
+        monkeypatch.setattr(atomic_file.sys, "platform", "linux")
+        monkeypatch.setattr(Path, "replace", denied)
+        with pytest.raises(PermissionError):
+            write_json_atomic(target, {"new": 1})
+        assert target.read_text(encoding="utf-8") == '{"old": 1}'
+        assert [p.name for p in tmp_path.iterdir()] == ["c.json"]
 
 
 _IN_PLACE_WRITE = re.compile(r"""open\([^)]*,\s*['"]w['"]""")
@@ -119,3 +172,111 @@ def test_state_files_are_saved_atomically(func):
     src = inspect.getsource(func)
     assert "write_json_atomic(" in src, f"{func.__qualname__} no longer saves atomically"
     assert not _IN_PLACE_WRITE.search(src), f"{func.__qualname__} truncates in place again"
+
+
+class TestReadJson:
+    def test_reads_json_with_the_given_encoding(self, tmp_path):
+        target = tmp_path / "c.json"
+        target.write_bytes(b'\xef\xbb\xbf{"bom": true}')
+        assert read_json(target, encoding="utf-8-sig") == {"bom": True}
+
+    def test_retries_the_windows_rename_race(self, tmp_path, monkeypatch):
+        # A reader opening the file while os.replace swaps it gets a
+        # PermissionError on Windows (win32-ppxai, 2026-09-28).
+        target = tmp_path / "c.json"
+        target.write_text('{"ok": 1}', encoding="utf-8")
+        real_open = open
+        calls = []
+
+        def flaky_open(*args, **kwargs):
+            calls.append(1)
+            if len(calls) < 3:
+                raise PermissionError(13, "sharing violation")
+            return real_open(*args, **kwargs)
+
+        monkeypatch.setattr(atomic_file.sys, "platform", "win32")
+        monkeypatch.setattr("builtins.open", flaky_open)
+        assert read_json(target) == {"ok": 1}
+        assert len(calls) == 3
+
+    def test_does_not_retry_off_windows(self, tmp_path, monkeypatch):
+        target = tmp_path / "c.json"
+        target.write_text("{}", encoding="utf-8")
+        monkeypatch.setattr(atomic_file.sys, "platform", "linux")
+
+        def denied(*args, **kwargs):
+            raise PermissionError(13, "denied")
+
+        monkeypatch.setattr("builtins.open", denied)
+        with pytest.raises(PermissionError):
+            read_json(target)
+
+
+class TestAFailedReadNeverWipesTheFile:
+    """Before 2026-09-28 both writers treated an unreadable file as empty
+    and saved that back: one failed read wiped the whole file."""
+
+    @pytest.fixture
+    def config_file(self, tmp_path, monkeypatch):
+        path = tmp_path / "ppxai-config.json"
+        monkeypatch.setattr(features, "find_writable_config_file", lambda: path)
+        monkeypatch.setattr(features, "find_config_file", lambda: path)
+        store = ConfigStore.get_instance()
+        monkeypatch.setitem(store.config, "tui", dict(store.config.get("tui", {})))
+        return path
+
+    def test_an_unparseable_config_is_not_overwritten(self, config_file):
+        config_file.write_text('{"providers": {"x": 1}, BROKEN', encoding="utf-8")
+        assert features.set_tui_config("debug_log", True) is False
+        assert config_file.read_text(encoding="utf-8") == '{"providers": {"x": 1}, BROKEN'
+        assert ConfigStore.get_instance().config["tui"]["debug_log"] is True
+
+    def test_an_unreadable_config_is_not_overwritten(self, config_file, monkeypatch):
+        config_file.write_text('{"providers": {"x": 1}}', encoding="utf-8")
+
+        def locked(*args, **kwargs):
+            raise PermissionError(13, "locked")
+
+        monkeypatch.setattr(features, "read_json", locked)
+        assert features.set_tui_config("debug_log", True) is False
+        assert json.loads(config_file.read_text(encoding="utf-8")) == {"providers": {"x": 1}}
+
+    def test_a_readable_config_keeps_everything_else(self, config_file):
+        config_file.write_text('{"providers": {"x": 1}, "tui": {"theme": "dark"}}',
+                               encoding="utf-8")
+        assert features.set_tui_config("debug_log", True) is True
+        saved = json.loads(config_file.read_text(encoding="utf-8"))
+        assert saved == {"providers": {"x": 1}, "tui": {"theme": "dark", "debug_log": True}}
+
+    def test_a_failed_save_keeps_the_file_and_the_setting(self, config_file, monkeypatch):
+        config_file.write_text('{"providers": {"x": 1}}', encoding="utf-8")
+
+        def denied(*args, **kwargs):
+            raise PermissionError(13, "[WinError 5] Access is denied")
+
+        monkeypatch.setattr(features, "write_json_atomic", denied)
+        assert features.set_tui_config("debug_log", True) is False
+        assert json.loads(config_file.read_text(encoding="utf-8")) == {"providers": {"x": 1}}
+        assert ConfigStore.get_instance().config["tui"]["debug_log"] is True
+
+    def test_corrupt_usage_is_moved_aside_not_overwritten(self, tmp_path):
+        usage_file = tmp_path / "usage.json"
+        usage_file.write_text('{"sessions": [TRUNCATED', encoding="utf-8")
+        storage = UsageStorage(usage_dir=tmp_path)
+        storage._save()
+        backups = list(tmp_path.glob("usage.json.corrupt-*"))
+        assert len(backups) == 1
+        assert backups[0].read_text(encoding="utf-8") == '{"sessions": [TRUNCATED'
+        assert json.loads(usage_file.read_text(encoding="utf-8"))["sessions"] == []
+
+    def test_unreadable_usage_is_never_saved_over(self, tmp_path, monkeypatch):
+        usage_file = tmp_path / "usage.json"
+        usage_file.write_text('{"version": 1, "sessions": [{"id": "keep"}]}', encoding="utf-8")
+
+        def locked(*args, **kwargs):
+            raise PermissionError(13, "locked")
+
+        monkeypatch.setattr(usage_module, "read_json", locked)
+        storage = UsageStorage(usage_dir=tmp_path)
+        storage._save()
+        assert json.loads(usage_file.read_text(encoding="utf-8"))["sessions"] == [{"id": "keep"}]

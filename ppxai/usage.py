@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from .common.atomic_file import write_json_atomic
+from .common.atomic_file import read_json, write_json_atomic
 from .common.logger import get_logger
 
 logger = get_logger("tui")
@@ -72,22 +72,39 @@ class UsageStorage:
         # Ensure directory exists
         self.usage_dir.mkdir(parents=True, exist_ok=True)
 
-        # Load existing data or initialize empty
+        # Load existing data or initialize empty. _load() sets
+        # _save_disabled when the file on disk must not be overwritten.
+        self._save_disabled = False
         self._data = self._load()
 
     def _load(self) -> dict[str, Any]:
         """Load usage data from disk."""
         if self.usage_file.exists():
             try:
-                with open(self.usage_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    # Validate version
-                    if data.get("version", 0) == self.STORAGE_VERSION:
-                        return data
-                    # Future: handle version migrations
+                data = read_json(self.usage_file)
+                # Future: handle version migrations (STORAGE_VERSION)
+                if isinstance(data, dict):
                     return data
-            except (json.JSONDecodeError, IOError) as e:
-                logger.debug(f"Failed to load usage data from {self.usage_file}: {e}")
+                raise json.JSONDecodeError("not a JSON object", "", 0)
+            except json.JSONDecodeError as e:
+                # Corrupt: keep it for inspection instead of letting the next
+                # save overwrite the history with an empty record.
+                backup = self.usage_file.with_name(
+                    f"{self.usage_file.name}.corrupt-{datetime.now():%Y%m%d-%H%M%S}")
+                try:
+                    self.usage_file.replace(backup)
+                    logger.warning(f"usage data at {self.usage_file} was corrupt ({e}); "
+                                   f"moved to {backup.name}, starting fresh")
+                except OSError as move_err:
+                    logger.warning(f"usage data at {self.usage_file} is corrupt ({e}) and could "
+                                   f"not be moved aside ({move_err}); not saving usage this run")
+                    self._save_disabled = True
+            except OSError as e:
+                # Unreadable (locked, permissions): the history on disk may be
+                # fine, so never write over it this run.
+                logger.warning(f"usage data at {self.usage_file} could not be read ({e}); "
+                               f"not saving usage this run")
+                self._save_disabled = True
 
         # Return empty structure
         return {
@@ -98,6 +115,8 @@ class UsageStorage:
 
     def _save(self):
         """Save usage data to disk."""
+        if self._save_disabled:
+            return
         try:
             write_json_atomic(self.usage_file, self._data, indent=2)
         except OSError as e:

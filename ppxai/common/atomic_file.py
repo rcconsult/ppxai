@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import stat
 import sys
 import tempfile
@@ -36,11 +37,21 @@ from typing import Any
 # lock we should surface to the user rather than hide with a retry.
 _DEFAULT_MAX_RETRIES = 3
 
+# JSON state saves (config, sessions, usage) race READERS, not scanners:
+# Python's open() does not pass FILE_SHARE_DELETE, so on Windows
+# `os.replace` over a file another thread or process has open for reading
+# is denied until that reader closes it. Readers hold it for milliseconds
+# and re-open often, so more, shorter, jittered attempts (~1 s in all) find
+# a gap where 3 fixed 100/200 ms ones did not (ppxai-64, 2026-09-28).
+_WINDOWS_JSON_RETRIES = 10
+_WINDOWS_JSON_BASE_DELAY = 0.02
+
 
 def atomic_replace(
     temp_path: Path,
     target_path: Path,
     max_retries: int = _DEFAULT_MAX_RETRIES,
+    base_delay: float = 0.1,
 ) -> None:
     """Atomically replace `target_path` with `temp_path`.
 
@@ -63,6 +74,8 @@ def atomic_replace(
         max_retries: Maximum attempts (default 3). Only has effect on
                    Windows — POSIX succeeds on the first call or
                    fails for a permission reason unrelated to locking.
+        base_delay: Backoff unit in seconds; attempt n sleeps
+                   `base_delay * n` plus up to `base_delay` of jitter.
 
     Raises:
         PermissionError: Windows lock contention persisted beyond
@@ -82,7 +95,9 @@ def atomic_replace(
             # POSIX a PermissionError means the caller doesn't own
             # the destination, and more attempts won't change that.
             if sys.platform == "win32" and attempt < max_retries - 1:
-                time.sleep(0.1 * (attempt + 1))  # 100ms, 200ms
+                # 100ms, 200ms (+ jitter) by default; jitter keeps two
+                # writers from retrying in lockstep.
+                time.sleep(base_delay * (attempt + 1) + random.uniform(0, base_delay))
                 continue
             # Exhausted or non-Windows — clean up before re-raising so
             # the caller's directory doesn't accumulate .tmp carcasses.
@@ -120,6 +135,12 @@ def write_json_atomic(
       the umask to match it would briefly zero the process-wide umask, which
       is not thread-safe.
     - On any failure the temp file is removed and the target is untouched.
+    - Windows: the rename is denied while a reader holds the target open,
+      so it is retried ~1 s with jitter. If it is still denied, this raises
+      `PermissionError` with the target untouched. It never falls back to
+      writing in place: that truncates the file while a reader has it open,
+      the torn read this function exists to prevent (win32-ppxai,
+      2026-09-28). Callers decide what a failed save means.
     """
     target = Path(os.path.realpath(target_path))
     text = json.dumps(data, indent=indent, ensure_ascii=ensure_ascii)
@@ -139,4 +160,36 @@ def write_json_atomic(
     except BaseException:
         tmp.unlink(missing_ok=True)
         raise
-    atomic_replace(tmp, target)
+    if sys.platform == "win32":
+        atomic_replace(tmp, target, max_retries=_WINDOWS_JSON_RETRIES,
+                       base_delay=_WINDOWS_JSON_BASE_DELAY)
+    else:
+        atomic_replace(tmp, target)
+
+
+def read_json(
+    path: Path | str,
+    *,
+    encoding: str = "utf-8",
+    max_retries: int = _DEFAULT_MAX_RETRIES,
+) -> Any:
+    """`json.load` of `path`, retrying the Windows rename race.
+
+    The read-side partner of `write_json_atomic`. On Windows, opening a
+    file at the instant `os.replace` swaps a new one into its place can fail
+    with `PermissionError` (sharing violation / delete pending) where POSIX
+    would simply open the old or the new file. That window is milliseconds,
+    so a short bounded retry (50 ms, 100 ms) covers it; anything longer is a
+    real lock and is raised. `FileNotFoundError` and `json.JSONDecodeError`
+    are raised at once -- callers decide what a missing or corrupt file means.
+    """
+    for attempt in range(max_retries):
+        try:
+            with open(path, encoding=encoding) as f:
+                return json.load(f)
+        except PermissionError:
+            if sys.platform == "win32" and attempt < max_retries - 1:
+                time.sleep(0.05 * (attempt + 1))
+                continue
+            raise
+    raise AssertionError("unreachable")  # pragma: no cover

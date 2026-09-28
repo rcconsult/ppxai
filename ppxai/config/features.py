@@ -5,7 +5,7 @@ TUI and session configuration.
 import json
 from typing import Any
 
-from ..common.atomic_file import write_json_atomic
+from ..common.atomic_file import read_json, write_json_atomic
 from ..common.logger import get_logger
 from .loader import find_config_file, find_writable_config_file
 from .store import ConfigStore
@@ -74,12 +74,23 @@ def set_tui_config(key: str, value: Any) -> bool:
             f"found, they do not merge)"
         )
 
+    store = ConfigStore.get_instance()
+    current = store.config
     if config_path.exists():
         try:
-            with open(config_path, "r", encoding="utf-8-sig") as f:
-                config_data = json.load(f)
-        except (json.JSONDecodeError, IOError):
-            config_data = {}
+            config_data = read_json(config_path, encoding="utf-8-sig")
+        except (json.JSONDecodeError, OSError) as e:
+            # Never write over a config we could not read: saving `{}` plus
+            # this one key would silently wipe the user's whole file (what
+            # this did until 2026-09-28). Apply it to this session only.
+            logger.warning(f"tui.{key} applied for this session only, not saved: "
+                           f"{config_path} could not be read ({e})")
+            current.setdefault("tui", {})[key] = value
+            return False
+        if not isinstance(config_data, dict):
+            logger.warning(f"tui.{key} not saved: {config_path} is not a JSON object")
+            current.setdefault("tui", {})[key] = value
+            return False
     else:
         config_data = {}
 
@@ -95,15 +106,16 @@ def set_tui_config(key: str, value: Any) -> bool:
                           trailing_newline=True)
 
         # Update in-memory config
-        store = ConfigStore.get_instance()
-        current = store.config
         if "tui" not in current:
             current["tui"] = {}
         current["tui"][key] = value
 
         return True
     except (OSError, TypeError, ValueError) as e:
-        logger.warning(f"Config save failed: {e}")
+        # The file is untouched (the save is atomic); keep the setting for
+        # this session, as when the config could not be read.
+        logger.warning(f"tui.{key} applied for this session only, not saved: {e}")
+        current.setdefault("tui", {})[key] = value
         return False
 
 

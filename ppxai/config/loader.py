@@ -22,6 +22,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+from ..common.atomic_file import read_json
 from ..common.logger import get_logger
 from .tls import resolve_tls_verify
 
@@ -300,9 +301,7 @@ def _load_json_config(config_path: Path) -> dict[str, Any]:
         ValueError: If the config file is invalid.
     """
     try:
-        with open(config_path, 'r', encoding='utf-8-sig') as f:
-            config = json.load(f)
-        return config
+        return read_json(config_path, encoding='utf-8-sig')
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in config file {config_path}: {e}")
     except Exception as e:
