@@ -338,9 +338,16 @@ class _EchoServer:
                 conn, _ = self.sock.accept()
             except OSError:
                 return
-            with conn:
-                data = conn.recv(1024)
-                conn.sendall(b"echo:" + data)
+            # The forward's readiness probe connects and closes at once, so the
+            # first connection is often already shut down. Linux raises EPIPE
+            # on the reply (macOS does not); it must not kill the server.
+            try:
+                with conn:
+                    data = conn.recv(1024)
+                    if data:
+                        conn.sendall(b"echo:" + data)
+            except OSError:
+                continue
 
     def close(self):
         self.sock.close()
