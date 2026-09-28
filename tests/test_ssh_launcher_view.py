@@ -49,7 +49,8 @@ global.clearInterval = () => {};
 
 def _node(script: str) -> dict:
     src = _STUBS + VIEW.read_text(encoding="utf-8") + "\n" + script
-    done = subprocess.run([NODE, "-e", src], capture_output=True, text=True, timeout=30)
+    done = subprocess.run([NODE, "-e", src], capture_output=True, text=True,
+                          encoding="utf-8", timeout=30)  # node writes UTF-8; Windows would decode cp1252
     assert done.returncode == 0, done.stderr
     return json.loads(done.stdout)
 
