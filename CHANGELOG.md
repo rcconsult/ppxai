@@ -19,6 +19,10 @@ Branch: `feature/v1.19.4` (the branch name predates the 1.19.4 security patch; t
 - A proxied request with `X-Ppxai-Hub-Attach: no` never attaches a server; the hub answers 503 instead. The launcher's count reads use it, so a refresh cannot undo a Detach.
 - A packaged `ppxai-server --uds --announce` now runs in, and reports as its `workdir`, the directory it was launched in. It used to use the binary's own directory, because the packaged entry script changes into it.
 
+### Fixed
+
+- **Saving the config, a session, the restore pointer or `usage.json` can no longer leave the file empty.** All four were written by truncating the file and then writing it, so a read that landed mid-save saw an empty file (`Invalid JSON in config file ... line 1 column 1`), and a crash mid-save left it empty — the user's hand-edited `ppxai-config.json` included (every `/debug-log`-style toggle saves it). They now write a temp file in the same directory and rename it over the target (`common/atomic_file.write_json_atomic`), so readers see the old file or the new one. A symlinked config stays a symlink, an existing file keeps its permissions, and a newly created one is owner-only (0600). Found by wsl2-builder as a parallel-suite flake in `tests/test_usage_integration.py`; pinned by `tests/test_atomic_json_write.py`, whose concurrent-reader test fails on the old write.
+
 ### Changed
 
 - The shipped example config (`ppxai-config.example.json`, which seeds new installs) now lists web search backends Gemini first: `tools.web_search.order` = `gemini`, `perplexity`, `duckduckgo`. It still pinned Perplexity first after the built-in default moved to Gemini first on 2026-09-27, so a fresh install tried Perplexity before Gemini. An existing config is not changed. A test now keeps the example's order equal to the built-in default.

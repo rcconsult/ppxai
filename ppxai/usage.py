@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from .common.atomic_file import write_json_atomic
 from .common.logger import get_logger
 
 logger = get_logger("tui")
@@ -98,9 +99,8 @@ class UsageStorage:
     def _save(self):
         """Save usage data to disk."""
         try:
-            with open(self.usage_file, 'w', encoding='utf-8') as f:
-                json.dump(self._data, f, indent=2)
-        except IOError as e:
+            write_json_atomic(self.usage_file, self._data, indent=2)
+        except OSError as e:
             # Log but don't crash - usage tracking is non-critical
             logging.getLogger(__name__).warning(f"Failed to save usage data: {e}")
 

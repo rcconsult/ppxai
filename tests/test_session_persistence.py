@@ -1347,6 +1347,10 @@ class TestWriteSessionJsonPropagatesOSError:
     AutosaveFailureGuard (rich/main.py, tui/stream_handler.py) can count
     consecutive failures and surface them to the user. Silently swallowing
     here would let a full-disk run hide every save failure for hours.
+
+    The save is atomic (`common.atomic_file.write_json_atomic`: temp file,
+    then rename), so the failure is injected where that write starts, at
+    `mkstemp`, rather than at `builtins.open`.
     """
 
     def _sm(self, tmp_path):
@@ -1357,7 +1361,7 @@ class TestWriteSessionJsonPropagatesOSError:
 
     def test_in_place_flat_write_propagates_oserror(self, tmp_path):
         sm = self._sm(tmp_path)
-        with patch("builtins.open", side_effect=OSError(28, "No space left on device")):
+        with patch("ppxai.common.atomic_file.tempfile.mkstemp", side_effect=OSError(28, "No space left on device")):
             with pytest.raises(OSError, match="No space left"):
                 sm._write_session_json_in_place(
                     "wtest", {"session_name": "wtest", "messages": [], "metadata": {}},
@@ -1366,7 +1370,7 @@ class TestWriteSessionJsonPropagatesOSError:
 
     def test_in_place_flat_write_propagates_permission_error(self, tmp_path):
         sm = self._sm(tmp_path)
-        with patch("builtins.open", side_effect=PermissionError("read-only mount")):
+        with patch("ppxai.common.atomic_file.tempfile.mkstemp", side_effect=PermissionError("read-only mount")):
             with pytest.raises(PermissionError, match="read-only mount"):
                 sm._write_session_json_in_place(
                     "wtest", {"session_name": "wtest", "messages": [], "metadata": {}},
@@ -1376,7 +1380,7 @@ class TestWriteSessionJsonPropagatesOSError:
     def test_in_place_dir_write_propagates_oserror(self, tmp_path):
         sm = self._sm(tmp_path)
         # mkdir succeeds, json.dump fails — ensure error reaches caller
-        with patch("builtins.open", side_effect=OSError(28, "No space left on device")):
+        with patch("ppxai.common.atomic_file.tempfile.mkstemp", side_effect=OSError(28, "No space left on device")):
             with pytest.raises(OSError, match="No space left"):
                 sm._write_session_json_in_place(
                     "wtest", {"session_name": "wtest", "messages": [], "metadata": {}},
@@ -1385,13 +1389,13 @@ class TestWriteSessionJsonPropagatesOSError:
 
     def test_save_with_extras_propagates_write_failure(self, tmp_path):
         sm = self._sm(tmp_path)
-        with patch("builtins.open", side_effect=OSError(28, "ENOSPC")):
+        with patch("ppxai.common.atomic_file.tempfile.mkstemp", side_effect=OSError(28, "ENOSPC")):
             with pytest.raises(OSError, match="ENOSPC"):
                 sm._save_with_extras()
 
     def test_save_dirty_propagates_write_failure_so_guard_can_catch(self, tmp_path):
         sm = self._sm(tmp_path)
-        with patch("builtins.open", side_effect=OSError(28, "ENOSPC")):
+        with patch("ppxai.common.atomic_file.tempfile.mkstemp", side_effect=OSError(28, "ENOSPC")):
             with pytest.raises(OSError, match="ENOSPC"):
                 sm.save_dirty()
 
@@ -1400,7 +1404,7 @@ class TestWriteSessionJsonPropagatesOSError:
         slash command result reports the failure rather than claiming
         success on a no-op."""
         sm = self._sm(tmp_path)
-        with patch("builtins.open", side_effect=OSError(28, "ENOSPC")):
+        with patch("ppxai.common.atomic_file.tempfile.mkstemp", side_effect=OSError(28, "ENOSPC")):
             with pytest.raises(OSError, match="ENOSPC"):
                 sm.save("named_save")
 

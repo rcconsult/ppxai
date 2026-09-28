@@ -21,9 +21,14 @@ to wrap with their own try/finally for the happy or sad path.
 
 from __future__ import annotations
 
+import json
+import os
+import stat
 import sys
+import tempfile
 import time
 from pathlib import Path
+from typing import Any
 
 # Tuned for the common Windows antivirus / indexer / preview-server
 # file-lock scenarios. 3 attempts with 100ms + 200ms backoffs covers
@@ -86,3 +91,52 @@ def atomic_replace(
             except OSError:
                 pass
             raise
+
+
+def write_json_atomic(
+    target_path: Path | str,
+    data: Any,
+    *,
+    indent: int | None = 2,
+    ensure_ascii: bool = True,
+    trailing_newline: bool = False,
+    encoding: str = "utf-8",
+) -> None:
+    """Write `data` as JSON to `target_path` so a reader never sees a
+    partial file.
+
+    The JSON goes to a temp file in the target's directory, is flushed and
+    fsynced, and then replaces the target via `atomic_replace` (so Windows
+    lock races are retried). A concurrent reader opens either the old file
+    or the new one, never an empty or half-written one. The previous
+    `open(path, "w")` + `json.dump` truncated first, so a read that landed
+    mid-save saw an empty file ("Expecting value: line 1 column 1").
+
+    - A symlinked target is resolved first, so a config kept in a dotfiles
+      repo stays a symlink and the file it points to is what changes.
+    - An existing target keeps its permission bits. A new one is created
+      owner-only (0600, from `mkstemp`) — stricter than `open(path, "w")`,
+      which suits what goes through here (config, sessions, usage). Reading
+      the umask to match it would briefly zero the process-wide umask, which
+      is not thread-safe.
+    - On any failure the temp file is removed and the target is untouched.
+    """
+    target = Path(os.path.realpath(target_path))
+    text = json.dumps(data, indent=indent, ensure_ascii=ensure_ascii)
+    if trailing_newline:
+        text += "\n"
+    fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=".tmp")
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding=encoding) as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        try:
+            os.chmod(tmp, stat.S_IMODE(target.stat().st_mode))
+        except FileNotFoundError:
+            pass  # a new file keeps mkstemp's owner-only 0600
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    atomic_replace(tmp, target)

@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..common.atomic_file import write_json_atomic
 from ..common.logger import get_logger
 from ..constants import ConsentMode
 from ..usage import save_session_usage
@@ -1569,8 +1570,7 @@ class SessionManager:
         else:
             json_path = self.sessions_dir / f"{session_name}.json"
 
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(session_data, f, indent=2)
+        write_json_atomic(json_path, session_data, indent=2)
         return json_path
 
     def save(self, name: str | None = None) -> str:
@@ -2369,8 +2369,7 @@ class SessionManager:
             "updated_at": datetime.now().isoformat()
         }
 
-        with open(SESSION_STATE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(state_data, f, indent=2)
+        write_json_atomic(SESSION_STATE_FILE, state_data, indent=2)
 
     @staticmethod
     def get_last_session_state() -> dict[str, Any] | None:

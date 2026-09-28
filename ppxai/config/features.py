@@ -5,6 +5,7 @@ TUI and session configuration.
 import json
 from typing import Any
 
+from ..common.atomic_file import write_json_atomic
 from ..common.logger import get_logger
 from .loader import find_config_file, find_writable_config_file
 from .store import ConfigStore
@@ -88,9 +89,10 @@ def set_tui_config(key: str, value: Any) -> bool:
     config_data["tui"][key] = value
 
     try:
-        with open(config_path, "w", encoding="utf-8") as f:
-            json.dump(config_data, f, indent=2, ensure_ascii=False)
-            f.write("\n")
+        # Atomic: a concurrent reader (another client, the server) must never
+        # see a truncated config mid-save.
+        write_json_atomic(config_path, config_data, indent=2, ensure_ascii=False,
+                          trailing_newline=True)
 
         # Update in-memory config
         store = ConfigStore.get_instance()
@@ -100,7 +102,7 @@ def set_tui_config(key: str, value: Any) -> bool:
         current["tui"][key] = value
 
         return True
-    except IOError as e:
+    except (OSError, TypeError, ValueError) as e:
         logger.warning(f"Config save failed: {e}")
         return False
 
