@@ -1,0 +1,2272 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.3/decisions/0007-completion-first-class-service/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>ADR 0007 — One command registry: completion, help and the roster from a single declaration - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-0007-one-command-registry-completion-help-and-the-roster-from-a-single-declaration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR 0007 — One command registry: completion, help and the roster from a single declaration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#goal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Goal">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-far-the-system-is-from-the-goal-measured-2026-09-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How far the system is from the goal (measured 2026-09-20)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#re-measured-status-2026-08-15-bugfixv1191" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Re-measured status (2026-08-15, bugfix/v1.19.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behaviour-a-completionservice-component-injected-at-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behaviour → a CompletionService component, injected at startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#roster-data-one-complete-declaration-served-by-a-pull-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roster data → one complete declaration, served by a pull endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-and-not-the-alternatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this and not the alternatives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-proper-solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future / proper solution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#which-mirrors-can-go-and-which-cannot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which mirrors can go, and which cannot
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Which mirrors can go, and which cannot">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#follow-up-out-of-scope-here-the-appstate-schema-endpoint-has-no-consumer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Follow-up, out of scope here: the AppState schema endpoint has no consumer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#triggers-to-revisit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers to revisit
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="adr-0007-one-command-registry-completion-help-and-the-roster-from-a-single-declaration">ADR 0007 — One command registry: completion, help and the roster from a single declaration<a class="headerlink" href="#adr-0007-one-command-registry-completion-help-and-the-roster-from-a-single-declaration" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-06-14 (revised 2026-08-15; re-measured 2026-09-20 on
+<code>bugfix/v1.19.3</code> — the 08-15 evidence had decayed, see §Re-measured;
+<strong>revised 2026-09-20 — goal restated by the owner and the roster decision
+changed from AppState push to a pull endpoint, see §Goal and §Decision</strong>;
+<strong>revised again 2026-09-20 — <code>/quit</code> (alias <code>/exit</code>) gated to
+<code>{rich, textual}</code>, reversing the "universal" call in the same section
+below: ending a GUI session is a UI button workflow, not a command</strong>.
+Originally titled "Completion as a first-class service; command roster via
+AppState".)
+<strong>Status:</strong> <strong>Accepted 2026-09-21 — implemented</strong> (owner sign-off; on
+<code>bugfix/v1.19.3</code>, unreleased). All five steps are done: step 1 shipped v1.18.8;
+steps 2 + 2.5, <strong>step 3a (web fetches the roster; <code>commands.js</code>
+deleted)</strong>, <strong>step 3a-sec (sensitive subcommands)</strong>, <strong>step 3b (VSCode
+fetches it; <code>commands.ts</code> deleted)</strong>, <strong>step 4 (completion is DERIVED
+from the spec; the <code>engine → commands</code> import is GONE)</strong> and <strong>step 5
+(the parity fence — <code>tests/test_command_parity_fence.py</code>, 128 tests)</strong>
+all landed 2026-09-21 on <code>bugfix/v1.19.3</code>
+(<code>CommandFactory.iter_completion_specs</code>, <code>commands/factory.py</code>).
+<code>CommandSpec</code> is the only command declaration left in the tree, and the
+fence is what keeps it that way. The status was held at Proposed until
+the owner flipped it; the remaining open questions (the plan's §Open
+owner decisions) are follow-ups to an accepted record, not conditions on
+it. Extracting a <code>ppxai/completion/</code> package is now optional and
+cosmetic (see §Future). The "target v1.19.x" in the 08-15 revision has now been passed by v1.19.0, v1.19.1 and v1.19.2 without step 2 landing — it was a hope, not a plan, and is restated below as an explicit deferral with triggers rather than a date.</p>
+<p><strong>After acceptance (2026-09-21 follow-ups).</strong> Three of the open owner
+decisions were decided the same day the record was accepted: <strong>(A)</strong>
+<code>/q</code> was registered as a declared alias of <code>/quit</code>
+(<code>ppxai/commands/client_handled.py</code>), so <code>TEXTUAL_LEGACY_QUIT_NAMES</code>
+and its baseline are gone from <code>ppxai/tui/app.py</code> and the fence.
+<strong>(B)</strong> <code>/help &lt;cmd&gt;</code> now renders a "Subcommands" section
+(<code>CommandFactory.get_command_help</code>), so the step-4 note above that the
+move "changed no help output" is superseded. <strong>(C)</strong> four of the five
+VSCode <code>LEGACY_INTERCEPTS</code> (<code>tools</code>, <code>context</code>, <code>ls</code>, <code>tree</code>) were
+migrated to factory routing; <code>LEGACY_INTERCEPT_BASELINE</code> is down to one
+row, <code>checkpoint</code>. <strong>DECIDED 2026-09-21: option B</strong> for
+<code>/checkpoint clear</code> (an irreversible delete whose only confirmation
+today is VSCode's modal) — build a confirmation that works in all four
+clients, including both TUIs (neither consumes command <code>side_effects</code>
+today), then migrate <code>checkpoint</code> off this table. Detail:
+<code>docs/plan-adr-0007-completion-service.md</code> §"Step 5 follow-ups
+(2026-09-21, owner decisions)". <strong>(D)</strong> Open owner decision 5 (the
+AppState schema endpoint) also closed same day, later: it was built,
+not just corrected — see the second correction in §"Which mirrors can
+go, and which cannot" below (commit <code>1953c29c</code>).</p>
+<blockquote>
+<p><strong>Update (2026-09-21, commit <code>beffa197</code>, later the same day). DONE,
+not in progress.</strong> <code>checkpoint</code> migrated too. <code>LEGACY_INTERCEPTS</code>
+is not "down to zero rows" — it and <code>LEGACY_HANDLERS</code>, the router's
+legacy branch, <code>handlers/commands.ts</code> and <code>handlers/types.ts</code> are all
+deleted from <code>vscode-extension/src/</code>. <code>/checkpoint clear</code> with no
+flag now returns <code>prompt_quick_pick</code> (Cancel first, the destructive
+row second) in all four clients, and both TUIs consume
+<code>CommandResult.side_effects</code> for the first time — see
+<code>ppxai/commands/agent.py::_checkpoint_clear</code>,
+<code>ppxai/rendering/rich_renderer.py::consume_prompt_side_effects</code>, and
+<code>ppxai/tui/widgets/dialog.py::QuickPickDialog</code>. The step-5 parity
+fence no longer models this as a shrinking baseline;
+<code>tests/test_command_parity_fence.py</code> asserts the mechanism's absence.</p>
+</blockquote>
+<p><strong>Related:</strong>
+- <code>ppxai/engine/completion.py</code> — current home of <code>complete()</code>
+- <code>ppxai/commands/factory.py</code> — <code>CommandFactory</code>, <code>CompletionCommandInfo</code>, <code>iter_completion_specs()</code>
+- <code>docs/patterns/protocol-dependency-inversion.md</code> — the v1.17.0 leaf-Protocol idiom this builds on
+- <code>docs/patterns/appstate.md</code> — observable state + <code>state_sync</code> push to all clients
+- ADR 0002 — CommandContext three-pattern split (the per-client delivery shape completion also lives across)
+- Debt item 29 — the layering finding that triggered this; v1.18.8 landed the seed (<code>iter_completion_specs()</code>)</p>
+<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
+<p><strong>A command is defined once, and everything else is derived.</strong> Its metadata
+— name, aliases, description, usage, category, subcommands, which clients
+implement it — is declared in one place, the Python command registry, and
+propagates from there to completion, <code>/help</code>, palettes and menus in every
+client. Commands are built once; the infrastructure guarantees that any
+client, app or service can rely on the roster without restating it.</p>
+<p>This was always the point of this record. Earlier revisions let the <em>layer
+inversion</em> (<code>engine → commands</code>) read as the decision and the roster as a
+nice-to-have, which is backwards: the inversion is a symptom of completion
+having no proper source to read from, and it disappears as a side effect of
+fixing that.</p>
+<h3 id="how-far-the-system-is-from-the-goal-measured-2026-09-20">How far the system is from the goal (measured 2026-09-20)<a class="headerlink" href="#how-far-the-system-is-from-the-goal-measured-2026-09-20" title="Permanent link">&para;</a></h3>
+<p>A command's metadata lives in <strong>five places</strong>, none complete (<strong>six</strong>, in
+fact — see the correction under the table: <code>vscode-extension/src/shared/
+commands.ts</code> is an independent copy, not a shared file):</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Where</th>
+<th>Carries</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>CommandSpec</code> (<code>commands/factory.py</code>)</td>
+<td>name, description, category, aliases, usage, hidden</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>web/shared/commands.js</code> (376 lines, hand-written)</td>
+<td>description, usage, category, <strong>subcommands</strong> — restated in JS, <strong>aliases restated as standalone entries</strong>. <strong>DELETED by step 3a (2026-09-21)</strong></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>web/app.js:199</code> inline fallback catalog</td>
+<td>a second JS copy, used when <code>SharedCommands</code> fails to load. <strong>DELETED by step 3a</strong></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>engine/completion.py</code> <code>_*_SUBCOMMANDS</code> tables (six of them — <strong>seven, in fact</strong>)</td>
+<td><strong>subcommands</strong> — a second hand-written set, in Python. <strong>DELETED by step 4 (2026-09-21)</strong>: all seven moved onto <code>CommandSpec.subcommands</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>engine/completion.py</code> <code>_BUILTIN_SPECIAL_COMMANDS</code></td>
+<td>the client-handled commands + their <code>clients</code> gating — in Python, but <strong>outside the registry</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The rosters disagree. Nine canonical non-hidden Python commands are missing
+from JS: <code>attach</code>, <code>autoroute</code>, <code>copy</code>, <code>debug-log</code>, <code>doctor</code>, <code>keys</code>,
+<code>preview-log</code>, <code>reload</code>, <code>undo</code>.</p>
+<blockquote>
+<p><strong>Correction (2026-09-21).</strong> The table above says "five places" and
+counts only the WEB JS roster. There were <strong>six</strong>:
+<code>vscode-extension/src/shared/commands.ts</code> is a SEPARATE hand-written
+roster (31 entries) with its own drift — it lists neither <code>/run</code>,
+<code>/task</code> nor <code>/token</code>, all three of which <code>chatPanel.ts</code> intercepts.
+<code>commands.js</code>'s own header claimed it was "the single source of truth"
+for both clients, which was never true. Step 3a deleted rows 2 and 3
+(web fetches <code>GET /commands?client=web</code> now) and <strong>step 3b, the same
+day, deleted <code>commands.ts</code></strong> (VSCode fetches
+<code>GET /commands?client=vscode</code> via <code>src/commandRoster.ts</code>). The two
+shipped separately precisely because they never shared a file. Row 4,
+the <code>_*_SUBCOMMANDS</code> tables, <strong>went the same day in step 4</strong> — and
+there were <strong>seven</strong> of them, not six: <code>_RUN_SUBCOMMANDS</code> (the U3
+one-off family) post-dated the count. All six places are now gone;
+<code>CommandSpec</code> is the only declaration left.</p>
+<p><strong>Correction (2026-09-20, same day).</strong> The first version of this section
+listed <code>cat</code>, <code>sh</code>, <code>term</code>, <code>token</code> as "in JS, missing from Python" and
+built an argument on it. That diff compared Python CANONICAL names against
+ALL JS names, so it was wrong for three of the four: <code>cat</code> is a registered
+alias of <code>/show</code>, and <code>sh</code> / <code>term</code> of <code>/terminal</code>. The true JS-only set is
+<strong><code>token</code> alone</strong>. The real duplication for the other three is different
+and worth naming: an alias is a <em>field</em> on a Python spec and a hand-written
+<em>standalone entry</em> in JS ("Alias for /show").</p>
+</blockquote>
+<p><strong>The client-handled commands are <code>/token</code>, <code>/quit</code>, <code>/exit</code>.</strong> <code>/token</code>
+manages the bearer the <em>client</em> attaches, so it cannot run server-side and
+is gated to <code>{web, vscode}</code>; <code>/quit</code> and <code>/exit</code> end the client process
+and are gated to <code>{rich, textual}</code> (owner decision, 2026-09-20 —
+reverses an earlier "universal" call: ending a GUI session is a UI button
+workflow, not a command — the web app has a header button for it and
+VSCode already has Disconnect). They are declared in
+<code>_BUILTIN_SPECIAL_COMMANDS</code> as loose dicts because the registry has no way
+to express a command with no server handler — which is why they sit
+outside it, and why web <code>/help</code> is stitched from two sources
+(<code>command-dispatcher.js::_appendExperimentalHelp</code>).</p>
+<p>And the v1.18.8 seed is too thin to be the source: <code>CompletionCommandInfo</code>
+carries name / description / hidden / alias data only. It drops <code>usage</code> and
+<code>category</code>, which <code>CommandSpec</code> already has, and has no subcommands — so
+publishing it as-is could not replace <code>commands.js</code>.</p>
+<p>Verify: <code>python -c "from ppxai.commands.factory import CommandFactory; ..."</code>
+against <code>grep -E "^    '/[a-z-]+':" ppxai/web/shared/commands.js</code>; the diff
+script is in <a href="../../plan-adr-0007-completion-service/">plan-adr-0007-completion-service.md</a>.</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Autocomplete for all four clients (Rich, Textual, Web, VSCode) is served
+by a single function, <code>engine.completion.complete()</code>. It <strong>was</strong> the only
+<code>engine → commands</code> import in the entire engine package: it reached up
+into the <code>commands</code> layer to read the command roster from
+<code>CommandFactory</code>. <strong>Step 4 (2026-09-21) removed it — the count is now
+ZERO</strong> (see the dated note in §Re-measured). The rest of this section is
+the diagnosis that produced the decision, kept as written.</p>
+<p>A v1.18.7 post-release review flagged this as a layer inversion. The
+deeper observation (review gate, debt 29): <strong>completion is not engine-owned
+data at all.</strong> It is a <em>capability</em> computed over two inputs that live in
+two different layers —</p>
+<ul>
+<li>the <strong>command space</strong> (names / aliases / descriptions), owned by
+  <code>commands/CommandFactory</code>, and</li>
+<li><strong>live context</strong> (working_dir, current provider, tool list), owned by
+  the engine / AppState.</li>
+</ul>
+<p>Parking that capability inside <code>engine/</code> is what forced the upward import.
+It belongs to neither layer exclusively. Three separate client glue layers
+(<code>rich/main.py</code>, <code>tui/completer.py</code>, <code>server/routes/completion.py</code>) also
+each re-scrape the same context off <code>engine_client</code> before calling
+<code>complete()</code> — duplicated wiring that confirms completion wants to <em>own</em>
+its context, not be handed it three different ways.</p>
+<p>Two distinct concerns are tangled here:</p>
+<ol>
+<li><strong>Behaviour</strong> — "given a buffer + cursor + context, return candidates."</li>
+<li><strong>Roster data</strong> — "what commands exist right now," which must reach not
+   only autocomplete but also command palettes, <code>/help</code>, and menus, across
+   all clients, with no per-client code when a command is added.</li>
+</ol>
+<p>The call graph shows the coupling sits entirely <em>below</em> the shared
+<code>complete()</code> seam, so the seam is the right place to invert, and the roster
+is the right thing to publish.</p>
+<blockquote>
+<p><strong>Correction (2026-08-15):</strong> the original text said "no client references
+<code>CommandFactory</code>". That is no longer true — the two in-process TUIs
+dispatch through it directly (<code>rich/main.py:20</code>,
+<code>rich/event_handler.py:20</code>, <code>tui/app.py:61</code>). It does not change the
+decision: those are <em>dispatch</em> references, not roster reads, and the
+roster is still funnelled through the single <code>complete()</code> seam. It does
+mean the eventual <code>CompletionService</code> cannot assume the command layer is
+reachable only from completion.</p>
+</blockquote>
+<h3 id="re-measured-status-2026-08-15-bugfixv1191">Re-measured status (2026-08-15, <code>bugfix/v1.19.1</code>)<a class="headerlink" href="#re-measured-status-2026-08-15-bugfixv1191" title="Permanent link">&para;</a></h3>
+<p>What step 1 actually fixed, and what is left:</p>
+<ul>
+<li>✅ <strong>Private-registry access is gone.</strong> <code>engine/completion.py</code> reads the
+  public <code>iter_completion_specs()</code> snapshot and <code>CommandFactory.get()</code> for
+  alias resolution. No <code>_registry</code> / <code>_aliases</code> poking remains.</li>
+<li>⚠️ <strong>The layer inversion itself is unchanged</strong>: <code>from ..commands.factory
+  import CommandFactory</code> at <code>ppxai/engine/completion.py:48</code>. It is the
+  <strong>only</strong> <code>engine → commands</code> import in the entire engine package — the
+  extraction stays a one-edge job.</li>
+</ul>
+<blockquote>
+<p><strong>CLOSED 2026-09-21 (step 4), on <code>bugfix/v1.19.3</code>, unreleased.</strong> That
+import is deleted and the count is <strong>zero</strong>:
+<code>grep -rnE "from \.\.commands|from ppxai\.commands|import ppxai\.commands" ppxai/engine/</code>
+returns nothing, checked across the whole package including
+function-level imports. No other <code>engine → commands</code> edge existed.
+<code>complete()</code> now takes a required, keyword-only <code>roster=</code> and each
+caller passes <code>CommandFactory.roster(&lt;its client&gt;)["commands"]</code>; the
+<code>client</code> parameter is gone with the gate, which is structural now.
+The "one-edge job" estimate held exactly — and it turned out to be one
+keyword argument, not a package extraction, because steps 1–2 had
+already turned the roster into plain data.</p>
+<p>Held at zero by
+<code>tests/test_no_new_lazy_imports.py::TestEngineImportsNoCommands</code>,
+which REPLACES <code>TestEngineCompletionStaysALeaf</code> (deleted, as its own
+failure message instructed — with no upward import there is nothing
+left to be a leaf about). Mutation-verified on the new shape: restoring
+the module-scope import breaks NOTHING visible — 6,285 tests still
+collect, <code>import ppxai.engine.completion</code> still succeeds standalone,
+the completion suites stay green — so unlike the other two guards in
+that file, the fence is the only thing that can see this rule.
+- 🔎 <strong>It does not block SDK embedding — measured on the real consumer
+  surface.</strong> The 2026-08-15 measurement listed eight symbols, one of which
+  (<code>engine.model_profiles.get_profile</code>) <strong>no longer exists</strong> — Item 65
+  deleted that module. Re-read off ppxai-sre at HEAD (2026-09-20), the
+  surface is now eleven modules:
+  <code>engine.client.EngineClient</code>, <code>engine.types.{Event, EventType}</code>,
+  <code>engine.tools.base.FunctionTool</code>, <code>engine.tools.manager.ToolManager</code>,
+  <code>engine.bootstrap.BootstrapContext</code>, <code>engine.session.SessionManager</code>,
+  <code>engine.provider_ops</code> (+ <code>ModelSwitchInFlightError</code>),
+  <code>engine.facts_resolver.facts_without_an_instance</code> (the replacement for the
+  deleted profile accessor), <code>config.loader.PPXAI_HOME</code>,
+  <code>config.providers.{get_provider_config, get_default_provider}</code>.
+  Importing all of them loads <strong>77</strong> <code>ppxai.*</code> modules (was 64) and <strong>zero</strong>
+  <code>ppxai.commands</code> modules; nothing under <code>ppxai.*completion</code> is imported.
+  The inversion is latent, traversed only when a caller imports completion
+  explicitly, which today only the three client glue layers do.</p>
+</blockquote>
+<p><strong>Measured as three composable spans (2026-08-15).</strong> A <code>sys.meta_path</code>
+  observer was installed <em>before</em> any ppxai import, recording every
+  <code>ppxai.commands*</code> / <code>ppxai.*completion*</code> resolution with its stack, then
+  real execution was driven — not bare imports. Each span is independently
+  re-runnable:</p>
+<table>
+<thead>
+<tr>
+<th>Span</th>
+<th>What was driven</th>
+<th>2026-08-15</th>
+<th>2026-09-20</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Import time + full consumer surface</td>
+<td>every ppxai symbol the consumer imports</td>
+<td><strong>0 / 0</strong> (64)</td>
+<td><strong>0 / 0</strong> (77)</td>
+</tr>
+<tr>
+<td>Client + tool-manager construction</td>
+<td><code>EngineClient()</code>, <code>ToolManager()</code></td>
+<td><strong>0 / 0</strong> (64)</td>
+<td><strong>0 / 0</strong> (77)</td>
+</tr>
+<tr>
+<td>Consumer-called symbols</td>
+<td><code>SessionManager()</code>, <code>facts_without_an_instance()</code>, <code>get_provider_config()</code>, <code>get_default_provider()</code></td>
+<td>not run</td>
+<td><strong>0 / 0</strong> (77)</td>
+</tr>
+<tr>
+<td>Request-time loop + tool dispatch</td>
+<td><code>tests/test_tool_messages.py</code> in full — 41 tests, native branch, multi-tool batches, mid-batch error, interrupt, loop detection, session serialization</td>
+<td><strong>0 / 0</strong> (73)</td>
+<td><strong>0 / 0</strong> (90)</td>
+</tr>
+</tbody>
+</table>
+<p>A note on the observer's filter, because the first re-run got it wrong:
+  matching the bare substring <code>completion</code> produces 56 false hits from
+  <code>openai.types.completion</code> and from ppxai's own <strong><code>engine.providers.wire.
+  chat_completions</code></strong> — the ADR 0012 wire handler, an unrelated name that
+  did not exist when this was first measured. The filter must be
+  <code>ppxai.commands*</code> or <code>ppxai.*</code> ending in <code>completion</code>. With that filter
+  every span reports zero hits and zero stack frames.</p>
+<p>The third span injects a scripted <code>MockProvider</code> directly, so it exercises
+  the <em>loop</em> rather than provider construction — which is precisely what the
+  second span covers, so the three compose. The observer recorded stack
+  frames for attribution and never fired.</p>
+<p><strong>The resulting claim, stated exactly:</strong> no <code>engine → commands</code> coupling
+  at import time, package load, client construction, or request-time
+  execution including tool dispatch. <strong>The only unexercised code is the
+  provider's own network round-trip</strong> — HTTP and serialization under
+  <code>engine/providers/</code>, structurally not a place the command layer can be
+  reached from. Closing that last sliver would need live credentials and is
+  not where a lazy import could plausibly live.</p>
+<p>(Baseline reproduced on this side: <code>tests/test_tool_messages.py</code> is 41
+  tests, green in 1.27s.)</p>
+<p>Note the consumer's engine entry point is <strong><code>EngineClient</code></strong>, not
+  <code>task_runner</code> — <code>build_task_runner</code>'s extraction (<code>eeb82076</code>) widened
+  what an embedder <em>could</em> drive in-process, but ppxai-sre has not adopted
+  it and reaches the engine through a single <code>engine.chat()</code> call today.
+- 🔁 <strong>New in the 2026-09-20 pass: the edge closes a <em>package</em>-level
+  cycle, which the earlier measurements never stated.</strong> Importing
+  <code>ppxai.commands.factory</code> pulls <strong>52 <code>ppxai.engine</code> modules</strong>. So the
+  direction of travel is <code>engine.completion → commands.factory →
+  engine.*</code>: the <code>engine</code> package depends on the <code>commands</code> package, which
+  depends back on <code>engine</code>.</p>
+<p>The <strong>module</strong> graph stays acyclic, and this is why nothing breaks:
+  <code>commands.factory</code> does <em>not</em> pull <code>engine.completion</code> (verified), and no
+  module inside <code>engine</code> imports <code>engine.completion</code> either — it is a leaf
+  that only the three client glue layers reach. <code>import
+  ppxai.engine.completion</code> therefore succeeds standalone, and the
+  <code>tests/test_no_new_lazy_imports.py</code> sweep added in Item 73 passes it
+  without an exemption row.</p>
+<p>That is a meaningful distinction, not a technicality: it means the
+  extraction is still a one-edge job with no cycle to untangle, <strong>and</strong> it
+  means the current arrangement is one import away from a genuine cycle.
+  Any future <code>engine</code> module that imports <code>engine.completion</code> — an obvious
+  thing to do, since the name suggests it is engine-owned — closes the loop
+  and turns this from a smell into an import error. The leaf status is
+  load-bearing and undefended; nothing in the test suite would stop that
+  import being added.</p>
+<ul>
+<li>📈 <strong>Surface has grown since the ADR was written.</strong> <code>/task</code> and <code>/run</code>
+  are now factory-registered, so the roster completion depends on is
+  broader; completion also gained client-specific gating (the <code>clients</code>
+  set, <code>engine/completion.py:70-78</code>) and dynamic run-id suggestions. None
+  of that is new coupling, but it raises the cost of the eventual move:
+  <code>engine/completion.py</code> is <strong>884 lines</strong> now. The coupling itself has not
+  spread — it is still exactly <strong>two call sites</strong>,
+  <code>CommandFactory.iter_completion_specs()</code> at <code>engine/completion.py:353</code>
+  and <code>CommandFactory.get()</code> at <code>:412</code>, reached by <strong>three</strong> callers of
+  <code>complete()</code> (<code>rich/main.py:32</code>, <code>tui/completer.py:24</code>,
+  <code>server/routes/completion.py:18</code>).</li>
+</ul>
+<p>Nothing here changes the decision. It moves the <em>priority</em>: this is an
+architectural cleanup with no current correctness defect, not a
+release-blocker.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>Split the two concerns and give each a first-class home.</p>
+<h3 id="behaviour-a-completionservice-component-injected-at-startup">Behaviour → a <code>CompletionService</code> component, injected at startup<a class="headerlink" href="#behaviour-a-completionservice-component-injected-at-startup" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>SUPERSEDED BY MEASUREMENT, 2026-09-21 (step 4). Not built, and not
+needed.</strong> This subsection is kept as the reasoning of the time; what
+actually closed the inversion was <strong>data in, not a Protocol</strong>.</p>
+<p>The design below has completion hold a <code>CommandRegistryProtocol</code>
+collaborator inside a <code>CompletionService</code> in a new top-level
+<code>ppxai/completion/</code> package, constructed at three composition roots.
+Steps 1–2 removed the reason for all three pieces:
+<code>CommandFactory.roster(client)</code> already returns PLAIN DATA — one entry
+per canonical command with <code>aliases</code>, <code>hidden</code> and <code>subcommands</code>,
+already filtered by <code>client_sees</code>. There is no collaborator left to
+invert: a Protocol here would describe "an object that can hand me a
+list of dicts", which is a list of dicts.</p>
+<p>So step 4 gave <code>complete()</code> a required keyword-only <code>roster=</code> argument
+and each of its three callers — all of which already sit ABOVE
+<code>commands</code> — reads the roster itself. No Protocol, no service class, no
+new package, no global mutable state, and no <code>roster=None</code> fallback
+that would re-create the edge behind a branch. The
+<code>CompletionContextProtocol</code> half is untouched by this: the three
+context scrapers still duplicate each other, and collapsing them stays
+the optional, independent cleanup §Explicitly not in the path calls it.</p>
+</blockquote>
+<ul>
+<li>New first-class package <code>ppxai/completion/</code> (sibling to <code>engine</code>,
+  <code>commands</code>, <code>server</code>), signalling completion is <strong>not</strong> subordinate to
+  the engine.</li>
+<li><code>CompletionService</code> holds two injected collaborators, each expressed as
+  a <strong>Protocol defined in a leaf module</strong> (so the service imports neither
+  concrete layer):</li>
+<li><code>CommandRegistryProtocol</code> — <code>iter_completion_specs()</code>, <code>resolve(name)</code>.
+    <code>CommandFactory</code> already satisfies it structurally; its
+    <code>iter_completion_specs()</code> + <code>CompletionCommandInfo</code> (landed in v1.18.8)
+    are the concrete seed.</li>
+<li><code>CompletionContextProtocol</code> — <code>working_dir</code>, <code>provider</code>,
+    <code>tool_list()</code>. The engine satisfies it structurally. The service
+    builds context itself, collapsing the three duplicated client scrapers
+    into one.</li>
+<li>The existing <code>complete()</code> logic moves into the service unchanged.</li>
+<li><strong>Composition-root ownership, preloaded at application startup.</strong> Each
+  entry point (<code>rich/main.py</code>, the ppxaide app, the server <code>lifespan</code>)
+  constructs the service — injecting <code>CommandFactory</code> + the engine — during
+  bootstrap, so it is present from the first keystroke and fails fast if
+  the registry is missing. Clients call <code>service.complete(buffer, cursor)</code>;
+  the server route resolves the session's service.</li>
+<li>This mirrors the existing <code>ToolManager</code> precedent: a standalone component
+  injected and consumed via <code>engine.tool_manager.list_tools()</code>.</li>
+</ul>
+<h3 id="roster-data-one-complete-declaration-served-by-a-pull-endpoint">Roster data → one complete declaration, served by a pull endpoint<a class="headerlink" href="#roster-data-one-complete-declaration-served-by-a-pull-endpoint" title="Permanent link">&para;</a></h3>
+<p><strong>Revised 2026-09-20 (owner's design).</strong> The original decision published the
+roster <em>through AppState</em>, pushed over <code>state_sync</code>. That is replaced:</p>
+<ul>
+<li><strong><code>CommandSpec</code> becomes the complete declaration.</strong> It absorbs what is
+  scattered today: <code>subcommands</code> (from the six <code>_*_SUBCOMMANDS</code> tables and
+  from <code>commands.js</code>), <code>clients</code> gating (from <code>completion.py</code>'s static
+  list), and argument kinds (path / model id / run id), so per-command
+  completion behaviour is data rather than lookup tables.</li>
+<li><strong>Client-handled commands are registered too, and bind to a NAMED
+  client action.</strong> <code>token</code>, <code>quit</code>, <code>exit</code> become specs with no server
+  handler, present in the roster and carrying the <code>clients</code> gating that
+  <code>_BUILTIN_SPECIAL_COMMANDS</code> holds informally today. Each declares
+  <code>client_action: "&lt;name&gt;"</code> (e.g. <code>"token.manage"</code>) — a name from a fixed
+  vocabulary held in Python — plus <code>client_action_clients</code>, the set of
+  clients that dispatch to it; any other client uses the server <code>handler</code>.
+  That pair is how HYBRID commands work too: <code>/task</code>, <code>/run</code> and <code>/auto</code>
+  have a real Python handler for the in-process TUIs and a client action
+  for web/VSCode, which drive <code>/v1/agent/*</code> and never call
+  <code>POST /command/task</code>. <strong>Python owns what exists, who gets it, its help, its
+  subcommands and which action it binds to; each client BUNDLES the
+  implementation of the named action.</strong> No executable code crosses the
+  wire. This mirrors the envelope's existing <code>SideEffectKind</code> idiom — the
+  server sends data, the client implements a closed vocabulary, unknown
+  names are ignored — applied in the other direction.</li>
+</ul>
+<p><code>client_handled</code> means <strong>dispatch happens in the client</strong>, not "no server
+  involvement": <code>/token mint</code> calls <code>POST /v1/tokens</code>. It also means
+  <strong>never forwarded</strong>: <code>/token set &lt;value&gt;</code> carries a secret, and a client
+  that POSTs it to <code>/command/token</code> and lets the server refuse has already
+  leaked it into a command body and server logs. The flag is therefore part
+  of the PUBLISHED snapshot, so the client knows before dispatching.</p>
+<p>(<code>cat</code>, <code>sh</code>, <code>term</code> need no migration: they are already registered
+  aliases — <code>CommandSpec.aliases</code>, resolved by the factory. JS must simply stop restating them.) Without this the registry can never
+  be complete and JS keeps a private list forever.
+- <strong>In-process clients (Rich, Textual) read the registry directly</strong> — they
+  hold <code>CommandFactory</code> already. Nothing new.
+- <strong>Server-mediated clients (web, VSCode) fetch it: <code>GET /commands</code></strong>
+  returns the full snapshot. Fetched once at JS startup — the payload is a
+  few KB (≈43 commands × ~6 fields), so lazy loading is not worth its
+  complexity. The dispatch half of this surface already exists
+  (<code>POST /command/{name}</code> + the envelope); the read half is what is missing.
+- <strong><code>commands.js</code> shrinks to a loader, then to nothing.</strong> Completion's
+  subcommand tables and <code>/help</code> are <em>derived</em> from the spec.
+  (<strong>Done for BOTH JS clients, steps 3a and 3b, 2026-09-21</strong> — and
+  neither became a loader: the fetch+cache landed in a new
+  <code>web/shared/command-roster.js</code> and <code>vscode-extension/src/
+  commandRoster.ts</code>, and both catalogs were deleted outright. Each
+  client additionally <strong>fails closed</strong> with no roster rather than
+  forwarding what it cannot classify; see the plan's steps 3a/3b for why
+  that replaces the old hardcoded-branch-order guarantee for
+  <code>/token set &lt;value&gt;</code>. The VSCode modules import no <code>vscode</code>, so the
+  behavioural tests compile and run the real TypeScript under Node.)
+- <strong>A parity fence</strong> fails when any client renders a command the registry
+  does not declare, or the registry declares one a client does not render.
+  The rosters drifted apart silently; only a test stops that.</p>
+<p><strong>One wrinkle: the roster is not static.</strong> <code>/reload</code> re-imports user
+commands from <code>~/.ppxai/commands/</code> at runtime, so a fetch-once client goes
+stale. The signal rides existing channels — <code>/reload</code>'s envelope emits a
+roster-changed event (the envelope already carries <code>events</code>), or <code>/state</code>
+carries a single integer roster version — and the client refetches. The
+<em>payload</em> stays on the endpoint; only the <em>signal</em> is pushed.</p>
+<p><strong>Why pull and not AppState push.</strong> AppState is machinery for state that
+changes constantly; the roster changes almost never. Putting it in AppState
+means a new field in <code>engine/app_state_schema.json</code>, its hand-written mirrors
+in <code>web/shared/app-state.js</code> and <code>vscode-extension/src/appState.ts</code>, and the
+cross-language sentinel tests that pin them — that was the <em>entire</em> cost that
+made this record look too expensive to start for three releases. A plain
+endpoint touches none of it.</p>
+<blockquote>
+<p><strong>Note (2026-09-21):</strong> "hand-written mirrors" overstates what an AppState
+field costs, and did so even before either file was corrected — see the
+"CORRECTION" and "CORRECTION OF THE CORRECTION" blocks in §"Which mirrors
+can go, and which cannot" below. Neither <code>web/shared/app-state.js</code> nor (as
+of 2026-09-21) <code>vscode-extension/src/appState.ts</code>'s generated TYPE layer
+is hand-edited to add a field. The pull-vs-push decision itself is not
+reopened by this note — a plain endpoint is still simpler for data that
+almost never changes — only the cost estimate that helped motivate it.</p>
+</blockquote>
+<p><strong>The layer inversion closes as a side effect.</strong> Once completion consumes
+spec data handed to it, <code>engine/completion.py</code> no longer needs
+<code>from ..commands.factory import CommandFactory</code> — the symptom this record
+was originally filed for disappears without being targeted.</p>
+<h2 id="why-this-and-not-the-alternatives">Why this and not the alternatives<a class="headerlink" href="#why-this-and-not-the-alternatives" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Keep <code>complete()</code> in <code>engine/</code>, invert via module-global injection
+  (<code>set_command_registry()</code>).</strong> Removes the import but adds global mutable
+  state and a mandatory bootstrap call at every entry point; a forgotten
+  wiring path fails silently (empty completions). Rejected — the failure
+  mode is worse than the disease.</li>
+<li><strong>Host the service <em>on</em> the engine (<code>engine.completion</code>).</strong> Convenient
+  (clients already hold <code>engine_client</code>), but naming a thing that <em>composes</em>
+  the commands layer from inside the engine re-introduces the very
+  upward smell we are removing. Composition-root ownership keeps the
+  direction clean.</li>
+<li><strong>Service locator / DI container.</strong> ppxai has no DI machinery today;
+  adding one for a single capability is disproportionate. Revisit only if a
+  second cross-layer capability wants the same treatment.</li>
+<li><strong>Put the roster <em>behaviour</em> in AppState.</strong> AppState is observable
+  <em>data</em>, not a service host.</li>
+<li><strong>Ship the client-side command CODE from the server</strong> (JS/TS carried on
+  the Python spec, served by the endpoint, verified by checksum, executed by
+  the client). Considered 2026-09-20 at the owner's suggestion, as the
+  fullest form of "define it once". <strong>Rejected, for four reasons:</strong></li>
+<li><em>It is fine for web and dangerous for VSCode.</em> The web client already
+     loads all its JS from <code>ppxai-server</code>, so that is no new trust boundary.
+     But the VSCode webview CSP is <code>default-src 'none'; script-src
+     'nonce-…' ${webview.cspSource}</code> — no <code>unsafe-eval</code>, no remote origin —
+     and <code>/token</code> is handled in the <strong>extension host</strong> (<code>chatPanel.ts</code>), a
+     Node process with the user's full privileges. Executing server-supplied
+     code there is remote code execution by design; with remote deployments
+     supported, one compromised server reaches every connecting developer's
+     machine.</li>
+<li><em>A checksum does not address that threat.</em> It proves the bytes were not
+     altered in transit, which TLS already does. A compromised server
+     supplies both the code and its checksum. What would help is a
+     <strong>signature</strong> under a key pinned into the client at build time — and
+     code signed at release time can simply be <strong>bundled</strong> at release time.</li>
+<li><em>The thing that varies at runtime is metadata, not behaviour.</em>
+     <code>/reload</code> and config change the roster; how <code>/token</code> writes to
+     <code>localStorage</code> changes only on a release.</li>
+<li><em>It would serve one command.</em> <code>quit</code>/<code>exit</code> are trivial and
+     <code>cat</code>/<code>sh</code>/<code>term</code> are aliases.</li>
+</ul>
+<p>Named <code>client_action</code> bindings get the same single-declaration property
+  without code on the wire. <strong>Revisit only for third-party or user-authored
+  client-side commands</strong> — plugins whose UI behaviour cannot be known at
+  build time. That needs the signing design above plus a sandbox, and is its
+  own record, not a rider on this one.
+- <strong>Put the roster <em>data</em> in AppState, pushed via <code>state_sync</code>.</strong> This was
+  this record's own decision until 2026-09-20. Rejected on cost and fit:
+  the roster is near-static, AppState is for fast-changing state, and the
+  DTO + two mirrors + sentinel tests made it the expensive piece that kept
+  the whole record from starting. A pull endpoint plus a change <em>signal</em>
+  achieves the same propagation for a fraction of the surface.</p>
+<h2 id="future-proper-solution">Future / proper solution<a class="headerlink" href="#future-proper-solution" title="Permanent link">&para;</a></h2>
+<p>This ADR <em>is</em> the proper solution; v1.18.8 shipped only the forward-compatible
+seed. Incremental path:</p>
+<ol>
+<li><strong>v1.18.8 (done):</strong> <code>CommandFactory.iter_completion_specs()</code> +
+   <code>CompletionCommandInfo</code>; <code>engine.completion</code> stops reading factory
+   privates. No cascade — the <code>complete()</code> seam is unchanged. (Debt 29
+   privates-reach closed.)</li>
+<li>
+<p><strong>Done, no target release</strong> (all five steps landed 2026-09-21 on
+   <code>bugfix/v1.19.3</code>, unreleased). Sequenced by the goal, not by the layer
+   inversion (revised 2026-09-20 — the earlier (a)/(b)/(c) split treated
+   the roster as the optional tail; it is the head):</p>
+</li>
+<li>
+<p><strong>Enrich <code>CommandSpec</code></strong> — <code>subcommands</code>, <code>clients</code>, argument kinds,
+      and client-handled specs for <code>token</code> / <code>quit</code> / <code>exit</code>. Widen <code>CompletionCommandInfo</code> (or replace it) so the
+      published view carries <code>usage</code>, <code>category</code> and subcommands.</p>
+</li>
+<li><strong><code>GET /commands</code></strong> serves the full snapshot; <code>/reload</code> signals
+      roster-changed.</li>
+<li><strong>JS clients fetch at startup</strong>; the hand-written catalogs are
+      deleted outright rather than becoming loaders. <strong>Split: 3a (web)
+      and 3b (VSCode) both DONE 2026-09-21</strong> — the two clients kept
+      SEPARATE hand-written rosters, so they shipped separately.</li>
+<li><strong>Derive, don't restate</strong> — ✅ <strong>DONE 2026-09-21.</strong> All seven
+      <code>_*_SUBCOMMANDS</code> tables moved onto <code>CommandSpec.subcommands</code>;
+      completion reads the roster the caller hands it;
+      <code>engine/completion.py</code> imports nothing from <code>ppxai.commands</code>, so
+      the layer inversion and the package cycle are closed;
+      <code>TestEngineCompletionStaysALeaf</code> is deleted and replaced by
+      <code>TestEngineImportsNoCommands</code> (the rule, at zero, whole package).
+      <code>/help</code> needed no change — it has been registry-generated since
+      step 1b, and neither <code>generate_help</code> nor <code>get_command_help</code>
+      renders subcommands, so the move changed no help output.
+      &gt; <strong>Update (2026-09-21).</strong> This is no longer current: open owner
+      &gt; decision 2 was decided the same day — <code>get_command_help</code> now
+      &gt; renders a "Subcommands" section from <code>CommandSpec.subcommands</code>.
+      &gt; See §After acceptance below.</li>
+<li>
+<p><strong>Parity fence</strong> — ✅ <strong>DONE 2026-09-21.</strong>
+      <code>tests/test_command_parity_fence.py</code> (128 tests) asserts five
+      things, each read off the PYTHON declaration and compared against
+      the real client source: (a) action coverage in BOTH directions per
+      client — no missing implementations, no orphan ones, nothing
+      outside the <code>CLIENT_ACTIONS</code> vocabulary; (b) no undeclared
+      intercepts — zero per-name branches in either JS client, and
+      <code>LEGACY_INTERCEPTS</code> as an explicit five-row SHRINKING baseline that
+      fails when it grows AND when it shrinks without its baseline row
+      going too (<strong>update, 2026-09-21: the table emptied to zero rows
+      and was then deleted outright — see §After acceptance; the fence
+      now asserts its absence rather than tracking a shrinking
+      baseline</strong>); (c) no surviving hand-written roster — every deletion in
+      the plan's completeness table fenced as absent, plus a GENERIC
+      detector (a literal naming ≥ 6 distinct registered commands, N
+      measured against the real tree) with one named, self-fencing
+      exemption; (d) side-effect kind coverage DERIVED from
+      <code>SideEffectKind.all_kinds()</code> rather than from a third hand-written
+      list; (e) roster self-consistency for every id in <code>KNOWN_CLIENTS</code>.</p>
+<p>Step 5 also closed the SEVENTH roster, which was on the Python
+  side and which step 4 found: <code>rich/ui.py::display_welcome()</code> — a
+  live hand-written ~30-command list rendered at Rich startup and
+  <strong>18 commands out of date</strong> — now derives from
+  <code>CommandFactory.roster("rich")</code>, taking it as plain data because
+  <code>rich/ui.py</code> genuinely cannot import <code>ppxai.commands</code> (that
+  package's <code>__init__</code> imports this module back). A second,
+  caller-less welcome roster (<code>ui_components.py::render_welcome</code>)
+  was deleted, and both TUI quit intercepts now derive their names
+  from the spec via the new
+  <code>CommandFactory.names_for_client_action()</code>, leaving exactly one
+  named legacy extra (<code>"q"</code>, Textual only) as a recorded owner
+  decision rather than a hidden literal.</p>
+<p>Retargeting the side-effect fences onto Python immediately found a
+  live gap: <code>test_web_shared_modules.py</code>'s hardcoded kind set was
+  missing <code>prompt_text</code>, which web has always implemented. That is
+  the whole argument for (d) in one line — a hand-written expected
+  set stops covering things silently.</p>
+</li>
+</ol>
+<p>Each step ships alone. Steps 1–2 are server-only and change no client.</p>
+<p><strong>The guard that stood meanwhile</strong> (2026-09-20 → 2026-09-21):
+   <code>tests/test_no_new_lazy_imports.py::TestEngineCompletionStaysALeaf</code>
+   fenced <code>engine.completion</code>'s leaf status. Mutating an import in proved
+   the package cycle empirically — a module-scope import of it from
+   <code>engine/client.py</code> took the whole pytest run down at collection with
+   <code>ImportError: cannot import name 'EngineClient' from partially
+   initialized module 'ppxai.engine'</code>, via
+   <code>completion -&gt; commands.factory -&gt; commands.handler -&gt; engine</code>.
+   <strong>Retired by step 4</strong> and replaced with the permanent rule,
+   <code>TestEngineImportsNoCommands</code>: no module under <code>ppxai/engine/</code> imports
+   <code>ppxai.commands</code>, module scope or function level, held at zero.</p>
+<p>Relocating <code>complete()</code> to a <code>ppxai/completion/</code> package (the original
+   step-2 headline) is <strong>optional now that step 4 has landed</strong> — the
+   upward import is gone, so where the module sits is cosmetic. Do not
+   build the <code>CompletionService</code> DI class ahead of need: a service holding
+   a context collaborator while callers still scrape context is worse than
+   either endpoint. Step 4 confirmed the stronger version of that
+   caution — with the roster already plain data, the registry
+   collaborator had nothing left to abstract either.</p>
+<p>Plan: <a href="../../plan-adr-0007-completion-service/">plan-adr-0007-completion-service.md</a>.</p>
+<h2 id="which-mirrors-can-go-and-which-cannot">Which mirrors can go, and which cannot<a class="headerlink" href="#which-mirrors-can-go-and-which-cannot" title="Permanent link">&para;</a></h2>
+<p>Recorded 2026-09-20 (owner's question: "the mirrors go away and get
+populated via a GET call, correct?"). The answer is <em>yes for data, no for
+behaviour</em>, and the distinction is worth keeping because "mirror" names
+three different things in this codebase:</p>
+<table>
+<thead>
+<tr>
+<th>Mirror</th>
+<th>What it is</th>
+<th>Fate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>web/shared/commands.js</code>, the <code>web/app.js:199</code> fallback catalog, alias entries restated as standalone commands, <code>_appendExperimentalHelp()</code></td>
+<td><strong>Data</strong> — names, descriptions, usage, subcommands</td>
+<td>✅ <strong>Deleted</strong> in step 3a (2026-09-21); populated from <code>GET /commands?client=web</code> via <code>web/shared/command-roster.js</code>. <code>vscode-extension/src/shared/commands.ts</code> was the same class of mirror and is ✅ <strong>deleted</strong> in step 3b (same day), populated from <code>GET /commands?client=vscode</code> via <code>vscode-extension/src/commandRoster.ts</code></td>
+</tr>
+<tr>
+<td><code>web/shared/side-effects.js</code> and the VSCode equivalent</td>
+<td><strong>Behaviour</strong> — 300 lines of handler implementations (<code>open_editor</code>, <code>copy_to_clipboard</code>, <code>prompt_text</code>, …) that <em>perform</em> an effect in the client</td>
+<td><strong>Stays.</strong> Not servable: this is the same line drawn when shipping client code from the server was rejected, and the same split as <code>client_action</code> — Python owns the NAME, the client bundles the IMPLEMENTATION</td>
+</tr>
+<tr>
+<td><code>web/shared/app-state.js</code>, <code>vscode-extension/src/appState.ts</code></td>
+<td>~~<strong>Data</strong> — hand-written mirrors of <code>engine/app_state_schema.json</code>~~ ~~<strong>Behaviour.</strong> Corrected 2026-09-21: neither file restates the schema. Both are the observable-store CLASS and DERIVE field names, defaults and the Python↔JS name mapping from the schema at construction~~ **Corrected again, 2026-09-21 (later the same day): true for the DATA path on both clients, but VSCode also had a TYPE path — <code>interface AppStateFields</code> — that WAS a hand-written restatement and HAD drifted (22 schema fields vs 20 typed). Now generated; see the second correction below.</td>
+<td><strong>Stays</strong> for the DATA/behaviour class on both clients; the VSCode TYPE layer is now build-time generated (2026-09-21) — see the correction below</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The rule:</strong> a mirror of DATA can be replaced by a GET; a mirror of
+BEHAVIOUR cannot, and should instead be held in line by a parity fence that
+reads the Python-owned vocabulary.</p>
+<p>What <em>can</em> be served for the behaviour mirrors is the <strong>vocabulary</strong> — the
+list of <code>SideEffectKind</code> names and of <code>CLIENT_ACTIONS</code> — so a client can
+verify at startup that it implements every name the server may send, and
+warn on a gap. That is a parity check, not a replacement; it belongs with
+step 5's fence.</p>
+<blockquote>
+<p><strong>Done as a BUILD-TIME check, not a runtime one (step 5, 2026-09-21).</strong>
+<code>tests/test_command_parity_fence.py</code> reads both Python-owned
+vocabularies and compares them against what each client source
+actually implements, in both directions. A runtime warning was not
+built and is not needed: the gap it would report is a shipping bug, and
+a test that fails in CI catches it before the shipping rather than
+after. The <code>client_action</code> half additionally fails CLOSED at runtime
+already — a client-dispatched command whose action is unimplemented is
+refused with a clear error and <strong>never</strong> forwarded (steps 3a/3b), so
+the unsafe direction was closed by construction. The <code>SideEffectKind</code>
+half cannot fail closed by design (kinds are an OPEN enum: unknown
+kinds are ignored on purpose), which is exactly why that one needs a
+test and gets one.</p>
+</blockquote>
+<h3 id="follow-up-out-of-scope-here-the-appstate-schema-endpoint-has-no-consumer">Follow-up, out of scope here: the AppState schema endpoint has no consumer<a class="headerlink" href="#follow-up-out-of-scope-here-the-appstate-schema-endpoint-has-no-consumer" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>Heading now stale (2026-09-21, later the same day): the endpoint HAS a
+consumer.</strong> <code>vscode-extension/src/schemaGuard.ts</code> calls
+<code>GET /schema/app-state</code> on every (re)connect — see the "CORRECTION OF THE
+CORRECTION" block above. Kept unedited below for the record of how this
+section's reasoning evolved same-day.</p>
+<p><strong>CORRECTION (2026-09-21) — the conclusion below is wrong; the grep is
+right.</strong> No JS client <em>fetches</em> <code>GET /schema/app-state</code>, but neither
+client maintains the schema by hand either. Both are already derived
+from <code>ppxai/engine/app_state_schema.json</code>, by two other routes that the
+endpoint's own module docstring (<code>server/routes/schema.py:8-16</code>)
+describes and that were not read when this section was written:</p>
+<ul>
+<li><strong>Web — derived at SERVE time.</strong> <code>server/routes/static.py:41-47</code>
+  injects <code>window.APP_STATE_SCHEMA</code> into <code>index.html</code> from the running
+  server's <code>engine.app_state.SCHEMA</code>; <code>web/shared/app-state.js:46</code>
+  refuses to construct without it. This is strictly better than a fetch:
+  same source, no round-trip, and no version skew is possible because
+  the page and the schema come from the same process.</li>
+<li><strong>VSCode — derived at BUILD time.</strong> <code>vscode-extension/scripts/
+  sync-schema.js</code> copies the Python file to
+  <code>resources/app-state-schema.json</code> on <code>precompile</code>/<code>prepackage</code>/
+  <code>prewatch</code>; <code>src/appState.ts::_loadSchema</code> reads it. The copy is
+  tracked, and <code>tests/test_app_state.py</code> pins it identical to the source
+  (verified identical 2026-09-21).</li>
+</ul>
+<p>So this is NOT "the command-roster problem one stage further along".
+The roster's mirrors were hand-written DATA; these two files are the
+store's BEHAVIOUR with the data already flowing in. The owner asked for
+this to be wired up on the strength of the paragraph below, and the
+finding was returned instead of built.</p>
+<p><strong>What a runtime fetch would and would not buy (VSCode only; web needs
+nothing).</strong> The one real gap is build-time vs run-time: an extension
+built at version X talking to a server at version Y. A fetch at connect
+would teach the extension Y's field names and defaults — but a field is
+only useful to code that reads it BY NAME, and that code is compiled
+into X. A roster entry is rendered generically (completion, help,
+dispatch), which is why fetching it pays; an AppState field is not. The
+skew is already DETECTED: both stores warn on a pushed field the schema
+does not declare. And the bundled copy cannot be dropped, because the
+extension constructs <code>AppState</code> before it has started the server it
+would fetch from. Net: a second source of truth with a precedence rule,
+for no behaviour. <strong>Recommendation: do not build it; the endpoint stays
+what its docstring says it is — a diagnostic surface.</strong> The same error
+also overstated one argument in "Why pull and not AppState push" above
+(adding an AppState field does not mean editing hand-written mirrors;
+it means the schema file, the sync script's copy, and the sentinel
+tests). The pull decision does not rest on that argument alone and is
+not reopened.</p>
+<p><strong>CORRECTION OF THE CORRECTION (2026-09-21, later the same day).</strong>
+The correction above is right about the DATA path and wrong about
+completeness: it never looked at the TYPE path, because the question
+it was answering ("does either file restate the schema?") was read as
+"does either file restate the schema's <em>data</em>?" <code>web/shared/app-state.js</code>
+has no type layer to drift — JS is untyped — so the correction's web
+half stands unmodified. VSCode's TYPE half was a second, separate
+restatement the correction missed: <code>interface AppStateFields</code> in
+<code>src/appState.ts</code> was hand-written, and by the time this second
+correction was written the schema declared <strong>22</strong> fields against the
+interface's <strong>20</strong> — <code>lastMessageRole</code> (v1.18.0) and
+<code>modelSupportsVision</code> (v1.18.6) were never added, so no VSCode code
+could read either field by name, while <code>ppxai/web/app.js</code> had been
+gating its attach badge on <code>modelSupportsVision</code> since v1.18.6. The
+file's own header compounded this: it claimed a "constructor assertion"
+checked the interface against the schema (there was none — only a
+<code>as AppStateFields</code> cast) and promised a generator "the v1.18.x schema
+generator will auto-generate <code>AppStateFields</code>" that was never built.
+No test compared the two, so none of this was caught.</p>
+<p>The first correction's "<strong>Recommendation: do not build it</strong>" therefore
+rested on a half-wrong premise — it was correct that the DATA path
+needed no runtime fetch, and wrong to conclude from that alone that
+there was "nothing to build." The owner overrode the recommendation
+and had both halves built the same day (commit <code>1953c29c</code>):</p>
+<ul>
+<li><strong>Build-time (closes the TYPE gap).</strong> <code>vscode-extension/scripts/
+  sync-schema.js</code> now also emits <code>src/appState.generated.ts</code>; the
+  hand-written interface is deleted. The schema stays language-neutral
+  (<code>array</code>/<code>object</code> stay wide types), so a <code>TYPE_REFINEMENTS</code> map in
+  the generator narrows the three container fields and refuses to
+  refine a field the schema does not declare or one whose type is not
+  a container. Tracked and byte-stable, pinned by
+  <code>tests/test_app_state_generated_types.py</code> (regenerates in memory,
+  fails on any difference).</li>
+<li><strong>Run-time (the gap the first correction argued was real but not
+  worth closing).</strong> <code>vscode-extension/src/schemaGuard.ts</code> fetches
+  <code>GET /schema/app-state</code> on every (re)connect and compares FIELDS
+  with the bundled schema — the endpoint's first consumer since
+  v1.17.4. Identical: silent. Extra server fields: adopted for the
+  connection, logged once. A compiled-against field missing or
+  retyped: one visible warning naming the fields and both versions.
+  404/fetch failure: logged once, nothing blocked. This is the
+  <strong>opposite posture from the command roster's fail-closed gate</strong>,
+  deliberately: <code>AppState</code> is constructed as a field initialiser
+  before any server exists — there is no roster-shaped "refuse to
+  dispatch" available, because there is nothing to dispatch — and a
+  server too old to serve the endpoint is still a perfectly usable
+  server, so blocking chat over an unverifiable diagnostic would be a
+  self-inflicted outage.</li>
+</ul>
+<p><strong>What the first correction got right and still holds.</strong> Adopted
+fields are stored, never rendered — the argument that "a field is only
+useful to code that reads it BY NAME, and that code is compiled into
+the build" is exactly why <code>schemaGuard.ts</code> adopts silently instead of
+trying to make an unknown field do anything. <strong>What it missed:</strong> the
+other direction. A field this build WAS compiled against — vanishing
+from, or retyped on, the server — used to be invisible; that silence
+is exactly the failure mode the TYPE-layer drift itself had just
+demonstrated (two fields absent for months, caught only by an
+unrelated grep). Closing that is the guarantee the run-time half
+buys, and it is why the recommendation changed.</p>
+<p><strong><code>version</code> is still not the signal.</strong> The schema's <code>"version"</code> key
+has read <code>"1.0"</code> since the file was created (<code>86adf127</code>) and none of
+the five field-changing commits since bumped it (verified:
+<code>git log -p --follow ppxai/engine/app_state_schema.json | grep
+'"version"'</code> returns one hit, the original add). <code>schemaGuard.ts</code>
+compares FIELDS; <code>version</code> is reported in the message only as context
+for whoever has to fix a real mismatch, never as the verdict.</p>
+<p><strong>Update (2026-09-21, later the same day again).</strong> A THIRD premise
+error surfaced the same day, this time in the open owner decision
+that followed this one (plan doc, decision 8): VSCode was assumed to
+have no vision-badge behaviour to protect, on the strength of "no
+VSCode UI reads <code>modelSupportsVision</code>." It does — the webview's own
+untyped mirror, <code>activeModelSupportsVision</code> in
+<code>vscode-extension/media/webview/main.js</code>, has read that field by name
+since v1.18.6. The TYPE drift this record fixed was real; it had not
+cost VSCode the feature. What actually needed fixing (and now is):
+<code>_reanchorFromServer</code> never forwarded a re-anchor to the webview, and
+a palette provider/model switch never re-anchored at all — see
+<code>docs/patterns/appstate.md</code> §"Run-time skew (VSCode)". Separately,
+web also gained the reconnect-time schema check this section
+describes as VSCode-only above — decision 9, DECIDED — closing the
+asymmetry this record left open. <code>version</code> maintenance itself was
+also decided (decision 11): starting at <code>"1.1"</code>, <code>schemaGuard.ts</code> and
+its web counterpart both still decide on FIELDS, <code>version</code> stays
+context only.</p>
+</blockquote>
+<p><code>GET /schema/app-state</code> <strong>already exists</strong> (<code>ppxai/server/routes/schema.py:32</code>)
+and <strong>neither JS client calls it</strong> — <code>grep -rn "schema/app-state" ppxai/web/
+vscode-extension/src/</code> returns nothing (2026-09-20). The server offers the
+schema while both clients keep maintaining it by hand, pinned in lockstep by
+cross-language sentinel tests. It is the command-roster problem exactly, one
+stage further along: the endpoint is built and only the consuming half is
+missing.</p>
+<p>Deliberately NOT folded into this record's plan: it touches the sentinel
+tests and the <code>state_sync</code> contract, and deserves its own scoping. It is
+written down here because nothing else in the repo records that the endpoint
+is unconsumed, and because whoever finishes step 3 will have just built the
+fetch-at-startup machinery that this would reuse.</p>
+<h2 id="triggers-to-revisit">Triggers to revisit<a class="headerlink" href="#triggers-to-revisit" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A "ship the engine as a standalone library" goal (makes the residual
+  <code>engine → commands</code> import a hard blocker, not a smell).
+  <strong>Partially fired 2026-08-15:</strong> ppxai-sre consumes ppxai as an SDK
+  dependency to implement its agents, and <code>build_task_runner</code> was extracted
+  to <code>ppxai/engine/task_runner.py</code> (<code>eeb82076</code>) precisely to serve that
+  model. It is <em>not</em> yet hard-blocking, because that consumer's import path
+  never reaches <code>engine.completion</code> (measured above). It becomes hard the
+  moment any of these is true:</li>
+<li><code>ppxai/engine/</code> is packaged as its own distribution, so an unused
+    upward import is a real dependency rather than a dormant one;</li>
+<li>an embedder needs the command roster — a palette, a menu, an
+    <code>/help</code> equivalent — <strong>without</strong> running the client command layer;</li>
+<li>the <code>commands</code> package acquires an import-time side effect (config
+    read, registry build, I/O) that an embedder must not pay for.</li>
+<li>A second client surface needing the live command roster (palette, menu),
+  which makes the AppState roster publication pay for itself.</li>
+<li>A second cross-layer capability appearing with the same "belongs to no
+  one layer" shape — at which point a small service registry may beat
+  per-capability composition-root wiring.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

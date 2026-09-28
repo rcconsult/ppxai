@@ -1,0 +1,1688 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.3/decisions/0014-web-search-layer-and-retrieval-grounding/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>ADR 0014: Web search is its own layer; grounding retrieves before the model call - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-0014-web-search-is-its-own-layer-grounding-retrieves-before-the-model-call" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR 0014: Web search is its own layer; grounding retrieves before the model call
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-already-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What already exists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-still-tangled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is still tangled
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-the-current-design-was-chosen-and-what-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why the current design was chosen, and what changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-a-search-layer-ppxaienginesearch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. A search layer: ppxai/engine/search/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-the-web_search-tool-becomes-an-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. The web_search tool becomes an adapter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-grounding-retrieves-before-the-model-call" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Grounding retrieves before the model call
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-egress-and-data-flow-rules-for-retrieval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Egress and data-flow rules for retrieval
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-wire-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Wire contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-and-not-the-alternatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this and not the alternatives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#owner-answers-2026-09-27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Owner answers (2026-09-27)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-defaults-the-owner-may-override" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation defaults (the owner may override)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-proper-solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future / proper solution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#triggers-to-revisit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers to revisit
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="adr-0014-web-search-is-its-own-layer-grounding-retrieves-before-the-model-call">ADR 0014: Web search is its own layer; grounding retrieves before the model call<a class="headerlink" href="#adr-0014-web-search-is-its-own-layer-grounding-retrieves-before-the-model-call" title="Permanent link">&para;</a></h1>
+<ul>
+<li><strong>Status:</strong> Implemented and <strong>closed</strong> (2026-09-28). Built 2026-09-27 (<code>b3c66740</code> layer, <code>05bb0ddb</code> retrieval grounding): direction approved by the owner, open questions answered below; default backend order revised the same day (Decision 3). Closed by the owner on 2026-09-28, which also accepted the <code>grounding.sources</code> field added in <code>c3e56736</code> as the structured-citations decision §5 had deferred.</li>
+<li><strong>Deciders:</strong> owner</li>
+<li><strong>Target:</strong> v1.19.3, together with ADR 0015 (owner, 2026-09-27).</li>
+<li><strong>Related:</strong> ADR 0009 (task execution profiles, the shared backend
+  resolver, the §4 oneshot gating table), ADR 0011 (<code>execution.run.*</code>,
+  which owns <code>grounding</code>), ADR 0012 (per-model facts; Perplexity's two
+  wires), ADR 0008 (cross-tier cost), and ADR 0015 (removal of the Perplexity
+  chat provider, which depends on this record).</li>
+</ul>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>On 2026-09-27 the owner deprecated Perplexity as a chat provider and kept
+it as a web-search backend (phase 1, <code>a6500041</code>). Two instructions came
+with the next step:</p>
+<ol>
+<li>Perplexity must stay available <strong>as the grounding option</strong>.</li>
+<li>Web search should be an abstraction <strong>separate from calling a provider's
+   model API</strong>.</li>
+</ol>
+<h3 id="what-already-exists">What already exists<a class="headerlink" href="#what-already-exists" title="Permanent link">&para;</a></h3>
+<p>Half of the separation is built:</p>
+<ul>
+<li><strong>The search backends are provider-independent.</strong>
+  <code>web_search_perplexity(query, n)</code> and <code>web_search_gemini(query, n)</code> in
+  <code>ppxai/engine/tools/builtin/web_premium.py</code> build their own clients and
+  return <code>(answer, citations, ToolUsage)</code>. DuckDuckGo lives in
+  <code>tools/builtin/web.py</code>. None of them call a chat provider. Since
+  <code>a6500041</code> the web_search tool no longer imports the Perplexity provider
+  class either; its wire fact comes from <code>providers/perplexity_facts.py</code>.</li>
+<li><strong>One resolver picks the backend.</strong> <code>tools/search_backends.py::
+  resolve_web_search_backend()</code> (ADR 0009 step 4) applies
+  <code>tools.web_search.order</code>, per-provider <code>preferred</code>/<code>strict</code>, backend
+  usability (keys), and the egress predicate. Its <code>BACKEND_HOSTS</code> feeds
+  egress enumeration. <code>web_search_premium()</code> walks the resolved candidates.</li>
+</ul>
+<h3 id="what-is-still-tangled">What is still tangled<a class="headerlink" href="#what-is-still-tangled" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Grounding belongs to the chat provider.</strong> <code>execution.run.grounding</code>
+  (ADR 0011 Q5) resolves to the <code>native</code> path in
+  <code>facts_resolver.get_effective_oneshot_path</code>: <em>grounding on AND the
+  provider's <code>capabilities.web_search</code></em>. <code>oneshot.py::
+  _apply_oneshot_grounding</code> then flips the provider's own search:
+  <code>enable_grounding = True</code> for Gemini, and nothing for Perplexity, because
+  Sonar always searches. <strong>For Perplexity, grounding IS the chat
+  provider.</strong> Removing the chat provider (ADR 0015) would remove Perplexity
+  grounding with it, which the owner has ruled out.</li>
+<li><strong>Grounding is provider-limited.</strong> Only providers with a native search
+  hook can ground. An OpenAI, NVIDIA, local vLLM or Anthropic model cannot,
+  even though the search layer could serve it.</li>
+<li><strong>The search backends live in a tool module.</strong> They are functions inside
+  <code>web_premium.py</code>, reached by the tool, and have no home that grounding,
+  <code>/doctor</code> or a future consumer can depend on without importing a tool
+  module.</li>
+</ul>
+<h3 id="why-the-current-design-was-chosen-and-what-changes">Why the current design was chosen, and what changes<a class="headerlink" href="#why-the-current-design-was-chosen-and-what-changes" title="Permanent link">&para;</a></h3>
+<p>The native path ("Option A", <code>docs/archive/plan-oneshot-grounding.md</code>)
+was chosen for its <strong>egress property</strong>: retrieval happens inside the
+provider's own API call, so a grounded oneshot reaches no host beyond the
+one it already calls, and no model-named URL is ever fetched. Retrieval
+before the call gives that up in one specific way. The prompt, or a query
+derived from it, now also goes to the <strong>search backend's host</strong>. If the
+chat model is a local vLLM and the search backend is Perplexity, a
+grounded prompt leaves the machine where before it did not. This is the
+central trade-off of this record. It is handled by the rules in Decision 4.
+It does not re-open the tool-loop exfiltration surface: no model-named URL
+fetch, no <code>fetch_url</code>, no model-chosen query.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<h3 id="1-a-search-layer-ppxaienginesearch">1. A search layer: <code>ppxai/engine/search/</code><a class="headerlink" href="#1-a-search-layer-ppxaienginesearch" title="Permanent link">&para;</a></h3>
+<p>A package that owns web search and knows nothing about chat providers.</p>
+<ul>
+<li><strong><code>SearchBackend</code></strong> (a <code>Protocol</code>): <code>id: str</code>, <code>hosts: tuple[str, ...]</code>,
+  <code>usable() -&gt; bool</code> (key present, etc.), and
+  <code>async search(query: str, n: int) -&gt; SearchResult</code>.</li>
+<li><strong><code>SearchResult</code></strong>: <code>backend</code>, <code>answer: str</code>, <code>citations: list[str]</code>,
+  <code>usage: ToolUsage | None</code>.</li>
+<li><strong>Backends:</strong> <code>perplexity</code> (Sonar, wire from <code>perplexity_facts</code>),
+  <code>gemini</code> (Google Search over REST, as today; not the chat provider), and
+  <code>duckduckgo</code>. The code moves out of <code>web_premium.py</code> and <code>web.py</code>
+  unchanged in behaviour.</li>
+<li><strong>The resolver moves in</strong>: <code>search_backends.py</code> becomes
+  <code>search/resolver.py</code>, with the same function and the same semantics
+  (order, preferred, strict, egress predicate). Internal module: every
+  importer is updated, with no re-export shim. It is not on ppxai-sre's
+  pinned import surface (<code>tests/test_consumer_import_surface.py</code>), which
+  was checked on 2026-09-27.</li>
+<li><strong>A fence:</strong> <code>ppxai/engine/search/</code> imports nothing from
+  <code>ppxai.engine.providers</code>, pinned by a test in the style of
+  <code>TestEngineImportsNoCommands</code>.</li>
+</ul>
+<h3 id="2-the-web_search-tool-becomes-an-adapter">2. The <code>web_search</code> tool becomes an adapter<a class="headerlink" href="#2-the-web_search-tool-becomes-an-adapter" title="Permanent link">&para;</a></h3>
+<p><code>web_search_premium()</code> becomes: resolve, walk the candidates, format. The
+walk calls <code>SearchBackend.search()</code>. Output format, fallback, <code>strict</code>,
+usage recording and the per-turn budgets (<code>tool_call_budgets</code>) are
+unchanged. The tool, grounding and <code>/task</code> grants then share one
+implementation, one cost record and one egress check.</p>
+<h3 id="3-grounding-retrieves-before-the-model-call">3. Grounding retrieves before the model call<a class="headerlink" href="#3-grounding-retrieves-before-the-model-call" title="Permanent link">&para;</a></h3>
+<p>With grounding on, the oneshot tier (<code>/v1/oneshot</code>, <code>/v1/agent/run</code>) does
+the following:</p>
+<ol>
+<li>Resolves the backend chain exactly as <code>web_search</code> does, scoped to the
+   request's provider.</li>
+<li>Searches once with the user's prompt as the query, walking the chain on
+   failure unless the resolution is <code>strict</code>.</li>
+<li>Adds the result to the request as context: the backend's answer plus a
+   numbered source list, inside a clearly delimited block the model is
+   told to use and cite.</li>
+<li>Makes the model call with <strong>no tools</strong>, exactly as the ungrounded
+   oneshot does.</li>
+</ol>
+<p>Consequences:</p>
+<ul>
+<li><strong>Perplexity stays a grounding backend.</strong> As accepted, it was first in
+  <code>AUTO_ORDER</code>. <strong>Revised by the owner on 2026-09-27, the same day:</strong> the
+  default order is Gemini, then Perplexity, then DuckDuckGo, each when its
+  key is set. Perplexity grounds whenever Gemini is unusable, or when an
+  operator puts it first. Order and pinning use the existing
+  <code>tools.web_search.order</code> / <code>preferred</code> / <code>strict</code>. No new keys are needed.</li>
+<li><strong>Every chat provider can be grounded</strong>, not only those with a native
+  hook.</li>
+<li><strong>Grounding is guaranteed</strong>: the search always runs, unlike the tool
+  loop, where the model decides whether to call it.</li>
+<li><strong>The gating table</strong> (<code>get_effective_oneshot_path</code>) gains the new path,
+  <code>"retrieve"</code>, and keeps "enrichment XOR grounding, never both" from
+  ADR 0009 §4.</li>
+<li><strong>Provider-native search becomes an explicit option.</strong> Gemini's
+  in-call Google Search remains available as <code>grounding: "native"</code>, with
+  today's egress property, for operators who want it. It is no longer what
+  <code>grounding: true</code> means (question 2).</li>
+</ul>
+<h3 id="4-egress-and-data-flow-rules-for-retrieval">4. Egress and data-flow rules for retrieval<a class="headerlink" href="#4-egress-and-data-flow-rules-for-retrieval" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Default OFF, unchanged.</strong> No grounding config means no search.</li>
+<li><strong>The backend host must pass the egress ceiling.</strong> <code>execution.
+  egress_ceiling</code> and the per-request egress predicate apply to the
+  backend's <code>hosts</code>, exactly as they do for the web_search tool. A
+  resolution with no allowed backend grounds nothing and says so. It never
+  falls back to an unchecked host.</li>
+<li><strong><code>strict</code> pins one backend</strong>, so a run can be held to one known search
+  host.</li>
+<li><strong>Only the prompt text is sent</strong>, never history, attachments or
+  retrieved content from another call. The query is not model-written
+  (question 3).</li>
+<li><strong><code>/doctor</code> shows it</strong>: the effective grounding path per configured
+  model, the backend it would use, and the host the prompt would reach.</li>
+</ul>
+<h3 id="5-wire-contract">5. Wire contract<a class="headerlink" href="#5-wire-contract" title="Permanent link">&para;</a></h3>
+<p>The response keeps its fields. The one addition is the optional request
+field of question 4. Citations reach the caller inside the answer text:
+the model is told to cite sources as <code>[n]</code>, and ppxai does <strong>not</strong> append a
+source list to the model's content, since that would break a JSON
+<code>response_format</code>. The existing optional <code>grounding</code> response record
+(<code>searched</code>, <code>run_id</code>, <code>queries</code>, <code>backend</code>, <code>search_cost</code>) is set on the
+retrieve path, as it already is on the search-loop path.</p>
+<p><strong>Amended 2026-09-28 (owner, on closing this record).</strong> The structured
+citations field that this section first deferred shipped as
+<code>grounding.sources</code> (<code>c3e56736</code>): <code>[{url, title}]</code>, the sources shown to the
+model, in order, so an answer's <code>[n]</code> is <code>sources[n-1]</code>. It is an additive
+key on the retrieval path only (the search-loop record has no such key), and
+<code>title</code> is null unless the backend gives one. Gemini's URLs are Google's
+opaque grounding redirects, so <code>title</code> carries the source's domain. The
+answer text still carries the <code>[n]</code> markers, and ppxai still appends no
+source list to the content. ppxai-sre checked the change against its
+consumer and reported no impact. <code>docs/api-gateway.md</code> is the wire
+reference.</p>
+<h3 id="6-cost">6. Cost<a class="headerlink" href="#6-cost" title="Permanent link">&para;</a></h3>
+<p>Retrieval usage is recorded through the existing <code>ToolUsage</code> path, so it
+appears in <code>/cost</code> under the run tier (ADR 0008) and in the run's usage
+events, like a web_search tool call.</p>
+<p>Two cost corrections landed after this record was built. <code>16ccbd98</code>:
+<code>gemini_grounding.per_query</code> is a per-query price, but it had been divided by
+1000 since v1.13.0, so each Gemini search was logged at a thousandth of its
+cost. <code>8f031e60</code>: a Perplexity search records the <code>usage.cost.total_cost</code>
+Perplexity reports, which includes its per-search and cache fees. The
+configured token prices ($0.25 in / $2.50 out per 1M) are now only the
+fallback.</p>
+<h2 id="why-this-and-not-the-alternatives">Why this and not the alternatives<a class="headerlink" href="#why-this-and-not-the-alternatives" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Keep grounding on the chat provider (status quo).</strong> This is what makes
+  ADR 0015 impossible without losing Perplexity grounding, and it limits
+  grounding to providers with a native hook.</li>
+<li><strong>Grounding through the tool loop (<code>execution.run.web_search</code>).</strong> It
+  already exists, but the model may answer without searching. It costs a
+  second model's tokens and a round trip, and the citations are whatever
+  the model chooses to repeat. Retrieval before the call is deterministic
+  and cheaper, and it keeps the oneshot model call tool-free.</li>
+<li><strong>A dedicated "Perplexity grounding" call, special-cased.</strong> This solves
+  the owner's first instruction but not the second. Every backend would
+  need its own special case, and grounding would stay outside the resolver
+  that already carries order, strict and egress.</li>
+</ul>
+<h2 id="owner-answers-2026-09-27">Owner answers (2026-09-27)<a class="headerlink" href="#owner-answers-2026-09-27" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Release:</strong> v1.19.3, with ADR 0015 in the same release.</li>
+<li><strong><code>grounding: true</code> means <code>"retrieve"</code>.</strong> <code>"native"</code> is the explicit
+   opt-in for a provider's in-call search. An operator who set <code>true</code> and
+   serves Gemini will see search move from Gemini's in-call Google Search
+   to a separate search before the model call, through the resolved
+   backend chain (Gemini's Google Search first under the revised order).
+   The release notes carry this as an upgrade note.</li>
+<li>
+<p><strong>The query is the raw prompt.</strong> No rewriting model call; it can be
+   added later.</p>
+</li>
+<li>
+<p><strong>Per-request control: add the optional field.</strong> Raised by ppxai-sre.
+   Their planned classifier sends email bodies as the prompt: often
+   confidential, and <strong>untrusted</strong>, since anyone can send mail. Under
+   server-wide retrieval grounding such a prompt would go to a third-party
+   search host, and an attacker's email would steer both the query and the
+   injected context. The egress ceiling and <code>strict</code> limit <em>where</em> the
+   prompt goes, not <em>whether</em>. <code>POST /v1/oneshot</code> therefore gains an
+   optional request field <strong><code>grounding: bool | null</code></strong>:</p>
+</li>
+<li><code>null</code> (or absent) uses the server default;</li>
+<li><code>false</code> is always honoured, since it can only reduce exposure;</li>
+<li><code>true</code> on a server with grounding disabled is refused with a 400
+     naming the setting, never silently ignored.</li>
+</ol>
+<p>The v1 contract permits this (<code>OneshotRequest</code>: optional fields are
+   non-breaking), and the response is unchanged. Limit: pydantic ignores
+   unknown fields, so a server <strong>older</strong> than this change ignores the
+   field. A caller that depends on the opt-out gates on the server version
+   from <code>GET /health</code>. Older servers only do <code>native</code> grounding, which
+   reaches no new host.</p>
+<h2 id="implementation-defaults-the-owner-may-override">Implementation defaults (the owner may override)<a class="headerlink" href="#implementation-defaults-the-owner-may-override" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Untrusted input.</strong> <code>docs/api-gateway.md</code> states that retrieval
+  grounding sends the prompt text to the search backend, and that callers
+  with untrusted or confidential prompts should send <code>grounding: false</code>.
+  <code>/doctor</code> says the same when grounding is on server-wide.</li>
+<li><strong>Citations</strong> stay inside the answer text as <code>[n]</code> markers, which resolve
+  through <code>grounding.sources</code> (§5, amended 2026-09-28).</li>
+<li><strong>Injected size</strong> is capped by <code>context.max_injection_size</code>, the limit
+  file injection already uses, rather than a new key.</li>
+</ul>
+<h2 id="future-proper-solution">Future / proper solution<a class="headerlink" href="#future-proper-solution" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>fetch_url</code> and the weather tool on the same layer, if a second consumer
+  appears.</li>
+<li>Result caching per (backend, query) within a run.</li>
+<li>Grounding for the interactive chat path (<code>/chat</code>), which today relies on
+  the tool loop, if the owner wants the same guarantee there.</li>
+</ul>
+<h2 id="triggers-to-revisit">Triggers to revisit<a class="headerlink" href="#triggers-to-revisit" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A search backend whose API cannot be called standalone, only as part of a
+  chat call. It would not fit <code>SearchBackend</code> as defined.</li>
+<li>An operator requirement that grounded prompts never leave the chat
+  provider's host. That is <code>native</code>, and would make it a first-class
+  default again.</li>
+<li>ppxai-sre's Pattern-A classifier landing on <code>/v1/oneshot</code> with grounding.
+  Check the query and citation choices against real use.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

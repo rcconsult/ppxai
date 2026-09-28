@@ -1,0 +1,2507 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.3/release-notes-v1.19.3/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Release Notes — v1.19.3 - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#release-notes-v1193" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Release Notes — v1.19.3
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#branch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Branch
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#one-command-registry-adr-0007" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One command registry (ADR 0007)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fixed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-guard-against-over-reach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The guard against over-reach
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Changed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#grounding-searches-first-for-every-provider-adr-0014" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grounding searches first, for every provider (ADR 0014)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debt
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="release-notes-v1193">Release Notes — v1.19.3<a class="headerlink" href="#release-notes-v1193" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Scope:</strong> Started as a two-fix observability release and grew to
+<strong>ten fixes, one transcript change, and ADR 0007's one-command-registry
+work</strong> on the same branch ahead of tagging. Two of the fixes make an
+<strong>existing silent degradation visible</strong>; neither
+changes what the send path does, and neither changes a resolved fact
+value. Two close out the 2026-09-27 Perplexity Sonar chat-completions
+retirement on the web_search tool's own code path (the provider side
+was already fixed under ADR 0012 W3) — one of them <strong>does</strong> change a
+code default. Two correct <code>/doctor</code>, which probed outside the TLS
+resolver and whose facts scan could describe a different config file
+than the one its own header named. Two are resolution and display: the
+shipped Qwen 27B-FP8 row now covers the in-place 3.8 upgrade — <strong>this
+release does change the model catalog</strong>, one glob, one family — and
+the context-window badge stops multiplying its baseline by the
+tool-loop iteration count. One rebuilds tool-loop detection: a guard
+that only ever saw a trailing streak of byte-identical arguments is
+replaced by a per-turn occurrence count plus an argument-independent
+per-tool budget, after a live incident where 15 paraphrased
+<code>web_search</code> calls tripped nothing. The last lands with the turn-level
+tool strip in the web and VSCode transcripts, which also fixes a
+chevron that could expand to nothing.</p>
+<p>Two more, found by the 2026-09-26 VSCode smoke run, make the
+Responses wire usable on <code>perplexity/sonar</code>, the only Sonar id left
+after 09-27: attachments were sent with chat-completions part types,
+and three tool names (<code>search_files</code>, <code>web_search</code>, <code>fetch_url</code>) are
+reserved by Perplexity. Both failed every affected turn.</p>
+<p><strong>⚠️ Perplexity is removed as a chat provider; Gemini is the new
+default</strong> (owner decision 2026-09-27, ADR 0015). Perplexity stays a
+web search and grounding backend. A config that still names it
+for chat is <strong>ignored, with a warning</strong>, and the engine falls back to
+the next configured provider; see "Removed" and the upgrade steps
+below. <strong>Grounding now searches first, for every provider</strong> (ADR 0014),
+and <code>/v1/oneshot</code> gained an optional <code>grounding</code> request field.</p>
+<p><strong>Command-surface changes, landed and Accepted 2026-09-21 (ADR 0007).</strong>
+<code>CommandSpec</code> is now the single declaration for every command;
+completion, <code>/help</code> and both JS clients' menus derive from it. <strong>This
+release DOES remove a command from web and VSCode</strong>: <code>/quit</code> is gone
+from both — web's header button is now "Leave", VSCode uses its
+existing connect/disconnect commands; <code>/quit</code>/<code>/exit</code> are unaffected
+in the Rich and Textual TUIs. Both JS clients now fail CLOSED on slash
+commands when the roster can't be fetched (e.g. newer web assets
+against an older server). <strong><code>/checkpoint clear</code> now asks first in
+ALL four clients</strong> (web, Rich, Textual, VSCode) instead of clearing
+immediately — Cancel is the default-highlighted first choice, <code>--yes</code>
+is there for scripted use — and both TUIs gained their first
+interactive prompt UI along the way, which also fixes <code>/show @x</code>
+multi-match and <code>/edit &lt;missing&gt;</code> dead-ending in Rich/Textual. See
+"One command registry" below for the rest — subcommand display in
+<code>/help</code>, <code>/tools help</code> reaching Rich and Textual, VSCode's
+<code>/tools</code>/<code>/context</code>/<code>/ls</code>/<code>/tree</code>/<code>/checkpoint</code> now server-rendered
+and VSCode's legacy intercept mechanism deleted entirely. <strong>Later the
+same day, ADR 0007's last open decision closed:</strong> VSCode's AppState
+TypeScript types are now generated from the schema (a hand-written
+copy had silently lost two fields), and VSCode now checks the
+connected server's AppState shape on every (re)connect — <strong>new,
+user-visible: one warning when a compiled-against field is missing or
+retyped on the server</strong>; a newer server's extra fields are adopted
+silently, an older server changes nothing.</p>
+<p><strong>Late additions (2026-09-28).</strong> A stuck provider call can no longer keep
+<code>ppxai-server</code> from stopping, and the packaged server now obeys
+<code>kill &lt;pid&gt;</code>. A request cut off by a stop gets a retryable <code>503</code>. <code>/cost</code>
+now records what Perplexity actually charges per search and counts
+Gemini thinking tokens. Grounded answers cite resolvable sources. See
+"Fixed".
+</p>
+<p>Config shape: a <code>providers.perplexity</code> block is now ignored, and
+<code>execution.run.grounding: true</code> now means search-first retrieval (see
+the upgrade steps). The shipped microk8s coder template changes shape,
+but it is an example: nothing in an existing install reads it. Two new
+optional keys, <code>server.shutdown_grace_s</code> (default 10) and
+<code>providers.&lt;id&gt;.timeout_s</code> (unset keeps the SDK default), bound how long
+a stop waits and how long a provider call may run.</p>
+<p><strong>v1 API gateway (<code>POST /v1/oneshot</code>, bearer auth).</strong> Every existing
+field keeps its shape. Four additive or error-path changes:
+- the request gains one optional field, <code>grounding</code> (<code>true</code>/<code>false</code>/absent);
+- on the retrieval path, the response's <code>grounding</code> record gains <code>sources</code>;
+- a request cut off by a server stop now gets <strong><code>503</code> with
+  <code>Retry-After: 5</code></strong> instead of <code>500</code>, so it can be retried;
+- a request naming <code>provider: "perplexity"</code> answers <code>400</code> instead of
+  calling the retired endpoint.</p>
+<p>A caller that depends on <code>grounding</code> checks the version from
+<code>GET /health</code>.</p>
+</blockquote>
+<h2 id="branch">Branch<a class="headerlink" href="#branch" title="Permanent link">&para;</a></h2>
+<p><code>bugfix/v1.19.3</code> (from master @ v1.19.2), <strong>42 commits ahead of master</strong>
+at the time of writing — re-derive with <code>git rev-list --count
+master..HEAD</code>; uncommitted work in the tree lands as further commits
+before tagging, so this count is a floor, not a final tally. Nine fixes
+and a web/VSCode transcript feature carried the branch through
+2026-09-16 (see Verification below for that tree's test state); ADR
+0007's one-command-registry work (steps 1–5 plus the same-day follow-ups
+in "One command registry" below) landed 2026-09-21. A tenth fix — the
+tool-loop guard rework below — landed 2026-09-23.</p>
+<p><strong>Upgrade steps.</strong> Run <code>/doctor</code> after upgrading; it reports each of
+these.</p>
+<ol>
+<li><strong>Perplexity for chat (ADR 0015).</strong> If <code>default_provider</code> or
+   <code>MODEL_PROVIDER</code> is <code>perplexity</code>, or your <code>ppxai-config.json</code> has a
+   <code>providers.perplexity</code> block, the block is now ignored and ppxai
+   starts on the next configured provider. Set <code>default_provider</code> to
+   another provider (e.g. <code>gemini</code>) and delete the block. Models you
+   reached through a Perplexity key move to the vendor's own provider:
+   <code>openai/*</code> → <code>openai</code>, <code>google/*</code> → <code>gemini</code>, <code>anthropic/*</code> →
+   <code>anthropic</code> (opt-in, untested against the live API), <code>xai/*</code> →
+   <code>openrouter</code>. Keep <code>PERPLEXITY_API_KEY</code>: it still powers web search
+   and grounding.</li>
+<li><strong>The web search model.</strong> If <code>tools.web_search.perplexity_model</code> is a
+   bare Sonar id (<code>sonar</code>, <code>sonar-pro</code>, ...), set it to
+   <code>"perplexity/sonar"</code>. The bare ids were served only on the
+   chat-completions endpoint that retired 2026-09-27, so every
+   Perplexity search fails with them. <strong>The shipped <code>ppxai-config.json</code>
+   carried <code>sonar</code> until this release.</strong></li>
+<li><strong>Grounding.</strong> If you set <code>execution.run.grounding: true</code> and serve
+   Gemini, search moves from Gemini's in-call Google Search to a
+   separate search before the model call, through the resolved backend
+   chain (Gemini's Google Search first when <code>GEMINI_API_KEY</code> is set). Set
+   <code>"native"</code> to keep the old behaviour.</li>
+</ol>
+<p>Otherwise: if you run tool loops against models whose facts rows you
+have not checked, the first fix is the reason to take this release; if
+you serve the 27B-FP8 Qwen line, the catalog fix is; if you script
+against web or VSCode's <code>/quit</code>, switch to the "Leave" button /
+connect-disconnect commands.</p>
+<h2 id="one-command-registry-adr-0007">One command registry (ADR 0007)<a class="headerlink" href="#one-command-registry-adr-0007" title="Permanent link">&para;</a></h2>
+<p>Landed and Accepted 2026-09-21. <code>CommandSpec</code> is the only place a
+command is declared — completion, <code>/help</code>, and both JS clients' command
+menus are all derived from it, served over <code>GET /commands?client=&lt;id&gt;</code>.
+See <a href="../decisions/0007-completion-first-class-service/">docs/decisions/0007-completion-first-class-service.md</a>.</p>
+<ul>
+<li>Both JS clients fetch the roster at startup; the hand-written
+  <code>ppxai/web/shared/commands.js</code> and <code>vscode-extension/src/shared/commands.ts</code>
+  are deleted, along with five more hand-written command lists
+  (including a Rich welcome-screen catalog that had drifted 18 commands
+  out of date).</li>
+<li><strong>⚠️ User-visible: <code>/quit</code> no longer exists as a command in web or
+  VSCode.</strong> Ending a client session is a UI workflow now, not a slash
+  command — web's button reads "Leave"; VSCode uses connect/disconnect.
+  Unaffected in Rich/Textual, where <code>/quit</code>, <code>/exit</code>, and now <code>/q</code>
+  (newly registered as an alias) all still work.</li>
+<li>Both JS clients fail CLOSED on slash commands when the roster can't
+  be fetched, rather than silently doing nothing or guessing at a name.</li>
+<li><code>/token set &lt;value&gt;</code> is <code>client_handled</code>, so a typed-inline
+  <code>/token set &lt;bearer&gt;</code> is masked and intercepted client-side before it
+  can reach the server dispatch path.</li>
+<li>Same-day follow-ups: <code>/help &lt;cmd&gt;</code> now lists a command's
+  subcommands; <code>/tools help</code> / <code>/tools help editing</code> now work in Rich,
+  Textual and web (previously VSCode-only); VSCode's <code>/tools</code>,
+  <code>/context</code>, <code>/ls</code>, <code>/tree</code> and (as of the follow-up below)
+  <code>/checkpoint</code> are now server-rendered via <code>POST /command/&lt;name&gt;</code>;
+  <code>/context clear</code> no longer leaves a stale Ctx% badge; three stale
+  <code>/tools agent</code> hint strings (retired by ADR 0011) are fixed.</li>
+<li><strong><code>/checkpoint clear</code> asks first, in all four clients, and both TUIs
+  gained their first interactive prompt UI.</strong> <code>/checkpoint clear</code>
+  irreversibly deletes every file-backend snapshot; VSCode's modal used
+  to be the only confirmation any client had — web, Rich and Textual
+  cleared immediately. With no flag, <code>/checkpoint clear</code> now returns a
+  quick-pick list with <strong>Cancel first</strong> and the destructive row second,
+  so a bare Enter on the default-highlighted item can never destroy
+  anything; picking Cancel re-dispatches <code>clear --no</code> (deletes nothing),
+  picking the second row re-dispatches <code>clear --yes</code> (clears). Scripted
+  use needs <code>--yes</code> directly. Rich shows a numbered list (Enter, <code>0</code>, a
+  non-numeric reply, or Ctrl-C all cancel); Textual shows a
+  <code>QuickPickDialog</code> modal (Escape dismisses). Neither TUI previously
+  read <code>CommandResult.side_effects</code> at all, so this also fixes two
+  unrelated dead ends: <code>/show @&lt;term&gt;</code> with several matches used to
+  print a count and stop — it now shows the numbered/dialog pick and
+  opens the chosen file; <code>/edit &lt;missing-file&gt;</code> used to print "not
+  found" with no way to create it — it now offers to create the file.
+  VSCode's legacy intercept mechanism — the last row of
+  <code>LEGACY_INTERCEPTS</code>, plus <code>LEGACY_HANDLERS</code>, the router's legacy
+  branch, <code>handlers/commands.ts</code> and <code>handlers/types.ts</code> — is deleted
+  outright, not just emptied. See
+  <a href="../decisions/0007-completion-first-class-service/">docs/decisions/0007-completion-first-class-service.md</a>
+  open owner decision 7. VSIX size: 136 KB.</li>
+<li><strong>VSCode's AppState TypeScript types are now generated, closing open
+  owner decision 5</strong> (2026-09-21, later the same day). The hand-written
+  <code>interface AppStateFields</code> had silently drifted from the canonical
+  schema — 22 fields declared, 20 typed — missing <code>lastMessageRole</code>
+  (v1.18.0) and <code>modelSupportsVision</code> (v1.18.6); no test compared the
+  two. <code>vscode-extension/scripts/sync-schema.js</code> now also emits
+  <code>src/appState.generated.ts</code>, tracked and pinned byte-identical to a
+  fresh regeneration.</li>
+<li><strong>New, user-visible: VSCode checks the connected server's AppState
+  shape on every (re)connect.</strong> <code>vscode-extension/src/schemaGuard.ts</code>
+  fetches <code>GET /schema/app-state</code> and compares it with the extension's
+  bundled schema. A matched pair is silent. A newer server's extra
+  fields are adopted for the connection silently — logged once, no
+  toast, because that state is stored but nothing renders it (rendering
+  code ships compiled in). <strong>A field the extension was compiled against
+  going missing, or changing type, on the server produces exactly one
+  visible warning</strong>, naming the fields and both versions. An older
+  server with no <code>/schema/app-state</code> endpoint (pre-v1.17.4) changes
+  nothing — one log line, chat keeps working; state deliberately does
+  NOT fail closed the way the command roster does, because <code>AppState</code>
+  is constructed before any server exists. VSIX 138 KB.</li>
+<li><strong>VSCode's vision badge now updates on a command-palette provider or
+  model switch, and the attach-time image warning's wording is
+  corrected</strong> (2026-09-21, later the same day, closing open owner
+  decision 8 — whose own premise turned out wrong too: VSCode's webview
+  already had an untyped mirror of <code>modelSupportsVision</code> since v1.18.6,
+  so it never lost the badge, only the type). <code>ppxai.switchProvider</code> /
+  <code>ppxai.switchModel</code> now trigger a full AppState re-anchor
+  (<code>chatPanel.ts::reanchorState()</code>) that also forwards to the webview —
+  previously only <code>/status</code> refreshed, which doesn't carry
+  <code>model_supports_vision</code>, so the badge lagged a full chat turn behind
+  a switch. The attach-time warning no longer promises the image "will
+  be sent as a text placeholder" (web retracted that claim in v1.19.0);
+  it now matches web's wording — a vision sidecar or the shell tool may
+  handle it, or the send is blocked, never silently dropped. The gate
+  decision itself moved to a new pure module,
+  <code>vscode-extension/media/webview/visionGate.js</code>.</li>
+<li><strong>Web now re-verifies the AppState schema on reconnect</strong> (closing
+  open owner decision 9). <code>_reanchorFromServer()</code> takes an opt-in
+  schema check, run only at a reconnect boundary — heartbeat recovery
+  and a tab regaining visibility, never first load or a same-connection
+  provider/model switch. It fetches <code>GET /schema/app-state</code> and
+  classifies it with a new pure module,
+  <code>ppxai/web/shared/app-state-schema-diff.js</code> — a JS re-implementation
+  of <code>schemaGuard.ts</code>'s classifier, held to identical verdicts by a
+  cross-language parity test over 10 shared fixtures. A match is
+  silent; a newer server's extra fields adopt quietly; <strong>a field this
+  tab expected going missing or changing shape produces one chat
+  notice</strong> telling the user the page was refreshed and to reload for a
+  matching UI; an unreachable endpoint logs once and blocks nothing.</li>
+<li><strong>SchemaGuard's log now reaches the extension's Output panel</strong>
+  (the dedicated <code>"ppxai"</code> channel as of 2026-09-22; it first landed on
+  the <code>"ppxai HTTP"</code> channel a day earlier), not only the Extension Host
+  console
+  (closing open owner decision 10).</li>
+<li><strong>The AppState schema's <code>"version"</code> field is maintained from <code>"1.1"</code>
+  on</strong> (closing open owner decision 11). <code>"1.0"</code> sat unchanged across
+  five earlier field-adding commits, so it's an unmeasured historical
+  marker, not a real signal. MAJOR for a field removed/renamed/retyped,
+  MINOR for a field added or its default changed — enforced against a
+  new append-only <code>ppxai/engine/app_state_schema_history.json</code>. Neither
+  run-time schema check (VSCode's or web's) treats <code>version</code> as the
+  verdict; both still decide on the actual fields.</li>
+</ul>
+<h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>A hung provider call no longer keeps <code>ppxai-server</code> running after a
+  stop.</strong> Found on WSL: an NVIDIA <code>kimi-k3</code> call that never answered kept
+  the server alive through SIGTERM until SIGKILL, and Ctrl+C behaved the
+  same on every platform. Three causes: uvicorn's graceful-shutdown wait
+  had no limit; ppxai's own signal handler never ran, because uvicorn
+  installs its own; and provider calls run in worker threads that Python
+  waits for at exit, with no limit on Python 3.10 and 3.11.</li>
+<li>A stop now waits at most <strong><code>server.shutdown_grace_s</code></strong> (new, default
+    10) for in-flight requests, then as long again for provider calls,
+    logs what it abandons, and exits. A second SIGINT or SIGTERM forces
+    the stop at once. A forced stop still runs the app's own shutdown, so
+    sessions are saved and preview backends stopped.</li>
+<li><strong>A request cut off at shutdown gets <code>503</code> with <code>Retry-After: 5</code></strong> and
+    <code>{"detail": "server is shutting down; retry"}</code> (with a
+    <code>Content-Length</code>), instead of a <code>500</code>. A caller can now tell a
+    retryable stop from a server bug. This includes <code>/v1/oneshot</code>; see
+    the API note in the summary. The log shows one warning line per
+    abandoned request, and a stop logs no ERROR lines.</li>
+<li>New optional <strong><code>providers.&lt;id&gt;.timeout_s</code></strong> bounds each call through
+    the OpenAI SDK. Unset, the SDK's 600 s read timeout with 2 retries
+    applies, as before.</li>
+<li><strong>The packaged <code>ppxai-server</code> now obeys <code>kill &lt;pid&gt;</code>.</strong> Its PyInstaller
+    spec ignored signals in the launcher, unlike the other three binaries,
+    so on Linux and macOS a SIGTERM (or a systemd stop) did nothing. Note
+    that <code>kill -9</code> on the launcher's PID still leaves the server process
+    running, since SIGKILL cannot be forwarded; stop it with SIGTERM, or
+    kill the whole process group.</li>
+<li><strong>The restart sweep runs at server start and leaves other servers'
+    runs alone.</strong> Runs a crashed server left <code>running</code> now show as
+    <code>interrupted</code> as soon as the next server is up, not after the first
+    <code>/v1</code> call. Run metadata gains an additive <code>server_pid</code> field, and a
+    run owned by another live server is not swept, so two servers sharing
+    <code>~/.ppxai/runs</code> (the desktop app next to the VSCode server) no longer
+    interrupt each other's live runs.</li>
+<li>
+<p><code>scripts/gateway-smoke.py</code> revokes the bearer token it mints, instead
+    of leaving one in <code>tokens.json</code> after every run.</p>
+</li>
+<li>
+<p><strong>Perplexity web-search cost is the cost Perplexity reports.</strong> Search
+  and grounding call Perplexity's Agent (Responses) API with
+  <code>perplexity/sonar</code> and a <code>web_search</code> tool: $0.25 in and $2.50 out per
+  1M tokens, plus $0.0025 per search (docs.perplexity.ai, checked
+  2026-09-28). The shipped configs priced it at the retired Sonar chat
+  rate of 1 / 1 per 1M tokens and counted tokens only, so the search fee
+  and cache writes were never recorded. ppxai now records the
+  <code>usage.cost.total_cost</code> each response carries; the configured token
+  price, now 0.25 / 2.5, is only the fallback. <strong>An installed config
+  keeps its own <code>tools.web_search.pricing.perplexity</code></strong>, so check it.</p>
+</li>
+<li>
+<p><strong>Grounded answers use the search results, and cite them resolvably.</strong>
+  A retest found <code>gemini-3.8-flash</code> answering from its training data
+  against the injected results, 3 runs of 3. The results now carry
+  today's date and say they are newer than the model's training data;
+  they remain data, not instructions. 3 runs of 3 then answered from the
+  results with <code>[1]</code>. Each <code>[n]</code> now resolves through the new
+  <code>grounding.sources</code> field (see "Grounding searches first").</p>
+</li>
+<li>
+<p><strong>Gemini thinking tokens are counted as output.</strong> Gemini bills thinking
+  tokens as output but reports them apart from the answer tokens, and
+  ppxai ignored them. <code>completion_tokens</code> and every Gemini cost therefore
+  left out most of a thinking model's output (measured: 55 completion
+  tokens against 1,262 total on a 190-token prompt). They are now part of
+  <code>completion_tokens</code>, so prompt plus completion equals total.</p>
+</li>
+<li>
+<p><strong>Gemini grounded searches were logged at 1/1000 of their cost.</strong>
+  <code>tools.web_search.pricing.gemini_grounding.per_query</code> is a per-query
+  price ($0.035, "$35/1000 queries" in the shipped configs), but the cost
+  function divided it by 1000. Since v1.13.0 each Gemini grounded search
+  was logged at $0.000035, so <code>/cost</code> under-reported Gemini web search
+  and grounding. If you had written a per-thousand value into
+  <code>per_query</code> to compensate, divide it by 1000.</p>
+</li>
+<li>
+<p><strong><code>/cost</code> now counts plain <code>/v1/oneshot</code> calls and tool-free
+  <code>/v1/agent/run</code> runs.</strong> The cross-tier usage log behind <code>/cost</code> (ADR
+  0008) was written by the chat path, <code>/task</code> runs and the oneshot
+  search-loop path only. A plain oneshot call recorded nothing, so it was
+  missing from <code>/cost</code>. The model call's tokens are now logged under the
+  oneshot tier, priced by the requested model id. The response is
+  unchanged, and an accounting failure never fails the request.</p>
+</li>
+<li>
+<p><strong>A discarded parallel tool call now says so in the log.</strong> When a
+  model's facts row says <code>parallel_tool_calls=False</code>, <code>chat_with_tools</code>
+  keeps only the first native call:</p>
+</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">if</span> <span class="ow">not</span> <span class="n">facts</span><span class="o">.</span><span class="n">parallel_tool_calls</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">parsed_calls</span> <span class="o">=</span> <span class="n">parsed_calls</span><span class="p">[:</span><span class="mi">1</span><span class="p">]</span>
+</span></code></pre></div>
+<p>That is the one branch in the function that throws away output the
+  model already produced, and it was the only one with no logging —
+  sitting directly beside the <code>fallback_on_empty</code> branch that does log.
+  The cost was measured in v1.19.2: fifteen shipped rows were pinned at
+  the conservative floor while their models emit several calls per turn.
+  Every one of those turns lost calls here and left <strong>nothing</strong> in
+  <code>~/.ppxai/logs</code>; the operator's only symptom was a tool loop taking
+  twice the round trips it needed, which is why the defect was found from
+  the outside — comparing one model id across two providers — rather than
+  from the logs kept for exactly this.</p>
+<p>It now logs a warning naming the model, the call kept, the calls
+  dropped, and the <code>parallel_tool_calls</code> row to change (the row is what
+  the reader has to edit; naming only the symptom leaves them nowhere to
+  go). Single-call turns stay silent behind an <code>if dropped:</code> guard — a
+  warning present on every turn of every serial model is one nobody
+  reads. Behaviour is otherwise unchanged: same call kept, same calls
+  dropped. (<code>30459847</code>)</p>
+<ul>
+<li><strong><code>/model info</code> no longer reports a floor value as built-in
+  knowledge.</strong> The label came from <code>is_unmeasured(model_id,
+  provider_table)</code>, which answers <em>"did a row match"</em> — so any matched
+  provider row made all twelve fields print <code>(built-in)</code>.
+  <code>PerplexityProvider</code> seeds its gateway rows from
+  <code>shipped_facts_for_model("openai/")</code> (and <code>anthropic/</code>, <code>google/</code>,
+  <code>xai/</code>, <code>perplexity/</code>), and <strong>none of those globs match anything</strong>, so
+  the seed <em>is</em> <code>UNMEASURED</code>: three fields (<code>wire_protocol</code>, <code>tool_mode</code>,
+  <code>max_tokens</code>) are then set deliberately and the remaining <strong>nine print
+  as <code>(built-in)</code> for every model those five globs serve, across four
+  vendors</strong>. ADR 0012 Q0e requires the floor to be visible — <em>"an
+  operator should be told which of their models those are rather than
+  discovering it when a tool call silently degrades"</em> — which is
+  precisely the route this took: a model reached through two providers
+  answered <code>parallel_tool_calls</code> differently, and the gateway's answer, a
+  guess, wore the label of a measurement. A live probe then showed the
+  guess was wrong (both ids emit two calls per turn, 3/3 trials).</li>
+</ul>
+<p><strong>Reporting only.</strong> The vendor-agnostic floor is correct as
+  <em>resolution</em> — one wire, four vendors, a roster that changes without
+  notice — and was only ever wrong as a <em>label</em>, so <code>is_unmeasured</code>, the
+  resolver and the send path are untouched. The <code>Tier</code> row moves with it:
+  tier is one of the nine, and it used to say <code>(no tier)</code> ("we have a
+  row, it just has no tier") when the truth is "no measurement".
+  (<code>6d29451b</code>)</p>
+<ul>
+<li>
+<p><strong>The web_search tool's <code>perplexity_model</code> default now survives the
+  2026-09-27 Sonar retirement.</strong> <code>web_search_perplexity</code> already resolves
+  its wire per-model from <code>ModelFacts.wire_protocol</code> — the same table
+  <code>PerplexityProvider</code> reads — but the code default handed to that lookup
+  was still the chat-wire id <code>sonar</code>. Anyone who never set
+  <code>tools.web_search.perplexity_model</code> (the common case) would have lost
+  web_search the moment Perplexity retires that endpoint, without having
+  touched their own config. The default is now <code>perplexity/sonar</code>, which
+  resolves to the <code>responses</code> wire and was verified live end-to-end
+  (2026-09-16: a real search query returns an answer plus citations).
+  <code>ppxai-config.example.json</code> updated to match, and a new test asserts
+  the default resolves to the <code>responses</code> wire rather than just "is not
+  (yet) in the deprecation table" — so a future regression to a
+  chat-wire id fails immediately instead of waiting for the next
+  retirement date.</p>
+</li>
+<li>
+<p><strong>A stray Pydantic serialization warning on Responses-wire web_search
+  calls is gone.</strong> A live call against <code>perplexity/sonar</code> that actually
+  triggers a search printed
+  <code>PydanticSerializationUnexpectedValue(Expected \</code>ResponseCustomToolCall`
+  ...)<code>to stderr on every call. Root cause: Perplexity's</code>search_results<code>output item is a type the openai SDK's</code>Response.output<code>union doesn't
+  know, and</code>_responses_answer_and_citations<code>used to call</code>response.model_dump()<code>to read the response as a plain dict — which
+  makes pydantic re-validate that mismatch and warn. The function now
+  reads</code>response.output` directly via attribute access (duck-typed
+  against both real SDK objects and dict-shaped test doubles) and never
+  serializes the typed union. Verified live before/after: the warning
+  fired on the unpatched code against a real search query and is silent
+  on the same query after the fix, with identical answer text and
+  citations.</p>
+</li>
+<li>
+<p><strong><code>/doctor</code>'s endpoint probe now goes through the outbound TLS
+  resolver.</strong> Every other outbound client in ppxai — provider SDK clients,
+  the built-in web tools — obtains its verification setting from
+  <code>config.tls.tls_verify()</code>, the v1.19.1 additive-CA resolver that honours
+  <code>SSL_VERIFY</code> / <code>SSL_CERT_FILE</code> / <code>network.ssl.*</code> and adds a configured
+  corporate CA to the system trust store rather than replacing it.
+  <code>_probe_provider_endpoint</code>'s <code>httpx.Client</code> was the one client that
+  never got the memo: it passed no <code>verify=</code> at all, so it fell back to
+  httpx's own certifi-only default. Measured 2026-09-16: <code>/doctor probe</code>
+  answered <code>CERTIFICATE_VERIFY_FAILED</code> for a corporate-CA endpoint the
+  same provider's own chat client reached without incident, because the
+  chat client's <code>httpx.Client(verify=tls_verify())</code> picked up the OS
+  trust store and the probe's did not. The probe now passes
+  <code>verify=tls_verify()</code>, the same call every other client makes.</p>
+</li>
+<li>
+<p><strong><code>/doctor</code>'s ADR 0012 facts scan can no longer report on the wrong
+  config file.</strong> <code>_format_facts_section</code> and the <code>facts_config</code> functions
+  it calls (<code>migration_plan</code>, <code>misplaced_fields_in_config</code>,
+  <code>wrong_typed_fields_in_config</code>, <code>incomplete_blocks_in_config</code>) took no
+  argument, so each one independently re-resolved and re-read whatever
+  config <code>facts_config.find_config_file()</code> currently points at — which
+  is not necessarily the file <code>audit_user_config()</code> audited, when a
+  caller passes it an explicit <code>config_path</code> (the headless
+  <code>audit_user_config(Path(...))</code> entry point exists for exactly this).
+  Observed 2026-09-16: the facts section listed providers from one
+  config while the audit header, two paragraphs above it in the same
+  report, named a different one. Every affected function now accepts an
+  optional <code>config_data: dict | None = None</code>; <code>/doctor</code> threads through
+  the same raw config dict its ADR 0010 migration scan already reads
+  from the audited path (<code>_format_config_migration_section</code> established
+  this pattern first), so both sections describe the one file the report
+  names. The default <code>None</code> keeps every other caller's behaviour
+  unchanged — this is unrelated to, and does not close, the Item 69
+  runtime debt below (<code>find_config_file()</code>'s own cwd-based search order).</p>
+</li>
+<li>
+<p><strong>The shipped facts row for the 27B-FP8 Qwen line now covers
+  Qwen3.8.</strong> The codeai and in-cluster deployments were upgraded <strong>in
+  place</strong> to <code>Qwen/Qwen3.8-27B-FP8</code> and <code>-agent</code>, keeping the 3.6 ids
+  served as aliases and the <code>qwen36</code> ingress path for backward
+  compatibility. The shipped glob was <code>Qwen/Qwen3.[56]-27B-FP8*</code>, so the
+  two ids now behaved differently against the same served weights: a
+  config naming the <strong>real</strong> 3.8 id matched nothing and landed on the
+  UNMEASURED floor — <code>tool_mode</code> prompt-based, no vision — while a config
+  naming the alias kept native tools. An in-place upgrade is exactly the
+  case a glob is supposed to absorb, and this one did not.</p>
+</li>
+</ul>
+<p>The glob is now <code>Qwen/Qwen3.[568]-27B-FP8*</code>. The row is <strong>inherited,
+  not measured</strong>: same family, same parser, same endpoint as 3.5/3.6,
+  pending a 3.8 benchmark run of its own — the source comment says so,
+  so the next reader does not mistake inheritance for a measurement. The
+  existing vision/native test pins both 3.8 ids. (<code>f5d2c078</code>)</p>
+<ul>
+<li><strong>The context-window badge no longer overshoots 100% in tool loops.</strong>
+  Measured on a live coder session (2026-09-16): a 13-request tool-loop
+  turn displayed roughly 350% while the model was actually at roughly
+  26%, and a separate 10-request turn displayed roughly 410% against an
+  actual roughly 41%. <code>chat_with_tools</code> accumulates usage across every
+  iteration of a tool loop into <code>accumulated_usage</code> — correct for
+  billing, since each iteration is a real, separately-billed provider
+  call — then calls <code>session.update_usage(accumulated_usage, ...)</code> once
+  at the end of the run. <code>_sync_usage_to_state</code> (the AppState listener
+  behind the badge) had no way to tell that delta apart from a
+  single-request turn's delta, so it treated the iteration-summed total
+  as "tokens currently in <code>session.messages</code>" — over-claiming by
+  roughly a factor of N for an N-iteration loop, since every iteration
+  resends the whole history rather than adding to it.</li>
+</ul>
+<p><code>SessionManager.update_usage()</code> gains an optional <code>context_tokens</code>
+  keyword: the token count of <code>session.messages</code> <em>after</em> the turn, as
+  opposed to <code>usage</code>'s cumulative-for-billing total. <code>chat_with_tools</code>
+  now tracks <code>last_request_tokens</code> — the most recent iteration's own
+  <code>prompt_tokens + completion_tokens</code> — alongside <code>accumulated_usage</code>,
+  and passes it as <code>context_tokens</code> at both <code>update_usage()</code> call sites
+  (normal completion and the max-iterations exit). <code>_sync_usage_to_state</code>
+  uses <code>context_tokens</code> as the context baseline whenever it is a
+  positive int, falling back to the pre-existing delta-based behaviour
+  otherwise. Session/cost totals (the usage badge, billing, per-model
+  tracking) are untouched — only the context-percentage baseline
+  changes. The plain single-request chat path never passes
+  <code>context_tokens</code>, so its behaviour (v1.18.4 Item A) is unchanged.</p>
+<ul>
+<li><strong>Tool-loop detection now catches paraphrased repeats, not just
+  byte-identical streaks.</strong> Measured live (2026-09-22, web client,
+  <code>gemini-3.5-flash</code>): one turn ran <code>web_search</code> 15 times in 113 seconds
+  hunting a single IMDb image id, every call succeeding, until the user
+  interrupted it. <code>"Loop detected"</code> appeared <strong>zero</strong> times in the log.
+  Four of the fifteen queries were byte-identical, but interleaved with
+  ten paraphrases (calls 2, 7, 10 and 14) — and the existing guard,
+  <code>is_tool_loop_detected</code>, walked the turn's history <em>backward from the
+  most recent call</em> and reset to zero at the first non-matching one, so
+  a trailing streak of 3 never formed. Plumbing was ruled out first: 17
+  <code>SSE: tool_call</code> and 17 <code>SSE: tool_result</code> lines in the window, so
+  every result reached the model — it was looping, not being made to
+  repeat.</li>
+</ul>
+<p>Two changes, not one:</p>
+<ol>
+<li><strong>Guard A now counts occurrences of <code>(tool, args)</code> anywhere in the
+     current turn</strong>, among successful calls only, instead of a trailing
+     streak. The old streak rule is deleted outright rather than kept
+     alongside the new one — a trailing streak of N is also N
+     occurrences in the turn, so it could never fire before the new rule
+     does; keeping both would have left dead code.</li>
+<li><strong>A new argument-independent per-turn call budget</strong> (guard B) on
+     <code>web_search</code> and <code>fetch_url</code> only — 10 calls each by default,
+     configured at <code>tools.agent.tool_call_budgets</code> and merged over the
+     shipped default (raising one tool's cap doesn't uncap the others;
+     absent or 0 means unlimited). This is the guard exact-argument
+     matching structurally cannot replace: it catches the ten
+     <em>paraphrased</em> calls the incident actually ran, not just the four
+     byte-identical ones. The number comes from tau-bench's published
+     historical trajectories (<code>sierra-research/tau-bench</code>, MIT license;
+     1,960 real GPT-4o/Sonnet runs scanned locally): a tool is called
+     once in 83.6% of turns, five times or fewer in 99.3%, but <strong>32 of
+     the 76 turns that called one tool six-plus times succeeded</strong> (reward
+     1.0) — so a low cap would have cut real, working turns. Ten calls
+     costs an estimated ~0.03% of legitimate turns and still stops the
+     2026-09-22 incident at call 11. Nothing else is capped — reading
+     files, listing directories and running shell commands legitimately
+     repeat many times in a turn.</li>
+</ol>
+<p><strong>Failed calls count toward neither guard.</strong> A retry after a transient
+  failure is recovery, not a loop, and "synthesize from the results you
+  already have" is the wrong thing to tell a model when there are no
+  results yet; a tool that keeps failing remains the zombie circuit
+  breaker's job (<code>tools.agent.zombie_threshold</code>). <code>record_tool_call</code> now
+  runs <em>after</em> the tool executes, with the real outcome, so this
+  distinction is possible at all.</p>
+<p><strong>Each guard's refusal carries its own message.</strong> The old text —
+  "called the tool with the same arguments N times" — is simply false
+  for a budget trip, and would teach the model to rephrase its
+  arguments, which is exactly the behaviour that caused the incident.
+  <strong>The budget refusal is also terminal</strong>: a second attempt at an
+  already-exhausted tool withdraws tools for the rest of the turn and
+  forces a synthesis pass, so the model can't spend its remaining
+  iterations negotiating with a tool that will never run again this
+  turn.</p>
+<p>A gap is accepted, not hidden: an alternating two-tool cycle where
+  every call uses fresh arguments (<code>A, B, A, B, …</code>, never repeating) is
+  caught by neither guard — fuzzy/semantic argument matching was
+  considered and declined, since it needs a tuned per-tool similarity
+  threshold and would block two deliberately different queries as
+  readily as one rephrased one. That gap is bounded only by the
+  iteration cap and the zombie breaker (the cap now ends in an answer
+  pass and logs the call pattern; see the Item 80 entry below), and is recorded in
+  <code>tests/fixtures/tool_loops/call-graph-cycle-alternating-distinct-args.json</code>
+  rather than left undocumented.</p>
+<p>Config lands on the existing <code>tools.agent.*</code> axis, not a new one.
+  <code>GET /tools/status</code> and <code>GET /agent/config</code> both gain a
+  <code>tool_call_budgets</code> key in their response body, additively; <code>POST
+  /v1/oneshot</code> is untouched. (<code>2514ba55</code>)</p>
+<ul>
+<li>
+<p><strong>A <code>/task</code> run's <code>events.jsonl</code> now records degraded turns.</strong> A
+  <code>turn_degraded</code> record is written for each tool-guard degradation
+  (budget exhausted, tools withdrawn, repeat loop) and a <code>turn_end</code>
+  record per turn carrying <code>degraded</code>/<code>degradation_reasons</code>. Previously
+  the runner persisted only tool calls, so a degraded turn looked
+  complete in the audit file. Additive; existing records and the run's
+  own <code>agent_run_complete</code>/<code>agent_run_error</code> are unchanged. A missing
+  <code>turn_end</code> means the turn's outcome is unknown. (<code>59702221</code>, closes
+  debt Item 82)</p>
+</li>
+<li>
+<p><strong>Every tool-loop exit now ends with a run terminal.</strong> Three
+  <code>chat_with_tools</code> exits (the prompt-based fallback's provider error,
+  the retry-synthesis provider error, and a tool interrupt) returned
+  without <code>AGENT_RUN_ERROR</code>, breaking the heartbeat contract and leaving
+  those turns with no <code>turn_end</code>. They now emit it, and the <code>/task</code>
+  runner waits for it before failing the run: the run still ends FAILED
+  with the same message, and no tool runs after an error. <code>path_denied</code>
+  audit records' <code>filesystem</code> category is now declared, so a
+  <code>?category=filesystem</code> filter documented from the list finds them.
+  The web and VSCode task views render <code>turn_degraded</code> and <code>turn_end</code>;
+  a turn that did not report <code>degraded</code> shows as "outcome unknown",
+  never as clean.</p>
+</li>
+<li>
+<p><strong>A tool loop that hits its iteration cap now answers instead of
+  giving up</strong> (debt Item 80). The cap used to end the turn on a canned
+  <em>"[Tool iterations limit reached …]"</em> line and throw away everything
+  the loop gathered. That was the only outcome for the loop neither
+  guard sees: two tools alternating with fresh arguments on every call.
+  After the last tool iteration, one extra pass now runs with tools
+  withdrawn, and its answer ends the turn. The cap is a new
+  degradation reason, <code>ToolGuardReason.ITERATION_CAP</code>
+  (<code>"iteration_cap"</code>, additive). <code>AGENT_RUN_COMPLETE</code> still sets
+  <code>max_iterations_reached: true</code> alongside it, so
+  <code>task_runner.turn_end_level</code> grades the turn <code>warning</code> as before. At
+  ~70% of the cap the model gets one "converge" notice
+  (<code>metadata.notice = "iteration_warning"</code>). It refuses nothing, so it
+  is not a degradation reason. The cap, the notice, both guards and the
+  zombie breaker log the turn's call pattern: shape, the repeating tool
+  cycle if any, per-tool calls and distinct arguments, and the last 12
+  tool names. The pattern also rides in the cap and notice metadata as
+  <code>call_pattern</code>. A detector that <em>refuses</em> the alternating shape is
+  still declined, because legitimate exploration looks the same. The
+  logged pattern is the evidence a future one would be designed from.
+  <strong>For consumers:</strong> a turn capped with a positive <code>max_iterations</code>
+  no longer reaches the fall-through exit, so its final text is the
+  model's answer, not the canned line. The fall-through now runs only
+  when <code>max_iterations &lt;= 0</code>.</p>
+</li>
+<li><strong>No module reads config at import any more.</strong> The one that did,
+  <code>engine/context.py</code>'s module-level <code>MAX_FILE_SIZE</code>, is removed. <code>@tree</code>
+  now uses the live configured limit, which previously ignored config
+  reloads. A new test fails on any future import-time config read. The
+  module attribute <code>ppxai.engine.context.MAX_FILE_SIZE</code> is gone; use
+  <code>ContextInjector().MAX_FILE_SIZE</code>.</li>
+<li><strong>Five more defects from the 2026-09-26 VSCode smoke run.</strong>
+  <code>/context clear</code> now actually removes injected content (defect 5,
+  broken since v1.13.9). Six VSCode webview elements that the CSP left
+  visible now start hidden (defect 1). Raw HTML in message text is
+  escaped in both VSCode and web, so <code>&lt;task&gt;</code> stays visible and
+  <code>&lt;img onerror=...&gt;</code> from a model is inert (defect 2). VSCode's <code>/auto</code>
+  stops when a tool-using turn reports <code>TASK_COMPLETE:</code>, and says "Max
+  iterations reached" only when it did (defect 6). VSCode re-checks the
+  AppState schema on window focus, so a server restarted under a live
+  connection is verified (defect 7).</li>
+<li><strong>The first process on a fresh HOME had no providers.</strong> Importing
+  <code>ppxai</code> reads config at module level, which loaded the store before
+  <code>initialize()</code> seeded <code>~/.ppxai/ppxai-config.json</code>. The store kept that
+  empty result for the whole first process, and only the second run
+  worked. Any container that starts with an empty HOME hit this.
+  <code>initialize()</code> now reloads the store on the call that seeds the file and
+  loads <code>.env</code>.</li>
+<li><strong>An <code>EngineClient()</code> built before <code>ppxai.config.initialize()</code> had no
+  providers.</strong> An embedder that skipped <code>initialize()</code> got an empty
+  provider table, and every <code>set_provider()</code> returned False silently.
+  <code>EngineClient.__init__</code> now calls the new
+  <code>ppxai.config.ensure_initialized()</code>, which runs <code>initialize()</code> once if
+  nothing has yet and never re-runs a completed one. The first call has
+  <code>initialize()</code>'s usual effects: it loads <code>.env</code>, seeds a missing
+  <code>~/.ppxai/ppxai-config.json</code>, and creates the <code>~/.ppxai</code> subdirectories.</li>
+<li><strong>The server ignored <code>default_provider</code>.</strong> <code>SessionManager</code> started
+  every engine on the first provider block in the config file, so neither
+  <code>default_provider</code> nor <code>MODEL_PROVIDER</code> reached web, VSCode or
+  <code>/v1/oneshot</code>. Found on 2026-09-27: with <code>default_provider: "gemini"</code>
+  the server still started on Perplexity, which is listed first. It now
+  starts on <code>get_default_provider()</code>. If that provider has no API key, it
+  tries the configured providers in file order.</li>
+<li><strong>Attachments work on Responses-wire models.</strong> <code>perplexity/sonar</code>,
+  gpt-5.6-terra, gpt-5.3-codex and gpt-5-pro rejected every attachment
+  turn with <code>invalid type "text"</code>. The Responses handler passed
+  chat-completions content parts through unchanged. It now sends <code>text</code>
+  as <code>input_text</code> (<code>output_text</code> for assistant turns), <code>image_url</code> as
+  <code>input_image</code> and <code>file</code> as <code>input_file</code>.</li>
+<li><strong>Tools on with <code>perplexity/sonar</code> no longer fails every turn.</strong>
+  Perplexity's <code>/v1/responses</code> reserves <code>search_files</code>, <code>web_search</code> and
+  <code>fetch_url</code> as custom function names (measured 2026-09-26), so a
+  tools-on turn, and any <code>/task</code> grant naming one of them, failed before
+  the model answered. A provider now declares <code>reserved_function_names</code>;
+  the Responses handler sends those tools as <code>ppxai_&lt;name&gt;</code> and maps the
+  name back when the model calls one. Registry, grants, consent and logs
+  keep the real names. Only <code>PerplexityProvider</code> declares any.
+  Live-verified: a tools-on turn called <code>search_files</code>, then
+  <code>read_file</code>, and answered.</li>
+</ul>
+<h3 id="the-guard-against-over-reach">The guard against over-reach<a class="headerlink" href="#the-guard-against-over-reach" title="Permanent link">&para;</a></h3>
+<p>Comparing a value to <code>UNMEASURED</code> cannot by itself tell a guess from a
+measurement that happens to agree with the guess. So the <code>/model info</code>
+fix above is gated on <code>has_global_row</code>: a model with its own row in
+<code>SHIPPED_MODEL_FACTS</code> keeps <code>(built-in)</code> on <strong>every</strong> field, and only a
+model resolved <em>solely</em> through a provider row is compared field by
+field. <code>o3*</code>'s measured-serial <code>parallel_tool_calls=False</code> and
+<code>gemini-3.1-pro*</code>'s are findings, not floors, and are never relabelled as
+guesses. Tests pin both.</p>
+<ul>
+<li>
+<p><strong>A session that never checkpoints no longer leaves an empty
+  directory behind.</strong> <code>FileCheckpointBackend.__init__</code> used to
+  <code>mkdir(parents=True, exist_ok=True)</code> at construction — and a
+  <code>FileCheckpointBackend</code> is built for every session whose working
+  directory has no <code>.git</code>, which is ordinary session creation, not a
+  checkpoint operation. Found while auditing the checkpoint-clear
+  confirmation work above: on one developer host this had accumulated
+  roughly 14,900 <code>sessions/checkpoints/session_&lt;timestamp&gt;/</code>
+  directories, all but two of them empty. The directory now appears on
+  the first real snapshot instead; <code>list_checkpoints()</code> and
+  <code>cleanup_old_checkpoints()</code> both tolerate its absence. Nothing a user
+  can see changes.</p>
+</li>
+<li>
+<p><strong>(Developer-facing) The test suite can no longer write into the
+  real <code>~/.ppxai</code>.</strong> The empty-checkpoint-directory leak above turned
+  out to be one symptom of a broader gap: a full suite run was also
+  appending to the <code>/cost</code> usage-events sink, interleaving into real
+  debug logs, writing real PNGs into the preview cache, and — despite
+  an existing autouse guard meant to prevent exactly this — a spawned
+  <code>ppxai-server</code> smoke-test subprocess kept rewriting the real TUI
+  session-restore pointer, because that guard patches an attribute
+  inside the pytest process and cannot reach a child interpreter with
+  its own real <code>HOME</code>. <code>tests/conftest.py</code> now points <code>HOME</code> at a
+  throwaway directory in <code>pytest_configure</code>, before any <code>ppxai</code> module
+  is imported — the one point at which redirecting <code>HOME</code> actually
+  works, since every module-level <code>Path.home()</code> constant (and every
+  subprocess the suite spawns) resolves into the throwaway home from
+  then on. <code>PPXAI_TEST_KEEP_HOME=1</code> keeps it after the run for
+  inspection. No change for anyone who only runs <code>ppxai</code> normally.</p>
+</li>
+</ul>
+<h2 id="removed">Removed<a class="headerlink" href="#removed" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Perplexity as a chat provider (ADR 0015).</strong> Its chat-completions API
+  retired on 2026-09-27; the one Sonar id left needed two wire fixes the
+  day before (see Fixed). Perplexity stays a web search and grounding
+  backend, second in the default order after Gemini. The phase-1 deprecation (warn on select) never
+  shipped: it is replaced by the removal in the same release.</li>
+<li><code>PerplexityProvider</code> and the models it served through a Perplexity
+    key (<code>openai/*</code>, <code>anthropic/*</code>, <code>google/*</code>, <code>xai/*</code>,
+    <code>perplexity/*</code> as chat) are gone.</li>
+<li>A <code>providers.perplexity</code> block is ignored, never rewritten, and
+    logged once at start-up. <code>set_provider("perplexity")</code> returns False
+    and never raises (start-up code that selects the configured default
+    keeps working), and it never falls back to a generic
+    OpenAI-compatible client, which would have called the retired
+    endpoint and failed every turn. The engine starts on the next
+    configured provider.</li>
+<li><code>/provider perplexity</code>, <code>/v1/oneshot</code> and the task tier answer with a
+    message naming the fix. <code>/doctor</code> reports the leftover default or
+    block, with a replacement per model it lists
+    (<code>metadata.removed_chat_providers</code>).</li>
+<li>A session recorded on Perplexity keeps its history, continues on the
+    current provider, and says so once: in the restore result
+    (<code>notice</code>) and as an INFO event (<code>metadata.notice =
+    "provider_removed"</code>) leading the next chat turn.</li>
+<li>Defaults: <code>default_provider</code> is <code>gemini</code> in both shipped configs, the
+    installers' generated configs, and VSCode's built-in config and
+    <code>ppxai.defaultProvider</code> setting. The fallback when nothing valid is
+    configured is <code>gemini</code>, then the first configured provider.
+    <code>get_provider_config("&lt;unknown&gt;")</code> returns <code>{}</code> instead of
+    Perplexity's block, which silently swapped providers under the
+    caller.</li>
+<li>Removed with it: the Perplexity chat system prompt, its <code>AGENTS.md</code>
+    hints, its model-deprecation and recommended-model rows,
+    <code>ProviderName.PERPLEXITY</code>, and
+    <code>scripts/probe-perplexity-capabilities.py</code> (it measured chat tool
+    calling). <code>perplexity_facts.py</code> keeps only the search backend's
+    Responses-wire row. <code>CODING_MODEL</code> now names <code>gemini-3.8-flash</code>.</li>
+</ul>
+<h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
+<h3 id="grounding-searches-first-for-every-provider-adr-0014">Grounding searches first, for every provider (ADR 0014)<a class="headerlink" href="#grounding-searches-first-for-every-provider-adr-0014" title="Permanent link">&para;</a></h3>
+<p>Web search is now its own layer, <code>ppxai/engine/search/</code>: the Perplexity,
+Gemini and DuckDuckGo backends and the resolver that orders them. It
+imports nothing from the chat providers, which a test pins. The
+<code>web_search</code> tool is an adapter over it, and its output is unchanged.</p>
+<p><strong><code>execution.run.grounding: true</code> now means <code>"retrieve"</code>.</strong> On
+<code>/v1/oneshot</code> and the tool-free <code>/v1/agent/run</code>, ppxai searches once, with
+the prompt as the query (capped at 2,000 characters), through the same
+backend chain as <code>web_search</code> — by default Gemini, then Perplexity, then
+DuckDuckGo, each when usable — and then calls the model with the result framed ahead of the
+prompt. Any provider can be grounded.</p>
+<ul>
+<li>The response's existing optional <code>grounding</code> record is set: <code>searched</code>,
+  <code>run_id</code>, <code>queries</code>, <code>backend</code>, <code>search_cost</code>. <code>searched: false</code> means no
+  backend was usable or every one failed, and the model answered without a
+  search.</li>
+<li>The record also gains <strong><code>sources</code></strong>, on this path only:
+  <code>[{url, title}]</code>, the results shown to the model, in order, so an
+  answer's <code>[n]</code> is <code>sources[n-1]</code>. <code>title</code> is null unless the backend
+  gives one; Gemini's URLs are opaque Google redirects, so its <code>title</code> is
+  the source's domain. This was ADR 0014's deferred structured-citations
+  decision, accepted on 2026-09-28.</li>
+<li>The search cost is logged under the oneshot tier, so <code>/cost</code> counts it.</li>
+<li>Only the prompt text is sent: not the system message, history or
+  attachments. The backend's hosts must pass <code>execution.egress_ceiling</code>;
+  a malformed ceiling is a 400 before the run starts.</li>
+<li>The injected result is capped by <code>context.max_injection_size</code>. The
+  model is asked to cite <code>[n]</code>; ppxai does not append sources to the
+  answer, since that would break a JSON <code>response_format</code>.</li>
+<li><code>"native"</code> keeps the provider's in-call search (Gemini), the meaning
+  <code>true</code> had before. An unrecognised value is treated as off.</li>
+<li><code>/doctor</code> shows the mode, the <code>retrieve</code> path per model, the backend and
+  host a prompt would reach, and a warning about untrusted input.</li>
+</ul>
+<p><strong>New optional request field, <code>/v1/oneshot</code>: <code>grounding</code>.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>absent / <code>null</code></td>
+<td>The server setting decides.</td>
+</tr>
+<tr>
+<td><code>false</code></td>
+<td>No web search of any kind for this request: no retrieval, no native search, no search loop.</td>
+</tr>
+<tr>
+<td><code>true</code></td>
+<td>Grounding required: 400 when the server cannot ground this request.</td>
+</tr>
+</tbody>
+</table>
+<p>The response keeps every field it had; the only additions are
+<code>grounding.sources</code> above and the shutdown <code>503</code> under Fixed. <strong>Callers
+with untrusted or confidential prompts should send <code>false</code></strong>: retrieval sends the prompt text to a
+third-party search host, and the results reach the model. A server older
+than v1.19.3 ignores the field; a caller that depends on it checks the
+version from <code>GET /health</code>.</p>
+<p><strong>Default search order.</strong> The <code>web_search</code> chain, which grounding also
+uses, is now Gemini → Perplexity → DuckDuckGo (was Perplexity first;
+owner decision 2026-09-27). Only usable backends are tried, so without
+<code>GEMINI_API_KEY</code> it stays Perplexity → DuckDuckGo. To keep the old order,
+set <code>tools.web_search.order: ["perplexity", "gemini", "duckduckgo"]</code>.</p>
+<p><strong>Upgrade.</strong> If you set <code>execution.run.grounding: true</code> (or the legacy
+<code>tools.web_search.oneshot_grounding: true</code>) and serve Gemini, search moves
+from Gemini's in-call Google Search to the resolved backend. Set
+<code>"native"</code> to keep the old behaviour.</p>
+<ul>
+<li>
+<p><strong>Gemini's default model is now <code>gemini-3.8-flash</code></strong> (owner decision,
+  2026-09-27): the newest generally available Gemini Flash model, at half
+  the price of <code>gemini-3.5-flash</code> through 2026-12-31 ($0.75 / $3.75 per 1M
+  tokens, then $1.50 / $7.50 from 2027-01-01). Capabilities were measured
+  2026-09-13; its tier is inherited from the 3.5 line, not benchmarked. It
+  changes in all six places the default is written: both shipped configs,
+  both install scripts, VSCode's built-in config and <code>/doctor</code>'s recommended
+  default. Existing configs keep their own default. Two shipped prices were
+  wrong and are corrected: <code>gemini-3.5-flash</code> is $1.50 / $9.00 (was
+  $0.50 / $3.00) and <code>gemini-3.1-flash-lite</code> is $0.25 / $1.50 (was
+  $0.10 / $0.40), so earlier cost estimates on those models were low.</p>
+</li>
+<li>
+<p><strong>web_search's Gemini backend in the shipped config moves off
+  <code>gemini-2.5-flash</code></strong>, which Google shuts down on 2026-10-16. Debt Item 54
+  fixed the code default, but <code>ppxai-config.json</code> overrode it. It is now
+  <code>gemini-3.6-flash</code>, matching the code and the example config.</p>
+</li>
+<li><strong>Tool calls collapse into one strip per assistant turn</strong> (web and
+  VSCode). The transcript already grouped tool calls, but the engine
+  emits one <code>TOOL_GROUP_START</code> per tool-loop <strong>iteration</strong>, and an
+  agentic run is usually one or two tools per iteration. Measured in a
+  live session (2026-09-19): 221 group events, runs reaching iteration 7,
+  <strong>every one with <code>count=1</code></strong> — so seven separate collapsed strips for a
+  single answer, each inserted <em>above</em> the assistant message and pushing
+  the answer further down the page. The grouping was never wrong; it sat
+  one level too low.</li>
+</ul>
+<p><code>.tool-turn</code> is that level: one strip per assistant turn holding every
+  iteration group, labelled from running counts (<code>14 tools · 8 steps ✓</code>)
+  with a status mark when it closes. Collapsed by default — expanding
+  the turn shows its steps, expanding a step shows its tool bubbles. It
+  is created lazily on the first group of a turn, closed in the
+  streaming <code>finally</code> so an aborted or errored turn cannot leak into the
+  next one, and dropped in <code>clearConversation</code>, which otherwise leaves
+  the following turn appending into detached DOM. <code>/auto</code>'s
+  per-iteration <code>━━━ Iteration n/m ━━━</code> system message folds into the
+  same strip instead of competing with it, and still prints on its own
+  when a run uses no tools.</p>
+<p>Ported to the VSCode webview in the same change rather than left for
+  later — the two transcripts are line-for-line twins, which is the
+  subject of <code>docs/lessons/parity-harness-must-know-every-client.md</code>.
+  (<code>1c1beac4</code>)</p>
+<ul>
+<li>
+<p><strong>Also fixed in that change: a tool bubble's chevron could expand to
+  nothing.</strong> The ▶ chevron rendered on <strong>every</strong> tool bubble, but
+  <code>.tool-details</code> was only built when verbose tool output was on — so
+  with verbose off, clicking a bubble toggled a class and revealed an
+  empty box. The VSCode webview never had this: it always renders the
+  details and treats verbose as "start expanded". The web side now
+  matches it, and a bubble with genuinely no payload renders no chevron
+  and takes no focus.</p>
+</li>
+<li>
+<p><strong>Tool bubbles are keyboard-operable and announce their state.</strong> These
+  disclosures were mouse-only, and there was no <code>aria-expanded</code> anywhere
+  in the web app. Headers are now <code>role="button"</code>, tab-reachable,
+  operable with Enter or Space, and carry <code>aria-expanded</code> plus
+  <code>aria-controls</code>. Bubbles are built with <code>createElement</code> /
+  <code>textContent</code> instead of <code>innerHTML</code> template strings — the old form
+  interpolated <code>escapeHtml()</code> correctly, but it put the safety on every
+  future editor rather than on the construction.</p>
+</li>
+<li>
+<p><strong>The shipped microk8s coder template is v1.19.3-shaped</strong>
+  (<code>deploy/examples/microk8s/server-config.yaml</code>). It predated ADR 0010
+  and ADR 0012: no <code>execution</code> block, no <code>network.ssl</code>, and tool
+  capability still declared per provider
+  (<code>capabilities.native_tool_calling</code> / <code>tool_calling.mode</code>) — keys
+  v1.19.1 <strong>silently ignores</strong>. Every model now carries a complete facts
+  block; <code>execution.{run,collect,task,default_subagent}</code> and
+  <code>network.ssl</code> are shown explicitly; Perplexity moves to the
+  Responses-wire ids (<code>perplexity/sonar</code> and the two gateway models)
+  ahead of the 09-27 retirement, <code>tools.web_search.perplexity_model</code>
+  included. Because the template enables the task tier with a default
+  <code>web_search</code> grant, it now also shows the matching posture instead of
+  the open default: <code>execution.task.sandbox.enforcement=in_process</code> with
+  <code>/workspace</code> as the readable root and the standard deny list, and
+  <code>execution.egress_ceiling=[api.perplexity.ai]</code> — the only host that
+  grant needs. Both are deployment decisions an operator should make
+  deliberately, and a template that leaves them at the default teaches
+  the default. <code>vllm-qwen36</code> is renamed <code>vllm-qwen38</code> with the 3.8 model
+  id, matching the deployed ConfigMap. <strong>Example only</strong> — nothing in an
+  existing install reads this file. (<code>9afc18fe</code>, <code>aa69e126</code>)</p>
+</li>
+</ul>
+<h2 id="debt">Debt<a class="headerlink" href="#debt" title="Permanent link">&para;</a></h2>
+<ul>
+<li>
+<p><strong>Item 69 wording sharpened — recorded, not reopened, at the owner's
+  direction.</strong> Item 69 closed the <em>test</em> half of the config-resolution
+  asymmetry; the <em>runtime</em> half is still open, and it makes <code>/doctor</code>
+  lie. <code>find_config_file()</code> prefers <code>./ppxai-config.json</code>, so <code>/doctor</code>
+  run from the ppxai repo root audits <strong>ppxai's own project config</strong> and
+  gives a clean bill of health on a file it never opened. Measured both
+  directions on the same tree, same code, only <code>cwd</code> differing:
+  <code>cwd=&lt;repo root&gt;</code> → <code>ppxai-config.json</code>, <code>incomplete_blocks_in_config()
+  = {}</code>; <code>cwd=/tmp</code> with <code>PPXAI_CONFIG_FILE</code> pointed at the home config →
+  one partial record, eleven fields named. The ADR 0012 Q0d enforcement
+  path therefore returns a <strong>false negative</strong> for anyone running
+  <code>/doctor</code> from a checkout. The next person to touch <code>/doctor</code>'s file
+  resolution should know the test-side pin did not cover them.
+  (<code>8c95d999</code>)</p>
+</li>
+<li>
+<p><strong>Item 73 — the <code>rendering.textual_renderer</code> ↔ <code>tui.app</code> import cycle
+  is now fenced, not fixed.</strong> <code>TestEveryPackageImportsStandalone</code>
+  checked six <em>package</em> roots, which is exactly how this cycle got in:
+  <code>ppxai/rendering/__init__.py</code> does not pull <code>textual_renderer</code>, so the
+  package imported clean while the module did not. A new sweep imports
+  <strong>every module</strong> under <code>ppxai/</code> in one subprocess, purging every
+  <code>ppxai*</code> entry from <code>sys.modules</code> between imports so each internal
+  graph is rebuilt while third-party imports stay cached — roughly 30s
+  for ~180 modules, against ~5s × 180 for an interpreter apiece.
+  <code>ppxai.tui.*</code> is excluded because importing it sets up the terminal
+  and can hang; the Item 73 cycle is still caught, because the module
+  that starts it lives in <code>rendering</code>. The cycle is the single
+  <code>KNOWN_IMPORT_CYCLES</code> row, and a second test asserts that row <strong>still
+  fails</strong> — so fixing the cycle turns the exemption into a failure
+  telling you to delete it. The cycle itself stays open; the inventory
+  now records what a fix costs (both ends lead to
+  <code>ppxai/tui/__init__.py:22</code> importing <code>tui.app</code> eagerly, and nothing
+  outside that file does <code>from ppxai.tui import PPXAIDEApp</code>).
+  (<code>99ca13f7</code>)</p>
+</li>
+<li>
+<p><strong>Item 34 — closed as obsolete, not implemented.</strong> It asked for
+  <code>python-docx</code> in the <code>[data]</code> extra "so the Word text fallback can
+  extract without LibreOffice". That fallback never used python-docx:
+  <code>docx_tools.py</code> extracts with stdlib <code>zipfile</code> + <code>xml.etree</code> (its own
+  docstring says so) and <code>files.py:868</code> calls it for the <code>.docx</code>
+  fallback; <code>grep -rn "import docx"</code> over <code>ppxai/</code> and <code>tests/</code> returns
+  nothing. Adding the dependency would have grown every binary by a
+  package nothing imports. Its heading already carried a ✅ while the
+  body was half open — the same heading-versus-body drift the item's own
+  text complains about. (<code>99ca13f7</code>)</p>
+</li>
+<li>
+<p><strong>Item 54 — re-probed early rather than waiting for its due date.</strong> 58
+  Gemini models (was 52 on 09-01), still <strong>no GA 3.x Pro</strong>: only the two
+  <code>gemini-3.1-pro-preview</code> ids. The one new GA-looking id,
+  <code>gemini-3-pro-image</code>, is an image model and no target for a chat Pro.
+  The entry's own instruction is "still preview-only? move this date
+  past the sunset", so the due date moves 2026-10-10 → 2026-11-14 with
+  the probe recorded. (<code>99ca13f7</code>)</p>
+</li>
+<li>
+<p><strong>Item 74 filed — <code>/preview --serve</code> cannot start ANY Node project on
+  Windows.</strong> Found live on a project whose <code>package.json</code> declares
+  <code>"start": "node server.js"</code>. <code>detect_command()</code> returns the string
+  <code>"npm start"</code> (<code>preview_backend.py:128</code>) and the launcher splits it and
+  starts it directly <strong>with no shell</strong> (<code>preview_backend.py:363</code>). On
+  Windows <code>npm</code> is not an executable — it is <code>npm.cmd</code>, or a PowerShell
+  script under a version manager — so the OS call fails with
+  <code>Failed to start backend: Command not found: [WinError 2]</code>.
+  Reproduced outside ppxai on the same host to rule out our own
+  resolution. Every non-<code>.exe</code> name the detector can emit is affected:
+  <code>npm</code>, <code>npx</code>, <code>yarn</code>, <code>pnpm</code>, and the <code>make run</code> branch; the Python
+  branch survives by accident because it resolves an absolute
+  <code>python.exe</code>. It went unnoticed because POSIX has no equivalent
+  failure, the detector never runs on Windows in CI, and
+  <code>detect_command</code> has <strong>no test at all on any platform</strong>. The entry
+  records the verified workaround and two candidate fixes — the better
+  one being to stop throwing away the value we already read: we consult
+  <code>scripts.start</code> to decide <code>npm start</code> is available, and
+  <code>"node server.js"</code> is directly startable on every platform.
+  (<code>b067ce9c</code>)</p>
+</li>
+<li>
+<p><strong>Item 78 — closed, and it was bigger than filed.</strong> Filed as "the
+  test suite leaks empty checkpoint directories into the real
+  <code>~/.ppxai</code>"; measured before the fix (one clean-tree run, marker-file
+  method): 214 entries created or modified in the developer's real
+  <code>~/.ppxai</code> — 111 empty <code>sessions/checkpoints/session_*</code> directories
+  (the filed leak), 8 real session files, 34 interleaved debug logs, 29
+  entries under <code>runs/</code>, 5 preview-cache PNGs, a staged upload, both
+  <code>/cost</code> sink files appended to, and the TUI session-restore pointer
+  rewritten by a spawned <code>ppxai-server</code> subprocess despite an existing
+  in-process guard against exactly that. After: 0. Both halves fixed —
+  <code>tests/conftest.py</code> points <code>HOME</code> at a throwaway directory before the
+  first <code>ppxai</code> import, and <code>FileCheckpointBackend</code> no longer creates
+  its directory at construction. Fenced by <code>tests/test_home_hermeticity.py</code>
+  and <code>tests/test_checkpoint.py::TestTheDirectoryIsCreatedLazily</code>. See
+  <code>docs/debt-inventory.md</code>'s closed-items note for the full account.
+  Existing empty directories on developer hosts were <strong>not</strong> deleted —
+  the cleanup command is recorded there, run at the owner's discretion.</p>
+</li>
+<li><strong>Item 79 filed — a <code>checkpoint_dir</code> fallback that always falls
+  back.</strong> <code>EngineClient</code>'s Agent Mode notification
+  (<code>ppxai/engine/client.py</code> ~line 807) reads
+  <code>getattr(self._checkpoint_manager, "checkpoint_dir", None)</code>, but
+  <code>CheckpointManager</code> has no <code>checkpoint_dir</code> attribute — only its
+  <code>.backend</code> does — so the <code>getattr</code> always returns <code>None</code> and the
+  literal fallback path is always shown. Harmless today because the
+  literal is correct, but silently wrong if the two ever diverge.
+  Found, not fixed, while auditing Item 78.</li>
+</ul>
+<p><strong>Open items: 20</strong> (re-derived from the "Open at a glance" table before
+this session's closes/filings — Items 73 and 74 filed, Item 34 closed;
+Item 78 closes and Item 79 files in this same session, net unchanged).</p>
+<h2 id="known-limitations">Known limitations<a class="headerlink" href="#known-limitations" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Manual smoke tests are pending for this release.</strong> The VSCode manual
+  smoke checklist has not been run in a real extension host, and the Rich
+  and Textual TUIs have not had a smoke run. The automated suite, the
+  gateway smoke and the 2026-09-26 VSCode-web smoke run did pass; the
+  manual runs follow after the tag.</li>
+<li><strong>Not every fix here was confirmed live; the split is deliberate.</strong>
+  Four were measured against a real endpoint on 2026-09-16 — the
+  <code>perplexity/sonar</code> default (a real search returning answer plus
+  citations), the Pydantic warning (fired before the change, silent
+  after, identical answer and citations), <code>/doctor</code>'s TLS probe (a
+  corporate-CA endpoint the same provider's chat client reached without
+  incident), and <code>/doctor</code>'s facts scan (the section listing providers
+  from a different config than the header named). The rest rely on
+  unit tests and mutation checks, <strong>not</strong> on a live tool loop against the
+  installed binaries. Their acceptance checks, if you want to close that
+  gap yourself: for the dropped-call warning, a multi-call turn against a
+  model whose row is still <code>False</code> — <code>~/.ppxai/logs</code> should now carry it;
+  for <code>/model info</code>, any <code>openai/*</code>-style id served through the
+  Perplexity gateway, where nine fields should now read <code>(unmeasured)</code>;
+  for the context badge, any multi-iteration tool loop, where the
+  percentage should stay under 100.</li>
+<li><strong>The Qwen3.8 row is inherited, not benchmarked.</strong> It is the 3.5/3.6
+  row — same family, same parser, same endpoint — and it is a far better
+  answer than the UNMEASURED floor the real 3.8 id was getting, but it
+  is not a measurement of 3.8. If 3.8 changed its tool-calling or vision
+  behaviour in the in-place upgrade, this row now states that change
+  confidently and wrongly. A 3.8 benchmark run is the close-out.</li>
+<li><strong>The turn-level tool strip is covered by two partial suites, neither
+  of which alone claims tool rendering works.</strong> The turn logic lives on
+  a class in a 3,700-line file that cannot be instantiated standalone,
+  so <code>tests/e2e/tool-turn.spec.ts</code> (9 tests) drives the real
+  <code>styles.css</code> for the CSS collapse contract while
+  <code>tests/test_web_shared_modules.py</code> (10 tests) covers the source
+  wiring — when a turn opens, nests and closes. The split is documented
+  in both files. Mutation-verified, each mutation failing exactly one
+  test.</li>
+<li>Everything Item 46 covered in v1.19.1 still stands: <code>execution.task.*</code>
+  has no dual-read from <code>tools.agent.*</code>, and <code>/doctor</code> prints what each
+  stale key costs. Unchanged by this release.</li>
+<li>The Anthropic provider remains <strong>opt-in and untested against the live
+  API</strong>, as recorded in v1.19.1 (debt Item 71, an accepted limitation).</li>
+</ul>
+<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
+<p><strong>Current (2026-09-28).</strong> Full suite at <code>7f7d1e94</code> on macOS (Intel,
+Python 3.11.11, <code>uv sync --all-extras</code>): <strong>6,917 passed, 5 skipped,
+0 failed</strong> in ~115 s, run in parallel. CI passes on <code>714e1176</code>, the
+branch head at the time of the pre-flight check; the commits after
+<code>7f7d1e94</code> are docs-only. The other hosts reported: Windows 6,870 passed,
+0 failed, at the shutdown fixes; Linux (WSL2) 6,894 passed, 7 skipped,
+0 failed, at <code>24ad6d67</code>. Their counts differ by the usual platform gates
+and by later test additions. On the macOS install built from <code>7f7d1e94</code>,
+all five binaries report 1.19.3, office preview renders a slide to PNG,
+and <code>scripts/gateway-smoke.py</code> passes 8 of 8. The rebuilt <code>ppxai-server</code>
+was signal-tested against a provider that never answers: an idle SIGTERM
+exits in about 1 s, one SIGTERM with a stuck call exits in about 20 s,
+and a second SIGTERM exits in about 1.4 s. In both stuck cases the client
+gets <code>503</code>, <code>Retry-After: 5</code> and a 44-byte body, and the log has no ERROR
+lines. A live Perplexity search recorded the reported $0.00394, not the
+$0.00143 its tokens would price at. <strong>Still NOT verified:</strong> the VSCode
+manual smoke checklist in a real extension host, and a Rich/Textual
+smoke run.</p>
+<p>The older measurements below are kept for the record.</p>
+<p>Full suite at <code>1953c29c</code> (branch HEAD, 2026-09-21, later the same day —
+supersedes the <code>beffa197</code> figure below, taken before the VSCode AppState
+codegen + connect-time schema-guard work landed) on macOS with
+<code>uv sync --all-extras</code>: <strong>6,696 passed, 1 skipped, 0 failed</strong> in 596s.
+The <code>beffa197</code> measurement — <strong>6,667 passed, 1 skipped, 0 failed</strong> in
+531s — predates that work; kept for the record, not current. The
+<code>b067ce9c</code> measurement — <strong>5,909 passed, 1 skipped, 0 failed</strong> in
+535s — predates ADR 0007 entirely; kept for the record, not current.
+Windows at an earlier point in the branch, measured on the other host:
+<strong>5,878 passed, 32 skipped, 0 failed</strong> @ <code>1c1beac4</code>; the extra skips
+are the usual platform gates (PTY, symlink cases, POSIX signal
+semantics) — not re-run since ADR 0007 landed. The Playwright specs
+under <code>tests/e2e/</code> are not in any of these counts — <strong>209 passed</strong>
+there at <code>beffa197</code>, including the 9 <code>tool-turn.spec.ts</code> tests; not
+re-run at <code>1953c29c</code> (the AppState work touched no web/VSCode webview
+UI a Playwright spec would exercise). The new VSCode AppState tests
+leave the real <code>~/.ppxai</code> untouched (entry count equal before and
+after, per the commit message). <strong>NOT verified in a real VSCode
+extension host</strong> — see the manual smoke checklist in
+<a href="../plan-adr-0007-completion-service/">docs/plan-adr-0007-completion-service.md</a>.</p>
+<p>The first two fixes were mutation-tested — the dropped-call warning
+fails 2 guards without its change, <code>/model info</code> fails 6. The tool-strip
+change was mutation-tested too, each mutation failing exactly one test:
+groups re-appended to the container, <code>endToolTurn</code> dropped from the
+<code>finally</code>, the <code>clearConversation</code> reset removed, details re-gated on
+verbose, the VSCode wrapper renamed, and the collapse rule deleted from
+the stylesheet.</p>
+<p><code>tests/test_parallel_tool_call_drop_logging.py</code> fences both halves of the
+first fix. Its logger double is <code>create_autospec</code>, <strong>not</strong>
+<code>MagicMock(spec=Logger)</code>: measured against the exact call shape that
+broke — <code>common.logger.Logger.warning</code> is <code>(msg, exc_info=False)</code> and
+takes no format arguments, so a lazy <code>%</code>-args call raises <code>TypeError</code>
+inside the tool loop — <code>MagicMock()</code> and <code>spec=</code> both <em>accept</em> it and
+hide the bug, while autospec and the real <code>Logger</code> both raise. <code>spec=</code>
+constrains which attributes exist; it says nothing about how they may be
+called. The first version of those tests used a bare <code>MagicMock</code> and
+passed against the broken call. (<code>bd687a15</code>)</p>
+<p>Local install verified on macOS Intel (x86_64, 12.7.6) after the version
+bump: all four binaries plus <code>/Applications/ppxai.app</code> report <strong>1.19.3</strong>,
+<code>~/.ppxai/web</code> diffs clean against the source tree, gateway-smoke <strong>7/7</strong>
+(including <code>/v1/agent/run</code> and <code>/v1/agent/task</code> to finalized), and
+<code>/files/preview</code> returns a real 1500×1125 PNG — the check that catches a
+build missing the <code>[data]</code> extras.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
