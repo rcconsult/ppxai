@@ -2,8 +2,10 @@
 
 **Date:** 2026-09-26 (revised 2026-09-26 — owner decided open questions 1, 2
 and 5; 3 and 4 measured against a WSL2 sshd the same day)
-**Status:** 📝 **Proposed** — no code written. Seams and contracts only;
-revise in place until accepted.
+**Status:** 🚧 **In progress.** Phase 1 (S3, the remote-side contract) was
+implemented on 2026-09-27 (`78e34b8e`): `ppxai-server --uds/--announce/--detach/--list`,
+the contract-1 registry, verified on Windows, macOS and Ubuntu 24.04. Phases 2
+and later (the hub and SSH transport) are not started. Revise in place.
 **Related:**
 - [`../plan-ssh-remote-backend.md`](../plan-ssh-remote-backend.md) — the phased plan that implements this record
 - [`../patterns/protocol-dependency-inversion.md`](../patterns/protocol-dependency-inversion.md) — the `Protocol`-in-leaf-module pattern the transport seam uses
