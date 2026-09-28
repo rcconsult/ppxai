@@ -5,6 +5,12 @@
 markdown experience. ppxai is a chat client, not a markdown IDE —
 this is a "nice to have," not a "must ship."
 
+**Note (2026-09-28):** this file was archived (`git log` shows commit
+`7ca59499` "archive shipped v1.18.x TODOs") alongside items that had
+actually shipped, but this one had not — it is still deferred, not
+done. It has no row in the live `docs/debt-inventory.md`, so it is
+currently untracked outside this file; file it there if reviving.
+
 ## Background
 
 The Rich TUI (`ppxai`) and Textual TUI (`ppxaide`) both already

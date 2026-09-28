@@ -464,8 +464,9 @@ class InjectedContext:
 ## Related Documentation
 
 - [Bootstrap Context Guide](bootstrap-context-guide.md) - Session-level project instructions (v1.14.0+)
-- [v1.11.0 Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) - Context injection roadmap
-- [Architecture Refactoring](archive/v1.15.2-completed/architecture-refactoring.md) - Engine layer design
+- [Architecture](architecture.md) - Engine layer design (current)
+- [v1.11.0 Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) - (historical, v1.11 design)
+- [Architecture Refactoring](archive/v1.15.2-completed/architecture-refactoring.md) - (historical, v1.15 design)
 - [CLAUDE.md](../CLAUDE.md) - AI assistant development guide
 
 ## Version History

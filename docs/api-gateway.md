@@ -507,7 +507,9 @@ trail — concurrent requests cannot cross-attribute cost.
 - **Provider support.** v1.19.x: **all configured providers** are
   supported. `oneshot()` is part of the `BaseProvider` contract, so
   `local`/`custom`/NIM/vLLM/Ollama/OpenRouter **and** native
-  OpenAI/Perplexity/Gemini all work. The only 400 is an *unbuildable*
+  OpenAI/Anthropic/Gemini all work (Perplexity is no longer a chat
+  provider — ADR 0015 — and is not reachable through this endpoint). The
+  only 400 is an *unbuildable*
   provider (unknown name / missing API key). (Pre-1.19.x this endpoint
   rejected native providers by class — that restriction is removed.)
 - **`response_format`.** Reaches the model on every provider, but the
@@ -525,8 +527,9 @@ trail — concurrent requests cannot cross-attribute cost.
   `response_format` field, so ppxai maps it onto `response_mime_type` /
   `response_schema` (`providers/gemini.py::response_format_to_gemini`),
   which additionally strips `additionalProperties` (the SDK's `Schema`
-  model accepts it, the REST API 400s on it) and suppresses Google Search
-  grounding for that call, since Gemini refuses the combination.
+  model accepts it, the REST API 400s on it). Structured output and
+  Google Search grounding **coexist** — grounding stays on; only ppxai
+  function tools disable Gemini grounding for that call.
 
   This boundary is not theoretical. Before v1.19.1 the Gemini path
   accepted `response_format` and silently dropped it: callers pinning a
@@ -608,7 +611,13 @@ trail — concurrent requests cannot cross-attribute cost.
     is opt-in, default-off, with the wire byte-identical when off.
   - **Legacy key.** `tools.web_search.oneshot_grounding` (v1.19.0) is
     dual-read as `execution.run.grounding`; an explicit `execution.run.*`
-    value wins. New configs should use the `execution.run` block.
+    value wins. A legacy `true` now resolves to `"retrieve"` (an outbound
+    search through the ADR 0014 search layer before the model call), not
+    the v1.19.0 meaning of native in-call grounding — operators who left
+    the legacy key set get new egress on upgrade. Set
+    `execution.run.grounding: "native"` explicitly to keep the old
+    (Gemini-only) behaviour. New configs should use the `execution.run`
+    block.
   - For general tool-using agent work (custom grants, egress allowlists,
     specs/skills), use `POST /v1/agent/task` — oneshot's search-loop is the
     single-tool special case of that tier.

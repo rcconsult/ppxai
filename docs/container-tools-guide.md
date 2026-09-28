@@ -739,6 +739,7 @@ These require direct CLI access or custom tools.
 
 ## Related Documentation
 
-- [TECHNICAL_DEBT.md](archive/v1.15.1-completed/TECHNICAL_DEBT.md) - Known issues and refactoring plans
+- [Debt inventory](debt-inventory.md) - Known issues and deferred work (current)
+- [TECHNICAL_DEBT.md](archive/v1.15.1-completed/TECHNICAL_DEBT.md) - (historical, v1.15)
 - [RELEASE-NOTES-v1.13.8.md](archive/release-notes/RELEASE-NOTES-v1.13.8.md) - Initial container tools release
 - [README.md](README.md) - Tool reference table

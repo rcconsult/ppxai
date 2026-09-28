@@ -51,7 +51,7 @@ imports cleanly with no cycle.
 
 ## Why this is in scope at all
 
-[`docs/patterns/protocol-dependency-inversion.md`](patterns/protocol-dependency-inversion.md)
+[`docs/patterns/protocol-dependency-inversion.md`](../patterns/protocol-dependency-inversion.md)
 is marked **"CRITICAL — Required for all cross-module type
 dependencies"** and states:
 
@@ -60,7 +60,7 @@ dependencies"** and states:
 
 A function-level `from ..config import X` is the same evasion spelled
 differently. The rule already exists; nothing enforces it.
-[ADR 0007](decisions/0007-completion-first-class-service.md) line 104
+[ADR 0007](../decisions/0007-completion-first-class-service.md) line 104
 already flags a location as "not where a lazy import could plausibly
 live", so the concern is live in the repo's own docs.
 

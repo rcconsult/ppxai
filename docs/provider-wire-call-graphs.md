@@ -5,7 +5,7 @@ traced from code. Use it for debugging (where does this answer come from?),
 refactoring (what depends on this seam?), and onboarding (the shape of the
 capability system at a glance).
 
-Created in W1 of [`plan-adr-0012-implementation.md`](plan-adr-0012-implementation.md).
+Created in W1 of [`plan-adr-0012-implementation.md`](archive/plan-adr-0012-implementation.md).
 The design record is [ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md).
 
 Traced by hand and cross-checked against `graphify update .` (refreshed
@@ -150,8 +150,11 @@ in W4.)
 > **This paragraph used to predict that the branches "collapse in W4, when
 > `chat_completions` becomes a handler and dispatch is a dict lookup with
 > no `if` at all". W4 shipped; that did not happen** (checked 2026-09-20).
-> Dispatch is still five explicit `if self._wire_for(model) == "responses"`
-> branches — `openai_native.py:278,303,355` and `perplexity.py:325,534`.
+> Dispatch is still explicit `if self._wire_for(model) == "responses"`
+> branches. **Updated 2026-09-28 (ADR 0015): `perplexity.py` is deleted —
+> Perplexity is no longer a chat provider.** Today there are only two such
+> branches, both in `openai_native.py:280,317` (was five across
+> `openai_native.py:278,303,355` and `perplexity.py:325,534`).
 >
 > The reason is deliberate and documented in
 > `wire/chat_completions.py`: only `ResponsesHandler` owns send paths
@@ -175,9 +178,16 @@ sets that build `shipped_model_facts` state *different fields* of one record
 would lose one fact to dict-merge order, so a fence asserts they never
 overlap.
 
-## Graph 2c — one account, two wires (ADR 0012 W3)
+## Graph 2c — one account, two wires (ADR 0012 W3) — HISTORICAL, superseded by ADR 0015
 
-Perplexity is the first provider to speak two protocols. Nothing about the
+> **Superseded 2026-09-28 (ADR 0015).** `PerplexityProvider` and `_WireCtx`
+> are both deleted — Perplexity was removed as a chat provider and kept
+> only as a web-search/grounding backend (ADR 0014, `ppxai/engine/search/`).
+> `grep -rn "class PerplexityProvider\|_WireCtx" ppxai` finds nothing. This
+> graph is kept as a historical record of the two-wire-per-account design;
+> no provider today speaks two protocols off one account.
+
+Perplexity was the first provider to speak two protocols. Nothing about the
 routing changed to allow it — the same `_wire_for` reader, the same handler
 registry. What it needed was a second *transport*, because the two wires sit
 at different paths on one host.
@@ -238,6 +248,13 @@ now reads config first, then the fact, in one place.
 
 ## Graph 2d — the end state: 5 providers, 4 wires (ADR 0012 W4 + §6)
 
+> **Updated 2026-09-28 (ADR 0015): the `perplexity` provider box below no
+> longer exists.** Perplexity was removed as a chat provider (kept only as
+> a web-search/grounding backend, ADR 0014, `ppxai/engine/search/`); today's
+> provider set is `anthropic`, `gemini`, `openai_compat`, `openai_native`
+> (`ls ppxai/engine/providers/`). The box is kept below as drawn, dated to
+> ADR 0012 W4.
+
 Every wire is a handler. Conversion is protocol-owned, so there is no shared
 method left for two protocols to disagree about — the shape debt Item 62 (b)
 described.
@@ -245,7 +262,7 @@ described.
 ```
   PROVIDERS (own an ACCOUNT: key, base_url, price table)
   ┌──────────────────┬───────────────────┬──────────────┬───────────────┐
-  │ openai_native    │ perplexity        │ openai_compat│ gemini        │
+  │ openai_native    │ perplexity (REMOVED, ADR 0015) │ openai_compat│ gemini │
   └────────┬─────────┴─────────┬─────────┴──────┬───────┴───────┬───────┘
            │                   │                │               │
            │  get_facts_for_model(model).wire_protocol           │
@@ -463,10 +480,14 @@ correctness does not depend on where a row was pasted. Between rungs, a
 provider row wins **whole** — rows are complete records, so there is no
 field-level merge and nothing to arbitrate.
 
-The provider dimension at rung 2 is load-bearing, not decoration:
-`anthropic/claude-sonnet-5` is reached over `responses` on Perplexity and
-`chat_completions` on OpenRouter, so one global row cannot state its
-`wire_protocol` correctly for both. That is the seam W3's fleet rows land in.
+The provider dimension at rung 2 is load-bearing, not decoration: while
+Perplexity's gateway existed, `anthropic/claude-sonnet-5` was reached over
+`responses` on Perplexity and `chat_completions` on OpenRouter, so one
+global row could not state its `wire_protocol` correctly for both. That was
+the seam W3's fleet rows landed in. **Perplexity's gateway is gone since
+ADR 0015**, but the principle — one global row cannot serve every
+provider's wire for the same model id — still holds for OpenRouter versus
+a `vLLM`/NIM/Ollama host serving the same model name over a different wire.
 
 ---
 

@@ -2,9 +2,10 @@
 
 **Date:** 2026-05-03 (revised 2026-06-15 — MVP design resolved)
 **Status:** Accepted — implemented (Stage 2 shipped in v1.19.0: Inc 1-9 +
-/task T1-T8a; Question A resolved 2026-06-15 as A1). Wire shapes in §11 are
-the original PROPOSAL and differ from the shipped API — agent_v1.py is
-authoritative.
+/task T1-T8a; T8b, the TUI port, shipped in v1.19.1, `1615b9d1`; T9
+(container tier-d) stays deferred; Question A resolved 2026-06-15 as A1).
+Wire shapes in §11 are the original PROPOSAL and differ from the shipped
+API — agent_v1.py is authoritative.
 **MVP design resolved 2026-06-15** — see "Resolved MVP design — read-only
 research sub-agents" below. The MVP sidesteps Question A by defining a run as
 a single `chat_with_tools` invocation, so Stage 2 can proceed for the

@@ -130,7 +130,7 @@ $env:PATH = [Environment]::GetEnvironmentVariable("PATH", "User")
 
 ```bash
 mkdir -p ~/.ppxai
-echo 'PERPLEXITY_API_KEY=your-key-here' > ~/.ppxai/.env
+echo 'GEMINI_API_KEY=your-key-here' > ~/.ppxai/.env
 ```
 
 #### Windows
@@ -141,7 +141,7 @@ echo 'PERPLEXITY_API_KEY=your-key-here' > ~/.ppxai/.env
 notepad $env:USERPROFILE\.ppxai\.env
 ```
 
-Get your API key at: https://www.perplexity.ai/settings/api
+Get your API key at: https://aistudio.google.com/apikey
 
 ### 3. Verify Installation
 
@@ -316,7 +316,7 @@ This installs:
 
 ```bash
 # Install the extension
-code --install-extension ~/.local/bin/ppxai-1.15.1.vsix
+code --install-extension ~/.local/bin/ppxai-<version>.vsix
 
 # Or drag and drop the .vsix file into VSCode
 ```
@@ -424,9 +424,9 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 This creates:
 - `~/.ppxai/ppxai-config.json` - Provider configuration with all built-in providers
 - `~/.ppxai/.env` - Template with all API key options documented
-- `~/.ppxai/sessions/` - Session storage
+- `~/.ppxai/sessions/` - Session storage (file checkpoints live at
+  `~/.ppxai/sessions/checkpoints/<session_id>/`)
 - `~/.ppxai/exports/` - Exported answers
-- `~/.ppxai/checkpoints/` - Agent checkpoints
 
 Then edit `~/.ppxai/.env` to uncomment and add your API keys.
 
@@ -435,10 +435,7 @@ Then edit `~/.ppxai/.env` to uncomment and add your API keys.
 ppxai supports multiple AI providers. Add keys to `~/.ppxai/.env`:
 
 ```bash
-# Perplexity (default - includes web search)
-PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# Google Gemini (free tier available)
+# Google Gemini (default provider, free tier available)
 GEMINI_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # OpenAI
@@ -446,6 +443,9 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # OpenRouter (access multiple providers)
 OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Perplexity (optional: web-search/grounding backend only, not a chat provider)
+PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ### Provider Configuration
@@ -454,7 +454,7 @@ For advanced provider configuration, create `~/.ppxai/ppxai-config.json`:
 
 ```json
 {
-  "default_provider": "perplexity",
+  "default_provider": "gemini",
   "providers": {
     "custom-vllm": {
       "name": "Local vLLM",
@@ -922,7 +922,7 @@ Add your API key to `~/.ppxai/.env`:
 
 **Linux/macOS:**
 ```bash
-echo 'PERPLEXITY_API_KEY=your-key-here' > ~/.ppxai/.env
+echo 'GEMINI_API_KEY=your-key-here' > ~/.ppxai/.env
 ```
 
 **Windows:**

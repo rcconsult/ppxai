@@ -374,16 +374,17 @@ The agent requires consent for file edits:
 **Corrected 2026-09-20.** This said one press "gracefully stops the
 current iteration" and that two presses within 2s "force stops" — that is
 not how `/auto` behaves. A single Ctrl-C raises `KeyboardInterrupt`,
-which `handle_agent` catches (`ppxai/commands/agent.py:788-799`) and
-takes straight to `_handle_agent_interrupt` — the rollback prompt — on
-the **first** press. There is no second-press escalation inside `/auto`
+which `handle_agent` catches (`ppxai/commands/agent.py:823,876`, line
+cites refreshed 2026-09-28 — was `:788-799`) and takes straight to
+`_handle_agent_interrupt` — the rollback prompt — on the **first**
+press. There is no second-press escalation inside `/auto`
 (`grep -rn "force_stop\|double_interrupt\|interrupt_count" ppxai/`
 returns nothing).
 
 The 2-second double-tap is real but belongs to the **top-level chat
 REPL** — press Ctrl-C twice to exit the application
-(`ppxai/rich/main.py:452-483`, `ctrl_c_timeout = 2.0`). It is unrelated
-to agent iterations.
+(`ppxai/rich/main.py:465`, `ctrl_c_timeout = 2.0`; line cite refreshed
+2026-09-28 — was `:452-483`). It is unrelated to agent iterations.
 
 ### Iteration Limits
 
@@ -653,7 +654,8 @@ See [Shell Consent Guide](shell-consent-guide.md) for complete documentation.
 - [Checkpoint Guide](checkpoint-guide.md) - Atomic rollback for agent tasks
 - [Shell Consent Guide](shell-consent-guide.md) - Shell command security
 - [Custom Tools Guide](custom-tool-development-guide.md) - Creating custom tools
-- [Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) - Technical implementation details
+- [Architecture](architecture.md) / [Debt Inventory](debt-inventory.md) - Current technical implementation details and known issues
+- [Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) - (historical, v1.11 design)
 
 ---
 

@@ -38,7 +38,8 @@
 | [DGX Spark Setup](dgx-spark-setup.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
-| [Release Notes v1.19.2](release-notes-v1.19.2.md) | **Latest release** (2026-09-14) — Gemini fleet refresh; Responses-wire tool loops fixed; mid-stream model/provider switch refused (409); Windows `/preview` and usage-log fixes; 15 `parallel_tool_calls` rows corrected. |
+| [Release Notes v1.19.3](release-notes-v1.19.3.md) | **Latest release** (2026-09-28) — ADR 0007 one command registry; **Perplexity removed as a chat provider** (ADR 0015; kept as a web-search/grounding backend, ADR 0014), **Gemini the default provider and `gemini-3.8-flash` its default model**; Sonar Responses-wire fixes; turn-level tool strip in web/VSCode transcripts. |
+| [Release Notes v1.19.2](release-notes-v1.19.2.md) | (2026-09-14) — Gemini fleet refresh; Responses-wire tool loops fixed; mid-stream model/provider switch refused (409); Windows `/preview` and usage-log fixes; 15 `parallel_tool_calls` rows corrected. |
 | [Release Notes v1.19.1](release-notes-v1.19.1.md) | (2026-09-10) — tool-loop transcript integrity; **ADR 0011** command taxonomy (`/auto` · `/run` · `/task`, breaking renames, no aliases); **ADR 0010** config-shape clean break (`tools.agent.*` → `execution.*`); **ADR 0012** per-model facts; opt-in Anthropic provider (untested against the live API). |
 | [Release Notes v1.19.0](release-notes-v1.19.0.md) | (2026-07-12) — agent platform (ADR 0003 Stage 2) durable `/v1/agent/*` run registry with tool-capable sandboxed tier, `/task` command family T1–T8a. |
 | [Release Notes v1.18.8](release-notes-v1.18.8.md) | (2026-06-14) |
@@ -62,13 +63,16 @@
 ### Archived Documentation
 
 Legacy and completed documentation is preserved in `archive/` for historical reference:
-- `archive/release-notes/` - Release notes for v1.11.x through v1.14.x
+- `archive/release-notes/` - Release notes for v1.11.x through v1.18.6
 - `archive/benchmarks/` - Model evaluation reports (Gemini, Perplexity, GPT-OSS tuning)
 - `archive/design/` - Completed design documents (image handler, side panel, distributed arch)
 - `archive/v1.15.1-completed/` - v1.15.1 planning and implementation docs
 - `archive/v1.15.2-completed/` - v1.15.2 planning and implementation docs
 - `archive/v1.15.3/` - v1.15.3 planning docs
 - `archive/v1.15.4/` - v1.15.4 planning docs (preview, SSL bugfix)
+- `archive/external-refs/` - External reference material saved for offline use
+- `archive/screenshots/` - Screenshots referenced by archived docs
+- Top-level files directly under `archive/` (TODO-\*, plan-\*, handoff-\*, DEBT-INVENTORY-\*, etc.) - completed per-feature TODOs, superseded plans, handoffs, and per-version debt snapshots
 
 ## Maintenance commands
 
@@ -115,8 +119,7 @@ ppxai includes built-in tools for AI-powered development:
 | `replace_block` | Find and replace text blocks |
 | `insert_text` | Insert text at line numbers |
 | `delete_lines` | Delete line ranges |
-| `web_search` | Search the web (DuckDuckGo) |
-| `web_search_premium` | Premium web search (Perplexity/Gemini) |
+| `web_search` | Search the web — walks a backend chain (Gemini → Perplexity → DuckDuckGo) resolved at call time |
 | `fetch_url` | Fetch URL contents |
 | `get_datetime` | Get current date/time |
 | `get_weather` | Get weather information (**HTTPS-only** since v1.19.1) |
@@ -218,7 +221,7 @@ Register in `ppxai/engine/tools/builtin/__init__.py`:
 ```python
 from .my_tool import MyTool
 
-def register_all_builtin_tools(manager, provider_name=None, engine=None):
+def register_all_builtin_tools(manager, provider=None, engine=None):
     # ... existing registrations ...
     manager.register_tool(MyTool())
 ```
@@ -235,7 +238,7 @@ engine = EngineClient()
 
 # Configure
 engine.set_provider("gemini")
-engine.set_model("gemini-2.5-flash")
+engine.set_model("gemini-3.8-flash")
 
 # Enable tools
 engine.enable_tools()

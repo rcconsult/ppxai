@@ -12,7 +12,7 @@ no separate ADR 0013. 0012 is `Proposed`, and the README's Proposed-records
 rule makes in-place revision the way a design converges; the unification IS
 0012's core question converging, not a second decision. **ADR 0012 §2 now
 carries the full design (`ModelFacts`, Q0a–Q0c) and is what you sign off.**
-**Drives:** [ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md)
+**Drives:** [ADR 0012](../decisions/0012-wire-protocol-as-per-model-capability.md)
 (Implemented v1.19.1; it was Proposed when this plan was written) · closes debt **Item 61** (W2) and **Item 62** (W4) · absorbs
 **I4b** from [plan-per-model-capabilities.md](plan-per-model-capabilities.md)
 as W3.
@@ -43,7 +43,7 @@ below must move those metrics, measured at its gate:
 2. **Call graphs per iteration:** run `graphify update .` and refresh
    **`docs/provider-wire-call-graphs.md`** (new, created in W1) showing the
    provider→handler→SDK call paths before/after that iteration — the
-   [agent-platform-call-graphs.md](agent-platform-call-graphs.md)
+   [agent-platform-call-graphs.md](../agent-platform-call-graphs.md)
    precedent, scoped to the wire layer.
 3. **Structural changes only.** No patchwork, no spaghetti, no
    helper/surface carving to route around a design problem. When the clean
@@ -107,7 +107,7 @@ place, `ModelFacts` new), one resolver each, both old accessors **deleted**
 Verified against a refreshed graph: all five resolve to **zero nodes**.
 `/doctor` ships with four scans plus record scaffolding; the example config
 ships migrated; call graphs in
-[`provider-wire-call-graphs.md`](provider-wire-call-graphs.md).
+[`provider-wire-call-graphs.md`](../provider-wire-call-graphs.md).
 
 **Five defects found and fixed on the way**, all of them shapes this ADR
 exists to remove — four were caught by review rather than by the tests.
@@ -184,7 +184,7 @@ deviating fails rather than silently excusing a future regression.
 ## W1 (original scope) — two fact records, explicit and complete (ADR 0012 §2 Q0d + Q0e · ~3.5d)
 
 **Re-scoped 2026-08-30 after three failed implementations** (see Q0e). The
-design is in [ADR 0012 §2](decisions/0012-wire-protocol-as-per-model-capability.md);
+design is in [ADR 0012 §2](../decisions/0012-wire-protocol-as-per-model-capability.md);
 this iteration implements it.
 
 **The shape:**
@@ -448,11 +448,11 @@ All three shipped:
 
 **Two follow-ups are now tracked as debt items rather than as comments:**
 
-- **[Item 64](debt-inventory.md)** ⏰ — re-probe the Perplexity pro line on
+- **[Item 64](../debt-inventory.md)** ⏰ — re-probe the Perplexity pro line on
   the Responses wire **before 2026-09-27**. The shipped deprecation rows
   advise a downgrade to the lighter `perplexity/sonar`; that hint is correct
   only while it stays true.
-- **[Item 65](debt-inventory.md)** — re-author `BUILTIN_PROFILES` as native
+- **[Item 65](../debt-inventory.md)** — re-author `BUILTIN_PROFILES` as native
   `ModelFacts` and retire the seed vocabulary. Deferred deliberately (a data
   migration should not share a diff with a behaviour change), fenced so the
   migration stays checkable.

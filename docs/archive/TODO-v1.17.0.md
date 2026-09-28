@@ -129,7 +129,7 @@ local-path provisioner). All session state is queried via REST from the session 
 
 ### Image Build (Kaniko)
 
-- **Source:** hostPath mount of `/Users/rado/git/utils/ppxai` (colima mounts macOS home at
+- **Source:** hostPath mount of `/path/to/ppxai` (colima mounts macOS home at
   same path inside VM — no copy needed)
 - **Registry:** `registry:2` pod + ClusterIP service (`registry.ppxai-system.svc:5000`),
   HTTP only, Kaniko uses `--insecure` flag

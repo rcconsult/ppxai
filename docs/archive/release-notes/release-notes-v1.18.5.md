@@ -265,7 +265,7 @@ Stage 2 scope. v1.18.5 does NOT change the v1 wire shape.
 - Local install validation done on macOS Intel via the
   `/build-install` skill end-to-end, plus interactive testing in
   both ppxaide (TUI) and the web app against the
-  `/Users/rado/git/exps/ppxai_demo/` test target. Both `--serve`
+  `/path/to/demo-project/` test target. Both `--serve`
   paths verified to spawn the backend and produce JSONL logs.
 - `uv.lock` refreshed via `uv sync` at the version bump.
 - ADR 0005 status is **Proposed** — retroactive naming of an

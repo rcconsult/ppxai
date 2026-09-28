@@ -1,9 +1,8 @@
 # Plan — SSH remote backend (ADR 0013)
 
 **Date:** 2026-09-26
-**Status:** Draft, not started. Implements
-[ADR 0013](decisions/0013-ssh-remote-backend.md) once the ADR's open questions
-are resolved.
+**Status:** Phases 0–5 implemented on `feature/v1.19.4` (unreleased); phase 6,
+the owner trial, is next. Implements [ADR 0013](decisions/0013-ssh-remote-backend.md).
 **Scope:** web client first. VSCode and the TUIs follow only after the web
 path is proven.
 

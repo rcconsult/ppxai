@@ -1,16 +1,14 @@
 # Command Tests Summary
 
+> **Historical (v1.16.2), not maintained.** For the current suite total see
+> CLAUDE.md's "Test-count expectations". Perplexity was removed as a chat
+> provider in v1.19.3 (ADR 0015) — the `mock_client_perplexity` /
+> `handler_perplexity` fixtures described below no longer exist; the fixtures
+> in use now are `mock_engine_client` and friends. This file documents the
+> `test_commands.py` command test classes as they were structured at v1.16.2.
+
 ## Overview
 Comprehensive test suite for all ppxai commands with **both providers** (Perplexity and Custom).
-
-> **Note:** This file documents the command test classes. For overall suite totals see below.
-
-## Test Statistics (v1.16.2)
-- **Total pytest tests**: 1,639 (up from 62 command tests at time of writing)
-- **Playwright E2E tests**: 200
-- **Command Test Classes**: 5 (documented in detail below)
-- **Providers Tested**: 2 (Perplexity AI + Custom Self-Hosted)
-- **Status**: ✅ All tests passing
 
 ## Test Coverage
 

@@ -37,7 +37,7 @@ prompt-injection defenses + sentinel tests + user-facing doc.
 | Historical loader | `ppxai/tool_manager.py` (~299 LOC, "legacy MCP loader") **deleted in v1.11.7** during EngineClient migration |
 | Slash command for MCP | does not exist |
 | AppState fields for MCP server state | none |
-| ToolManager source field | hardcoded `"source": "engine"` (`tools/manager.py:193`) — no extension point for non-builtin tools |
+| ToolManager source field | hardcoded `"source": "engine"` (`tools/manager.py:233`) — no extension point for non-builtin tools |
 
 Earlier statements like "ppxai supports MCP" (in research notes,
 CLAUDE.md, conversation memory) were based on the optional-dep
@@ -154,10 +154,10 @@ Each item below blocks Day-0 unless explicitly marked "Day-1+".
    same `ToolManager`.
 3. **Shutdown hook** — engine shutdown path sends `terminate()` to
    each child + reaps PIDs. Reuses the lifecycle discipline from
-   `PreviewBackend` (`ppxai/server/preview_backend.py`) — the only
+   `PreviewBackend` (`ppxai/engine/preview_backend.py`) — the only
    existing precedent for engine-owned long-lived subprocesses.
 4. **Tool-source field** — `ToolManager.list_tools()` currently
-   hardcodes `"source": "engine"` at `tools/manager.py:193`. Extend
+   hardcodes `"source": "engine"` at `tools/manager.py:233`. Extend
    to `"source": "mcp:<server-name>"` for MCP-sourced tools so
    `/tools` listing and AppState DTOs distinguish them.
 5. **Tool-name namespacing** — adopt `<server>.<tool>` so two

@@ -9,7 +9,7 @@ Multi-provider AI chat interface for VS Code, powered by ppxai.
 - **Time Dividers**: Visual separators between conversations (after 5min gap or date change)
 - **@file References**: Type `@filename` to include file content, `@clipboard` for clipboard text, `@url` for web content
 - **Autocomplete** (unified with all ppxai clients via `POST /complete`):
-  - `/` commands + aliases + `/quit`/`/exit` (dynamic, from server's `CommandFactory`)
+  - `/` commands + aliases (dynamic, from server's `CommandFactory`) — `/quit`/`/exit`/`/q` are Rich/Textual-only; use the "Leave" action or disconnect in VSCode
   - `/tools`, `/usage`, `/checkpoint`, `/status`, `/theme` subcommands + second-level args (`/usage show <mode>`, `/theme emoji on/off`, `/checkpoint backend <backend>`, `/tools help <tool>`)
   - Dynamic `/model <name>` for the active provider, `/provider <name>` for configured providers
   - Path arguments for `/attach`, `/cd`, `/ls`, `/show`, `/tree`, `/preview` with alias resolution
@@ -21,14 +21,14 @@ Multi-provider AI chat interface for VS Code, powered by ppxai.
   - Generate Documentation
 - **Live HTML Preview** (v1.15.4): `/preview` opens HTML files in a WebviewPanel with live reload via `FileSystemWatcher`
 - **Slash Commands**: `/help`, `/show`, `/tools`, `/model`, `/provider`, `/generate`, `/preview`, etc.
-- **Multi-Provider Support**: Perplexity, OpenAI, Gemini, OpenRouter, local models
+- **Multi-Provider Support**: Gemini, OpenAI, OpenRouter, local models (Claude too — opt-in, untested)
 - **Session Management**: Save and load conversation sessions
 - **Streaming Responses**: Real-time SSE streaming with timing info
 - **Syntax Highlighting**: PowerShell, Dockerfile, DOS, AppleScript support (v1.15.4)
 
 ## Requirements
 
-- API key for at least one provider (Perplexity, OpenAI, Gemini, etc.)
+- API key for at least one chat provider (Gemini, OpenAI, etc.)
 - **Option A:** Pre-built binaries (no Python needed)
 - **Option B:** Python 3.10+ with ppxai package
 
@@ -52,11 +52,10 @@ Create a `.env` file in your project directory (or `~/.ppxai/.env`):
 
 ```bash
 # At least one API key is required
-PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxx
-# Or
 GEMINI_API_KEY=xxxxxxxxxxxx
 # Or
 OPENAI_API_KEY=sk-xxxxxxxxxxxx
+# Perplexity is a web-search/grounding backend, not a chat provider
 ```
 
 #### 3. Install the VSCode extension
@@ -113,11 +112,10 @@ Create a `.env` file in your project directory (or `~/.ppxai/.env`):
 
 ```bash
 # At least one API key is required
-PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxx
-# Or
 GEMINI_API_KEY=xxxxxxxxxxxx
 # Or
 OPENAI_API_KEY=sk-xxxxxxxxxxxx
+# Perplexity is a web-search/grounding backend, not a chat provider
 ```
 
 #### 3. Install the VSCode extension
@@ -215,9 +213,10 @@ Configure the extension in VS Code settings:
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `ppxai.serverUrl` | URL of ppxai-server | `http://127.0.0.1:54320` |
-| `ppxai.defaultProvider` | Default AI provider | `perplexity` |
+| `ppxai.defaultProvider` | Default AI provider | `gemini` |
 | `ppxai.defaultModel` | Default model (empty for provider default) | `""` |
 | `ppxai.enableTools` | Enable AI tools (file ops, shell, web) | `false` |
+| `ppxai.configPath` | Path to ppxai-config.json (leave empty for auto-detect) | `""` |
 
 ## Chat Slash Commands
 
@@ -252,11 +251,22 @@ Type these directly in the chat input:
 | `/load` | Load saved session |
 | `/clear` | Clear conversation |
 
+### Background Agent Platform
+| Command | Description |
+|---------|-------------|
+| `/task` | Launch a tool-capable background task (`ls`\|`get`\|`watch`\|`respond`\|`collect`\|`resume`\|`cancel`\|`help`) |
+| `/run` | Launch a tool-free one-off background run (`ls`\|`get`\|`watch`\|`collect`\|`cancel`\|`help`) |
+| `/auto` | In-session autonomous tool-use loop |
+
+Run `/help` for the full, always-current command list — it is derived from the
+same `CommandSpec` registry as this table (ADR 0007), so this table can drift.
+
 ## VSCode Commands (Cmd+Shift+P)
 
 | Command | Description |
 |---------|-------------|
 | `ppxai: Open Chat` | Open the chat panel |
+| `ppxai: Set API Token (/v1 bearer)` | Set the bearer token for a remote/hosted server |
 | `ppxai: Explain Selection` | Explain selected code |
 | `ppxai: Generate Tests` | Generate unit tests |
 | `ppxai: Generate Documentation` | Generate documentation |
@@ -264,6 +274,14 @@ Type these directly in the chat input:
 | `ppxai: Implement from Description` | Generate code from description |
 | `ppxai: Switch Provider` | Change AI provider |
 | `ppxai: Switch Model` | Change model |
+| `ppxai: Interrupt Current Request` | Cancel the in-flight request |
+| `ppxai: Start Server` | Start the local ppxai-server |
+| `ppxai: Stop Server` | Stop the local ppxai-server |
+| `ppxai: Toggle Server` | Start or stop the local ppxai-server |
+| `ppxai: Server Status` | Show whether the server is running |
+| `ppxai: Reload Configuration` | Reload ppxai-config.json |
+| `ppxai: Show Context Usage` | Show context window usage |
+| `ppxai: Clear Injected Files from Context` | Remove injected `@file`/`@git`/etc. context |
 
 ## Architecture
 
@@ -275,13 +293,18 @@ vscode-extension/
 │   ├── chatPanel.ts       # Webview chat UI (orchestrator)
 │   ├── previewPanel.ts    # Live HTML preview panel (v1.15.4)
 │   ├── sessionsProvider.ts # Sessions tree view
+│   ├── commandRouter.ts   # Roster-driven slash command dispatch (ADR 0007)
+│   ├── commandRoster.ts   # GET /commands client + roster cache
+│   ├── commandRenderer.ts # Server-rendered command result display
+│   ├── schemaGuard.ts     # Connect-time AppState schema drift check
+│   ├── taskController.ts  # /task, /run, /auto client glue
+│   ├── appState.ts / appState.generated.ts # AppState store + generated field types
+│   ├── sideEffectsHandler.ts # CommandResult.side_effects consumer (prompts, etc.)
 │   └── handlers/          # Extracted handlers (v1.14.0+)
 │       ├── eventBus.ts    # Type-safe pub/sub communication
 │       ├── stream.ts      # Stream event processing
 │       ├── consent.ts     # Consent dialog handlers
-│       ├── agentStateMachine.ts # Agent loop state machine
-│       ├── commands.ts    # Slash command handlers
-│       └── types.ts       # HandlerContext interface
+│       └── agentStateMachine.ts # Agent loop state machine
 ├── media/webview/         # External CSS/JS for webview
 └── resources/
     └── icon.svg           # Activity bar icon

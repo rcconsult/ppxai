@@ -4,12 +4,16 @@
 **Updated:** 2026-08-04
 
 > **Note (v1.19.x):** Web search backend selection now goes through
-> `resolve_web_search_backend()` (`ppxai/engine/tools/search_backends.py`).
-> `tools.web_search.preferred` (global) or `providers.<name>.web_search.preferred`
-> is an **ordering** — first choice, then the rest of the usable fallback
-> chain — not a hard pin. Add `strict: true` in the same scope to make it a
-> hard pin (no fallback, egress narrowed to just that backend). See
+> `resolve_web_search_backend()` (`ppxai/engine/search/resolver.py`, the
+> ADR 0014 search layer). Default order is gemini → perplexity →
+> duckduckgo. `tools.web_search.preferred` (global) or
+> `providers.<name>.web_search.preferred` is an **ordering** — first
+> choice, then the rest of the usable fallback chain — not a hard pin. Add
+> `strict: true` in the same scope to make it a hard pin (no fallback,
+> egress narrowed to just that backend). See
 > [provider-setup.md](provider-setup.md#web-search-backend-ordering-v1191).
+> Perplexity was removed as a **chat** provider in v1.19.3 (ADR 0015) and
+> remains only a web-search/grounding backend here.
 
 ---
 
@@ -29,12 +33,15 @@ This document explains which providers use which method and the implications for
 | Provider | Method | Native API Support | ppxai Implementation |
 |----------|--------|-------------------|---------------------|
 | **Gemini** | Native | ✅ Yes | `generate_content` wire, `function_declarations` |
-| **Perplexity** | **Per-model, per-wire** | ✅ on `/v1/responses` | **Not "no" any more.** Bare `sonar` on chat-completions is `prompt_based`; the namespaced `perplexity/sonar` on the Responses wire is `auto` and **measured calling the tool** (2026-08-31, `scripts/probe-perplexity-capabilities.py --api-path responses`). The gateway fleet (`anthropic/*`, `openai/*`, `google/*`, `xai/*`) is `auto` on Responses too. |
 | **Anthropic** | Native | ✅ Yes | `messages` wire (ADR 0012 §6). **Opt-in and untested against the live API** — debt Item 71 |
 | **OpenAI** | Per-model | ✅ Yes | `OpenAINativeProvider`; `chat_completions` or `responses` per `ModelFacts.wire_protocol` |
 | **Custom** | Native | ✅ Yes | Standard `tools` parameter (OpenRouter, other OpenAI-compat) |
 | **vLLM** | Per-model | ✅ Yes (with `--enable-auto-tool-choice`) | Standard `tools` parameter — but `openai/gpt-oss*` is pinned `prompt_based` in the facts table regardless of your vLLM version |
 | **Ollama** | Native | ✅ Yes (Qwen models only) | Standard `tools` parameter |
+
+Perplexity is no longer a chat provider (ADR 0015, v1.19.3) and has no
+row here; it remains a web-search/grounding backend (ADR 0014), which is
+not a tool-calling endpoint.
 
 > This table is **per provider**, which is a simplification that ADR 0012
 > retired: tool mode is a property of the **model and the endpoint serving
@@ -67,7 +74,6 @@ This document explains which providers use which method and the implications for
 - Gemini (2.5+)
 - OpenAI (all models with function calling)
 - Anthropic (opt-in; untested against the live API — Item 71)
-- Perplexity, on `/v1/responses` only (`perplexity/sonar` and the gateway fleet)
 - OpenRouter (varies by model)
 - vLLM (requires `--enable-auto-tool-choice`; `gpt-oss` is pinned prompt-based anyway)
 - Ollama (Qwen2.5 models only)
@@ -94,12 +100,13 @@ This document explains which providers use which method and the implications for
 - ⚠️ Prone to formatting errors
 
 **Providers:**
-- Perplexity (all Sonar models)
-- Any provider without native tool calling
+- Any provider without native tool calling (e.g. `openai/gpt-oss*` on vLLM)
+- Perplexity used this method while it was a chat provider (removed
+  ADR 0015, v1.19.3); the history below is kept for the reusable lesson
 
 ---
 
-## Perplexity Sonar Models (Prompt-Based)
+## Perplexity Sonar Models (Prompt-Based) — historical (chat provider removed, ADR 0015)
 
 ### Test Results (2026-02-08)
 
@@ -197,7 +204,7 @@ reached through two providers legitimately answers differently.
 | Can it emit several calls per turn? | `ModelFacts.parallel_tool_calls` |
 | What does the *account* support? | `ProviderCapabilities` — key, base URL, prices; no tool-mode opinion |
 
-The dispatch site is one line, `ppxai/engine/chat.py:646`:
+The dispatch site is one line, `ppxai/engine/chat.py` (`use_native_tools = facts.tool_mode != "prompt_based"`):
 
 ```python
 use_native_tools = facts.tool_mode != "prompt_based"
@@ -290,26 +297,23 @@ This allows fair comparison between providers.
 - ✅ Use vLLM with proper flags (native support)
 
 **For Web Search + Tools:**
-- ✅ Use Perplexity (prompt-based works reliably with AGENTS.md hints)
-- ⚠️ Expect slightly lower tool calling scores vs native providers
+- ✅ Use Gemini (native grounding coexists with tool/function calling)
+- Perplexity is no longer a chat provider (ADR 0015, v1.19.3) and is not
+  selectable for tool calling; it remains available only as a
+  web-search/grounding backend (ADR 0014).
 
 ### Improving Prompt-Based Tool Calling
 
-If using Perplexity or other prompt-based providers:
+If using a prompt-based provider (e.g. `openai/gpt-oss*` on vLLM):
 
 1. **Add model-specific hints** in `AGENTS.md`:
    ```yaml
-   sonar*:
+   gpt-oss*:
      - "CRITICAL: For code editing, call apply_patch ONCE - detected issue: you make 5-6 duplicate calls."
      - "Do NOT output tool call JSON in your response text - use tool calling directly."
    ```
 
-2. **Use specific models:**
-   - `sonar` (75.0% benchmark) - Best cost/utility ratio
-   - `sonar-pro` - More thorough but higher cost
-   - Avoid `sonar-reasoning-pro` (poor tool calling: 67.2%)
-
-3. **Check AGENTS.md exists** in your project for model-specific tuning
+2. **Check AGENTS.md exists** in your project for model-specific tuning
 
 ---
 

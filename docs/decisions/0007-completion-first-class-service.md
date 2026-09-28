@@ -9,8 +9,8 @@ changed from AppState push to a pull endpoint, see §Goal and §Decision**;
 below: ending a GUI session is a UI button workflow, not a command**.
 Originally titled "Completion as a first-class service; command roster via
 AppState".)
-**Status:** **Accepted 2026-09-21 — implemented** (owner sign-off; on
-`bugfix/v1.19.3`, unreleased). All five steps are done: step 1 shipped v1.18.8;
+**Status:** **Accepted 2026-09-21 — implemented** (owner sign-off;
+shipped in v1.19.3, 2026-09-28). All five steps are done: step 1 shipped v1.18.8;
 steps 2 + 2.5, **step 3a (web fetches the roster; `commands.js`
 deleted)**, **step 3a-sec (sensitive subcommands)**, **step 3b (VSCode
 fetches it; `commands.ts` deleted)**, **step 4 (completion is DERIVED

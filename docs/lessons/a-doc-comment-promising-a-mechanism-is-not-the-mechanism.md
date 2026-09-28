@@ -11,8 +11,11 @@ had 22 fields, the interface 20. `lastMessageRole` (added v1.18.0) and
 whole time, while web had gated its attach badge on `modelSupportsVision`
 since v1.18.6.
 
-**Verify with:** the file is gone now (deleted in the fix below), so point
-at history:
+**Verify with:** `vscode-extension/src/appState.ts` still exists — it is
+the `AppState` store class. What's gone is the hand-written
+`AppStateFields` interface and its stale header comment (deleted in the
+fix below, see "What's actually true / what to do"). Point at history for
+the deleted interface:
 ```bash
 git log -S "will auto-generate" --oneline -- vscode-extension/src/appState.ts
 # -> 1953c29c, f351f43f

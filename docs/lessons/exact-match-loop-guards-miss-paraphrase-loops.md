@@ -47,7 +47,7 @@ reached the threshold of 3.
 2. **Add an argument-independent per-tool budget for retrieval tools
    only, generous.** `is_tool_budget_exceeded` (`manager.py:645`) caps
    `web_search` and `fetch_url` at 10 calls per turn by default
-   (`Default.TOOL_CALL_BUDGETS`, `ppxai/constants.py:242-245`; absent or
+   (`Default.TOOL_CALL_BUDGETS`, `ppxai/constants.py:180-183`; absent or
    0 = unlimited; every other tool stays uncapped). This is the guard
    that catches the incident's ten *paraphrased* calls, which
    exact-match matching structurally cannot see no matter how it counts.
@@ -79,8 +79,18 @@ reached the threshold of 3.
    model that doesn't take the hint burns every remaining iteration
    re-offering arguments to a tool that will never run again this turn.
    Guard A (the repeat rule) has **no equivalent escalation** — only
-   guard B's budget trip is terminal; see Item 80 in
-   `docs/debt-inventory.md` for the gap this leaves.
+   guard B's budget trip is terminal.
+
+**Update (2026-09-26, Item 80 closed):** the alternating-cycle gap below
+that neither guard trips on is no longer a silent give-up. The iteration
+cap now runs one forced-synthesis pass instead of a canned "limit reached"
+line (`ToolGuardReason.ITERATION_CAP`, additive), sends a single converge
+notice at ~70% of the cap, and both guards plus the cap and the zombie
+breaker log the loop's shape via `ToolManager.describe_call_pattern()`
+(repeating cycle, per-tool distinct-args counts, tail) — evidence for
+designing a real detector if the pattern recurs, not a detector itself.
+See the closed [Item 80](../archive/DEBT-INVENTORY-CLOSED.md) for the full
+body.
 
 A guard limited to only the old two properties (exact-match, trailing
 streak) is provably weaker than the five-item version above — it is a
@@ -96,8 +106,10 @@ The accepted gap this leaves — an alternating two-tool cycle with
 non-repeating arguments (`A, B, A, B, …`, never twice with the same
 arguments) — is recorded in
 `tests/fixtures/tool_loops/call-graph-cycle-alternating-distinct-args.json`
-rather than hidden, and is bounded only by the iteration cap and the
-zombie circuit breaker.
+rather than hidden. As of the 2026-09-26 update above, it is no longer
+left to run to a canned give-up: the iteration cap now answers with a
+forced-synthesis pass and the loop's shape is logged, though no guard
+detects the alternating pattern itself.
 
 ## Related
 

@@ -91,8 +91,13 @@ where they help the reader confirm.
 Links to ADRs, ROADMAP entries, or other lessons.
 ```
 
-Keep each lesson under 100 lines. If the topic needs more space,
-it's probably an ADR or design doc, not a lesson.
+Aim to keep each lesson under 100 lines, but this is a guideline, not a
+fence: a lesson accumulates dated "Update" sections as the hazard it
+records gets fixed or sharpened, and several run well past 100 lines in
+practice (measured 2026-09-28: 9 of 22 do). If a lesson keeps growing
+because the underlying mechanism keeps changing shape, that's a signal
+it may deserve its own ADR or design doc instead — but don't trim a
+lesson just to hit the number.
 
 ## Promotion workflow (for AI agents)
 
@@ -113,7 +118,7 @@ discoverable later.
 
 - [mcp-not-yet-integrated.md](mcp-not-yet-integrated.md) — ppxai
   has filename-level MCP breadcrumbs but zero integration; v1.20.x
-  plan at `docs/MCP-INTEGRATION-PLAN.md`
+  plan at `docs/mcp-integration-plan.md`
 - [config-source-resolution.md](config-source-resolution.md) —
   `PPXAI_CONFIG_FILE` (often set via repo-root `.env`) overrides
   `./ppxai-config.json`; editing the obvious project config can
@@ -211,8 +216,10 @@ discoverable later.
 - [measure-against-a-clean-export-not-a-dirty-tree.md](measure-against-a-clean-export-not-a-dirty-tree.md)
   — a measurement taken against a tree with uncommitted changes describes
   code no commit contains; stamp a sha next to it and it becomes a
-  confident wrong number about that sha. `git status --short` before
-  trusting any "measured on this tree" claim; to pin a number to a commit,
+  confident wrong number about that sha. `git status --short
+  --ignored=matching` before trusting any "measured on this tree" claim —
+  plain `--short` hides ignored-but-present entries (`.env`,
+  `__pycache__`, ...); to pin a number to a commit,
   export it clean first (`git archive <sha> | tar -x`) and measure there.
 - [a-doc-comment-promising-a-mechanism-is-not-the-mechanism.md](a-doc-comment-promising-a-mechanism-is-not-the-mechanism.md)
   — `vscode-extension/src/appState.ts`'s header claimed a runtime

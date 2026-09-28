@@ -100,6 +100,15 @@ npx vsce package --allow-missing-repository
 code --install-extension vscode-extension/ppxai-{version}.vsix --force
 ```
 
+### 5. Refresh `~/.ppxai/web/` (if requested `binaries`, `desktop`, or `all`)
+
+Every server (`ppxai-server`, `ppxai-desktop`, `uv run` alike) serves the web
+UI from `~/.ppxai/web/` at request time — not from the PyInstaller bundle and
+not from the source tree. Rebuilding the binaries alone leaves stale JS/CSS
+served until this directory is also synced. See the `build-install` skill's
+step 5b for the sync mechanism (`install_web_ui()` in `ppxai-desktop.py`), or
+set `PPXAI_WEB_DIR` to serve `ppxai/web/` directly while iterating.
+
 ## Notes
 
 - All four PyInstaller builds can run in parallel for faster builds

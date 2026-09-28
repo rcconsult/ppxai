@@ -155,5 +155,4 @@ populating `failure_markers` on the rtk default.
 
 - [shell-wrappers.md](shell-wrappers.md) — user-facing documentation
 - [ROADMAP.md](../ROADMAP.md) §"v1.18.5 - Shell wrapper framework — rtk as first wrapper"
-- [reference_rtk_install.md](../../.claude/projects/-Users-rado-git-utils-ppxai/memory/reference_rtk_install.md) — host install state on rado's machine
 - rtk upstream: https://github.com/rtk-ai/rtk

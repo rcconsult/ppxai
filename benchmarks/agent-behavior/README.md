@@ -41,14 +41,18 @@ consumer (ppxai-sre).
 # 2. Run the benchmark (mints a loopback token automatically):
 ./.uv/uv.exe run python benchmarks/agent-behavior/run.py \
     --base-url http://127.0.0.1:54320 \
-    --providers all          # or: perplexity,nvidia
+    --providers all          # or: gemini,nvidia
 
 # Results: a per-(provider,model,task) table + JSON under results/.
 ```
 
 ## Honesty notes
 
-- **Real API calls** — costs tokens on paid providers (openai, perplexity).
+- **Real API calls** — costs tokens on paid providers (openai, gemini). The
+  harness's `DEFAULT_MODELS` (`run.py`) still lists `perplexity`; Perplexity
+  is no longer selectable as a chat provider (ADR 0015) — a `--providers`
+  run naming it will fail, and its results in this doc are historical
+  (2026-06-16 run).
 - **Non-determinism** — models vary run-to-run; `--repeat N` averages.
 - **Coarse correctness** — marker-substring, not semantic grading. A pass
   means "the tool result reached the answer"; it does not grade prose.

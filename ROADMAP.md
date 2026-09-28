@@ -8,7 +8,7 @@
 ## Core Value Proposition
 
 ppxai provides:
-1. **Multi-Provider Support** - Switch between Perplexity, Gemini, OpenAI, OpenRouter, Ollama anytime
+1. **Multi-Provider Support** - Switch between Gemini, OpenAI, OpenRouter, Ollama anytime (Claude too — opt-in, untested)
 2. **Dual Interface** - Same experience in TUI and VSCode extension
 3. **Agent Mode** - Iterative tool execution with consent-based safety
 4. **Open Source** - Inspect, modify, self-host, no telemetry
@@ -784,6 +784,16 @@ impractical.
 > spec/skill files; only mid-session auto-routing remains, retargeted
 > v1.20.x+ — see [docs/TODO-routing.md](docs/TODO-routing.md) Disposition.
 
+> **AppState schema + generator / client wiring: SUPERSEDED / not pursued
+> (archived 2026-07-12)** — AppState stays hand-written per client, verified
+> by sentinel tests (`engine/app_state_schema.json` is the cross-client data
+> SoT); the YAML→Python/JS/TS codegen never started. The TYPE-generation half
+> for VSCode **was** built later, on 2026-09-21 under ADR 0007
+> (`sync-schema.js` emitting `src/appState.generated.ts`), driven by a real
+> field drift rather than by reviving this TODO — see
+> [docs/architecture.md](docs/architecture.md) "Schema-Driven AppState DTO"
+> and [TODO-appstate-codegen.md](docs/archive/TODO-appstate-codegen.md).
+
 | Feature | Description | Plan |
 |---------|-------------|------|
 | **AppState schema + generator** | YAML → Python/JS/TS codegen, CI `--check` mode | [TODO-appstate-codegen.md](docs/archive/TODO-appstate-codegen.md) |
@@ -892,7 +902,7 @@ when there's evidence of wrapper-side failures in real use.
 
 **Branch:** `feature/v1.18.5`.
 
-### v1.19.x - Anthropic Provider (planned)
+### v1.19.x - Anthropic Provider (Phase 1 shipped, v1.19.1)
 
 > **UNPARKED 2026-09-09 — Phase 1 shipped on `feat/anthropic-provider`.**
 > Agent-platform Stage 2 landed in v1.19.0, which was the stated
@@ -1027,6 +1037,37 @@ ppxai as dependency" separation that RELATED-PROJECTS.md commits to.
 
 Each phase is independently releasable as a v1.19.x point release if
 needed; the full bundle is what makes v1.19.x "ready for ppxai-sre."
+
+---
+
+### v1.19.1 – v1.19.3 - Shipped (summary), v1.19.4 prepared
+
+**Status:** ✅ v1.19.1, v1.19.2, v1.19.3 released; v1.19.4 (a security
+patch) is prepared but not released. See [CHANGELOG.md](CHANGELOG.md) and the per-version
+`docs/release-notes-v1.19.*.md` files for full detail — this is a pointer,
+not a restatement.
+
+- **v1.19.1** — ADR 0009/0010/0011/0012 migration (`execution.*` as the third
+  top-level config axis, the `/auto`·`/run`·`/task` command taxonomy, T8b's
+  TUI port of the `/task` family), and the opt-in (ships untested) Anthropic
+  provider.
+- **v1.19.2** — see [docs/release-notes-v1.19.2.md](docs/release-notes-v1.19.2.md).
+- **v1.19.3** (2026-09-28) — ADR 0007's one command registry (`CommandSpec`
+  as the single declaration, `GET /commands`), ADR 0014's web-search/grounding
+  layer (`engine/search/`, `execution.run.grounding` modes), and ADR 0015
+  (Perplexity removed as a chat provider, kept as a web_search/grounding
+  backend; Gemini is now the default provider and model).
+- **v1.19.4** (not yet released) — security patch: websocket connections (`/ws/terminal`) now
+  get the same Host/Origin/auth checks as HTTP requests.
+
+### ADR 0013 - SSH remote backend (in progress)
+
+Not yet released. SSH transport over the user's own `ssh`, a remote session
+manager, a `/h/<host>/<server>/` hub proxy, and an SSH Launcher panel in the
+web UI are landed on a feature branch but gated behind `remote.hosts` (off by
+default). See [docs/decisions/0013-ssh-remote-backend.md](docs/decisions/0013-ssh-remote-backend.md)
+and the `[Unreleased]` section of [CHANGELOG.md](CHANGELOG.md) for current
+detail.
 
 ---
 
@@ -1390,4 +1431,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: July 12, 2026
+**Last Updated**: September 28, 2026

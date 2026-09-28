@@ -9,7 +9,9 @@ trying to replace.
 **Verify with:** `grep -rn "54320" ppxai/server/ scripts/gateway-smoke.py`
 (the port is a hardcoded default, not auto-negotiated) — and reproduce:
 start one server, spawn a second; the second logs `[Errno 48] address
-already in use` and exits while the first keeps answering.
+already in use` (macOS/BSD errno for `EADDRINUSE`; Linux prints
+`[Errno 98]` for the same condition) and exits while the first keeps
+answering.
 
 ## Why this trips people up
 
@@ -62,10 +64,19 @@ it forks a **bootloader parent** plus the real server as a **child**
 (`pgrep -fl ppxai-server` after launch shows two PIDs). Consequences for
 any script that manages the server's lifecycle:
 
-- `subprocess.Popen(...).terminate()` / `.kill()` signals only the parent
-  (the bootloader). The **child keeps running and keeps port 54320**, so
-  the script leaks a server on exit and the *next* run either trips the
-  port guard or — worse — talks to the orphan.
+- `subprocess.Popen(...).terminate()` used to signal only the parent (the
+  bootloader), which never forwarded it. **Fixed since `24ad6d67`
+  (v1.19.3):** `ppxai-server.spec` had `bootloader_ignore_signals=True`
+  since `9bc121d3`, for no recorded reason, unlike the other three specs.
+  With it True, the bootloader swallowed SIGTERM instead of forwarding it
+  to the child — so `kill <pid>` / `.terminate()` / a systemd stop did
+  nothing, and the child kept running and kept port 54320. The flag is now
+  `False`, matching the other specs, so on POSIX a `.terminate()` (SIGTERM)
+  to the bootloader PID now reaches the child. `.kill()` (SIGKILL) is
+  **not** forwarded by any bootloader setting — PyInstaller has no chance
+  to relay it — so it still orphans the child; on Windows there is no
+  SIGTERM equivalent either. Both cases still need the process-group /
+  tree kill below.
 - This produced a phantom "product bug" during the T7 lifecycle trial
   (2026-07-12): a server was "restarted" between a park and a GET, but the
   restart silently failed to bind (old child still held the port), so the

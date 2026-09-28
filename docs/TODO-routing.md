@@ -137,7 +137,7 @@ Added to `ppxai-config.json` under a new `routing` key:
         "description": "Local coding with cloud planning",
         "roles": {
           "chat":    {"provider": "lmstudio",   "model": "qwen2.5-coder-7b-instruct"},
-          "planner": {"provider": "perplexity", "model": "sonar-pro"},
+          "planner": {"provider": "gemini",     "model": "gemini-3.8-flash"},
           "coder":   {"provider": "lmstudio",   "model": "qwen2.5-coder-7b-instruct"},
           "tools":   {"provider": "lmstudio",   "model": "qwen2.5-coder-7b-instruct"}
         }

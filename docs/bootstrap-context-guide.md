@@ -112,7 +112,7 @@ Sources: (2 files)
 Total: 5.3 KB (~1,325 tokens)
 
 Hints Defined:
-  Provider: local, ollama, perplexity
+  Provider: local, ollama, openai
   Model: deepseek*, qwen*
 ```
 
@@ -128,8 +128,8 @@ provider_hints:
     - "Hint for Ollama"
   gemini:
     - "Hint for Gemini"
-  perplexity:
-    - "Hint for Perplexity"
+  anthropic:
+    - "Hint for Anthropic"
 ```
 
 ### The `local` Provider
@@ -157,7 +157,7 @@ When using Ollama, you get both `local` hints AND `ollama` hints.
 | `local` | "Complete tasks fully", "Use tools proactively" |
 | `ollama` | "Keep responses concise", "Prefer smaller focused tool calls" |
 | `gemini` | "Use Google Search grounding for current information" |
-| `perplexity` | "Use native web search - don't use web_search tool" |
+| `openai` | "Prefer the Responses API's native tool calling" |
 | `custom` | "Use tools directly without XML formatting" |
 
 ## Model Hints
@@ -429,8 +429,8 @@ model_hints:
 
 ```yaml
 provider_hints:
-  perplexity:
-    - "Use your native web search for current information."
+  openai:
+    - "Use the web_search tool for current information."
     - "Cite sources as markdown links inline."
   gemini:
     - "Use Google Search grounding when available."

@@ -2,7 +2,21 @@
 
 ## Current Status
 
-The VSCode extension currently **does not have automated tests**. This document outlines the testing approach that should be implemented.
+The VSCode extension's TypeScript is tested from the Python suite: a dozen
+`tests/test_vscode_*.py` files (e.g. `test_vscode_schema_guard_behavior.py`,
+`test_vscode_task_controller.py`, `test_vscode_command_roster_behavior.py`)
+compile and run the real, compiled TS modules under plain Node and assert on
+their behavior — not the `@vscode/test-electron` approach this document
+originally proposed. There's also a Playwright suite at `tests/e2e/` that
+drives parts of the extension in a browser harness (`app-state.spec.ts`,
+`live-app.spec.ts`, etc.).
+
+`npm test` (`node ./out/test/runTest.js`) is **not implemented** — there is
+no `vscode-extension/src/test/` directory, so nothing builds it, and running
+`npm test` fails. The rest of this document is kept as a reference for the
+`@vscode/test-electron` approach this project did NOT end up taking; treat
+the "Recommended" / "Priority Test Cases" / "Setup Instructions" sections
+below as historical design notes, not a current gap.
 
 ## Recommended Test Framework
 
@@ -179,17 +193,19 @@ npm test
 
 ## Current Test Coverage Summary
 
-### ✅ Python Backend (ppxai package)
-- **273/278 tests passing (98.2%)**
-- File editing tools: 25 tests
-- Help commands: 11 tests (TUI + UI)
-- HTTP server endpoints: Covered
-- Commands: Comprehensive coverage
+See CLAUDE.md's "Test-count expectations" for the current whole-suite total
+(the `pytest tests/` run, including the `test_vscode_*.py` files below).
 
-### ❌ TypeScript Extension (vscode-extension)
-- **0 tests (not implemented)**
-- Recommended: ~20-30 tests
-- Priority: `/tools help editing`, consent dialogs, HTTP client
+### Python Backend (ppxai package)
+- Comprehensive coverage across commands, tools, providers, config
+
+### TypeScript Extension (vscode-extension)
+- Covered via `tests/test_vscode_*.py` (compiled TS run under Node) — schema
+  guard, command roster/router, task controller, vision gate/badge wiring,
+  visibility re-anchor, and more
+- Also covered by `tests/e2e/*.spec.ts` (Playwright)
+- `@vscode/test-electron`-style in-extension-host tests (this document's
+  original proposal) were not built; `npm test` does not run
 
 ## Testing Without Full Setup
 

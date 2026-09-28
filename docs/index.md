@@ -9,7 +9,7 @@
 
 | Problem | ppxai Solution |
 |---------|----------------|
-| Locked to one AI vendor | Switch between Perplexity, Gemini, OpenAI, OpenRouter, Ollama anytime |
+| Locked to one AI vendor | Switch between Gemini, OpenAI, OpenRouter, Ollama anytime |
 | Can't use local models | Full Ollama/vLLM support with same interface |
 | AI modifies files without asking | Consent-based safety for all file operations |
 | Lost context when switching models | Preserve conversation across provider changes |
@@ -41,9 +41,9 @@
 
 ```bash
 # Create ~/.ppxai/.env with your keys
-PERPLEXITY_API_KEY=pplx-xxx
 GEMINI_API_KEY=xxx
 OPENAI_API_KEY=sk-xxx
+PERPLEXITY_API_KEY=pplx-xxx   # optional: web-search/grounding backend only, not a chat provider
 ```
 
 ### Run
@@ -59,8 +59,7 @@ ppxai-desktop      # Desktop web app
 
 ### Multi-Provider Support
 
-- **Perplexity AI** - Real-time web search with citations
-- **Google Gemini** - 1M token context, search grounding; 3.5 Flash by default
+- **Google Gemini** - 1M token context, search grounding; 3.8 Flash by default
 - **OpenAI** - GPT-5.6-terra by default, plus the GPT-5.5/5.4 lines and GPT-5.3-codex
 - **Anthropic (Claude)** - opt-in via the `[anthropic]` extra; ships untested against the live API
 - **OpenRouter** - 100+ models including Claude

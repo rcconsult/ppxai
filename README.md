@@ -20,7 +20,7 @@
 
 | Problem | ppxai Solution |
 |---------|----------------|
-| Locked to one AI vendor | Switch between Perplexity, Gemini, OpenAI, OpenRouter, Ollama anytime (Claude too — opt-in, and [untested against the live API](docs/ANTHROPIC-PROVIDER.md)) |
+| Locked to one AI vendor | Switch between Gemini, OpenAI, OpenRouter, Ollama anytime (Claude too — opt-in, and [untested against the live API](docs/ANTHROPIC-PROVIDER.md)) |
 | Expensive API costs | Use local models, free tiers, or cheapest provider that works |
 | Closed-source tools | Fully OSS—inspect, modify, self-host |
 | Terminal OR IDE | Same experience everywhere—TUI, Desktop App, VSCode extension |
@@ -46,7 +46,7 @@ This installs `ppxai` (Rich TUI), `ppxaide` (Textual TUI), `ppxai-server`, and `
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 
 # Set up API key
-echo 'PERPLEXITY_API_KEY=pplx-xxxxx' > ~/.ppxai/.env
+echo 'GEMINI_API_KEY=your-key-here' > ~/.ppxai/.env
 ```
 
 **Windows (PowerShell):** binaries install to `~/.ppxai/bin/` — add it to PATH:
@@ -145,7 +145,7 @@ if isinstance(result, CodeResult):
 
 This enables **single-source command logic** that renders correctly in any UI—terminal, VSCode webview, or browser—just by swapping the renderer implementation.
 
-See [Architecture Docs](docs/architecture.md) and [v1.15.0 Release Notes](docs/archive/release-notes/RELEASE-NOTES-v1.15.0.md) for details.
+See [Architecture Docs](docs/architecture.md) for details (introduced in v1.15.0; see `docs/archive/release-notes/RELEASE-NOTES-v1.15.0.md` for the historical release notes).
 
 ### Live HTML Preview (v1.15.4)
 
@@ -160,8 +160,7 @@ The `/preview` command opens a live-reloading HTML preview across all clients:
 Asset cache busting (`?_t=<mtime>`) ensures CSS/JS/JSON changes are immediately reflected.
 
 ### Multi-Provider Support
-- **Perplexity AI** - Real-time search with citations
-- **Google Gemini** - 3.5 Flash (default), 3.1 Pro Preview with 1M context, 3.1 Flash Lite, Gemma 4 (31B / 26B-A4B), Google Search Grounding
+- **Google Gemini** - 3.8 Flash (default), 3.1 Pro Preview with 1M context, 3.1 Flash Lite, Gemma 4 (31B / 26B-A4B), Google Search Grounding
 - **OpenAI** - GPT-5.6-terra (default), GPT-5.5/-pro, GPT-5.4/-pro/-mini/-nano, GPT-5.3-codex (dedicated `OpenAINativeProvider`; wire and tool mode resolved per model from `ModelFacts`)
 - **Anthropic (Claude)** - opt-in via the `[anthropic]` extra; Claude Opus 5, Sonnet 5, Haiku 4.5. ⚠️ **ships untested against the live API** — see the v1.19.1 notes
 - **OpenRouter** - Claude, Llama, 100+ models
@@ -206,7 +205,7 @@ which rule applied.
 - **Context Preservation** - Switch providers/models mid-conversation without losing history. Start with cheap model, switch to powerful one when needed
 - **Smart Context Injection** - `@file` for code, `@git` for uncommitted changes, `@tree` for project structure, `@clipboard` for clipboard text, `@url` for web content. Hash-based deduplication prevents duplicate injections.
 - **Context Management** - `/context` shows usage vs model limit, `/context show` displays bootstrap hierarchy, `/context clear` removes injected files. Context badge shows percentage in TUI status line and VSCode header.
-- **Cost Control** - Use Perplexity for research, Gemini for long context, local models for sensitive code—all in one session
+- **Cost Control** - Use Gemini with web-search grounding for research, Gemini for long context, local models for sensitive code—all in one session
 - **Real-time Usage Tracking** - Token counts and cost estimates in status line (`1.2K↓/0.5K↑ $0.0045`)
 - **Themed TUI Panels** - Rich TUI: 4 themes; Textual TUI (ppxaide): 17+ themes (`/theme` to cycle or Ctrl+T)
 
@@ -250,8 +249,9 @@ The tool-free sibling of `/task`: one prompt, one answer, in the background.
 - Lifecycle: `/run ls|get|watch|collect|cancel` (`/run help` for the full grammar)
 - No `respond`/`resume` — a one-off run has no consent park to return to
 - Enrichment is config-decided, not per-run: `execution.run.grounding`
-  (provider-native search) and `execution.run.web_search` (the `web_search`
-  tool loop), both default off
+  (`off|retrieve|native` — `true` means `retrieve`, search-first through
+  `engine/search/`; `native` is the provider's own in-call search) and
+  `execution.run.web_search` (the `web_search` tool loop), both default off
 - Same registry as `/task`, recorded as `kind=oneshot`; this is also what
   `POST /v1/oneshot` executes as of v1.19.1
 
@@ -292,7 +292,7 @@ Atomic rollback for multi-file agent operations:
 - `/undo` reverts all changes from the last agent task
 - `/checkpoint` - Manage checkpoints (status, list, backend, clear, info)
 - Git backend: auto-commits before tasks, `git revert` to undo
-- File backend (fallback): snapshots to `~/.ppxai/checkpoints/`
+- File backend (fallback): snapshots to `~/.ppxai/sessions/checkpoints/<session_id>/`
 
 See [docs/checkpoint-guide.md](docs/checkpoint-guide.md) for details.
 
@@ -302,7 +302,7 @@ Enable with `/tools enable` (or use Agent Mode):
 - `execute_shell_command` - With consent system (safe/dangerous/blocked)
 - `apply_patch`, `replace_block`, `insert_text`, `delete_lines` - File editing with consent
 - `calculator`, `get_datetime`, `get_working_directory` - Utilities
-- `web_search` - Premium web search (Perplexity/Gemini/DuckDuckGo fallback)
+- `web_search` - Premium web search (Gemini/Perplexity/DuckDuckGo fallback order)
 - `get_weather` - Weather info with HTTPS/HTTP fallback for corporate proxies (v1.15.4)
 
 **Tool Settings:** `/tools set verbose on` shows full arguments and results; `/tools set verbose off` (default) shows brief status only.
@@ -347,8 +347,10 @@ ppxai works with any system transcription tool that types into the focused text 
 **Simple (one provider):**
 ```bash
 # .env
-PERPLEXITY_API_KEY=pplx-xxxxx
+GEMINI_API_KEY=your-key-here
 ```
+
+(`PERPLEXITY_API_KEY` is optional — Perplexity is a web-search/grounding backend, not a chat provider.)
 
 **Multi-provider:**
 ```bash
@@ -389,7 +391,7 @@ All data stays on your machine:
 - `~/.ppxai/sessions/` - Conversation history
 - `~/.ppxai/exports/` - Markdown exports
 - `~/.ppxai/usage/` - Usage statistics
-- `~/.ppxai/checkpoints/` - File-based undo snapshots
+- `~/.ppxai/sessions/checkpoints/` - File-based undo snapshots
 - `~/.ppxai/logs/` - Debug logs (when enabled)
 
 No telemetry. No tracking. Data only goes to the LLM provider you choose.
@@ -412,9 +414,9 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
 | [Architecture](docs/architecture.md) | Type-based renderer design (v1.15.0) |
 | [Tool Calling](docs/tool-calling.md) | Native vs prompt-based tool calling |
-| [Release Notes v1.16.1](docs/archive/release-notes/RELEASE-NOTES-v1.16.1.md) | FileTree widget, CommandFactory server pattern, unified session restore |
-| [Release Notes v1.16.0](docs/archive/release-notes/RELEASE-NOTES-v1.16.0.md) | Profile-driven tool loop, multi-tool support, agent UI, benchmark v2 |
-| [Release Notes v1.15.6](docs/archive/release-notes/RELEASE-NOTES-v1.15.6.md) | Native OpenAI provider, model profiles, benchmark analysis |
+| [Latest Release Notes](docs/release-notes-v1.19.4.md) | Current release — see `docs/release-notes-v1.19.*.md` for the full v1.19.x series |
+| [CHANGELOG](CHANGELOG.md) | Full version history |
+| [Archived Release Notes](docs/archive/release-notes) | Pre-v1.19 release notes |
 
 ## Project Structure
 
@@ -438,7 +440,6 @@ ppxai/
 │   │   ├── types.py            # Message, Event, UsageStats types
 │   │   ├── providers/          # AI provider implementations
 │   │   │   ├── base.py         # BaseProvider abstract class
-│   │   │   ├── perplexity.py   # Perplexity AI (native search)
 │   │   │   ├── anthropic.py    # AnthropicProvider (Claude, `messages` wire)
 │   │   │   ├── gemini.py       # GeminiProvider (native Google Search Grounding)
 │   │   │   ├── openai_compat.py# OpenAI-compatible fallback (OpenRouter, local)
@@ -495,9 +496,8 @@ ppxai/
 │   ├── ppxai.png               # ppxai icon (CLI)
 │   ├── ppxaide-nobg.png        # ppxaide icon (TUI)
 │   └── [.ico|.icns files]      # Platform-specific icons
-├── tests/                      # 4,796+ tests
+├── tests/                      # see CLAUDE.md for the current test count
 │   ├── test_tui.py             # Textual TUI tests (270+ tests)
-│   ├── test_engine.py          # Engine layer tests
 │   ├── test_commands.py        # Command tests
 │   └── test_*.py               # Provider, tool, config tests
 ├── docs/                       # Documentation
@@ -506,7 +506,7 @@ ppxai/
 │   ├── linux-terminal-setup.md # Ghostty/Kitty setup for Ctrl+Enter
 │   ├── provider-setup.md       # Multi-provider configuration
 │   ├── architecture.md         # Type-based renderer design
-│   └── RELEASE-NOTES-*.md      # Version release notes
+│   └── release-notes-v*.md     # Version release notes
 ├── benchmarks/                 # LLM performance benchmarks
 └── deploy/                     # Deployment configs (deploy/k8s, deploy/helm, deploy/compose)
 ```

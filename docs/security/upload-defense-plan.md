@@ -1,6 +1,6 @@
 # ppxai / Coder Upload Defense-in-Depth Plan (DRAFT)
 
-> Status: DRAFT for the sister-session (upload feature implementation). Not committed.
+> Status: DRAFT for the sister-session (upload feature implementation). Committed to the repo (`d73ebdd3`) as a reference doc.
 > Author: research session, 2026-06-08. Target: ppxai-server `/files/upload` + coder per-user pods.
 > Companion to the codebase upload-path map (see §7 integration points).
 
@@ -177,9 +177,10 @@ Controls:
 ## 7. ppxai integration points (from codebase map)
 
 - **Primary hook — workspace population:** `ppxai/server/routes/files.py` `upload_file()`
-  (~L921–1045). Streams 1 MB chunks, **writes directly to resolved workspace path** (~L1015–1033),
-  bypassing SessionFileStore. Insert L0+L1 here: buffer/temp-file → scan → atomic-rename on clean.
-  Accepts *any* content-type today (100 MB cap) — add the type allowlist here.
+  (line numbers drift; find it by function name — was `~L921–1045`, now starts at `:1022`). Streams
+  1 MB chunks, **writes directly to resolved workspace path**, bypassing SessionFileStore. Insert
+  L0+L1 here: buffer/temp-file → scan → atomic-rename on clean. Accepts *any* content-type today
+  (100 MB cap) — add the type allowlist here.
 - **Secondary hook — chat attachments:** `routes/chat.py` base64 decode (~L128) →
   `engine/file_preprocessing.py:preprocess_file()` → `engine/session_store.py:SessionFileStore.save()`
   (single `write_bytes`, ~L215). One chokepoint for this path.

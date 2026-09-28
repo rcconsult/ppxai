@@ -91,7 +91,7 @@ File editing tools are included when you enable AI tools:
 /tools enable
 ```
 
-> **Tip:** Use Tab for autocomplete: `/tools <tab>` shows all subcommands. `/tools list` shows every tool with its description (there is no per-tool `/tools help <name>`).
+> **Tip:** Use Tab for autocomplete: `/tools <tab>` shows all subcommands. `/tools list` shows every tool with its description. `/tools help <tool>` shows a single tool's description.
 
 **VSCode:**
 Enable tools in settings or via the tools toggle button in chat panel.
@@ -708,7 +708,7 @@ Ready to try file editing tools? Here's your checklist:
 - [ ] Review the consent prompt
 - [ ] Check the edit with `git diff`
 - [ ] Try a multi-file refactoring with "always" mode
-- [ ] Read [Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) for technical details
+- [ ] Read [Architecture](architecture.md) for current technical details ([Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) is the historical v1.11 design)
 
 ---
 

@@ -5,7 +5,7 @@
 **Related:**
 - [ADR 0003](0003-agent-platform-architecture.md) — Agent platform architecture; Stage 2's `runs/<run_id>/agent-<n>/` namespace IS this pattern, scoped to agent runs only
 - [`docs/research/2026-05-10-openshell-coordination-patterns.md`](../research/2026-05-10-openshell-coordination-patterns.md) — prior art (NVIDIA OpenShell `runs/<run_id>/` namespace)
-- [`../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md) — caveat C5 (agent-served services routing) builds on this pattern
+- [ppxai-sre `docs/PPXAI-INTEGRATION-V1.19.md`](https://github.com/rcconsult/ppxai-sre/blob/main/docs/PPXAI-INTEGRATION-V1.19.md) — caveat C5 (agent-served services routing) builds on this pattern (cross-repo link, unresolvable without a checkout or access to that private repo; branch name unverified)
 - `ppxai/server/routes/preview.py` — v1.18.5 preview-backend log file is an `events.jsonl`-shaped artifact today
 - `ppxai/engine/session.py` — session JSON files are `state.json`-shaped artifacts today
 
@@ -19,7 +19,10 @@ state for inspection:
 - `~/.ppxai/logs/preview-backend-<pid>.log` (v1.18.5) — captured
   subprocess output from `/preview --serve`
 - `~/.ppxai/usage/usage.json` — provider call counters and costs
-- `~/.ppxai/checkpoints/<id>/` — git checkpoints for `/agent` rollback
+- `~/.ppxai/sessions/checkpoints/<session_id>/` — git checkpoints for
+  `/agent` rollback (dated factual correction, 2026-09-28: `checkpoint.py`
+  has rooted this under `SESSIONS_DIR / "checkpoints"` since `f3e67b5d`,
+  2025-12-27, before this ADR was written)
 
 The ADR 0003 Stage 2 plan adds another:
 

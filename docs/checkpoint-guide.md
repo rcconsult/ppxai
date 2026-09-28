@@ -11,6 +11,11 @@ is no `Confirm undo? (y/n)` prompt, the status line is a `↶` glyph
 rather than `Checkpoints: <backend>` text, and the two-commit mechanism
 (`ppxai checkpoint:` vs `ppxai agent:`) was undocumented.
 
+**Updated 2026-09-28 (not a full re-verify):** `/checkpoint clear` now
+asks for confirmation first in all four clients (landed `beffa197`,
+2026-09-21, after the last full verification above) — see the `clear`
+section below.
+
 ## Overview
 
 The checkpoint system provides **atomic multi-file rollback** for agent mode tasks. Works with both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI). Before executing autonomous tasks, a checkpoint is created that lets you undo all changes with a single `/undo` command.
@@ -244,7 +249,7 @@ The `/checkpoint` command provides checkpoint status, listing, and configuration
 | `status` (default) | Show current checkpoint status |
 | `list` | List recent checkpoints |
 | `backend <mode>` | Set checkpoint backend for this session |
-| `clear` | Clear old file-based snapshots |
+| `clear [--yes\|--no]` | Clear old file-based snapshots — asks for confirmation first; `--yes`/`--no` skip the prompt for scripted use |
 | `info <id>` | Show details about a specific checkpoint |
 | `undo` | Alias for `/undo` command |
 
@@ -326,13 +331,17 @@ Change checkpoint backend for the current session:
 
 Delete **all** file-based checkpoint snapshots (not a "keep recent N" prune —
 it calls `cleanup_old_checkpoints(keep_last=0)`, which removes every
-snapshot):
+snapshot). Since 2026-09-21, this asks for confirmation first in all four
+clients (a `prompt_quick_pick` with Cancel as the first row, so a stray
+Enter never deletes anything):
 
 ```
-/checkpoint clear
+/checkpoint clear            # asks; deletes nothing until confirmed
+/checkpoint clear --yes      # delete, no prompt (scripted use)
+/checkpoint clear --no       # say so, delete nothing
 ```
 
-**Output:**
+**Output (after confirming):**
 ```
 🗑️  Cleared 8 old checkpoint snapshots
 ```
@@ -387,8 +396,8 @@ This is equivalent to running `/undo` directly.
 ### Example 1: Git Project with Undo
 
 ```
-# Status shows git checkpoints
-[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: git]
+# Status shows a checkpoint exists (the ↶ glyph, not "Checkpoints: git" text)
+[Gemini | gemini-3.8-flash | Tools: ON | Agent: ON | ↶]
 
 # Run agent task
 You: /auto add user registration endpoint
@@ -417,8 +426,8 @@ You: /undo
 ### Example 2: Non-Git Project
 
 ```
-# No git repo, file backend active
-[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: file]
+# No git repo, file backend active (the ↶ glyph, not "Checkpoints: file" text)
+[Gemini | gemini-3.8-flash | Tools: ON | Agent: ON | ↶]
 
 # Run agent task
 You: /auto refactor config.py to use environment variables
@@ -446,8 +455,8 @@ You: /undo
 ### Example 3: Disabled Checkpoints
 
 ```
-# Checkpoints explicitly disabled
-[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: OFF]
+# Checkpoints explicitly disabled — there is no "OFF" indicator; absence of ↶ is the only signal
+[Gemini | gemini-3.8-flash | Tools: ON | Agent: ON]
 
 # Warning shown when running agent
 You: /auto update dependencies
@@ -781,7 +790,7 @@ The checkpoint system works identically in VSCode extension:
 - Same backend selection logic
 - Same checkpoint creation/restore behavior
 
-See [docs/VSCODE-CHECKPOINT-UI-SPEC.md](archive/v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC.md) for implementation details.
+See [VSCode Checkpoint UI Spec](archive/v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC.md) (historical, v1.15.2) for implementation details.
 
 ---
 
@@ -845,5 +854,5 @@ A: Use `/checkpoint list` to see the last 10 checkpoints, or `/checkpoint info <
 ## See Also
 
 - [Session Agent Guide](session-agent-guide.md) - Autonomous agent mode documentation
-- [VSCode Checkpoint UI Spec](archive/v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC.md) - VSCode extension implementation
+- [VSCode Checkpoint UI Spec](archive/v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC.md) - (historical, v1.15.2) VSCode extension implementation
 - [Release Notes v1.12.0](archive/release-notes/RELEASE-NOTES-v1.12.0.md) - Full feature list and changelog

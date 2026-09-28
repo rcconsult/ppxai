@@ -44,8 +44,8 @@ async def switch_provider(new_provider: str, new_model: str):
     with status_bar.transaction() as txn:
         txn.update("provider", new_provider)
         txn.update("model", new_model)
-        if new_provider == "perplexity":
-            txn.add("web", "Web", "ON")
+        if new_provider == "gemini":
+            txn.add("web", "Web", "ON")  # native grounding
             txn.remove("thinking")
         success, error = txn.commit()
         if not success:

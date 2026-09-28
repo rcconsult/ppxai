@@ -14,7 +14,8 @@ grep -n '"source"' ppxai/engine/tools/manager.py
 ```
 
 The first returns nothing. The second shows
-`tool_manager.py:193` hardcodes `"source": "engine"` with no
+`ppxai/engine/tools/manager.py` hardcodes `"source": "engine"` (line
+number drifts — cite by the grep, not a line number) with no
 extension point for non-builtin tool sources.
 
 ## Why this trips people up
@@ -26,11 +27,11 @@ Three filename-level signals make ppxai look MCP-enabled:
    `ModuleNotFoundError` in a fresh sync. The extra is documented
    intent, not shipped functionality.
 
-2. **`.mcp.json` at repo root** is now an empty `{"mcpServers": {}}`.
-   It previously listed `code-review-graph` as if it were a wired MCP
-   server config; either way it is not evidence of integration —
-   **zero Python code in `ppxai/` loads this file**, verified by grep
-   across the whole tree.
+2. **`.mcp.json` at repo root**, when it exists, is a per-host file
+   (`.gitignore:122`) — it has never been tracked, so whether it holds
+   `{"mcpServers": {}}` or something else varies by host. On any host,
+   it is not evidence of integration — **zero Python code in `ppxai/`
+   loads this file**, verified by grep across the whole tree.
 
 3. **`tests/test_mcp.py`** exists. It's a *diagnostic script* — "can
    my host run MCP?" — not an integration test against ppxai's MCP
@@ -43,7 +44,7 @@ build downstream code against a feature that isn't there.
 
 - The old `tool_manager.py` MCP loader from pre-v1.11.7 was **deleted**
   in v1.11.7. There has been no in-tree MCP code since.
-- `ppxai/engine/tools/manager.py:193` hardcodes `"source": "engine"`
+- `ppxai/engine/tools/manager.py` (`grep -n '"source"' ppxai/engine/tools/manager.py`) hardcodes `"source": "engine"`
   with no extension point. External tool sources (MCP servers,
   ppxai-sre's `tools_adapter.py` workaround, etc.) have no public
   way to surface tools through the engine today.

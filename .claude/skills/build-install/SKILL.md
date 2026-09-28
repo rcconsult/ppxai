@@ -16,7 +16,7 @@ uploads it.
 ### All platforms
 - Working tree at the version you want to ship — version files already
   bumped (see `tests/test_version_consistency.py` for the SoT list).
-- `uv` resolvable per CLAUDE.md "uv Resolution" (system or `.uv/uv`).
+- `uv` resolvable per `docs/dev-setup.md` "uv Resolution" (system or `.uv/uv`).
 - **Build venv MUST have the `[data]` extras.** The office-preview pipeline
   needs `pypdfium2` (PDF→PNG) + `python-pptx`/`openpyxl`, which live in the
   `[data]` optional extra. Step 1 runs `uv sync --all-extras` to guarantee it.

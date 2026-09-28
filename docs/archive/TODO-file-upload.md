@@ -1697,7 +1697,7 @@ Tracing the request:
 1. Previous turn ended with an `assistant` message in session history
 2. VSCode sent `POST /chat` carrying a "user" turn whose body was
    ONLY a context block: `"[Context: Working in VSCode workspace
-   \"ppxai\" at /Users/rado/git/utils/ppxai]"` — no actual user
+   \"ppxai\" at /path/to/ppxai]"` — no actual user
    prompt following
 3. Perplexity saw `assistant → context (treated as user) → assistant`
    but somewhere in the sequence the pattern broke its strict

@@ -86,7 +86,7 @@ the connective narrative.
 
 3. **`/ls` and `/tree` web/VSCode renderer dispatch** (`462e6739`).
    Surfaced from a v1.18.3 user report: typing `/ls` in the web UI
-   returned only `"44 items in /Users/rado/git/exps"` — the
+   returned only `"44 items in /path/to/exps"` — the
    `result.message` — instead of the actual rows. Two related root
    causes: (a) Web/VSCode renderers dispatch on the wire `result.type`
    STRING, not Python class hierarchy. `DirectoryListingResult` is a
@@ -137,7 +137,7 @@ the connective narrative.
 5. **`list_directory` tool echoes the resolved path in its header**
    (`ee90bff4`). Reported 2026-05-04 from the web UI: after
    `/cd ppxai_demo`, asking the model "ls" produced
-   `"/Users/rado/git/exps contains the files and folders listed
+   `"/path/to/exps contains the files and folders listed
    above"` — the PARENT of the actual working dir. Root cause: the
    tool returned bare item names (e.g. `DIR foo\nFILE bar`) with no
    path header. The model called the tool with `path="."` (default)

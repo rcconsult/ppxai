@@ -71,11 +71,15 @@ Three `.desktop` files are installed to `~/.local/share/applications/`:
 
 | Application | Name | Type | Description | Terminal |
 |------------|------|------|-------------|----------|
-| **ppxai** | ppxai | Terminal (Rich CLI) | Legacy TUI with Rich markdown | Default terminal |
-| **ppxaide** | ppxaide | Terminal (Textual TUI) | Modern TUI with multi-line input, 17+ themes | Ghostty (Ctrl+Enter) |
+| **ppxai** | ppxai | Terminal (Rich CLI) | Legacy TUI with Rich markdown | Detected terminal (see note) |
+| **ppxaide** | ppxaide | Terminal (Textual TUI) | Modern TUI with multi-line input, 17+ themes | Detected terminal (see note) |
 | **ppxai Desktop** | ppxai-desktop | GUI (Web) | Browser-based interface with full features | N/A (browser) |
 
-**Note:** ppxaide is configured to use Ghostty terminal to ensure Ctrl+Enter works. The other apps use your default terminal/browser.
+**Note:** ppxai and ppxaide share the same terminal-detection order (ghostty,
+then gnome-terminal, konsole, xfce4-terminal, alacritty, kitty, else your
+default terminal) — Ghostty is preferred for Ctrl+Enter support, but it's not
+ppxaide-exclusive: whichever of the two you launch opens in the same detected
+terminal. ppxai-desktop always opens in your default browser.
 
 ### Icons
 
@@ -105,13 +109,16 @@ Once installed, you can:
 
 3. **One-Click Execution**
    - Click the icon in your application menu to launch
-   - ppxaide automatically launches in Ghostty (for Ctrl+Enter support)
-   - ppxai and ppxai-desktop use your default terminal/browser
+   - ppxai and ppxaide share one terminal-detection order (ghostty, then
+     gnome-terminal, konsole, xfce4-terminal, alacritty, kitty, else your
+     default terminal) — Ghostty is preferred, not ppxaide-exclusive, so if
+     Ghostty is installed both launch in it; ppxai-desktop opens your
+     default browser
 
 ## Requirements
 
 - ppxai binaries must be installed in `~/.local/bin/`
-- Run the build/install process first: `/build` or `scripts/install-local.sh`
+- Run the build/install process first: `/build`, the `build-install` skill, or `install.sh --with-desktop`
 
 ## Desktop File Locations
 

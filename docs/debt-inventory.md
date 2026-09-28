@@ -53,8 +53,10 @@ quoting them** — this table is a map, not a source.
 | **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
 | **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
 | **3** | k8s session-manager security tests | trigger-deferred; quick pass done, full suite postponed |
+| **36** | per-session sub-agent config + `/subagent` command, persisted in checkpoint | deferred — natural fit alongside session/spawn machinery |
+| **37** | agent-platform (v1.19.0) watchlist | low-severity, correctness-neutral items from Inc 5-7 reviews; none block the MVP |
 | **21** | `chat_with_tools` decomposition (673 LoC, fan-out 169) | v1.19.x+ |
-| **22** | `PpxaiApp` (web/app.js) decomposition (3,749 LoC) | trigger-deferred |
+| **22** | `PpxaiApp` (web/app.js) decomposition (4,406 LoC, re-measure — drifts) | trigger-deferred |
 | **29** | `engine.completion` imports `commands.factory` (layer inversion) | **the import is GONE (ADR 0007 step 4, 2026-09-21)** — see the note; what is left is optional and cosmetic |
 | **35** | pluggable persistence channel abstraction | ~2–3 d, wants its own ADR |
 | **38** | model-catalog watch list | recurring sweep; last one found 4 dead NVIDIA ids shipping |
@@ -68,9 +70,10 @@ quoting them** — this table is a map, not a source.
 | **47** | VSCode `/task` lacks the web split-pane | deliberate T8a scope |
 | **75** | second-level "argument kinds" schema for command completion | debt item, not now — owner decision 2026-09-21 (ADR 0007 open decision #3) |
 | **76** | fold chat-shaped-ness into the command roster (`STREAMING_COMMANDS`) | debt item for now — owner decision 2026-09-21 (ADR 0007 open decision #4) |
-| **77** | dead client code left after the ADR 0007 step-5 VSCode migration | ~45min, verified by grep — no owner decision needed, extended 2026-09-21 with 4 more dead `httpClient.ts` methods |
+| **77** | dead client code left after the ADR 0007 step-5 VSCode migration — Rich half (`display_tool_help`) done, 8 `httpClient.ts` methods remain | ~15min, verified by grep — no owner decision needed |
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
 | **83** | the SERIAL test suite is ~2x slower per test than in July, cause unfound | owner decision 2026-09-27: record, not fix; the parallel default (~3 min) hides it |
+| **84** | the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell | owner decision 2026-09-28: record as debt, don't build it now |
 
 ---
 
@@ -438,10 +441,13 @@ captured the same shape).
 
 ### Item 22 — `PpxaiApp` (web/app.js) further decomposition
 
-**Affected file:** `ppxai/web/app.js` — `PpxaiApp` class, 3,749 LoC
-(down from 3,679 before the v1.18.7 `_previewAttachment` extract —
-extract added 71 lines of method boilerplate; the dispatcher itself
-shrank 8x).
+**Affected file:** `ppxai/web/app.js` — `PpxaiApp` class. The file was
+3,749 LoC when this item was filed (down from 3,679 before the v1.18.7
+`_previewAttachment` extract — extract added 71 lines of method
+boilerplate; the dispatcher itself shrank 8x); it has grown since
+(4,406 LoC measured 2026-09-28, `wc -l ppxai/web/app.js`) and drifts
+with ordinary feature work, so re-measure rather than trusting either
+number.
 
 **What's wrong:** still the single biggest god class in the codebase
 even after the v1.18.7 split. Other long methods inside it (e.g.
@@ -754,14 +760,18 @@ date bumped to 2026-07-11; no new table entries needed.
    Superseded by Item 55**, which carries the verified pricing/benchmark/
    hazard detail and the fix order.
 
-2. **Perplexity Agent API** — 🔴 **ESCALATED 2026-08-30: the Sonar
+2. **Perplexity Agent API** — **resolved by ADR 0015 (2026-09-27): the
+   Perplexity chat provider was removed**, so the migration and "new
+   models vs. second provider" question below are moot; see the "Probe
+   deleted" note near the end of this watch item. Left below as history.
+   🔴 **ESCALATED 2026-08-30: the Sonar
    chat-completions endpoint has a RETIREMENT DATE — 2026-09-27** (forum
    announcement "Sonar is moving to the Agent API",
    community.perplexity.ai/t/5802, + changelog; endpoint now labelled
    *legacy* with a migration guide). It is the only wire
    `PerplexityProvider` — and `web_premium.py`'s separate web_search
    client — speak. Migration is planned as
-   [plan-adr-0012-implementation.md](plan-adr-0012-implementation.md)
+   [plan-adr-0012-implementation.md](archive/plan-adr-0012-implementation.md)
    W0–W3, target complete **2026-09-20** (forum precedent: Gemini
    endpoints have died early). Prior state (TRIGGER FIRED 2026-08-13):
    docs stabilized, "Sonar Chat Completions is now Agent API" (changelog,
@@ -800,7 +810,7 @@ date bumped to 2026-07-11; no new table entries needed.
 
    So this is a **routing** problem, not a protocol problem — per-model
    `api_path`, which is exactly what `ToolCallingProfile` already carries.
-   Tracked as I4b in [plan-per-model-capabilities.md](plan-per-model-capabilities.md).
+   Tracked as I4b in [plan-per-model-capabilities.md](archive/plan-per-model-capabilities.md).
    Note `anthropic/*` **requires `max_output_tokens`** (400 without) — more
    table data, not a code branch.
 
@@ -1711,6 +1721,14 @@ shipped already.
 
 ---
 
+## Open (continued)
+
+Items 36, 37, 75-79, 83 and 84 below are still open — they were filed
+after Item 14's "moved out of scope" note above and landed under this
+heading by mistake. They belong under "## Open" and have rows in "Open
+at a glance"; this sub-heading marks that they are not "recently moved
+out of debt scope" items.
+
 ### Item 36 — per-session sub-agent config + `/subagent` command, persisted in checkpoint [agent platform]
 
 **Context:** v1.19.0 Inc 2 fixed sub-agent provider/model resolution to
@@ -2211,7 +2229,7 @@ genuine open set. (Lettered q–t; upstream owns p = external review round.)**
   `/status,/sessions,/state,/v1/agent/runs` now **times out** from a neighbour pod;
   a real pod still reaches `Ready` (probe path intact, 0 restarts); ingress-nginx →
   pod still HTTP 200 (north-south intact). Live site config
-  `deploy/microk8s/networkpolicy.yaml` + a generic opt-in
+  `deploy/examples/microk8s/networkpolicy.yaml` + a generic opt-in
   `networkPolicy.ingressIsolation` in the Helm chart (`ingressNamespace` +
   `probeSourceCIDRs`; `fail`s if enabled with empty CIDRs). **STILL DEFERRED
   (defense-in-depth):** the app-layer per-session `PPXAI_API_TOKEN` between ingress
@@ -2439,10 +2457,12 @@ exemption.
   reload`/`/context show` VSCode intercepts that step 5 replaced with
   factory routing (`POST /command/<name>`) — the intercepts calling them
   were deleted, the client methods were not.
-- `ppxai/rich/ui.py::display_tool_help` has no production caller.
-  `grep -rn "display_tool_help" ppxai --include="*.py"` matches only its
-  own `def` line; every other hit is in `tests/test_ui.py` (7 test
-  methods exercising it directly).
+- `ppxai/rich/ui.py::display_tool_help` had no production caller.
+  **Done, 2026-09-27 (commit `1a54fe87`):** the function and its
+  `tests/test_ui.py::TestToolHelp` class were deleted along with several
+  other dead-code finds from the same graphify pass; `tests/test_ui.py`
+  no longer exists and `grep -rn display_tool_help ppxai tests` matches
+  nothing.
 
 **Update (2026-09-21, commit `beffa197`).** Four more `httpClient.ts`
 methods went dead the same way, this time from the `/checkpoint`
@@ -2465,10 +2485,9 @@ whenever someone is already editing nearby (same shape as the
 `display_file_editing_help` deletion in the step-5 follow-ups above,
 which removed a sibling dead function the same day this was found).
 
-**Effort:** ~45min — eight method deletions in `httpClient.ts` (four
+**Effort:** ~15min — eight method deletions in `httpClient.ts` (four
 original plus the four `/checkpoint` wrappers above, plus their TS type
-declarations if any), one function deletion in `ui.py` plus its
-`tests/test_ui.py::TestToolHelp` class.
+declarations if any). The `ui.py` half is done — see the update above.
 
 ---
 
@@ -2612,9 +2631,11 @@ terminal has been Unix-only since v1.17.1 and nobody has asked for it
 until now.
 ## Closed (recent)
 
-One-liners only — full bodies + evidence trails in
+One-liners only. Most have full bodies + evidence trails archived in
 [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md);
-older per-version detail in the v1.18.2/v1.18.3 snapshots.
+older per-version detail in the v1.18.2/v1.18.3 snapshots. **Exception:**
+Items 56-60 were never archived — their bodies were deleted on close and
+the one-liner below is all that remains of each.
 
 - **Item 80** — a non-repeating multi-tool cycle trips neither guard — closed 2026-09-26 by making its outcome better and its shape visible, not by detecting it (owner chose options B+C+logging). The iteration cap used to end every such turn on a canned "limit reached" line. Now one tools-withdrawn answer pass runs after the last tool iteration (`ToolGuardReason.ITERATION_CAP`, additive; `max_iterations_reached` still set), a single converge notice goes out at ~70% of the cap, and the cap, the notice, both guards and the zombie breaker log `ToolManager.describe_call_pattern()` (shape, repeating cycle, per-tool distinct-args counts, tail). A detector that refuses the alternating shape is still declined, because exploration looks the same. The logged pattern is the evidence for designing one if an incident recurs. Fenced by `tests/test_tool_loop_guard.py::TestIterationCap` / `TestCallPattern` and the reason-vocabulary fence. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 81** — test-order provider-class leak — closed 2026-09-26. `test_custom_endpoint_integration.py::custom_engine` purged `ppxai.engine.providers*` from `sys.modules` without restoring them, even on its skip path, so later modules compared classes from two imports. The purge was obsolete, because `tls_verify()` resolves at client build, so it is deleted. Fenced by `tests/test_no_sys_modules_purge.py` (AST check against computed-name `sys.modules` deletes in-process, mutation-verified). Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).

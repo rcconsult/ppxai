@@ -52,10 +52,15 @@ This error occurs when Harmony control tokens aren't properly parsed. Since GPT-
 
 ppxai supports two distinct approaches:
 
-| Mode | Config Flag | vLLM Flags Required | Reliability |
+| Mode | Config (model's `facts` block) | vLLM Flags Required | Reliability |
 |------|-------------|---------------------|-------------|
-| **Prompt-Based** | `native_tool_calling: false` | None | ✅ High |
-| **Native** | `native_tool_calling: true` | `--enable-auto-tool-choice` | ⚠️ May hit HarmonyError |
+| **Prompt-Based** | `"tool_mode": "prompt_based"` | None | ✅ High |
+| **Native** | `"tool_mode": "native"` | `--enable-auto-tool-choice` | ⚠️ May hit HarmonyError |
+
+> `native_tool_calling` (as a provider `capabilities` flag) is a **dead
+> key** since ADR 0012 — parsed and ignored. The live control is
+> `providers.<p>.models.<m>.facts.tool_mode`; see
+> [docs/tool-calling.md](tool-calling.md#configuration-reference).
 
 ### Recommended: Prompt-Based Tool Calling
 
@@ -69,13 +74,18 @@ ppxai supports two distinct approaches:
       "base_url": "http://your-vllm-endpoint:8000/v1",
       "api_key_env": "VLLM_API_KEY",
       "default_model": "openai/gpt-oss-120b",
-      "capabilities": {
-        "native_tool_calling": false
+      "models": {
+        "openai/gpt-oss-120b": {
+          "facts": { "tool_mode": "prompt_based" }
+        }
       }
     }
   }
 }
 ```
+
+(This is also the shipped default for `openai/gpt-oss*` — see the caveat
+under "Recommended Configuration" below.)
 
 ---
 
@@ -83,7 +93,7 @@ ppxai supports two distinct approaches:
 
 ### 1. System Prompt Injection
 
-When `native_tool_calling: false`, ppxai injects tool definitions into the system prompt:
+When a model's `facts.tool_mode` is `"prompt_based"`, ppxai injects tool definitions into the system prompt:
 
 ```python
 # From ppxai/engine/tools/manager.py — see the `get_tools_prompt` method
@@ -435,7 +445,7 @@ assert 'filepath' in result['arguments']  # Normalized from 'file'
 
 ## Summary
 
-1. **Use prompt-based mode** (`native_tool_calling: false`) to avoid HarmonyError
+1. **Use prompt-based mode** (`facts.tool_mode: "prompt_based"`) to avoid HarmonyError
 2. **Inject tool descriptions** into system prompt with JSON format instructions
 3. **Parse responses** using multiple strategies (JSON, code blocks, brace matching)
 4. **Handle GPT-OSS quirks**: nested structures, parameter name variations
@@ -453,8 +463,8 @@ Given that Harmony format is mandatory for GPT-OSS, here are the implications:
 
 | Approach | Status | Notes |
 |----------|--------|-------|
-| **Native** (`native_tool_calling: true`) | ✅ Works | Requires vLLM with Harmony fix (PR #30205) |
-| **Prompt-based** (`native_tool_calling: false`) | ✅ Works | Fallback for older vLLM versions |
+| **Native** (`facts.tool_mode: "native"`) | ✅ Works | Requires vLLM with Harmony fix (PR #30205) |
+| **Prompt-based** (`facts.tool_mode: "prompt_based"`) | ✅ Works | Fallback for older vLLM versions; also the shipped default for `openai/gpt-oss*` |
 
 ### vLLM Harmony Fix — read the fine print
 
@@ -477,10 +487,11 @@ which overclaims on both counts.
 > ⚠️ **ppxai overrides this today, whatever your vLLM version.** The
 > `openai/gpt-oss*` facts row pins `tool_mode='prompt_based'`
 > (`ppxai/engine/model_facts.py:944`), and since ADR 0012 that row answers
-> the whole question at dispatch (`ppxai/engine/chat.py:646`,
+> the whole question at dispatch (`ppxai/engine/chat.py`, the `use_native_tools = ...` line,
 > `use_native_tools = facts.tool_mode != "prompt_based"`) — so setting
-> `native_tool_calling: true` for a gpt-oss model is accepted by config and
-> then ignored. (This used to be a `model_profiles.py` profile; that module
+> `facts.tool_mode: "native"` (or the older, now-dead
+> `capabilities.native_tool_calling: true`) for a gpt-oss model is accepted
+> by config and then ignored. (This used to be a `model_profiles.py` profile; that module
 > was deleted in Item 65 and the pin moved to the facts table with it.)
 > Treat the block below as what to use *once that pin is lifted*, not as a
 > working configuration; the prompt-based block underneath is what actually
@@ -497,8 +508,10 @@ a fix for #23567's HarmonyError:
     "vllm-gpt-oss": {
       "base_url": "http://your-vllm:8000/v1",
       "default_model": "openai/gpt-oss-120b",
-      "capabilities": {
-        "native_tool_calling": true
+      "models": {
+        "openai/gpt-oss-120b": {
+          "facts": { "tool_mode": "native" }
+        }
       }
     }
   }
@@ -513,8 +526,10 @@ a fix for #23567's HarmonyError:
     "vllm-gpt-oss": {
       "base_url": "http://your-vllm:8000/v1",
       "default_model": "openai/gpt-oss-120b",
-      "capabilities": {
-        "native_tool_calling": false
+      "models": {
+        "openai/gpt-oss-120b": {
+          "facts": { "tool_mode": "prompt_based" }
+        }
       }
     }
   }

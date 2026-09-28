@@ -30,10 +30,18 @@ Please include:
 
 ### Scope
 
-Please note that ppxai is a terminal UI application that:
+Please note that ppxai is a terminal UI application, plus an optional local HTTP
+server (`ppxai-server`/`ppxai-desktop`, used by VSCode/Web/Desktop) that:
 - Stores session data locally in `~/.ppxai/`
-- Communicates only with configured AI provider APIs
+- Communicates with configured AI provider APIs, and outbound web-search/grounding
+  backends when enabled (`ppxai/engine/search/`)
 - Requires users to provide their own API keys via `.env` file
+
+**Local server surface:** the HTTP server binds to loopback by default and can be
+protected with `PPXAI_API_TOKEN` (bearer auth) and `PPXAI_ALLOWED_ORIGINS` (CORS/Host
+allowlist). Websocket connections (`/ws/terminal`) get the same Host/Origin/auth
+checks as HTTP requests (the fix is in v1.19.4, not yet released; releases
+up to v1.19.3 do not have it — see CHANGELOG.md `[1.19.4]`).
 
 **Security considerations:**
 - Keep your `.env` file and API keys secure

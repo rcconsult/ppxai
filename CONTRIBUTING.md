@@ -27,7 +27,7 @@ Thank you for your interest in contributing to ppxai! We welcome contributions f
 4. Set up configuration:
    ```bash
    cp .env.example .env
-   # Edit .env and add your API keys (e.g., PERPLEXITY_API_KEY)
+   # Edit .env and add your API keys (e.g., GEMINI_API_KEY)
    ```
 5. Run the application:
    ```bash
@@ -53,7 +53,7 @@ Thank you for your interest in contributing to ppxai! We welcome contributions f
 4. Set up configuration:
    ```bash
    cp .env.example .env
-   # Edit .env and add your API keys (e.g., PERPLEXITY_API_KEY)
+   # Edit .env and add your API keys (e.g., GEMINI_API_KEY)
    ```
 5. Run the application:
    ```bash

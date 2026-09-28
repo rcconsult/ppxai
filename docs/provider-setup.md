@@ -102,34 +102,29 @@ MODEL_PROVIDER=gemini
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-3.5-flash",
-      "coding_model": "gemini-3.5-flash",
+      "default_model": "gemini-3.8-flash",
+      "coding_model": "gemini-3.8-flash",
       "options": {
         "enable_grounding": true
       },
       "models": {
+        "gemini-3.8-flash": {
+          "name": "Gemini 3.8 Flash",
+          "description": "Newest GA flash model, best price/performance (default since 2026-09-27)"
+        },
         "gemini-3.5-flash": {
           "name": "Gemini 3.5 Flash",
-          "description": "Fast model with best price/performance"
+          "description": "Previous default flash model"
         },
         "gemini-3.1-flash-lite": {
           "name": "Gemini 3.1 Flash Lite",
           "description": "Cost-efficient for high-volume tasks"
-        },
-        "gemini-1.5-pro": {
-          "name": "Gemini 1.5 Pro",
-          "description": "Best for complex reasoning, 2M context"
-        },
-        "gemini-1.5-flash": {
-          "name": "Gemini 1.5 Flash",
-          "description": "Fast and versatile, 1M context"
         }
       },
       "pricing": {
-        "gemini-3.5-flash": {"input": 0.5, "output": 3},
-        "gemini-3.1-flash-lite": {"input": 0.1, "output": 0.4},
-        "gemini-1.5-pro": {"input": 1.25, "output": 5.00},
-        "gemini-1.5-flash": {"input": 0.075, "output": 0.30}
+        "gemini-3.8-flash": {"input": 0.75, "output": 3.75},
+        "gemini-3.5-flash": {"input": 1.5, "output": 9},
+        "gemini-3.1-flash-lite": {"input": 0.25, "output": 1.5}
       },
       "capabilities": {
         "web_search": true,
@@ -154,61 +149,13 @@ MODEL_PROVIDER=gemini
 
 ## Perplexity AI
 
-Perplexity is the default provider and has built-in web search capabilities.
-
-### `.env`
-```bash
-# Perplexity API Key
-PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# Optional: Perplexity is default, but you can be explicit
-MODEL_PROVIDER=perplexity
-```
-
-### `ppxai-config.json`
-```json
-{
-  "version": "1.0",
-  "default_provider": "perplexity",
-  "providers": {
-    "perplexity": {
-      "name": "Perplexity AI",
-      "base_url": "https://api.perplexity.ai",
-      "api_key_env": "PERPLEXITY_API_KEY",
-      "default_model": "sonar",
-      "coding_model": "sonar-pro",
-      "models": {
-        "sonar": {
-          "name": "Sonar",
-          "description": "Fast search model, low cost ($0.20/M tokens)"
-        },
-        "sonar-pro": {
-          "name": "Sonar Pro",
-          "description": "Advanced search with citations (upgrade for complex queries)"
-        },
-        "sonar-reasoning-pro": {
-          "name": "Sonar Reasoning Pro",
-          "description": "Extended thinking for complex queries"
-        },
-        "sonar-deep-research": {
-          "name": "Sonar Deep Research",
-          "description": "Multi-step research for comprehensive answers"
-        }
-      },
-      "pricing": {
-        "sonar": {"input": 1.00, "output": 1.00},
-        "sonar-pro": {"input": 3.00, "output": 15.00},
-        "sonar-reasoning-pro": {"input": 2.00, "output": 8.00},
-        "sonar-deep-research": {"input": 2.00, "output": 8.00}
-      },
-      "capabilities": {
-        "web_search": true,
-        "realtime_info": true
-      }
-    }
-  }
-}
-```
+Perplexity was removed as a chat provider in v1.19.3 (ADR 0015 —
+[`docs/decisions/0015-remove-perplexity-chat-provider.md`](decisions/0015-remove-perplexity-chat-provider.md));
+its chat-completions API retired 2026-09-27. `PERPLEXITY_API_KEY` and a
+`providers.perplexity` block are no longer used for chat — set
+`PERPLEXITY_API_KEY` and configure `tools.web_search` instead to use it as
+a web-search/grounding backend (ADR 0014). For chat, use another
+provider, e.g. Gemini (see above).
 
 ---
 
@@ -403,33 +350,20 @@ You can configure multiple providers and switch between them using the `/provide
 ### `.env`
 ```bash
 # Multiple API keys
-PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 GEMINI_API_KEY=AIzaSy-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# Default to Perplexity (has web search)
-MODEL_PROVIDER=perplexity
+# Default to Gemini (has web search grounding)
+MODEL_PROVIDER=gemini
 ```
 
 ### `ppxai-config.json`
 ```json
 {
   "version": "1.0",
-  "default_provider": "perplexity",
+  "default_provider": "gemini",
   "providers": {
-    "perplexity": {
-      "name": "Perplexity AI",
-      "base_url": "https://api.perplexity.ai",
-      "api_key_env": "PERPLEXITY_API_KEY",
-      "default_model": "sonar",
-      "coding_model": "sonar-pro",
-      "models": {
-        "sonar": {"name": "Sonar", "description": "Fast search, low cost"},
-        "sonar-pro": {"name": "Sonar Pro", "description": "Advanced search"}
-      },
-      "capabilities": {"web_search": true, "realtime_info": true}
-    },
     "openai": {
       "name": "OpenAI ChatGPT",
       "base_url": "https://api.openai.com/v1",
@@ -446,11 +380,11 @@ MODEL_PROVIDER=perplexity
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-3.5-flash",
-      "coding_model": "gemini-3.5-flash",
+      "default_model": "gemini-3.8-flash",
+      "coding_model": "gemini-3.8-flash",
       "models": {
-        "gemini-3.5-flash": {"name": "Gemini 3.5 Flash", "description": "Fast multimodal"},
-        "gemini-1.5-pro": {"name": "Gemini 1.5 Pro", "description": "2M context"}
+        "gemini-3.8-flash": {"name": "Gemini 3.8 Flash", "description": "Fast multimodal"},
+        "gemini-3.1-pro-preview": {"name": "Gemini 3.1 Pro Preview", "description": "1M context, advanced reasoning"}
       },
       "capabilities": {"web_search": true, "realtime_info": true}
     },
@@ -476,15 +410,14 @@ In ppxai, use the `/provider` command to switch between configured providers:
 
 ```
 You: /provider
-Current provider: perplexity
+Current provider: gemini
 
 Available providers:
-1. perplexity - Perplexity AI (configured)
-2. openai - OpenAI ChatGPT (configured)
-3. gemini - Google Gemini (configured)
-4. openrouter - OpenRouter (configured)
+1. openai - OpenAI ChatGPT (configured)
+2. gemini - Google Gemini (configured)
+3. openrouter - OpenRouter (configured)
 
-Select provider [1-4]:
+Select provider [1-3]:
 ```
 
 ---
@@ -496,7 +429,10 @@ ppxai searches for `ppxai-config.json` in this order:
 1. `PPXAI_CONFIG_FILE` environment variable (if set)
 2. `./ppxai-config.json` (current directory - project-specific)
 3. `~/.ppxai/ppxai-config.json` (home directory - user-specific)
-4. Built-in defaults (Perplexity only)
+4. First run seeds `~/.ppxai/ppxai-config.json` from the bundled
+   `ppxai-config.example.json`; with no config at all, no providers are
+   configured (or a legacy-env `custom` provider, if the old env vars
+   are set)
 
 This allows you to:
 - Share project-specific configs with your team (commit to git)
@@ -523,14 +459,15 @@ The bundle is **added to** the system trust store, so public hosts keep
 working. `SSL_CERT_FILE` / `SSL_VERIFY` still take precedence if set. Full
 precedence table and the `verify: false` escape hatch (warned about at
 startup and in `/doctor`) are in
-[installation.md](installation.md#corporate-proxy--tls). Run `/doctor` to
+[installation.md](installation.md#windows-ssl-certificate-errors-corporate-proxy).
+Run `/doctor` to
 see which rule actually applied.
 
 ### API Key Not Found
 ```
 Error: OPENAI_API_KEY not found in environment variables.
 ```
-**Solution**: Make sure your `.env` file is in the same directory where you run ppxai, or set the environment variable directly.
+**Solution**: Make sure your `.env` file is in `~/.ppxai/.env` (the primary location; the loader also reads one in the current directory), or set the environment variable directly.
 
 ### Invalid Model
 ```
@@ -543,12 +480,6 @@ Error: Invalid model 'gpt-5'. Permitted models can be found in the documentation
 Error: Connection refused at localhost:8000
 ```
 **Solution**: Make sure your local model server (vLLM, Ollama) is running before starting ppxai.
-
-### SSL Certificate Errors
-```
-[SSL: CERTIFICATE_VERIFY_FAILED]
-```
-**Solution**: If you're behind a corporate proxy, add `SSL_VERIFY=false` to your `.env` file (not recommended for production).
 
 ---
 

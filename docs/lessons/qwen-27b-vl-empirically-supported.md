@@ -24,7 +24,7 @@ grep -n 'Qwen/Qwen3\.\[568\]-27B-FP8' ppxai/engine/model_facts.py
 
 # The reader moved out of the retired module with the data it reads:
 grep -n 'def supports_vision' ppxai/engine/model_facts.py
-# Expected: 1368:def supports_vision(model: str) -> bool:
+# Expected (line number drifts — cite by grep): 1337:def supports_vision(model: str) -> bool:
 ```
 
 ```python
@@ -79,7 +79,7 @@ generates 3 fixture images inline via Pillow and POSTs OpenAI-style
 |---|---|
 | Script | `trad-ai-chat/scripts/test-vl-capabilities.sh` |
 | Commit | `916772c` (2026-04-23) |
-| Baseline | `https://codeai.internal/qwen35/v1` model `Qwen/Qwen3.5-27B-FP8` |
+| Baseline | `https://your-vllm-host/v1` (in-cluster vLLM deployment) model `Qwen/Qwen3.5-27B-FP8` |
 | Score | **8/9 PASS** |
 | One fail | Test 2b — arithmetic-over-OCR'd-data reasoning, NOT a vision failure (OCR was correct per Test 2a) |
 | Use as | Gate A for the Qwen3-VL-8B-Instruct decommission (CR-v4.0.0 Part 2 Phase 6) |

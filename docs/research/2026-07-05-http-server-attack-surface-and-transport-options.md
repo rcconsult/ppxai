@@ -180,9 +180,21 @@ Options A+C already close. Recorded only to close it explicitly.
    per-user pods. 16 tests in `tests/test_host_cors_security.py`; documented in
    [api-gateway.md](../api-gateway.md) §"Transport perimeter". The sharpest edge is
    now blunted.
+
+   **Dated note (2026-09-28):** this fix used HTTP middleware, which never sees a
+   websocket scope. `/ws/terminal` — a shell — stayed open to any origin, with or
+   without a token, until v1.19.4's `5129540a` (`fix(server): websocket handshakes
+   get the Host, Origin and auth checks HTTP gets`) added a pure-ASGI
+   `_WebSocketGuard` in `ppxai/server/http.py` that applies the same checks to the
+   websocket handshake.
 2. **Near term (A.2–A.4):** random port + `0600` port file + per-launch loopback
    token, so the desktop default becomes auth-*on* and un-discoverable. Consider
    UDS/named-pipe to remove the TCP surface on macOS/Linux.
+
+   **Dated note (2026-09-28):** partly built by ADR 0013 — `ppxai-server --uds
+   [PATH] --announce` (`ppxai/server/http.py`) binds a Unix domain socket `0600`
+   before the first accept and generates a per-launch token, removing the TCP
+   surface and the un-authed default on POSIX hosts.
 3. **Structural (Option C):** land the embeddable-runner API (debt **(t)**) so
    ppxai-sre consumes ppxai as an in-process SDK and never depends on the local
    HTTP server. This is already on the roadmap for the mutation-tool work; it

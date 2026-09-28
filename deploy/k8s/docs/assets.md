@@ -1,5 +1,16 @@
 # ppxai Kubernetes Assets
 
+> **Historical record of the original k8s POC — DRIFTED from the current
+> `deploy/helm/ppxai/templates/` chart, not regenerated.** Several files named
+> below (`storageclass-workspace.yaml`, `registry-deployment.yaml`,
+> `session-manager-rbac.yaml`, `base-ingress.yaml`, …) were since consolidated
+> into `storage.yaml`, `registry.yaml`, `rbac.yaml` and `ingress.yaml`;
+> `rbac.yaml` grants a namespaced `Role`, not a `ClusterRole`; and the chart
+> has since added `networkpolicy.yaml`, `secret-session-signing.yaml` and
+> `benchmark-job.yaml`, none of which are described here. Treat the prose
+> below as design intent, not a current inventory — run
+> `ls deploy/helm/ppxai/templates/` for the authoritative list.
+
 Every resource deployed by the ppxai k8s POC and what it does.
 
 ---
@@ -54,8 +65,8 @@ Exposes the session manager API internally and to the nginx ingress (for `/api/*
 
 **`server-config.yaml`** — two resources:
 
-- **ConfigMap `ppxai-server-config`**: Contains `ppxai-config.json` with provider definitions (perplexity, gemini, openai) using `api_key_env` references. Mounted read-only into every server pod at `/root/.ppxai/ppxai-config.json`.
-- **Secret `ppxai-api-keys`**: Holds `PERPLEXITY_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `CUSTOM_API_KEY`, `CUSTOM_BASE_URL`. Injected as env vars into every server pod via `secretKeyRef`.
+- **ConfigMap `ppxai-server-config`**: Contains `ppxai-config.json` with provider definitions (gemini, openai; perplexity is no longer a chat provider, see ADR 0015) using `api_key_env` references. Mounted read-only into every server pod at `/root/.ppxai/ppxai-config.json`.
+- **Secret `ppxai-api-keys`**: Holds provider API keys (e.g. `GEMINI_API_KEY`, `OPENAI_API_KEY`, `PERPLEXITY_API_KEY` for the web-search backend), `CUSTOM_API_KEY`, `CUSTOM_BASE_URL`. Injected as env vars into every server pod via `secretKeyRef`.
 
 ---
 

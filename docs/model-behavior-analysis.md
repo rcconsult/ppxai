@@ -6,6 +6,15 @@
 > (OpenAI fleet refresh) both change the model set it ranks, so treat the
 > per-model conclusions as a snapshot of its Created date, not current
 > guidance. The architectural reasoning is unaffected.
+>
+> ⚠️ **The "Phase 1: Model Profile System" recommendation below was
+> implemented, then superseded.** `ppxai/engine/model_profiles.py`
+> (`ModelProfile`, `ToolCallingProfile`, the profile registry) was built and
+> later **deleted** when ADR 0012 / debt Item 65 replaced the whole profile
+> vocabulary with `ModelFacts` in `ppxai/engine/model_facts.py` (commit
+> `ed3c069a`). Do not create `model_profiles.py` — read
+> [docs/tool-calling.md](tool-calling.md#configuration-reference) for the
+> current mechanism.
 
 **Created:** 2026-02-19
 **Last updated:** 2026-02-22

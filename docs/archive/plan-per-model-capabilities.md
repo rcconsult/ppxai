@@ -336,7 +336,7 @@ misdirected I4b.
 > as W0–W3 of [plan-adr-0012-implementation.md](plan-adr-0012-implementation.md),
 > target 2026-09-20.
 
-> **Superseded in shape by [ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md)
+> **Superseded in shape by [ADR 0012](../decisions/0012-wire-protocol-as-per-model-capability.md)
 > (2026-08-30).** This section assumed `api_path` merely needed filling in and
 > that the owner had to choose "new models on `perplexity`" vs "a second
 > provider entry". Investigating found (a) `api_path` is declared, config-

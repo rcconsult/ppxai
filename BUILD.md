@@ -1,7 +1,7 @@
 # Building ppxai
 
 This guide explains how to build:
-- **TUI Executables** - Standalone terminal app for Windows, macOS, and Linux
+- **TUI Executables** - Standalone terminal app for Windows, macOS, and Linux (`ppxai.spec` for the Rich TUI, `ppxaide.spec` for the Textual TUI)
 - **Server Executables** - HTTP server for VS Code extension (no Python required)
 - **VS Code Extension** - VSIX package for VS Code Marketplace
 
@@ -59,19 +59,25 @@ venv\Scripts\activate.bat
 ### 2. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install -e ".[server,gemini,build]"
 ```
+
+(`requirements.txt` is a stale, partial mirror of `pyproject.toml`'s
+dependencies — installing from it alone is missing modules imported at
+load time such as `pyperclip`, `filetype`, `tree-sitter*` and `blinker`.)
 
 ### 3. Build with PyInstaller
 
 ```bash
 pyinstaller ppxai.spec
+# For the Textual TUI (ppxaide) as well:
+pyinstaller ppxaide.spec
 ```
 
 ### 4. Find your executable
 
-**macOS/Linux:** `dist/ppxai`
-**Windows:** `dist\ppxai.exe`
+**macOS/Linux:** `dist/ppxai` (and `dist/ppxaide`)
+**Windows:** `dist\ppxai.exe` (and `dist\ppxaide.exe`)
 
 ## Distribution
 
@@ -89,7 +95,7 @@ Users don't need Python installed to run it!
 When distributing to users, provide:
 1. The executable (`ppxai` or `ppxai.exe`)
 2. The `.env.example` file (as a template)
-3. Instructions to create `.env` with their `PERPLEXITY_API_KEY`
+3. Instructions to create `.env` with their `GEMINI_API_KEY` (or another chat-provider key — Perplexity is a web-search/grounding backend, not a chat provider)
 
 ### Installation Instructions for Users
 
@@ -249,9 +255,9 @@ xattr -d com.apple.quarantine dist/ppxai
 Or: System Preferences → Security & Privacy → Click "Open Anyway"
 
 ### Missing .env file error
-Make sure users create a `.env` file with:
+Make sure users create a `.env` file with at least one chat-provider key:
 ```
-PERPLEXITY_API_KEY=your_api_key_here
+GEMINI_API_KEY=your_api_key_here
 ```
 
 ### Executable is very large

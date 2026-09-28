@@ -1,12 +1,14 @@
 # ADR 0008 — Cross-tier cost and shared-resource accounting
 
 **Date:** 2026-07-15
-**Status:** **Accepted 2026-09-06 — Option A implemented** (`ppxai/usage_events.py`, taps in `engine/task_runner.py` + `engine/session.py`, rollup in `/cost`). Debt Item 49 closed. See §Sign-off for what was decided on each open question.
+**Status:** **Accepted 2026-09-06 — Option A implemented** (`ppxai/usage_events.py`, taps in `engine/task_runner.py` + `engine/session.py`, rollup in `/usage`). Debt Item 49 closed. See §Sign-off for what was decided on each open question.
+
+**Note (2026-09-28):** ppxai has no `/cost` command and never had one — the earlier wording above and below was wrong. The cross-tier rollup is part of the `/usage` command (`ppxai/commands/tools.py`, `name="usage"`).
 **Related:**
 - [`0004-llm-gateway-features.md`](0004-llm-gateway-features.md) — established the stateless `/v1/oneshot` tier that bypasses `EngineClient` (the origin of gap #1 below)
 - [`0003-agent-platform-architecture.md`](0003-agent-platform-architecture.md) — established the per-run `EngineClient` (D1 isolation) for `/v1/agent/task`
 - `ppxai/engine/session.py::save_usage_to_persistent_storage` — the only writer of `usage.json`
-- `ppxai/usage.py` — usage persistence + `/cost` rollup
+- `ppxai/usage.py` — usage persistence + `/usage` rollup
 - `ppxai/server/routes/oneshot.py` — stateless, no `EngineClient`, usage returned then dropped
 - `ppxai/server/routes/agent_v1.py` — per-run engine; per-run token budget (`control.tokens_used = engine.session.live_run_tokens`, ~L1045) but no global rollup
 - Debt inventory: **Item 49** (this ADR's tracking entry)

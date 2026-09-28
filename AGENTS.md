@@ -488,6 +488,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
   - `openai_native.py` - Native OpenAI (GPT-5.x, o-series, Codex via Responses API)
   - `gemini.py` - Native Gemini (google-genai SDK; native function_call/function_response tool threading)
   - `openai_compat.py` - OpenAI-compatible (local/vLLM, custom)
+  - `anthropic.py` - Anthropic (`messages` wire; opt-in, needs the `[anthropic]` extra and a config block)
 - `ppxai/engine/model_facts.py` - per-model facts: wire protocol, tool mode, vision, tier (ADR 0012; replaced the deleted `model_profiles.py` in Item 65)
 - `ppxai/engine/tools/` - Tool system with builtins + brace-counting JSON parser
   - `network_policy.py` - AC-2 egress allowlist (fail-closed, https-only, SSRF guard)
@@ -537,7 +538,7 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 
 - `CLAUDE.md` - Detailed project instructions for Claude Code (authoritative release/branch state)
 - `ROADMAP.md` - Feature roadmap and version planning
-- `docs/debt-inventory.md` - Rolling deferred-work / task list; in-flight plans live in `docs/plan-v*.md`
+- `docs/debt-inventory.md` - Rolling deferred-work / task list; in-flight plans live in `docs/plan-*.md`
 - `docs/known-issues.md` - Known issues tracker (KI-001: google-genai SDK pin)
 
 ### Current version

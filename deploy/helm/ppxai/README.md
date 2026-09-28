@@ -18,6 +18,7 @@ helm upgrade --install ppxai . -f values-colima.yaml
 # Corporate (microk8s)
 cp values-microk8s.yaml.example values-microk8s.yaml
 # Edit values-microk8s.yaml with real IPs/hostnames/LDAP details
+# Set auth.sessionSigning.key (openssl rand -hex 32) — the session-manager fails closed without it, see Secrets below
 helm upgrade --install coder . -f values-microk8s.yaml -n coder
 
 # Or use the wrapper scripts:
@@ -68,4 +69,25 @@ Or use an existing secret:
 apiKeys:
   create: false
   existingSecret: my-api-keys
+```
+
+**`auth.sessionSigning` is also required.** The session-manager binds every
+`/s/<slug>/` request to the authenticated identity via an HMAC-signed cookie
+and FAILS CLOSED without a signing key. Generate one once with
+`openssl rand -hex 32` and keep it stable — rotating it logs out every active
+user:
+
+```bash
+helm upgrade --install coder . -f values-microk8s.yaml \
+  --set auth.sessionSigning.key=$(openssl rand -hex 32)
+```
+
+Or use an existing secret (preferred for production, so the key never lands
+in values/helm history):
+
+```yaml
+auth:
+  sessionSigning:
+    existingSecret: my-session-signing-key
+    existingSecretKey: SESSION_SIGNING_KEY
 ```

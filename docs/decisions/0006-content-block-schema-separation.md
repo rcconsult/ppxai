@@ -1,7 +1,7 @@
 # ADR 0006 — Separate engine-internal content schema from wire schema
 
 **Date:** 2026-05-14
-**Status:** Accepted — full implementation lands on `bugfix/v1.18.6` (all 4 phases). No stopgap; the producer-side fix is shipping directly.
+**Status:** Accepted — implemented, shipped in v1.18.6 (all 4 phases). No stopgap; the producer-side fix shipped directly.
 **Related:**
 - [ADR 0003](0003-agent-platform-architecture.md) — agent platform (sub-agents + autonomous agents) for v1.19.x. Strategic motivation for v1.18.6's schema_version: 2 work — every architectural primitive ADR 0003 needs (run identity, persistence, cross-process readers, sub-agent message construction) inherits or extends what this ADR establishes. See "Strategic rationale" section below.
 - [ADR 0004](0004-llm-gateway-features.md) — v1 API gateway; this ADR's wire-schema discipline is what makes the gateway safe across strict OpenAI-compatible endpoints
@@ -66,8 +66,8 @@ cover this case.
 
 Three concurrent pressures surfaced the entanglement on 2026-05-14:
 
-1. **A user attached a screenshot to gpt-5.5 on the corporate
-   `codeai.internal` OpenAI-compat endpoint.** The endpoint's strict
+1. **A user attached a screenshot to gpt-5.5 on an internal
+   `https://your-vllm-host/v1`-style OpenAI-compat endpoint.** The endpoint's strict
    validator returned `"Invalid chat format. Unexpected keys in a
    message content image dict."` The attachment was silently
    dropped — the model never saw it.

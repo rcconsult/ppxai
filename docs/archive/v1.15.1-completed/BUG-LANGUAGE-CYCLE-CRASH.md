@@ -23,10 +23,10 @@ Falling back to plain text.
 ## Stack Trace
 
 ```
-/Users/rado/git/utils/ppxai/ppxai/tui/widgets/side_panel.py:276 in action_cycle_language
+/path/to/ppxai/ppxai/tui/widgets/side_panel.py:276 in action_cycle_language
 │ 276 │   │   │   editor.language = new_lang  # new_lang = 'go'
 
-/Users/rado/git/utils/ppxai/ppxai/tui/widgets/code_editor.py:260 in language
+/path/to/ppxai/ppxai/tui/widgets/code_editor.py:260 in language
 │ 260 │   │   │   self._text_area.language = value  # value = 'go'
 
 textual/widgets/_text_area.py:841 in _watch_language

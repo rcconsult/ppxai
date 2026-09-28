@@ -839,7 +839,7 @@ manager.register_function(
     description="Search the web",
     parameters={...},
     handler=search_function,
-    provider_excluded=["perplexity"]  # Perplexity has native search
+    provider_excluded=["gemini"]  # Gemini has native grounding
 )
 ```
 
@@ -1124,8 +1124,9 @@ print(result)
 
 - [File Editing Guide](file-editing-guide.md) - Built-in file editing tools
 - [Shell Consent Guide](shell-consent-guide.md) - Shell command consent system
-- [Architecture Refactoring](archive/v1.15.2-completed/architecture-refactoring.md) - EngineClient design
-- [Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) - Tool system internals
+- [Architecture](architecture.md) - Current EngineClient design and tool system internals
+- [Architecture Refactoring](archive/v1.15.2-completed/architecture-refactoring.md) - (historical, v1.15.2 EngineClient design)
+- [Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) - (historical, v1.11 tool system design)
 
 ---
 

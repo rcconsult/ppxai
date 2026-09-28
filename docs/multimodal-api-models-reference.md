@@ -6,9 +6,12 @@
 > PDFs and video are handled, the unified-architecture point) still holds.
 > The **model ids and tier claims do not**: this file presents `gpt-5.4` as
 > OpenAI's flagship and `gemini-3.1-*` as Gemini's newest line, while the
-> shipped defaults are **`gpt-5.6-terra`** and **`gemini-3.5-flash`**, with
-> measured `gemini-3.6/3.7/3.8-flash` rows in `ppxai/engine/model_facts.py`
-> and an Anthropic provider that did not exist when this was written.
+> shipped defaults are **`gpt-5.6-terra`** and **`gemini-3.8-flash`** (since
+> 2026-09-27), with measured `gemini-3.6/3.7/3.8-flash` rows in
+> `ppxai/engine/model_facts.py` and an Anthropic provider that did not exist
+> when this was written. **Perplexity is also no longer a chat provider**
+> (ADR 0015, v1.19.3) — the Sonar matrix below is a historical record;
+> Perplexity now ships only as a web-search/grounding backend (ADR 0014).
 >
 > **For what a given model can actually do today, read
 > `ppxai/engine/model_facts.py` or run `/model info`** — those are the
@@ -103,7 +106,7 @@ Sonar models support image input alongside their core real-time web search capab
 |---|---|---|---|---|---|---|
 | `sonar` | ✅ | ✅ | ❌ | ❌ | ✅ | Fast; $1/1M tokens |
 | `sonar-pro` | ✅ | ✅ | ❌ | ❌ | ✅ | Deep retrieval; 200K context; $3/1M tokens |
-| `sonar-reasoning-pro` | ✅ | ❌ | ❌ | ❌ | ✅ | Multi-step reasoning. **This is the id in the shipped config** — plain `sonar-reasoning` is not configured. |
+| `sonar-reasoning-pro` | ✅ | ❌ | ❌ | ❌ | ✅ | Multi-step reasoning. Plain `sonar-reasoning` is not configured. No Perplexity chat model ships any more (ADR 0015) — Perplexity appears only as the `web_search` backend's `perplexity_model` (`perplexity/sonar`). |
 | `sonar-deep-research` | ✅ | ❌ | ❌ | ❌ | ✅ | Long-form research; $2/1M input, $8/1M output |
 
 ### Image Input Specs (sonar / sonar-pro)

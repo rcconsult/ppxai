@@ -25,8 +25,7 @@ Each provider has a pre-configured coding model optimized for development tasks:
 
 | Provider | Default Coding Model | Why This Model? |
 |----------|---------------------|-----------------|
-| **Perplexity** | `perplexity/sonar` | The Responses-wire id; the bare `sonar` chat-wire id retires 2026-09-27 |
-| **Gemini** | `gemini-3.5-flash` | Fast model, current default in the shipped config |
+| **Gemini** | `gemini-3.8-flash` | Fast model, current default in the shipped config |
 | **OpenAI** | `gpt-5.6-terra` | Current default in the shipped config |
 | **Custom** | (user-configured) | Configure any OpenAI-compatible endpoint (OpenRouter, etc.) |
 | **Ollama** | `qwen2.5-coder:3b` | Specialized local coding model |
@@ -182,16 +181,16 @@ file is found at all. In practice, first-run seeding copies the bundled
 
 ```json
 {
-  "perplexity": {
-    "default_model": "perplexity/sonar",
-    "coding_model": "perplexity/sonar"
-  },
   "gemini": {
-    "default_model": "gemini-3.5-flash",
-    "coding_model": "gemini-3.5-flash"
+    "default_model": "gemini-3.8-flash",
+    "coding_model": "gemini-3.8-flash"
   }
 }
 ```
+
+(Perplexity is no longer a chat provider — ADR 0015 — so it has no
+`coding_model` entry; it remains a `web_search`/grounding backend under
+`tools.web_search`.)
 
 ## Troubleshooting
 
@@ -214,7 +213,7 @@ If on an older version, the autorouter would use the global `MODEL_PROVIDER` ins
 
 # Output shows:
 # Auto-routing is currently: enabled
-# Auto-routing uses gemini-3.5-flash for coding commands
+# Auto-routing uses gemini-3.8-flash for coding commands
 # Use /autoroute on or /autoroute off to change
 ```
 

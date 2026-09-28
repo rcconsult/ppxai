@@ -3,6 +3,10 @@
 **Version:** v1.15.6
 **Last Updated:** 2026-02-20
 
+> Perplexity was removed as a chat provider in v1.19.3 (ADR 0015); `set_provider("perplexity")`
+> now refuses. Sample output below naming Perplexity/Sonar models is historical; the
+> command examples use Gemini instead.
+
 ---
 
 ## Overview
@@ -35,7 +39,7 @@ The ppxai benchmark suite evaluates AI models on capabilities critical for codin
 cd benchmarks/llm-eval
 
 # Benchmark any provider
-python benchmark.py --provider perplexity --model sonar
+python benchmark.py --provider gemini --model gemini-3.8-flash
 python benchmark.py --provider gemini --model gemini-2.5-flash
 python benchmark.py --provider openai --model gpt-5-mini
 
@@ -50,7 +54,7 @@ python benchmark.py --provider custom --model openai/gpt-oss-120b
 python benchmark.py --list-results
 
 # Compare two models
-python benchmark.py --compare perplexity/sonar gemini/gemini-2.5-flash
+python benchmark.py --compare gemini/gemini-3.8-flash gemini/gemini-2.5-flash
 
 # Show ranking
 python benchmark.py --ranking
@@ -305,7 +309,7 @@ ppxai supports **two different tool calling architectures**:
 
 ```bash
 # Run all tests
-python benchmark.py --provider perplexity --model sonar-pro
+python benchmark.py --provider gemini --model gemini-3.8-flash
 
 # Run specific categories
 python benchmark.py --provider gemini --model gemini-3-flash-preview \
@@ -324,7 +328,7 @@ python benchmark.py --provider custom --model openai/gpt-oss-120b \
 
 ```bash
 # Save detailed logs to debug/ directory
-python benchmark.py --provider perplexity --model sonar-pro --debug
+python benchmark.py --provider gemini --model gemini-3.8-flash --debug
 
 # Output structure:
 # debug/
@@ -338,7 +342,7 @@ python benchmark.py --provider perplexity --model sonar-pro --debug
 
 ```bash
 # Show error summaries for failed tests
-python benchmark.py --provider perplexity --model sonar-pro --verbose
+python benchmark.py --provider gemini --model gemini-3.8-flash --verbose
 ```
 
 ---
@@ -561,7 +565,7 @@ Best scores shown (multiple runs per model, high variance observed for some mode
 **Solutions:**
 ```bash
 # Increase timeout (default: 120s)
-python benchmark.py --provider perplexity --model sonar-pro --timeout 300
+python benchmark.py --provider gemini --model gemini-3.8-flash --timeout 300
 
 # For slow models/providers, use 5+ minutes
 python benchmark.py --provider custom --model meta-llama/llama-3.1-405b --timeout 600
@@ -677,7 +681,7 @@ ALL_TESTS.append(
 
 2. **Run test:**
 ```bash
-python benchmark.py --provider perplexity --model sonar-pro --categories tool_calling
+python benchmark.py --provider gemini --model gemini-3.8-flash --categories tool_calling
 ```
 
 ---

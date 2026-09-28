@@ -63,29 +63,37 @@ to `~/.ppxai/ppxai-config.json`.
   (`ppxai/server/http.py::run_server`). Read that line before assuming which
   file is live.
 
-## The test suite reads whichever file wins — including yours
+## History: the test suite used to read whichever file won — including yours
 
-The same search order applies **inside pytest**, and nothing in
-`tests/conftest.py` pins it. So a test that resolves model facts reads the
-first of `PPXAI_CONFIG_FILE` / `./ppxai-config.json` / `~/.ppxai/ppxai-config.json`
-that exists — on a developer machine, routinely the developer's own config.
+**This section describes a problem that is fixed.** Until debt Items 69 and
+78 landed, the search order above applied **inside pytest too**, and nothing
+in `tests/conftest.py` pinned it. A test that resolved model facts read the
+first of `PPXAI_CONFIG_FILE` / `./ppxai-config.json` /
+`~/.ppxai/ppxai-config.json` that existed — on a developer machine, routinely
+the developer's own config. That was measured to fail in the dangerous
+direction: a stale personal config masked a real regression on one host while
+CI (which has no user config) stayed green.
 
-Measured 2026-08-31: `tests/test_perplexity_two_wires.py` failed on a dev host
-because that host's `~/.ppxai/ppxai-config.json` carried a
-`facts.tool_mode = "native"` override for `perplexity/sonar`, while the test
-asserts the shipped `auto`. Nothing was wrong with the repo. The same test
-passes on CI, where no user config exists.
+Since then, `tests/conftest.py::pytest_configure` copies the **tracked**
+`ppxai-config.json` into the throwaway test home and pins
+`PPXAI_CONFIG_FILE` at that copy (Item 69, `conftest.py:264-296`), and the
+session-scoped `_the_developers_config_is_unreachable` fixture points the
+`USER_CONFIG_FILE` fallback constant at a path that does not exist
+(`conftest.py:336-360`). `_redirect_home_to_tmp()` also moves `HOME` itself
+before the first `ppxai` import (Item 78), so the suite cannot resolve the
+real `~/.ppxai/ppxai-config.json` even from a cleared environment.
 
-Two consequences worth internalising:
-
-- **A red test can be your config, not the code.** Before debugging, check
-  what the suite is actually reading:
+**Practical effect today:** your own `~/.ppxai/ppxai-config.json` cannot
+reach the suite unless you explicitly set `PPXAI_CONFIG_FILE` yourself before
+running pytest. A red test is very unlikely to be "your config, not the
+code" any more — but if you *did* export `PPXAI_CONFIG_FILE`, that override
+still wins, so check for it first:
   ```bash
+  echo "$PPXAI_CONFIG_FILE"
   python -c "from ppxai.config.loader import find_config_file; print(find_config_file())"
   ```
-  Run it *inside* pytest if the answer looks surprising — `initialize()` may
-  not have run in your shell, so a bare invocation can report the
-  project-local file while the suite reads the user-global one.
+
+One consequence still worth internalising:
 
 - **A green suite is not proof either.** The reverse case is worse: a config
   the suite reads can *mask* a defect. The repo-root `ppxai-config.json` is

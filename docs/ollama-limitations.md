@@ -148,11 +148,11 @@ This prevents infinite loops like `get_weather → get_weather → get_weather �
 
 For queries requiring synthesis (research, explanations, complex reasoning):
 ```
-/provider perplexity  # or gemini
+/provider gemini
 ```
 
-Perplexity and Gemini have:
-- Native web search (no tool overhead)
+Gemini has:
+- Native web search grounding (no tool overhead)
 - Better reasoning capabilities
 - Proper response synthesis
 
@@ -172,7 +172,7 @@ Ollama works well for:
 cd ~/project && ls
 
 # Cloud for research (accurate, synthesized)
-/provider perplexity
+/provider gemini
 explain the authentication flow in this codebase
 ```
 

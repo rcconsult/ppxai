@@ -217,7 +217,11 @@ getting it backwards is how this class of bug recurs:
 ## The rule
 
 - A path constant resolved at import time **cannot** be redirected by
-  patching `HOME` afterwards. Patch the constant, in `conftest.py`, autouse.
+  patching `HOME` afterwards. **Set `HOME` itself before the first `ppxai`
+  import** (`tests/conftest.py::pytest_configure` calls
+  `_redirect_home_to_tmp()` for this) — this is the suite-wide fix, not an
+  added fixture per constant. Patch an individual constant only for a test
+  that needs its own path in addition to the redirected home.
 - Isolating a directory through a constructor argument is not isolation if the
   module also holds a home-resolved constant.
 - When a user reports "X broke after your change", check whether **running the

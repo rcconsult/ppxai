@@ -18,15 +18,12 @@ The script handles everything automatically:
 2. ✅ Checks branch (must be on master, use `--force` to release from feature branch)
 3. ✅ Merges to master (if on feature branch with `--force`)
 4. ✅ Updates ALL version references:
-   - pyproject.toml
-   - ppxai/__init__.py
-   - vscode-extension/package.json
-   - vscode-extension/package-lock.json
-   - ppxai/common/event_handler.py
-   - README.md (vsix references)
-   - vscode-extension/README.md (vsix references)
-   - CLAUDE.md (current version + version alignment)
-   - ROADMAP.md (current release)
+   - pyproject.toml (canonical Python SoT)
+   - ppxai/version.py (runtime SoT)
+   - vscode-extension/package.json (npm SoT)
+   - vscode-extension/package-lock.json (typed JSON edit)
+   - README.md (shields.io badge + tests-NNNN)
+   - docs/index.md (shields.io badge)
 5. ✅ Validates all version references with validate-release.py
 6. ✅ Creates release notes template if missing
 7. ✅ Runs TypeScript lint on VSCode extension
@@ -81,8 +78,6 @@ python scripts/release.py v1.11.7 --redo --force
 
 2. **Update CHANGELOG.md** - Add an entry for the new version manually
 
-3. **Review ROADMAP.md** - The script updates "Current Release" version, but you may want to update the content
-
 ## After Running
 
 1. **Verify the release** - Check https://github.com/rcconsult/ppxai/releases/tag/v{version}
@@ -133,19 +128,16 @@ gh release view v{version}
 
 ## Manual Build & Upload
 
-If CI fails after release is created, manually build and upload assets:
+If CI fails after release is created, manually build and upload assets using the
+`build-install` skill, or run the PyInstaller specs directly:
 
 ```bash
-# On Linux/macOS
-cd scripts
-./build-all.sh v1.15.2
-
-# On Windows
-cd scripts
-.\build-windows.ps1 -Version v1.15.2
+uv run pyinstaller ppxai.spec --noconfirm
+uv run pyinstaller ppxaide.spec --noconfirm
+uv run pyinstaller ppxai-server.spec --noconfirm
+uv run pyinstaller ppxai-desktop.spec --noconfirm
 
 # Upload assets
-cd ..
 gh release upload v1.15.2 dist/ppxai-*
 gh release upload v1.15.2 dist/ppxaide-*
 gh release upload v1.15.2 dist/ppxai-server-*

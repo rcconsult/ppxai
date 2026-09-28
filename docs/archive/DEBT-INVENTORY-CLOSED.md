@@ -18,7 +18,7 @@ archive for the branch-by-branch closes since then.
 > **(1) Detection — already fixed earlier this cycle.**
 > `model_profiles.py` now carries `supports_vision=True` globs for
 > `Qwen/Qwen3.[56]-27B-FP8*` (and `Qwen3.6-35B-A3B-FP8*`); this session
-> also pinned the `-agent` suffix variant the codeai cluster serves
+> also pinned the `-agent` suffix variant the internal vLLM cluster serves
 > (`Qwen/Qwen3.6-27B-FP8-agent`) in `test_model_profiles.py`. The
 > originally-reported diagram now routes as a real `image_url` block.
 >
@@ -143,8 +143,9 @@ the vllm-qwen35 provider.
 > 1. `/path/to/trad-ai-chat/scripts/test-vl-capabilities.sh`
 >    (commit `916772c`, 2026-04-23) — 9-test VL probe (Test 0 image accept,
 >    Test 1 OCR, Test 2 tables, Test 3 charts). Baseline run against
->    `https://codeai.internal/qwen35/v1` model `Qwen/Qwen3.5-27B-FP8`
->    scored **8/9 PASS**. The one fail (Test 2b) was arithmetic-over-OCR'd-data
+>    an in-cluster vLLM deployment (`https://your-vllm-host/v1`) model
+>    `Qwen/Qwen3.5-27B-FP8` scored **8/9 PASS**. The one fail (Test 2b) was
+>    arithmetic-over-OCR'd-data
 >    reasoning — NOT vision.
 > 2. `/path/to/trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md`
 >    (2026-04-30) — confirms Qwen3.6-27B-FP8 has an **explicit vision
@@ -280,7 +281,7 @@ document the auth-off requirement loudly in the release notes.
 
 Found while diagnosing the deny-path empty-result bug (T5/T7 trials; the
 symptom fixes landed with §M — see
-[agent-platform-call-graphs.md](agent-platform-call-graphs.md)). Two
+[agent-platform-call-graphs.md](../agent-platform-call-graphs.md)). Two
 structural gaps, both verified by source read + grep, both fixed same day:
 
 1. **`_convert_messages` (gemini.py) never threaded `Message.tool_calls` /
@@ -758,7 +759,7 @@ archived snapshots:
   corruption); and the **session auto-restore-mode** bug (`1fe60ea5` — web
   client ignored `auto_restore` and used a fragile `confirm()`, so restore
   landed on fresh defaults; `/status` now exposes the mode). All with
-  regression tests. See [CHANGELOG.md](../CHANGELOG.md) `[1.18.8]`.
+  regression tests. See [CHANGELOG.md](../../CHANGELOG.md) `[1.18.8]`.
 
 - **Item 28 — OfficeFileView blob-revoke race + attachment text_fallback (closed 2026-06-14):**
   `ef17f748` on `bugfix/v1.18.8`. The attachment renderers (`app.js`) gained an
@@ -844,7 +845,7 @@ archived snapshots:
   (it migrated `read_file`/`write_file` only). `TestServeImageConfinement`
   added (sibling-prefix path → 403 via `/files/image/`, verified to fail
   404 against the old check; in-tree image → 200). v1.18.8 Phase A — see
-  [archive/plan-v1.18.8-files-parity.md](archive/plan-v1.18.8-files-parity.md).
+  [archive/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md).
 
 - **Item 20 — v1.19.x alignment paperwork (closed 2026-05-24):** merged to
   master as `56bc2d38` (Stage-2 fold rebased from `42ed8f00`) + `7a2ea268`
@@ -860,14 +861,14 @@ archived snapshots:
   excluded after rerun confirmed contamination), 18 (NIM probe rerun),
   19 (Qwen3.5 `enable_thinking` config example), plus Tier 1 #1-3 and
   Tier 2 #4-5 from the v1.18.3 NIM engine work. See
-  [docs/archive/DEBT-INVENTORY-v1.18.3.md](archive/DEBT-INVENTORY-v1.18.3.md).
+  [docs/archive/DEBT-INVENTORY-v1.18.3.md](DEBT-INVENTORY-v1.18.3.md).
 
 - **v1.18.2 branch (closed 2026-04-29):** Items 1 (god-node refactoring
   narrowed to session_restore_ops), 2 (resolveWebviewView contract
   refactor), 4 (focused-subtree graphify runs), 5 (esbuild VSIX bundle),
   6 (Windows `code` CLI shim), 7-9 (Tier 1 observability), 10
   (EngineClientProtocol), 11 (agent.py logger AttributeError). See
-  [docs/archive/DEBT-INVENTORY-v1.18.2.md](archive/DEBT-INVENTORY-v1.18.2.md).
+  [docs/archive/DEBT-INVENTORY-v1.18.2.md](DEBT-INVENTORY-v1.18.2.md).
 
 ---
 
@@ -885,7 +886,7 @@ rolling inventory cannot carry that.
 ### Item 61 — `api_path` is declared, config-overridable, displayed — and never routed on [providers / config]
 
 **Filed 2026-08-30** while designing
-[ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md).
+[ADR 0012](../decisions/0012-wire-protocol-as-per-model-capability.md).
 Independent of that ADR: this is a live defect today.
 
 `ToolCallingProfile.api_path` (`model_profiles.py:43`) is set on built-in
@@ -974,7 +975,7 @@ the resolved table rests on an observed response.
 ### Item 62 — ADR 0006's wire validator covers only ONE of three protocols; `_convert_messages` is one protocol's emitter in the shared base [providers / multimodal]
 
 **Filed 2026-08-30** while designing
-[ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md).
+[ADR 0012](../decisions/0012-wire-protocol-as-per-model-capability.md).
 Independent of that ADR; two coupled defects, both live.
 
 **(a) The ADR 0006 validator has exactly one call site.**
@@ -1726,7 +1727,7 @@ because a sink nothing calls is the same bug with more code.
 
 
 **Planned:** `v1.19.x`+ (**needs an architecture decision, not a patch** —
-design in [decisions/0008-cross-tier-cost-and-resource-accounting.md](decisions/0008-cross-tier-cost-and-resource-accounting.md),
+design in [decisions/0008-cross-tier-cost-and-resource-accounting.md](../decisions/0008-cross-tier-cost-and-resource-accounting.md),
 Status: Proposed). Surfaced 2026-07-15 while reviewing Item 48's engine
 isolation.
 
@@ -2003,7 +2004,7 @@ uv run python scripts/probe-perplexity-capabilities.py --api-path responses   --
 ```
 
 If any answers, update `replacement` in
-[`ppxai/engine/model_deprecations.py`](../ppxai/engine/model_deprecations.py)
+[`ppxai/engine/model_deprecations.py`](../../ppxai/engine/model_deprecations.py)
 and re-add the entries to `ppxai-config.example.json` (with a pricing row and
 the migration fence's `RETIRED` set trimmed to match).
 

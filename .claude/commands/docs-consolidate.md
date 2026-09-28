@@ -141,9 +141,9 @@ docs/archive/
 ```
 
 ### Single Source of Truth
-- Active TODO/planning lives in `docs/TODO-v{version}.md`
+- Active planning lives in `docs/plan-*.md`; rolling deferred work lives in `docs/debt-inventory.md`
 - If a root-level `TODO-v{version}.md` exists and conflicts, replace it with a redirect stub pointing to the `docs/` version
-- `AGENTS.md` should reference the active TODO file
+- `AGENTS.md` should reference `docs/debt-inventory.md` and `docs/plan-*.md`
 
 ### Redirect Stub Format
 When a root-level file has many inbound references but its content has moved:

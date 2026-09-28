@@ -24,9 +24,9 @@ If applicable, add screenshots or copy-paste the terminal output to help explain
 
 **Environment (please complete the following information):**
  - OS: [e.g. macOS 14.0, Ubuntu 22.04, Windows 11]
- - ppxai version: [e.g. v1.12.3 - run `/version` in TUI]
- - Interface: [TUI / VSCode Extension]
- - Provider: [e.g. Perplexity, Gemini, OpenAI]
+ - ppxai version: [e.g. v1.19.3 - run `ppxai --version`]
+ - Interface: [Rich TUI / ppxaide (Textual TUI) / VSCode Extension / Desktop Web App]
+ - Provider: [e.g. Gemini, OpenAI, OpenRouter]
  - Python version (if using from source): [e.g. 3.11]
 
 **Installation method:**

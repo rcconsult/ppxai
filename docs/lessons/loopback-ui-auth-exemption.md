@@ -83,3 +83,17 @@ identity. Options if you decide to close THAT too:
   send it (removes the "any local process" hole while keeping desktop UX).
 - Gate the exemption behind an explicit `server.auth.trust_loopback_ui` flag,
   default on for desktop builds, off for server/cluster builds.
+
+## Extended by the hub (v1.19.4)
+
+ADR 0013 phase 4's remote hub (`ppxai/server/routes/remote_hub.py`) reuses
+the same IP-only `_is_loopback()` for its own gate: `_gate()` answers any
+`Hub` request "if ... this is a direct loopback peer" (`remote_hub.py:216`),
+and `_upstream_headers()` injects the remote server's own bearer token onto
+every proxied request (`remote_hub.py:349-353`). So when `remote.hosts` is
+configured, any local process on the hub machine can drive `/hub/*` and the
+`/h/<host>/<id>/` proxy — reach the remote servers — without holding any
+credential of its own; the hub holds the credential and hands it out to
+whoever is loopback. The per-session loopback token option above, if ever
+built, would now also have to cover `/hub` and `/h/`, not just the
+interactive UI surface.

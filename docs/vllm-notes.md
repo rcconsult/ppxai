@@ -29,10 +29,16 @@ vLLM with GPT-OSS can hit `HarmonyError: unexpected tokens remaining in message 
 
 | Mode | Config | vLLM flags | Reliability |
 |------|--------|------------|-------------|
-| Native | `native_tool_calling: true` | `--enable-auto-tool-choice --tool-call-parser openai` | ⚠️ HarmonyError risk |
-| Prompt-based | `native_tool_calling: false` | None required | Stable (recommended) |
+| Native | `facts.tool_mode: "native"` on the model | `--enable-auto-tool-choice --tool-call-parser openai` | ⚠️ HarmonyError risk |
+| Prompt-based | `facts.tool_mode: "prompt_based"` on the model | None required | Stable (recommended; the shipped default for `openai/gpt-oss*`) |
 
-**Key insight:** vLLM only triggers Harmony parsing when `request.tools` is provided. With `native_tool_calling: false`, ppxai doesn't send `tools`, so vLLM returns plain text that ppxai parses client-side. This bypasses the unstable Harmony parser.
+> `native_tool_calling` (provider- or capability-level) is a **dead key**
+> since ADR 0012 — parsed and ignored. Set `tool_mode` on the model's
+> `facts` block instead; see
+> [docs/tool-calling.md](tool-calling.md#configuration-reference) for the
+> full form.
+
+**Key insight:** vLLM only triggers Harmony parsing when `request.tools` is provided. With `tool_mode: "prompt_based"`, ppxai doesn't send `tools`, so vLLM returns plain text that ppxai parses client-side. This bypasses the unstable Harmony parser.
 
 Implementation:
 - Tool prompt injection: `ppxai/engine/tools/manager.py:get_tools_prompt()`
@@ -44,9 +50,12 @@ Production setup:
 - vLLM 0.11.x nightly with LMCache
 - `--tool-call-parser openai`
 - Model: `openai/gpt-oss-120b`
-- ppxai default: `native_tool_calling: true`
+- ppxai default: `openai/gpt-oss*` is pinned `facts.tool_mode: "prompt_based"`
+  in the shipped facts table (`ppxai/engine/model_facts.py`), regardless of
+  vLLM flags
 
-For developers hitting HarmonyError: set `native_tool_calling: false`.
+For developers hitting HarmonyError: set `facts.tool_mode: "prompt_based"`
+on the model.
 
 ## Qwen3 / Qwen2.5 (Hermes format)
 
@@ -66,9 +75,12 @@ ppxai config:
   "providers": {
     "custom": {
       "base_url": "http://localhost:8000/v1",
-      "native_tool_calling": true,
       "models": {
-        "Qwen/Qwen3-...": { "max_tokens": 8192, "temperature": 0.2 }
+        "Qwen/Qwen3-...": {
+          "max_tokens": 8192,
+          "temperature": 0.2,
+          "facts": { "tool_mode": "native" }
+        }
       }
     }
   }
@@ -80,7 +92,8 @@ Known issues:
 - Unicode whitespace in code
 - May still exhibit "I'll use X tool" behavior
 
-Fallback: if native tool calling fails, set `native_tool_calling: false`.
+Fallback: if native tool calling fails, set `facts.tool_mode: "prompt_based"`
+on the model.
 
 ## Known issue: "I'll use X tool" followed by JSON text
 

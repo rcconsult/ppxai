@@ -681,7 +681,7 @@ This demonstrates genuine error recovery — the model read the error message ("
 
 **Date:** 2026-02-20, 00:00–00:42 UTC+1 (continuation of 2026-02-19 23:55)
 **Sessions:** `webapp-7fd005b1` (pre-fix), `webapp-ae74b096` (gemini-3-pro), `webapp-f9afa0cd` (gemini-3-pro), `webapp-a3f8c979` (main multi-model test)
-**Working directory:** `/Users/rado/git/utils/ppxai-sre-repo` (monorepo with agents, libs, MCP servers)
+**Working directory:** `/path/to/ppxai-sre-repo` (monorepo with agents, libs, MCP servers)
 **Client:** ppxai Web App via ppxai-server (HTTP/SSE) on macOS
 **Debug log:** `~/.ppxai/logs/server-debug.log`
 **Monitored by:** Claude Code (live tail + analysis)
@@ -1051,7 +1051,7 @@ Engine error: Invalid request: Unsupported parameter: 'max_tokens' is not suppor
 
 **Date:** 2026-02-20, 00:42–01:20 UTC+1
 **Session:** `webapp-d10cfb08-198c-4c67-a43c-fedbf7a4ab33`
-**Working directory:** `/Users/rado/git/utils/ppxai-sre-repo`
+**Working directory:** `/path/to/ppxai-sre-repo`
 **Client:** ppxai Web App via ppxai-server (HTTP/SSE) on macOS
 **Debug log:** `~/.ppxai/logs/server-debug.log`
 **Monitored by:** Claude Code (live tail + analysis)

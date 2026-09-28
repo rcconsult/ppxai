@@ -1,5 +1,11 @@
 # `/task` command — incremental build plan
 
+> **Status (2026-09-28): T1–T8b shipped** (v1.19.0 for T1–T7/T8a,
+> v1.19.1 for T8b) — all marked ✅ DONE in the body below. Only **T3.b**
+> (`--system-file`/`--batch`, deferred) and **T9** (container tier-d,
+> future) remain open. The "Where we start" paragraph below describes the
+> **pre-T1 baseline**, not current state — read it as history.
+
 Sequencing plan for the interactive **`/task`** command family (design:
 [agent-task-command-design.html](agent-task-command-design.html); lifecycle:
 [agent-task-lifecycle.html](agent-task-lifecycle.html); architecture:
@@ -26,7 +32,7 @@ Sequencing plan for the interactive **`/task`** command family (design:
 > late port. Every increment ships with tests and a concrete trial before the
 > next one starts.
 
-**Where we start.** The tool-capable tier already exists server-side:
+**Where we start (pre-T1 baseline — historical, not current state).** The tool-capable tier already exists server-side:
 `POST /v1/agent/task`, `GET /runs`, `GET /runs/{id}`, `GET /runs/{id}/events`
 (SSE), `POST /runs/{id}/cancel`, owner-scoped authz, `execution.task.enabled`
 default-off gate, no-shell rejection. There is **no `/task` client command in

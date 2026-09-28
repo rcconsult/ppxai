@@ -22,22 +22,22 @@ so the agent can actually read `references/`.
 
 ## Enable the skill surface
 
-Skills resolve **by name** under `tools.agent.sandbox.skills_dir` (name only — no
+Skills resolve **by name** under `execution.task.sandbox.skills_dir` (name only — no
 paths). The seal must be engaged (`enforcement: "in_process"`) for the read-scope
 mount to mean anything. In `~/.ppxai/ppxai-config.json`:
 
 ```jsonc
 {
-  "tools": {
-    "agent": {
-      "task_tier_enabled": true,
-      "default_subagent": { "provider": "nvidia", "model": "qwen" },
+  "execution": {
+    "task": {
+      "enabled": true,
       "sandbox": {
         "enforcement": "in_process",                 // engage the T2 seal
         "skills_dir": "/path/to/ppxai/examples/task-skills",
         "allow_skill_scripts": false                 // needs-scripts is refused while false
       }
-    }
+    },
+    "default_subagent": { "provider": "nvidia", "model": "qwen" }
   }
 }
 ```
@@ -93,7 +93,7 @@ stores the bearer once and every `/task` verb carries it.
 
 - **Grant = union.** Skills ADD capability: the effective grant is the
   request/spec grant ∪ every skill's grant, de-duped, still ⊆ the operator
-  ceiling (no `execute_shell_command`, `task_tier_enabled` required).
+  ceiling (no `execute_shell_command`, `execution.task.enabled` required).
 - **Scalars** (provider/model/system/budget) take precedence
   request > spec > first skill that sets it > `default_subagent`.
 - **Scripts are inert.** `scripts/` never run in the in-process tier; the gate

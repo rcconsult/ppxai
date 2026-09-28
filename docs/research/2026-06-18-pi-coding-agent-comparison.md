@@ -45,10 +45,12 @@ governed agent backend for other services.
 | Sub-agents | **Rejected** as built-in (spawn via bash + tmux; externalize state to files) | **Built in**: `/v1/agent/task`, `spawn_subagent`, run registry, budgets/cancel |
 | MCP | **Rejected** | Planned (v1.20.x), not yet integrated |
 | Safety/sandbox | "Full YOLO" — "use a container if you need guardrails" | Consent gates, tool allowlist (AC-1), egress allowlist + SSRF guard (AC-2), bearer auth, pluggable secret sources |
-| Providers | Anthropic, OpenAI, Google, xAI, Groq, Cerebras, OpenRouter, OpenAI-compat | Perplexity, Gemini, OpenAI, OpenRouter, vLLM/NIM/Ollama; Anthropic in progress |
+| Providers | Anthropic, OpenAI, Google, xAI, Groq, Cerebras, OpenRouter, OpenAI-compat | Perplexity, Gemini, OpenAI, OpenRouter, vLLM/NIM/Ollama; Anthropic in progress [^providers-2026-09] |
 | Headless/API | JSON streaming + RPC for the coding agent itself | Stable semver `POST /v1/oneshot` + `/v1/agent/*` as a gateway for OTHER services |
 | Session model | continue/resume/branching, AGENTS.md context, HTML export, cost/token tracking, Claude OAuth | sessions + checkpoints, AppState sync, command envelope, multi-client |
 | Maturity/reach | ≈46k stars, fast public OSS | Private project, 4 clients, ≈148k LoC |
+
+[^providers-2026-09]: **Dated note (2026-09-28), not a rewrite of the original research.** Since ADR 0015, Perplexity is no longer a chat provider (kept only as a web-search/grounding backend, ADR 0014); Anthropic shipped opt-in in v1.19.1.
 
 ## The sharpest contrast (relevant to v1.19.0)
 

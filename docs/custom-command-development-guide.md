@@ -126,6 +126,28 @@ class CommandSpec:
     aliases: List[str] = field(default_factory=list)   # e.g. ["h"] for /h -> /hello
     usage: str = ""              # Usage hint (e.g., "/hello [name]")
     hidden: bool = False         # Hide from /help listing
+    subcommands: List[tuple] = field(default_factory=list)  # (name, description) pairs — the
+                                  # ONLY source for tab completion and `/help <cmd>` (ADR 0007);
+                                  # first level only, e.g. [("list", "List items"), ("clear", "Clear all")]
+    clients: List[str] | None = None          # Which clients can see this command; None = universal
+    client_action: str | None = None          # Name from CLIENT_ACTIONS for client-handled behavior
+    sensitive_subcommands: List[str] = field(default_factory=list)  # subset of `subcommands` whose
+                                  # argument is a secret (e.g. "set" in a token command) and must
+                                  # never be logged, echoed or persisted
+```
+
+`subcommands` is what drives completion and `/help <cmd>` — see
+`ppxai/commands/factory.py::CommandSpec` for the full field list
+(including `client_action_clients`), e.g.:
+
+```python
+CommandFactory.register(CommandSpec(
+    name="mynotes",
+    description="Manage quick notes",
+    handler=handle_mynotes,
+    category="custom",
+    subcommands=[("add", "Add a note"), ("list", "List notes"), ("clear", "Clear all notes")],
+))
 ```
 
 ---
@@ -197,7 +219,7 @@ for name, func, desc in [
         name=name,
         description=desc,
         handler=func,
-        category="git"
+        category="custom"  # REQUIRED for a file in ~/.ppxai/commands/ — see the warning above
     ))
 ```
 
@@ -725,15 +747,17 @@ def handle_gd(handler, args: str):
     else:
         console.print(f"[red]{output}[/red]")
 
-# Register commands
+# Register commands — category="custom" is REQUIRED for a file in
+# ~/.ppxai/commands/ (see the warning above); grouping can go in the
+# description instead.
 CommandFactory.register(CommandSpec(
-    name="gs", description="Git status (short)", handler=handle_gs, category="git"
+    name="gs", description="Git status (short)", handler=handle_gs, category="custom"
 ))
 CommandFactory.register(CommandSpec(
-    name="gl", description="Git log", handler=handle_gl, category="git", usage="/gl [count]"
+    name="gl", description="Git log", handler=handle_gl, category="custom", usage="/gl [count]"
 ))
 CommandFactory.register(CommandSpec(
-    name="gd", description="Git diff", handler=handle_gd, category="git", usage="/gd [file]"
+    name="gd", description="Git diff", handler=handle_gd, category="custom", usage="/gd [file]"
 ))
 ```
 
@@ -781,11 +805,11 @@ def handle_notes(handler, args: str):
 
 CommandFactory.register(CommandSpec(
     name="note", description="Add a quick note", handler=handle_note,
-    category="notes", usage="/note <text>"
+    category="custom", usage="/note <text>"  # REQUIRED for ~/.ppxai/commands/ — see the warning above
 ))
 CommandFactory.register(CommandSpec(
     name="notes", description="Show recent notes", handler=handle_notes,
-    category="notes"
+    category="custom"
 ))
 ```
 
@@ -830,7 +854,7 @@ CommandFactory.register(CommandSpec(
     name="api",
     description="Generate API curl command",
     handler=handle_api,
-    category="tools",
+    category="custom",  # REQUIRED for ~/.ppxai/commands/ — see the warning above
     usage="/api <describe the API call>"
 ))
 ```

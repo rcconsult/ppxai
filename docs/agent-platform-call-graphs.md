@@ -8,10 +8,12 @@
 > describe commands which no longer exist.
 >
 > **1. Admission moved out of the routes (`135abf48`).**
-> `ppxai/engine/task_authorizer.py::authorize_task()` (`:1274`) is the
-> single admission point for the task tier, called from
-> `routes/agent_v1.py:714`. `authorize_oneshot()` is its `/run` sibling,
-> called at `:364`. These graphs draw those gates inline in the route.
+> `ppxai/engine/task_authorizer.py::authorize_task()` (`:1275`, banner
+> previously said `:1274`) is the single admission point for the task
+> tier, called from `routes/agent_v1.py:728` (banner previously said
+> `:714`). `authorize_oneshot()` is its `/run` sibling, called at `:371`
+> (banner previously said `:364`). These graphs draw those gates inline
+> in the route. Line cites drift fast here — prefer the symbol names.
 > Specifically superseded: **Increment 4** (provider/model resolution —
 > `create_agent_task` no longer calls `_v1_provider_or_400` at all; that
 > now happens inside `authorize()` via `validate_provider_or_error`),
@@ -28,8 +30,8 @@
 > is a genuinely different topology from the HTTP route and is why a
 > mechanical find-and-replace of the gate boxes would be wrong.
 >
-> **2. `build_task_runner` moved** to `ppxai/engine/task_runner.py:152`
-> (v1.19.1, for the T8b in-process port). Inc 7 and T2 still attribute it
+> **2. `build_task_runner` moved** to `ppxai/engine/task_runner.py:240`
+> (banner previously said `:152`; v1.19.1, for the T8b in-process port). Inc 7 and T2 still attribute it
 > to `routes/agent_v1.py`, which now only re-exports it — and its own
 > comment says *"NOT a patch point… Patch
 > `ppxai.engine.task_runner.build_task_runner` instead."*
@@ -47,11 +49,23 @@
 > `{web_search}` grant, not the plain oneshot path Inc 1/2 draw
 > (`agent_v1.py:385-410`). No section covers this.
 >
-> **5. `NetworkPolicy` gained `provider_name`** (`network_policy.py:364`) and
+> **5. `NetworkPolicy` gained `provider_name`** (`ppxai/engine/tools/network_policy.py:298`,
+> banner previously omitted the path and said `:364`) and
 > `tool_targets()` now resolves web_search hosts per-provider via
 > `resolve_web_search_backend()` rather than the fixed four-host superset
 > Inc 5 shows. The allow-list is also passed through `apply_egress_ceiling()`
-> before construction (`task_runner.py:305-315`).
+> before construction (`task_runner.py:393`, banner previously said
+> `:305-315`).
+>
+> **6. §I is superseded by ADR 0014/0015.** §I still describes oneshot
+> grounding as native-only, gated on `tools.web_search.oneshot_grounding`,
+> with a Perplexity "sonar\* searches intrinsically" branch. Since v1.19.3,
+> the gate is `execution.run.grounding` with modes `off`/`retrieve`/`native`
+> (`ppxai/config/execution.py::GROUNDING_MODES`; `True` means `"retrieve"` —
+> a search through the `ppxai/engine/search/` layer, for ANY provider, not
+> just Gemini) and the Perplexity chat provider no longer exists (ADR 0015).
+> §N's example command at line 1027 (`"/task run "…" [--work-dir <p>]"`) is
+> also stale — ADR 0011 renamed this to `/task "…" [--work-dir <p>]`.
 >
 > Redrawing remains open work; this banner is the map of what to redraw.
 

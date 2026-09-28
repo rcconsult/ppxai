@@ -6,6 +6,14 @@ executed 2026-08-15 on `bugfix/v1.19.1`, one commit per phase
 `0b3bde98` P3 · `66639086` P4 · `7bec4940` P6 · `575ae3e7` P5).
 Filed 2026-08-15 @ `7c82c95e`.
 
+> **Historical record, not current state (2026-09-28).** This file is
+> closed-out work — a completed TODO, not a live tracker. Its "ground
+> truth" snapshot below (v1.19.1 unreleased, 5097 collected tests, OpenAI
+> coding model `gpt-5.4-mini`) reflects 2026-08-15 and is now stale — v1.19.1
+> shipped, the test count has grown, and `providers.openai.coding_model` is
+> `gpt-5.6-terra` in the shipped config. Treat everything below as a dated
+> snapshot of what was true when the sweep ran, not as current facts.
+
 **Two filed findings were REJECTED on verification** (in addition to the
 macOS-Intel one at the bottom) — do not re-file:
 1. *"`autorouter-config.md:30` names the wrong OpenAI coding model."*

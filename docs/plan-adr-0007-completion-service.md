@@ -2,8 +2,9 @@
 
 **Status: ALL FIVE STEPS IMPLEMENTED** — 1 (1a + 1b), 2, 2.5, 3a (web),
 3a-sec (sensitive subcommands), 3b (VSCode), 4 (derive, don't restate)
-and **5 (the parity fence, 2026-09-21)**. The ADR's own Status line is
-the owner's to flip; implementation is complete.
+and **5 (the parity fence, 2026-09-21)**. **Accepted 2026-09-21; shipped
+in v1.19.3 (released 2026-09-28)** — the ADR's own Status line has
+already been flipped to Accepted/implemented.
 Written 2026-09-20 on `bugfix/v1.19.3`; **rewritten the same day** after
 the owner restated the goal. The first draft split the work (a) invert the
 edge / (b) relocate / (c) roster, called (c) "a feature wearing the ADR's
@@ -18,7 +19,7 @@ file is written not to repeat that.
 **Record:** [decisions/0007-completion-first-class-service.md](decisions/0007-completion-first-class-service.md)
 · step 1 shipped v1.18.8 · steps 2 and 2.5 landed 2026-09-20, steps 3a
 (web), 3a-sec, 3b (VSCode) and 4 on 2026-09-21, all on `bugfix/v1.19.3`,
-no target release.
+**shipped in v1.19.3 (released 2026-09-28)**.
 
 ## The goal
 

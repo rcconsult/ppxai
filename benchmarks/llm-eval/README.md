@@ -15,10 +15,10 @@ Uses **ppxai Engine** for consistent tool handling across all providers.
 ## Quick Start
 
 ```bash
-# Run against Perplexity
-python benchmark.py --provider perplexity --model sonar-pro
-
 # Run against Gemini
+python benchmark.py --provider gemini --model gemini-3.8-flash
+
+# Run against a different Gemini model
 python benchmark.py --provider gemini --model gemini-2.5-flash
 
 # Run against OpenAI
@@ -75,7 +75,7 @@ Tests failure handling:
 
 ```bash
 # Full benchmark
-python benchmark.py --provider perplexity --model sonar-pro
+python benchmark.py --provider gemini --model gemini-3.8-flash
 
 # Specific categories only
 python benchmark.py --provider gemini --model gemini-2.5-flash --categories tool_calling,code_editing

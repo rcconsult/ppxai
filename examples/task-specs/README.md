@@ -13,19 +13,19 @@ prompt — so you launch with `--spec <name>` instead of a long flag line.
 
 ## Enable the spec surface
 
-Specs resolve **by name** under `tools.agent.sandbox.specs_dir` (name only — no
+Specs resolve **by name** under `execution.task.sandbox.specs_dir` (name only — no
 paths). In `~/.ppxai/ppxai-config.json`:
 
 ```jsonc
 {
-  "tools": {
-    "agent": {
-      "task_tier_enabled": true,                 // the tool-capable /task tier is default-off
-      "default_subagent": { "provider": "nvidia", "model": "qwen" },
+  "execution": {
+    "task": {
+      "enabled": true,                 // the tool-capable /task tier is default-off
       "sandbox": {
         "specs_dir": "/path/to/ppxai/examples/task-specs"
       }
-    }
+    },
+    "default_subagent": { "provider": "nvidia", "model": "qwen" }
   }
 }
 ```
@@ -88,7 +88,7 @@ a hint pointing at `/token`.
 
 - **Precedence:** explicit request field > spec field > `default_subagent`.
 - **Ceiling:** the merged grant faces the same guards as a direct request —
-  no `execute_shell_command`, `task_tier_enabled` required. A spec cannot widen
+  no `execute_shell_command`, `execution.task.enabled` required. A spec cannot widen
   what the operator allows.
 - **`--system-file` / `--batch`** (browser file reads) are T3.b; `batch.jsonl`
   is included now so it's ready when that client glue lands. The server loader
