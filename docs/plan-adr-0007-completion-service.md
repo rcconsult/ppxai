@@ -950,6 +950,21 @@ verified:
 >    server was my own curl). Web re-checks on heartbeat recovery; VSCode
 >    does not.
 >
+> **Desktop extension host, 2026-09-28: connect + chat verified, command
+> list not re-run.** VSCode desktop with the 1.19.4 VSIX, against the
+> installed `ppxai-server.exe` 1.19.4 (the `/ws/terminal` guard build, which
+> refused a probe from `http://evil.example` with 403 in the same window).
+> From the "ppxai HTTP" and "ppxai" output channels: the extension connected
+> once the server came up, streamed 3 chat turns, two of them 6-step tool
+> loops, and sent a shell consent reply the server acted on. The "ppxai"
+> channel stayed empty, so schema-guard item 1 (matched pair: silent) also
+> holds in the desktop host. Disconnecting called `/shutdown`; the server
+> logged a graceful stop (`reason: api_request`, no ERROR lines), and no
+> `ppxai` process or port 54320 listener was left. Not covered by this run: the eight step-C
+> commands, SecretStorage, and defect 1's CSP fix on desktop. They passed in
+> VSCode web and nothing points to a desktop-only difference, but this run
+> did not exercise them.
+>
 > Minor: `/checkpoint list` cuts file-backend ids to 8 characters, so every
 > same-day id reads `cp-20260`. Message timestamps (and the usage badge)
 > render dark-on-blue and are near-unreadable in VS Code web's light theme.
