@@ -401,11 +401,13 @@ def test_hook_and_python_patterns_agree_on_corpus() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         msg_path = Path(tmpdir) / "COMMIT_EDITMSG"
         for message, expect_violation in _SHARED_CORPUS:
-            msg_path.write_text(message, newline="")
+            msg_path.write_text(message, encoding="utf-8", newline="")
             result = subprocess.run(
                 ["sh", str(_HOOK_PATH), str(msg_path)],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=10,
             )
             hook_rejected = result.returncode != 0
@@ -424,12 +426,15 @@ def test_hook_honours_owner_override_env_var() -> None:
         msg_path = Path(tmpdir) / "COMMIT_EDITMSG"
         msg_path.write_text(
             "fix(x): thing\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+            encoding="utf-8",
             newline="",
         )
         result = subprocess.run(
             ["sh", str(_HOOK_PATH), str(msg_path)],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=10,
             env={**os.environ, "PPXAI_ALLOW_ATTRIBUTION": "1"},
         )
