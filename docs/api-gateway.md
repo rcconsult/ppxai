@@ -497,6 +497,7 @@ trail — concurrent requests cannot cross-attribute cost.
 | 400 | Unknown provider, missing model with no default, no API key for provider, provider doesn't support oneshot in v1; `"grounding": true` on a server that cannot ground the request (the detail names `execution.run.grounding`); a malformed `execution.egress_ceiling` on the retrieval path |
 | 422 | Request body fails validation (empty prompt, negative max_tokens, temperature out of range, etc.) |
 | 502 | Provider call raised — wraps the upstream error as `{"detail": "Provider call failed: <message>"}`; on the enrichment path, a failed/cancelled run — the detail carries the `run_id` for post-mortem |
+| 503 | (v1.19.3) The server stopped while the request was in flight: past `server.shutdown_grace_s` (default 10 s) on a single SIGTERM or Ctrl+C, or at once on a second one. The response carries `Retry-After: 5` and `{"detail": "server is shutting down; retry"}`. Safe to retry against a restarted server; before v1.19.3 the same case was a `500` |
 | 504 | Enrichment-path run exceeded the request timeout — the run is cooperatively cancelled and the detail carries its `run_id` (the record stays inspectable) |
 
 #### Notes

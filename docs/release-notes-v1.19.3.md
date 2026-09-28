@@ -62,15 +62,33 @@
 > retyped on the server**; a newer server's extra fields are adopted
 > silently, an older server changes nothing.
 >
+> **Late additions (2026-09-28).** A stuck provider call can no longer keep
+> `ppxai-server` from stopping, and the packaged server now obeys
+> `kill <pid>`. A request cut off by a stop gets a retryable `503`. `/cost`
+> now records what Perplexity actually charges per search and counts
+> Gemini thinking tokens. Grounded answers cite resolvable sources. See
+> "Fixed".
+>
 
 > Config shape: a `providers.perplexity` block is now ignored, and
 > `execution.run.grounding: true` now means search-first retrieval (see
 > the upgrade steps). The shipped microk8s coder template changes shape,
-> but it is an example: nothing in an existing install reads it. The v1
-> API gateway (`POST /v1/oneshot`, bearer auth) keeps its response shape;
-> its request gains one optional field, `grounding`, and a request naming
-> `provider: "perplexity"` now answers 400 instead of calling the retired
-> endpoint.
+> but it is an example: nothing in an existing install reads it. Two new
+> optional keys, `server.shutdown_grace_s` (default 10) and
+> `providers.<id>.timeout_s` (unset keeps the SDK default), bound how long
+> a stop waits and how long a provider call may run.
+>
+> **v1 API gateway (`POST /v1/oneshot`, bearer auth).** Every existing
+> field keeps its shape. Four additive or error-path changes:
+> - the request gains one optional field, `grounding` (`true`/`false`/absent);
+> - on the retrieval path, the response's `grounding` record gains `sources`;
+> - a request cut off by a server stop now gets **`503` with
+>   `Retry-After: 5`** instead of `500`, so it can be retried;
+> - a request naming `provider: "perplexity"` answers `400` instead of
+>   calling the retired endpoint.
+>
+> A caller that depends on `grounding` checks the version from
+> `GET /health`.
 
 ## Branch
 
@@ -232,6 +250,69 @@ See [docs/decisions/0007-completion-first-class-service.md](decisions/0007-compl
   verdict; both still decide on the actual fields.
 
 ## Fixed
+
+- **A hung provider call no longer keeps `ppxai-server` running after a
+  stop.** Found on WSL: an NVIDIA `kimi-k3` call that never answered kept
+  the server alive through SIGTERM until SIGKILL, and Ctrl+C behaved the
+  same on every platform. Three causes: uvicorn's graceful-shutdown wait
+  had no limit; ppxai's own signal handler never ran, because uvicorn
+  installs its own; and provider calls run in worker threads that Python
+  waits for at exit, with no limit on Python 3.10 and 3.11.
+  - A stop now waits at most **`server.shutdown_grace_s`** (new, default
+    10) for in-flight requests, then as long again for provider calls,
+    logs what it abandons, and exits. A second SIGINT or SIGTERM forces
+    the stop at once. A forced stop still runs the app's own shutdown, so
+    sessions are saved and preview backends stopped.
+  - **A request cut off at shutdown gets `503` with `Retry-After: 5`** and
+    `{"detail": "server is shutting down; retry"}` (with a
+    `Content-Length`), instead of a `500`. A caller can now tell a
+    retryable stop from a server bug. This includes `/v1/oneshot`; see
+    the API note in the summary. The log shows one warning line per
+    abandoned request, and a stop logs no ERROR lines.
+  - New optional **`providers.<id>.timeout_s`** bounds each call through
+    the OpenAI SDK. Unset, the SDK's 600 s read timeout with 2 retries
+    applies, as before.
+  - **The packaged `ppxai-server` now obeys `kill <pid>`.** Its PyInstaller
+    spec ignored signals in the launcher, unlike the other three binaries,
+    so on Linux and macOS a SIGTERM (or a systemd stop) did nothing. Note
+    that `kill -9` on the launcher's PID still leaves the server process
+    running, since SIGKILL cannot be forwarded; stop it with SIGTERM, or
+    kill the whole process group.
+  - **The restart sweep runs at server start and leaves other servers'
+    runs alone.** Runs a crashed server left `running` now show as
+    `interrupted` as soon as the next server is up, not after the first
+    `/v1` call. Run metadata gains an additive `server_pid` field, and a
+    run owned by another live server is not swept, so two servers sharing
+    `~/.ppxai/runs` (the desktop app next to the VSCode server) no longer
+    interrupt each other's live runs.
+  - `scripts/gateway-smoke.py` revokes the bearer token it mints, instead
+    of leaving one in `tokens.json` after every run.
+
+- **Perplexity web-search cost is the cost Perplexity reports.** Search
+  and grounding call Perplexity's Agent (Responses) API with
+  `perplexity/sonar` and a `web_search` tool: $0.25 in and $2.50 out per
+  1M tokens, plus $0.0025 per search (docs.perplexity.ai, checked
+  2026-09-28). The shipped configs priced it at the retired Sonar chat
+  rate of 1 / 1 per 1M tokens and counted tokens only, so the search fee
+  and cache writes were never recorded. ppxai now records the
+  `usage.cost.total_cost` each response carries; the configured token
+  price, now 0.25 / 2.5, is only the fallback. **An installed config
+  keeps its own `tools.web_search.pricing.perplexity`**, so check it.
+
+- **Grounded answers use the search results, and cite them resolvably.**
+  A retest found `gemini-3.8-flash` answering from its training data
+  against the injected results, 3 runs of 3. The results now carry
+  today's date and say they are newer than the model's training data;
+  they remain data, not instructions. 3 runs of 3 then answered from the
+  results with `[1]`. Each `[n]` now resolves through the new
+  `grounding.sources` field (see "Grounding searches first").
+
+- **Gemini thinking tokens are counted as output.** Gemini bills thinking
+  tokens as output but reports them apart from the answer tokens, and
+  ppxai ignored them. `completion_tokens` and every Gemini cost therefore
+  left out most of a thinking model's output (measured: 55 completion
+  tokens against 1,262 total on a 190-token prompt). They are now part of
+  `completion_tokens`, so prompt plus completion equals total.
 
 - **Gemini grounded searches were logged at 1/1000 of their cost.**
   `tools.web_search.pricing.gemini_grounding.per_query` is a per-query
@@ -692,6 +773,12 @@ prompt. Any provider can be grounded.
   `run_id`, `queries`, `backend`, `search_cost`. `searched: false` means no
   backend was usable or every one failed, and the model answered without a
   search.
+- The record also gains **`sources`**, on this path only:
+  `[{url, title}]`, the results shown to the model, in order, so an
+  answer's `[n]` is `sources[n-1]`. `title` is null unless the backend
+  gives one; Gemini's URLs are opaque Google redirects, so its `title` is
+  the source's domain. This was ADR 0014's deferred structured-citations
+  decision, accepted on 2026-09-28.
 - The search cost is logged under the oneshot tier, so `/cost` counts it.
 - Only the prompt text is sent: not the system message, history or
   attachments. The backend's hosts must pass `execution.egress_ceiling`;
@@ -712,8 +799,9 @@ prompt. Any provider can be grounded.
 | `false` | No web search of any kind for this request: no retrieval, no native search, no search loop. |
 | `true` | Grounding required: 400 when the server cannot ground this request. |
 
-The response shape is unchanged. **Callers with untrusted or confidential
-prompts should send `false`**: retrieval sends the prompt text to a
+The response keeps every field it had; the only additions are
+`grounding.sources` above and the shutdown `503` under Fixed. **Callers
+with untrusted or confidential prompts should send `false`**: retrieval sends the prompt text to a
 third-party search host, and the results reach the model. A server older
 than v1.19.3 ignores the field; a caller that depends on it checks the
 version from `GET /health`.
@@ -960,6 +1048,27 @@ Item 78 closes and Item 79 files in this same session, net unchanged).
   API**, as recorded in v1.19.1 (debt Item 71, an accepted limitation).
 
 ## Verification
+
+**Current (2026-09-28).** Full suite at `7f7d1e94` on macOS (Intel,
+Python 3.11.11, `uv sync --all-extras`): **6,917 passed, 5 skipped,
+0 failed** in ~115 s, run in parallel. CI passes on `714e1176`, the
+branch head at the time of the pre-flight check; the commits after
+`7f7d1e94` are docs-only. The other hosts reported: Windows 6,870 passed,
+0 failed, at the shutdown fixes; Linux (WSL2) 6,894 passed, 7 skipped,
+0 failed, at `24ad6d67`. Their counts differ by the usual platform gates
+and by later test additions. On the macOS install built from `7f7d1e94`,
+all five binaries report 1.19.3, office preview renders a slide to PNG,
+and `scripts/gateway-smoke.py` passes 8 of 8. The rebuilt `ppxai-server`
+was signal-tested against a provider that never answers: an idle SIGTERM
+exits in about 1 s, one SIGTERM with a stuck call exits in about 20 s,
+and a second SIGTERM exits in about 1.4 s. In both stuck cases the client
+gets `503`, `Retry-After: 5` and a 44-byte body, and the log has no ERROR
+lines. A live Perplexity search recorded the reported $0.00394, not the
+$0.00143 its tokens would price at. **Still NOT verified:** the VSCode
+manual smoke checklist in a real extension host, and a Rich/Textual
+smoke run.
+
+The older measurements below are kept for the record.
 
 Full suite at `1953c29c` (branch HEAD, 2026-09-21, later the same day —
 supersedes the `beffa197` figure below, taken before the VSCode AppState
