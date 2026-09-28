@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 820" width="1600" height="820" role="img" aria-labelledby="t d">
+  <title id="t">ppxai SSH hub — attachment state machine</title>
+  <desc id="d">RemoteSessionManager attachment states: disconnected, connecting, tunneled, healthy, degraded and the terminal state gone, with every transition allowed by ALLOWED_TRANSITIONS in ppxai/remote/manager.py and what triggers it.</desc>
+  <defs>
+    <style>
+      .t  { font-family: 'IBM Plex Sans','Segoe UI','Noto Sans',Arial,sans-serif; fill: #1D1F20; }
+      .c  { font-family: 'IBM Plex Sans Condensed','Arial Narrow','Noto Sans Condensed',sans-serif; }
+      .m  { font-family: 'IBM Plex Mono',Consolas,'Noto Sans Mono',monospace; }
+      .h1 { font-size: 30px; font-weight: 700; fill: #F2F2F3; }
+      .st { font-size: 20px; font-weight: 700; fill: #FFFFFF; }
+      .sd { font-size: 12.5px; fill: #E9F4FB; }
+      .e  { font-size: 13.5px; }
+      .s  { font-size: 12.5px; fill: #5D5D60; }
+      .halo { stroke: #FFFFFF; stroke-width: 9px; paint-order: stroke; stroke-linejoin: round; }
+    </style>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#005A93"/></marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#98989B"/></marker>
+  </defs>
+
+  <rect width="1600" height="820" fill="#F2F2F3"/>
+  <rect width="1600" height="72" fill="#032B46"/>
+  <text x="32" y="46" class="t c h1">ppxai SSH hub — one attachment's states (RemoteSessionManager)</text>
+  <text x="1568" y="44" text-anchor="end" class="t e" style="fill:#A1D4F0">ppxai/remote/manager.py · ALLOWED_TRANSITIONS</text>
+  <rect x="24" y="92" width="1552" height="640" rx="14" fill="#FFFFFF"/>
+
+  <!-- transitions first (under the state boxes) -->
+  <!-- disconnected -> connecting -->
+  <path d="M290 250 H 426" stroke="#005A93" stroke-width="2.5" fill="none" marker-end="url(#a)"/>
+  <!-- connecting -> tunneled -->
+  <path d="M654 250 H 790" stroke="#005A93" stroke-width="2.5" fill="none" marker-end="url(#a)"/>
+  <!-- tunneled -> healthy -->
+  <path d="M1018 250 H 1154" stroke="#005A93" stroke-width="2.5" fill="none" marker-end="url(#a)"/>
+  <!-- connecting -> disconnected (initial forward fails) -->
+  <path d="M470 290 C 440 360 340 360 250 294" stroke="#98989B" stroke-width="2" fill="none" marker-end="url(#g)"/>
+  <!-- connecting -> degraded (re-forward fails during recovery) -->
+  <path d="M560 294 C 600 420 700 520 792 560" stroke="#005A93" stroke-width="2" fill="none" marker-end="url(#a)"/>
+  <!-- tunneled -> degraded -->
+  <path d="M904 294 V 546" stroke="#005A93" stroke-width="2" fill="none" marker-end="url(#a)"/>
+  <!-- healthy -> degraded -->
+  <path d="M1200 294 C 1160 420 1090 520 1020 560" stroke="#005A93" stroke-width="2" fill="none" marker-end="url(#a)"/>
+  <!-- degraded -> connecting (recover) -->
+  <path d="M790 600 C 560 640 470 480 520 296" stroke="#005A93" stroke-width="2" fill="none" marker-end="url(#a)" stroke-dasharray="8 5"/>
+  <!-- degraded -> gone -->
+  <path d="M1018 600 H 1236" stroke="#5D5D60" stroke-width="2.5" fill="none" marker-end="url(#g)"/>
+  <!-- healthy -> gone (stop) -->
+  <path d="M1350 294 V 546" stroke="#5D5D60" stroke-width="2.5" fill="none" marker-end="url(#g)"/>
+  <!-- tunneled/healthy/degraded -> disconnected (detach, close) -->
+  <path d="M1268 214 C 1240 120 300 120 200 206" stroke="#98989B" stroke-width="2" fill="none" marker-end="url(#g)" stroke-dasharray="3 5"/>
+
+  <!-- states -->
+  <rect x="64"   y="206" width="226" height="88" rx="44" fill="#5D5D60"/>
+  <text x="177"  y="244" text-anchor="middle" class="t st">disconnected</text>
+  <text x="177"  y="268" text-anchor="middle" class="t sd">not attached / detached</text>
+
+  <rect x="428"  y="206" width="226" height="88" rx="44" fill="#005A93"/>
+  <text x="541"  y="244" text-anchor="middle" class="t st">connecting</text>
+  <text x="541"  y="268" text-anchor="middle" class="t sd">ssh -N -L starting</text>
+
+  <rect x="792"  y="206" width="226" height="88" rx="44" fill="#0072B8"/>
+  <text x="905"  y="244" text-anchor="middle" class="t st">tunneled</text>
+  <text x="905"  y="268" text-anchor="middle" class="t sd">local end accepts</text>
+
+  <rect x="1156" y="206" width="226" height="88" rx="44" fill="#032B46"/>
+  <text x="1269" y="244" text-anchor="middle" class="t st">healthy</text>
+  <text x="1269" y="268" text-anchor="middle" class="t sd">/health 200 · route() works</text>
+
+  <rect x="792"  y="548" width="226" height="88" rx="44" fill="#62B2E0"/>
+  <text x="905"  y="586" text-anchor="middle" class="t st" style="fill:#032B46">degraded</text>
+  <text x="905"  y="610" text-anchor="middle" class="t sd" style="fill:#032B46">retry: 1 s × 2ⁿ, max 30 s</text>
+
+  <rect x="1238" y="548" width="226" height="88" rx="10" fill="#1D1F20"/>
+  <text x="1351" y="586" text-anchor="middle" class="t st">gone</text>
+  <text x="1351" y="610" text-anchor="middle" class="t sd">terminal: no way out</text>
+
+  <!-- edge labels (with halo, drawn last) -->
+  <g class="t e">
+    <text x="358" y="238" text-anchor="middle" class="halo">attach()</text>
+    <text x="722" y="238" text-anchor="middle" class="halo">forward() ok</text>
+    <text x="1086" y="238" text-anchor="middle" class="halo">GET /health 200</text>
+    <text x="352" y="364" text-anchor="middle" class="halo">first forward fails → error to caller</text>
+    <text x="646" y="468" text-anchor="middle" class="halo">re-forward fails</text>
+    <text x="912" y="420" class="halo">/health ≠ 200</text>
+    <text x="1128" y="468" text-anchor="middle" class="halo">monitor: /health ≠ 200</text>
+    <text x="560" y="600" text-anchor="middle" class="halo">_recover(): still listed ⇒ reconnect</text>
+    <text x="1127" y="588" text-anchor="middle" class="halo">not listed</text>
+    <text x="1360" y="420" class="halo">stop(): POST /shutdown 200</text>
+    <text x="735" y="140" text-anchor="middle" class="halo">detach() / hub shutdown — the remote server keeps running</text>
+  </g>
+
+  <!-- notes -->
+  <g class="t">
+    <text x="48" y="768" class="s">Every transition goes through _transition(), which rejects anything not in ALLOWED_TRANSITIONS and notifies subscribers; the hub retires its pooled HTTP client whenever a server leaves healthy.</text>
+    <text x="48" y="790" class="s">The monitor ticks every 5 s: healthy ⇒ probe /health; degraded with its backoff elapsed ⇒ re-list the host first. A retry that fails again stays degraded with a longer wait and emits no event.</text>
+  </g>
+</svg>

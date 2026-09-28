@@ -31,15 +31,67 @@ This document describes the high-level architecture and import patterns used in 
       providers/       tools/          session/
       BaseProvider    manager.py      session.py
       GeminiProvider  builtin/        checkpoint
-      OpenAIProvider  validator.py
-      PerplexityProv
+      OpenAICompat*   validator.py
+      OpenAINative*
+      Anthropic*
 ```
+
+`*` = `…Provider` (`OpenAICompatibleProvider`, `OpenAINativeProvider`,
+`AnthropicProvider`). Perplexity is **not** a chat provider (ADR 0015); it is a
+web-search and grounding backend under `engine/search/` (ADR 0014).
+
+When `remote.hosts` is configured, the same `ppxai-server` is also a **hub**
+that serves remote ppxai servers under `/h/<host>/<id>/` over SSH. See
+[Remote SSH hub (ADR 0013)](#remote-ssh-hub-adr-0013) below.
+
+## Remote SSH hub (ADR 0013)
+
+*Built on `feature/v1.19.4` (phases 1–5), not yet released.* The hub lets the
+local browser use a ppxai server that runs on another machine, so the engine,
+tools, files and terminal stay on that machine. It adds **no new program**:
+
+- the **local** `ppxai-server` becomes the hub when `remote.hosts` names a host
+  (`ppxai/server/routes/remote_hub.py` + the new `ppxai/remote/` package);
+- each **remote** server is the same `ppxai-server` binary, started over SSH
+  with `--uds --announce --detach`: a 0600 unix socket (no TCP listener), a
+  per-launch bearer token, and a registry entry under
+  `~/.ppxai/run/servers/`;
+- the transport is the user's own OpenSSH (`~/.ssh/config`, keys,
+  `known_hosts`, `BatchMode=yes`). The hub keeps one `ssh -N -L` forward per
+  attached server and reverse-proxies `/h/<host>/<id>/…` to it, injecting the
+  token so it never reaches the browser.
+
+![ppxai local flow and SSH hub flow side by side](diagrams/ssh-remote/ssh-hub-architecture.png)
+
+The local flow is unchanged: without `remote.hosts` there is no hub, no
+manager, no `ssh` process, and every `/hub/*` and `/h/*` path answers the
+plain Starlette 404 (pinned for the k8s coder pods by
+`tests/test_remote_hub_coder_fence.py`). `ppxai/remote/` imports nothing from
+`ppxai.engine` or `ppxai.commands`: it moves bytes and never interprets a chat.
+
+| Piece | Where | Role |
+|---|---|---|
+| Host inventory (S1) | `config/remote.py`, `remote/inventory.py` | `remote.hosts` = `[{id, ssh, ppxai_server?}]`; a fourth top-level config axis |
+| Transport (S2) | `remote/transport.py`, `remote/openssh.py` | `RemoteTransport` Protocol; `run()` = `ssh -T`, `forward()` = `ssh -N -L`; typed errors from OpenSSH stderr |
+| Remote contract (S3) | `server/registry.py`, `http.py::_run_announced` | `--uds --announce --detach`, `--list --json`; registry contract 1 |
+| Session manager (S4) | `remote/manager.py`, `remote/contract.py` | attachments, the state machine, 5 s monitor, launch/attach/detach/stop |
+| Hub routes (S5) | `server/routes/remote_hub.py` | `/hub/*` control API; `/h/<host>/<id>/…` HTTP/SSE/websocket proxy |
+| Web client (S6) | `web/app.js` `servedPathPrefix()`, `components/views/ssh-launcher-view.js` | API base inside the prefix; the SSH Launcher split pane |
+
+- **Call graphs:** [remote-ssh-call-graphs.md](remote-ssh-call-graphs.md)
+- **Diagrams:** [diagrams/ssh-remote/](diagrams/ssh-remote/README.md): the
+  architecture above, a
+  [launch → open → terminal → stop sequence](diagrams/ssh-remote/ssh-hub-sequence.png),
+  and the [attachment state machine](diagrams/ssh-remote/ssh-attachment-states.png)
+- **Design and status:** [ADR 0013](decisions/0013-ssh-remote-backend.md),
+  [plan-ssh-remote-backend.md](plan-ssh-remote-backend.md)
 
 ## Python Module Hierarchy
 
 ```
 ppxai/
-├── config/            # LEAF pkg: No ppxai imports (safe to import anywhere)
+├── config/            # Bottom of the DAG: imports only common/ and constants.py, never engine/
+│   ├── remote.py      # `remote` axis reader (ADR 0013 S1): raw `remote.hosts` block
 │   ├── loader.py      # Config file discovery + load
 │   ├── store.py       # ConfigStore, get_config, reload
 │   ├── execution.py   # execution.* axis readers (ADR 0010/0011)
@@ -47,10 +99,10 @@ ppxai/
 │   └── …              # paths, providers, tools, features, prompts, context, defaults
 ├── constants.py       # LEAF: Enums and constants
 ├── prompts.py         # LEAF: No ppxai imports
-├── common/            # Low-level utilities — every file here is a LEAF
-│   ├── logger.py      # No ppxai imports (enable_all/disable_all v1.15.4)
+├── common/            # Low-level utilities — near-leaf (see consent.py for the one exception)
+│   ├── logger.py      # Imports only ppxai.version (enable_all/disable_all v1.15.4)
 │   ├── preview.py     # Preview utilities (v1.15.4)
-│   ├── consent.py     # Uses logger only
+│   ├── consent.py     # Uses logger + constants, AND engine.tools.wrappers (get_registry) — an upward import
 │   ├── format.py      # format_tokens / format_usage_badge (v1.18.0 Phase 4 — canonical Python source for the JS/TS mirrors in web/shared and vscode/src/shared)
 │   ├── autosave_guard.py  # AutosaveFailureGuard state machine (v1.18.0 Phase 5f — surfaces sustained auto-save failures to the user)
 │   ├── atomic_file.py     # atomic_replace with Windows lock-retry (v1.18.0 Phase 5g — extracted from editor.py)
@@ -59,18 +111,22 @@ ppxai/
 │   └── file_type.py       # File-type / mimetype helpers
 ├── preview_server.py  # Stdlib HTTP preview server (v1.15.4)
 ├── engine/            # Core business logic (~36 modules; the layering-relevant ones shown)
-│   ├── types.py       # LEAF: No ppxai imports — ToolManagerProtocol / ToolEngineProtocol live here
+│   ├── types.py       # Near-leaf: imports only common.logger-level helpers and the two artifact modules — ToolManagerProtocol / ToolEngineProtocol live here
 │   ├── task_runner.py # build_task_runner — embeddable, drives in-process runs (T8b)
 │   ├── task_backend.py# In-process run lifecycle for the TUIs (no HTTP)
 │   ├── task_authorizer.py # authorize_task(): THE admission boundary for every tier
-│   ├── bootstrap.py   # LEAF: Bootstrap context parsing (v1.14.0)
-│   ├── providers/     # Provider implementations
+│   ├── bootstrap.py   # Bootstrap context parsing (v1.14.0); imports config/ only
+│   ├── providers/     # Chat providers: Gemini, OpenAICompatible, OpenAINative, Anthropic
+│   ├── search/        # web_search layer (ADR 0014): backends (gemini, perplexity, duckduckgo), resolver, grounding
 │   ├── tools/         # Tool system
 │   │   ├── manager.py # Uses types only
 │   │   └── builtin/   # Built-in tools (Protocol-based imports)
 │   └── client.py      # Facade (uses bootstrap.py)
+├── remote/            # SSH hub (ADR 0013): transport, openssh, inventory, contract, manager — imports nothing from engine/ or commands/
 ├── server/            # HTTP server
-│   └── http.py        # Uses engine, config
+│   ├── http.py        # Uses engine, config; lifespan starts the hub when remote.hosts is set
+│   ├── registry.py    # Announced-server registry (ADR 0013 S3): --uds/--announce/--list
+│   └── routes/remote_hub.py  # /hub/* control API + /h/<host>/<id>/… proxy
 ├── commands/          # UI-agnostic command layer (v1.15.0 factory + protocol)
 │   ├── protocol.py    # CommandContext protocol (interface)
 │   ├── factory.py     # CommandFactory + CommandSpec registry
@@ -122,8 +178,9 @@ ADR 0010 moved six tier keys off `tools.agent.*` as a **clean break with no
 dual-read**: a config left at an old path is silently ignored and reverts to
 its default, which is why `/doctor` scans the config *file* for stale paths.
 
-**Why**: `ppxai/engine/types.py` is a leaf — it imports nothing from ppxai — so
-anything may import it. The tool depends on the *interface* it actually needs
+**Why**: `ppxai/engine/types.py` sits at the bottom of the DAG — it imports
+only `common/` helpers and the two small artifact modules, never `client.py`
+or the tools — so anything may import it. The tool depends on the *interface* it actually needs
 rather than on `EngineClient`, which would close an import cycle. The concrete
 class satisfies the Protocol structurally; nothing needs to inherit from it.
 
@@ -144,7 +201,7 @@ class satisfies the Protocol structurally; nothing needs to inherit from it.
 The codebase follows a Directed Acyclic Graph (DAG) for imports:
 
 ```
-config/, engine/types.py, common/logger.py  (leaf modules - no ppxai imports)
+common/, constants.py  →  config/, engine/types.py  (bottom of the DAG; leaf-ward imports only)
            ↓
 engine/providers/, engine/tools/manager.py
            ↓
@@ -170,17 +227,21 @@ Entry points are declared in `pyproject.toml`:
 | `ppxai-server` | `ppxai.server.http:run_server` |
 | `ppxai-desktop` | `ppxai.server.http:run_desktop` |
 
-### 3. Clean Leaf Modules
+### 3. Bottom-of-the-DAG Modules
 
-Modules that have no ppxai imports and can be imported by anything.
+Modules that import only leaf-ward (never engine client, tools, commands or
+clients) and can be imported by anything. Only `constants.py` and
+`prompts.py` import nothing from ppxai at all.
 
+- `ppxai/constants.py` - Enums and constants (no ppxai imports)
+- `ppxai/prompts.py` - Prompt templates (no ppxai imports)
+- `ppxai/common/logger.py` - Logging; imports only `ppxai.version`
 - `ppxai/config/` - Configuration package (`loader`, `store`, `paths`, `providers`,
-  `tools`, `execution`, `features`, `prompts`, `context`, `defaults`)
-- `ppxai/engine/types.py` - Protocols and shared type definitions
-- `ppxai/constants.py` - Enums and constants
-- `ppxai/prompts.py` - Prompt templates
-- `ppxai/common/logger.py` - Logging
-- `ppxai/engine/bootstrap.py` - Bootstrap context parsing (v1.14.0)
+  `tools`, `execution`, `features`, `prompts`, `context`, `defaults`, `remote`);
+  imports `common.logger` and `constants`, never `engine/`
+- `ppxai/engine/types.py` - Protocols and shared type definitions; imports the
+  two small artifact modules
+- `ppxai/engine/bootstrap.py` - Bootstrap context parsing (v1.14.0); imports `config/`
 
 Theme definitions live with their client (`ppxai/rich/themes.py`,
 `ppxai/tui/themes/themes.py`), and helpers in `ppxai/rich/utils.py` — none of
@@ -226,7 +287,7 @@ ppxai/engine/bootstrap.py
 │     client.py, session.py, providers/, tools/        │
 ├─────────────────────────────────────────────────────┤
 │                   Common Layer                       │
-│           config.py, types.py, logger.py             │
+│      config/, engine/types.py, common/logger.py      │
 └─────────────────────────────────────────────────────┘
 ```
 

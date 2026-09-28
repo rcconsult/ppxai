@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1060" width="1600" height="1060" role="img" aria-labelledby="t d">
+  <title id="t">ppxai — local flow and SSH hub flow</title>
+  <desc id="d">The local ppxai-server serves its own UI and engine, and, when remote.hosts is set, also acts as a hub that reaches remote ppxai-servers over the user's SSH. The hub launches and lists remote servers over ssh -T, holds one ssh -N -L forward per attached server, and reverse-proxies /h/host/id/ to that server's private unix socket, injecting its bearer token.</desc>
+  <defs>
+    <style>
+      .t  { font-family: 'IBM Plex Sans','Segoe UI','Noto Sans',Arial,sans-serif; fill: #1D1F20; }
+      .c  { font-family: 'IBM Plex Sans Condensed','Arial Narrow','Noto Sans Condensed',sans-serif; }
+      .m  { font-family: 'IBM Plex Mono',Consolas,'Noto Sans Mono',monospace; }
+      .h1 { font-size: 30px; font-weight: 700; fill: #F2F2F3; }
+      .h2 { font-size: 20px; font-weight: 700; fill: #032B46; }
+      .h3 { font-size: 16px; font-weight: 700; fill: #032B46; }
+      .b  { font-size: 14px; }
+      .s  { font-size: 12.5px; fill: #5D5D60; }
+      .w  { fill: #FFFFFF; }
+      .lbl{ font-size: 13px; font-weight: 600; }
+    </style>
+    <marker id="aL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#98989B"/></marker>
+    <marker id="aC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#005A93"/></marker>
+    <marker id="aP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0072B8"/></marker>
+  </defs>
+
+  <!-- page -->
+  <rect width="1600" height="1060" fill="#F2F2F3"/>
+  <rect width="1600" height="72" fill="#032B46"/>
+  <text x="32" y="46" class="t c h1">ppxai — the local flow and the SSH hub flow, side by side</text>
+  <text x="1568" y="44" text-anchor="end" class="t b w" style="fill:#A1D4F0">ADR 0013 · feature/v1.19.4 · phases 1–5 as built</text>
+
+  <!-- ================= LOCAL MACHINE ================= -->
+  <rect x="24" y="96" width="930" height="880" rx="14" fill="#FFFFFF" stroke="#98989B" stroke-width="1.5" stroke-dasharray="8 6"/>
+  <text x="48" y="128" class="t c h2">Local machine</text>
+  <text x="48" y="150" class="t s">Windows · macOS · Linux — the browser and the hub</text>
+
+  <!-- browser -->
+  <rect x="48" y="170" width="882" height="118" rx="10" fill="#E9F4FB" stroke="#62B2E0" stroke-width="1.5"/>
+  <text x="68" y="198" class="t h3">Browser — one origin: http://127.0.0.1:54320</text>
+  <rect x="68" y="214" width="260" height="58" rx="8" fill="#FFFFFF" stroke="#98989B"/>
+  <text x="84" y="238" class="t lbl">Local UI</text><text x="84" y="259" class="t m s">/</text>
+  <rect x="344" y="214" width="260" height="58" rx="8" fill="#FFFFFF" stroke="#005A93" stroke-width="1.5"/>
+  <text x="360" y="238" class="t lbl" style="fill:#005A93">SSH Launcher (split pane)</text><text x="360" y="259" class="t m s">GET/POST /hub/*   Open ⇒ new tab</text>
+  <rect x="620" y="214" width="292" height="58" rx="8" fill="#FFFFFF" stroke="#0072B8" stroke-width="2.5"/>
+  <text x="636" y="238" class="t lbl" style="fill:#0072B8">Remote UI (served by the remote)</text><text x="636" y="259" class="t m s">/h/&lt;host&gt;/&lt;id&gt;/…   ws …/ws/terminal</text>
+
+  <!-- local ppxai-server -->
+  <rect x="48" y="316" width="882" height="486" rx="12" fill="#FFFFFF" stroke="#032B46" stroke-width="2"/>
+  <rect x="48" y="316" width="882" height="42" rx="12" fill="#032B46"/>
+  <rect x="48" y="340" width="882" height="18" fill="#032B46"/>
+  <text x="68" y="344" class="t c h3 w" style="fill:#FFFFFF">Local ppxai-server  (hub on only when remote.hosts is set)</text>
+
+  <rect x="68" y="366" width="842" height="42" rx="6" fill="#F2F2F3" stroke="#98989B"/>
+  <text x="84" y="392" class="t b"><tspan font-weight="700">Middleware</tspan>  Host allowlist · bearer auth (loopback UI exempt) · CORS · <tspan font-weight="700" fill="#005A93">_WebSocketGuard</tspan> (Host + Origin + auth on every websocket)</text>
+
+  <!-- lane 1 local -->
+  <rect x="68" y="430" width="262" height="352" rx="8" fill="#F2F2F3" stroke="#98989B"/>
+  <text x="84" y="456" class="t h3">/…  local routes</text>
+  <text x="84" y="478" class="t s">chat · files · commands · /v1/*</text>
+  <rect x="84" y="494" width="230" height="46" rx="6" fill="#FFFFFF" stroke="#98989B"/>
+  <text x="100" y="522" class="t lbl">EngineClient</text>
+  <rect x="84" y="556" width="230" height="46" rx="6" fill="#FFFFFF" stroke="#98989B"/>
+  <text x="100" y="584" class="t lbl">providers · tools · session</text>
+  <rect x="84" y="618" width="230" height="64" rx="6" fill="#FFFFFF" stroke="#98989B"/>
+  <text x="100" y="644" class="t lbl">/ws/terminal</text>
+  <text x="100" y="664" class="t s">PTY on POSIX; none on Windows</text>
+  <text x="84" y="718" class="t s">Tools, files and shell run</text>
+  <text x="84" y="736" class="t s" font-weight="700">on THIS machine.</text>
+
+  <!-- lane 2 control -->
+  <rect x="346" y="430" width="262" height="352" rx="8" fill="#E9F4FB" stroke="#005A93" stroke-width="1.5"/>
+  <text x="362" y="456" class="t h3" style="fill:#005A93">/hub/*  control API</text>
+  <text x="362" y="478" class="t s">hosts · servers · launch · attach/detach/stop</text>
+  <rect x="362" y="494" width="230" height="64" rx="6" fill="#FFFFFF" stroke="#005A93"/>
+  <text x="378" y="520" class="t lbl">RemoteSessionManager</text>
+  <text x="378" y="540" class="t s">state machine · monitor every 5 s</text>
+  <rect x="362" y="574" width="230" height="64" rx="6" fill="#FFFFFF" stroke="#005A93"/>
+  <text x="378" y="600" class="t lbl">RemoteTransport (Protocol)</text>
+  <text x="378" y="620" class="t s">OpenSSHTransport — system ssh</text>
+  <text x="362" y="668" class="t s">Gates: loopback peer only;</text>
+  <text x="362" y="686" class="t s">same-origin + JSON for POSTs;</text>
+  <text x="362" y="704" class="t s">hub off ⇒ plain 404 everywhere.</text>
+
+  <!-- lane 3 proxy -->
+  <rect x="624" y="430" width="286" height="352" rx="8" fill="#E9F4FB" stroke="#0072B8" stroke-width="2.5"/>
+  <text x="640" y="456" class="t h3" style="fill:#0072B8">/h/&lt;host&gt;/&lt;id&gt;/…  proxy</text>
+  <text x="640" y="478" class="t s">auto-attach on first request</text>
+  <rect x="640" y="494" width="254" height="84" rx="6" fill="#FFFFFF" stroke="#0072B8"/>
+  <text x="656" y="518" class="t lbl">Rewrite headers</text>
+  <text x="656" y="538" class="t s">− Authorization, Cookie, Origin, Referer,</text>
+  <text x="656" y="555" class="t s">  X-Forwarded-*   + Host: localhost</text>
+  <text x="656" y="572" class="t s" font-weight="700" style="fill:#005A93">+ Bearer &lt;token from registry&gt;</text>
+  <rect x="640" y="592" width="254" height="64" rx="6" fill="#FFFFFF" stroke="#0072B8"/>
+  <text x="656" y="618" class="t lbl">pooled httpx · websockets</text>
+  <text x="656" y="638" class="t s">streamed both ways, never buffered</text>
+  <rect x="640" y="670" width="254" height="64" rx="6" fill="#FFFFFF" stroke="#0072B8"/>
+  <text x="656" y="696" class="t lbl">LocalEndpoint</text>
+  <text x="656" y="716" class="t m s">127.0.0.1:&lt;port&gt; | 0700 dir/s.sock</text>
+
+  <!-- ssh processes -->
+  <rect x="346" y="826" width="564" height="130" rx="10" fill="#FFFFFF" stroke="#005A93" stroke-width="1.5"/>
+  <text x="366" y="854" class="t h3" style="fill:#005A93">ssh processes (the user's OpenSSH, ~/.ssh/config, BatchMode=yes)</text>
+  <rect x="366" y="870" width="252" height="70" rx="6" fill="#E9F4FB" stroke="#005A93"/>
+  <text x="380" y="894" class="t lbl m">ssh -T &lt;dest&gt; '…'</text>
+  <text x="380" y="914" class="t s">short-lived: discover binary,</text>
+  <text x="380" y="930" class="t s">--list --json, --uds --announce</text>
+  <rect x="634" y="870" width="260" height="70" rx="6" fill="#E9F4FB" stroke="#0072B8" stroke-width="2"/>
+  <text x="648" y="894" class="t lbl m">ssh -N -L local:remote.sock</text>
+  <text x="648" y="914" class="t s">long-lived: ONE forward per</text>
+  <text x="648" y="930" class="t s">attached server (keep-alive)</text>
+
+  <!-- ================= SSH band ================= -->
+  <rect x="966" y="96" width="92" height="880" rx="10" fill="#E9F4FB" stroke="#A1D4F0"/>
+
+  <!-- ================= REMOTE HOST ================= -->
+  <rect x="1070" y="96" width="506" height="880" rx="14" fill="#FFFFFF" stroke="#98989B" stroke-width="1.5" stroke-dasharray="8 6"/>
+  <text x="1094" y="128" class="t c h2">Remote host</text>
+  <text x="1094" y="150" class="t s">Linux / macOS with ppxai installed (POSIX only)</text>
+
+  <rect x="1094" y="170" width="458" height="70" rx="8" fill="#F2F2F3" stroke="#98989B"/>
+  <text x="1112" y="198" class="t h3">sshd</text>
+  <text x="1112" y="220" class="t s">authorized_keys; forwards a TCP or UDS local end to a remote UDS</text>
+
+  <rect x="1094" y="258" width="458" height="96" rx="8" fill="#FFFFFF" stroke="#0072B8" stroke-width="2"/>
+  <text x="1112" y="284" class="t h3" style="fill:#0072B8">Private unix socket — no TCP listener</text>
+  <text x="1112" y="306" class="t m s">$XDG_RUNTIME_DIR/ppxai/&lt;id&gt;.sock</text>
+  <text x="1112" y="326" class="t s">socket 0600 in a 0700 dir, bound before the first accept</text>
+  <text x="1112" y="344" class="t s">(fallback ~/.ppxai/run/sock/ where XDG is unset)</text>
+
+  <rect x="1094" y="372" width="458" height="430" rx="12" fill="#FFFFFF" stroke="#032B46" stroke-width="2"/>
+  <rect x="1094" y="372" width="458" height="42" rx="12" fill="#032B46"/>
+  <rect x="1094" y="396" width="458" height="18" fill="#032B46"/>
+  <text x="1112" y="400" class="t c h3" style="fill:#FFFFFF">Remote ppxai-server — the SAME binary</text>
+  <text x="1112" y="440" class="t m b">--uds --announce --detach</text>
+  <text x="1112" y="460" class="t s">per-launch token in PPXAI_API_TOKEN (auth ON) · no idle exit</text>
+  <text x="1112" y="478" class="t s">never runs a hub (_HUB_ALLOWED = False)</text>
+  <rect x="1112" y="494" width="422" height="40" rx="6" fill="#F2F2F3" stroke="#98989B"/>
+  <text x="1126" y="519" class="t b">Middleware: Host = localhost ✓ · Bearer ✓ · ws guard ✓</text>
+  <rect x="1112" y="546" width="422" height="40" rx="6" fill="#F2F2F3" stroke="#98989B"/>
+  <text x="1126" y="571" class="t b">its OWN web UI, routes, SSE chat</text>
+  <rect x="1112" y="598" width="422" height="40" rx="6" fill="#F2F2F3" stroke="#98989B"/>
+  <text x="1126" y="623" class="t b">EngineClient · providers · tools · sessions</text>
+  <rect x="1112" y="650" width="422" height="40" rx="6" fill="#F2F2F3" stroke="#98989B"/>
+  <text x="1126" y="675" class="t b">/ws/terminal → pty.fork() → the user's login shell</text>
+  <text x="1112" y="724" class="t s">Tools, files and shell run</text>
+  <text x="1112" y="742" class="t s" font-weight="700">on the REMOTE host.</text>
+  <text x="1112" y="776" class="t s">Stop = POST /shutdown through its forward, never a pid signal.</text>
+
+  <rect x="1094" y="826" width="458" height="130" rx="10" fill="#FFFFFF" stroke="#005A93" stroke-width="1.5"/>
+  <text x="1112" y="854" class="t h3" style="fill:#005A93">Registry entry (S3 contract 1)</text>
+  <text x="1112" y="876" class="t m s">~/.ppxai/run/servers/&lt;id&gt;.json   0600</text>
+  <text x="1112" y="898" class="t s">contract · id · pid · socket · token · version ·</text>
+  <text x="1112" y="916" class="t s">app_state_schema · workdir · started_at · label</text>
+  <text x="1112" y="938" class="t s">read only through the user's own SSH session</text>
+
+  <!-- ================= ARROWS ================= -->
+  <!-- Arrows run only through gaps between boxes, never across text. -->
+  <!-- local flow -->
+  <path d="M198 272 V 314" stroke="#98989B" stroke-width="3" fill="none" marker-end="url(#aL)"/>
+  <path d="M198 408 V 428" stroke="#98989B" stroke-width="3" fill="none" marker-end="url(#aL)"/>
+  <path d="M199 540 V 554" stroke="#98989B" stroke-width="2" fill="none" marker-end="url(#aL)"/>
+  <!-- control flow -->
+  <path d="M474 272 V 314" stroke="#005A93" stroke-width="3" fill="none" marker-end="url(#aC)"/>
+  <path d="M474 408 V 428" stroke="#005A93" stroke-width="3" fill="none" marker-end="url(#aC)"/>
+  <path d="M477 558 V 572" stroke="#005A93" stroke-width="2" fill="none" marker-end="url(#aC)"/>
+  <path d="M596 638 V 824" stroke="#005A93" stroke-width="2.5" fill="none" marker-end="url(#aC)"/>
+  <path d="M492 940 V 966 H 946 C 1030 966 1040 205 1092 205" stroke="#005A93" stroke-width="2.5" fill="none" marker-end="url(#aC)" stroke-dasharray="7 5"/>
+  <path d="M1082 240 V 393 H 1092" stroke="#005A93" stroke-width="2" fill="none" marker-end="url(#aC)" stroke-dasharray="7 5"/>
+  <path d="M1250 802 V 824" stroke="#005A93" stroke-width="2" fill="none" marker-end="url(#aC)"/>
+  <!-- proxy data flow -->
+  <path d="M766 272 V 314" stroke="#0072B8" stroke-width="4" fill="none" marker-end="url(#aP)"/>
+  <path d="M766 408 V 428" stroke="#0072B8" stroke-width="4" fill="none" marker-end="url(#aP)"/>
+  <path d="M766 734 V 824" stroke="#0072B8" stroke-width="4" fill="none" marker-end="url(#aP)"/>
+  <path d="M894 905 H 930 C 1050 905 1040 306 1092 306" stroke="#0072B8" stroke-width="4" fill="none" marker-end="url(#aP)"/>
+  <path d="M1470 354 V 370" stroke="#0072B8" stroke-width="4" fill="none" marker-end="url(#aP)"/>
+
+  <!-- SSH band label last, with a halo, so the crossing arrows never hide it -->
+  <text transform="translate(1012 540) rotate(-90)" text-anchor="middle" class="t c h2" style="fill:#005A93" stroke="#E9F4FB" stroke-width="7" paint-order="stroke" stroke-linejoin="round">SSH — user's keys, known_hosts, agent, ProxyJump</text>
+
+  <!-- ================= LEGEND ================= -->
+  <rect x="24" y="990" width="1552" height="54" rx="10" fill="#FFFFFF" stroke="#98989B"/>
+  <path d="M48 1017 H 108" stroke="#98989B" stroke-width="3" marker-end="url(#aL)"/>
+  <text x="120" y="1022" class="t b">Local flow — unchanged; the hub adds nothing to it</text>
+  <path d="M520 1017 H 580" stroke="#005A93" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#aC)"/>
+  <text x="592" y="1022" class="t b">Control: list · launch · attach · stop (ssh -T)</text>
+  <path d="M968 1017 H 1028" stroke="#0072B8" stroke-width="4" marker-end="url(#aP)"/>
+  <text x="1040" y="1022" class="t b">Proxied HTTP/SSE/websocket over ssh -N -L; token injected by the hub</text>
+</svg>
