@@ -13,7 +13,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-__version__ = "1.19.3"
+__version__ = "1.19.4"
 
 
 def _build_info() -> dict[str, str] | None:
