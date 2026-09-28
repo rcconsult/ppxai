@@ -110,6 +110,8 @@ the browser; an unknown host id is a 404, never a forward.
 
 ## Phase 5 — S6, web client
 
+**Status (2026-09-28): item 1 (prefix recognition) landed early**, because without it phase 4 was misleading, not merely incomplete. win32-ppxai's live hub run from Windows loaded `/h/wsl/<id>/`: HTML and assets came through the proxy, but every API call went to the LOCAL hub server, so the page showed and restored the Windows session. `app.js` now derives its prefix in one place (`servedPathPrefix()`: `/h/<host>/<id>` or `/s/<slug>`), and `handleQuit()` under `/h/` detaches and returns to `/`, never stopping anything; the coder `/s/` branch is unchanged (`tests/test_web_hub_prefix.py`, `tests/test_session_end_workflows.py`). The same run found that a FROZEN `ppxai-server` reports and runs in its binary's directory, because the entry script chdirs there; the launch directory is now recorded first and restored on the announce path (`tests/test_announced_workdir.py`). The picker (item 2) is still to do.
+
 - `app.js` prefix recognition: `/h/<host>/<id>` alongside `/s/<user>`.
 - `handleQuit()`: under `/h/`, detach and return to the picker.
 - Picker view: hosts + state, servers per host, sessions and runs per server

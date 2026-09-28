@@ -1006,6 +1006,7 @@ def _run_announced(args) -> int:
         return _usage_error("--uds/--announce/--detach need a POSIX host; "
                             "use --host/--port on Windows")
 
+    workdir = _announced_workdir()
     server_id = registry.new_server_id()
     socket_path = (registry.default_socket_path(server_id) if args.uds == ""
                    else Path(os.path.abspath(os.path.expanduser(args.uds))))
@@ -1037,7 +1038,7 @@ def _run_announced(args) -> int:
     entry = None
     if args.announce:
         entry = registry.build_entry(server_id=server_id, socket_path=socket_path,
-                                     token=token, workdir=os.getcwd(), label=args.label)
+                                     token=token, workdir=workdir, label=args.label)
         registry.write_entry(entry)
     _report(report_fd, entry or {"socket": str(socket_path), "pid": os.getpid()})
 
@@ -1054,6 +1055,23 @@ def _run_announced(args) -> int:
             pass
     _exit_if_workers_hung()
     return 0
+
+
+def _announced_workdir() -> str:
+    """The directory an announced server runs in, and chdir there.
+
+    The frozen `ppxai-server` entry script chdirs to its own binary's
+    directory, so `os.getcwd()` would be `~/.local/bin` whatever directory
+    the hub `cd`-ed into (found by win32-ppxai's live hub run, 2026-09-28).
+    The entry script records the launch directory in PPXAI_LAUNCH_CWD first;
+    use it, and go back there so the engine's tools work in it too.
+    """
+    workdir = os.environ.pop("PPXAI_LAUNCH_CWD", "") or os.getcwd()
+    try:
+        os.chdir(workdir)
+    except OSError:
+        workdir = os.getcwd()
+    return workdir
 
 
 def _report(fd: int | None, payload: dict) -> None:

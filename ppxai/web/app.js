@@ -61,6 +61,30 @@ class AttachmentView extends BaseView {
     onKeyDown() { return false; }
 }
 
+/**
+ * Path prefixes under which this UI is served by a proxy, not at the root of
+ * the server that answers its API calls. Both proxies strip the prefix before
+ * the request reaches ppxai, so every API/websocket URL must carry it:
+ *   /s/<slug>         -- the k8s coder ingress (per-user pod)
+ *   /h/<host>/<id>    -- ADR 0013's local hub, proxying a remote ppxai-server
+ * Without the hub case a page loaded at /h/<host>/<id>/ would silently talk
+ * to the LOCAL hub server instead of the remote one (win32 live run,
+ * 2026-09-28). The id patterns match ppxai/remote/{inventory,contract}.py.
+ */
+const CODER_PREFIX_RE = /^(\/s\/[^/]+)/;
+const HUB_PREFIX_RE = /^\/h\/([a-z0-9-]{1,32})\/([A-Za-z0-9_-]{1,64})(?=\/|$)/;
+
+function hubLocation(pathname) {
+    const m = pathname.match(HUB_PREFIX_RE);
+    return m ? { host: m[1], serverId: m[2], prefix: m[0] } : null;
+}
+
+function servedPathPrefix(pathname) {
+    const hub = hubLocation(pathname);
+    if (hub) return hub.prefix;
+    return pathname.match(CODER_PREFIX_RE)?.[1] || '';
+}
+
 class PpxaiApp {
     constructor() {
         // Configuration
@@ -70,7 +94,7 @@ class PpxaiApp {
         // Fall back to localStorage or default only if origin is file:// or about:
         const pageOrigin = window.location.origin;
         const usePageOrigin = pageOrigin && !pageOrigin.startsWith('file:') && pageOrigin !== 'null';
-        const pathPrefix = window.location.pathname.match(/^(\/s\/[^/]+)/)?.[1] || '';
+        const pathPrefix = servedPathPrefix(window.location.pathname);
         this.serverUrl = usePageOrigin ? (pageOrigin + pathPrefix) : (localStorage.getItem('ppxai-server-url') || 'http://127.0.0.1:54320');
 
         // Session ID for server session isolation (v1.14.0)
@@ -1015,7 +1039,23 @@ class PpxaiApp {
      * instead of killing the server — the pod must stay alive.
      */
     async handleQuit() {
-        const pathPrefix = window.location.pathname.match(/^(\/s\/[^/]+)/)?.[1] || '';
+        // ADR 0013 hub: leaving a remote session DETACHES (drops the local
+        // forward) and returns to the hub; the remote server keeps running.
+        const hub = hubLocation(window.location.pathname);
+        if (hub) {
+            const confirmed = confirm('Leave this remote session? The remote server keeps running.');
+            if (!confirmed) return;
+            try {
+                await fetch(`${window.location.origin}/hub/hosts/${hub.host}/servers/${hub.serverId}/detach`,
+                            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+            } catch (error) {
+                console.log('Hub detach failed (leaving anyway):', error);
+            }
+            window.location.href = '/';
+            return;
+        }
+
+        const pathPrefix = window.location.pathname.match(CODER_PREFIX_RE)?.[1] || '';
 
         if (pathPrefix) {
             // Coder mode: don't kill the server, redirect to login
