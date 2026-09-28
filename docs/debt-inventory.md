@@ -2565,6 +2565,51 @@ and not on Windows in July.
 **Why not now:** parallel runs make the absolute cost small, and the
 timing report added 2026-09-27 now names setup-heavy tests, so a
 regression of this kind shows up in the report instead of hiding.
+
+### Item 84 — the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell [server / tools / Windows]
+
+**Filed 2026-09-28** (owner decision: record as debt, don't build it now).
+
+**a. `/terminal` (`/ws/terminal`) cannot open a shell on Windows.**
+`ppxai/server/routes/terminal.py` spawns the shell with `pty.fork()` and
+drives it with `fcntl` (non-blocking reads) and `termios` (`TIOCSWINSZ`
+resize). All three are Unix-only, so on Windows `_PTY_AVAILABLE` stays
+False and the endpoint sends "Terminal requires a Unix host (PTY not
+available on Windows)." and closes. This check runs BEFORE
+`tools.shell.shell_bin` is read, so configuring Git Bash or `pwsh` changes
+nothing. The v1.17.1 plan deferred it ("Windows: needs `pywinpty` — defer
+to later", `docs/archive/TODO-v1.17.1.md`); it was never picked up.
+Verified live 2026-09-28 against the installed 1.19.4 `ppxai-server` and
+`ppxai-desktop`.
+
+**b. The shell tool runs cmd.exe on Windows, but the prompts ask for
+PowerShell.** `ppxai/engine/tools/builtin/shell.py` ignores `shell_bin`
+on Windows (`shell_bin = ... if not is_windows else None`) and runs
+through `asyncio.create_subprocess_shell`, i.e. `%COMSPEC%` = `cmd.exe`.
+The tool description says "cmd/PowerShell", and the owner's provider
+system prompts say "On Windows: Use PowerShell syntax", so PowerShell-only
+syntax fails unless the model itself wraps the command in
+`powershell -Command`.
+
+**Fix sketch:**
+1. A Windows terminal backend behind the same `/ws/terminal` message
+   protocol (`input` / `resize` / `output` / `exit`), so the web UI and the
+   websocket guard (`_WebSocketGuard`, v1.19.4) are unchanged: ConPTY via
+   `pywinpty` (a Windows-only dependency), resize via `setwinsize`, reads
+   on a thread (ConPTY pipes have no `fcntl` non-blocking mode). Shell
+   default `pwsh` → `powershell` → `cmd`, overridable by `shell_bin`
+   (e.g. `C:\Program Files\Git\bin\bash.exe`).
+2. Add `pywinpty` (`winpty`) to `ppxai-server.spec`'s hidden imports and
+   check the installed `ppxai-server.exe` opens a shell. A dropped hidden
+   import passes every source-tree test (the `dotenv` precedent).
+3. Make the shell tool honour `shell_bin` on Windows (with the right
+   `-Command` / `-c` flag per shell), OR make the prompts and the tool
+   description say cmd.exe. Either way, what the prompt asks for must be
+   what runs.
+
+**Why not now:** Windows users have the chat shell tool; the interactive
+terminal has been Unix-only since v1.17.1 and nobody has asked for it
+until now.
 ## Closed (recent)
 
 One-liners only — full bodies + evidence trails in
