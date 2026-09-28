@@ -490,11 +490,14 @@ class _AbandonedAtShutdown:
                 f"Abandoned an in-flight request at shutdown: "
                 f"{scope.get('method', '')} {scope.get('path', '')} -> 503"
             )
+            body = b'{"detail": "server is shutting down; retry"}'
+            # An explicit Content-Length: without one uvicorn chunks the body,
+            # and a client on the closing connection (WSL, curl) saw it empty.
             await send({"type": "http.response.start", "status": 503,
                         "headers": [(b"content-type", b"application/json"),
+                                    (b"content-length", str(len(body)).encode()),
                                     (b"retry-after", b"5")]})
-            await send({"type": "http.response.body",
-                        "body": b'{"detail": "server is shutting down; retry"}'})
+            await send({"type": "http.response.body", "body": body})
 
 
 # Outermost, so it sees the cancellation after every other layer.

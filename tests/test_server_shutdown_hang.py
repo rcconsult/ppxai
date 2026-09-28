@@ -225,6 +225,7 @@ def _start_hung_server(grace_s: float):
         try:
             r = httpx.get(f"http://127.0.0.1:{port}/hang", timeout=120)
             proc.hang_status.append(r.status_code)
+            proc.hang_response = r
         except httpx.HTTPError as exc:
             proc.hang_status.append(type(exc).__name__)
 
@@ -236,8 +237,14 @@ def _start_hung_server(grace_s: float):
 
 
 def _client_status(proc):
+    """The stuck client's status; a 503 must also carry its retry hints."""
     proc.hang_thread.join(timeout=10)
-    return proc.hang_status[0] if proc.hang_status else None
+    status = proc.hang_status[0] if proc.hang_status else None
+    if status == 503:
+        r = proc.hang_response
+        assert r.headers.get("retry-after") == "5"
+        assert r.json() == {"detail": "server is shutting down; retry"}, r.content
+    return status
 
 
 def _exit_within(proc, seconds: float) -> tuple[bool, str]:
