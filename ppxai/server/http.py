@@ -448,6 +448,59 @@ for router in all_routers:
     app.include_router(router)
 
 
+#: The server `_run_server_with_graceful_shutdown` is running, so ASGI code
+#: can tell "cancelled because we are stopping" from any other cancel.
+_active_server: uvicorn.Server | None = None
+
+
+class _AbandonedAtShutdown:
+    """Answer a request abandoned at shutdown with 503, not 500.
+
+    A stop cancels requests still running past the grace (a provider call
+    that never answers). The CancelledError escaped the app and uvicorn
+    answered 500 Internal Server Error, which tells a caller the server is
+    broken. While the server is stopping, and before any response has
+    started, this answers 503 with Retry-After instead, so a caller such as
+    ppxai-sre sees a retryable shutdown, and logs one warning line. Any
+    other cancellation propagates unchanged.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        started = False
+
+        async def _send(message):
+            nonlocal started
+            if message.get("type") == "http.response.start":
+                started = True
+            await send(message)
+
+        try:
+            await self.app(scope, receive, _send)
+        except asyncio.CancelledError:
+            server = _active_server
+            if started or server is None or not server.should_exit:
+                raise
+            _warn_console(
+                f"Abandoned an in-flight request at shutdown: "
+                f"{scope.get('method', '')} {scope.get('path', '')} -> 503"
+            )
+            await send({"type": "http.response.start", "status": 503,
+                        "headers": [(b"content-type", b"application/json"),
+                                    (b"retry-after", b"5")]})
+            await send({"type": "http.response.body",
+                        "body": b'{"detail": "server is shutting down; retry"}'})
+
+
+# Outermost, so it sees the cancellation after every other layer.
+app.add_middleware(_AbandonedAtShutdown)
+
+
 # === CLI Entry Point ===
 
 def _forwarded_allow_ips() -> str:
@@ -553,6 +606,11 @@ class _AbandonedRequestFilter(logging.Filter):
         self._server = server
 
     def filter(self, record: logging.LogRecord) -> bool:
+        # uvicorn's own grace-timeout line is expected at a stop, not an error.
+        if str(record.msg).startswith("Cancel %s running task(s), timeout graceful shutdown"):
+            record.levelno, record.levelname = logging.WARNING, "WARNING"
+            record.msg = "Grace period over: cancelling %s request(s) still running"
+            return True
         exc = record.exc_info[1] if record.exc_info else None
         if self._server.should_exit and isinstance(exc, asyncio.CancelledError):
             record.levelno, record.levelname = logging.WARNING, "WARNING"
@@ -621,8 +679,9 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
     # task finally unwinds, which can be AFTER serve() returns (seen on macOS;
     # removing the filter in `finally` let that traceback through).
     logging.getLogger("uvicorn.error").addFilter(_AbandonedRequestFilter(server))
-    global _serving_via_entry_point
+    global _serving_via_entry_point, _active_server
     _serving_via_entry_point = True
+    _active_server = server
     shutdown_task = asyncio.create_task(shutdown_listener())
     try:
         await server.serve()

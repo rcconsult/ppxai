@@ -160,6 +160,7 @@ _SERVER_CHILD = textwrap.dedent("""
         h._stopped_line = "STOPPED-LINE"  # as ppxai's lifespan records it
 
     app = FastAPI(lifespan=lifespan)
+    app.add_middleware(h._AbandonedAtShutdown)  # as ppxai's app does
     block = threading.Event()
 
     @app.get("/ok")
@@ -218,15 +219,25 @@ def _start_hung_server(grace_s: float):
         proc.kill()
         pytest.fail(f"server never came up: {proc.communicate()[0]}")
 
+    proc.hang_status = []  # what the stuck client finally got
+
     def _hang():
         try:
-            httpx.get(f"http://127.0.0.1:{port}/hang", timeout=120)
-        except httpx.HTTPError:
-            pass
+            r = httpx.get(f"http://127.0.0.1:{port}/hang", timeout=120)
+            proc.hang_status.append(r.status_code)
+        except httpx.HTTPError as exc:
+            proc.hang_status.append(type(exc).__name__)
 
-    threading.Thread(target=_hang, daemon=True).start()
+    t = threading.Thread(target=_hang, daemon=True)
+    t.start()
+    proc.hang_thread = t
     time.sleep(0.5)  # the request is in flight, its worker thread blocked
     return proc, port
+
+
+def _client_status(proc):
+    proc.hang_thread.join(timeout=10)
+    return proc.hang_status[0] if proc.hang_status else None
 
 
 def _exit_within(proc, seconds: float) -> tuple[bool, str]:
@@ -258,6 +269,11 @@ class TestCtrlCStopsItDespiteAHungCall:
         assert "Traceback" not in out, out
         # "stopped" is the LAST line, after the release warning (WSL 2b).
         assert out.strip().splitlines()[-1] == "STOPPED-LINE", out
+        # The abandoned caller is told "retry", not "server bug".
+        assert _client_status(proc) == 503, (proc.hang_status, out)
+        # A stop logs no ERROR lines: uvicorn's grace-timeout cancel is a warning.
+        assert "ERROR" not in out, out
+        assert "Grace period over: cancelling 1 request(s) still running" in out
 
     def test_a_second_ctrl_c_forces_it(self):
         proc, port = _start_hung_server(grace_s=120.0)
@@ -272,6 +288,7 @@ class TestCtrlCStopsItDespiteAHungCall:
         # to be cancelled with a traceback.
         assert "APP-SHUTDOWN-RAN" in out
         assert "Traceback" not in out, out
+        assert _client_status(proc) == 503, (proc.hang_status, out)
 
     def test_a_doubled_delivery_is_one_stop_not_a_force(self):
         """A terminal Ctrl+C reaches the process group AND is forwarded by the
