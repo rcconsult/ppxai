@@ -5,14 +5,22 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.19.4] - unreleased
+## [Unreleased]
 
-Branch: `feature/v1.19.4`. Work stream: ADR 0013's SSH remote backend.
+Branch: `feature/v1.19.4` (the branch name predates the 1.19.4 security patch; this work ships in a later version). Work stream: ADR 0013's SSH remote backend.
 
 ### Groundwork (not yet a supported feature) — SSH transport (ADR 0013 phase 2)
 
 - New package `ppxai/remote/`, used by nothing yet. `RemoteTransport` is the Protocol the hub will reach remote hosts through: run a command, forward a local endpoint to a remote unix socket, close. `OpenSSHTransport` implements it over the user's own `ssh`, so SSH config aliases, the agent, `ProxyJump`, hardware keys and `known_hosts` work unchanged and ppxai stores none of them. Every invocation uses `BatchMode=yes`, so a missing key or an unknown host key fails at once instead of waiting on a prompt. The remote command is quoted in one place and refuses line breaks. OpenSSH's failures map to typed errors that keep its stderr verbatim. On POSIX a forward's local end is a unix socket in a private directory. The package may not import the engine or the command layer (fenced).
 - `RemoteSessionManager` (ADR 0013 phase 3), also unused so far: lists the announced servers on a configured host, launches a detached one in a chosen directory, attaches (forward, then `/health` with the server's token), detaches without stopping the server, and stops a server by asking it (`POST /shutdown`), never by signalling a pid. Each attachment runs the ADR's state machine, plus a terminal `gone` for a server that left the host's registry, and reports every transition to subscribers. A degraded attachment is retried with capped exponential backoff. A remote `ppxai-server` older than 1.19.3 is refused with its version, and a registry entry with an unknown contract number is refused naming both numbers, without hiding the host's other servers. `remote.hosts` entries are validated (URL-safe `id`, `local` reserved, one ssh destination, unknown keys refused) but not yet read from config.
+
+## [1.19.4] - unreleased
+
+Branch: `fix/v1.19.4` (from master @ v1.19.3). Security patch, one fix.
+
+### Security
+
+- **Websocket connections now get the same Host, Origin and auth checks as HTTP requests.** Until now, any web page the user visited could open `ws://127.0.0.1:<port>/ws/terminal` on a running `ppxai-server` or `ppxai-desktop` and run shell commands in a server-side terminal. Setting `PPXAI_API_TOKEN` did not prevent it. The server's Host check, bearer-token gate and CORS policy are HTTP middleware, which never sees a websocket, and browsers do not apply CORS to websockets. On the k8s coder deployment the `SameSite=Lax` session cookie kept other sites out, but not pages on the same parent domain. A websocket handshake is now refused (HTTP 403) unless its Host passes the same allowlist as HTTP, its Origin (if it sends one) is an allowed origin (`PPXAI_ALLOWED_ORIGINS`, loopback, or the server's own origin), and the bearer gate passes as it would for a GET of the same path. The web UI's own terminal, the coder pods' terminal and a same-origin gateway UI keep working. Found while building ADR 0013's hub proxy; reproduced with a live server and pinned by `tests/test_websocket_guard.py`.
 
 ## [1.19.3] - 2026-09-28
 
