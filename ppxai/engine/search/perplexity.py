@@ -32,6 +32,24 @@ PERPLEXITY_CHAT_BASE_URL = APIEndpoint.PERPLEXITY_API
 PERPLEXITY_RESPONSES_BASE_URL = APIEndpoint.PERPLEXITY_API.rstrip("/") + "/v1"
 
 
+def _reported_cost(usage_obj: Any) -> float | None:
+    """The call's USD cost as Perplexity itself reports it, else None.
+
+    The Responses wire returns `usage.cost.total_cost` (measured 2026-09-28:
+    input 0.00014 + cache creation 0.00117 + output 0.00027 + one web_search
+    tool call 0.0025 = 0.00408). It is the authoritative figure: token prices
+    alone miss the per-call tool fee and the cache-creation charge, which were
+    most of the cost. The configured per-token prices are the fallback.
+    """
+    cost = getattr(usage_obj, "cost", None)
+    if cost is None and isinstance(usage_obj, dict):
+        cost = usage_obj.get("cost")
+    total = cost.get("total_cost") if isinstance(cost, dict) else getattr(cost, "total_cost", None)
+    if isinstance(total, bool) or not isinstance(total, (int, float)) or total < 0:
+        return None
+    return float(total)
+
+
 def _output_item_url_rows(item: Any) -> list[Any]:
     """Return the `results` rows of a `search_results` output item, if any.
 
@@ -171,6 +189,7 @@ async def search_perplexity(query: str, num_results: int = 5) -> tuple[str, list
             usage_obj = getattr(response, "usage", None)
             tokens_in = getattr(usage_obj, "input_tokens", 0) or 0
             tokens_out = getattr(usage_obj, "output_tokens", 0) or 0
+            reported = _reported_cost(usage_obj)
         else:
             client = AsyncOpenAI(
                 api_key=api_key,
@@ -185,6 +204,7 @@ async def search_perplexity(query: str, num_results: int = 5) -> tuple[str, list
             citations = list(getattr(response, "citations", None) or [])[:num_results]
             tokens_in = response.usage.prompt_tokens
             tokens_out = response.usage.completion_tokens
+            reported = _reported_cost(response.usage)
 
     usage = ToolUsage(
         call_count=1,
@@ -192,7 +212,8 @@ async def search_perplexity(query: str, num_results: int = 5) -> tuple[str, list
         tokens_out=tokens_out,
         provider="perplexity"
     )
-    usage.estimated_cost = calculate_tool_cost("perplexity", tokens_in, tokens_out)
+    usage.estimated_cost = (reported if reported is not None
+                            else calculate_tool_cost("perplexity", tokens_in, tokens_out))
 
     return content, citations, usage
 

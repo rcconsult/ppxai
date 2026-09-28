@@ -737,8 +737,8 @@
       ],
       "pricing": {
         "perplexity": {
-          "input": 1,
-          "output": 1,
+          "input": 0.25,
+          "output": 2.5,
           "model": "per_token"
         },
         "gemini_grounding": {

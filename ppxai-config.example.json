@@ -1367,10 +1367,10 @@
       "__comment_gemini_model": "Model for Gemini grounding searches. GA; the 2.5 line sunsets from 2026-10-16 (debt Item 54).",
       "pricing": {
         "perplexity": {
-          "input": 1,
-          "output": 1,
+          "input": 0.25,
+          "output": 2.5,
           "model": "per_token",
-          "__comment": "Perplexity Sonar pricing per 1M tokens"
+          "__comment": "FALLBACK only. web_search calls the Agent (Responses) API with perplexity/sonar: $0.25 in / $2.50 out per 1M tokens, plus $0.0025 per web_search tool call (docs.perplexity.ai/getting-started/pricing, checked 2026-09-28). ppxai records the cost Perplexity reports per call (usage.cost.total_cost), which includes the tool and cache fees; these per-token prices apply only when a response carries no reported cost. The old 1 / 1 was the retired Sonar chat-completions price."
         },
         "gemini_grounding": {
           "per_query": 0.035,
