@@ -475,6 +475,9 @@ body {
     white-space: nowrap;
 }
 
+.ssh-launcher-btn { display: inline-flex; align-items: center; gap: 5px; }
+.ssh-icon { vertical-align: middle; flex: none; }
+
 .ssh-launcher {
     padding: 8px 12px;
     font-size: 12px;

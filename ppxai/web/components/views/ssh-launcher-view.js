@@ -2,7 +2,7 @@
  * SshLauncherView — the ADR 0013 hub's host/server launcher, in the right
  * split pane (RightPanelFrame).
  *
- * Owner design (2026-09-28): a header "🖥 SSH" button, shown only when the
+ * Owner design (2026-09-28): a header "SSH" button, shown only when the
  * local server is a hub (`remote.hosts` set), opens this view beside the chat.
  * It lists the configured hosts and each host's announced ppxai servers, and
  * offers Open / Detach / Stop / New server. **Open opens the remote's own web
@@ -22,6 +22,26 @@
  */
 
 const SSH_LAUNCHER_REFRESH_MS = 10000;
+
+/**
+ * The SSH icon (owner's pick, 2026-09-28): the ppxai brand bubble and
+ * gradient (vscode-extension/resources/icon.svg, the web favicon) with
+ * ppxaide's `>_` prompt in place of the dots. Used as a data: URI <img>, so
+ * its gradient id cannot collide when the icon is on the page twice.
+ */
+const SSH_LAUNCHER_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">'
+    + '<defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">'
+    + '<stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs>'
+    + '<rect x="8" y="8" width="112" height="88" rx="16" fill="url(#g)"/>'
+    + '<polygon points="24,96 24,120 48,96" fill="url(#g)"/>'
+    + '<polyline points="30,34 50,52 30,70" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<line x1="60" y1="72" x2="90" y2="72" stroke="#fff" stroke-width="10" stroke-linecap="round"/></svg>';
+
+/** The icon as an <img> of the given CSS pixel size. */
+function sshLauncherIconHtml(size) {
+    return `<img class="ssh-icon" src="data:image/svg+xml,${encodeURIComponent(SSH_LAUNCHER_ICON_SVG)}"`
+        + ` width="${size}" height="${size}" alt="">`;
+}
 
 /**
  * Sent on the launcher's session/run-count reads through the proxy: the hub
@@ -144,9 +164,9 @@ class SshLauncherView extends BaseView {
 
     // ── BaseView protocol ─────────────────────────────────────────────────
 
-    getTitle() { return '🖥 SSH Launcher'; }
+    getTitle() { return 'SSH Launcher'; }
     getPath() { return 'ssh://launcher'; }
-    getIcon() { return '🖥'; }
+    getIcon() { return sshLauncherIconHtml(14); }  // the stack dropdown inserts it as HTML
 
     mount(container) {
         this._container = container;

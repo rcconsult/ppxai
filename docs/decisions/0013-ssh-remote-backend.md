@@ -263,7 +263,7 @@ UI and server versions always match. The AppState schema guard that landed
 **As built (2026-09-28), owner design:** the picker is not a page but the
 **SSH Launcher**, a view in the web UI's right split pane (the
 `RightPanelFrame` that already hosts files and task runs), opened by a header
-"🖥 SSH" button. The button appears only on the local page, and only when
+"SSH" button with its own icon (the brand bubble with a `>_` prompt). The button appears only on the local page, and only when
 `GET /hub/hosts` answers 200 (a hub is configured); `/` stays the ordinary
 chat UI. **Open** puts the remote's UI in a new browser tab, one named tab
 per server. **Leave** on a remote page detaches and lands on `/#ssh`, which

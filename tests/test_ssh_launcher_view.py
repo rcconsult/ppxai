@@ -1,6 +1,6 @@
 """ADR 0013 phase 5: the web UI's SSH Launcher (right split pane).
 
-Owner design (2026-09-28): a header "🖥 SSH" button, shown only on the local
+Owner design (2026-09-28): a header "SSH" button, shown only on the local
 page of a hub, opens `SshLauncherView` in the right split pane; Open puts the
 remote's UI in a new, per-server named browser tab; Leave on a remote page
 detaches and lands on `/#ssh`, which reopens the launcher.
@@ -201,6 +201,22 @@ Promise.resolve().then(() => process.stdout.write(JSON.stringify({ calls, confir
 
 
 class TestContracts:
+    def test_the_icon_is_the_brand_bubble_with_a_prompt(self):
+        # Same bubble geometry and gradient as the brand icon, so the two
+        # stay recognisably one family (owner's pick, 2026-09-28).
+        src = VIEW.read_text(encoding="utf-8")
+        brand = (WEB.parents[1] / "vscode-extension" / "resources" / "icon.svg").read_text(encoding="utf-8")
+        for part in ('rect x="8" y="8" width="112" height="88" rx="16"',
+                     "points=\"24,96 24,120 48,96\"", "#6366f1", "#8b5cf6"):
+            assert part in brand and part in src, part
+
+    @needs_node
+    def test_the_icon_is_a_self_contained_data_uri(self):
+        html = _node("process.stdout.write(JSON.stringify(sshLauncherIconHtml(16)));")
+        assert html.startswith('<img class="ssh-icon" src="data:image/svg+xml,%3Csvg')
+        assert 'width="16" height="16"' in html
+        assert "<svg" not in html, "inline <svg> ids would collide; keep it a data: URI"
+
     def test_terminal_run_statuses_match_the_registry(self):
         src = VIEW.read_text(encoding="utf-8")
         m = re.search(r"SSH_LAUNCHER_TERMINAL_RUNS = new Set\(\s*\[([^\]]*)\]", src)

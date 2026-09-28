@@ -3968,6 +3968,7 @@ class PpxaiApp {
             isHub = resp.ok;
         } catch (_) { /* no hub */ }
         if (!isHub) return;
+        this.elements.sshBtn.innerHTML = `${sshLauncherIconHtml(16)} SSH`;
         this.elements.sshBtn.classList.remove('hidden');
         if (window.location.hash === '#ssh') {
             history.replaceState(null, '', window.location.pathname + window.location.search);
