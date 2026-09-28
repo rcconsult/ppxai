@@ -974,7 +974,7 @@ Coordination patterns for the run namespace are in
 The agent-platform substrate ADR is
 [docs/decisions/0003-agent-platform-architecture.md](docs/decisions/0003-agent-platform-architecture.md).
 Consumer-side migration plan with caveats and asks against this
-plan is at [`../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md);
+plan is at [ppxai-sre `docs/PPXAI-INTEGRATION-V1.19.md`](https://github.com/rcconsult/ppxai-sre/blob/master/docs/PPXAI-INTEGRATION-V1.19.md) (private repo);
 those caveats (C1-C5) and asks (A1-A3) are folded into ADR 0003
 "Open decisions" §6-§13 with recommended positions, and the phase
 rows below carry the load-bearing wire-shape commitments inline.

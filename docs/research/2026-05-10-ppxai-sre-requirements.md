@@ -434,5 +434,5 @@ retrofit them into this one.
 - [docs/research/2026-05-10-openshell-coordination-patterns.md](2026-05-10-openshell-coordination-patterns.md) — coordination-pattern research note (the load-bearing design for ADR 0003 Stage 2)
 - [debt-inventory.md](../debt-inventory.md) Item 3 — k8s session-manager (multi-tenant deploy shape)
 - [ROADMAP.md](../../ROADMAP.md) — v1.19.x agent-platform entry references this note
-- [`../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md) — consumer-side integration plan with caveats C1-C4 + asks A1-A3 filed against the v1.19.x scope here
+- [ppxai-sre `docs/PPXAI-INTEGRATION-V1.19.md`](https://github.com/rcconsult/ppxai-sre/blob/master/docs/PPXAI-INTEGRATION-V1.19.md) (private repo) — consumer-side integration plan with caveats C1-C4 + asks A1-A3 filed against the v1.19.x scope here
 - ppxai-sre repository: https://github.com/rcconsult/ppxai-sre (private)

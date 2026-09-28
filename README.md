@@ -82,7 +82,7 @@ See [docs/installation.md](docs/installation.md) for detailed installation optio
 
 ### Option 2: Download Binaries
 
-Download from [Releases](../../releases):
+Download from [Releases](https://github.com/rcconsult/ppxai/releases):
 - `ppxai-{platform}` - Rich TUI (original)
 - `ppxaide-{platform}` - Textual TUI (new in v1.15.0)
 - `ppxai-server-{platform}` - HTTP server for VSCode
