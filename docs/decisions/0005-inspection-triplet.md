@@ -5,7 +5,7 @@
 **Related:**
 - [ADR 0003](0003-agent-platform-architecture.md) — Agent platform architecture; Stage 2's `runs/<run_id>/agent-<n>/` namespace IS this pattern, scoped to agent runs only
 - [`docs/research/2026-05-10-openshell-coordination-patterns.md`](../research/2026-05-10-openshell-coordination-patterns.md) — prior art (NVIDIA OpenShell `runs/<run_id>/` namespace)
-- [ppxai-sre `docs/PPXAI-INTEGRATION-V1.19.md`](https://github.com/rcconsult/ppxai-sre/blob/main/docs/PPXAI-INTEGRATION-V1.19.md) — caveat C5 (agent-served services routing) builds on this pattern (cross-repo link, unresolvable without a checkout or access to that private repo; branch name unverified)
+- [ppxai-sre `docs/PPXAI-INTEGRATION-V1.19.md`](https://github.com/rcconsult/ppxai-sre/blob/master/docs/PPXAI-INTEGRATION-V1.19.md) — caveat C5 (agent-served services routing) builds on this pattern (cross-repo link to a private repo; default branch `master`, confirmed by ppxai-sre 2026-09-28)
 - `ppxai/server/routes/preview.py` — v1.18.5 preview-backend log file is an `events.jsonl`-shaped artifact today
 - `ppxai/engine/session.py` — session JSON files are `state.json`-shaped artifacts today
 
