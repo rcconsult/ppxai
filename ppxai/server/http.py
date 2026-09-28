@@ -16,6 +16,7 @@ import concurrent.futures
 import json
 import logging
 import os
+import re
 import signal
 import sys
 import threading
@@ -29,11 +30,13 @@ import webbrowser
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.datastructures import Headers
 
 import ppxai.config.loader as _loader
 
@@ -276,7 +279,10 @@ def _cors_kwargs() -> dict:
         origins = [o for o in origins if o != "*"]
     if origins:
         return {"allow_origins": origins}
-    return {"allow_origin_regex": r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$"}
+    return {"allow_origin_regex": _LOOPBACK_ORIGIN_RE.pattern}
+
+
+_LOOPBACK_ORIGIN_RE = re.compile(r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$")
 
 
 def _host_allowlist() -> "set | None":
@@ -420,27 +426,97 @@ async def host_validation_middleware(request: Request, call_next):
     Permissive (`_host_allowlist()` -> None) short-circuits to no check.
     """
     if request.method != "OPTIONS" and request.url.path not in _HEALTH_PATHS:
-        allowed = _host_allowlist()
-        if allowed is not None:
-            raw = (request.headers.get("host") or "").strip()
-            # Strip port; handle IPv6 literal "[::1]:port" -> "::1".
-            host = raw.rsplit(":", 1)[0] if raw.count(":") <= 1 else raw
-            if host.startswith("[") and "]" in host:
-                host = host[1:host.index("]")]
-            host = host.strip().lower()
-            if host and host not in allowed:
-                            return JSONResponse(
-                    status_code=400,
-                    content={
-                        "error": "invalid_host",
-                        "detail": (
-                            f"Host {host!r} is not allowed. This server accepts "
-                            "loopback Hosts by default; set PPXAI_TRUSTED_HOSTS for "
-                            "a non-loopback (gateway) deployment."
-                        ),
-                    },
-                )
+        host = _rejected_host(request.headers.get("host"))
+        if host is not None:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_host",
+                    "detail": (
+                        f"Host {host!r} is not allowed. This server accepts "
+                        "loopback Hosts by default; set PPXAI_TRUSTED_HOSTS for "
+                        "a non-loopback (gateway) deployment."
+                    ),
+                },
+            )
     return await call_next(request)
+
+
+def _rejected_host(raw_host: str | None) -> str | None:
+    """The normalised Host name if the allowlist rejects it, else None."""
+    allowed = _host_allowlist()
+    if allowed is None:
+        return None
+    raw = (raw_host or "").strip()
+    # Strip port; handle IPv6 literal "[::1]:port" -> "::1".
+    host = raw.rsplit(":", 1)[0] if raw.count(":") <= 1 else raw
+    if host.startswith("[") and "]" in host:
+        host = host[1:host.index("]")]
+    host = host.strip().lower()
+    return host if host and host not in allowed else None
+
+
+# WebSocket guard ------------------------------------------------------------
+# `@app.middleware("http")` never sees a websocket: Starlette hands those
+# middlewares only `http` scopes. So the Host check, the auth gate and CORS
+# above did NOT apply to `/ws/terminal`, and any web page the user visited
+# could open `ws://127.0.0.1:<port>/ws/terminal` and drive a shell -- with or
+# without PPXAI_API_TOKEN (browsers do not apply CORS to websockets, and they
+# send cookies, so a gateway's ingress auth does not stop a same-site page
+# either). This guard applies the same three rules to every websocket
+# route, before the route runs:
+#   * Host must pass the same allowlist as HTTP (anti-rebinding);
+#   * a browser's Origin must be an allowed origin -- PPXAI_ALLOWED_ORIGINS,
+#     loopback, or the server's own origin (same host:port as a Host that
+#     passed the check above). No Origin at all is a non-browser client;
+#   * the bearer-token gate runs exactly as for a GET of the same path.
+# A refusal closes the handshake with 1008 (the client sees HTTP 403).
+
+
+def _origin_allowed(origin: str, raw_host: str | None) -> bool:
+    if _LOOPBACK_ORIGIN_RE.match(origin):
+        return True
+    explicit = [o for o in _env_list("PPXAI_ALLOWED_ORIGINS") if o != "*"]
+    if origin in explicit:
+        return True
+    netloc = urlsplit(origin).netloc.lower()
+    return bool(netloc) and netloc == (raw_host or "").strip().lower()
+
+
+def _websocket_rejection(scope) -> str | None:
+    """Why this websocket handshake must be refused, or None to let it through."""
+    headers = Headers(scope=scope)
+    raw_host = headers.get("host")
+    host = _rejected_host(raw_host)
+    if host is not None:
+        return f"host {host!r} is not allowed"
+    origin = headers.get("origin")
+    if origin and not _origin_allowed(origin, raw_host):
+        return f"origin {origin!r} is not allowed"
+    as_get = Request({**scope, "type": "http", "method": "GET"})
+    if _auth_check_request(as_get) is not None:
+        return "a valid bearer token is required"
+    return None
+
+
+class _WebSocketGuard:
+    """Pure ASGI wrapper: vets websocket handshakes, passes everything else."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "websocket":
+            reason = _websocket_rejection(scope)
+            if reason is not None:
+                logger.warning(f"Refused websocket {scope.get('path')}: {reason}")
+                await receive()  # websocket.connect
+                await send({"type": "websocket.close", "code": 1008})
+                return
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(_WebSocketGuard)
 
 
 # Register all route modules
