@@ -1,6 +1,6 @@
 # ADR 0014: Web search is its own layer; grounding retrieves before the model call
 
-- **Status:** Implemented (2026-09-27, `b3c66740` layer, `05bb0ddb` retrieval grounding): direction approved by the owner, open questions answered below; default backend order revised the same day (Decision 3)
+- **Status:** Implemented and **closed** (2026-09-28). Built 2026-09-27 (`b3c66740` layer, `05bb0ddb` retrieval grounding): direction approved by the owner, open questions answered below; default backend order revised the same day (Decision 3). Closed by the owner on 2026-09-28, which also accepted the `grounding.sources` field added in `c3e56736` as the structured-citations decision §5 had deferred.
 - **Deciders:** owner
 - **Target:** v1.19.3, together with ADR 0015 (owner, 2026-09-27).
 - **Related:** ADR 0009 (task execution profiles, the shared backend
@@ -161,15 +161,33 @@ the model is told to cite sources as `[n]`, and ppxai does **not** append a
 source list to the model's content, since that would break a JSON
 `response_format`. The existing optional `grounding` response record
 (`searched`, `run_id`, `queries`, `backend`, `search_cost`) is set on the
-retrieve path, as it already is on the search-loop path. A structured
-`citations` field would be an additive change to the one stable external
-surface, and is deferred to its own decision.
+retrieve path, as it already is on the search-loop path.
+
+**Amended 2026-09-28 (owner, on closing this record).** The structured
+citations field that this section first deferred shipped as
+`grounding.sources` (`c3e56736`): `[{url, title}]`, the sources shown to the
+model, in order, so an answer's `[n]` is `sources[n-1]`. It is an additive
+key on the retrieval path only (the search-loop record has no such key), and
+`title` is null unless the backend gives one. Gemini's URLs are Google's
+opaque grounding redirects, so `title` carries the source's domain. The
+answer text still carries the `[n]` markers, and ppxai still appends no
+source list to the content. ppxai-sre checked the change against its
+consumer and reported no impact. `docs/api-gateway.md` is the wire
+reference.
 
 ### 6. Cost
 
 Retrieval usage is recorded through the existing `ToolUsage` path, so it
 appears in `/cost` under the run tier (ADR 0008) and in the run's usage
 events, like a web_search tool call.
+
+Two cost corrections landed after this record was built. `16ccbd98`:
+`gemini_grounding.per_query` is a per-query price, but it had been divided by
+1000 since v1.13.0, so each Gemini search was logged at a thousandth of its
+cost. `8f031e60`: a Perplexity search records the `usage.cost.total_cost`
+Perplexity reports, which includes its per-search and cache fees. The
+configured token prices ($0.25 in / $2.50 out per 1M) are now only the
+fallback.
 
 ## Why this and not the alternatives
 
@@ -224,8 +242,8 @@ events, like a web_search tool call.
   grounding sends the prompt text to the search backend, and that callers
   with untrusted or confidential prompts should send `grounding: false`.
   `/doctor` says the same when grounding is on server-wide.
-- **Citations** stay inside the answer text. A structured field is a
-  separate decision on the stable surface.
+- **Citations** stay inside the answer text as `[n]` markers, which resolve
+  through `grounding.sources` (§5, amended 2026-09-28).
 - **Injected size** is capped by `context.max_injection_size`, the limit
   file injection already uses, rather than a new key.
 
