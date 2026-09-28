@@ -48,7 +48,7 @@ Thank you for your interest in contributing to ppxai! We welcome contributions f
    ```
 3. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install -e ".[server,gemini,tui,data,build]"   # or: uv sync --all-extras
    ```
 4. Set up configuration:
    ```bash

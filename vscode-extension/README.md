@@ -9,7 +9,7 @@ Multi-provider AI chat interface for VS Code, powered by ppxai.
 - **Time Dividers**: Visual separators between conversations (after 5min gap or date change)
 - **@file References**: Type `@filename` to include file content, `@clipboard` for clipboard text, `@url` for web content
 - **Autocomplete** (unified with all ppxai clients via `POST /complete`):
-  - `/` commands + aliases (dynamic, from server's `CommandFactory`) — `/quit`/`/exit`/`/q` are Rich/Textual-only; use the "Leave" action or disconnect in VSCode
+  - `/` commands + aliases (dynamic, from server's `CommandFactory`) — `/quit`/`/exit`/`/q` are Rich/Textual-only; `/quit` isn't offered in VSCode — close the chat panel or use "ppxai: Stop Server"
   - `/tools`, `/usage`, `/checkpoint`, `/status`, `/theme` subcommands + second-level args (`/usage show <mode>`, `/theme emoji on/off`, `/checkpoint backend <backend>`, `/tools help <tool>`)
   - Dynamic `/model <name>` for the active provider, `/provider <name>` for configured providers
   - Path arguments for `/attach`, `/cd`, `/ls`, `/show`, `/tree`, `/preview` with alias resolution
@@ -297,18 +297,24 @@ vscode-extension/
 │   ├── commandRoster.ts   # GET /commands client + roster cache
 │   ├── commandRenderer.ts # Server-rendered command result display
 │   ├── schemaGuard.ts     # Connect-time AppState schema drift check
-│   ├── taskController.ts  # /task, /run, /auto client glue
-│   ├── appState.ts / appState.generated.ts # AppState store + generated field types
+│   ├── taskController.ts  # /task, /run client glue
+│   ├── autoLoop.ts        # /auto client glue
+│   ├── config.ts          # Extension configuration
+│   ├── outputChannel.ts   # "ppxai" output channel logging
+│   ├── appState.ts / appState.generated.ts / appStateTypes.ts # AppState store + field types
 │   ├── sideEffectsHandler.ts # CommandResult.side_effects consumer (prompts, etc.)
-│   └── handlers/          # Extracted handlers (v1.14.0+)
-│       ├── eventBus.ts    # Type-safe pub/sub communication
-│       ├── stream.ts      # Stream event processing
-│       ├── consent.ts     # Consent dialog handlers
-│       └── agentStateMachine.ts # Agent loop state machine
+│   ├── handlers/          # Extracted handlers (v1.14.0+)
+│   │   ├── eventBus.ts    # Type-safe pub/sub communication
+│   │   ├── stream.ts      # Stream event processing
+│   │   ├── consent.ts     # Consent dialog handlers
+│   │   └── agentStateMachine.ts # Agent loop state machine
+│   └── shared/            # Formatters and other client-agnostic helpers
 ├── media/webview/         # External CSS/JS for webview
 └── resources/
     └── icon.svg           # Activity bar icon
 ```
+
+(This tree lists the key files, not every file under `src/`.)
 
 The extension communicates with `ppxai-server` via HTTP REST + SSE for streaming responses.
 

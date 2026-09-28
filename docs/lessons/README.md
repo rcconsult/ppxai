@@ -42,8 +42,9 @@ Examples of cross-host + grep-verifiable lessons:
 
 - "ppxai imports `mcp` nowhere — the `[mcp]` optional extra is intent,
   not implementation" (verifiable: `Grep "import mcp" ppxai/`)
-- "`tool_manager.py:193` hardcodes `source: engine`, blocking
-  extension by external tool sources" (verifiable: open the file)
+- "`ppxai/engine/tools/manager.py` hardcodes `source: engine`, blocking
+  extension by external tool sources" (verifiable:
+  `grep -n '"source": "engine"' ppxai/engine/tools/manager.py`)
 - "ADR 0006 producer-side keys MUST stay off the wire — the
   `__debug__`-gated `assert_wire_blocks_clean` validator enforces it"
   (verifiable: read `engine/uploaded_file.py`)
@@ -136,10 +137,12 @@ discoverable later.
   spawned binary die silently, so acceptance tests the OLD process — free
   the port first (`gateway-smoke.py` now guards this)
 - [perplexity-alternation-retired-orphan-toolcalls-is-real.md](perplexity-alternation-retired-orphan-toolcalls-is-real.md) —
-  Perplexity Sonar relaxed the old "messages must alternate" rule (verified
-  live); the recurring tools-chat 400 is the provider-agnostic orphan
-  `assistant.tool_calls` case — check the actual wire error before adding
-  another alternation patch
+  the recurring tools-chat 400 is the provider-agnostic orphan
+  `assistant.tool_calls` case, not a provider-specific alternation rule —
+  check the actual wire error before adding another alternation patch.
+  Perplexity Sonar (which had relaxed its old "messages must alternate"
+  rule) is the historical origin of the pattern-match, now moot since
+  ADR 0015 removed it as a chat provider
 - [stale-tests-outlive-deleted-behavior.md](stale-tests-outlive-deleted-behavior.md) —
   removing a behavior leaves its tests behind; they fail as assumed-
   environmental noise or keep passing against a renamed surface while

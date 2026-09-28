@@ -121,17 +121,19 @@ def handle_<name>(handler, args: str) -> Optional[CommandResult]:
 class CommandSpec:
     name: str                    # Command name (without /)
     description: str             # Short description for /help
-    handler: Callable            # The handler function
+    handler: Callable | None = None   # The handler function; None requires client_action instead
     category: str = "general"    # Category for grouping in /help
-    aliases: List[str] = field(default_factory=list)   # e.g. ["h"] for /h -> /hello
+    aliases: list[str] = field(default_factory=list)   # e.g. ["h"] for /h -> /hello
     usage: str = ""              # Usage hint (e.g., "/hello [name]")
     hidden: bool = False         # Hide from /help listing
-    subcommands: List[tuple] = field(default_factory=list)  # (name, description) pairs — the
+    subcommands: list[tuple[str, str]] = field(default_factory=list)  # (name, description) pairs — the
                                   # ONLY source for tab completion and `/help <cmd>` (ADR 0007);
                                   # first level only, e.g. [("list", "List items"), ("clear", "Clear all")]
-    clients: List[str] | None = None          # Which clients can see this command; None = universal
+    clients: frozenset[str] | None = None     # Which clients can see this command; None = universal
     client_action: str | None = None          # Name from CLIENT_ACTIONS for client-handled behavior
-    sensitive_subcommands: List[str] = field(default_factory=list)  # subset of `subcommands` whose
+    client_action_clients: frozenset[str] | None = None  # Which clients dispatch to client_action
+                                  # instead of handler; None = every client that can see the command
+    sensitive_subcommands: frozenset[str] = frozenset()  # subset of `subcommands` whose
                                   # argument is a secret (e.g. "set" in a token command) and must
                                   # never be logged, echoed or persisted
 ```

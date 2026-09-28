@@ -118,7 +118,10 @@ Once installed, you can:
 ## Requirements
 
 - ppxai binaries must be installed in `~/.local/bin/`
-- Run the build/install process first: `/build`, the `build-install` skill, or `install.sh --with-desktop`
+- Install the binaries first: `/build`, the `build-install` skill, or `./install.sh`
+  (its `--with-desktop` flag only installs a single `ppxai-desktop` launcher,
+  not the three terminal-detecting `.desktop` files this doc describes). Then
+  run `./install-desktop-integration.sh` from this directory to install those.
 
 ## Desktop File Locations
 

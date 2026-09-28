@@ -111,7 +111,7 @@ ppxai/
 │   └── file_type.py       # File-type / mimetype helpers
 ├── preview_server.py  # Stdlib HTTP preview server (v1.15.4)
 ├── engine/            # Core business logic (~36 modules; the layering-relevant ones shown)
-│   ├── types.py       # Near-leaf: imports only common.logger-level helpers and the two artifact modules — ToolManagerProtocol / ToolEngineProtocol live here
+│   ├── types.py       # Near-leaf: its only ppxai imports are the two artifact modules (artifact_projector, artifact_registry) — ToolManagerProtocol / ToolEngineProtocol live here
 │   ├── task_runner.py # build_task_runner — embeddable, drives in-process runs (T8b)
 │   ├── task_backend.py# In-process run lifecycle for the TUIs (no HTTP)
 │   ├── task_authorizer.py # authorize_task(): THE admission boundary for every tier
@@ -178,8 +178,8 @@ ADR 0010 moved six tier keys off `tools.agent.*` as a **clean break with no
 dual-read**: a config left at an old path is silently ignored and reverts to
 its default, which is why `/doctor` scans the config *file* for stale paths.
 
-**Why**: `ppxai/engine/types.py` sits at the bottom of the DAG — it imports
-only `common/` helpers and the two small artifact modules, never `client.py`
+**Why**: `ppxai/engine/types.py` sits at the bottom of the DAG — its only
+ppxai imports are the two small artifact modules, never `client.py`
 or the tools — so anything may import it. The tool depends on the *interface* it actually needs
 rather than on `EngineClient`, which would close an import cycle. The concrete
 class satisfies the Protocol structurally; nothing needs to inherit from it.
@@ -862,7 +862,7 @@ The web app (`ppxai/web/`) serves as the UI for `ppxai-desktop` and the browser-
 ```
 ppxai/web/
 ├── index.html                          # Single-page app shell
-├── app.js                              # PpxaiApp root class (~4,160 lines as of v1.19.3)
+├── app.js                              # PpxaiApp root class (~4,400 lines as of v1.19.4 work)
 ├── shared/                             # Framework-level modules (flat, not per-group folders)
 │   ├── api-client.js                   # ApiClient — all fetch() calls, timeout, error shape
 │   ├── app-state.js                    # AppState — centralised state with listener notifications

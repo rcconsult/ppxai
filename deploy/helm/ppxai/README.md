@@ -73,17 +73,21 @@ apiKeys:
 
 **`auth.sessionSigning` is also required.** The session-manager binds every
 `/s/<slug>/` request to the authenticated identity via an HMAC-signed cookie
-and FAILS CLOSED without a signing key. Generate one once with
+and FAILS CLOSED without a signing key. Generate one **once** with
 `openssl rand -hex 32` and keep it stable — rotating it logs out every active
-user:
+user, so do NOT pass `--set auth.sessionSigning.key=$(openssl rand -hex 32)`
+directly on `helm upgrade`: that re-generates a new key on every invocation.
+Generate it once and save the value, then pass the same saved value on every
+upgrade:
 
 ```bash
+export SESSION_SIGNING_KEY=$(openssl rand -hex 32)   # generate once, save it
 helm upgrade --install coder . -f values-microk8s.yaml \
-  --set auth.sessionSigning.key=$(openssl rand -hex 32)
+  --set auth.sessionSigning.key=$SESSION_SIGNING_KEY
 ```
 
 Or use an existing secret (preferred for production, so the key never lands
-in values/helm history):
+in values/helm history — create it once, then every upgrade references it):
 
 ```yaml
 auth:

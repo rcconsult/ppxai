@@ -297,7 +297,11 @@ This allows fair comparison between providers.
 - ✅ Use vLLM with proper flags (native support)
 
 **For Web Search + Tools:**
-- ✅ Use Gemini (native grounding coexists with tool/function calling)
+- ✅ Use Gemini (or any tool-capable model) with ppxai's `web_search` tool,
+  which searches through the ADR 0014 layer (`ppxai/engine/search/`). Gemini's
+  *native* Google Search grounding is off whenever ppxai tools are sent:
+  `generate_content` rejects grounding plus function declarations, so
+  function calling wins (`ppxai/engine/providers/gemini.py`)
 - Perplexity is no longer a chat provider (ADR 0015, v1.19.3) and is not
   selectable for tool calling; it remains available only as a
   web-search/grounding backend (ADR 0014).

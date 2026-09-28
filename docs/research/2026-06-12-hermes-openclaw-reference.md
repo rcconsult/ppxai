@@ -6,7 +6,7 @@
 The full comparative reference lives in the **ppxai-sre** repo, where the
 agent-runtime research already lives:
 
-→ [`../../../ppxai-sre/docs/HERMES-OPENCLAW-REFERENCE.md`](../../../ppxai-sre/docs/HERMES-OPENCLAW-REFERENCE.md)
+→ [`ppxai-sre/docs/HERMES-OPENCLAW-REFERENCE.md`](https://github.com/rcconsult/ppxai-sre/blob/master/docs/HERMES-OPENCLAW-REFERENCE.md) (private repo)
 
 ## Why this pointer exists
 

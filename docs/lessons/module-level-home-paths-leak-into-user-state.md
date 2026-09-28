@@ -69,7 +69,7 @@ with patch.dict(os.environ, {}, clear=True), \
 # RuntimeError: Could not determine home directory.
 ```
 
-Because `PPXAI_HOME` is module-level (`config/loader.py:30`), that raise
+Because `PPXAI_HOME` is module-level (`ppxai/config/loader.py`), that raise
 happens **at import of `ppxai.config.loader`** — before any application code
 runs. The traceback points at ppxai's loader, not at the change that caused
 it, so the cause (a base image or a `runAsUser`) is one indirection away
@@ -160,10 +160,10 @@ unguarded and why each one mattered — every row is now covered by the
 | Constant | Consequence |
 |---|---|
 | the logger's `~/.ppxai/logs/` (`common/logger.py`) | **test runs interleave with the user's real debug logs** — anyone debugging a TUI problem reads a mixture of their session and the last suite run |
-| `config/loader.py:30 PPXAI_HOME` | the root under which runs, sessions and uploads live |
-| `engine/bootstrap.py:67 HINT_TEMPLATES_FILE` | user hint templates |
-| `engine/session_store.py:55 _DEFAULT_STAGING_DIR` | upload staging |
-| `server/routes/files.py:38 _PREVIEW_CACHE_ROOT` | preview cache |
+| `config/loader.py`'s `PPXAI_HOME` | the root under which runs, sessions and uploads live |
+| `engine/bootstrap.py`'s `HINT_TEMPLATES_FILE` | user hint templates |
+| `engine/session_store.py`'s `_DEFAULT_STAGING_DIR` | upload staging |
+| `server/routes/files.py`'s `_PREVIEW_CACHE_ROOT` | preview cache |
 
 The logs one was not hypothetical: it made monitoring a live trial nearly
 useless, because fixture runs (`task='x'`, `task='secret'`) appeared in the

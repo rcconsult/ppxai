@@ -20,10 +20,11 @@ were produced by people deliberately being careful. None raised an error.
 
 ### 1. The anchor matched twice
 
-`if not probe or not probe.get("reachable"):` appears at
-`ppxai/commands/doctor.py:429` (`detect_context_limit_drift`) and `:497`
-(`detect_uncatalogued_models`). Mutating "the guard" patched line 429 while
-the tests exercised the function at 497, so the suite passed — and that reads
+`if not probe or not probe.get("reachable"):` appears twice in
+`ppxai/commands/doctor.py`: once in `detect_context_limit_drift` and once in
+`detect_uncatalogued_models` (`grep -n 'not probe or not probe.get' ppxai/commands/doctor.py`
+finds both). Mutating "the guard" patched the anchor inside one function while
+the tests exercised the other, so the suite passed — and that reads
 exactly like *this guard has no fence under it*.
 
 Two sessions ran the same mutation independently and both got the same wrong

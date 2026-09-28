@@ -1435,7 +1435,7 @@ a number derived from origin — not from the tree you fixed.**
   came from. Overlaps [[Item 63]]; **owner's call**, deliberately not settled
   in code.
 
-Plan: `docs/handoff-item-65.md` (committed in `ba8b89ac`). Two of its claims
+Plan: `docs/archive/handoff-item-65.md` (committed in `ba8b89ac`). Two of its claims
 were wrong and are corrected there and here: §5's safety argument (above),
 and §3's assumption that `api_path="auto"` had rows behind it — zero
 profiles used it.
@@ -1715,7 +1715,7 @@ follow-up — they're feature work belonging on the roadmap, or they
 shipped already.
 
 - **Item 14 — Anthropic provider** → moved to roadmap 2026-05-05.
-  See [ROADMAP.md §"v1.19.x - Anthropic Provider (planned)"](../ROADMAP.md#v119x---anthropic-provider-planned).
+  See [ROADMAP.md §"v1.19.x - Anthropic Provider (Phase 1 shipped, v1.19.1)"](../ROADMAP.md#v119x---anthropic-provider-phase-1-shipped-v1191).
   Original v1.18.2 entry preserved at
   [docs/archive/DEBT-INVENTORY-v1.18.2.md](archive/DEBT-INVENTORY-v1.18.2.md#item-14--add-anthropic-provider-with-explicit-tos-aware-auth-fallback)
   for full design rationale (TOS warning text, OAuth fallback caveats).
@@ -1724,7 +1724,7 @@ shipped already.
 
 ## Open (continued)
 
-Items 36, 37, 75-79, 83 and 84 below are still open — they were filed
+Items 36, 37, 75-77, 79 and 83-85 below are still open — they were filed
 after Item 14's "moved out of scope" note above and landed under this
 heading by mistake. They belong under "## Open" and have rows in "Open
 at a glance"; this sub-heading marks that they are not "recently moved

@@ -441,11 +441,12 @@ will actually do, and labels each field's source (`config` / `built-in` /
 > a flat `is_unmeasured(...)` leaf, which was the pre-v1.19.3 shape: one
 > boolean deciding the label for all twelve fields at once. That answered
 > *"did a row match"*, not *"is this value measured"* — and
-> `PerplexityProvider` seeds its gateway rows from
-> `shipped_facts_for_model("openai/")` and four sibling globs that match
-> **nothing**, so the seed IS `UNMEASURED` with three fields then set
+> `PerplexityProvider` (removed as a chat provider in v1.19.3, ADR 0015 —
+> see the note above) seeded its gateway rows from
+> `shipped_facts_for_model("openai/")` and four sibling globs that matched
+> **nothing**, so the seed WAS `UNMEASURED` with three fields then set
 > deliberately. The other nine printed `(built-in)` for every model those
-> globs serve, across four vendors.
+> globs served, across four vendors.
 >
 > The `has_global_row` guard is what keeps the fix from over-reaching:
 > comparing a value to `UNMEASURED` cannot by itself tell a guess from a

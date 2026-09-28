@@ -70,7 +70,8 @@ So byte count has both failure directions: piped, a live run looks dead;
 unpiped, §2's file looked alive because the bytes came from the `git log`
 *before* the pipe, never from pytest at all. Byte count answers "is the
 pipeline flushing", not "is the work running". **Check the process**
-(`tasklist | grep -ci python`) — that is what settled both cases: zero
+(Windows: `tasklist | grep -ci python`; POSIX: `pgrep -fc pytest`, or
+`kill -0 <pid>` for one known process) — that is what settled both cases: zero
 processes when it had died, six when it was fine.
 
 ### 3. `ruff --select <RULE>` reports a different count than a full run

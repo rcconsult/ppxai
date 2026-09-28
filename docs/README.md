@@ -119,7 +119,7 @@ ppxai includes built-in tools for AI-powered development:
 | `replace_block` | Find and replace text blocks |
 | `insert_text` | Insert text at line numbers |
 | `delete_lines` | Delete line ranges |
-| `web_search` | Search the web — walks a backend chain (Gemini → Perplexity → DuckDuckGo) resolved at call time |
+| `web_search` | Search the web — walks the backend chain from `tools.web_search.order` (Gemini → Perplexity → DuckDuckGo when it is unset), resolved at call time |
 | `fetch_url` | Fetch URL contents |
 | `get_datetime` | Get current date/time |
 | `get_weather` | Get weather information (**HTTPS-only** since v1.19.1) |

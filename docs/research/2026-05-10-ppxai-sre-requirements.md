@@ -3,7 +3,7 @@
 **Date:** 2026-05-10
 **Status:** Research / exploratory — not a decision
 **Triggered by:** question during the v1.18.4 release-prep session
-about what ppxai needs to build to support [ppxai-sre](https://github.com/rcconsult/ppxai-sre)
+about what ppxai needs to build to support [ppxai-sre](https://github.com/rcconsult/ppxai-sre) (private repo)
 (autonomous SRE agent platform — see [RELATED-PROJECTS.md](../../RELATED-PROJECTS.md))
 **Author:** Captured from a research conversation; not vetted against
 ppxai-sre's current branch.

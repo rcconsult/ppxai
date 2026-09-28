@@ -25,8 +25,8 @@ integration the server wraps around it:
 | Missing in the TUI | The other clients | Symptom |
 |---|---|---|
 | U4 merge on `collect` | `agent-run-controller.js:121`, `taskController.ts:596` | runs never entered the conversation → every TUI session was message-less → **"session restore is broken"** |
-| registry `on_change` | `server/state.py:215` | `AppState.background_agents` never written, though `tui/app.py:254` already subscribes and renders a badge |
-| `sweep_orphans()` | `server/state.py:209` | a run orphaned by a TUI exit stays `running`; `ls` lies after a restart |
+| registry `on_change` | `server/state.py`'s `_mirror_to_app_state` registration | `AppState.background_agents` never written, though `tui/app.py:254` already subscribes and renders a badge |
+| `sweep_orphans()` | `server/state.py`'s call into `AgentRunRegistry.sweep_orphans()` | a run orphaned by a TUI exit stays `running`; `ls` lies after a restart |
 
 Every one was found by a human trialling the app. None was found by the suite.
 

@@ -19,7 +19,7 @@ Uses **ppxai Engine** for consistent tool handling across all providers.
 python benchmark.py --provider gemini --model gemini-3.8-flash
 
 # Run against a different Gemini model
-python benchmark.py --provider gemini --model gemini-2.5-flash
+python benchmark.py --provider gemini --model gemini-3.1-flash-lite
 
 # Run against OpenAI
 python benchmark.py --provider openai --model gpt-4o
@@ -78,7 +78,7 @@ Tests failure handling:
 python benchmark.py --provider gemini --model gemini-3.8-flash
 
 # Specific categories only
-python benchmark.py --provider gemini --model gemini-2.5-flash --categories tool_calling,code_editing
+python benchmark.py --provider gemini --model gemini-3.1-flash-lite --categories tool_calling,code_editing
 
 # With verbose output (shows error details)
 python benchmark.py --provider openai --model gpt-4o -v

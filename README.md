@@ -302,7 +302,7 @@ Enable with `/tools enable` (or use Agent Mode):
 - `execute_shell_command` - With consent system (safe/dangerous/blocked)
 - `apply_patch`, `replace_block`, `insert_text`, `delete_lines` - File editing with consent
 - `calculator`, `get_datetime`, `get_working_directory` - Utilities
-- `web_search` - Premium web search (Gemini/Perplexity/DuckDuckGo fallback order)
+- `web_search` - Premium web search: the backend chain from `tools.web_search.order` (Gemini → Perplexity → DuckDuckGo when it is unset)
 - `get_weather` - Weather info with HTTPS/HTTP fallback for corporate proxies (v1.15.4)
 
 **Tool Settings:** `/tools set verbose on` shows full arguments and results; `/tools set verbose off` (default) shows brief status only.
@@ -414,9 +414,9 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
 | [Architecture](docs/architecture.md) | Type-based renderer design (v1.15.0) |
 | [Tool Calling](docs/tool-calling.md) | Native vs prompt-based tool calling |
-| [Latest Release Notes](docs/release-notes-v1.19.4.md) | Current release — see `docs/release-notes-v1.19.*.md` for the full v1.19.x series |
+| [Latest Release Notes](docs/release-notes-v1.19.3.md) | Latest release (v1.19.3) — see `docs/release-notes-v1.19.*.md` for the v1.19.x series; v1.19.4 is prepared, not released |
 | [CHANGELOG](CHANGELOG.md) | Full version history |
-| [Archived Release Notes](docs/archive/release-notes) | Pre-v1.19 release notes |
+| [Archived Release Notes](docs/archive/release-notes) | Older release notes (v1.18.7 and v1.18.8 are still in `docs/`) |
 
 ## Project Structure
 

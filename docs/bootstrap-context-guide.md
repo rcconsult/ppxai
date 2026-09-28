@@ -157,7 +157,7 @@ When using Ollama, you get both `local` hints AND `ollama` hints.
 | `local` | "Complete tasks fully", "Use tools proactively" |
 | `ollama` | "Keep responses concise", "Prefer smaller focused tool calls" |
 | `gemini` | "Use Google Search grounding for current information" |
-| `openai` | "Prefer the Responses API's native tool calling" |
+| `openai` | "Use the web_search tool for current information" |
 | `custom` | "Use tools directly without XML formatting" |
 
 ## Model Hints

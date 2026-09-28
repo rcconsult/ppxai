@@ -40,7 +40,7 @@ The checkpoint system provides **atomic multi-file rollback** for agent mode tas
 
 2. **Check status** (see checkpoint backend in status line):
    ```
-   [Perplexity | sonar-pro | Tools: ON | Agent: ON | ↶]
+   [Gemini | gemini-3.8-flash | Tools: ON | Agent: ON | ↶]
    ```
    The checkpoint indicator is the compact `↶` glyph, not the words
    `Checkpoints: git` — see the table below.

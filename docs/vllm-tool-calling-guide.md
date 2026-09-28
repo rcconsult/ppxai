@@ -484,23 +484,23 @@ which overclaims on both counts.
 
 ### Recommended Configuration
 
-> ⚠️ **ppxai overrides this today, whatever your vLLM version.** The
+> ⚠️ **ppxai defaults gpt-oss to prompt-based tool calling.** The shipped
 > `openai/gpt-oss*` facts row pins `tool_mode='prompt_based'`
-> (`ppxai/engine/model_facts.py:944`), and since ADR 0012 that row answers
-> the whole question at dispatch (`ppxai/engine/chat.py`, the `use_native_tools = ...` line,
-> `use_native_tools = facts.tool_mode != "prompt_based"`) — so setting
-> `facts.tool_mode: "native"` (or the older, now-dead
-> `capabilities.native_tool_calling: true`) for a gpt-oss model is accepted
-> by config and then ignored. (This used to be a `model_profiles.py` profile; that module
-> was deleted in Item 65 and the pin moved to the facts table with it.)
-> Treat the block below as what to use *once that pin is lifted*, not as a
-> working configuration; the prompt-based block underneath is what actually
-> runs. On upstream state, see the table above — #23567 is closed **as not
-> planned**, which is not the same as fixed.
+> (`ppxai/engine/model_facts.py`), and since ADR 0012 the resolved facts
+> decide dispatch (`ppxai/engine/chat.py`:
+> `use_native_tools = facts.tool_mode != "prompt_based"`). **Your per-model
+> facts override that row:** `providers.<p>.models.<m>.facts.tool_mode:
+> "native"` is applied on top of the shipped row (`resolve_model_facts()` in
+> `ppxai/engine/facts_config.py`), so the native block below is a working
+> opt-in. Only the older `capabilities.native_tool_calling` key is dead and
+> ignored. (The pin used to be a `model_profiles.py` profile; that module was
+> deleted in Item 65 and the pin moved to the facts table.) Opt in knowing
+> the upstream state in the table above: #23567 (the multi-turn HarmonyError)
+> is closed **as not planned**, which is not the same as fixed.
 
-**With vLLM past PR #30205, once the facts-row pin is lifted:** native tool
-calling gives the best performance — but see the caveat above; #30205 is not
-a fix for #23567's HarmonyError:
+**With vLLM past PR #30205 — the native opt-in:** native tool calling gives
+the best performance, with the HarmonyError caveat above; #30205 is not a fix
+for #23567:
 
 ```json
 {

@@ -25,7 +25,7 @@ dated 2026-09-27. The `/v1` base-url suffix needs no install-script change:
 trailing slash or an existing `/v1`. Nothing about the cutover remains
 pending on the ppxai side.
 Supersedes the `api_path` routing sketch in
-[`../plan-per-model-capabilities.md`](../archive/plan-per-model-capabilities.md) §I4b,
+[`../archive/plan-per-model-capabilities.md`](../archive/plan-per-model-capabilities.md) §I4b,
 which assumed the slot merely needed filling in.
 
 **Revised in part by [ADR 0015](0015-remove-perplexity-chat-provider.md)
@@ -37,7 +37,7 @@ remains a web-search / grounding backend under `engine/search/` (ADR 0014).
 The wire-protocol unification itself (steps 0-4, the three remaining
 handlers) is unaffected.
 **Related:**
-- [`../plan-per-model-capabilities.md`](../archive/plan-per-model-capabilities.md) — the arc this lands in; I1–I4 shipped, I4b is the first consumer of this ADR
+- [`../archive/plan-per-model-capabilities.md`](../archive/plan-per-model-capabilities.md) — the arc this lands in; I1–I4 shipped, I4b is the first consumer of this ADR
 - [`../patterns/protocol-dependency-inversion.md`](../patterns/protocol-dependency-inversion.md) — the `Protocol`-in-leaf-module pattern this uses
 - [`0010-config-shape-review.md`](0010-config-shape-review.md) — the config axes an operator-declared protocol would land on
 - [debt Item 38](../debt-inventory.md) — Perplexity's Agent-API fleet, the fleet that surfaced this

@@ -59,7 +59,7 @@ venv\Scripts\activate.bat
 ### 2. Install dependencies
 
 ```bash
-pip install -e ".[server,gemini,build]"
+pip install -e ".[server,gemini,tui,data,build]"   # or: uv sync --all-extras
 ```
 
 (`requirements.txt` is a stale, partial mirror of `pyproject.toml`'s

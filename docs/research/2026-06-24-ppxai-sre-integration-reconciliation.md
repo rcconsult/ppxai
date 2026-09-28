@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-24
 **Branch verified:** `feature/v1.19.0` @ `690d8db4` (not yet released)
-**Contract of record:** [`../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md)
+**Contract of record:** [`ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md`](https://github.com/rcconsult/ppxai-sre/blob/master/docs/PPXAI-INTEGRATION-V1.19.md) (private repo)
 
 ## Why this doc exists
 

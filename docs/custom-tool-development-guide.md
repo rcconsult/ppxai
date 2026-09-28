@@ -839,7 +839,7 @@ manager.register_function(
     description="Search the web",
     parameters={...},
     handler=search_function,
-    provider_excluded=["gemini"]  # Gemini has native grounding
+    provider_excluded=["ollama"]  # e.g. a provider whose models you don't want calling it
 )
 ```
 

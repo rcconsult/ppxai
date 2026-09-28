@@ -64,8 +64,10 @@
 > (`ppxai/config/execution.py::GROUNDING_MODES`; `True` means `"retrieve"` —
 > a search through the `ppxai/engine/search/` layer, for ANY provider, not
 > just Gemini) and the Perplexity chat provider no longer exists (ADR 0015).
-> §N's example command at line 1027 (`"/task run "…" [--work-dir <p>]"`) is
-> also stale — ADR 0011 renamed this to `/task "…" [--work-dir <p>]`.
+> §N's example command (`"/task run "…" [--work-dir <p>]"`) is
+> also stale — ADR 0011 renamed this to `/task "…" [--work-dir <p>]`. The
+> same stale `/task run` form also appears below at "§N — workdir
+> alignment" and in the `run_in_background._drive success` graph.
 >
 > Redrawing remains open work; this banner is the map of what to redraw.
 
@@ -1230,7 +1232,7 @@ out of the AppState badge set (the run consumes nothing).
 ```
 run_in_background._drive success:                     [engine/agent_runs.py]
   body = await runner(meta)
-  ├─ meta.hold_result (top-level /task run — the route sets it)
+  ├─ meta.hold_result (top-level /task — the route sets it)
   │    finish_run(status="completed_pending_ack", result=body)   ← record persists
   │    persist_state({status, result_ready_at, result_chars})    ← state.json
   │    emit_event("agent_result_ready", category="result")       ← INSTEAD of agent_run_complete

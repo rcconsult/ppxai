@@ -40,7 +40,7 @@ cd benchmarks/llm-eval
 
 # Benchmark any provider
 python benchmark.py --provider gemini --model gemini-3.8-flash
-python benchmark.py --provider gemini --model gemini-2.5-flash
+python benchmark.py --provider gemini --model gemini-3.1-flash-lite
 python benchmark.py --provider openai --model gpt-5-mini
 
 # Custom providers (vLLM, Ollama, etc.)
@@ -54,7 +54,7 @@ python benchmark.py --provider custom --model openai/gpt-oss-120b
 python benchmark.py --list-results
 
 # Compare two models
-python benchmark.py --compare gemini/gemini-3.8-flash gemini/gemini-2.5-flash
+python benchmark.py --compare gemini/gemini-3.8-flash gemini/gemini-3.1-flash-lite
 
 # Show ranking
 python benchmark.py --ranking
@@ -579,8 +579,7 @@ python benchmark.py --provider custom --model meta-llama/llama-3.1-405b --timeou
 
 **Solutions:**
 ```bash
-# Check .env file has correct API keys
-cat ~/.ppxai/.env | grep PERPLEXITY_API_KEY
+# Check .env file has the correct API key
 cat ~/.ppxai/.env | grep GEMINI_API_KEY
 
 # Reload config
@@ -599,12 +598,13 @@ python -c "from ppxai.config import reload_config; reload_config()"
 python -c "
 from ppxai.config import initialize, PROVIDERS
 initialize()
-print(PROVIDERS['perplexity']['capabilities'])
+print(PROVIDERS['gemini']['capabilities'])
 "
 ```
 
-**Perplexity Sonar models** use prompt-based tool calling (lower scores expected)
 **Gemini/OpenAI** use native tool calling (higher scores expected)
+**Prompt-based providers** (e.g. custom/vLLM/Ollama models without native
+function calling) score lower here
 
 ---
 
