@@ -55,7 +55,7 @@ kill → list prunes. All local, POSIX-gated where the OS demands it.
 - **A forward's readiness is "the local end accepts"**, not "the remote socket answers". Real ssh accepts locally and only fails the channel; liveness is S4's `/health` probe.
 - **Exception names end in `Error`** (repo lint, N818); the ADR's S2 text is updated to match.
 
-Verified against the real OpenSSH 8.6 client on macOS: unknown host → `HostUnreachableError`, closed port → the same. The opt-in live class runs with `PPXAI_TEST_SSH_DEST=<destination>`. **Not yet run:** a live forward against a real sshd, and anything on Windows (the forward and quoting classes are POSIX-gated; the TCP forward path was exercised on macOS with `local_forward_kind="tcp"`).
+Verified against the real OpenSSH 8.6 client on macOS: unknown host → `HostUnreachableError`, closed port → the same. The opt-in live class runs with `PPXAI_TEST_SSH_DEST=<destination>` (and `PPXAI_TEST_SSH_COMMAND` for an ssh argv prefix, e.g. a scratch `UserKnownHostsFile`). **Linux (WSL2 Ubuntu 24.04, 706a60dd):** all 95 incl. the live class against a real sshd. **Windows (706a60dd):** a live `OpenSSHTransport` TCP forward from Windows OpenSSH to a WSL2 `ppxai-server --uds` reached the server (`/health` 401 without the token, as designed) and the port closed after `close()`; two test-only defects found by the peers were fixed (an echo server dying on EPIPE on Linux, `706a60dd`; the fake ssh writing stderr in text mode on Windows).
 
 - `ppxai/remote/transport.py`: the Protocol, `RunResult`, `LocalEndpoint`,
   typed errors.
@@ -70,6 +70,8 @@ table from captured real OpenSSH messages; one opt-in live test against a host
 named by an env var, skipped otherwise.
 
 ## Phase 3 — S4, `RemoteSessionManager`
+
+**Status (2026-09-28): implemented** on `feature/v1.19.4` — `ppxai/remote/inventory.py` (S1 `remote.hosts` validation; not yet read from config — Phase 4 wires it), `contract.py` (the hub's own contract record, pinned to the server's by a test), `manager.py`; `tests/test_remote_manager.py`. What the ADR did not say and the build decided is recorded under S4 "As built". Besides the fake-driven state-machine tests, the remote shell snippets (binary discovery, `cd` into the workdir) run through a real `sh`, and one slow test launches a real `ppxai-server --uds --announce --detach` through the fake ssh, attaches over a real forward, health-checks it and stops it with `POST /shutdown`.
 
 - State machine exactly as drawn in the ADR; every transition an event the
   picker can render.

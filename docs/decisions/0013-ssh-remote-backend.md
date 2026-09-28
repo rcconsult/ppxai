@@ -6,8 +6,10 @@ and 5; 3 and 4 measured against a WSL2 sshd the same day)
 implemented on 2026-09-27 (`78e34b8e`): `ppxai-server --uds/--announce/--detach/--list`,
 the contract-1 registry, verified on Windows, macOS and Ubuntu 24.04. Phase 2
 (S2, the transport) was implemented on 2026-09-28 on `feature/v1.19.4`:
-`ppxai/remote/transport.py` + `openssh.py`. Phases 3 and later (session
-manager, hub proxy, picker) are not started. Revise in place.
+`ppxai/remote/transport.py` + `openssh.py`. Phase 3 (S1 parsing + S4, the
+session manager) the same day: `ppxai/remote/{inventory,contract,manager}.py`.
+Phases 4 and later (hub proxy, picker, config wiring) are not started.
+Revise in place.
 **Related:**
 - [`../plan-ssh-remote-backend.md`](../plan-ssh-remote-backend.md) — the phased plan that implements this record
 - [`../patterns/protocol-dependency-inversion.md`](../patterns/protocol-dependency-inversion.md) — the `Protocol`-in-leaf-module pattern the transport seam uses
@@ -193,6 +195,29 @@ label)`, `attach(host, server_id)`, `detach(host, server_id)` (drop the
 forward, leave the server running), `stop(host, server_id)` (ask the server to
 shut down). **Detach is the default** when the browser leaves; stopping a
 remote server is always an explicit act.
+
+**As built (2026-09-28):**
+
+- A sixth, terminal state, **`gone`**: the server is no longer in the host's
+  registry (stopped, crashed, host rebooted). The 2026-09-26 trial asked for
+  it: a server that ends is a normal outcome, not `degraded`. `degraded`
+  retries re-list the host first; a server missing from the list is `gone`.
+- `degraded` also covers a forward that works but whose `/health` fails
+  (e.g. 401). Retries back off exponentially (1 s doubling, capped at 30 s)
+  and emit no event while nothing changes.
+- `stop()` sends `POST /shutdown` through the server's own forward (attaching
+  first if needed); it never signals a pid.
+- `route(host, id)` gives S5 the endpoint and token, and only for a
+  `healthy` attachment. Every public view omits the token, and so does
+  `RemoteServer`'s `repr`.
+- The hub keeps its own record of each contract it can read
+  (`ppxai/remote/contract.py`) instead of importing the server's, and a test
+  pins it to `ppxai/server/registry.py`. A listing with one unreadable entry
+  returns the rest plus a refusal message; it does not fail whole.
+- The remote binary is the configured `ppxai_server`, else `ppxai-server` on
+  the login PATH, else `~/.local/bin/ppxai-server` (non-interactive SSH login
+  PATHs often lack `~/.local/bin`). An old server (argparse rejects `--list`
+  or `--uds`) is refused with its `--version` and the minimum, 1.19.3.
 
 The manager lives in a new package `ppxai/remote/` that imports nothing from
 `ppxai/engine/` or `ppxai/commands/` — it moves bytes and never interprets a
