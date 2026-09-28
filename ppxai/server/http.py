@@ -613,14 +613,15 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
 
     # Run both server and shutdown listener concurrently
     workers = _install_worker_executor()
-    abandoned = _AbandonedRequestFilter(server)
-    uvicorn_error = logging.getLogger("uvicorn.error")
-    uvicorn_error.addFilter(abandoned)
+    # Installed for the rest of the process, deliberately never removed: a
+    # request cancelled at the grace timeout logs its CancelledError when the
+    # task finally unwinds, which can be AFTER serve() returns (seen on macOS;
+    # removing the filter in `finally` let that traceback through).
+    logging.getLogger("uvicorn.error").addFilter(_AbandonedRequestFilter(server))
     shutdown_task = asyncio.create_task(shutdown_listener())
     try:
         await server.serve()
     finally:
-        uvicorn_error.removeFilter(abandoned)
         shutdown_task.cancel()
         try:
             await shutdown_task

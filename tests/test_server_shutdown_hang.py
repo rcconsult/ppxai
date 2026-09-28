@@ -167,7 +167,14 @@ _SERVER_CHILD = textwrap.dedent("""
 
     @app.get("/hang")
     async def hang():  # a provider call that never answers
-        await asyncio.to_thread(block.wait)
+        try:
+            await asyncio.to_thread(block.wait)
+        except asyncio.CancelledError:
+            # Unwind LATE, after serve() has returned, as a request under
+            # ppxai's BaseHTTPMiddleware stack did on macOS: its cancellation
+            # traceback was logged after the filter had been removed.
+            await asyncio.shield(asyncio.sleep(0.5))
+            raise
         return {}
 
     @app.post("/ctrl-c")
