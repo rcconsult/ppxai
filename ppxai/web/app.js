@@ -257,6 +257,7 @@ class PpxaiApp {
         this.state.on('workingDir', (cwd) => this._onWorkingDirChanged(cwd));
 
         await this.connectToServer();
+        await this._initRemoteHub();
 
         // ADR 0007 step 3a: fetch the command roster once, now that the
         // server URL is settled. Slash-command ROUTING reads it, so this
@@ -674,6 +675,8 @@ class PpxaiApp {
             // Header
             versionBadge: document.getElementById('versionBadge'),
             serverBadge: document.getElementById('serverBadge'),
+            hostBadge: document.getElementById('hostBadge'),
+            sshBtn: document.getElementById('sshBtn'),
             serverStatus: document.getElementById('serverStatus'),
             folderBadge: document.getElementById('folderBadge'),
             folderPath: document.getElementById('folderPath'),
@@ -820,6 +823,9 @@ class PpxaiApp {
         });
 
         // File sidebar toggle button
+        if (this.elements.sshBtn) {
+            this.elements.sshBtn.addEventListener('click', () => this.openSshLauncher());
+        }
         if (this.elements.sidebarToggleBtn) {
             this.elements.sidebarToggleBtn.addEventListener('click', () => this.toggleFileSidebar());
         }
@@ -1051,7 +1057,7 @@ class PpxaiApp {
             } catch (error) {
                 console.log('Hub detach failed (leaving anyway):', error);
             }
-            window.location.href = '/';
+            window.location.href = '/#ssh';   // the local page, launcher open
             return;
         }
 
@@ -3885,6 +3891,7 @@ class PpxaiApp {
         for (const view of this.rightPanelFrame._stack) {
             const path = view.getPath();
             if (!path) continue;      // non-file views (HTML iframe) not persisted
+            if (view instanceof SshLauncherView) continue;  // not a file; reopened by its button
             if (view.isDirty()) continue;  // skip views with unsaved changes
             let viewType = 'code';
             if (view instanceof MarkdownFileView) viewType = 'markdown';
@@ -3930,6 +3937,52 @@ class PpxaiApp {
         if (this.rightPanelFrame.stackSize > 0) {
             this.elements.resizeHandle.classList.remove('hidden');
         }
+    }
+
+    // === SSH Launcher (ADR 0013 phase 5) ===
+
+    /**
+     * On a page the hub proxies (/h/<host>/<id>/), name the remote in the
+     * header and the tab title. On the local page, show the SSH button only
+     * when this server is a hub: GET /hub/hosts answers 200 only when
+     * `remote.hosts` is configured (otherwise it is an unknown path). A
+     * coder page (/s/<slug>) never asks. `#ssh` (where Leave on a remote
+     * page lands) opens the launcher.
+     */
+    async _initRemoteHub() {
+        const hub = hubLocation(window.location.pathname);
+        if (hub) {
+            document.title = `ppxai — ${hub.host}`;
+            const badge = this.elements.hostBadge;
+            if (badge) {
+                badge.textContent = `🖥 ${hub.host} · ${hub.serverId.slice(0, 8)}`;
+                badge.title = `Remote ppxai server ${hub.serverId} on ${hub.host}, through the local hub`;
+                badge.classList.remove('hidden');
+            }
+            return;
+        }
+        if (servedPathPrefix(window.location.pathname) || !this.elements.sshBtn) return;
+        let isHub = false;
+        try {
+            const resp = await fetch(`${window.location.origin}/hub/hosts`);
+            isHub = resp.ok;
+        } catch (_) { /* no hub */ }
+        if (!isHub) return;
+        this.elements.sshBtn.classList.remove('hidden');
+        if (window.location.hash === '#ssh') {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+            this.openSshLauncher();
+        }
+    }
+
+    openSshLauncher() {
+        if (!this.rightPanelFrame) return;
+        // One launcher, whatever rpfDedup says: push() promotes an existing
+        // view with the same path only when dedup is on.
+        const at = this.rightPanelFrame._stack.findIndex(v => v instanceof SshLauncherView);
+        if (at >= 0) this.rightPanelFrame.activateByIndex(at);
+        else this.rightPanelFrame.push(new SshLauncherView(this.state));
+        this.elements.resizeHandle.classList.remove('hidden');
     }
 
     // === File Sidebar (v1.16.2) ===

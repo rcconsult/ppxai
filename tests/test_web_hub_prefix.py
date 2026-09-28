@@ -10,7 +10,8 @@ The hub case was missing when phase 4 shipped: win32-ppxai's live run
 (2026-09-28) loaded `/h/wsl/<id>/` and every API call went to the LOCAL hub
 server, so the page showed the Windows session, not the WSL one. These tests
 run the prefix functions from app.js's own source under node, and pin the
-Leave button's hub branch (detach, never shut anything down) next to the
+Leave button's hub branch (detach, never shut anything down, land on the
+launcher) next to the
 coder branch that `tests/test_session_end_workflows.py` already pins.
 """
 
@@ -98,5 +99,5 @@ class TestAppJsWiring:
         hub_block = body[hub_at:coder_at]
         assert "/detach" in hub_block
         assert "shutdown" not in hub_block, "leaving a remote session must not stop anything"
-        assert "window.location.href = '/'" in hub_block
-        assert re.search(r"window\.location\.href = '/';\s*return;", hub_block)
+        # Back to the local page with the SSH Launcher open (owner, 2026-09-28).
+        assert re.search(r"window\.location\.href = '/#ssh';[^\n]*\n\s*return;", hub_block)

@@ -331,6 +331,40 @@ class TestRefusals:
         assert r.json()["state"] == "degraded"
 
 
+class TestObserveOnly:
+    """`X-Ppxai-Hub-Attach: no` (the SSH Launcher's count reads) never attaches.
+
+    Found live (2026-09-28): a launcher refresh whose host list predated a
+    Detach read counts through the proxy afterwards, and auto-attach undid
+    the Detach."""
+
+    NO = {"x-ppxai-hub-attach": "no"}
+
+    def _attached(self, env):
+        hosts = env["client"].get("/hub/hosts").json()["hosts"]
+        return {a["server_id"] for h in hosts for a in h["attachments"]}
+
+    def test_a_detached_server_stays_detached(self, env):
+        c = env["client"]
+        c.post(f"/hub/hosts/gpu01/servers/{SID}/detach", json={})
+        r = c.get(f"{P}/echo", headers=self.NO)
+        assert r.status_code == 503 and r.headers["retry-after"] == "5"
+        assert SID not in self._attached(env)
+
+    def test_an_attached_server_answers_and_the_header_stays_local(self, env):
+        c = env["client"]
+        assert c.post(f"/hub/hosts/gpu01/servers/{SID}/attach", json={}).json()["state"] == "healthy"
+        r = c.get(f"{P}/echo", headers=self.NO)
+        assert r.status_code == 200, r.text
+        assert "x-ppxai-hub-attach" not in r.json()["headers"]
+
+    def test_any_other_value_still_auto_attaches(self, env):
+        c = env["client"]
+        c.post(f"/hub/hosts/gpu01/servers/{SID}/detach", json={})
+        assert c.get(f"{P}/echo", headers={"x-ppxai-hub-attach": "yes"}).status_code == 200
+        assert SID in self._attached(env)
+
+
 class TestControlApi:
     def test_hosts_lists_the_inventory(self, env):
         hosts = env["client"].get("/hub/hosts").json()["hosts"]

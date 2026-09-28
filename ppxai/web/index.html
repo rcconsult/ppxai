@@ -41,7 +41,9 @@
                     <span class="server-indicator"></span>
                     <span id="serverStatus">Connected</span>
                 </button>
+                <span class="host-badge hidden" id="hostBadge" title="Remote ppxai server (through the local hub)"></span>
                 <button class="header-btn sidebar-toggle-btn" id="sidebarToggleBtn" title="Toggle file tree">🗂 Files</button>
+                <button class="header-btn ssh-launcher-btn hidden" id="sshBtn" title="SSH Launcher: remote ppxai servers">🖥 SSH</button>
                 <button class="folder-badge" id="folderBadge" title="Click to change working directory">
                     <span class="badge-icon">📁</span>
                     <span id="folderPath">No folder</span>
@@ -91,7 +93,7 @@
             </div>
             <div class="header-actions">
                 <button class="header-btn" id="clearBtn" title="Clear conversation">Clear</button>
-                <button class="header-btn quit-btn" id="quitBtn" title="Leave — stops the local server and closes this tab (in a hosted session: returns to login)">Leave</button>
+                <button class="header-btn quit-btn" id="quitBtn" title="Leave: stops the local server and closes this tab (hosted session: returns to login; remote server: detaches and returns to the SSH Launcher)">Leave</button>
                 <button class="header-btn" id="themeBtn" title="Toggle theme">🌙</button>
                 <div class="menu-container">
                     <button class="header-btn menu-btn" id="menuBtn">⋮</button>
@@ -280,6 +282,7 @@
     <script src="components/views/office-file-view.js"></script>
     <script src="components/views/terminal-view.js"></script>
     <script src="components/views/agent-run-view.js"></script>
+    <script src="components/views/ssh-launcher-view.js"></script>
     <script src="components/views/task-run-view.js"></script>
     <script src="components/right-panel-frame.js"></script>
     <script src="app.js"></script>

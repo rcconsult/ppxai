@@ -260,6 +260,20 @@ The UI inside `/h/<host>/<id>/` is **served by the remote server itself**, so
 UI and server versions always match. The AppState schema guard that landed
 2026-09-21 remains the backstop, not the mechanism.
 
+**As built (2026-09-28), owner design:** the picker is not a page but the
+**SSH Launcher**, a view in the web UI's right split pane (the
+`RightPanelFrame` that already hosts files and task runs), opened by a header
+"🖥 SSH" button. The button appears only on the local page, and only when
+`GET /hub/hosts` answers 200 (a hub is configured); `/` stays the ordinary
+chat UI. **Open** puts the remote's UI in a new browser tab, one named tab
+per server. **Leave** on a remote page detaches and lands on `/#ssh`, which
+reopens the launcher. A remote page names its host in a header badge and the
+tab title. Stop is only offered in the launcher, and asks first. Session and
+run counts are read only through a *healthy* attachment and with
+`X-Ppxai-Hub-Attach: no`, which makes the hub answer 503 instead of
+auto-attaching: without it, a refresh whose host list predated a Detach
+re-attached the server (found in a live browser run).
+
 All hosts share one browser origin, so `localStorage` is shared across hosts.
 Today's keys are viewer preferences (theme, layout) where sharing is fine; any
 future host-specific key must be namespaced by prefix.

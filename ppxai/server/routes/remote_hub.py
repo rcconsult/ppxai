@@ -29,6 +29,12 @@ its registry entry and never sent to the browser; `Host: localhost`; the
 browser's `Authorization`, `Cookie`, `Origin`, `Referer` and forwarding
 headers dropped. Bodies are never rewritten; a relative `Location` and a
 cookie `Path` get the `/h/<host>/<id>` prefix so they stay inside it.
+
+**Auto-attach** happens on a proxied request to a server that has no
+attachment, so a reload after a hub restart works. A caller that only
+OBSERVES (the SSH Launcher reading session/run counts) sends
+`X-Ppxai-Hub-Attach: no` and gets the 503 instead: otherwise a read made from
+a snapshot taken just before a Detach would silently re-attach the server.
 """
 
 from __future__ import annotations
@@ -79,6 +85,9 @@ ManagerFactory = Callable[[Sequence[RemoteHost]], RemoteSessionManager]
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 _PROXY_METHODS = ["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"]
 
+# A request carrying `X-Ppxai-Hub-Attach: no` never attaches (module doc).
+_NO_ATTACH_HEADER = "x-ppxai-hub-attach"
+
 # Never forwarded upstream: hop-by-hop headers, the browser's own
 # credentials and identity, and anything that would make the remote think the
 # request was proxied (its Host check and loopback rules then pass unchanged).
@@ -88,6 +97,7 @@ _DROP_UPSTREAM = frozenset({
     "authorization", "cookie", "origin", "referer", "forwarded",
     "x-forwarded-for", "x-forwarded-host", "x-forwarded-proto",
     "x-forwarded-port", "x-forwarded-prefix", "x-real-ip",
+    _NO_ATTACH_HEADER,
 })
 _DROP_DOWNSTREAM = frozenset({
     "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
@@ -312,16 +322,16 @@ def _prefix(host: str, server_id: str) -> str:
     return f"/h/{host}/{server_id}"
 
 
-async def _route(hub_: Hub, host: str, server_id: str):
-    """(endpoint, token) for a healthy attachment -- attaching on first use --
-    or the JSONResponse to send instead."""
+async def _route(hub_: Hub, host: str, server_id: str, *, may_attach: bool = True):
+    """(endpoint, token) for a healthy attachment -- attaching on first use
+    unless `may_attach` is False -- or the JSONResponse to send instead."""
     if not HOST_ID_RE.match(host) or host not in hub_.host_ids() \
             or not SERVER_ID_RE.match(server_id):
         return _not_found()
     route = hub_.manager.route(host, server_id)
     if route is not None:
         return route
-    if hub_.manager.attachment(host, server_id) is None:
+    if may_attach and hub_.manager.attachment(host, server_id) is None:
         try:
             await hub_.manager.attach(host, server_id)
         except (RemoteHubError, RemoteTransportError) as exc:
@@ -374,7 +384,8 @@ async def proxy_http(request: Request, host: str, server_id: str, path: str):
         return _not_found()
     if request.method not in _SAFE_METHODS and _cross_site(request):
         return JSONResponse({"detail": "cross-site request refused"}, status_code=403)
-    route = await _route(hub_, host, server_id)
+    may_attach = request.headers.get(_NO_ATTACH_HEADER, "").strip().lower() != "no"
+    route = await _route(hub_, host, server_id, may_attach=may_attach)
     if isinstance(route, Response):
         return route
     endpoint, token = route
