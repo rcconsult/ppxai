@@ -196,7 +196,7 @@ duplicate calls with unchanged provider+model are no-ops.
 
 - **Qwen3-4B model hints** — new `"Qwen3-4B*"` section with 8 calibrated hints
 - **`local` provider hints** — expanded from 3 generic hints to 10 specific hints covering apply_patch, visible response, multi-strategy file search
-- **`asusai-vllm` provider hints** — added "COMPLETE ALL STEPS" and "Explore thoroughly" hints
+- **`dgx-vllm` provider hints** — added "COMPLETE ALL STEPS" and "Explore thoroughly" hints
 - **Removed "Make ONE tool call" anti-pattern** — this phrasing caused -21.4% regression in Qwen3-4B tool_calling; replaced with "avoid duplicates" + "chain different calls"
 - **Global preferences** — reorganized code style, tool usage, and communication preferences
 

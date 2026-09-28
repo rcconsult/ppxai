@@ -380,7 +380,7 @@ The reasoning model's poor tool calling performance (50%) confirms that **Chain-
 | 1 | perplexity/sonar-pro | 100.0% | All-around best (historical peak) |
 | 2 | custom/openai/gpt-oss-120b | 89.1% | Strong reasoning |
 | 3 | gemini/gemini-2.5-flash | 81.2% | Fast & reliable |
-| 4 | asusai-vllm/Qwen3-30B-A3B | 81.2% | Code generation |
+| 4 | dgx-vllm/Qwen3-30B-A3B | 81.2% | Code generation |
 | 5 | perplexity/sonar | 75.0% | Fast response |
 | 7 | **perplexity/sonar-reasoning-pro** | 65.6% | Complex logic |
 

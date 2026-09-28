@@ -74,6 +74,7 @@ quoting them** — this table is a map, not a source.
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
 | **83** | the SERIAL test suite is ~2x slower per test than in July, cause unfound | owner decision 2026-09-27: record, not fix; the parallel default (~3 min) hides it |
 | **84** | the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell | owner decision 2026-09-28: record as debt, don't build it now |
+| **85** | ~296 relative links inside `docs/archive/` don't resolve | owner decision 2026-09-28: record as debt; live docs are clean, the archive is historical |
 
 ---
 
@@ -2629,6 +2630,31 @@ syntax fails unless the model itself wraps the command in
 **Why not now:** Windows users have the chat shell tool; the interactive
 terminal has been Unix-only since v1.17.1 and nobody has asked for it
 until now.
+
+### Item 85 — ~296 relative links inside `docs/archive/` don't resolve [docs]
+
+**Filed 2026-09-28** (owner decision: record as debt, fix later).
+
+The 2026-09-28 docs audit (wsl2-builder, 144 findings) and win32-ppxai's
+repo-wide scan of every git-tracked `*.md` counted 296 unresolved relative
+links, about 95% of them inside `docs/archive/` across ~60 files. They were
+correct when written: the documents moved into subdirectories of the
+archive, or their targets were deleted or renamed. Typical cases are old
+release notes pointing at `../CHANGELOG.md` or `docs/...` with the depth
+they had before archiving, and links to source files that no longer exist.
+The live docs were fixed in `27456f1a`/`6ece7e30`; what remains in live
+files is false positives (link syntax inside inline code, template
+placeholders in `.claude/commands/docs-consolidate.md`).
+
+**Fix sketch:** a script that, per archived file, re-resolves each link
+against the file's current location, rewrites the ones whose target still
+exists (at any depth), and turns the rest into plain text marked
+"(removed)". Then a `tests/test_docs_consistency.py` check that fails on a
+NEW unresolved link in `docs/archive/` (a baseline count, shrink-only),
+so the number cannot grow again.
+
+**Why not now:** the archive is historical by design; nobody navigates it
+link by link, and no live document depends on it.
 ## Closed (recent)
 
 One-liners only. Most have full bodies + evidence trails archived in

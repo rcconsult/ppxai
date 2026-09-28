@@ -1,11 +1,11 @@
 {
-  "provider": "asusai-vllm",
+  "provider": "dgx-vllm",
   "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-  "timestamp": "2026-02-23T14:59:53.341756",
+  "timestamp": "2026-02-23T15:57:30.036717",
   "overall_score": 81.81518151815183,
   "tests_passed": 28,
   "tests_total": 36,
-  "duration_seconds": 199.8447380065918,
+  "duration_seconds": 194.24111533164978,
   "category_scores": {
     "hallucination_resistance": 83.33333333333334,
     "tool_calling": 100.0,
@@ -65,7 +65,7 @@
       "score": 0.0,
       "details": {
         "error": "Didn't accurately report step 2 failure",
-        "content_preview": "i need to check the current state of the configuration and see if i can modify it. let me first read the config.json file to understand its structure.\n"
+        "content_preview": ""
       },
       "weight": 1.5
     },
@@ -169,12 +169,13 @@
       "passed": true,
       "score": 1.0,
       "details": {
-        "patch_length": 247,
+        "patch_length": 267,
         "tool_correctness": true,
         "tool_success": true,
         "response_quality": 1.0,
         "anti_patterns": [],
         "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
           "No anti-patterns detected"
         ],
         "overall_score": 1.0,
@@ -238,7 +239,7 @@
       "passed": true,
       "score": 1.0,
       "details": {
-        "content_length": 2862
+        "content_length": 2380
       },
       "weight": 1.0
     },
@@ -467,7 +468,7 @@
       "google-genai": "1.56.0",
       "openai": "2.11.0"
     },
-    "model_fingerprint": "cd7e94ca1835",
+    "model_fingerprint": "51cc90347fe9",
     "tool_calling_method": "native",
     "total_tokens": 0,
     "total_tool_calls": 84,

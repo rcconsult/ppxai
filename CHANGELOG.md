@@ -1908,7 +1908,7 @@ persistence, disk-scan fallback) all landed this day.
 ### Changed
 
 - **Default models updated** — `ppxai-config.json`: sonar-pro (Perplexity), gemini-3-flash-preview (Gemini), gpt-4.1-mini (OpenAI default), gpt-5.1-codex-mini (OpenAI coding)
-- **AGENTS.md** — Qwen3-4B model hints added; provider hints expanded for `local`, `asusai-vllm`, `openai`, `gemini`; global preferences reorganized
+- **AGENTS.md** — Qwen3-4B model hints added; provider hints expanded for `local`, `dgx-vllm`, `openai`, `gemini`; global preferences reorganized
 
 ## [1.16.1] - 2026-03-01
 

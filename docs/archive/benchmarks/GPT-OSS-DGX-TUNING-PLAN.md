@@ -2,7 +2,7 @@
 
 **Created:** 2026-02-09
 **Status:** COMPLETED 2026-02-09
-**Models:** GPT-OSS 120B (`custom`), Qwen3-Coder-30B-A3B FP8 (`asusai-vllm`)
+**Models:** GPT-OSS 120B (`custom`), Qwen3-Coder-30B-A3B FP8 (`dgx-vllm`)
 **Scope:** 2 vLLM endpoints only (Ollama models deferred)
 **Objective:** Apply the same evidence-based tuning that achieved +25.2% avg improvement across Gemini/Perplexity
 
@@ -10,7 +10,7 @@
 
 ## Results Summary
 
-### Qwen3-Coder FP8 (asusai-vllm) - Best: 75.0% (+18.8%)
+### Qwen3-Coder FP8 (dgx-vllm) - Best: 75.0% (+18.8%)
 
 | Phase | Overall | Code Edit | Tool Call | Hallucin. | Reasoning | Error Rec |
 |-------|---------|-----------|-----------|-----------|-----------|-----------|
@@ -111,8 +111,8 @@
 
 ### Changes Made
 
-1. **AGENTS.md** - Added 38+13 hints (custom: 7, asusai-vllm: 9, gpt-oss*: 8, Qwen/Qwen3-Coder*: 10, *Qwen3-Next*: 13, qwen2.5-coder*: 4)
-2. **ppxai-config.json** - Set `frequency_penalty: 0.0` for asusai-vllm; added Qwen3-Next FP8 + NVFP4 + Qwen3-Coder-Next FP8 model entries
+1. **AGENTS.md** - Added 38+13 hints (custom: 7, dgx-vllm: 9, gpt-oss*: 8, Qwen/Qwen3-Coder*: 10, *Qwen3-Next*: 13, qwen2.5-coder*: 4)
+2. **ppxai-config.json** - Set `frequency_penalty: 0.0` for dgx-vllm; added Qwen3-Next FP8 + NVFP4 + Qwen3-Coder-Next FP8 model entries
 3. **benchmark.py** - UTF-8 stdout/stderr encoding fix for Windows
 4. **engine_runner.py** - (encoding fix reverted, handled at benchmark.py level)
 
@@ -125,7 +125,7 @@ The benchmark runner uses `ppxai.config.find_config_file()` which searches:
 2. `./ppxai-config.json` (project-local — the repo config)
 3. `~/.ppxai/ppxai-config.json` (user config)
 
-The `custom` and `asusai-vllm` providers are defined **only in the user config** at `~/.ppxai/ppxai-config.json`. The repo config does NOT contain these providers.
+The `custom` and `dgx-vllm` providers are defined **only in the user config** at `~/.ppxai/ppxai-config.json`. The repo config does NOT contain these providers.
 
 **All benchmark commands MUST set `PPXAI_CONFIG_FILE`:**
 
@@ -145,7 +145,7 @@ export PPXAI_CONFIG_FILE="$HOME/.ppxai/ppxai-config.json"
 set PPXAI_CONFIG_FILE=%USERPROFILE%\.ppxai\ppxai-config.json && set UV_NATIVE_TLS=true && .uv\uv run python -c "from ppxai.config import initialize, PROVIDERS; initialize(); print([p for p in PROVIDERS])"
 ```
 
-Expected output should include `custom` and `asusai-vllm`.
+Expected output should include `custom` and `dgx-vllm`.
 
 ---
 
@@ -153,7 +153,7 @@ Expected output should include `custom` and `asusai-vllm`.
 
 ### Provider Configurations
 
-| Setting | `custom` (GPT-OSS 120B) | `asusai-vllm` (Qwen3-Coder FP8) |
+| Setting | `custom` (GPT-OSS 120B) | `dgx-vllm` (Qwen3-Coder FP8) |
 |---------|-------------------------|----------------------------------|
 | **Base URL** | `https://your-gpt-oss-host/v1` | `http://your-vllm-host:8000/v1` |
 | **API key env** | `CUSTOM_API_KEY` | `OLLAMA_API_KEY` |
@@ -186,7 +186,7 @@ CRITICAL TOOL RULES:
 On Windows: Use PowerShell syntax. Bash heredocs (<<EOF) and $() don't work.
 ```
 
-**`asusai-vllm` — Generic, not tuned:**
+**`dgx-vllm` — Generic, not tuned:**
 ```
 You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.
 ```
@@ -197,7 +197,7 @@ You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. 
 |--------|--------------|------------------------------|
 | `custom` provider | 2 generic | Gemini: 10, Perplexity: 6 |
 | `gpt-oss*` model | 2 generic | gemini-3-flash*: 7, sonar*: 7 |
-| `asusai-vllm` provider | **0** | — |
+| `dgx-vllm` provider | **0** | — |
 | `Qwen/Qwen3-Coder*` model | **0** | — |
 
 ---
@@ -207,7 +207,7 @@ You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. 
 | Provider | Model | Overall | Tool Call | Code Edit | Hallucination | Error Rec | Key Failures |
 |----------|-------|---------|-----------|-----------|---------------|-----------|--------------|
 | **custom** | GPT-OSS 120B | **82.8%** | 78.6% | 71.4% | 77.8% | 100% | large_payload (0 chars), patch_multiline (missing import), respects_tool_failure |
-| **asusai-vllm** | Qwen3-Coder FP8 | **81.2%** | 100% | 100% | — | 100% | (from DGX doc, not quality-validated) |
+| **dgx-vllm** | Qwen3-Coder FP8 | **81.2%** | 100% | 100% | — | 100% | (from DGX doc, not quality-validated) |
 
 **Critical gap:** Neither model has been run through multi-criteria quality validation (anti-pattern detection). Binary scores may be misleading — Gemini/Perplexity showed avg -51.2% gap.
 
@@ -236,7 +236,7 @@ set PPXAI_CONFIG_FILE=%USERPROFILE%\.ppxai\ppxai-config.json && set UV_NATIVE_TL
 .uv\uv run python benchmarks\llm-eval\benchmark.py --provider custom --model openai/gpt-oss-120b --debug --verbose
 
 # Qwen3-Coder-30B FP8 (DGX vLLM)
-.uv\uv run python benchmarks\llm-eval\benchmark.py --provider asusai-vllm --model Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8 --debug --verbose
+.uv\uv run python benchmarks\llm-eval\benchmark.py --provider dgx-vllm --model Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8 --debug --verbose
 ```
 
 **PowerShell:**
@@ -245,7 +245,7 @@ $env:PPXAI_CONFIG_FILE = "$env:USERPROFILE\.ppxai\ppxai-config.json"
 $env:UV_NATIVE_TLS = "true"
 
 .uv\uv run python benchmarks\llm-eval\benchmark.py --provider custom --model openai/gpt-oss-120b --debug --verbose
-.uv\uv run python benchmarks\llm-eval\benchmark.py --provider asusai-vllm --model "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8" --debug --verbose
+.uv\uv run python benchmarks\llm-eval\benchmark.py --provider dgx-vllm --model "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8" --debug --verbose
 ```
 
 **What to look for in debug logs:**
@@ -272,7 +272,7 @@ provider_hints:
     - "Do NOT output tool call JSON in your response text - use native tool calling only."
     - "For large file writes, ensure complete content - truncated output fails silently."
     - "When tools return errors, report the actual error to the user."
-  asusai-vllm:
+  dgx-vllm:
     - "You are running on NVIDIA GB10 with native tool calling via vLLM."
     - "Execute tools directly - never describe what you would do."
     - "CRITICAL: After tool failures, acknowledge the error - do NOT claim success."
@@ -300,7 +300,7 @@ model_hints:
 ```bash
 set PPXAI_CONFIG_FILE=%USERPROFILE%\.ppxai\ppxai-config.json && set UV_NATIVE_TLS=true
 .uv\uv run python benchmarks\llm-eval\benchmark.py --provider custom --model openai/gpt-oss-120b --debug --verbose
-.uv\uv run python benchmarks\llm-eval\benchmark.py --provider asusai-vllm --model Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8 --debug --verbose
+.uv\uv run python benchmarks\llm-eval\benchmark.py --provider dgx-vllm --model Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8 --debug --verbose
 ```
 
 ---
@@ -322,9 +322,9 @@ Edit: `providers.custom.models["openai/gpt-oss-120b"].generation_params`
 | **Higher tokens** | 0.2 | 0.9 | 0.0 | 0.0 | **16384** | Large payload truncation was 0 chars |
 | **Conservative** | 0.1 | 0.85 | 0.0 | 0.0 | 8192 | Most deterministic |
 
-#### Qwen3-Coder-30B FP8 (`asusai-vllm`)
+#### Qwen3-Coder-30B FP8 (`dgx-vllm`)
 
-Edit: `providers["asusai-vllm"].generation_params` (provider-level, applies to default model)
+Edit: `providers["dgx-vllm"].generation_params` (provider-level, applies to default model)
 
 | Exp | Temp | Top P | Freq Pen | Max Tokens | Rationale |
 |-----|------|-------|----------|------------|-----------|
@@ -365,9 +365,9 @@ CRITICAL TOOL RULES:
 On Windows: Use PowerShell syntax. Bash heredocs (<<EOF) and $() don't work.
 ```
 
-#### `asusai-vllm` — Add tool result verification
+#### `dgx-vllm` — Add tool result verification
 
-Edit: `providers["asusai-vllm"].system_prompt` in `~/.ppxai/ppxai-config.json`
+Edit: `providers["dgx-vllm"].system_prompt` in `~/.ppxai/ppxai-config.json`
 
 ```
 You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. Be concise and precise. Execute tools directly and report results briefly. Focus on code quality, correctness, and best practices. CRITICAL: Check tool results before claiming success - if a tool fails, acknowledge the failure honestly. Never fabricate tool output.
@@ -443,7 +443,7 @@ set UV_NATIVE_TLS=true
 .uv\uv run python benchmarks\llm-eval\benchmark.py --provider custom --model openai/gpt-oss-120b --debug --verbose
 
 # Qwen3-Coder FP8 benchmark
-.uv\uv run python benchmarks\llm-eval\benchmark.py --provider asusai-vllm --model Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8 --debug --verbose
+.uv\uv run python benchmarks\llm-eval\benchmark.py --provider dgx-vllm --model Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8 --debug --verbose
 
 # Compare results for a provider/model
 .uv\uv run python benchmarks\llm-eval\benchmark.py --provider custom --model openai/gpt-oss-120b --compare

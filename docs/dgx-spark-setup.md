@@ -4,7 +4,7 @@
 **Purpose:** Feasibility study testbed for evaluating local LLM coding assistants
 **Hardware:** ASUS Ascent GX10 / DGX Spark
 **Host IP:** `<dgx-spark-ip>`
-**Provider ID:** `asusai-vllm` (vLLM)
+**Provider ID:** `dgx-vllm` (vLLM)
 **HF Cache:** `/opt/hf/cache` (287GB, `root:users`, 775)
 **Launch Script:** `/opt/hf/launch-vllm.sh`
 
@@ -182,7 +182,7 @@ VLLM_API_KEY=dummy
 
 > ⚠️ **The `"providers"` wrapper is required.** `ppxai/config/loader.py:412`
 > only reads provider definitions nested under a top-level `"providers"`
-> key. Until 2026-09-20 this snippet was a bare `{"asusai-vllm": {…}}`
+> key. Until 2026-09-20 this snippet was a bare `{"dgx-vllm": {…}}`
 > object — pasted as-is it parses fine, loads nothing, and gives you no
 > error; the provider simply never appears. Note also that
 > `capabilities.native_tool_calling` below is a **dead key** since ADR 0012
@@ -194,7 +194,7 @@ VLLM_API_KEY=dummy
 ```json
 {
   "providers": {
-    "asusai-vllm": {
+    "dgx-vllm": {
       "name": "ASUS DGX Spark vLLM (GB10)",
       "base_url": "http://<dgx-spark-ip>:8000/v1",
       "api_key_env": "VLLM_API_KEY",
@@ -241,7 +241,7 @@ curl http://<dgx-spark-ip>:8000/v1/models
 
 # Quick test via ppxai
 uv run ppxai
-# Then: /provider asusai-vllm
+# Then: /provider dgx-vllm
 # Then: Hello, write a Python hello world
 ```
 
@@ -378,7 +378,7 @@ unset SSL_CERT_FILE
 ```bash
 PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json SSL_VERIFY=false \
   uv run python scripts/benchmark.py \
-    --provider asusai-vllm \
+    --provider dgx-vllm \
     --model "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8" \
     --iterations 3
 ```
@@ -389,7 +389,7 @@ PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json SSL_VERIFY=false \
 cd benchmarks/llm-eval
 PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json SSL_VERIFY=false \
   uv run python benchmark.py \
-    --provider asusai-vllm \
+    --provider dgx-vllm \
     --model "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8" \
     --timeout 120 \
     -v

@@ -72,7 +72,7 @@
         "native_tool_calling": true
       }
     },
-    "asusai-vllm": {
+    "dgx-vllm": {
       "name": "ASUS DGX Spark vLLM (GB10)",
       "base_url": "http://your-dgx-spark-ip:8000/v1",
       "api_key_env": "VLLM_API_KEY",

@@ -403,8 +403,8 @@ Rank   Provider/Model                           Score   Runs
 --------------------------------------------------------------
 1      gemini/gemini-3-flash-preview           100.0%      1
 2      custom/openai/gpt-oss-120b               89.1%      1
-3      asusai-vllm/Qwen3-Coder-30B-A3B          81.3%      1
-4      asusai-vllm/Qwen3-Coder-Next             60.9%      3
+3      dgx-vllm/Qwen3-Coder-30B-A3B          81.3%      1
+4      dgx-vllm/Qwen3-Coder-Next             60.9%      3
 5      perplexity/sonar-pro                     50.0%      2
 ```
 

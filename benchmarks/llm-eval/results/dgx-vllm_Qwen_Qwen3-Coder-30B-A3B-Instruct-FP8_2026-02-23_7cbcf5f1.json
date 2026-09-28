@@ -1,11 +1,11 @@
 {
-  "provider": "asusai-vllm",
+  "provider": "dgx-vllm",
   "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-  "timestamp": "2026-02-23T16:00:44.699957",
+  "timestamp": "2026-02-23T14:59:53.341756",
   "overall_score": 81.81518151815183,
   "tests_passed": 28,
   "tests_total": 36,
-  "duration_seconds": 194.6537811756134,
+  "duration_seconds": 199.8447380065918,
   "category_scores": {
     "hallucination_resistance": 83.33333333333334,
     "tool_calling": 100.0,
@@ -65,7 +65,7 @@
       "score": 0.0,
       "details": {
         "error": "Didn't accurately report step 2 failure",
-        "content_preview": "i need to check the current state of the configuration file and then update it properly. let me first read the config.json file to see its current contents.\n"
+        "content_preview": "i need to check the current state of the configuration and see if i can modify it. let me first read the config.json file to understand its structure.\n"
       },
       "weight": 1.5
     },
@@ -169,13 +169,12 @@
       "passed": true,
       "score": 1.0,
       "details": {
-        "patch_length": 248,
+        "patch_length": 247,
         "tool_correctness": true,
         "tool_success": true,
         "response_quality": 1.0,
         "anti_patterns": [],
         "quality_notes": [
-          "Clean tool-only response (no unnecessary text)",
           "No anti-patterns detected"
         ],
         "overall_score": 1.0,
@@ -239,7 +238,7 @@
       "passed": true,
       "score": 1.0,
       "details": {
-        "content_length": 2055
+        "content_length": 2862
       },
       "weight": 1.0
     },
@@ -270,7 +269,7 @@
       "score": 0.0,
       "details": {
         "error": "Expected 3 blocks, got 1",
-        "content_preview": "LANGUAGE: Python\nPARADIGM: Object-oriented\nUSE_CASE: Web development\n\nLANGUAGE: C++\nPARADIGM: Procedural\nUSE_CASE: System programming\n\nLANGUAGE: JavaScript\nPARADIGM: Functional\nUSE_CASE: Frontend development"
+        "content_preview": "LANGUAGE: Python\nPARADIGM: Object-oriented\nUSE_CASE: Web development\n\nLANGUAGE: Rust\nPARADIGM: Systems programming\nUSE_CASE: Game development\n\nLANGUAGE: JavaScript\nPARADIGM: Functional\nUSE_CASE: Mobile app development"
       },
       "weight": 1.0
     },
@@ -468,10 +467,10 @@
       "google-genai": "1.56.0",
       "openai": "2.11.0"
     },
-    "model_fingerprint": "fabeea32bbc1",
+    "model_fingerprint": "cd7e94ca1835",
     "tool_calling_method": "native",
     "total_tokens": 0,
     "total_tool_calls": 84,
-    "agents_md_mode": "without"
+    "agents_md_mode": "with"
   }
 }

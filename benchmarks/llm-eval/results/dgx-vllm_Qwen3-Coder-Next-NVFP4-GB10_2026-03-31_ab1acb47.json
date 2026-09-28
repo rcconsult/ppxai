@@ -1,11 +1,11 @@
 {
-  "provider": "asusai-vllm",
+  "provider": "dgx-vllm",
   "model": "Qwen3-Coder-Next-NVFP4-GB10",
-  "timestamp": "2026-03-31T17:23:34.100079",
-  "overall_score": 86.03960396039605,
-  "tests_passed": 31,
+  "timestamp": "2026-03-31T17:27:55.492231",
+  "overall_score": 85.14851485148515,
+  "tests_passed": 30,
   "tests_total": 36,
-  "duration_seconds": 263.6272850036621,
+  "duration_seconds": 261.3835527896881,
   "category_scores": {
     "hallucination_resistance": 55.55555555555556,
     "tool_calling": 89.28571428571429,
@@ -15,7 +15,7 @@
     "reasoning": 100.0,
     "error_recovery": 100.0,
     "agentic_tool_loops": 85.71428571428571,
-    "efficiency": 88.00000000000001
+    "efficiency": 70.0
   },
   "test_results": [
     {
@@ -169,7 +169,7 @@
       "passed": true,
       "score": 1.0,
       "details": {
-        "patch_length": 218,
+        "patch_length": 220,
         "tool_correctness": true,
         "tool_success": true,
         "response_quality": 1.0,
@@ -189,7 +189,7 @@
       "passed": true,
       "score": 1.0,
       "details": {
-        "patch_length": 261,
+        "patch_length": 305,
         "tool_correctness": true,
         "tool_success": true,
         "response_quality": 1.0,
@@ -230,7 +230,7 @@
       "passed": true,
       "score": 1.0,
       "details": {
-        "code_blocks": 3
+        "code_blocks": 2
       },
       "weight": 1.0
     },
@@ -240,7 +240,7 @@
       "passed": true,
       "score": 1.0,
       "details": {
-        "content_length": 979
+        "content_length": 1737
       },
       "weight": 1.0
     },
@@ -445,12 +445,12 @@
     {
       "name": "tool_call_efficiency",
       "category": "efficiency",
-      "passed": true,
-      "score": 0.8,
+      "passed": false,
+      "score": 0.5,
       "details": {
-        "total_tool_calls": 6,
+        "total_tool_calls": 10,
         "optimal": 5,
-        "score": 0.8
+        "score": 0.5
       },
       "weight": 1.5
     }
@@ -463,10 +463,10 @@
       "google-genai": "1.56.0",
       "openai": "2.11.0"
     },
-    "model_fingerprint": "5a102b22f774",
+    "model_fingerprint": "a7142d0bca11",
     "tool_calling_method": "native",
     "total_tokens": 0,
-    "total_tool_calls": 90,
-    "agents_md_mode": "with"
+    "total_tool_calls": 95,
+    "agents_md_mode": "without"
   }
 }

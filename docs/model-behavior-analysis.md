@@ -109,7 +109,7 @@ BEHAVIOR SPECTRUM (not binary!)
 | # | Model | Best Score | Provider | Best Tool Method | # Runs |
 |---|-------|-----------|----------|-----------------|--------|
 | 1 | gemini-2.5-pro | 81.25% | gemini | native | 2 |
-| 2 | Qwen3-Coder-30B-A3B-FP8 | 81.25% | asusai-vllm | native | 1 |
+| 2 | Qwen3-Coder-30B-A3B-FP8 | 81.25% | dgx-vllm | native | 1 |
 | 3 | gemini-2.5-flash | 81.25% | gemini | n/a | 1 |
 | 4 | sonar | 75.00% | perplexity | n/a | 1 |
 | 5 | gpt-4.1-mini | 71.88% | openai | prompt_based | 3 |
@@ -121,7 +121,7 @@ BEHAVIOR SPECTRUM (not binary!)
 | 11 | gpt-5.1-codex | 64.06% | openai | prompt_based | 8 |
 | 12 | gpt-5 | 62.50% | openai | native | 5 |
 | 13 | o4-mini | 62.50% | openai | prompt_based | 4 |
-| 14 | Qwen3-Coder-Next-FP8 | 60.94% | asusai-vllm | n/a | 3 |
+| 14 | Qwen3-Coder-Next-FP8 | 60.94% | dgx-vllm | n/a | 3 |
 | 15 | gpt-4.1-nano | 50.00% | openai | native | 3 |
 | 16 | gpt-5.1-codex-mini | 40.63% | openai | native | 3 |
 

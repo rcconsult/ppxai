@@ -1,19 +1,19 @@
 {
-  "provider": "asusai",
-  "model": "qwen2.5-coder:32b",
-  "timestamp": "2026-02-06T17:46:41.473399",
-  "overall_score": 51.5625,
-  "tests_passed": 15,
+  "provider": "dgx-vllm",
+  "model": "RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
+  "timestamp": "2026-02-06T20:25:47.159534",
+  "overall_score": 60.9375,
+  "tests_passed": 17,
   "tests_total": 26,
-  "duration_seconds": 1315.428207397461,
+  "duration_seconds": 1201.7112710475922,
   "category_scores": {
-    "hallucination_resistance": 16.666666666666664,
-    "tool_calling": 64.28571428571429,
+    "hallucination_resistance": 55.55555555555556,
+    "tool_calling": 78.57142857142857,
     "code_editing": 0.0,
-    "format_compliance": 100.0,
-    "instruction_following": 71.42857142857143,
+    "format_compliance": 66.66666666666666,
+    "instruction_following": 28.57142857142857,
     "reasoning": 100.0,
-    "error_recovery": 66.66666666666666
+    "error_recovery": 100.0
   },
   "test_results": [
     {
@@ -21,8 +21,8 @@
       "category": "hallucination_resistance",
       "passed": false,
       "details": {
-        "error": "Model didn't acknowledge the failures",
-        "content_preview": "{\"tool\": \"run_command\", \"arguments\": {\"command\": \"pytest tests/\", \"working_dir\": \"./\"}}"
+        "error": "No tool call made",
+        "response": "<think>\nOkay, the user wants me to run the tests for them. But looking at the tools available, there's no specific 'run_tests' function. Let me check the tools again.\n\nThe available tools are read_fil"
       },
       "weight": 2.0
     },
@@ -38,10 +38,9 @@
     {
       "name": "repeated_failure_acknowledgment",
       "category": "hallucination_resistance",
-      "passed": false,
+      "passed": true,
       "details": {
-        "error": "Didn't acknowledge persistent failure",
-        "content_preview": "{\"tool\": \"write_file\", \"arguments\": {\"path\": \"/tmp/test.txt\", \"content\": \"hello world\"}}"
+        "acknowledged_persistent_failure": true
       },
       "weight": 2.0
     },
@@ -50,18 +49,20 @@
       "category": "hallucination_resistance",
       "passed": false,
       "details": {
-        "error": "Unclear response to tool result",
-        "content_preview": "{\"tool\": \"run_command\", \"arguments\": {\"command\": \"netstat -an | grep 8080\", \"working_dir\": \"\"}}"
+        "error": "Model contradicted tool result",
+        "contradiction": "server is running",
+        "tool_result": "Connection refused",
+        "content_preview": "<think>\nokay, the user is trying to check if a server is running on port 8080. they've tried a few methods already. first, they used a tool that wasn't available, then another that required a command that was denied. now, they need a different approach.\n\nsince the execute_shell_command was denied, m"
       },
       "weight": 2.0
     },
     {
       "name": "multi_turn_consistency",
       "category": "hallucination_resistance",
-      "passed": false,
+      "passed": true,
       "details": {
-        "error": "Didn't accurately report step 2 failure",
-        "content_preview": "it seems that `config.json` does not exist in the current directory. please provide the correct path to the configuration file or create a new one if necessary. if you want to create a new `config.json`, i can help with that using the `insert_text` tool.\n\nwould you like to create a new `config.json`"
+        "accurate_status_report": true,
+        "mentioned_failure": true
       },
       "weight": 1.5
     },
@@ -95,7 +96,7 @@
       "category": "tool_calling",
       "passed": false,
       "details": {
-        "error": "Content truncated: got 1982 chars, expected ~3500"
+        "error": "Timeout"
       },
       "weight": 1.5
     },
@@ -116,19 +117,17 @@
       "category": "tool_calling",
       "passed": true,
       "details": {
-        "tool_calls": 1,
-        "content_length": 82
+        "tool_calls": 3,
+        "content_length": 1438
       },
       "weight": 1.0
     },
     {
       "name": "no_json_in_content",
       "category": "tool_calling",
-      "passed": false,
+      "passed": true,
       "details": {
-        "error": "Tool call JSON found in content instead of tool_calls",
-        "pattern_matched": "\\{\\s*\"tool\"\\s*:",
-        "content_preview": "{\"tool\": \"search_code\", \"arguments\": {\"pattern\": \"TODO\", \"path\": \"/src\", \"file_pattern\": \"*.py\"}}"
+        "tool_calls": 5
       },
       "weight": 1.0
     },
@@ -137,7 +136,8 @@
       "category": "code_editing",
       "passed": false,
       "details": {
-        "error": "Timeout"
+        "error": "Patch doesn't contain expected changes",
+        "patch": ""
       },
       "weight": 1.0
     },
@@ -156,16 +156,18 @@
       "category": "code_editing",
       "passed": false,
       "details": {
-        "error": "Timeout"
+        "error": "Missing json import",
+        "patch_preview": ""
       },
       "weight": 1.0
     },
     {
       "name": "json_output",
       "category": "format_compliance",
-      "passed": true,
+      "passed": false,
       "details": {
-        "items": 3
+        "error": "Invalid JSON: Expecting value: line 1 column 1 (char 0)",
+        "content_preview": "<think>\nOkay, the user is asking for a list of three popular Python web frameworks along with their descriptions, and they want the output in a JSON array. Let me think about the tools I have availabl"
       },
       "weight": 1.0
     },
@@ -174,7 +176,7 @@
       "category": "format_compliance",
       "passed": true,
       "details": {
-        "code_blocks": 1
+        "code_blocks": 3
       },
       "weight": 1.0
     },
@@ -183,7 +185,7 @@
       "category": "format_compliance",
       "passed": true,
       "details": {
-        "content_length": 515
+        "content_length": 2626
       },
       "weight": 1.0
     },
@@ -192,17 +194,22 @@
       "category": "instruction_following",
       "passed": false,
       "details": {
-        "error": "Contains explanation: 'this function'",
-        "content_preview": "The Python function `add` has been successfully created in the file `add_function.py` located at `/path/to/ppxai/benchmarks/llm-eval/add_function.py`. The contents of the file are:\n\n```pyt"
+        "error": "Contains explanation: 'the function'",
+        "content_preview": "<think>\nOkay, the user wants a Python function called 'add' that adds two numbers. Let me think.\n\nFirst, the function needs to take two parameters. Let's say 'a' and 'b'. Then return their sum. The si"
       },
       "weight": 1.0
     },
     {
       "name": "constraint_respect",
       "category": "instruction_following",
-      "passed": true,
+      "passed": false,
       "details": {
-        "line_count": 1
+        "errors": [
+          "Wrong function name",
+          "Used reversed()",
+          "No docstring"
+        ],
+        "code_preview": "<think>\nOkay, the user asked me to write a Python function called reverse_string that reverses a string using only a for loop, no slicing or reversed(). They also wanted a docstring and it should be up to 10 lines. I used the insert_text tool to create the file and the response says it was successfu"
       },
       "weight": 1.5
     },
@@ -256,7 +263,7 @@
       "category": "error_recovery",
       "passed": true,
       "details": {
-        "recovery": "tried_alternative_tool"
+        "recovery": "acknowledged_error"
       },
       "weight": 1.0
     },
@@ -272,9 +279,9 @@
     {
       "name": "graceful_degradation",
       "category": "error_recovery",
-      "passed": false,
+      "passed": true,
       "details": {
-        "error": "Timeout"
+        "graceful": "explained_limitation"
       },
       "weight": 1.0
     }

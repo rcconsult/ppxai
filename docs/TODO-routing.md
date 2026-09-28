@@ -145,7 +145,7 @@ Added to `ppxai-config.json` under a new `routing` key:
       "dgx-hybrid": {
         "description": "GPT-OSS thinks, Qwen3-Coder executes (k8s)",
         "think":   {"provider": "custom",      "model": "openai/gpt-oss-120b"},
-        "execute": {"provider": "asusai-vllm", "model": "Qwen3-Coder-30B-A3B-Instruct-FP8"}
+        "execute": {"provider": "dgx-vllm", "model": "Qwen3-Coder-30B-A3B-Instruct-FP8"}
       },
       "dgx-full": {
         "description": "All GPT-OSS (max quality, slower)",
@@ -189,7 +189,7 @@ just map multiple roles to the same provider/model:
   "dgx-hybrid": {
     "description": "GPT-OSS thinks, Qwen3-Coder acts",
     "think":   {"provider": "custom",      "model": "openai/gpt-oss-120b"},
-    "execute": {"provider": "asusai-vllm", "model": "Qwen3-Coder-30B"}
+    "execute": {"provider": "dgx-vllm", "model": "Qwen3-Coder-30B"}
   }
 }
 ```
@@ -503,7 +503,7 @@ PATTERNS = {
 **Log format:** `~/.ppxai/routing/decisions.jsonl`
 
 ```jsonl
-{"ts": "2026-03-08T15:00:00", "prompt_hash": "a1b2c3", "prompt_prefix": "refactor the auth...", "classified_role": "coder", "confidence": 0.85, "tier": 1, "provider": "asusai-vllm", "model": "Qwen3-Coder-30B", "tokens_in": 450, "tokens_out": 120, "tool_calls": 2, "duration_ms": 3200, "outcome": "success"}
+{"ts": "2026-03-08T15:00:00", "prompt_hash": "a1b2c3", "prompt_prefix": "refactor the auth...", "classified_role": "coder", "confidence": 0.85, "tier": 1, "provider": "dgx-vllm", "model": "Qwen3-Coder-30B", "tokens_in": 450, "tokens_out": 120, "tool_calls": 2, "duration_ms": 3200, "outcome": "success"}
 {"ts": "2026-03-08T15:01:00", "prompt_hash": "d4e5f6", "prompt_prefix": "plan a migration...", "classified_role": "planner", "confidence": 0.92, "tier": 1, "provider": "custom", "model": "gpt-oss-120b", "tokens_in": 1200, "tokens_out": 800, "tool_calls": 0, "duration_ms": 8500, "outcome": "success"}
 ```
 
@@ -702,7 +702,7 @@ In k8s, provider endpoints may be internal services rather than external URLs:
 {
   "providers": {
     "custom": {"base_url": "http://vllm-gpt-oss.ppxai.svc:8000/v1"},
-    "asusai-vllm": {"base_url": "http://vllm-qwen3.ppxai.svc:8000/v1"}
+    "dgx-vllm": {"base_url": "http://vllm-qwen3.ppxai.svc:8000/v1"}
   }
 }
 ```

@@ -40,7 +40,7 @@ PRICING = {
     "openai/gpt-4o-mini":            {"input": 0.15,  "output": 0.60},
     # Local / custom (free)
     "custom/openai/gpt-oss-120b":    {"input": 0.0,   "output": 0.0},
-    "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": {"input": 0.0, "output": 0.0},
+    "dgx-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": {"input": 0.0, "output": 0.0},
 }
 
 

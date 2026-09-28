@@ -1,138 +1,138 @@
 {
   "pairs": {
-    "asusai-vllm/Qwen3-Coder-Next-NVFP4-GB10": [
+    "dgx-vllm/Qwen3-Coder-Next-NVFP4-GB10": [
       {
-        "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_928a4f56.json",
+        "filename": "dgx-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_928a4f56.json",
         "timestamp": "2026-03-31T17:23:34.100079",
         "overall_score": 86.03960396039605,
         "agents_md_mode": "with"
       },
       {
-        "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_a7396b21.json",
+        "filename": "dgx-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_a7396b21.json",
         "timestamp": "2026-03-31T17:39:16.107309",
         "overall_score": 90.0,
         "agents_md_mode": "without"
       },
       {
-        "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_ab1acb47.json",
+        "filename": "dgx-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_ab1acb47.json",
         "timestamp": "2026-03-31T17:27:55.492231",
         "overall_score": 85.14851485148515,
         "agents_md_mode": "without"
       },
       {
-        "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_e5a1f7ff.json",
+        "filename": "dgx-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_e5a1f7ff.json",
         "timestamp": "2026-03-31T17:37:13.071646",
         "overall_score": 86.03960396039605,
         "agents_md_mode": "with"
       }
     ],
-    "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": [
+    "dgx-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": [
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-07_e21de04b.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-07_e21de04b.json",
         "timestamp": "2026-02-07T00:44:19.998895",
         "overall_score": 81.25,
         "agents_md_mode": "with"
       },
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_09efb741.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_09efb741.json",
         "timestamp": "2026-02-23T15:03:16.127923",
         "overall_score": 84.78547854785478,
         "agents_md_mode": "without"
       },
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_112891c0.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_112891c0.json",
         "timestamp": "2026-02-23T15:57:30.036717",
         "overall_score": 81.81518151815183,
         "agents_md_mode": "with"
       },
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_6414c54a.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_6414c54a.json",
         "timestamp": "2026-02-23T13:10:32.757580",
         "overall_score": 8.118811881188117,
         "agents_md_mode": "with"
       },
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7a361f1c.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7a361f1c.json",
         "timestamp": "2026-02-23T14:15:22.658119",
         "overall_score": 79.83498349834984,
         "agents_md_mode": "with"
       },
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7cbcf5f1.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7cbcf5f1.json",
         "timestamp": "2026-02-23T14:59:53.341756",
         "overall_score": 81.81518151815183,
         "agents_md_mode": "with"
       },
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_ba1071b5.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_ba1071b5.json",
         "timestamp": "2026-02-23T16:00:44.699957",
         "overall_score": 81.81518151815183,
         "agents_md_mode": "without"
       }
     ],
-    "asusai-vllm/Qwen/Qwen3-Coder-Next-FP8": [
+    "dgx-vllm/Qwen/Qwen3-Coder-Next-FP8": [
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-10_cee37b05.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-10_cee37b05.json",
         "timestamp": "2026-02-10T13:25:33.321635",
         "overall_score": 60.9375,
         "agents_md_mode": "with"
       },
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_9334c773.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_9334c773.json",
         "timestamp": "2026-02-12T13:52:38.299008",
         "overall_score": 54.6875,
         "agents_md_mode": "with"
       },
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_aec09c1b.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_aec09c1b.json",
         "timestamp": "2026-02-12T12:33:11.439010",
         "overall_score": 57.8125,
         "agents_md_mode": "with"
       }
     ],
-    "asusai-vllm/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8": [
+    "dgx-vllm/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8": [
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Next-80B-A3B-Instruct-FP8_2026-02-10_f717e85a.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Next-80B-A3B-Instruct-FP8_2026-02-10_f717e85a.json",
         "timestamp": "2026-02-10T12:43:52.346871",
         "overall_score": 54.6875,
         "agents_md_mode": "with"
       }
     ],
-    "asusai-vllm/Qwen/Qwen3-Next-80B-A3B-Thinking-FP8": [
+    "dgx-vllm/Qwen/Qwen3-Next-80B-A3B-Thinking-FP8": [
       {
-        "filename": "asusai-vllm_Qwen_Qwen3-Next-80B-A3B-Thinking-FP8_2026-02-10_d205a445.json",
+        "filename": "dgx-vllm_Qwen_Qwen3-Next-80B-A3B-Thinking-FP8_2026-02-10_d205a445.json",
         "timestamp": "2026-02-10T17:26:00.064258",
         "overall_score": 57.8125,
         "agents_md_mode": "with"
       }
     ],
-    "asusai-vllm/RedHatAI/Qwen3-30B-A3B-FP8-dynamic": [
+    "dgx-vllm/RedHatAI/Qwen3-30B-A3B-FP8-dynamic": [
       {
-        "filename": "asusai-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_9d46e1f4.json",
+        "filename": "dgx-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_9d46e1f4.json",
         "timestamp": "2026-02-06T20:25:47.159534",
         "overall_score": 60.9375,
         "agents_md_mode": "with"
       }
     ],
-    "asusai/qwen2.5-coder:32b-64k": [
+    "dgx/qwen2.5-coder:32b-64k": [
       {
-        "filename": "asusai_qwen2.5-coder_32b-64k_2026-02-06_2e0c1914.json",
+        "filename": "dgx_qwen2.5-coder_32b-64k_2026-02-06_2e0c1914.json",
         "timestamp": "2026-02-06T18:41:34.871171",
         "overall_score": 57.8125,
         "agents_md_mode": "with"
       }
     ],
-    "asusai/qwen2.5-coder:32b": [
+    "dgx/qwen2.5-coder:32b": [
       {
-        "filename": "asusai_qwen2.5-coder_32b_2026-02-06_8d69e30a.json",
+        "filename": "dgx_qwen2.5-coder_32b_2026-02-06_8d69e30a.json",
         "timestamp": "2026-02-06T17:46:41.473399",
         "overall_score": 51.5625,
         "agents_md_mode": "with"
       }
     ],
-    "asusai/qwen3:30b-a3b": [
+    "dgx/qwen3:30b-a3b": [
       {
-        "filename": "asusai_qwen3_30b-a3b_2026-02-06_b428bb08.json",
+        "filename": "dgx_qwen3_30b-a3b_2026-02-06_b428bb08.json",
         "timestamp": "2026-02-06T18:25:47.778980",
         "overall_score": 46.875,
         "agents_md_mode": "with"
@@ -1583,141 +1583,141 @@
   },
   "runs": [
     {
-      "pair": "asusai-vllm/Qwen3-Coder-Next-NVFP4-GB10",
-      "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_928a4f56.json",
+      "pair": "dgx-vllm/Qwen3-Coder-Next-NVFP4-GB10",
+      "filename": "dgx-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_928a4f56.json",
       "timestamp": "2026-03-31T17:23:34.100079",
       "overall_score": 86.03960396039605,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/Qwen3-Coder-Next-NVFP4-GB10",
-      "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_a7396b21.json",
+      "pair": "dgx-vllm/Qwen3-Coder-Next-NVFP4-GB10",
+      "filename": "dgx-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_a7396b21.json",
       "timestamp": "2026-03-31T17:39:16.107309",
       "overall_score": 90.0,
       "agents_md_mode": "without"
     },
     {
-      "pair": "asusai-vllm/Qwen3-Coder-Next-NVFP4-GB10",
-      "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_ab1acb47.json",
+      "pair": "dgx-vllm/Qwen3-Coder-Next-NVFP4-GB10",
+      "filename": "dgx-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_ab1acb47.json",
       "timestamp": "2026-03-31T17:27:55.492231",
       "overall_score": 85.14851485148515,
       "agents_md_mode": "without"
     },
     {
-      "pair": "asusai-vllm/Qwen3-Coder-Next-NVFP4-GB10",
-      "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_e5a1f7ff.json",
+      "pair": "dgx-vllm/Qwen3-Coder-Next-NVFP4-GB10",
+      "filename": "dgx-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_e5a1f7ff.json",
       "timestamp": "2026-03-31T17:37:13.071646",
       "overall_score": 86.03960396039605,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-07_e21de04b.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-07_e21de04b.json",
       "timestamp": "2026-02-07T00:44:19.998895",
       "overall_score": 81.25,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_09efb741.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_09efb741.json",
       "timestamp": "2026-02-23T15:03:16.127923",
       "overall_score": 84.78547854785478,
       "agents_md_mode": "without"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_112891c0.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_112891c0.json",
       "timestamp": "2026-02-23T15:57:30.036717",
       "overall_score": 81.81518151815183,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_6414c54a.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_6414c54a.json",
       "timestamp": "2026-02-23T13:10:32.757580",
       "overall_score": 8.118811881188117,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7a361f1c.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7a361f1c.json",
       "timestamp": "2026-02-23T14:15:22.658119",
       "overall_score": 79.83498349834984,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7cbcf5f1.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7cbcf5f1.json",
       "timestamp": "2026-02-23T14:59:53.341756",
       "overall_score": 81.81518151815183,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_ba1071b5.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_ba1071b5.json",
       "timestamp": "2026-02-23T16:00:44.699957",
       "overall_score": 81.81518151815183,
       "agents_md_mode": "without"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-Next-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-10_cee37b05.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Coder-Next-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-10_cee37b05.json",
       "timestamp": "2026-02-10T13:25:33.321635",
       "overall_score": 60.9375,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-Next-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_9334c773.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Coder-Next-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_9334c773.json",
       "timestamp": "2026-02-12T13:52:38.299008",
       "overall_score": 54.6875,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-Next-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_aec09c1b.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Coder-Next-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_aec09c1b.json",
       "timestamp": "2026-02-12T12:33:11.439010",
       "overall_score": 57.8125,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Next-80B-A3B-Instruct-FP8_2026-02-10_f717e85a.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Next-80B-A3B-Instruct-FP8_2026-02-10_f717e85a.json",
       "timestamp": "2026-02-10T12:43:52.346871",
       "overall_score": 54.6875,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Next-80B-A3B-Thinking-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Next-80B-A3B-Thinking-FP8_2026-02-10_d205a445.json",
+      "pair": "dgx-vllm/Qwen/Qwen3-Next-80B-A3B-Thinking-FP8",
+      "filename": "dgx-vllm_Qwen_Qwen3-Next-80B-A3B-Thinking-FP8_2026-02-10_d205a445.json",
       "timestamp": "2026-02-10T17:26:00.064258",
       "overall_score": 57.8125,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai-vllm/RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
-      "filename": "asusai-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_9d46e1f4.json",
+      "pair": "dgx-vllm/RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
+      "filename": "dgx-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_9d46e1f4.json",
       "timestamp": "2026-02-06T20:25:47.159534",
       "overall_score": 60.9375,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai/qwen2.5-coder:32b-64k",
-      "filename": "asusai_qwen2.5-coder_32b-64k_2026-02-06_2e0c1914.json",
+      "pair": "dgx/qwen2.5-coder:32b-64k",
+      "filename": "dgx_qwen2.5-coder_32b-64k_2026-02-06_2e0c1914.json",
       "timestamp": "2026-02-06T18:41:34.871171",
       "overall_score": 57.8125,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai/qwen2.5-coder:32b",
-      "filename": "asusai_qwen2.5-coder_32b_2026-02-06_8d69e30a.json",
+      "pair": "dgx/qwen2.5-coder:32b",
+      "filename": "dgx_qwen2.5-coder_32b_2026-02-06_8d69e30a.json",
       "timestamp": "2026-02-06T17:46:41.473399",
       "overall_score": 51.5625,
       "agents_md_mode": "with"
     },
     {
-      "pair": "asusai/qwen3:30b-a3b",
-      "filename": "asusai_qwen3_30b-a3b_2026-02-06_b428bb08.json",
+      "pair": "dgx/qwen3:30b-a3b",
+      "filename": "dgx_qwen3_30b-a3b_2026-02-06_b428bb08.json",
       "timestamp": "2026-02-06T18:25:47.778980",
       "overall_score": 46.875,
       "agents_md_mode": "with"

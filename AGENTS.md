@@ -39,7 +39,7 @@ provider_hints:
     - "For large file writes, ensure complete content - truncated output fails silently."
     - "When tools return errors, report the actual error message to the user."
     - "Do NOT make duplicate calls with alternate parameter names. Chain multiple DIFFERENT tool calls without stopping."
-  asusai-vllm:
+  dgx-vllm:
     - "You are running on NVIDIA GB10 with native tool calling via vLLM."
     - "Execute tools directly - never describe what you would do, just call the tool."
     - "CRITICAL: After tool failures, acknowledge the error - do NOT claim success."

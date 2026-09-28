@@ -5533,7 +5533,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai",
+      "provider": "dgx",
       "model": "sonar-pro",
       "summary": {
         "error": "No valid results"
@@ -5649,7 +5649,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai",
+      "provider": "dgx",
       "model": "sonar-pro",
       "summary": {
         "error": "No valid results"
@@ -5765,7 +5765,7 @@
       "version": "1.15.2",
       "git_commit": "unknown",
       "git_branch": "unknown",
-      "provider": "asusai",
+      "provider": "dgx",
       "model": "sonar-pro",
       "summary": {
         "error": "No valid results"
@@ -5793,7 +5793,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai",
+      "provider": "dgx",
       "model": "sonar-pro",
       "summary": {
         "error": "No valid results"
@@ -5950,7 +5950,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai",
+      "provider": "dgx",
       "model": "qwen2.5-coder:32b",
       "summary": {
         "total_runs": 9,
@@ -6079,7 +6079,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai",
+      "provider": "dgx",
       "model": "qwen3:30b-a3b",
       "summary": {
         "total_runs": 9,
@@ -6208,7 +6208,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai",
+      "provider": "dgx",
       "model": "qwen2.5-coder:32b-64k",
       "summary": {
         "total_runs": 9,
@@ -6337,7 +6337,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai",
+      "provider": "dgx",
       "model": "qwen3:30b-a3b-96k",
       "summary": {
         "total_runs": 9,
@@ -6466,7 +6466,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai-vllm",
+      "provider": "dgx-vllm",
       "model": "RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
       "summary": {
         "total_runs": 9,
@@ -6595,7 +6595,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai-vllm",
+      "provider": "dgx-vllm",
       "model": "RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
       "summary": {
         "error": "No valid results"
@@ -6653,7 +6653,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai-vllm",
+      "provider": "dgx-vllm",
       "model": "RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
       "summary": {
         "total_runs": 9,
@@ -6782,7 +6782,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai-vllm",
+      "provider": "dgx-vllm",
       "model": "RedHatAI/Llama-3.3-70B-Instruct-NVFP4",
       "summary": {
         "total_runs": 9,
@@ -6911,7 +6911,7 @@
       "version": "1.15.2",
       "git_commit": "790fedc",
       "git_branch": "master",
-      "provider": "asusai-vllm",
+      "provider": "dgx-vllm",
       "model": "RedHatAI/Qwen3-32B-NVFP4",
       "summary": {
         "total_runs": 9,
@@ -7040,7 +7040,7 @@
       "version": "1.15.3",
       "git_commit": "b12cfe3",
       "git_branch": "bugfix/v1.15.3",
-      "provider": "asusai-vllm",
+      "provider": "dgx-vllm",
       "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
       "summary": {
         "total_runs": 9,
