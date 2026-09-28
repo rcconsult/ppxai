@@ -202,7 +202,10 @@ async def lifespan(app: FastAPI):
     logger.info(f"Server stopped at {stop_timestamp} (uptime: {uptime_str}, reason: {shutdown_reason})")
     logger.info("Server shutting down - cleaning up SessionManager")
     await sm.shutdown()
-    print(f"ppxai HTTP server stopped (uptime: {uptime_str}, reason: {shutdown_reason})")
+    global _stopped_line
+    _stopped_line = f"ppxai HTTP server stopped (uptime: {uptime_str}, reason: {shutdown_reason})"
+    if not _serving_via_entry_point:
+        print(_stopped_line)  # TestClient etc.: nothing else will print it
 
 
 # Create FastAPI app with lifespan
@@ -618,6 +621,8 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
     # task finally unwinds, which can be AFTER serve() returns (seen on macOS;
     # removing the filter in `finally` let that traceback through).
     logging.getLogger("uvicorn.error").addFilter(_AbandonedRequestFilter(server))
+    global _serving_via_entry_point
+    _serving_via_entry_point = True
     shutdown_task = asyncio.create_task(shutdown_listener())
     try:
         await server.serve()
@@ -628,11 +633,19 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
         except asyncio.CancelledError:
             pass
         await _release_worker_threads(workers, 0.0 if server.force_exit else grace_s)
+        if _stopped_line:
+            print(_stopped_line, flush=True)
 
 
 #: Set when provider calls were still running in worker threads at shutdown.
 #: The caller then finishes its own cleanup and calls `_exit_if_workers_hung`.
 _workers_hung = False
+
+#: The lifespan's "ppxai HTTP server stopped (...)" line. Under the server
+#: entry point it is printed LAST, after the worker-thread release, whose
+#: warnings and the cancelled request's 500 used to follow it.
+_stopped_line: str | None = None
+_serving_via_entry_point = False
 
 
 def _install_worker_executor() -> concurrent.futures.ThreadPoolExecutor:

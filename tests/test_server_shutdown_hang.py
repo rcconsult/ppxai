@@ -157,6 +157,7 @@ _SERVER_CHILD = textwrap.dedent("""
     async def lifespan(app):
         yield
         print("APP-SHUTDOWN-RAN", flush=True)  # ppxai saves sessions here
+        h._stopped_line = "STOPPED-LINE"  # as ppxai's lifespan records it
 
     app = FastAPI(lifespan=lifespan)
     block = threading.Event()
@@ -255,6 +256,8 @@ class TestCtrlCStopsItDespiteAHungCall:
         # The cancelled request is one warning line, not a crash traceback.
         assert "Abandoned an in-flight request" in out
         assert "Traceback" not in out, out
+        # "stopped" is the LAST line, after the release warning (WSL 2b).
+        assert out.strip().splitlines()[-1] == "STOPPED-LINE", out
 
     def test_a_second_ctrl_c_forces_it(self):
         proc, port = _start_hung_server(grace_s=120.0)
