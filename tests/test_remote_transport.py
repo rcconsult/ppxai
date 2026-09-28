@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import shlex
 import shutil
 import socket
 import stat
@@ -484,15 +485,18 @@ class TestFakeTransport:
 # ---------------------------------------------------------------------------
 
 LIVE_DEST = os.environ.get("PPXAI_TEST_SSH_DEST", "")
+# Optional ssh argv prefix, e.g. `ssh -o UserKnownHostsFile=/path/known_hosts`
+# for a test sshd whose key is not in the user's own known_hosts.
+LIVE_SSH = tuple(shlex.split(os.environ.get("PPXAI_TEST_SSH_COMMAND", "ssh"), posix=sys.platform != "win32"))
 
 
 @pytest.mark.network
 @pytest.mark.skipif(not LIVE_DEST, reason="set PPXAI_TEST_SSH_DEST to an ssh destination")
 class TestLive:
     async def test_run_reaches_the_host(self):
-        r = await OpenSSHTransport(LIVE_DEST).run(["uname", "-s"], timeout=30)
+        r = await OpenSSHTransport(LIVE_DEST, ssh_command=LIVE_SSH).run(["uname", "-s"], timeout=30)
         assert r.rc == 0 and r.stdout.strip()
 
     async def test_an_unknown_host_is_unreachable(self):
         with pytest.raises(HostUnreachableError):
-            await OpenSSHTransport("nosuchhost.invalid").run(["true"], timeout=30)
+            await OpenSSHTransport("nosuchhost.invalid", ssh_command=LIVE_SSH).run(["true"], timeout=30)

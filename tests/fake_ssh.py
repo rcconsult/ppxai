@@ -118,8 +118,10 @@ def main() -> int:
     if os.environ.get("FAKE_SSH_SLEEP"):
         time.sleep(float(os.environ["FAKE_SSH_SLEEP"]))
     if "FAKE_SSH_RC" in os.environ:
-        sys.stderr.write(os.environ.get("FAKE_SSH_STDERR", ""))
-        sys.stderr.flush()
+        # Bytes, not text: text-mode stderr turns \n into \r\n on Windows,
+        # and the tests assert OpenSSH's stderr is kept verbatim.
+        sys.stderr.buffer.write(os.environ.get("FAKE_SSH_STDERR", "").encode())
+        sys.stderr.buffer.flush()
         return int(os.environ["FAKE_SSH_RC"])
 
     options, flags, _destination, command = _parse(argv)
