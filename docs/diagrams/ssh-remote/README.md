@@ -28,7 +28,7 @@ The script uses the Playwright Chromium that `tests/e2e` installs
 (`npm install` there once). The PNG is always regenerated from the SVG; never
 edit it by hand.
 
-Style: CFT/Tradition palette (`#032B46` headers, `#0072B8` / `#005A93`
+Style: navy/blue palette (`#032B46` headers, `#0072B8` / `#005A93`
 emphasis, `#62B2E0` / `#A1D4F0` fills, `#5D5D60` / `#98989B` muted,
 `#F2F2F3` page), fonts `'IBM Plex Sans','Segoe UI','Noto Sans',Arial,sans-serif`
 and the IBM Plex Sans Condensed / Arial Narrow chain for headings. Every
