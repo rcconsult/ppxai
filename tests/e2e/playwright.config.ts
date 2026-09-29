@@ -2,25 +2,31 @@ import { defineConfig, devices } from '@playwright/test';
 import * as path from 'path';
 
 /**
- * Two kinds of E2E here, deliberately separated:
+ * Three kinds of E2E here, deliberately separated:
  *
  * - `chromium` (default) — widget specs over `file://` harnesses. No server,
  *   no provider, fast. This is what `npm test` runs.
  * - `live` (opt-in) — `live-app.spec.ts` drives the REAL web app against a
  *   REAL `ppxai-server`, so it covers dispatch/envelope/SSE wiring the
  *   harnesses can't reach. Started via `webServer` below.
+ * - `ssh` (opt-in) — `ssh-launcher.spec.ts` drives the ADR 0013 SSH Launcher
+ *   against a real hub server + a real (locally-shimmed) remote server. It
+ *   starts and stops its own servers, so it has no `webServer` entry.
  *
  *     npm run test:live
  *     PPXAI_E2E_PROVIDER=qwen36-vllm npm run test:live   # enable LLM steps
+ *     npm run test:ssh
  *
- * Gated on PPXAI_E2E_LIVE=1 (the npm scripts set it), so a plain
- * `npx playwright test` never tries to start a server. It must be an ENV var,
- * not argv sniffing: Playwright re-evaluates this config in each worker
- * process without the CLI args, so an argv-derived project list would exist
- * in the runner and vanish in the worker ("Project 'live' not found").
+ * Both are gated on an env var (PPXAI_E2E_LIVE / PPXAI_E2E_SSH, set by the
+ * npm scripts), so a plain `npx playwright test` never tries to start a
+ * server. It must be an ENV var, not argv sniffing: Playwright re-evaluates
+ * this config in each worker process without the CLI args, so an
+ * argv-derived project list would exist in the runner and vanish in the
+ * worker ("Project 'live' not found").
  */
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const LIVE = process.env.PPXAI_E2E_LIVE === '1';
+const SSH = process.env.PPXAI_E2E_SSH === '1';
 const PORT = Number(process.env.PPXAI_E2E_PORT || 8807);
 
 // Prefer the working-tree server (.venv) so a live run tests THIS checkout,
@@ -44,7 +50,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: 'live-app.spec.ts',
+      testIgnore: ['live-app.spec.ts', 'ssh-launcher.spec.ts'],
       use: { ...devices['Desktop Chrome'] },
     },
     ...(LIVE
@@ -55,6 +61,13 @@ export default defineConfig({
             ...devices['Desktop Chrome'],
             baseURL: `http://127.0.0.1:${PORT}`,
           },
+        }]
+      : []),
+    ...(SSH
+      ? [{
+          name: 'ssh',
+          testMatch: 'ssh-launcher.spec.ts',
+          use: { ...devices['Desktop Chrome'] },
         }]
       : []),
   ],

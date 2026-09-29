@@ -8,7 +8,9 @@
     "test:headed": "npx playwright test --headed",
     "test:debug": "npx playwright test --debug",
     "test:live": "node run-live.js",
-    "test:live:headed": "node run-live.js --headed"
+    "test:live:headed": "node run-live.js --headed",
+    "test:ssh": "node run-ssh.js",
+    "test:ssh:headed": "node run-ssh.js --headed"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0"
