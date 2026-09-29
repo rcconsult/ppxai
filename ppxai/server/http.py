@@ -17,7 +17,9 @@ import json
 import logging
 import os
 import re
+import select
 import signal
+import subprocess
 import sys
 import threading
 import time
@@ -1084,26 +1086,88 @@ def _report(fd: int | None, payload: dict) -> None:
         pipe.write(text)
 
 
+#: Set by a FROZEN launcher on the server it re-spawns (see `_detach`): the
+#: number of the inherited pipe fd the daemon reports its entry on.
+_DETACH_REPORT_FD_ENV = "PPXAI_DETACH_REPORT_FD"
+#: How long a launcher waits for the detached server to announce itself.
+_DETACH_ANNOUNCE_TIMEOUT_S = 120.0
+
+
 def _detach() -> int:
-    """Double-fork away from the launcher (POSIX). Returns, in the daemon, the
-    write end of a pipe; the launcher prints what arrives on it and exits
-    (1 if the daemon reported an error or died without announcing).
+    """Detach from the launcher (POSIX). Returns, in the daemon, the write end
+    of a pipe; the launcher prints what arrives on it and exits (1 if the
+    daemon reported an error or died without announcing).
+
+    A PyInstaller one-file binary cannot simply fork: its bootloader deletes
+    the extraction dir (`sys._MEIPASS`) when the Python process it started
+    exits, so a forked daemon would keep running out of a deleted directory
+    and fail on the first file it opens lazily (TLS's `base_library.zip`,
+    python-pptx, ...). Found live 2026-09-28: every chat on a hub-launched
+    WSL server failed. A frozen launcher therefore re-spawns its own
+    executable as an independent instance (`PYINSTALLER_RESET_ENVIRONMENT=1`,
+    PyInstaller >= 6.9), which unpacks and later cleans up its own copy.
     """
+    inherited = os.environ.pop(_DETACH_REPORT_FD_ENV, None)
+    if inherited is not None:  # the re-spawned daemon (frozen path)
+        _daemon_stdio()
+        return int(inherited)
+
     read_fd, write_fd = os.pipe()
+    if getattr(sys, "frozen", False):
+        env = {**os.environ, _DETACH_REPORT_FD_ENV: str(write_fd),
+               "PYINSTALLER_RESET_ENVIRONMENT": "1"}
+        proc = subprocess.Popen(
+            [sys.executable, *sys.argv[1:]], env=env, pass_fds=(write_fd,),
+            start_new_session=True, stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        os.close(write_fd)
+        _await_announcement(read_fd, proc.poll)
     if os.fork() > 0:  # the launcher
         os.close(write_fd)
-        with os.fdopen(read_fd, encoding="utf-8") as pipe:
-            payload = pipe.read()
-        if not payload:
-            print("ppxai-server: the detached server exited before announcing", file=sys.stderr)
-            os._exit(1)
-        print(payload, flush=True)
-        os._exit(1 if "error" in json.loads(payload) else 0)
+        _await_announcement(read_fd, lambda: None)
     os.close(read_fd)
     os.setsid()
     if os.fork() > 0:
         os._exit(0)
-    # The daemon: no controlling terminal; stdio goes to a server log.
+    _daemon_stdio()
+    return write_fd
+
+
+def _await_announcement(read_fd: int, exited) -> None:
+    """The launcher side: print the daemon's JSON entry, then exit.
+
+    Reads until one complete JSON document has arrived, NOT until EOF: the
+    re-spawned one-file bootloader may itself hold an inherited copy of the
+    write end for the server's whole life. `exited()` (a Popen.poll) ends the
+    wait when the daemon dies before announcing."""
+    decoder = json.JSONDecoder()
+    buf = ""
+    deadline = time.monotonic() + _DETACH_ANNOUNCE_TIMEOUT_S
+    payload = None
+    while time.monotonic() < deadline:
+        ready, _, _ = select.select([read_fd], [], [], 0.2)
+        if ready:
+            chunk = os.read(read_fd, 65536)
+            if not chunk:  # EOF: every writer is gone
+                break
+            buf += chunk.decode("utf-8", "replace")
+            try:
+                payload, _ = decoder.raw_decode(buf.lstrip())
+                break
+            except ValueError:
+                continue  # not complete yet
+        elif exited() is not None:
+            break
+    os.close(read_fd)
+    if payload is None:
+        print("ppxai-server: the detached server exited before announcing", file=sys.stderr)
+        os._exit(1)
+    print(json.dumps(payload, indent=2), flush=True)
+    os._exit(1 if isinstance(payload, dict) and "error" in payload else 0)
+
+
+def _daemon_stdio() -> None:
+    """The daemon: no controlling terminal; stdio goes to a server log."""
     log_dir = Path.home() / ".ppxai" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_fd = os.open(log_dir / f"server-detached-{os.getpid()}.log",
@@ -1112,7 +1176,6 @@ def _detach() -> int:
     os.dup2(null_fd, 0)
     os.dup2(log_fd, 1)
     os.dup2(log_fd, 2)
-    return write_fd
 
 
 def run_desktop():
