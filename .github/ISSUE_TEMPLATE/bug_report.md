@@ -31,7 +31,7 @@ If applicable, add screenshots or copy-paste the terminal output to help explain
 
 **Installation method:**
 - [ ] Standalone binary from releases
-- [ ] `pip install ppxai`
+- [ ] `pip install` from the git repository (ppxai is not on PyPI)
 - [ ] `uv` from source
 - [ ] VSCode extension only
 

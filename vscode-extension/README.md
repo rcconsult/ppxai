@@ -101,9 +101,10 @@ In VSCode: Click the ppxai icon in the Activity Bar (sidebar), or run command `p
 #### 1. Install ppxai with server support
 
 ```bash
-pip install ppxai[server]
+# ppxai is not on PyPI (the `ppxai` name there is an unrelated project)
+pip install "ppxai[server] @ git+https://github.com/rcconsult/ppxai"
 # Or with uv
-uv pip install ppxai[server]
+uv pip install "ppxai[server] @ git+https://github.com/rcconsult/ppxai"
 ```
 
 #### 2. Configure API keys
@@ -153,17 +154,17 @@ Attach images, PDFs, Excel, PowerPoint, Word, CSV, and code files to your conver
 
 | File Type | Python Package | System Package | Install |
 |-----------|---------------|----------------|---------|
-| PDF text extraction | `pypdf` | — | `pip install 'ppxai[data]'` |
+| PDF text extraction | `pypdf` | — | `[data]` extras (below) |
 | PDF page images | `pdf2image` | `poppler-utils` | see below |
-| Excel (.xlsx) | `openpyxl` | — | `pip install 'ppxai[data]'` |
-| PowerPoint (.pptx) | `python-pptx` | — | `pip install 'ppxai[data]'` |
+| Excel (.xlsx) | `openpyxl` | — | `[data]` extras (below) |
+| PowerPoint (.pptx) | `python-pptx` | — | `[data]` extras (below) |
 | PPTX slide rendering | — | `libreoffice` | see below |
 
 **Install all Python extras at once:**
 ```bash
-pip install 'ppxai[data]'
-# Or with uv
-uv pip install 'ppxai[data]'
+pip install "ppxai[data] @ git+https://github.com/rcconsult/ppxai"
+# Or with uv, in a ppxai checkout
+uv sync --extra data
 ```
 
 **System dependencies (only needed for PDF page images and PPTX slide rendering):**

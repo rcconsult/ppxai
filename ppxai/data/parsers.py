@@ -13,6 +13,8 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any
 
+from ppxai.constants import install_extra_hint
+
 # Optional data format parsers (in 'data' extras group)
 try:
     import yaml
@@ -159,7 +161,7 @@ def parse_yaml(
         TreeNode representing the YAML structure
     """
     if yaml is None:
-        raise ImportError("PyYAML is required for YAML parsing: pip install 'ppxai[data]'")
+        raise ImportError(f"PyYAML is required for YAML parsing: {install_extra_hint('data')}")
     data = yaml.safe_load(content)
     return _build_tree(root_key, data, depth=0, max_depth=max_depth)
 
@@ -203,7 +205,7 @@ def parse_hcl(
         TreeNode representing the HCL structure
     """
     if hcl2 is None:
-        raise ImportError("python-hcl2 is required for HCL parsing: pip install 'ppxai[data]'")
+        raise ImportError(f"python-hcl2 is required for HCL parsing: {install_extra_hint('data')}")
     data = hcl2.loads(content)
     return _build_tree(root_key, data, depth=0, max_depth=max_depth)
 

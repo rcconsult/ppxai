@@ -16,6 +16,7 @@ from textual.containers import Center, Vertical
 from textual.widget import Widget
 from textual.widgets import Static
 
+from ppxai.constants import install_extra_hint
 from ppxai.tui.images import get_image_size
 from ppxai.tui.terminal import (
     ImageProtocol,
@@ -295,7 +296,7 @@ class FallbackHandler:
                         info_lines.append("[yellow]Image preview not available.[/yellow]")
                         info_lines.append("")
                         info_lines.append("[dim]Install for image preview:[/dim]")
-                        info_lines.append("[cyan]pip install ppxai[tui][/cyan]")
+                        info_lines.append("[cyan]" + install_extra_hint("tui").replace("[", "\\[") + "[/cyan]")
                     elif self._reason == "terminal":
                         protocol = get_image_protocol_name()
                         info_lines.append(f"[yellow]Terminal image protocol: {protocol}[/yellow]")

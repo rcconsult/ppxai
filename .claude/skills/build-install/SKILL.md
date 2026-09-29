@@ -519,8 +519,8 @@ file /tmp/s.png   # expect: PNG image data
 ```
 
 Expect `200 image/png` and a real PNG. If you instead get a JSON
-`text_fallback` saying "install LibreOffice … or `pip install
-'ppxai[data]'`", the build is missing `[data]` (rebuild after
+`text_fallback` saying "install LibreOffice … or add the [data]
+extras", the build is missing `[data]` (rebuild after
 `uv sync --all-extras`) OR LibreOffice isn't installed/discoverable.
 
 Note the `/files/preview` path guard: the PPTX must live under the

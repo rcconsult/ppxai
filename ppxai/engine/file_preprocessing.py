@@ -61,6 +61,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ppxai.constants import install_extra_hint
+
 from .image_validation import sniff_media_type, validate_image
 from .model_facts import supports_vision as model_supports_vision
 from .session_store import (
@@ -647,7 +649,7 @@ def _preprocess_pdf(
     if page_count is None:
         warnings.append(
             "PDF page count unknown (pypdf not installed or file malformed). "
-            "Install with: pip install 'ppxai[data]'"
+            f"Install with: {install_extra_hint('data')}"
         )
         page_info = "unknown page count"
     else:

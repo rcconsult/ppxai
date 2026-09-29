@@ -15,7 +15,7 @@ native function calling takes priority and grounding is disabled. To use
 grounding for web search, disable tools with `/tools off`.
 See: https://ai.google.dev/gemini-api/docs/live-tools
 
-Requires: pip install ppxai[gemini]
+Requires the [gemini] extras: see ppxai.constants.install_extra_hint
 """
 
 import asyncio
@@ -28,6 +28,8 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
+
+from ppxai.constants import install_extra_hint
 
 from ... import usage as _usage
 from ...common.logger import get_logger
@@ -283,7 +285,7 @@ class GeminiProvider(BaseProvider):
         if not _genai_available:
             raise ImportError(
                 "google-genai package not installed. "
-                "Install with: pip install ppxai[gemini]"
+                f"Install with: {install_extra_hint('gemini')}"
             )
 
         self.enable_grounding = enable_grounding

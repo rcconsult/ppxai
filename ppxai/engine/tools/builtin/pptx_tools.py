@@ -26,6 +26,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from ppxai.constants import install_extra_hint
+
 from ....common.libreoffice import find_libreoffice, libreoffice_available
 from ...file_ref import FILE_REF_PROPERTIES, resolve_file_reference
 from ...types import ToolEngineProtocol, ToolManagerProtocol
@@ -63,7 +65,7 @@ def extract_pptx_slide_text(path: Path, slide_num: int) -> str:
     try:
         from pptx import Presentation
     except ImportError:
-        return "Error: python-pptx not installed. Install with: pip install 'ppxai[data]'"
+        return f"Error: python-pptx not installed. Install with: {install_extra_hint('data')}"
 
     try:
         prs = Presentation(str(path))
@@ -205,7 +207,7 @@ class ListPptxSlidesTool(BaseTool):
         try:
             from pptx import Presentation
         except ImportError:
-            return "Error: python-pptx not installed. Install with: pip install 'ppxai[data]'"
+            return f"Error: python-pptx not installed. Install with: {install_extra_hint('data')}"
 
         try:
             prs = Presentation(str(meta.path))

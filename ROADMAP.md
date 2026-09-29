@@ -75,7 +75,7 @@ ppxai provides:
 - Google Search Grounding with citations (like Perplexity)
 - Streaming support with usage tracking
 - Graceful fallback to OpenAI-compatible API
-- Install: `pip install ppxai[gemini]`
+- Install: the `[gemini]` extras (`uv sync --extra gemini`)
 
 ---
 
@@ -86,7 +86,7 @@ ppxai provides:
 - Priority fallback: Perplexity Sonar → Gemini Grounding → DuckDuckGo (free)
 - SSL_VERIFY environment variable for corporate proxy support
 - Custom provider tool calling tests
-- Install: `pip install ppxai[gemini]` for Gemini Grounding support
+- Install: the `[gemini]` extras (`uv sync --extra gemini`) for Gemini Grounding support
 
 ### Desktop Web App ✅ (v1.13.1)
 - Standalone `ppxai-desktop` launcher for all platforms
@@ -140,7 +140,7 @@ ppxai provides:
 - **Container management tools** - 16 tools for Docker, Podman, Kubernetes CLI
 - **Format auto-detection** - Extension-based and content sniffing for data files
 - **Visualization config** - `max_rows`, `page_size`, `tree_depth`, `csv_delimiter` options
-- **Optional dependencies** - `pip install ppxai[data]` for YAML/HCL parsing
+- **Optional dependencies** - the `[data]` extras (`uv sync --extra data`) for YAML/HCL parsing
 - **`@filename` autocomplete fix** - Web App and VSCode now show real file suggestions via `/files/search`
 - **E2E Playwright tests** - 55 browser tests for data viewer components
 
@@ -463,7 +463,7 @@ ppxai/tui/                     # New module (Textual-based)
 | **Double Ctrl+C to quit** | Prevents accidental exits in ppxaide | ✅ Done |
 
 **Dependencies:**
-- `textual>=0.47.0` (added to optional extras: `pip install ppxai[tui]`)
+- `textual>=0.47.0` (added to optional extras: `[tui]`)
 
 ### v1.15.3 - Config Hot-Reload Fix ✅
 

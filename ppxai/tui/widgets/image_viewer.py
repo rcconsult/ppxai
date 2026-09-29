@@ -5,7 +5,7 @@ Uses factory pattern to dispatch to the appropriate handler:
 - FullImageHandler: When textual-imageview is available AND terminal supports images
 - FallbackHandler: When library missing OR terminal doesn't support images
 
-Install for full support: pip install ppxai[tui]
+Install for full support: the [tui] extras (ppxai.constants.install_extra_hint)
 """
 
 from pathlib import Path

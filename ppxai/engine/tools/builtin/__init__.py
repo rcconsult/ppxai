@@ -7,6 +7,8 @@ These tools are registered automatically when the engine starts.
 import logging
 from typing import Optional
 
+from ppxai.constants import install_extra_hint
+
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from . import calculator, datetime_tool, filesystem, preview_log, web
 
@@ -76,8 +78,7 @@ def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = Non
             if pdf_tools.register_tools(manager, engine) is False:
                 logger.warning(
                     "PDF tools (read_pdf, get_pdf_page_image) NOT registered: "
-                    "pypdf missing. Install the [data] extras "
-                    "(pip install 'ppxai[data]')."
+                    f"pypdf missing. Install the [data] extras: {install_extra_hint('data')}."
                 )
         except Exception:
             logger.warning("PDF tools failed to register", exc_info=True)
@@ -88,8 +89,7 @@ def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = Non
             if excel_tools.register_tools(manager, engine) is False:
                 logger.warning(
                     "Excel tools (list_excel_sheets, read_excel_sheet) NOT "
-                    "registered: openpyxl missing. Install the [data] extras "
-                    "(pip install 'ppxai[data]')."
+                    f"registered: openpyxl missing. Install the [data] extras: {install_extra_hint('data')}."
                 )
         except Exception:
             logger.warning("Excel tools failed to register", exc_info=True)
@@ -101,8 +101,8 @@ def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = Non
                 logger.warning(
                     "PowerPoint tools (list_pptx_slides, read_pptx_slide_text, "
                     "render_pptx_slide, summarize_pptx_visual) NOT registered: "
-                    "python-pptx missing. Install the [data] extras "
-                    "(pip install 'ppxai[data]'). Without these the model falls "
+                    f"python-pptx missing. Install the [data] extras: {install_extra_hint('data')}. "
+                    "Without these the model falls "
                     "back to ad-hoc shell scripts for .pptx files."
                 )
         except Exception:

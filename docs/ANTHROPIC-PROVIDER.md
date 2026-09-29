@@ -19,7 +19,7 @@ Native support for Claude over Anthropic's Messages API. Optional — install
 the extra to enable it:
 
 ```bash
-uv sync --extra anthropic     # or: pip install 'ppxai[anthropic]'
+uv sync --extra anthropic     # or: pip install "ppxai[anthropic] @ git+https://github.com/rcconsult/ppxai"
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 

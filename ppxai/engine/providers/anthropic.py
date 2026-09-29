@@ -42,6 +42,8 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
+from ppxai.constants import install_extra_hint
+
 from ...common.logger import get_logger
 from ...config.tls import tls_verify
 from ..model_facts import ModelFacts
@@ -150,7 +152,7 @@ class AnthropicProvider(BaseProvider):
         if not _anthropic_available:
             raise ImportError(
                 "anthropic package not installed. "
-                "Install with: pip install ppxai[anthropic]"
+                f"Install with: {install_extra_hint('anthropic')}"
             )
 
         self.effort = effort

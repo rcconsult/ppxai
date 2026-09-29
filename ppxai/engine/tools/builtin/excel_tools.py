@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ppxai.constants import install_extra_hint
+
 from ...file_ref import FILE_REF_PROPERTIES, resolve_file_reference
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
@@ -89,7 +91,7 @@ class ListExcelSheetsTool(BaseTool):
         try:
             import openpyxl
         except ImportError:
-            return "Error: openpyxl not installed. Install with: pip install 'ppxai[data]'"
+            return f"Error: openpyxl not installed. Install with: {install_extra_hint('data')}"
 
         try:
             wb = openpyxl.load_workbook(str(meta.path), read_only=True, data_only=True)
@@ -193,7 +195,7 @@ class ReadExcelSheetTool(BaseTool):
         try:
             import openpyxl
         except ImportError:
-            return "Error: openpyxl not installed. Install with: pip install 'ppxai[data]'"
+            return f"Error: openpyxl not installed. Install with: {install_extra_hint('data')}"
 
         try:
             wb = openpyxl.load_workbook(str(meta.path), read_only=True, data_only=True)

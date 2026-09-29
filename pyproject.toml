@@ -89,7 +89,7 @@ anthropic = [
 
 # Data processing support (v1.13.8 yaml/hcl, v1.17.4 multimodal file upload)
 # Groups two related but distinct capabilities under one extras name so
-# `pip install 'ppxai[data]'` gives users everything needed for file-based
+# the [data] extras give users everything needed for file-based
 # workflows: YAML/HCL parsing for config tooling, pypdf/pypdfium2 for PDF
 # attachment extraction (ReadPdfTool, GetPdfPageImageTool), and the
 # future Excel/PPTX dependencies added in Phase 4.

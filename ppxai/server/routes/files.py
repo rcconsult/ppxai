@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 
 import ppxai.engine.tools.builtin.pptx_tools as _pptx_tools
+from ppxai.constants import install_extra_hint
 
 from ...common.docx_to_pdf import convert_docx_to_pdf
 from ...common.logger import get_logger
@@ -920,11 +921,11 @@ def render_office_preview(
         # Neither LibreOffice nor python-pptx. The web client renders a
         # formatted "install LibreOffice" card from libreoffice_available;
         # this body is the plain-text equivalent for other clients. The
-        # `pip install 'ppxai[data]'` route only helps source installs — it's
+        # `[data]` extras route only helps source installs — it's
         # a dead end for the frozen binary, so omit it there.
         hint = "Install LibreOffice to render this presentation."
         if not getattr(sys, "frozen", False):
-            hint += " (Or `pip install 'ppxai[data]'` for text extraction.)"
+            hint += f" (Or add the [data] extras for text extraction: {install_extra_hint('data')}.)"
         return _text_fallback(
             kind="presentation", name=name, total=1, content=hint,
         )

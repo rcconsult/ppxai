@@ -239,3 +239,20 @@ class CheckpointBackend(str, Enum):
     NONE = "none"
 
 
+# =============================================================================
+# Installing optional extras
+# =============================================================================
+
+#: ppxai is NOT published on PyPI. The `ppxai` name there belongs to an
+#: unrelated project, so a hint like `pip install 'ppxai[data]'` would install
+#: someone else's package. Every "install the X extra" hint goes through
+#: `install_extra_hint()`; tests/test_no_pypi_install_hints.py fences the rest.
+PPXAI_GIT_URL: Final = "https://github.com/rcconsult/ppxai"
+
+
+def install_extra_hint(extra: str) -> str:
+    """How to add an optional extra (`data`, `gemini`, `anthropic`, `tui`, ...)."""
+    return (f"uv sync --extra {extra} (in a ppxai checkout), or "
+            f'pip install "ppxai[{extra}] @ git+{PPXAI_GIT_URL}"')
+
+

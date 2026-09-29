@@ -30,6 +30,8 @@ import base64
 import io
 from typing import Any
 
+from ppxai.constants import install_extra_hint
+
 from ...file_ref import FILE_REF_PROPERTIES, resolve_file_reference
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
@@ -178,7 +180,7 @@ class ReadPdfTool(BaseTool):
         except ImportError:
             return (
                 "Error: pypdf is not installed. PDF extraction requires the "
-                "[data] extras group: pip install 'ppxai[data]'"
+                f"[data] extras group: {install_extra_hint('data')}"
             )
 
         try:
@@ -315,7 +317,7 @@ class GetPdfPageImageTool(BaseTool):
         except ImportError:
             return (
                 "Error: pypdfium2 is not installed. Page rasterization "
-                "requires the [data] extras group: pip install 'ppxai[data]'"
+                f"requires the [data] extras group: {install_extra_hint('data')}"
             )
 
         pdf = None
