@@ -1,8 +1,9 @@
 # Plan — SSH remote backend (ADR 0013)
 
 **Date:** 2026-09-26
-**Status:** Phases 0–5 implemented on `feature/v1.19.4` (unreleased); phase 6,
-the owner trial, **passed 2026-09-29**. ADR acceptance is the owner's call. Implements [ADR 0013](decisions/0013-ssh-remote-backend.md).
+**Status:** ✅ **Complete.** Phases 0–6 implemented on `feature/v1.19.4`
+(unreleased); the owner trial passed 2026-09-29 and the owner accepted ADR 0013
+the same day, after the two items the trial left open were done (below). Implements [ADR 0013](decisions/0013-ssh-remote-backend.md).
 **Scope:** web client first. VSCode and the TUIs follow only after the web
 path is proven.
 
@@ -18,7 +19,7 @@ next phase starts on instruction.
 | Q1 | Where the hub runs | ✅ Owner: mounted in the local `ppxai-server` |
 | Q2 | Config key for the host inventory | ✅ Owner: new top-level `remote.*` |
 | Q3 | Windows OpenSSH → remote unix-socket forward | ✅ Measured 2026-09-26 against WSL2 sshd: works with the stock Windows client |
-| Q4 | Connection reuse | ✅ Measured: one long-lived forward per server; the proxy must pool keep-alive connections. The 6-vs-61 ms spread is undiagnosed — re-measure against uvicorn in Phase 4 |
+| Q4 | Connection reuse | ✅ Measured: one long-lived forward per server; the proxy must pool keep-alive connections. The 6-vs-61 ms spread is undiagnosed; deferred at acceptance (ADR Q4) |
 | Q5 | Hosts without the S3 contract | ✅ Owner: refuse |
 
 Exit: ADR 0013 revised in place with the answers, still Proposed. **Phase 0 is complete.**
@@ -111,7 +112,7 @@ the browser; an unknown host id is a 404, never a forward.
 
 **Status (2026-09-28): item 1 (prefix recognition) landed early**, because without it phase 4 was misleading, not merely incomplete. win32-ppxai's live hub run from Windows loaded `/h/wsl/<id>/`: HTML and assets came through the proxy, but every API call went to the LOCAL hub server, so the page showed and restored the Windows session. `app.js` now derives its prefix in one place (`servedPathPrefix()`: `/h/<host>/<id>` or `/s/<slug>`), and `handleQuit()` under `/h/` detaches and returns to `/`, never stopping anything; the coder `/s/` branch is unchanged (`tests/test_web_hub_prefix.py`, `tests/test_session_end_workflows.py`). The same run found that a FROZEN `ppxai-server` reports and runs in its binary's directory, because the entry script chdirs there; the launch directory is now recorded first and restored on the announce path (`tests/test_announced_workdir.py`). The picker (item 2) is still to do.
 
-**Status (2026-09-28, later): items 2–4 implemented** as the owner's design, the **SSH Launcher** in the right split pane (ADR S6 "As built"): `ppxai/web/components/views/ssh-launcher-view.js`, the header button, host badge and `/#ssh` wiring in `app.js`, styles in `styles.css`. Tests: `tests/test_ssh_launcher_view.py` runs the renderer and the view under node with a fake `fetch` (escaping, no token rendered, counts only through healthy attachments and never attaching, Stop asks, Detach doesn't, one named tab per server, overlapping refreshes coalesce; mutation-checked), `tests/test_web_hub_prefix.py` pins Leave → `/#ssh`. A live Playwright run against a real hub and a real remote `ppxai-server` (fake ssh shim, as in the e2e test) walked button → launcher → New server → Open (new tab: badge `🖥 lab · <id8>`, title `ppxai — lab`, no SSH button) → Leave (back on `/`, launcher open, server "not attached") → Stop, with no console errors. That run found the one server change: the launcher's count reads re-attached a just-detached server through the proxy's auto-attach, so `X-Ppxai-Hub-Attach: no` now disables auto-attach per request (`tests/test_remote_hub.py::TestObserveOnly`). Not yet done: a Playwright spec in `tests/e2e/` (the live run was a scratch script). The run on Windows against a real sshd is done: phase 6.
+**Status (2026-09-28, later): items 2–4 implemented** as the owner's design, the **SSH Launcher** in the right split pane (ADR S6 "As built"): `ppxai/web/components/views/ssh-launcher-view.js`, the header button, host badge and `/#ssh` wiring in `app.js`, styles in `styles.css`. Tests: `tests/test_ssh_launcher_view.py` runs the renderer and the view under node with a fake `fetch` (escaping, no token rendered, counts only through healthy attachments and never attaching, Stop asks, Detach doesn't, one named tab per server, overlapping refreshes coalesce; mutation-checked), `tests/test_web_hub_prefix.py` pins Leave → `/#ssh`. A live Playwright run against a real hub and a real remote `ppxai-server` (fake ssh shim, as in the e2e test) walked button → launcher → New server → Open (new tab: badge `🖥 lab · <id8>`, title `ppxai — lab`, no SSH button) → Leave (back on `/`, launcher open, server "not attached") → Stop, with no console errors. That run found the one server change: the launcher's count reads re-attached a just-detached server through the proxy's auto-attach, so `X-Ppxai-Hub-Attach: no` now disables auto-attach per request (`tests/test_remote_hub.py::TestObserveOnly`). The scratch run became `tests/e2e/ssh-launcher.spec.ts` on 2026-09-29 (`npm run test:ssh`). The run on Windows against a real sshd is done: phase 6.
 
 - `app.js` prefix recognition: `/h/<host>/<id>` alongside `/s/<user>`.
 - `handleQuit()`: under `/h/`, detach and return to the picker.
@@ -165,15 +166,19 @@ stop. Findings feed back into the ADR before acceptance.
    reported its binary's directory as its workdir. Both fixed in `5c539936`
    (phase 5 above).
 
-**Open after the trial** (both deferred by the owner, 2026-09-29):
+**Left open by the trial, done 2026-09-29** (the owner first deferred both,
+then asked for them before accepting the ADR):
 
-- A Playwright spec in `tests/e2e/` for the Launcher.
-- Remote hosts need a `ppxai-server` with `e3746f65`: an older one-file
-  build launches, then fails every chat. The hub's `MIN_SERVER_VERSION`
-  (`ppxai/remote/contract.py`) still says `1.19.3`, and `e3746f65` did not
-  change the version number, so the check cannot tell the two apart today.
-  Whether to enforce it (e.g. a contract or version bump) is the owner's
-  call.
+- A Playwright spec for the Launcher: `tests/e2e/ssh-launcher.spec.ts`,
+  its own `ssh` project, run with `npm run test:ssh` in `tests/e2e/`
+  (POSIX only; the remote is `tests/fake_ssh.py`, so no host or key).
+- Remote builds without `e3746f65`: an older one-file build launched, then
+  failed every chat, and the version number could not say so. The registry
+  moved to contract 2 (same fields; the new meaning is "`--detach` works
+  from a one-file build"), the hub retired contract 1, and before a launch
+  the hub runs `ppxai-server --registry-contract` on the host and refuses a
+  binary without it, or with a contract it does not read, before anything
+  starts. `MIN_SERVER_VERSION` is gone. See ADR S3 "As built".
 
 ---
 

@@ -112,7 +112,7 @@ main()                                                 [server/http.py]
     ├─ --announce: token = new_token() → os.environ["PPXAI_API_TOKEN"]; _IDLE_TIMEOUT_OVERRIDE = 0
     ├─ initialize(); make sure the secret chain reads PPXAI_API_TOKEN (auth ON for socket requests)
     ├─ registry.build_entry(...) → write_entry()       [registry.py:84, :119] ~/.ppxai/run/servers/<id>.json, 0600
-    │   {contract:1, id, pid (THIS process), socket, token, version, app_state_schema, workdir, started_at, label}
+    │   {contract:2, id, pid (THIS process), socket, token, version, app_state_schema, workdir, started_at, label}
     ├─ _report(fd, entry)                              → JSON to stdout / to the waiting launcher
     └─ uvicorn on fd=sock.fileno()                     (serves until POST /shutdown or a signal)
         finally: remove_entry(id); unlink(socket)
@@ -143,9 +143,9 @@ hub_servers(request, host)                             [:244]
     │           └─ ssh -o BatchMode=yes -o ConnectTimeout=N -T <dest> '<argv quoted once>'
     │       rc≠0 → ServerNotInstalledError (409)
     ├─ _run(host, [binary, "--list", "--json"])
-    │   └─ rc≠0 → _refuse_if_unsupported(): argparse "unrecognized arguments" → UnsupportedServerError (409, names --version + minimum)
-    └─ for each entry: parse_entry(host, raw)          [remote/contract.py:83]
-        ├─ unknown `contract` → UnknownContractError  ┐ collected in `refused`,
+    │   └─ rc≠0 → _refuse_if_unsupported(): argparse usage error (rc 2) → UnsupportedServerError (409, names --version + the hub's version)
+    └─ for each entry: parse_entry(host, raw) → parse_contract()   [remote/contract.py]
+        ├─ retired (1) / unknown `contract` → RetiredContractError / UnknownContractError  ┐ collected in `refused`,
         └─ bad field / non-POSIX socket path → Malformed ┘ the rest still listed
    → {"servers": [RemoteServer.public()…], "refused": [...]}
 ```
@@ -168,6 +168,10 @@ hub_launch(request, host)                              [routes/remote_hub.py:265
 ├─ body {"workdir"?, "label"?}: single-line strings only → else 400
 └─ manager.launch(host, workdir, label)               [manager.py:297]
     ├─ _resolve_binary(host)
+    ├─ _check_contract(): _run(host, [binary, "--registry-contract"]) BEFORE anything starts
+    │   ├─ rc 2 (no such flag: 1.19.3, pre-contract-2 builds) → UnsupportedServerError (409)
+    │   ├─ not a number → MalformedEntryError; retired/unknown → Retired/UnknownContractError (409)
+    │   └─ contract 2 → go on
     ├─ argv = [binary, "--uds", "--announce", "--detach", ("--label", label)]
     ├─ workdir → ["sh","-c",_CD_EXEC_SCRIPT,"sh", workdir, *argv]   ("~" = remote $HOME)
     ├─ _run(host, argv, launch_timeout=90)  →  §2 runs on the remote host

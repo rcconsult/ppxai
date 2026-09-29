@@ -2,7 +2,8 @@
 
 **Date:** 2026-09-26 (revised 2026-09-26 — owner decided open questions 1, 2
 and 5; 3 and 4 measured against a WSL2 sshd the same day)
-**Status:** 🚧 **In progress.** Phase 1 (S3, the remote-side contract) was
+**Status:** ✅ **Accepted** (owner, 2026-09-29), implemented on
+`feature/v1.19.4`, unreleased. History: phase 1 (S3, the remote-side contract) was
 implemented on 2026-09-27 (`78e34b8e`): `ppxai-server --uds/--announce/--detach/--list`,
 the contract-1 registry, verified on Windows, macOS and Ubuntu 24.04. Phase 2
 (S2, the transport) was implemented on 2026-09-28 on `feature/v1.19.4`:
@@ -13,8 +14,9 @@ the same day: `ppxai/server/routes/remote_hub.py`. Phase 5 (S6, the web
 client: `/h/` prefix recognition and the SSH Launcher in the split pane) the
 same day, see S6 "As built". Phase 6 (owner trial) **passed on 2026-09-29**
 (Windows hub → WSL2 Ubuntu 24.04 over real OpenSSH; see the plan's phase 6
-for the checklist and the findings it fixed). Acceptance is the owner's
-call. All of it is unreleased, on `feature/v1.19.4`. Revise in place.
+for the checklist and the findings it fixed). After the trial the hub
+retired registry contract 1 (S3 "As built"), and the SSH Launcher got a
+Playwright spec (`tests/e2e/ssh-launcher.spec.ts`). Revise in place.
 **Related:**
 - [`../plan-ssh-remote-backend.md`](../plan-ssh-remote-backend.md) — the phased plan that implements this record
 - [`../patterns/protocol-dependency-inversion.md`](../patterns/protocol-dependency-inversion.md) — the `Protocol`-in-leaf-module pattern the transport seam uses
@@ -165,12 +167,12 @@ Registry entry, `~/.ppxai/run/servers/<id>.json`, mode 0600:
 
 ```json
 {
-  "contract": 1,
+  "contract": 2,
   "id": "9f2c…",
   "pid": 41233,
   "socket": "/home/u/.ppxai/run/sock/9f2c.sock",
   "token": "…",
-  "version": "1.19.3",
+  "version": "1.19.4",
   "app_state_schema": "1.1",
   "workdir": "/home/u/src/project",
   "started_at": "2026-09-26T10:14:03Z",
@@ -182,6 +184,22 @@ Registry entry, `~/.ppxai/run/servers/<id>.json`, mode 0600:
 know, with a message naming both numbers. The token lives in a 0600 file inside
 the owner's home — the same trust boundary as `~/.ppxai/.env`, and the hub reads
 it only through the user's own SSH session.
+
+**As built (2026-09-29): contract 2, and contract 1 is retired.** A
+PyInstaller one-file `ppxai-server` from before `e3746f65` starts under
+`--detach`, answers `/health`, and then fails every chat (its unpacked
+bundle was deleted when the launcher exited). That fix did not change the
+version number, so `version` cannot tell the two builds apart. Contract 2
+has the same fields as 1; what it adds is the meaning "this server's
+`--detach` works from a one-file build". The hub reads contract 2 only and
+refuses contract 1 by name, with the reason (`RETIRED_CONTRACTS` in
+`ppxai/remote/contract.py`). Before a launch the hub runs
+`ppxai-server --registry-contract` on the host, which prints the contract
+the binary writes. A binary without the flag (argparse exits 2) or with a
+contract the hub does not read is refused before anything starts; the
+message names the remote's version and says to install the hub's version or
+rebuild from the same source. A version floor could not do this: the hub
+ships in a release after 1.19.4, and `e3746f65` did not change the number.
 
 ### S4 — `RemoteSessionManager` (local service)
 
@@ -222,7 +240,8 @@ remote server is always an explicit act.
 - The remote binary is the configured `ppxai_server`, else `ppxai-server` on
   the login PATH, else `~/.local/bin/ppxai-server` (non-interactive SSH login
   PATHs often lack `~/.local/bin`). An old server (argparse rejects `--list`
-  or `--uds`) is refused with its `--version` and the minimum, 1.19.3.
+  or `--uds`, or `--registry-contract` before a launch) is refused with its
+  `--version` and the hub's own version to install (S3 "As built").
 
 The manager lives in a new package `ppxai/remote/` that imports nothing from
 `ppxai/engine/` or `ppxai/commands/` — it moves bytes and never interprets a
@@ -246,6 +265,13 @@ The proxy must:
 
 `/` on the hub is the host/session picker. `/h/<host>/` with no server id
 lists that host's servers.
+
+**As built (2026-09-29):** the proxy streams, upgrades websockets, injects
+the token, sends `Host: localhost`, and keeps one pooled keep-alive client
+per attached server (`remote_hub.py`), as Q4 requires. The two picker
+routes were not built: `/` stays the chat UI, and `/h/<host>/` has no route
+of its own. A host's servers are listed by `GET /hub/hosts/<host>/servers`
+and shown by the SSH Launcher (S6 "As built").
 
 ### S6 — Web client
 
@@ -356,7 +382,10 @@ exists to detect. Serving the remote's own UI removes the skew.
    **Real-server re-measure (2026-09-26, `ppxai-server` 1.19.3 on WSL2 over a
    loopback-TCP forward):** `/health` keep-alive ×50 = 64 ms avg, 31 min, 80
    max — the same shape as the `http.server` numbers, so the spread is the
-   tunnel, not the test server. Still undiagnosed.
+   tunnel, not the test server. Still undiagnosed. **Deferred at acceptance
+   (2026-09-29):** the proxy pools keep-alive connections as (b) requires.
+   The spread itself was not re-measured through the hub. Diagnosing it is
+   a tuning task; revisit if remote sessions feel slow.
 
    **Real-server perimeter test, same run — 10/10 through the forward:**
    `/health`; `/` (web UI served, `APP_STATE_SCHEMA` injected);
@@ -384,7 +413,8 @@ exists to detect. Serving the remote's own UI removes the skew.
      `degraded`.
 5. **Remote hosts without the S3 contract — DECIDED: refuse** with a message
    naming the remote's version and the minimum that has the contract. No TCP
-   fallback launch.
+   fallback launch. As built: the same rule covers a server that has the
+   contract but an older one (contract 1, S3 "As built").
 
 ## Future / proper solution
 

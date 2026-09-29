@@ -73,7 +73,7 @@ plain Starlette 404 (pinned for the k8s coder pods by
 |---|---|---|
 | Host inventory (S1) | `config/remote.py`, `remote/inventory.py` | `remote.hosts` = `[{id, ssh, ppxai_server?}]`; a fourth top-level config axis |
 | Transport (S2) | `remote/transport.py`, `remote/openssh.py` | `RemoteTransport` Protocol; `run()` = `ssh -T`, `forward()` = `ssh -N -L`; typed errors from OpenSSH stderr |
-| Remote contract (S3) | `server/registry.py`, `http.py::_run_announced` | `--uds --announce --detach`, `--list --json`; registry contract 1 |
+| Remote contract (S3) | `server/registry.py`, `http.py::_run_announced` | `--uds --announce --detach`, `--list --json`; registry contract 2 (the hub refuses 1) |
 | Session manager (S4) | `remote/manager.py`, `remote/contract.py` | attachments, the state machine, 5 s monitor, launch/attach/detach/stop |
 | Hub routes (S5) | `server/routes/remote_hub.py` | `/hub/*` control API; `/h/<host>/<id>/…` HTTP/SSE/websocket proxy |
 | Web client (S6) | `web/app.js` `servedPathPrefix()`, `components/views/ssh-launcher-view.js` | API base inside the prefix; the SSH Launcher split pane |
