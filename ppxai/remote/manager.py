@@ -44,7 +44,6 @@ from typing import Any
 import httpx
 
 from .contract import (
-    MIN_SERVER_VERSION,
     MalformedEntryError,
     RemoteServer,
     ServerNotInstalledError,
@@ -52,7 +51,9 @@ from .contract import (
     UnknownHostError,
     UnknownServerError,
     UnsupportedServerError,
+    parse_contract,
     parse_entry,
+    upgrade_hint,
 )
 from .inventory import RemoteHost
 from .openssh import OpenSSHTransport
@@ -259,19 +260,38 @@ class RemoteSessionManager:
         self._binary[host.id] = path
         return path
 
+    async def _server_version(self, host: RemoteHost, binary: str) -> str:
+        probe = await self._run(host, [binary, "--version"], self._run_timeout_s)
+        if probe.rc == 0 and probe.stdout.strip():
+            return probe.stdout.strip().split()[-1]
+        return "of an unknown version"
+
     async def _refuse_if_unsupported(self, host: RemoteHost, binary: str, result) -> None:
-        """A non-zero `--list`/`--uds`: an old server (argparse exit 2) is
-        refused by name and version (ADR 0013 Q5); anything else is a plain
-        command failure."""
-        if result.rc == 2 and "unrecognized arguments" in result.stderr:
-            version = "an unknown version"
-            probe = await self._run(host, [binary, "--version"], self._run_timeout_s)
-            if probe.rc == 0 and probe.stdout.strip():
-                version = probe.stdout.strip().split()[-1]
+        """A non-zero `--list`/`--uds`/`--registry-contract`: an old server
+        (argparse's usage error, exit 2) is refused by name and version (ADR
+        0013 Q5); anything else is a plain command failure. Classified on
+        the exit code alone: a wrapper may print the usage to stdout."""
+        if result.rc == 2:
+            version = await self._server_version(host, binary)
             raise UnsupportedServerError(
-                f"{host.id}: ppxai-server {version} cannot be driven by the hub; "
-                f"it needs {MIN_SERVER_VERSION} or newer on the remote host")
+                f"{host.id}: ppxai-server {version} cannot be driven by this hub; "
+                f"{upgrade_hint(host.id)}")
         result.check()
+
+    async def _check_contract(self, host: RemoteHost, binary: str) -> None:
+        """Refuse a remote whose server this hub cannot use BEFORE starting
+        one: a server that writes a retired contract would start, answer
+        /health, and then fail every chat. Not cached: the remote binary can
+        be upgraded while the hub runs."""
+        result = await self._run(host, [binary, "--registry-contract"], self._run_timeout_s)
+        if result.rc != 0:
+            await self._refuse_if_unsupported(host, binary, result)
+        try:
+            contract = int(result.stdout.strip())
+        except ValueError:
+            raise MalformedEntryError(
+                f"{host.id}: --registry-contract did not print a number") from None
+        parse_contract(host.id, contract, f"ppxai-server at {binary}")
 
     async def servers(self, host_id: str) -> ServerListing:
         """The host's live announced servers (S3 `--list --json`)."""
@@ -299,6 +319,7 @@ class RemoteSessionManager:
         """Start a detached announced server on the host and return its entry."""
         host = self._host(host_id)
         binary = await self._resolve_binary(host)
+        await self._check_contract(host, binary)
         argv = [binary, "--uds", "--announce", "--detach"]
         if label:
             argv += ["--label", label]

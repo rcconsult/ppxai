@@ -16,14 +16,27 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from ..version import __version__
+
 #: Field set per contract number the hub can read.
 KNOWN_CONTRACTS: dict[int, tuple[str, ...]] = {
-    1: ("contract", "id", "pid", "socket", "token", "version",
+    2: ("contract", "id", "pid", "socket", "token", "version",
         "app_state_schema", "workdir", "started_at", "label"),
 }
 
-#: The first release whose `ppxai-server` has `--uds/--announce/--list`.
-MIN_SERVER_VERSION = "1.19.3"
+#: Contracts the hub recognises and refuses, with the reason it gives.
+#: The version number cannot carry this: the fix that retired contract 1
+#: (`e3746f65`) did not change it.
+RETIRED_CONTRACTS: dict[int, str] = {
+    1: ("that server predates the one-file --detach fix, and launched "
+        "detached from a one-file build it fails every chat"),
+}
+
+
+def upgrade_hint(host: str) -> str:
+    """What to do about a remote host whose server this hub refuses."""
+    return (f"install ppxai {__version__} (this hub's version) or newer on {host}, "
+            "or rebuild its ppxai-server from the same source as this hub")
 
 #: A server id is a URL path segment (`/h/<host>/<id>/`).
 SERVER_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -53,13 +66,17 @@ class UnknownContractError(RemoteHubError):
     """A registry entry carries a contract number this hub cannot read."""
 
 
+class RetiredContractError(UnknownContractError):
+    """A registry entry carries a contract this hub knows and no longer accepts."""
+
+
 class MalformedEntryError(RemoteHubError):
     """A registry entry is not what its contract promises."""
 
 
 @dataclass(frozen=True)
 class RemoteServer:
-    """One announced server on a remote host (a contract-1 registry entry)."""
+    """One announced server on a remote host (a registry entry at a contract the hub reads)."""
 
     host: str
     id: str
@@ -80,17 +97,26 @@ class RemoteServer:
         return f"RemoteServer(host={self.host!r}, id={self.id!r}, version={self.version!r})"
 
 
+def parse_contract(host: str, contract: Any, who: str = "ppxai-server") -> int:
+    """`contract` if this hub reads it, else a typed refusal naming it."""
+    if contract in RETIRED_CONTRACTS:
+        raise RetiredContractError(
+            f"{host}: {who} speaks registry contract {contract}, which this ppxai "
+            f"no longer accepts: {RETIRED_CONTRACTS[contract]}; {upgrade_hint(host)}")
+    if contract not in KNOWN_CONTRACTS:
+        known = ", ".join(str(c) for c in sorted(KNOWN_CONTRACTS))
+        raise UnknownContractError(
+            f"{host}: {who} speaks registry contract {contract!r}; this ppxai "
+            f"understands contract {known}. Upgrade the side that is older.")
+    return contract
+
+
 def parse_entry(host: str, raw: Any) -> RemoteServer:
     """One `--list --json` element -> `RemoteServer`, or a typed refusal."""
     if not isinstance(raw, dict):
         raise MalformedEntryError(f"{host}: registry entry is not an object")
     contract = raw.get("contract")
-    if contract not in KNOWN_CONTRACTS:
-        known = ", ".join(str(c) for c in sorted(KNOWN_CONTRACTS))
-        raise UnknownContractError(
-            f"{host}: server {raw.get('id', '?')!r} speaks registry contract "
-            f"{contract!r}; this ppxai understands contract {known}. "
-            "Upgrade the side that is older.")
+    parse_contract(host, contract, f"server {raw.get('id', '?')!r}")
     missing = [f for f in KNOWN_CONTRACTS[contract] if f not in raw]
     if missing:
         raise MalformedEntryError(f"{host}: contract-{contract} entry lacks {missing}")

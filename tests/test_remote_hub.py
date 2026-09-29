@@ -148,7 +148,7 @@ class Served:
 
 
 def _entry(sid, token):
-    return {"contract": 1, "id": sid, "pid": 4242, "socket": f"/r/{sid}.sock",
+    return {"contract": 2, "id": sid, "pid": 4242, "socket": f"/r/{sid}.sock",
             "token": token, "version": "1.19.4", "app_state_schema": "1.1",
             "workdir": "/home/u/src", "started_at": "2026-09-28T10:00:00Z", "label": None}
 

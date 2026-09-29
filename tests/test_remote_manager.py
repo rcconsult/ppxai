@@ -25,7 +25,6 @@ import pytest
 
 from ppxai.remote import (
     KNOWN_CONTRACTS,
-    MIN_SERVER_VERSION,
     ForwardFailedError,
     HostUnreachableError,
     InventoryError,
@@ -35,6 +34,7 @@ from ppxai.remote import (
     RemoteCommandFailedError,
     RemoteHost,
     RemoteSessionManager,
+    RetiredContractError,
     RunResult,
     ServerNotInstalledError,
     State,
@@ -44,7 +44,7 @@ from ppxai.remote import (
     UnsupportedServerError,
     parse_hosts,
 )
-from ppxai.remote.contract import parse_entry, version_tuple
+from ppxai.remote.contract import RETIRED_CONTRACTS, parse_entry, version_tuple
 from ppxai.remote.manager import (
     _CD_EXEC_SCRIPT,
     _DEFAULT_CANDIDATES,
@@ -69,7 +69,7 @@ EP = LocalEndpoint("tcp", "127.0.0.1:50001")
 
 def entry(sid=SID, **overrides):
     base = {
-        "contract": 1, "id": sid, "pid": 4242, "socket": SOCK if sid == SID else f"/run/{sid}.sock",
+        "contract": 2, "id": sid, "pid": 4242, "socket": SOCK if sid == SID else f"/run/{sid}.sock",
         "token": "tok-" + sid, "version": "1.19.4", "app_state_schema": "1.1",
         "workdir": "/home/u/src", "started_at": "2026-09-28T10:00:00Z", "label": None,
     }
@@ -94,6 +94,15 @@ class Rig:
             clock=lambda: self.now, retry_base_s=1, retry_max_s=8)
         self.mgr.subscribe(self.events.append)
         self.on_run(DISCOVER, RunResult(0, BIN + "\n", ""))
+        self.contract(RunResult(0, f"{registry.CONTRACT}\n", ""))
+
+    def version(self, text):
+        """What `ppxai-server --version` prints on the host (replaces, not queues)."""
+        self.runs[(BIN, "--version")] = [RunResult(0, f"ppxai-server {text}\n", "")]
+
+    def contract(self, outcome):
+        """What `ppxai-server --registry-contract` does on the host (replaces)."""
+        self.runs[(BIN, "--registry-contract")] = [outcome]
 
     def _factory(self, host):
         t = FakeTransport(runs=self.runs, forwards=self.forwards)
@@ -180,13 +189,29 @@ class TestContract:
         server = parse_entry("gpu01", raw)
         assert (server.id, server.token, server.label) == (SID, "t", "lab")
 
-    def test_the_minimum_version_is_not_newer_than_this_release(self):
-        assert version_tuple(MIN_SERVER_VERSION) <= version_tuple(__version__)
+    def test_version_tuple_reads_leading_numbers(self):
+        assert version_tuple("1.19.4") == (1, 19, 4)
+        assert version_tuple("1.20.0rc1") == (1, 20, 0)
 
     def test_an_unknown_contract_names_both_numbers(self):
         with pytest.raises(UnknownContractError) as exc:
-            parse_entry("gpu01", entry(contract=2))
-        assert "contract 2" in str(exc.value) and "contract 1" in str(exc.value)
+            parse_entry("gpu01", entry(contract=3))
+        assert "contract 3" in str(exc.value) and "contract 2" in str(exc.value)
+
+    def test_contract_1_is_refused_with_the_reason_and_the_minimum(self):
+        # A contract-1 server is 1.19.3 or a 1.19.4 build before e3746f65:
+        # launched detached from a one-file build, it fails every chat.
+        with pytest.raises(RetiredContractError) as exc:
+            parse_entry("gpu01", entry(contract=1))
+        message = str(exc.value)
+        assert "contract 1" in message and "--detach" in message
+        assert __version__ in message and "rebuild" in message
+
+    def test_a_retired_contract_is_still_an_unknown_contract_to_callers(self):
+        # remote_hub maps UnknownContractError to its status and listings
+        # file it under `refused`; the subclass must keep both working.
+        assert issubclass(RetiredContractError, UnknownContractError)
+        assert not set(RETIRED_CONTRACTS) & set(KNOWN_CONTRACTS)
 
     @pytest.mark.parametrize("change", [
         {"id": "../etc"}, {"pid": "1"}, {"pid": True}, {"socket": "rel.sock"},
@@ -244,6 +269,13 @@ class TestServers:
         assert [s.id for s in listing.servers] == [SID, "b" * 16]
         assert listing.refused == []
 
+    async def test_a_contract_1_server_is_listed_as_refused_not_dropped(self):
+        rig = Rig()
+        rig.listing(entry(), entry("d" * 16, contract=1))
+        listing = await rig.mgr.servers("gpu01")
+        assert [s.id for s in listing.servers] == [SID]
+        assert len(listing.refused) == 1 and "contract 1" in listing.refused[0]
+
     async def test_an_unknown_contract_is_refused_without_hiding_the_rest(self):
         rig = Rig()
         rig.listing(entry(), entry("c" * 16, contract=9))
@@ -281,10 +313,10 @@ class TestServers:
     async def test_an_old_server_is_refused_naming_its_version(self):
         rig = Rig()
         rig.on_run(LIST, RunResult(2, "", "ppxai-server: error: unrecognized arguments: --list --json\n"))
-        rig.on_run([BIN, "--version"], RunResult(0, "ppxai-server 1.19.2\n", ""))
+        rig.version("1.19.2")
         with pytest.raises(UnsupportedServerError) as exc:
             await rig.mgr.servers("gpu01")
-        assert "1.19.2" in str(exc.value) and MIN_SERVER_VERSION in str(exc.value)
+        assert "1.19.2" in str(exc.value) and __version__ in str(exc.value)
 
     async def test_any_other_failure_is_a_command_failure(self):
         rig = Rig()
@@ -332,9 +364,69 @@ class TestLaunch:
     async def test_an_old_server_is_refused(self):
         rig = Rig()
         rig.on_run(self.LAUNCH, RunResult(2, "", "error: unrecognized arguments: --uds --announce --detach\n"))
-        rig.on_run([BIN, "--version"], RunResult(0, "ppxai-server 1.18.8\n", ""))
+        rig.version("1.18.8")
         with pytest.raises(UnsupportedServerError, match="1.18.8"):
             await rig.mgr.launch("gpu01")
+
+    def runs(self, rig):
+        return [argv for t in rig.made for argv, _ in t.run_calls]
+
+    async def test_the_contract_is_checked_before_the_launch(self):
+        rig = Rig()
+        rig.on_run(self.LAUNCH, RunResult(0, json.dumps(entry()), ""))
+        await rig.mgr.launch("gpu01")
+        runs = self.runs(rig)
+        assert runs.index([BIN, "--registry-contract"]) < runs.index(self.LAUNCH)
+
+    async def test_a_binary_without_the_probe_is_refused_before_it_starts(self):
+        # 1.19.3, and builds before the contract bump, have --uds/--announce/
+        # --detach, so the launch would succeed and leave a server that fails
+        # every chat. Their argparse rejects the probe; nothing may start.
+        rig = Rig()
+        rig.contract(RunResult(2, "", "error: unrecognized arguments: --registry-contract\n"))
+        rig.version("1.19.3")
+        with pytest.raises(UnsupportedServerError) as exc:
+            await rig.mgr.launch("gpu01")
+        assert "1.19.3" in str(exc.value) and "rebuild" in str(exc.value)
+        assert self.LAUNCH not in self.runs(rig)
+
+    async def test_a_usage_error_printed_to_stdout_is_still_an_old_server(self):
+        rig = Rig()
+        rig.contract(RunResult(2, "usage: ppxai-server [-h] ...\n", ""))
+        rig.version("1.19.3")
+        with pytest.raises(UnsupportedServerError):
+            await rig.mgr.launch("gpu01")
+        assert self.LAUNCH not in self.runs(rig)
+
+    async def test_a_retired_contract_is_refused_before_it_starts(self):
+        rig = Rig()
+        rig.contract(RunResult(0, "1\n", ""))
+        with pytest.raises(RetiredContractError, match="contract 1"):
+            await rig.mgr.launch("gpu01")
+        assert self.LAUNCH not in self.runs(rig)
+
+    async def test_an_unknown_contract_is_refused_before_it_starts(self):
+        rig = Rig()
+        rig.contract(RunResult(0, "7\n", ""))
+        with pytest.raises(UnknownContractError, match="contract 7"):
+            await rig.mgr.launch("gpu01")
+        assert self.LAUNCH not in self.runs(rig)
+
+    async def test_a_probe_that_prints_no_number_is_refused(self):
+        rig = Rig()
+        rig.contract(RunResult(0, "two\n", ""))
+        with pytest.raises(MalformedEntryError, match="registry-contract"):
+            await rig.mgr.launch("gpu01")
+        assert self.LAUNCH not in self.runs(rig)
+
+    async def test_the_probe_uses_the_discovered_binary(self):
+        rig = Rig([RemoteHost("gpu01", "gpu01", "~/opt/ppxai-server")])
+        other = "/home/u/opt/ppxai-server"
+        rig.on_run(["sh", "-c", _DISCOVER_SCRIPT, "sh", "~/opt/ppxai-server"],
+                   RunResult(0, other + "\n", ""))
+        rig.on_run([other, "--registry-contract"], RunResult(0, f"{registry.CONTRACT}\n", ""))
+        rig.on_run([other, "--uds", "--announce", "--detach"], RunResult(0, json.dumps(entry()), ""))
+        assert (await rig.mgr.launch("gpu01")).id == SID
 
 
 # ---------------------------------------------------------------------------

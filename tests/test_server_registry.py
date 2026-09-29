@@ -165,6 +165,17 @@ class TestTheCliRefusesMisuse:
     def test_windows_refuses_uds_with_a_clear_message(self, monkeypatch, capsys):
         assert "POSIX" in _refused(monkeypatch, capsys, "--uds", "--announce")
 
+    def test_registry_contract_prints_the_contract_and_starts_nothing(
+            self, monkeypatch, capsys):
+        # The hub runs this before a launch (ppxai/remote/manager.py); a
+        # binary without the flag is refused by argparse, which the hub
+        # reads as "too old" and never starts it.
+        monkeypatch.setattr(sys, "argv", ["ppxai-server", "--registry-contract"])
+        with pytest.raises(SystemExit) as exc:
+            server_http.run_server()
+        assert exc.value.code == 0
+        assert capsys.readouterr().out.strip() == str(registry.CONTRACT)
+
     def test_list_with_no_servers_says_so(self):
         """The one subprocess case: it proves the real `python -m` entry
         point, on every platform (the launch tests below are POSIX-only)."""

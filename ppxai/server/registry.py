@@ -35,9 +35,14 @@ from ..common.process import pid_alive
 from ..version import __version__
 
 #: Bump on ANY change to the entry's fields or their meaning.
-CONTRACT = 1
+#: 2 (2026-09-29): same fields as 1; the meaning added is that a server
+#: which writes it survives `--detach` from a PyInstaller one-file build
+#: (`e3746f65`). A contract-1 server launched that way starts, then fails
+#: every chat, and its version number cannot say so (the fix did not bump
+#: it), so the hub retires contract 1 (`ppxai/remote/contract.py`).
+CONTRACT = 2
 
-#: Every key an entry carries at CONTRACT 1, in write order.
+#: Every key an entry carries at CONTRACT 2 (unchanged from 1), in write order.
 ENTRY_FIELDS = (
     "contract", "id", "pid", "socket", "token", "version",
     "app_state_schema", "workdir", "started_at", "label",

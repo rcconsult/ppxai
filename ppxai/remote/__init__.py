@@ -18,10 +18,10 @@ nothing from `ppxai.engine` or `ppxai.commands` (fenced by
 
 from .contract import (
     KNOWN_CONTRACTS,
-    MIN_SERVER_VERSION,
     MalformedEntryError,
     RemoteHubError,
     RemoteServer,
+    RetiredContractError,
     ServerNotInstalledError,
     UnknownContractError,
     UnknownHostError,
@@ -46,11 +46,11 @@ from .transport import (
 
 __all__ = [
     "KNOWN_CONTRACTS",
-    "MIN_SERVER_VERSION",
     "InventoryError",
     "MalformedEntryError",
     "RemoteHost",
     "RemoteHubError",
+    "RetiredContractError",
     "RemoteServer",
     "RemoteSessionManager",
     "ServerListing",

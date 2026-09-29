@@ -885,9 +885,15 @@ def run_server():
     parser.add_argument("--list", action="store_true", dest="list_servers",
                         help="List live announced servers (pruning dead entries) and exit")
     parser.add_argument("--json", action="store_true", help="With --list: print JSON")
+    parser.add_argument("--registry-contract", action="store_true",
+                        help="Print the registry contract this server writes and exit "
+                             "(a hub checks it before a launch)")
 
     args = parser.parse_args()
 
+    if args.registry_contract:
+        print(registry.CONTRACT)
+        sys.exit(0)
     if args.list_servers:
         sys.exit(_list_servers(as_json=args.json))
     if args.uds is not None or args.announce or args.detach:
