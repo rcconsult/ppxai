@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-26
 **Status:** Phases 0–5 implemented on `feature/v1.19.4` (unreleased); phase 6,
-the owner trial, is next. Implements [ADR 0013](decisions/0013-ssh-remote-backend.md).
+the owner trial, **passed 2026-09-29**. ADR acceptance is the owner's call. Implements [ADR 0013](decisions/0013-ssh-remote-backend.md).
 **Scope:** web client first. VSCode and the TUIs follow only after the web
 path is proven.
 
@@ -111,7 +111,7 @@ the browser; an unknown host id is a 404, never a forward.
 
 **Status (2026-09-28): item 1 (prefix recognition) landed early**, because without it phase 4 was misleading, not merely incomplete. win32-ppxai's live hub run from Windows loaded `/h/wsl/<id>/`: HTML and assets came through the proxy, but every API call went to the LOCAL hub server, so the page showed and restored the Windows session. `app.js` now derives its prefix in one place (`servedPathPrefix()`: `/h/<host>/<id>` or `/s/<slug>`), and `handleQuit()` under `/h/` detaches and returns to `/`, never stopping anything; the coder `/s/` branch is unchanged (`tests/test_web_hub_prefix.py`, `tests/test_session_end_workflows.py`). The same run found that a FROZEN `ppxai-server` reports and runs in its binary's directory, because the entry script chdirs there; the launch directory is now recorded first and restored on the announce path (`tests/test_announced_workdir.py`). The picker (item 2) is still to do.
 
-**Status (2026-09-28, later): items 2–4 implemented** as the owner's design, the **SSH Launcher** in the right split pane (ADR S6 "As built"): `ppxai/web/components/views/ssh-launcher-view.js`, the header button, host badge and `/#ssh` wiring in `app.js`, styles in `styles.css`. Tests: `tests/test_ssh_launcher_view.py` runs the renderer and the view under node with a fake `fetch` (escaping, no token rendered, counts only through healthy attachments and never attaching, Stop asks, Detach doesn't, one named tab per server, overlapping refreshes coalesce; mutation-checked), `tests/test_web_hub_prefix.py` pins Leave → `/#ssh`. A live Playwright run against a real hub and a real remote `ppxai-server` (fake ssh shim, as in the e2e test) walked button → launcher → New server → Open (new tab: badge `🖥 lab · <id8>`, title `ppxai — lab`, no SSH button) → Leave (back on `/`, launcher open, server "not attached") → Stop, with no console errors. That run found the one server change: the launcher's count reads re-attached a just-detached server through the proxy's auto-attach, so `X-Ppxai-Hub-Attach: no` now disables auto-attach per request (`tests/test_remote_hub.py::TestObserveOnly`). Not yet done: a Playwright spec in `tests/e2e/` (the live run was a scratch script), and a run on Windows and against a real sshd.
+**Status (2026-09-28, later): items 2–4 implemented** as the owner's design, the **SSH Launcher** in the right split pane (ADR S6 "As built"): `ppxai/web/components/views/ssh-launcher-view.js`, the header button, host badge and `/#ssh` wiring in `app.js`, styles in `styles.css`. Tests: `tests/test_ssh_launcher_view.py` runs the renderer and the view under node with a fake `fetch` (escaping, no token rendered, counts only through healthy attachments and never attaching, Stop asks, Detach doesn't, one named tab per server, overlapping refreshes coalesce; mutation-checked), `tests/test_web_hub_prefix.py` pins Leave → `/#ssh`. A live Playwright run against a real hub and a real remote `ppxai-server` (fake ssh shim, as in the e2e test) walked button → launcher → New server → Open (new tab: badge `🖥 lab · <id8>`, title `ppxai — lab`, no SSH button) → Leave (back on `/`, launcher open, server "not attached") → Stop, with no console errors. That run found the one server change: the launcher's count reads re-attached a just-detached server through the proxy's auto-attach, so `X-Ppxai-Hub-Attach: no` now disables auto-attach per request (`tests/test_remote_hub.py::TestObserveOnly`). Not yet done: a Playwright spec in `tests/e2e/` (the live run was a scratch script). The run on Windows against a real sshd is done: phase 6.
 
 - `app.js` prefix recognition: `/h/<host>/<id>` alongside `/s/<user>`.
 - `handleQuit()`: under `/h/`, detach and return to the picker.
@@ -125,6 +125,55 @@ the browser; an unknown host id is a 404, never a forward.
 Real hosts, real keys: launch from the picker, chat with tools, open the
 terminal, detach, re-attach from another tab, see the session still there,
 stop. Findings feed back into the ADR before acceptance.
+
+**Status (2026-09-29): PASSED**, run by the owner with win32-ppxai.
+
+- **Setup.** Hub: the installed Windows `ppxai-server` 1.19.4 (built from
+  `297f65d8`) with `remote.hosts = [{"id": "wsl", "ssh": "<alias>"}]`, the
+  alias an `~/.ssh/config` entry for a WSL2 sshd on a local port. Remote:
+  WSL2 Ubuntu 24.04 with a one-file `ppxai-server` (PyInstaller 6.17) built
+  from `e3746f65`. Real OpenSSH, real keys; everything driven from the web
+  SSH Launcher.
+- **Launch.** "New server" started a detached server; its own unpack dir
+  intact, no deleted mappings.
+- **Open.** The remote UI in a new tab, its API under `/h/wsl/<id>/`.
+- **Chat.** A plain turn answered in 2.0 s (`gemini-3.8-flash`); a tool turn
+  (`get_weather`) in 7.5 s; three more turns, no errors in the logs.
+- **Commands and terminal.** `/help`; `/terminal` opened a login shell in the
+  remote home directory, used twice.
+- **Detach and re-attach.** Leave, then Open again: the same session was
+  restored with its new messages (68 → 82), so it persisted across the
+  detach.
+- **Stop.** `POST /shutdown` 200, a clean stop after about 6 minutes; the
+  registry entry, the socket and the unpack dir were gone, with no new stale
+  unpack dir.
+
+**Findings, all fixed before the pass:**
+
+1. A one-file `ppxai-server --detach` ran out of an unpack dir its launcher
+   had deleted (the launcher forked, then exited, so the bootloader cleaned
+   up under the daemon): every lazily loaded module failed, and chat with it
+   (`…/_MEI…/base_library.zip: No such file`). Fixed in `e3746f65`: a frozen
+   launcher re-spawns the binary with `PYINSTALLER_RESET_ENVIRONMENT=1`, so
+   the daemon's bootloader owns its own unpack dir
+   (`tests/test_detach_frozen.py`). Verified with real one-file builds on
+   WSL and macOS Intel; Windows has no `--detach`.
+2. `scripts/gateway-smoke.py` left a slow-starting server running after a
+   startup timeout. Fixed in `cbd0d8e2` (60 s start wait on Windows; cleanup
+   watches for a late listener).
+3. The web client's API calls escaped the `/h/` prefix, and a frozen server
+   reported its binary's directory as its workdir. Both fixed in `5c539936`
+   (phase 5 above).
+
+**Open after the trial:**
+
+- A Playwright spec in `tests/e2e/` for the Launcher.
+- Remote hosts need a `ppxai-server` with `e3746f65`: an older one-file
+  build launches, then fails every chat. The hub's `MIN_SERVER_VERSION`
+  (`ppxai/remote/contract.py`) still says `1.19.3`, and `e3746f65` did not
+  change the version number, so the check cannot tell the two apart today.
+  Whether to enforce it (e.g. a contract or version bump) is the owner's
+  call.
 
 ---
 

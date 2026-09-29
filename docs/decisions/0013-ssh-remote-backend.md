@@ -11,8 +11,10 @@ session manager) the same day: `ppxai/remote/{inventory,contract,manager}.py`.
 Phase 4 (S5, the hub proxy and `/hub/*` control API, wired to `remote.hosts`)
 the same day: `ppxai/server/routes/remote_hub.py`. Phase 5 (S6, the web
 client: `/h/` prefix recognition and the SSH Launcher in the split pane) the
-same day, see S6 "As built". Phase 6 (owner trial) is not started. All of it
-is unreleased, on `feature/v1.19.4`. Revise in place.
+same day, see S6 "As built". Phase 6 (owner trial) **passed on 2026-09-29**
+(Windows hub → WSL2 Ubuntu 24.04 over real OpenSSH; see the plan's phase 6
+for the checklist and the findings it fixed). Acceptance is the owner's
+call. All of it is unreleased, on `feature/v1.19.4`. Revise in place.
 **Related:**
 - [`../plan-ssh-remote-backend.md`](../plan-ssh-remote-backend.md) — the phased plan that implements this record
 - [`../patterns/protocol-dependency-inversion.md`](../patterns/protocol-dependency-inversion.md) — the `Protocol`-in-leaf-module pattern the transport seam uses
