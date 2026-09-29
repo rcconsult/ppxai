@@ -74,7 +74,13 @@ def _force_utf8_console() -> None:
 
 
 DEFAULT_PORT = 54320
-STARTUP_WAIT_S = 20
+# A freshly installed onefile exe starts slowly on Windows (Defender scans
+# it, the bootloader unpacks it): the first run after /build-install missed
+# 20 s there (win32-ppxai, 2026-09-29).
+STARTUP_WAIT_S = 60 if os.name == "nt" else 20
+# After a spawn that never answered, how long cleanup keeps watching the port
+# for a server that binds late (see reap_port_listener's `settle_s`).
+LATE_LISTENER_GRACE_S = 20
 RUN_POLL_TIMEOUT_S = 180
 # Backstop lifetime of the bootstrap-minted bearer; it is revoked at the end
 # of every run anyway (see Gateway.revoke_bootstrap_token).
@@ -416,7 +422,8 @@ def port_in_use(host: str, port: int) -> bool:
         return sock.connect_ex((host, port)) == 0
 
 
-def reap_port_listener(host: str, port: int, timeout_s: float = 8.0) -> bool:
+def reap_port_listener(host: str, port: int, timeout_s: float = 8.0,
+                       settle_s: float = 0.0) -> bool:
     """Last-resort cleanup: kill whatever still LISTENs on host:port.
 
     Signalling the spawned process is not sufficient on Windows. The
@@ -430,12 +437,23 @@ def reap_port_listener(host: str, port: int, timeout_s: float = 8.0) -> bool:
     it is the same thing a human does with netstat + taskkill, and it is what
     makes the next run's port_in_use guard trustworthy.
 
+    `settle_s`: keep watching a FREE port that long before calling it free.
+    For a spawn that never answered /status: its server may still be
+    starting, and a free port then only means "not listening yet". Observed
+    2026-09-29 (win32-ppxai): the bootloader exited, taskkill /T missed the
+    child, the port was still free so nothing was reaped, and the child bound
+    :54320 seconds later, failing the next run with "port already in use".
+
     Returns True when the port ends up free.
     """
-    deadline = time.time() + timeout_s
+    start = time.time()
+    deadline = start + max(timeout_s, settle_s + 2)
     while time.time() < deadline:
         if not port_in_use(host, port):
-            return True
+            if time.time() - start >= settle_s:
+                return True
+            time.sleep(0.5)
+            continue
         pids = _pids_listening_on(port)
         if not pids:
             # Held by something we can't identify (or a lingering socket in
@@ -455,7 +473,16 @@ def reap_port_listener(host: str, port: int, timeout_s: float = 8.0) -> bool:
 
 
 def _pids_listening_on(port: int) -> list:
-    """PIDs LISTENing on `port`, via netstat (stdlib-only, both platforms)."""
+    """PIDs LISTENing on `port`: netstat on Windows and Linux, lsof on macOS
+    (BSD netstat has no PID column, so this found nothing there before)."""
+    if sys.platform == "darwin":
+        try:
+            out = subprocess.run(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t"],
+                                 capture_output=True, text=True, timeout=10,
+                                 check=False).stdout
+        except (OSError, subprocess.SubprocessError):
+            return []
+        return sorted({int(tok) for tok in out.split() if tok.isdigit()})
     flags = ["-ano"] if os.name == "nt" else ["-tlnp"]
     try:
         out = subprocess.run(["netstat", *flags], capture_output=True,
@@ -533,6 +560,7 @@ def main() -> int:
 
     results = []  # (step, verdict, detail)
     proc = None
+    server_answered = False     # False → cleanup waits for a late listener
     health_version = "unknown"  # read while the server is up; see below
     server_mode = "binary"      # flipped to "source" when the binary is stale
     base_url = args.base_url or f"http://127.0.0.1:{args.port}"
@@ -599,6 +627,7 @@ def main() -> int:
         if not wait_for_server(gw):
             print(f"server did not answer /status within {STARTUP_WAIT_S}s", file=sys.stderr)
             return 2
+        server_answered = True
 
         # Must be read HERE: the spawned process is terminated in the finally
         # block, before the manifest is written.
@@ -822,7 +851,9 @@ def main() -> int:
             # reap_port_listener). Verify, and reap by port ownership if the
             # listener is still up, so the NEXT run's port_in_use guard isn't
             # tripped by our own leftovers.
-            if not args.base_url and not reap_port_listener("127.0.0.1", args.port):
+            settle = 0.0 if server_answered else LATE_LISTENER_GRACE_S
+            if not args.base_url and not reap_port_listener("127.0.0.1", args.port,
+                                                            settle_s=settle):
                 print(f"warning: port {args.port} still held after cleanup — "
                       f"free it before the next run", file=sys.stderr)
 
