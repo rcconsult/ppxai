@@ -1,33 +1,23 @@
-# ppxai - Multi-LLM Interface for Developers
+# ppxai — one AI workbench, any model, on your machine
 
-![Version](https://img.shields.io/badge/version-1.19.4-blue) ![Tests](https://img.shields.io/badge/tests-6917%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.19.4-blue) ![Tests](https://img.shields.io/badge/tests-7243%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
-**Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
+Chat, edit code, and run background tasks against Gemini, OpenAI, OpenRouter, Anthropic, or a local model — from the same web app, VSCode extension, or terminal UI. Everything runs on your machine; only your chat traffic goes to the provider you pick.
 
-### Desktop Web App — drag-and-drop file upload, inline image/PDF preview, and split-pane attachment viewer (v1.17.4)
-![Desktop Web App](docs/archive/screenshots/v1.17.x/ppxai-desktop-web-app-v1.17.4.png)
-
-### ppxaide — Textual TUI with syntax-highlighted editor, file tree sidebar, and CSS themes
-![ppxaide TUI](docs/archive/screenshots/v1.17.x/ppxaide-v1.17.2.png)
-
-### ppxai — Rich TUI with multimodal attachments, inline image preview (iTerm2/Sixel), and Excel/PDF/PPTX tools (v1.17.4)
-![ppxai Rich TUI](docs/archive/screenshots/v1.17.x/ppxai-rich-v1.17.4-multimodal.png)
-
-### VSCode Extension — chat panel with agent mode, tool consent, and inline code editing
-![VSCode Extension](docs/archive/screenshots/v1.17.x/ppxai-vscode-v1.17.3.png)
+![The web app: Gemini reads a project with tools, then answers](docs/screenshots/web-chat-tools.png)
 
 ## Why ppxai?
 
-| Problem | ppxai Solution |
+| Problem | ppxai solution |
 |---------|----------------|
-| Locked to one AI vendor | Switch between Gemini, OpenAI, OpenRouter, Ollama anytime (Claude too — opt-in, and [untested against the live API](docs/ANTHROPIC-PROVIDER.md)) |
-| Expensive API costs | Use local models, free tiers, or cheapest provider that works |
-| Closed-source tools | Fully OSS—inspect, modify, self-host |
-| Terminal OR IDE | Same experience everywhere—TUI, Desktop App, VSCode extension |
+| Locked to one AI vendor | Switch between Gemini, OpenAI, OpenRouter, local models anytime (Anthropic too — opt-in, [untested against the live API](docs/ANTHROPIC-PROVIDER.md)) |
+| Expensive API costs | Use local models, free tiers, or whichever provider is cheapest for the task |
+| Closed-source tools | Fully open source — inspect, modify, self-host |
+| Terminal OR IDE | Same commands and history in a TUI, the desktop app, or VSCode |
 
-## Quick Start
+## Quick start
 
-### Option 1: One-Line Install (Recommended)
+### Option 1: one-line install
 
 **Linux / macOS:**
 ```bash
@@ -39,58 +29,43 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 irm https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1 | iex
 ```
 
-This installs `ppxai` (Rich TUI), `ppxaide` (Textual TUI), `ppxai-server`, and `ppxai-desktop`. Then:
+This installs `ppxai` (Rich TUI), `ppxaide` (Textual TUI), `ppxai-server`, and `ppxai-desktop` to `~/.local/bin/` (Linux/macOS) or `~/.ppxai/bin/` (Windows). Then:
 
 ```bash
-# Add to PATH (if not already)
+# Add to PATH (Linux/macOS, if not already)
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 
-# Set up API key
+# Set up an API key
 echo 'GEMINI_API_KEY=your-key-here' > ~/.ppxai/.env
 ```
 
-**Windows (PowerShell):** binaries install to `~/.ppxai/bin/` — add it to PATH:
+**Windows (PowerShell):** add the binaries directory to PATH:
 ```powershell
 [Environment]::SetEnvironmentVariable("Path", "$env:USERPROFILE\.ppxai\bin;" + [Environment]::GetEnvironmentVariable("Path", "User"), "User")
 ```
 
 ```bash
-# Run Rich TUI (original)
-ppxai
-
-# Or run Textual TUI (new in v1.15.0)
-ppxaide
-
-# Or run Desktop Web App (browser-based UI)
-ppxai-desktop
+ppxai              # Rich TUI (original)
+ppxaide            # Textual TUI
+ppxai-desktop      # Desktop web app
 ```
 
-**Installation options (Linux/macOS):**
-- With config templates: `curl -sSL ... | bash -s -- --with-config` (recommended for first-time setup)
-- With VSCode extension: `curl -sSL ... | bash -s -- --with-extension`
-- **With Linux desktop integration:** `curl -sSL ... | bash -s -- --with-desktop` (installs .desktop files, icons, Ghostty terminal)
-- macOS app bundle: `curl -sSL ... | bash -s -- --with-macos-app`
-- Full macOS setup: `curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent`
-- Uninstall: `curl -sSL ... | bash -s -- --uninstall`
+**Useful install flags (Linux/macOS):** `--with-config` (config templates), `--with-extension` (VSCode extension), `--with-desktop` (Linux desktop integration: launchers, icons, Ghostty terminal), `--with-macos-app` (macOS `.app` bundle), `--uninstall`.
+**Windows:** `install.ps1 -Force` (reinstall), `-Version v1.19.3` (specific version), `-Uninstall`.
 
-**Linux Desktop Integration (v1.15.5):**
-Provides one-click launching of ppxai, ppxaide, and ppxai-desktop from your application menu (GNOME, KDE, etc.). Includes Ghostty terminal configuration for proper Ctrl+Enter support in ppxaide. See [desktop/README.md](desktop/README.md) for details.
+See [docs/installation.md](docs/installation.md) for the full option list, including Windows.
 
-**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.16.0` (specific version), `-Uninstall`
-
-See [docs/installation.md](docs/installation.md) for detailed installation options including Windows.
-
-### Option 2: Download Binaries
+### Option 2: download binaries
 
 Download from [Releases](https://github.com/rcconsult/ppxai/releases):
-- `ppxai-{platform}` - Rich TUI (original)
-- `ppxaide-{platform}` - Textual TUI (new in v1.15.0)
-- `ppxai-server-{platform}` - HTTP server for VSCode
-- `ppxai-desktop-{platform}` - Desktop Web App
-- `ppxai-{version}.vsix` - VSCode extension
-- `ppxai-*-macos-arm64.dmg` - macOS app bundle installer
+- `ppxai-{platform}` — Rich TUI
+- `ppxaide-{platform}` — Textual TUI
+- `ppxai-server-{platform}` — HTTP server for VSCode/Web
+- `ppxai-desktop-{platform}` — Desktop web app
+- `ppxai-{version}.vsix` — VSCode extension
+- `ppxai-*-macos-arm64.dmg` — macOS app bundle installer
 
-### Option 3: From Source
+### Option 3: from source
 
 ```bash
 git clone https://github.com/rcconsult/ppxai.git && cd ppxai
@@ -100,261 +75,96 @@ uv run ppxai                        # Start Rich TUI
 uv run ppxaide                      # Or start Textual TUI
 ```
 
-### Linux Terminal Requirements (ppxaide only)
+### Linux terminal note (ppxaide only)
 
-**ppxaide requires a terminal with Ctrl+Enter support** for multi-line input. Standard terminals (GNOME Terminal, Konsole) don't distinguish Ctrl+Enter from Enter.
+`ppxaide` needs a terminal that distinguishes Ctrl+Enter from Enter for multi-line input. GNOME Terminal and Konsole don't. Ghostty, Kitty, and WezTerm work out of the box:
 
-**Recommended:** Install Ghostty terminal:
 ```bash
-# One-line install (includes Ghostty + desktop integration)
+# One-line install with Ghostty + desktop integration
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-desktop
-
-# Or manual Ghostty setup
-wget https://github.com/pkgforge-dev/ghostty-appimage/releases/latest/download/Ghostty-1.2.3-x86_64.AppImage
-mv Ghostty-1.2.3-x86_64.AppImage ~/.local/bin/ghostty && chmod +x ~/.local/bin/ghostty
-mkdir -p ~/.config/ghostty && echo 'keybind = ctrl+enter=text:\x1b[13;5u' >> ~/.config/ghostty/config
 ```
 
-**Alternatives:** Kitty, WezTerm (work out-of-the-box)
-**Fallback:** Use Ctrl+J instead of Ctrl+Enter (works in all terminals)
+Fallback in any terminal: use Ctrl+J instead of Ctrl+Enter. See [docs/linux-terminal-setup.md](docs/linux-terminal-setup.md).
 
-See [docs/linux-terminal-setup.md](docs/linux-terminal-setup.md) for comprehensive setup guide.
+## What you can do
 
-## Features
+### Chat with any model
 
-### v1.15.0 Architecture: Type-Based Renderer Dispatch
+- **Providers:** Google Gemini (default, `gemini-3.8-flash`), OpenAI (`gpt-5.6-terra` and the GPT-5.x line), OpenRouter (100+ models including Claude), Anthropic (opt-in via the `[anthropic]` extra), local models (Ollama, vLLM, llama.cpp). Perplexity is **not** a chat provider — it's a web-search/grounding backend only.
+- **Switch mid-session:** `/provider gemini` or `/model gpt-5.6-terra` — conversation history carries over, so you can start cheap and move to a stronger model when needed.
+- **Smart context injection:** `@file`, `@git`, `@tree`, `@clipboard`, `@url` pull content into the prompt; `/context` shows usage against the model's limit.
+- **Sessions:** saved automatically after every message (`session.auto_save_interval`); `/sessions` browses saved conversations, `/export` writes one to markdown, `/usage` shows token counts and cost.
+- **Copy a response** with `/copy` (TUI) or the copy button (Web/VSCode/ppxaide) — more reliable than terminal text selection, which can grab panel borders.
+- **Voice input:** works with any system transcription tool that types into the focused field (e.g. [Handy](https://github.com/cjpais/Handy), offline Whisper/Parakeet). Confirmed working in VSCode and the desktop web app; less reliable in terminal UIs. See [vscode-extension/README.md](vscode-extension/README.md#voice-input-optional).
 
-The core innovation in v1.15.0 is a revolutionary renderer architecture that **completely decouples command logic from UI presentation**:
+### Let it work on your code
 
-- **21 CommandResult types** - Structured data for all command outputs (MessageResult, TableResult, CodeResult, ErrorResult, etc.)
-- **Mechanical dispatch** - `isinstance()` checks route results to renderers, zero conditionals
-- **2 renderer implementations** - RichRenderer (legacy TUI) + TextualRenderer (ppxaide)
-- **UI-agnostic commands** - Same command code works in TUI, VSCode, Web, future GUIs
-- **100% testable** - Commands tested without UI framework dependencies
+- **Tools with consent:** file search/read/write, shell commands, and code editing tools, each gated by a consent prompt (safe/dangerous/blocked). Turn them on with `/tools on` or the Tools badge.
+- **`/auto`** runs an in-session agent loop: the model chains tool calls and re-prompts itself until the task is done, still asking consent for file edits and shell commands. See [docs/session-agent-guide.md](docs/session-agent-guide.md).
+- **Checkpoints & undo:** `/undo` reverts everything from the last agent task. The git backend auto-commits before a task and reverts on undo; the file backend (fallback) snapshots to `~/.ppxai/sessions/checkpoints/<session_id>/`. See [docs/checkpoint-guide.md](docs/checkpoint-guide.md).
+- **Coding commands:** `/generate`, `/test`, `/docs`, `/explain`, `/debug`, `/convert`, `/implement` (alias `/impl`) turn a description or a file into generated code, tests, docs, or an explanation.
+- **Bootstrap context:** drop project instructions in `AGENTS.md` (or `CLAUDE.md`) at the global, project, or subdirectory level — provider hints (e.g. different instructions for Ollama vs. Gemini) and model hints (pattern-matched, e.g. `deepseek-r1*` gets a reasoning prompt) load automatically. `/context hints` shows what's active.
 
-**Example:**
-```python
-# Command returns typed result
-result = show_command.execute("file.py")
-# → Returns CodeResult(content="...", language="python")
+### Run work in the background
 
-# Renderer mechanically dispatches
-if isinstance(result, CodeResult):
-    renderer.render_code(result)  # TUI uses Rich syntax highlighting
-```
+- **`/task "<description>" --tools read_file,search_files [--spec name] [--work-dir path]`** launches a durable, addressable background run with its own tool grant and working directory; it keeps running while you chat, and its result waits for you to collect it. `/task ls|get|watch|respond|collect|resume|cancel` manages it; `collect` retrieves a held result. Off until you set `execution.task.enabled`; the web and VSCode clients also need a `/v1` token (`/token mint`).
+- **`/run <prompt>`** is the tool-free, one-off sibling: no flags, just a prompt and an answer. `/run ls|get|watch|collect|cancel`.
+- Both ship in all four clients (Web, VSCode, `ppxaide`, `ppxai`); the Rich TUI has no live event loop, so it serves every read verb but declines `launch`/`resume`.
 
-This enables **single-source command logic** that renders correctly in any UI—terminal, VSCode webview, or browser—just by swapping the renderer implementation.
+![Background task view](docs/screenshots/web-task.png)
 
-See [Architecture Docs](docs/architecture.md) for details (introduced in v1.15.0; see `docs/archive/release-notes/RELEASE-NOTES-v1.15.0.md` for the historical release notes).
+See [docs/task-agent-guide.md](docs/task-agent-guide.md) for spec files, skills, egress allowlists, and budgets.
 
-### Live HTML Preview (v1.15.4)
+### Work with files
 
-The `/preview` command opens a live-reloading HTML preview across all clients:
+- **Attach** files with `/attach <path>` (TUI), drag-and-drop or the paperclip button (Web/VSCode), or the `a` key in the `ppxaide` file tree.
+- **Images** — inline preview, vision-model analysis. **PDF** — text extraction and page rasterization with split-panel preview. **Excel** — sheet listing and markdown-table reads, with client-side sort/filter/pagination. **PowerPoint** — slide text extraction, visual summary via a VL model, split-panel slide navigator. **Word** — text extraction with a rendered PDF preview. **CSV** — small files inline, large ones lazy-loaded.
+- **Live HTML preview:** `/preview` opens a live-reloading preview of an HTML file across every client (a stdlib server for the TUIs, an iframe for Web, a `WebviewPanel` for VSCode).
 
-| Client | Implementation | Live Reload |
-|--------|----------------|-------------|
-| **TUI** | Stdlib `PreviewServer`, auto-opens browser | mtime polling at `/poll` |
-| **Web App** | Iframe with `/preview/{path}` endpoint | SSE polling |
-| **VSCode** | `WebviewPanel` with `FileSystemWatcher` | Native file watcher |
+![File tree and a live HTML preview beside the chat](docs/screenshots/web-files-preview.png)
 
-Asset cache busting (`?_t=<mtime>`) ensures CSS/JS/JSON changes are immediately reflected.
+### Use a terminal
 
-### Multi-Provider Support
-- **Google Gemini** - 3.8 Flash (default), 3.1 Pro Preview with 1M context, 3.1 Flash Lite, Gemma 4 (31B / 26B-A4B), Google Search Grounding
-- **OpenAI** - GPT-5.6-terra (default), GPT-5.5/-pro, GPT-5.4/-pro/-mini/-nano, GPT-5.3-codex (dedicated `OpenAINativeProvider`; wire and tool mode resolved per model from `ModelFacts`)
-- **Anthropic (Claude)** - opt-in via the `[anthropic]` extra; Claude Opus 5, Sonnet 5, Haiku 4.5. ⚠️ **ships untested against the live API** — see the v1.19.1 notes
-- **OpenRouter** - Claude, Llama, 100+ models
-- **Local** - Ollama, vLLM, llama.cpp
+In the web app and VSCode, `/terminal` opens a real shell pane beside the chat, in the session's working directory. In the terminal UIs it shows your terminal's capabilities instead.
 
-Switch providers anytime: `/provider gemini` or `/model gemini-3.1-pro-preview`
+![Terminal pane beside the chat](docs/screenshots/web-terminal.png)
 
-**Behind a corporate proxy?** Set your CA bundle once in `ppxai-config.json`
-(`network.ssl.cert_file`) — it is *added to* the system trust store, so
-internal and public hosts both verify. See
-[docs/installation.md](docs/installation.md) and run `/doctor` to confirm
-which rule applied.
+### Know what it costs
 
-**Enhanced Gemini support (v1.12.5+):** Install `pip install ppxai[gemini]` for native Google Search Grounding with citations. **v1.13.3+:** Tools and grounding now work together—use file editing tools while keeping native web search with citations.
+- **`/usage [24h|week|month|year|all]`** shows token counts and cost estimates per model for the session or a time window.
+- **`/doctor`** audits your config: flags deprecated keys (and what they cost you), dead settings, and recommended model upgrades.
 
-### Triple Interface
-| TUI (Terminal) | Desktop Web App | VSCode Extension |
-|----------------|-----------------|------------------|
-| **ppxai** - Rich TUI (original) | Browser-based UI | Webview chat panel |
-| **ppxaide** - Textual TUI (v1.15.0+) | Full slash commands | Right-click: Explain, Test, Docs |
-| Unified autocomplete via `engine/completion.py` (v1.17.x) | Same autocomplete over `POST /complete` | Same autocomplete over `POST /complete` |
-| `@file`, `@git`, `@tree`, `@clipboard`, `@url` context | Provider/model badges | Provider/model switcher |
-| Status bar with provider/model | SSE streaming | SSE streaming |
+![Usage and cost breakdown](docs/screenshots/web-usage.png)
 
-**ppxaide features (v1.15.0+):**
-- **Multi-line input** (v1.15.5) - Enter inserts newlines, Ctrl+Enter submits. Auto-expands from 1 to 18 lines
-- **Type-based renderer architecture** - All commands return structured result objects (21 types), enabling mechanical UI dispatch without conditionals
-- **Markdown in chat bubbles** - Full markdown rendering with clickable URLs, headers, code blocks, and citations
-- **Modern async architecture** with real-time streaming and thinking indicators
-- **17+ themes** (vs 4 in Rich TUI) - Ctrl+T cycles the 8-entry quick set, Ctrl+P opens the palette for the full 17+
-- **Advanced file viewers** with tree/table/image support via typed results
-- **Real-time token/cost tracking** in status bar with smart formatting
-- **Tool execution display** with verbose mode (`/tools set verbose on/off`)
-- **Reasoning token support** - DeepSeek R1, GPT-OSS thinking visualization
-- **Bootstrap context auto-loading** from AGENTS.md
-- **UI-agnostic commands** - Same command logic works in TUI, VSCode, and Web
+### Integrate
 
-**Desktop Web App (v1.13.1+):** Run `ppxai-desktop` to launch a browser-based chat interface. macOS users can download the `.dmg` installer for a native app experience.
+- **`POST /v1/oneshot`** — the stable, semver-versioned gateway for a single prompt-in/answer-out call, with optional search grounding. Byte-identical wire shape since v1.18.4. See [docs/api-gateway.md](docs/api-gateway.md).
+- **`/v1/agent/*`** — the background run-registry API behind `/task` and `/run`. Still evolving; not yet a stable contract.
 
-### UX Highlights
-- **Full Markdown Rendering** - Tables, code blocks with syntax highlighting, clickable links (OSC 8), citations with URLs. **ppxaide (v1.15.0+)** renders markdown directly in chat bubbles with clickable URLs and styled headers.
-- **Context Preservation** - Switch providers/models mid-conversation without losing history. Start with cheap model, switch to powerful one when needed
-- **Smart Context Injection** - `@file` for code, `@git` for uncommitted changes, `@tree` for project structure, `@clipboard` for clipboard text, `@url` for web content. Hash-based deduplication prevents duplicate injections.
-- **Context Management** - `/context` shows usage vs model limit, `/context show` displays bootstrap hierarchy, `/context clear` removes injected files. Context badge shows percentage in TUI status line and VSCode header.
-- **Cost Control** - Use Gemini with web-search grounding for research, Gemini for long context, local models for sensitive code—all in one session
-- **Real-time Usage Tracking** - Token counts and cost estimates in status line (`1.2K↓/0.5K↑ $0.0045`)
-- **Themed TUI Panels** - Rich TUI: 4 themes; Textual TUI (ppxaide): 17+ themes (`/theme` to cycle or Ctrl+T)
+## Four ways to use it
 
-### File Upload & Data Analysis (v1.17.4)
-Attach files to conversations across all four clients:
-- **Images** - Inline preview, vision model analysis (Gemini, GPT-5, local VL models)
-- **PDF** - Text extraction (`read_pdf`), page rasterization (`get_pdf_page_image`), split panel preview
-- **Excel** - Sheet listing, data reading as markdown tables (`read_excel_sheet`), client-side preview with SheetJS (sort, filter, pagination)
-- **PowerPoint** - Slide text extraction, visual summary via VL model (`summarize_pptx_visual`), split panel slide navigator with LibreOffice rendering
-- **Word** - Text extraction (`read_docx`), split panel PDF preview via LibreOffice
-- **CSV** - Small files inline, large (>50KB) lazy-loaded via `read_csv` / `list_csv_columns` tools
+- **Web / desktop app** — run `ppxai-server` and open the browser UI, or run `ppxai-desktop` for a standalone window (macOS also ships a `.dmg`).
+- **VSCode extension** — chat panel, inline code actions (Explain, Test, Docs), tool consent in the editor.
 
-**How to attach:** `/attach <path>` (TUI), drag-drop or paperclip button (Web/VSCode), `a` key in file tree (ppxaide)
+  ![VSCode chat panel](docs/screenshots/vscode-chat.png)
+- **`ppxaide`** — Textual TUI: multi-line input, 17+ themes, syntax-highlighted file/code viewers.
+- **`ppxai`** — Rich TUI: the original terminal interface, 4 themes.
 
-### Session Agent Mode (`/auto`)
-Enable with `/auto on` or click the Agent button in VSCode:
-- Iterative tool execution with automatic re-prompting
-- AI decides when to use tools and chains multiple calls
-- Consent-based safety for file edits and shell commands
-- Works with any provider that supports tool calling
+All four share the same commands, the same autocomplete, and the same session history.
 
-See [docs/session-agent-guide.md](docs/session-agent-guide.md) for details.
-Distinct from the background **`/task` sub-agent platform** and one-off
-`/run` runs (v1.19.x) — see the disambiguation table at the top of
-that guide.
-
-### Background Agent Platform (`/task`, v1.19.0)
-Durable, addressable background runs with per-run tool grants and a sandboxed workdir:
-- `/task "…" --tools read_file [--spec name] [--skill name] [--allow host] [--budget …] [--work-dir path]` — direct launch (v1.19.1)
-- Lifecycle: `/task ls|get|watch|cancel`, plus `respond` (interactive consent), `collect` (a held result), and `resume` (recover an interrupted run)
-- Spec files (`--spec`) and skills (`--skill`) grant reusable tool/read-scope bundles
-- Egress allowlists and budgets bound what a run can reach and spend
-- Ships in **all clients** — Web, VSCode, Textual (`ppxaide`) and Rich (`ppxai`). The Rich TUI has no live event loop, so it serves every read verb but rejects `launch`/`resume`
-- Default-off via `execution.task.enabled`
-
-See [docs/task-agent-guide.md](docs/task-agent-guide.md) and [docs/api-gateway.md](docs/api-gateway.md) for details.
-
-### One-Off Runs (`/run`, v1.19.x)
-The tool-free sibling of `/task`: one prompt, one answer, in the background.
-- `/run <prompt>` — launch; no flags, since the tier grants no tools by design
-- Lifecycle: `/run ls|get|watch|collect|cancel` (`/run help` for the full grammar)
-- No `respond`/`resume` — a one-off run has no consent park to return to
-- Enrichment is config-decided, not per-run: `execution.run.grounding`
-  (`off|retrieve|native` — `true` means `retrieve`, search-first through
-  `engine/search/`; `native` is the provider's own in-call search) and
-  `execution.run.web_search` (the `web_search` tool loop), both default off
-- Same registry as `/task`, recorded as `kind=oneshot`; this is also what
-  `POST /v1/oneshot` executes as of v1.19.1
-
-See [docs/session-agent-guide.md](docs/session-agent-guide.md) for how `/run`,
-`/task` and `/auto` differ.
-
-### Bootstrap Context (v1.14.0+)
-Load project-specific instructions from `AGENTS.md` or `CLAUDE.md`:
-- **Hierarchical scopes** (v1.14.2) - Global (`~/.ppxai/AGENTS.md`), project (git root), subdirectory (cwd)
-- **Auto-discovery** - Looks for `AGENTS.md`, then `CLAUDE.md` in each scope
-- **Provider hints** - Different instructions for Ollama vs Gemini vs OpenAI
-- **Model hints** - Pattern-matched guidance (e.g., `deepseek-r1*` gets reasoning prompts)
-- **`local` inheritance** - Ollama, vLLM, LMStudio inherit from `local` hints
-- **Include directive** (v1.14.2) - `<!-- include: ./docs/style.md -->` for modular configs
-- **Hint templates** (v1.14.2) - Reusable hints in `~/.ppxai/hint-templates.yaml`
-
-Example `AGENTS.md`:
-```markdown
----
-provider_hints:
-  local:
-    - "Complete tasks fully without stopping on empty responses."
-  ollama:
-    - "Keep responses concise - limited context window."
-model_hints:
-  "deepseek-r1*":
-    - "Show reasoning before taking actions."
----
-
-# Project Instructions
-Python 3.11+, type hints required, pytest for testing.
-```
-
-Use `/context hints` to see active hints, `/context show` to see bootstrap hierarchy.
-
-### Checkpoint & Undo (v1.12.0+)
-Atomic rollback for multi-file agent operations:
-- `/undo` reverts all changes from the last agent task
-- `/checkpoint` - Manage checkpoints (status, list, backend, clear, info)
-- Git backend: auto-commits before tasks, `git revert` to undo
-- File backend (fallback): snapshots to `~/.ppxai/sessions/checkpoints/<session_id>/`
-
-See [docs/checkpoint-guide.md](docs/checkpoint-guide.md) for details.
-
-### AI Tools
-Enable with `/tools enable` (or use Agent Mode):
-- `search_files`, `read_file`, `list_directory` - Filesystem access
-- `execute_shell_command` - With consent system (safe/dangerous/blocked)
-- `apply_patch`, `replace_block`, `insert_text`, `delete_lines` - File editing with consent
-- `calculator`, `get_datetime`, `get_working_directory` - Utilities
-- `web_search` - Premium web search: the backend chain from `tools.web_search.order` (Gemini → Perplexity → DuckDuckGo when it is unset)
-- `get_weather` - Weather info with HTTPS/HTTP fallback for corporate proxies (v1.15.4)
-
-**Tool Settings:** `/tools set verbose on` shows full arguments and results; `/tools set verbose off` (default) shows brief status only.
-
-### Coding Commands
-```
-/generate   Generate code from description
-/test       Generate unit tests
-/docs       Generate documentation
-/explain    Explain code logic
-/debug      Analyze errors
-/convert    Translate between languages
-/preview    Live-reloading HTML preview (v1.15.4)
-/implement  Implement a feature from a description (alias: /impl)
-```
-
-### Session Management
-- Auto-save every 10 messages
-- `/sessions` - Browse saved conversations
-- `/export` - Export to markdown
-- `/usage [24h|week|month|all]` - View token counts and cost estimates
-
-### Copying Responses (v1.15.0+)
-All clients provide reliable ways to copy AI responses to clipboard:
-
-| Client | Method | Notes |
-|--------|--------|-------|
-| **ppxai** (Rich TUI) | `/copy` command | Copies last response; `/copy 2` for second-to-last |
-| **ppxai** (Rich TUI) | Click `#` link in title | Opens temp file for copying (works without xclip) |
-| **ppxaide** (Textual TUI) | Click 📋 button | Button in message header |
-| **Web App** | Click 📋 button | Hover over message to reveal |
-| **VSCode** | Click 📋 button | Hover over message to reveal |
-
-**Why dedicated copy?** Terminal text selection often copies panel borders (Rich TUI) or conflicts with terminal plugins (iTerm2). The `/copy` command and buttons guarantee clean text.
-
-### Voice Input (optional)
-
-ppxai works with any system transcription tool that types into the focused text field. [**Handy**](https://github.com/cjpais/Handy) (MIT, offline, Whisper/Parakeet) is a good fit — install it, set a global hotkey, focus the ppxai input, hold the hotkey, speak. Confirmed working in the **VSCode extension** and **Desktop Web App**; terminal UIs are less reliable because synthetic keystroke injection into terminal apps varies by platform. See [VSCode extension docs](vscode-extension/README.md#voice-input-optional) for details.
-
-## Configuration
+## Configure
 
 **Simple (one provider):**
 ```bash
-# .env
+# ~/.ppxai/.env
 GEMINI_API_KEY=your-key-here
 ```
 
 (`PERPLEXITY_API_KEY` is optional — Perplexity is a web-search/grounding backend, not a chat provider.)
 
-**Multi-provider:**
+**Multiple providers:**
 ```bash
-# .env - API keys only
+# ~/.ppxai/.env - API keys only
 PERPLEXITY_API_KEY=pplx-xxxxx
 GEMINI_API_KEY=AIza-xxxxx
 OPENAI_API_KEY=sk-xxxxx
@@ -362,7 +172,7 @@ OPENROUTER_API_KEY=sk-or-xxxxx
 ```
 
 ```json
-// ppxai-config.json - Provider definitions (optional, has defaults)
+// ~/.ppxai/ppxai-config.json - provider definitions (optional, has defaults)
 {
   "default_provider": "gemini",
   "providers": {
@@ -381,135 +191,45 @@ OPENROUTER_API_KEY=sk-or-xxxxx
 }
 ```
 
-**Generation Parameters (v1.15.0+):** Configure `temperature`, `top_p`, `frequency_penalty`, `presence_penalty` per-provider or per-model. Lower temperature (0.1-0.3) recommended for coding tasks.
+Per-provider or per-model generation parameters (`temperature`, `top_p`, `frequency_penalty`, `presence_penalty`) are supported; lower temperature (0.1–0.3) is recommended for coding tasks.
 
-See [docs/provider-setup.md](docs/provider-setup.md) for detailed examples.
+**Behind a corporate proxy?** Set your CA bundle once (`network.ssl.cert_file` in `ppxai-config.json`) — it's *added to* the system trust store, so internal and public hosts both verify. Run `/doctor` to confirm which rule applied. See [docs/installation.md](docs/installation.md).
 
-## Data Privacy
+See [docs/provider-setup.md](docs/provider-setup.md) for more examples.
+
+## Privacy
 
 All data stays on your machine:
-- `~/.ppxai/sessions/` - Conversation history
-- `~/.ppxai/exports/` - Markdown exports
-- `~/.ppxai/usage/` - Usage statistics
-- `~/.ppxai/sessions/checkpoints/` - File-based undo snapshots
-- `~/.ppxai/logs/` - Debug logs (when enabled)
+- `~/.ppxai/sessions/` — conversation history
+- `~/.ppxai/exports/` — markdown exports
+- `~/.ppxai/usage/` — usage statistics
+- `~/.ppxai/sessions/checkpoints/` — file-based undo snapshots
+- `~/.ppxai/logs/` — debug logs (when enabled)
 
-No telemetry. No tracking. Data only goes to the LLM provider you choose.
+No telemetry, no tracking. Data only goes to the LLM provider you choose.
 
 ## Documentation
 
 | Guide | Description |
 |-------|-------------|
 | [Installation](docs/installation.md) | Detailed installation options (all platforms) |
-| [Linux Desktop Integration](desktop/README.md) | One-click app launcher integration (v1.15.5) |
-| [Linux Terminal Setup](docs/linux-terminal-setup.md) | Ghostty/Kitty for Ctrl+Enter support (v1.15.5) |
+| [Linux Desktop Integration](desktop/README.md) | One-click app launcher integration |
+| [Linux Terminal Setup](docs/linux-terminal-setup.md) | Ghostty/Kitty for Ctrl+Enter support |
 | [VSCode Extension](vscode-extension/README.md) | Installation and usage |
 | [Session Agent Mode](docs/session-agent-guide.md) | In-session iterative tool execution (`/auto`) |
-| [Task Agent Guide](docs/task-agent-guide.md) | Background /task agent platform (v1.19.0) |
+| [Task Agent Guide](docs/task-agent-guide.md) | Background `/task` agent platform |
 | [Checkpoint & Undo](docs/checkpoint-guide.md) | Atomic rollback for agent tasks |
 | [Provider Setup](docs/provider-setup.md) | Configure any OpenAI-compatible API |
 | [Tool Development](docs/custom-tool-development-guide.md) | Add custom tools |
 | [Shell Consent](docs/shell-consent-guide.md) | Command safety system |
 | [File Editing](docs/file-editing-guide.md) | Consent-based file operations |
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
-| [Architecture](docs/architecture.md) | Type-based renderer design (v1.15.0) |
-| [Tool Calling](docs/tool-calling.md) | Native vs prompt-based tool calling |
-| [Latest Release Notes](docs/release-notes-v1.19.3.md) | Latest release (v1.19.3) — see `docs/release-notes-v1.19.*.md` for the v1.19.x series; v1.19.4 is prepared, not released |
+| [Architecture](docs/architecture.md) | Layered design, module hierarchy, renderer dispatch |
+| [API Gateway](docs/api-gateway.md) | `POST /v1/oneshot` — the stable external surface |
+| [Tool Calling](docs/tool-calling.md) | Native vs. prompt-based tool calling |
+| [Latest Release Notes](docs/release-notes-v1.19.3.md) | v1.19.3 is the latest release — see `docs/release-notes-v1.19.*.md` for the series |
 | [CHANGELOG](CHANGELOG.md) | Full version history |
-| [Archived Release Notes](docs/archive/release-notes) | Older release notes (v1.18.7 and v1.18.8 are still in `docs/`) |
-
-## Project Structure
-
-```
-ppxai/
-├── ppxai/                      # Core package
-│   ├── rich/main.py            # Rich TUI entry point (legacy ppxai)
-│   ├── tui/                    # Textual TUI (ppxaide - v1.15.0+)
-│   │   ├── app.py              # Main Textual application (PPXAIDEApp)
-│   │   ├── widgets/            # UI components
-│   │   │   ├── chat_view.py    # Main chat display with message bubbles
-│   │   │   ├── input_box.py    # Multi-line input (ChatTextArea)
-│   │   │   ├── side_panel.py   # File viewer/editor panel
-│   │   │   ├── code_editor.py  # Syntax-highlighted code editor
-│   │   │   └── status_bar.py   # Provider/model/tools status
-│   │   ├── themes/             # 17+ themes with layout.tcss
-│   │   └── screens/            # Modal screens (command palette, etc.)
-│   ├── engine/                 # Core business logic (no UI dependencies)
-│   │   ├── client.py           # EngineClient facade
-│   │   ├── session.py          # Session management
-│   │   ├── types.py            # Message, Event, UsageStats types
-│   │   ├── providers/          # AI provider implementations
-│   │   │   ├── base.py         # BaseProvider abstract class
-│   │   │   ├── anthropic.py    # AnthropicProvider (Claude, `messages` wire)
-│   │   │   ├── gemini.py       # GeminiProvider (native Google Search Grounding)
-│   │   │   ├── openai_compat.py# OpenAI-compatible fallback (OpenRouter, local)
-│   │   │   └── openai_native.py# OpenAI dedicated (GPT-5.x, Codex, o-series)
-│   │   └── tools/              # AI tools system
-│   │       ├── manager.py      # ToolManager with provider filtering
-│   │       ├── base.py         # BaseTool abstract class
-│   │       └── builtin/        # 24+ built-in tools
-│   ├── commands/               # UI-agnostic command implementations — see /help
-│   │   ├── results.py          # 21 CommandResult types
-│   │   ├── context.py          # CommandContext protocol
-│   │   ├── factory.py          # CommandFactory (registry pattern)
-│   │   └── [show|tools|model|provider|...].py  # Individual commands
-│   ├── rendering/               # Renderer implementations
-│   │   ├── base.py              # BaseRenderer interface
-│   │   ├── rich_renderer.py     # RichRenderer for legacy TUI
-│   │   └── textual_renderer.py  # TextualRenderer - type-based dispatch (ppxaide)
-│   ├── server/                 # HTTP + JSON-RPC servers
-│   │   ├── http.py             # FastAPI HTTP + SSE server (for VSCode/Web/Desktop), 21 route modules
-│   │   └── jsonrpc.py          # JSON-RPC server over stdio (deprecated)
-│   ├── web/                    # Desktop Web App frontend assets (served by server/http.py)
-│   │   └── [styles|components|lib|shared]/  # React-like frontend
-│   ├── rich/                   # Rich TUI (legacy ppxai) internals
-│   │   ├── event_handler.py    # Event system for streaming
-│   │   └── ...
-│   ├── common/                 # Shared utilities
-│   │   ├── logger.py           # Logging system
-│   │   ├── consent.py          # File/shell consent system
-│   │   └── preview.py          # HTML preview helpers
-│   ├── config/                 # Configuration system
-│   │   ├── store.py            # ConfigStore (load/save ppxai-config.json)
-│   │   ├── loader.py           # Config loading/merging
-│   │   ├── providers.py        # Provider definitions
-│   │   └── defaults.py         # Default config values
-│   └── data/                   # Session/usage data storage
-├── vscode-extension/           # VSCode extension (TypeScript)
-│   ├── src/
-│   │   ├── extension.ts        # Extension entry point
-│   │   ├── httpClient.ts       # HTTP + SSE client
-│   │   ├── chatPanel.ts        # Webview chat UI
-│   │   ├── previewPanel.ts     # Live HTML preview (v1.15.4)
-│   │   └── handlers/           # Event handlers (v1.14.0+)
-│   └── media/webview/          # External CSS/JS for webview
-├── desktop/                    # Linux desktop integration (v1.15.5)
-│   ├── install-desktop-integration.sh   # One-click installer
-│   ├── uninstall-desktop-integration.sh # Uninstaller
-│   └── README.md               # Installation guide
-├── scripts/                    # Build, release, install scripts
-│   ├── bootstrap.py            # Auto-downloads uv, sets up project
-│   ├── release.py              # Automated release script
-│   └── install.ps1             # One-line installer (Windows)
-├── install.sh                  # One-line installer (Linux/macOS), repo root
-├── resources/                  # Icons and assets
-│   ├── ppxai.png               # ppxai icon (CLI)
-│   ├── ppxaide-nobg.png        # ppxaide icon (TUI)
-│   └── [.ico|.icns files]      # Platform-specific icons
-├── tests/                      # see CLAUDE.md for the current test count
-│   ├── test_tui.py             # Textual TUI tests (270+ tests)
-│   ├── test_commands.py        # Command tests
-│   └── test_*.py               # Provider, tool, config tests
-├── docs/                       # Documentation
-│   ├── session-agent-guide.md  # In-session /auto mode guide
-│   ├── checkpoint-guide.md     # Atomic rollback guide
-│   ├── linux-terminal-setup.md # Ghostty/Kitty setup for Ctrl+Enter
-│   ├── provider-setup.md       # Multi-provider configuration
-│   ├── architecture.md         # Type-based renderer design
-│   └── release-notes-v*.md     # Version release notes
-├── benchmarks/                 # LLM performance benchmarks
-└── deploy/                     # Deployment configs (deploy/k8s, deploy/helm, deploy/compose)
-```
+| [Archived Release Notes](docs/archive/release-notes) | Older release notes |
 
 ## Contributing
 
@@ -518,7 +238,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
 ```bash
 uv run pytest tests/ -v       # Run tests
 uv run ppxai                  # Rich TUI
-uv run ppxaide                # Textual TUI (v1.15.0+)
+uv run ppxaide                # Textual TUI
 uv run ppxai-server           # Start server for VSCode dev
 ```
 
@@ -528,4 +248,4 @@ MIT
 
 ---
 
-**ppxai** is a flexible interface for chatting with LLMs—with optional agent capabilities when you need them. Use whatever model fits your task and budget, in terminal or IDE, with full control over when AI can modify your files.
+**ppxai** is a flexible interface for chatting with LLMs — with optional agent capabilities when you need them. Use whatever model fits your task and budget, in a terminal, a browser, or your IDE, with full control over when AI can modify your files.

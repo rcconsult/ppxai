@@ -1,21 +1,23 @@
 # ppxai Documentation
 
-**Multi-LLM Interface for Developers** - Use your favorite AI provider in terminal or VSCode with zero vendor lock-in.
+**One AI workbench, any model, on your machine.** Chat, edit code, and run background tasks against Gemini, OpenAI, OpenRouter, Anthropic, or a local model — from the web app, VSCode, or a terminal UI.
 
 [![Version](https://img.shields.io/badge/version-1.19.4-blue)](https://github.com/rcconsult/ppxai/releases)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](https://github.com/rcconsult/ppxai/blob/master/LICENSE)
 
+![The web app: Gemini reads a project with tools, then answers](screenshots/web-chat-tools.png)
+
 ## Why ppxai?
 
-| Problem | ppxai Solution |
+| Problem | ppxai solution |
 |---------|----------------|
-| Locked to one AI vendor | Switch between Gemini, OpenAI, OpenRouter, Ollama anytime |
-| Can't use local models | Full Ollama/vLLM support with same interface |
+| Locked to one AI vendor | Switch between Gemini, OpenAI, OpenRouter, local models anytime |
+| Can't use local models | Full Ollama/vLLM support with the same interface |
 | AI modifies files without asking | Consent-based safety for all file operations |
-| Lost context when switching models | Preserve conversation across provider changes |
+| Lost context when switching models | Conversation history carries across provider changes |
 | Expensive cloud-only pricing | Mix cloud and local models per task |
 
-## Quick Start
+## Quick start
 
 ### Installation
 
@@ -31,13 +33,18 @@
     irm https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1 | iex
     ```
 
-=== "pip"
+=== "From source"
 
     ```bash
-    pip install ppxai
+    git clone https://github.com/rcconsult/ppxai.git && cd ppxai
+    python scripts/bootstrap.py --all
     ```
 
-### Configure API Keys
+!!! warning "Not on PyPI"
+    ppxai is not published to PyPI. The `ppxai` package there is an unrelated
+    project, so `pip install ppxai` installs something else.
+
+### Configure API keys
 
 ```bash
 # Create ~/.ppxai/.env with your keys
@@ -50,35 +57,24 @@ PERPLEXITY_API_KEY=pplx-xxx   # optional: web-search/grounding backend only, not
 
 ```bash
 ppxai              # Rich TUI (original)
-ppxaide            # Textual TUI (v1.15.0+)
+ppxaide            # Textual TUI
 ppxai-server       # HTTP server for VSCode
 ppxai-desktop      # Desktop web app
 ```
 
-## Features
+## What you can do
 
-### Multi-Provider Support
+### Chat with any model
 
-- **Google Gemini** - 1M token context, search grounding; 3.8 Flash by default
-- **OpenAI** - GPT-5.6-terra by default, plus the GPT-5.5/5.4 lines and GPT-5.3-codex
-- **Anthropic (Claude)** - opt-in via the `[anthropic]` extra; ships untested against the live API
-- **OpenRouter** - 100+ models including Claude
-- **Local Models** - Ollama, vLLM, LMStudio
+- **Google Gemini** — 1M token context, search grounding; `gemini-3.8-flash` by default
+- **OpenAI** — `gpt-5.6-terra` by default, plus the GPT-5.5/5.4 lines and GPT-5.3-codex
+- **Anthropic (Claude)** — opt-in via the `[anthropic]` extra; ships untested against the live API
+- **OpenRouter** — 100+ models including Claude
+- **Local models** — Ollama, vLLM, LMStudio
 
-### Four Interfaces
+Switch providers or models mid-session with `/provider` / `/model` without losing conversation history.
 
-| Feature | ppxai (Rich TUI) | ppxaide (Textual TUI) | VSCode | Web App |
-|---------|------------------|----------------------|--------|---------|
-| Streaming responses | ✅ | ✅ | ✅ | ✅ |
-| Syntax highlighting | ✅ | ✅ | ✅ | ✅ |
-| File editing tools | ✅ | ✅ | ✅ | ✅ |
-| Agent mode | ✅ | ✅ | ✅ | ✅ |
-| Checkpoint/undo | ✅ | ✅ | ✅ | ✅ |
-| Markdown in chat | Limited | ✅ Full rendering | ✅ | ✅ |
-| Themes | 4 themes | 17+ themes | N/A | N/A |
-| Tab completion | ✅ | ✅ | ✅ | ✅ |
-
-### Agent Mode
+### Let it work on your code
 
 Enable autonomous multi-step task execution:
 
@@ -86,9 +82,7 @@ Enable autonomous multi-step task execution:
 /auto on
 ```
 
-The AI can chain tool calls, edit files, run commands - all with your consent.
-
-### Bootstrap Context
+The AI can chain tool calls, edit files, and run commands — all with your consent. Checkpoints (`/undo`) give you atomic rollback for anything it changed.
 
 Load project-specific instructions from `AGENTS.md`:
 
@@ -105,6 +99,35 @@ model_hints:
 # Project Instructions
 Python 3.11+, pytest for testing.
 ```
+
+### Run work in the background
+
+`/task "<description>" --tools <names>` launches a durable, addressable background run with its own tool grant. `/run <prompt>` is the tool-free, one-off equivalent. Both ship in all four clients; see the Task Agent Guide below.
+
+### Work with files
+
+Attach images, PDFs, Excel, PowerPoint, and Word files for the model to read; `/preview` opens a live-reloading HTML preview across every client.
+
+### Use a terminal
+
+In the web app and VSCode, `/terminal` opens a real shell pane beside the chat.
+
+### Know what it costs
+
+`/usage` shows token counts and cost per model; `/doctor` audits your config for stale or ineffective settings.
+
+## Four ways to use it
+
+| Feature | ppxai (Rich TUI) | ppxaide (Textual TUI) | VSCode | Web app |
+|---------|------------------|------------------------|--------|---------|
+| Streaming responses | Yes | Yes | Yes | Yes |
+| Syntax highlighting | Yes | Yes | Yes | Yes |
+| File editing tools | Yes | Yes | Yes | Yes |
+| `/auto` agent mode | Yes | Yes | Yes | Yes |
+| Checkpoint/undo | Yes | Yes | Yes | Yes |
+| Markdown in chat | Limited | Full rendering | Yes | Yes |
+| Themes | 4 | 17+ | N/A | N/A |
+| Tab completion | Yes | Yes | Yes | Yes |
 
 ## Documentation
 

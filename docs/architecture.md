@@ -140,6 +140,70 @@ ppxai/
 └── rich/main.py       # Rich TUI entry point (see pyproject [project.scripts])
 ```
 
+## Repository Layout
+
+The tree above is the DAG-relevant subset of `ppxai/`. The full repository,
+including the client-facing directories the DAG view omits (`rendering/`,
+`web/`, the rest of `rich/`, `data/`) and the four other build surfaces:
+
+```
+ppxai/
+├── ppxai/                      # Core package
+│   ├── rich/main.py            # Rich TUI entry point (legacy ppxai)
+│   │   └── event_handler.py    # Event system for streaming
+│   ├── tui/                    # Textual TUI (ppxaide)
+│   │   ├── app.py              # Main Textual application (PPXAIDEApp)
+│   │   ├── widgets/            # UI components (chat_view.py, input_box.py, side_panel.py, code_editor.py, status_bar.py)
+│   │   ├── themes/             # 17+ themes with layout.tcss
+│   │   └── screens/            # Modal screens (command palette, etc.)
+│   ├── engine/                 # Core business logic — see "Python Module Hierarchy" above
+│   ├── commands/                # UI-agnostic command implementations — see /help
+│   ├── rendering/               # Renderer implementations
+│   │   ├── base.py              # BaseRenderer interface
+│   │   ├── rich_renderer.py     # RichRenderer for legacy TUI
+│   │   └── textual_renderer.py  # TextualRenderer — type-based dispatch (ppxaide)
+│   ├── server/                  # HTTP + JSON-RPC servers — see "Python Module Hierarchy" above
+│   ├── web/                     # Desktop Web App frontend assets (served by server/http.py)
+│   │   └── [styles|components|lib|shared]/  # Frontend
+│   ├── common/                  # Shared utilities — see "Python Module Hierarchy" above
+│   ├── config/                  # Configuration system — see "Python Module Hierarchy" above
+│   └── data/                    # Session/usage data storage
+├── vscode-extension/           # VSCode extension (TypeScript)
+│   ├── src/
+│   │   ├── extension.ts        # Extension entry point
+│   │   ├── httpClient.ts       # HTTP + SSE client
+│   │   ├── chatPanel.ts        # Webview chat UI
+│   │   ├── previewPanel.ts     # Live HTML preview
+│   │   └── handlers/           # Event handlers
+│   └── media/webview/          # External CSS/JS for webview
+├── desktop/                    # Linux desktop integration
+│   ├── install-desktop-integration.sh   # One-click installer
+│   ├── uninstall-desktop-integration.sh # Uninstaller
+│   └── README.md               # Installation guide
+├── scripts/                    # Build, release, install scripts
+│   ├── bootstrap.py            # Auto-downloads uv, sets up project
+│   ├── release.py              # Automated release script
+│   └── install.ps1             # One-line installer (Windows)
+├── install.sh                  # One-line installer (Linux/macOS), repo root
+├── resources/                  # Icons and assets
+│   ├── ppxai.png               # ppxai icon (CLI)
+│   ├── ppxaide-nobg.png        # ppxaide icon (TUI)
+│   └── [.ico|.icns files]      # Platform-specific icons
+├── tests/                      # see CLAUDE.md for the current test count
+│   ├── test_tui.py             # Textual TUI tests
+│   ├── test_commands.py        # Command tests
+│   └── test_*.py               # Provider, tool, config tests
+├── docs/                       # Documentation
+│   ├── session-agent-guide.md  # In-session /auto mode guide
+│   ├── checkpoint-guide.md     # Atomic rollback guide
+│   ├── linux-terminal-setup.md # Ghostty/Kitty setup for Ctrl+Enter
+│   ├── provider-setup.md       # Multi-provider configuration
+│   ├── architecture.md         # This document
+│   └── release-notes-v*.md     # Version release notes
+├── benchmarks/                 # LLM performance benchmarks
+└── deploy/                     # Deployment configs (deploy/k8s, deploy/helm, deploy/compose)
+```
+
 ## Import Patterns
 
 ### 1. Protocol-Based Dependency Inversion
@@ -366,6 +430,34 @@ main() → PPXAIDEApp [singleton, IS its own CommandContext]
 | UI updates | Direct `console.print()` | EventBus signals → widget subscribers |
 | State | Public attributes on CommandHandler | Private attrs + public property/method API |
 | Widget tree | None (prompt_toolkit only) | Full Textual `compose()` tree |
+
+### Origin: Type-Based Renderer Dispatch (v1.15.0)
+
+The command/renderer split described below started as a single change in
+v1.15.0: decouple command logic from UI presentation entirely.
+
+- **21 `CommandResult` types** — structured data for all command outputs
+  (`MessageResult`, `TableResult`, `CodeResult`, `ErrorResult`, etc.)
+- **Mechanical dispatch** — `isinstance()` checks route results to
+  renderers, zero conditionals in command code
+- **Renderer implementations** — `RichRenderer` (legacy TUI) and
+  `TextualRenderer` (`ppxaide`) at the time; web and VSCode now consume the
+  same results over the command envelope (see below)
+- **UI-agnostic commands** — the same command code renders correctly in
+  any client, tested without a UI framework dependency
+
+```python
+# Command returns a typed result
+result = show_command.execute("file.py")
+# -> Returns CodeResult(content="...", language="python")
+
+# Renderer mechanically dispatches
+if isinstance(result, CodeResult):
+    renderer.render_code(result)  # TUI uses Rich syntax highlighting
+```
+
+See `docs/archive/release-notes/RELEASE-NOTES-v1.15.0.md` for the historical
+release notes. The sections below describe how this dispatch works today.
 
 ### Command Dispatch Flow (v1.18.1)
 
