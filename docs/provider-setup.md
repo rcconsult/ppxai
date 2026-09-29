@@ -141,7 +141,7 @@ MODEL_PROVIDER=gemini
 |--------|------|---------|-------------|
 | `enable_grounding` | boolean | `true` | Enable Google Search Grounding for real-time web search with citations |
 
-**Note**: The OpenAI-compatible endpoint is `https://generativelanguage.googleapis.com/v1beta/openai`. For native Google Search Grounding with citations (similar to Perplexity), install `pip install ppxai[gemini]` which uses the native Gemini SDK.
+**Note**: The OpenAI-compatible endpoint is `https://generativelanguage.googleapis.com/v1beta/openai`. For native Google Search Grounding with citations (similar to Perplexity), install the `gemini` extra (`uv sync --extra gemini` in a checkout), which adds the native Gemini SDK.
 
 **v1.13.3+**: When tools are enabled, both grounding AND tool prompts work together - grounding provides web search capabilities while tools provide other features like file editing, shell commands, etc.
 

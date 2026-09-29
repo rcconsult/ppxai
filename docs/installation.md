@@ -359,14 +359,16 @@ The server runs on `http://127.0.0.1:54320` by default.
 
 ## Alternative: Install with pip/uv
 
-For Python developers who prefer package managers:
+For Python developers who prefer package managers. ppxai is **not on PyPI**
+(the `ppxai` package there is an unrelated project), so install it from this
+repository:
 
 ```bash
 # With pip
-pip install ppxai[server]
+pip install "ppxai[server] @ git+https://github.com/rcconsult/ppxai"
 
 # With uv
-uv pip install ppxai[server]
+uv pip install "ppxai[server] @ git+https://github.com/rcconsult/ppxai"
 
 # Run TUI
 ppxai
