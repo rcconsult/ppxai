@@ -41,6 +41,15 @@ recording stand-in proxy (2026-09-29):
 | httpx with an explicit `transport=` (TCP or `uds=`) | no (0.28 mounts no env proxies then) |
 | httpx default with `NO_PROXY=localhost,127.0.0.1` | no, but that is the user's environment, not the code's |
 
+**A test trap:** `urllib.request.urlopen()` builds a global opener on its
+first call and caches it (`urllib.request._opener`), and its `ProxyHandler`
+reads the proxy environment only then. A test that monkeypatches
+`HTTP_PROXY` and calls `urlopen()` therefore sees whatever environment the
+FIRST `urlopen()` in that process saw, which depends on test order under
+xdist. Use `urllib.request.build_opener().open(...)` (a fresh opener reads
+the environment now) when a test needs the proxy environment to apply.
+Found as an order-dependent failure in this lesson's own control test.
+
 ## What's actually true
 
 Guarded (2026-09-29):

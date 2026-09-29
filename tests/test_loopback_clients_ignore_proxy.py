@@ -91,9 +91,12 @@ def _load_script(path: Path, name: str):
 
 def test_the_stand_in_proxy_really_catches_a_default_client(backend, proxy):
     # Control: without the fixes' opt-out, urllib DOES go to the proxy here,
-    # so the tests below prove something.
+    # so the tests below prove something. A FRESH opener, not urlopen():
+    # urlopen caches a global opener on its first call and ProxyHandler reads
+    # the environment only then, so after any earlier urlopen in this worker
+    # the cached opener has no proxy and the control would go direct.
     with pytest.raises(urllib.error.HTTPError) as err:
-        urllib.request.urlopen(f"http://127.0.0.1:{backend}/health", timeout=5)
+        urllib.request.build_opener().open(f"http://127.0.0.1:{backend}/health", timeout=5)
     assert err.value.code == 502
     assert proxy, "the stand-in proxy saw nothing: the control is broken"
 
