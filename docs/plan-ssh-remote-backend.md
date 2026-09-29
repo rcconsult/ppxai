@@ -165,7 +165,7 @@ stop. Findings feed back into the ADR before acceptance.
    reported its binary's directory as its workdir. Both fixed in `5c539936`
    (phase 5 above).
 
-**Open after the trial:**
+**Open after the trial** (both deferred by the owner, 2026-09-29):
 
 - A Playwright spec in `tests/e2e/` for the Launcher.
 - Remote hosts need a `ppxai-server` with `e3746f65`: an older one-file
