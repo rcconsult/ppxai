@@ -45,7 +45,22 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
+
+# urllib honours HTTP_PROXY even for 127.0.0.1/localhost, so behind a
+# corporate proxy a loopback gateway would be probed THROUGH the proxy
+# (docs/lessons/loopback-http-hops-must-not-read-proxy-env.md). A loopback
+# URL skips the proxy; a --base-url to a real remote gateway keeps it.
+_NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+_LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def _urlopen(req, data=None, timeout=30):
+    url = req.full_url if isinstance(req, urllib.request.Request) else req
+    if (urllib.parse.urlsplit(url).hostname or "").lower() in _LOOPBACK_HOSTS:
+        return _NO_PROXY_OPENER.open(req, data=data, timeout=timeout)
+    return urllib.request.urlopen(req, data=data, timeout=timeout)
 from pathlib import Path
 
 
@@ -334,7 +349,7 @@ class Gateway:
             req.add_header("Authorization", f"Bearer {self.token}")
         data = json.dumps(body).encode() if body is not None else None
         try:
-            with urllib.request.urlopen(req, data=data, timeout=timeout) as resp:
+            with _urlopen(req, data=data, timeout=timeout) as resp:
                 # Read the bytes ONCE, record them, then parse from the same
                 # buffer — the stream can't be re-read after json.loads.
                 raw = resp.read()
@@ -937,7 +952,7 @@ def probe_health_version(base_url: str) -> str:
     "some server on :8850" and "a server claiming 1.19.1".
     """
     try:
-        with urllib.request.urlopen(
+        with _urlopen(
             base_url.rstrip("/") + "/health", timeout=5
         ) as resp:
             body = json.loads(resp.read().decode() or "{}") or {}

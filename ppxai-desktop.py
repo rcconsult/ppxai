@@ -194,11 +194,15 @@ def wait_for_server(port: int, timeout: float = 30.0) -> bool:
     import urllib.request
 
     url = f'http://127.0.0.1:{port}/health'
+    # No proxy: urllib honours HTTP_PROXY even for 127.0.0.1, and behind a
+    # corporate proxy every poll would reach the proxy, never the server
+    # (docs/lessons/loopback-http-hops-must-not-read-proxy-env.md).
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     start = time.time()
 
     while time.time() - start < timeout:
         try:
-            with urllib.request.urlopen(url, timeout=1) as response:
+            with opener.open(url, timeout=1) as response:
                 if response.status == 200:
                     return True
         except (urllib.error.URLError, ConnectionRefusedError, TimeoutError):

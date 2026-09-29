@@ -264,7 +264,11 @@ async def preview_proxy_passthrough(
     try:
         # verify=tls_verify(): the cached context, not a fresh certifi one per
         # proxied request (~0.75s of CPU each under OpenSSL 3.0).
-        async with httpx.AsyncClient(timeout=30.0, verify=tls_verify()) as client:
+        # trust_env=False: the backend is on localhost; with HTTP_PROXY set,
+        # httpx would send every proxied request to the corporate proxy
+        # (docs/lessons/loopback-http-hops-must-not-read-proxy-env.md).
+        async with httpx.AsyncClient(timeout=30.0, verify=tls_verify(),
+                                     trust_env=False) as client:
             response = await client.request(
                 method=request.method,
                 url=target_url,

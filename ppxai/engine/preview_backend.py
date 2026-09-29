@@ -212,7 +212,11 @@ async def wait_for_port(port: int, timeout: float = 10.0) -> bool:
             # verify=tls_verify(): the cached context. httpx's default builds
             # a fresh certifi context per client -- ~0.75s of CPU under
             # OpenSSL 3.0, on EVERY 0.2s poll, even for plain http.
-            async with httpx.AsyncClient(timeout=1.0, verify=tls_verify()) as client:
+            # trust_env=False: a loopback hop. With HTTP_PROXY set, httpx
+            # sends localhost to the proxy, whose own reply would read as
+            # "backend is up" (docs/lessons/loopback-http-hops-must-not-read-proxy-env.md).
+            async with httpx.AsyncClient(timeout=1.0, verify=tls_verify(),
+                                         trust_env=False) as client:
                 await client.get(url)
                 return True
         except Exception:

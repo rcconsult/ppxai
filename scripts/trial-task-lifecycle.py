@@ -41,10 +41,23 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
 DEFAULT_PORT = 54320
+
+# urllib honours HTTP_PROXY even for 127.0.0.1/localhost; a loopback gateway
+# skips the proxy, a --base-url to a remote one keeps it
+# (docs/lessons/loopback-http-hops-must-not-read-proxy-env.md).
+_NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+_LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def _urlopen(req, data=None, timeout=30):
+    if (urllib.parse.urlsplit(req.full_url).hostname or "").lower() in _LOOPBACK_HOSTS:
+        return _NO_PROXY_OPENER.open(req, data=data, timeout=timeout)
+    return urllib.request.urlopen(req, data=data, timeout=timeout)
 STARTUP_WAIT_S = 20
 POLL_TIMEOUT_S = 180
 POLL_INTERVAL_S = 1.5
@@ -98,7 +111,7 @@ class Gateway:
             req.add_header("Authorization", f"Bearer {self.token}")
         data = json.dumps(body).encode() if body is not None else None
         try:
-            with urllib.request.urlopen(req, data=data, timeout=timeout) as r:
+            with _urlopen(req, data=data, timeout=timeout) as r:
                 return r.status, json.loads(r.read().decode() or "null")
         except urllib.error.HTTPError as e:
             try:

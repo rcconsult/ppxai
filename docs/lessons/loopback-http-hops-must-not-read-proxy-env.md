@@ -51,16 +51,22 @@ Guarded (2026-09-29):
 - `ppxai/server/registry.py`, `socket_answers`: an explicit
   `HTTPTransport(uds=...)`, safe on httpx 0.28 without `trust_env=False`.
 
-**Not guarded** (loopback URL, default client), open as of 2026-09-29:
+Guarded since 2026-09-29 (were open when this lesson was written; pinned by
+`tests/test_loopback_clients_ignore_proxy.py`, which points each client at a
+real local server with `HTTP_PROXY` set to a recording stand-in proxy):
 
 - `ppxai/server/routes/preview.py` — the `/preview` proxy to
-  `http://localhost:<port>/…`: behind a proxy, every proxied request goes to
-  the corporate proxy.
-- `ppxai/engine/preview_backend.py`, `wait_for_port` — any response counts
-  as ready, so the proxy's own reply reads as "backend is up".
-- `ppxai-desktop.py`, `wait_for_server` (urllib) — gets the proxy's reply,
-  not 200, and gives up after 30 s.
-- `scripts/gateway-smoke.py`, `Gateway.request` (urllib).
+  `http://localhost:<port>/…`: `trust_env=False`. Before, behind a proxy,
+  every proxied request went to the corporate proxy.
+- `ppxai/engine/preview_backend.py`, `wait_for_port` — `trust_env=False`.
+  Before, any response counted as ready, so the proxy's own reply read as
+  "backend is up".
+- `ppxai-desktop.py`, `wait_for_server` (urllib) — an opener with an empty
+  `ProxyHandler`. Before, it got the proxy's reply, not 200, and gave up
+  after 30 s.
+- `scripts/gateway-smoke.py` and `scripts/trial-task-lifecycle.py` (urllib)
+  — skip the proxy for a loopback `--base-url` only; a remote gateway still
+  goes through the environment's proxy.
 
 **What to do:** give every loopback or unix-socket client `trust_env=False`
 (httpx) or `urllib.request.build_opener(urllib.request.ProxyHandler({}))`
