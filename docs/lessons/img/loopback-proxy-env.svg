@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="440" viewBox="0 0 900 440" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#374151"/></marker>
+    <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/></marker>
+  </defs>
+  <rect width="900" height="440" fill="#ffffff"/>
+  <text x="30" y="40" font-size="22" font-weight="bold" fill="#1f2937">"localhost" can leave the machine</text>
+  <text x="30" y="64" font-size="14" fill="#4b5563">With HTTP_PROXY set, httpx and urllib send 127.0.0.1 / localhost requests to the proxy.</text>
+  <!-- machine boundary -->
+  <rect x="30" y="90" width="560" height="250" rx="10" fill="#f9fafb" stroke="#9ca3af" stroke-dasharray="6,4"/>
+  <text x="46" y="112" font-size="13" fill="#6b7280">this machine</text>
+  <!-- client -->
+  <rect x="60" y="180" width="190" height="70" rx="8" fill="#eff6ff" stroke="#60a5fa"/>
+  <text x="155" y="208" font-size="14" font-weight="bold" fill="#1f2937" text-anchor="middle">ppxai client</text>
+  <text x="155" y="230" font-size="12" fill="#4b5563" text-anchor="middle">GET http://localhost:p/</text>
+  <!-- local server -->
+  <rect x="380" y="130" width="190" height="70" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="475" y="158" font-size="14" font-weight="bold" fill="#1f2937" text-anchor="middle">local server</text>
+  <text x="475" y="180" font-size="12" fill="#4b5563" text-anchor="middle">preview, hub forward, socket</text>
+  <!-- proxy -->
+  <rect x="650" y="230" width="220" height="70" rx="8" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="760" y="258" font-size="14" font-weight="bold" fill="#1f2937" text-anchor="middle">corporate proxy</text>
+  <text x="760" y="280" font-size="12" fill="#4b5563" text-anchor="middle">answers 502 / auth page</text>
+  <!-- arrows -->
+  <path d="M250,200 L378,168" stroke="#16a34a" stroke-width="2.5" fill="none" marker-end="url(#arrG)"/>
+  <text x="268" y="158" font-size="12" fill="#166534">trust_env=False</text>
+  <path d="M250,235 L648,262" stroke="#dc2626" stroke-width="2.5" fill="none" marker-end="url(#arrR)"/>
+  <text x="330" y="272" font-size="12" fill="#991b1b">default client (reads HTTP_PROXY)</text>
+  <!-- table -->
+  <text x="30" y="372" font-size="14" font-weight="bold" fill="#1f2937">Measured, httpx 0.28.1 + urllib, HTTP_PROXY set:</text>
+  <text x="30" y="396" font-size="13" fill="#991b1b">proxied: httpx default · AsyncClient default · urllib urlopen · NO_PROXY=&lt;other host&gt; · ALL_PROXY only</text>
+  <text x="30" y="418" font-size="13" fill="#166534">direct: trust_env=False · explicit transport= (TCP or uds=) · urllib ProxyHandler({})</text>
+  <text x="870" y="432" font-size="10" fill="#6b7280" text-anchor="end">docs/lessons/loopback-http-hops-must-not-read-proxy-env.md</text>
+</svg>

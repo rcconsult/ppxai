@@ -197,6 +197,14 @@ discoverable later.
   patching idiom declared a batch safe that then shipped 15 failures. Read
   the COUNTS, never the exit code — "5,684 passed" cannot be forged by a
   pipe. A false "fine" ships; a false "broken" only costs time (2026-09-01).
+- [outbound-http-clients-take-the-shared-tls-context.md](outbound-http-clients-take-the-shared-tls-context.md)
+  — a new outbound client passes `verify=tls_verify()` (or `context=tls_ssl_context()`
+  for urllib). httpx's default trusts certifi only (fails behind TLS
+  inspection); a CA path replaces the system roots (fails off that network).
+- [loopback-http-hops-must-not-read-proxy-env.md](loopback-http-hops-must-not-read-proxy-env.md)
+  — with `HTTP_PROXY` set, httpx and urllib send `localhost`/`127.0.0.1` to the
+  proxy. Loopback and socket hops need `trust_env=False` (or an explicit
+  `transport=`, or urllib `ProxyHandler({})`); four unguarded ones listed.
 - [mutation-tests-that-never-ran.md](mutation-tests-that-never-ran.md) — a
   mutation test's failure modes all resolve to "all green", which is what a
   covered guard also looks like. An anchor that matches twice patches the
