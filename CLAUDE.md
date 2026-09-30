@@ -215,11 +215,22 @@ Slimmed in 2026-05. Most files now read from `ppxai.__version__` at runtime, lin
 
 ## GitHub CLI Authentication
 
+Unset both token variables and let `gh` use its own login:
+
 ```bash
-GH_TOKEN=$(cat .github/gh-tokenv.env) gh release list
+env -u GH_TOKEN -u GITHUB_TOKEN gh run list --branch <branch> --limit 5
 ```
 
-`.github/gh-tokenv.env` is gitignored (the name `scripts/release.py` reads).
+PowerShell has no `env -u`:
+
+```powershell
+Remove-Item Env:GH_TOKEN, Env:GITHUB_TOKEN -ErrorAction SilentlyContinue; gh run list --limit 5
+```
+
+Don't pass `GH_TOKEN=$(cat .github/gh-tokenv.env)`: the file holds a
+`GH_TOKEN="…"` line, not a bare token, so `gh` gets that whole line and
+answers 401. The file is gitignored; `scripts/release.py` and the build
+scripts read it themselves (`source`).
 
 ## Key Design Decisions
 
