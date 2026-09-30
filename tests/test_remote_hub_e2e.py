@@ -64,8 +64,14 @@ def hub_process(tmp_path):
     config.write_text(json.dumps(base), encoding="utf-8")
 
     port = _free_port()
+    # Serve the checkout's web UI. Without this both servers read
+    # ~/.ppxai/web, which the suite links from the developer's real install
+    # (tests/conftest.py): present on a dev machine, absent on CI, where the
+    # proxied page was "Web UI not found". The remote inherits this env
+    # through tests/fake_ssh.py.
     env = dict(os.environ, PATH=f"{shim_dir}{os.pathsep}{os.environ['PATH']}",
-               PPXAI_CONFIG_FILE=str(config), XDG_RUNTIME_DIR=str(runtime))
+               PPXAI_CONFIG_FILE=str(config), XDG_RUNTIME_DIR=str(runtime),
+               PPXAI_WEB_DIR=str(Path(__file__).resolve().parents[1] / "ppxai" / "web"))
     env.pop("PPXAI_API_TOKEN", None)
     proc = subprocess.Popen([sys.executable, "-m", "ppxai.server.http", "--port", str(port)],
                             env=env, cwd=str(tmp_path), stdout=subprocess.PIPE,
