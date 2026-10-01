@@ -67,7 +67,7 @@ class TestMissingOrBadSessionId:
         assert r.status_code == 200
         # The "default" session exists on every running server.
 
-    def test_unknown_session_id_creates_fresh_session(self, http_client):
+    def test_unknown_session_id_creates_fresh_session(self, http_client, tmp_path):
         unknown = "absolutely-never-seen-before-xyz123"
         r = http_client.get("/status", headers={"X-Session-Id": unknown})
         assert r.status_code == 200
@@ -75,7 +75,7 @@ class TestMissingOrBadSessionId:
         # — mutating its working_dir then reading it back proves it.
         r1 = http_client.post(
             "/context/working_dir",
-            json={"path": "/tmp"},
+            json={"path": str(tmp_path)},  # not /tmp: absent on Windows (400)
             headers={"X-Session-Id": unknown},
         )
         assert r1.status_code in (200, 422)  # 422 if path validation fails

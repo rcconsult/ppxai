@@ -13,6 +13,9 @@ from ppxai.engine.tools.builtin.shell import ShellExecuteTool, _is_backgrounded
 
 # Windows cmd.exe doesn't support single quotes in arguments
 _Q = '"' if sys.platform == 'win32' else "'"
+# A uv venv on Windows ships `python.exe` only; a bare `python3` there is the
+# Microsoft Store alias stub (exit 9009). Both names hit the same guard.
+_PY = "python" if sys.platform == "win32" else "python3"
 
 
 @pytest.fixture
@@ -41,9 +44,9 @@ class TestCompoundCommands:
         assert "/tmp" in result or "private/tmp" in result  # macOS /tmp → /private/tmp
 
     @pytest.mark.asyncio
-    async def test_cd_without_operator_triggers_handler(self, shell_tool, mock_engine):
+    async def test_cd_without_operator_triggers_handler(self, shell_tool, mock_engine, tmp_path):
         """Plain cd /path should still use the cd handler."""
-        result = await shell_tool.execute("cd /tmp")
+        result = await shell_tool.execute(f"cd {tmp_path.as_posix()}")
         assert "Changed directory to" in result
         mock_engine.set_working_dir.assert_called_once()
 
@@ -79,13 +82,13 @@ class TestInteractiveGuard:
     @pytest.mark.asyncio
     async def test_python_with_args_allowed(self, shell_tool):
         """python3 -c 'print(1)' should run (has args)."""
-        result = await shell_tool.execute(f"python3 -c {_Q}print(42){_Q}")
+        result = await shell_tool.execute(f"{_PY} -c {_Q}print(42){_Q}")
         assert "42" in result
 
     @pytest.mark.asyncio
     async def test_python_in_compound_not_blocked(self, shell_tool):
         """python3 in a compound command should not be blocked."""
-        result = await shell_tool.execute(f"echo start && python3 -c {_Q}print(99){_Q}")
+        result = await shell_tool.execute(f"echo start && {_PY} -c {_Q}print(99){_Q}")
         assert "interactive" not in result.lower()
         assert "99" in result
 

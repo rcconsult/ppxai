@@ -25,7 +25,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.conftest import ESBUILD
+from tests.conftest import ESBUILD, minimal_subprocess_env
 
 ROOT = Path(__file__).resolve().parents[1]
 EXT = ROOT / "vscode-extension"
@@ -136,10 +136,9 @@ def _marked_use_block(source: str, anchor: str) -> str:
 
 
 def _render(config: str) -> dict[str, str]:
-    env = {
-        "PATH": "", "MARKED": str(MARKED), "CONFIG": config,
-        "CASES": json.dumps(_CASES),
-    }
+    env = minimal_subprocess_env(
+        PATH="", MARKED=str(MARKED), CONFIG=config, CASES=json.dumps(_CASES),
+    )
     proc = subprocess.run(
         [NODE, "-e", _MARKED_HARNESS], capture_output=True, text=True,
         encoding="utf-8", env=env, timeout=60,
@@ -215,7 +214,7 @@ class TestDefect6AutoLoopSeesCompletion:
         assert build.returncode == 0, build.stderr
         proc = subprocess.run(
             [NODE, "-e", _AUTO_HARNESS], capture_output=True, text=True,
-            env={"PATH": "", "BUNDLE": str(out)}, timeout=60,
+            env=minimal_subprocess_env(PATH="", BUNDLE=str(out)), timeout=60,
         )
         assert proc.returncode == 0, proc.stderr
         return json.loads(proc.stdout)

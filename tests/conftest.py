@@ -22,6 +22,23 @@ ESBUILD = (Path(__file__).resolve().parent.parent / "vscode-extension"
            / "node_modules" / ".bin"
            / ("esbuild.cmd" if sys.platform == "win32" else "esbuild"))
 
+#: What a Windows child process cannot start without. Node aborts at init
+#: (`ncrypto::CSPRNG` assertion, exit 134) when `SystemRoot` is missing,
+#: because OpenSSL reaches the OS RNG through it.
+_WIN32_ESSENTIAL_ENV = ("SystemRoot", "SystemDrive", "TEMP", "TMP", "USERPROFILE")
+
+
+def minimal_subprocess_env(**extra: str) -> dict[str, str]:
+    """A hand-built child env: `extra` plus, on Windows, the variables a
+    process needs to start at all. Use it instead of a bare dict literal."""
+    env = dict(extra)
+    if sys.platform == "win32":
+        for key in _WIN32_ESSENTIAL_ENV:
+            if key in os.environ:
+                env.setdefault(key, os.environ[key])
+    return env
+
+
 #: The developer's REAL home, captured at conftest IMPORT time — i.e. before
 #: `pytest_configure` points `HOME` somewhere else. Everything downstream
 #: compares against this, so "is this path in the user's real data directory?"

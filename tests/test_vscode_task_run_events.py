@@ -18,6 +18,7 @@ as one of the tail's stop events.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -25,6 +26,7 @@ from pathlib import Path
 import pytest
 
 from tests.conftest import ESBUILD as CONFTEST_ESBUILD
+from tests.conftest import minimal_subprocess_env
 
 ROOT = Path(__file__).resolve().parents[1]
 EXT = ROOT / "vscode-extension"
@@ -117,10 +119,7 @@ console.log('ALL OK');
 
 def test_vscode_event_text_renders_turn_degraded_and_turn_end(tmp_path):
     bundle = _bundle(tmp_path)
-    env = {
-        "PPXAI_BUNDLE": str(bundle),
-        "PATH": __import__("os").environ.get("PATH", ""),
-    }
+    env = minimal_subprocess_env(PPXAI_BUNDLE=str(bundle), PATH=os.environ.get("PATH", ""))
     proc = subprocess.run(
         [NODE, "-e", _HARNESS], capture_output=True, text=True, encoding="utf-8", timeout=30, env=env,
     )
@@ -148,10 +147,7 @@ console.log('ALL OK');
 
 def test_vscode_event_text_turn_degraded_is_plain_text(tmp_path):
     bundle = _bundle(tmp_path)
-    env = {
-        "PPXAI_BUNDLE": str(bundle),
-        "PATH": __import__("os").environ.get("PATH", ""),
-    }
+    env = minimal_subprocess_env(PPXAI_BUNDLE=str(bundle), PATH=os.environ.get("PATH", ""))
     proc = subprocess.run(
         [NODE, "-e", _ESCAPING_HARNESS], capture_output=True, text=True, encoding="utf-8", timeout=30, env=env,
     )
