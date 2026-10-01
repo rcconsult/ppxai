@@ -38,7 +38,7 @@ recording stand-in proxy (2026-09-29):
 | urllib `urlopen("http://127.0.0.1:<p>/")` | **yes** |
 | httpx with `trust_env=False` | no |
 | urllib `build_opener(ProxyHandler({})).open(...)` | no |
-| httpx with an explicit `transport=` (TCP or `uds=`) | no (0.28 mounts no env proxies then) |
+| httpx with an explicit `transport=` (TCP or `uds=`) | no (0.28 mounts no env proxies then), **but see the TLS trap below** |
 | httpx default with `NO_PROXY=localhost,127.0.0.1` | no, but that is the user's environment, not the code's |
 
 **A test trap:** `urllib.request.urlopen()` builds a global opener on its
@@ -50,6 +50,18 @@ xdist. Use `urllib.request.build_opener().open(...)` (a fresh opener reads
 the environment now) when a test needs the proxy environment to apply.
 Found as an order-dependent failure in this lesson's own control test.
 
+**The TLS trap: a passed-in transport ignores the client's `trust_env`.**
+`httpx.AsyncClient(transport=httpx.AsyncHTTPTransport(), trust_env=False)`
+still reads the environment: the transport has its own `trust_env`,
+default `True`, and at construction it loads `SSL_CERT_FILE` into an SSL
+context, even for a plain-HTTP or unix-socket hop. With that variable
+naming a missing file (a CA bundle path carried over from another
+machine), construction raises `FileNotFoundError`. The hub proxy answered
+500 to every request, and the two unix-socket health probes caught it as an
+`OSError` and reported a live server as not answering (found 2026-09-30).
+Pass `trust_env=False` to the transport as well as the client. Pinned by
+`tests/test_loopback_clients_ignore_tls_env.py`.
+
 ## What's actually true
 
 Guarded (2026-09-29):
@@ -58,7 +70,10 @@ Guarded (2026-09-29):
   `ppxai/remote/manager.py` (its `/health` probes): `trust_env=False`, with a
   comment saying why (`96e7f58e`).
 - `ppxai/server/registry.py`, `socket_answers`: an explicit
-  `HTTPTransport(uds=...)`, safe on httpx 0.28 without `trust_env=False`.
+  `HTTPTransport(uds=...)`. Safe from the proxy on httpx 0.28, but not from
+  `SSL_CERT_FILE` (the TLS trap above); since 2026-09-30 both the transport
+  and the client pass `trust_env=False`, as do the transports in
+  `remote_hub.py` and `remote/manager.py`.
 
 Guarded since 2026-09-29 (were open when this lesson was written; pinned by
 `tests/test_loopback_clients_ignore_proxy.py`, which points each client at a
@@ -78,7 +93,7 @@ real local server with `HTTP_PROXY` set to a recording stand-in proxy):
   goes through the environment's proxy.
 
 **What to do:** give every loopback or unix-socket client `trust_env=False`
-(httpx) or `urllib.request.build_opener(urllib.request.ProxyHandler({}))`
+(httpx; on the transport too, when it passes `transport=`) or `urllib.request.build_opener(urllib.request.ProxyHandler({}))`
 (urllib). Outbound clients are the other case: they keep the proxy
 environment and take the shared TLS context, see
 [outbound-http-clients-take-the-shared-tls-context.md](outbound-http-clients-take-the-shared-tls-context.md).

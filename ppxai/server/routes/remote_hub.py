@@ -134,11 +134,15 @@ class Hub:
             return current[1]
         if current is not None:
             self._retire(current[1])
+        # trust_env=False on the TRANSPORT too: the client's flag does not
+        # reach a transport passed in, and a transport that trusts the env
+        # loads SSL_CERT_FILE at construction -- a missing file made every
+        # proxied request a 500, though this hop is plain HTTP.
         if endpoint.kind == "uds":
-            transport = httpx.AsyncHTTPTransport(uds=endpoint.address)
+            transport = httpx.AsyncHTTPTransport(uds=endpoint.address, trust_env=False)
             base = "http://localhost"
         else:
-            transport = httpx.AsyncHTTPTransport()
+            transport = httpx.AsyncHTTPTransport(trust_env=False)
             base = f"http://{endpoint.address}"
         client = httpx.AsyncClient(transport=transport, base_url=base,
                                    timeout=_UPSTREAM_TIMEOUT, trust_env=False)

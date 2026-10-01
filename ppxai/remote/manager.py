@@ -108,7 +108,10 @@ async def http_request(endpoint: LocalEndpoint, token: str, method: str, path: s
     """One request through a forward, named as `localhost` with the server's
     bearer token -- the S5 header rules, applied to the hub's own probes."""
     if endpoint.kind == "uds":
-        transport = httpx.AsyncHTTPTransport(uds=endpoint.address)
+        # trust_env=False here as well: the client's flag does not reach a
+        # passed-in transport, which would load SSL_CERT_FILE and, if it is
+        # missing, raise an OSError read below as "not answering".
+        transport = httpx.AsyncHTTPTransport(uds=endpoint.address, trust_env=False)
         base = "http://localhost"
     else:
         transport = None

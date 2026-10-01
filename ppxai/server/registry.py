@@ -168,8 +168,11 @@ def socket_answers(socket_path: str, token: str | None = None) -> bool:
         return False
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     try:
-        with httpx.Client(transport=httpx.HTTPTransport(uds=socket_path),
-                          timeout=_HEALTH_TIMEOUT_S) as client:
+        # trust_env=False on both: a transport that trusts the env loads
+        # SSL_CERT_FILE, and a missing file is an OSError -- a live server
+        # would be pruned as dead.
+        with httpx.Client(transport=httpx.HTTPTransport(uds=socket_path, trust_env=False),
+                          timeout=_HEALTH_TIMEOUT_S, trust_env=False) as client:
             return client.get("http://localhost/health", headers=headers).status_code == 200
     except (httpx.HTTPError, OSError):
         return False
