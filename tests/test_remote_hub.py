@@ -301,6 +301,29 @@ class TestProxy:
         assert r.status_code == 502 and r.json()["error"] == "remote_unreachable"
 
 
+    def test_a_silent_forward_is_a_504_not_a_hang(self, env, monkeypatch):
+        # Listening but never accepting: the kernel completes the handshake,
+        # nothing ever answers -- a wedged remote behind a live SSH forward.
+        monkeypatch.setattr(remote_hub, "_UPSTREAM_HEADERS_TIMEOUT_S", 0.5)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as silent:
+            silent.bind(("127.0.0.1", 0))
+            silent.listen(1)
+            wedged = LocalEndpoint("tcp", f"127.0.0.1:{silent.getsockname()[1]}")
+            hub_ = remote_hub.hub()
+            monkeypatch.setattr(hub_.manager, "route", lambda h, s: (wedged, TOKEN))
+            started = time.monotonic()
+            r = env["client"].get(f"{P}/echo")
+            elapsed = time.monotonic() - started
+        assert r.status_code == 504 and r.json()["error"] == "remote_timeout"
+        assert elapsed < 5
+
+    def test_the_header_deadline_outlasts_a_provider_read_timeout(self):
+        # A plain /v1/oneshot sends no headers until its provider call ends;
+        # the OpenAI SDK's read timeout is 600 s. The remote's own error must
+        # get there before the hub gives up.
+        assert remote_hub._UPSTREAM_HEADERS_TIMEOUT_S > 600
+
+
 class TestRefusals:
     def test_a_cross_site_write_is_refused(self, env):
         r = env["client"].post(f"{P}/echo", content=b"x", headers={"origin": "http://evil.example"})

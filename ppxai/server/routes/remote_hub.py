@@ -106,6 +106,13 @@ _DROP_DOWNSTREAM = frozenset({
 _COOKIE_PATH_RE = re.compile(r"(?i)(;\s*path=)(/[^;]*)")
 
 _UPSTREAM_TIMEOUT = httpx.Timeout(10.0, read=None, write=None, pool=None)
+# `read=None` keeps SSE streams and long bodies open, but alone it lets a remote
+# that accepts and never answers hold a request forever. This bounds only the
+# wait for the response HEADERS. A plain `/v1/oneshot` sends none until its
+# provider call returns, and the OpenAI SDK's read timeout is 600 s, so the
+# deadline sits past that: the remote's own provider error (a 502 with its
+# message) arrives first, and only a wedged remote meets this 504.
+_UPSTREAM_HEADERS_TIMEOUT_S = 660.0
 
 
 class Hub:
@@ -397,7 +404,15 @@ async def proxy_http(request: Request, host: str, server_id: str, path: str):
         request.method, url, headers=_upstream_headers(request, token),
         content=request.stream() if has_body else None)
     try:
-        upstream = await client.send(upstream_request, stream=True)
+        upstream = await asyncio.wait_for(client.send(upstream_request, stream=True),
+                                          timeout=_UPSTREAM_HEADERS_TIMEOUT_S)
+    except asyncio.TimeoutError:
+        logger.warning(f"hub: {host}/{server_id} {request.method} /{path} sent no response "
+                       f"headers in {_UPSTREAM_HEADERS_TIMEOUT_S:g}s")
+        return JSONResponse({"error": "remote_timeout",
+                             "detail": f"{host}/{server_id} accepted the request but sent no "
+                                       f"response in {_UPSTREAM_HEADERS_TIMEOUT_S:g}s"},
+                            status_code=504)
     except httpx.HTTPError as exc:
         logger.warning(f"hub: {host}/{server_id} {request.method} /{path} failed: {exc!r}")
         return JSONResponse({"error": "remote_unreachable",

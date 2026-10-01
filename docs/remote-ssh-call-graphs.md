@@ -227,6 +227,7 @@ proxy_http(request, host, server_id, path)             [routes/remote_hub.py:371
 │     − hop-by-hop, Host, Authorization, Cookie, Origin, Referer, Forwarded, X-Forwarded-*, X-Real-IP
 │     + Host: localhost  + Authorization: Bearer <registry token>
 ├─ client.send(build_request(method, "/"+path+query, content=request.stream()), stream=True)
+│   ├─ no response headers in 660 s → 504 remote_timeout
 │   └─ httpx.HTTPError → 502 remote_unreachable
 │
 │   ─── over the forward ──▶ remote ppxai-server (the unchanged local stack, on the remote host)
