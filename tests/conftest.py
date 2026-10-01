@@ -22,6 +22,13 @@ ESBUILD = (Path(__file__).resolve().parent.parent / "vscode-extension"
            / "node_modules" / ".bin"
            / ("esbuild.cmd" if sys.platform == "win32" else "esbuild"))
 
+#: `git` for commands that READ this checkout. A checkout owned by another
+#: account (a VM clone owned by Administrators) trips git's dubious-ownership
+#: check (exit 128), and the user's own `safe.directory` exemption lives in a
+#: global gitconfig the suite cannot see once HOME is redirected. Per
+#: invocation only; nothing is written to any config.
+REPO_GIT = ("git", "-c", "safe.directory=*")
+
 #: What a Windows child process cannot start without. Node aborts at init
 #: (`ncrypto::CSPRNG` assertion, exit 134) when `SystemRoot` is missing,
 #: because OpenSSL reaches the OS RNG through it.

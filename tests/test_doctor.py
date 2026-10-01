@@ -43,6 +43,7 @@ from ppxai.engine.model_deprecations import (
     classify_model,
     find_missing_recommended,
 )
+from tests.conftest import REPO_GIT
 
 # -----------------------------------------------------------------------------
 # classify_model — per-model classification
@@ -604,7 +605,7 @@ class TestDeprecationTableInvariants:
         root = pathlib.Path(__file__).resolve().parent.parent
         try:
             names = subprocess.run(
-                ["git", "ls-files", "ppxai-config*.json"],
+                [*REPO_GIT, "ls-files", "ppxai-config*.json"],
                 cwd=root, capture_output=True, text=True, timeout=30,
             ).stdout.split()
         except Exception:  # noqa: BLE001 — no git (sdist, vendored tree)
@@ -777,7 +778,7 @@ class TestDeprecationTableInvariants:
         root = pathlib.Path(__file__).parent.parent
         try:
             out = subprocess.run(
-                ["git", "ls-files", "ppxai-config*.json"],
+                [*REPO_GIT, "ls-files", "ppxai-config*.json"],
                 cwd=root, capture_output=True, text=True, timeout=30,
             ).stdout.split()
         except Exception:  # noqa: BLE001 -- no git (sdist, vendored tree)

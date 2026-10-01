@@ -36,6 +36,7 @@ import subprocess
 import pytest
 
 from ppxai.engine.facts_config import FACT_FIELDS
+from tests.conftest import REPO_GIT
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -49,7 +50,7 @@ def _tracked_configs():
     """
     try:
         out = subprocess.run(
-            ["git", "ls-files", "ppxai-config*.json"],
+            [*REPO_GIT, "ls-files", "ppxai-config*.json"],
             cwd=REPO_ROOT, capture_output=True, text=True, timeout=30,
         ).stdout.split()
     except Exception:  # noqa: BLE001 — no git (sdist, vendored tree)

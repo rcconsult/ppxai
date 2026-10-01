@@ -39,10 +39,13 @@ it, ask whether the doc is really historical or just stale.
 """
 
 import re
+import subprocess
 from functools import lru_cache
 from pathlib import Path
 
 import pytest
+
+from tests.conftest import REPO_GIT
 
 PROJECT_ROOT = Path(__file__).parent.parent
 
@@ -98,6 +101,31 @@ def _is_pruned(rel: str) -> bool:
 
 
 @lru_cache(maxsize=None)
+def _git_visible() -> frozenset[str] | None:
+    """Tracked + untracked-but-not-ignored paths, or None without git.
+
+    A gitignored file (a host-local `.local/AGENTS.md`) is nobody else's doc;
+    a new doc not yet `git add`ed still is. None (no git, an sdist) keeps
+    the old walk-everything behaviour rather than checking nothing.
+    """
+    try:
+        out = subprocess.run(
+            [*REPO_GIT, "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            cwd=PROJECT_ROOT, capture_output=True, timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    return frozenset(out.stdout.decode("utf-8", "replace").split("\0")) - {""}
+
+
+def _is_ignored(rel: str) -> bool:
+    visible = _git_visible()
+    return visible is not None and rel not in visible
+
+
+@lru_cache(maxsize=None)
 def _active_docs(suffixes=(".md", ".html")):
     """Every tracked doc that is not a historical record.
 
@@ -116,7 +144,7 @@ def _active_docs(suffixes=(".md", ".html")):
         # ERROR_CANT_ACCESS_FILE for a reparse point whose target is gone).
         # Filtering after the stat crashed the whole walk on a repo that had
         # simply run `npm install`.
-        if _is_pruned(rel):
+        if _is_pruned(rel) or _is_ignored(rel):
             continue
         try:
             if not path.is_file():
@@ -146,7 +174,7 @@ def _adr0010_corpus():
             continue
         rel = path.relative_to(PROJECT_ROOT).as_posix()
         # Prune BEFORE the is_file() stat -- see _active_docs for why.
-        if _is_pruned(rel) or "tests/" in rel:
+        if _is_pruned(rel) or "tests/" in rel or _is_ignored(rel):
             continue
         try:
             if not path.is_file():
@@ -699,3 +727,13 @@ class TestEveryLessonIsDiscoverable:
             f"{dangling}\n\nA renamed or deleted lesson leaves the old name "
             "behind; a reader following it finds nothing."
         )
+
+
+class TestCorpusIsWhatGitSees:
+    """The doc walk skips gitignored files: a host-local note is not a doc."""
+
+    def test_a_gitignored_path_is_skipped_and_a_tracked_one_is_not(self):
+        if _git_visible() is None:
+            pytest.skip("no git here; the walk falls back to every file")
+        assert _is_ignored(".local/AGENTS.md")
+        assert not _is_ignored("README.md")

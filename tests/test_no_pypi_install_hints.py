@@ -17,6 +17,7 @@ import subprocess
 from pathlib import Path
 
 from ppxai.constants import PPXAI_GIT_URL, install_extra_hint
+from tests.conftest import REPO_GIT
 
 REPO = Path(__file__).resolve().parents[1]
 THIS = Path(__file__).resolve().relative_to(REPO).as_posix()
@@ -43,7 +44,7 @@ def _exempt(rel: str) -> bool:
 
 
 def _tracked_text_files() -> list[str]:
-    out = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
+    out = subprocess.run([*REPO_GIT, "ls-files"], cwd=REPO, capture_output=True, text=True,
                          check=True, encoding="utf-8")
     return [p for p in out.stdout.splitlines() if Path(p).suffix in TEXT_SUFFIXES]
 

@@ -51,6 +51,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import REPO_GIT
+
 ROOT = Path(__file__).resolve().parents[1]
 EXT = ROOT / "vscode-extension"
 SRC = EXT / "src"
@@ -213,7 +215,7 @@ class TestNoHandWrittenInterface:
 
     def test_the_generated_file_is_tracked(self):
         proc = subprocess.run(
-            ["git", "ls-files", "--error-unmatch",
+            [*REPO_GIT, "ls-files", "--error-unmatch",
              str(GENERATED.relative_to(ROOT))],
             cwd=ROOT, capture_output=True, text=True,
         )

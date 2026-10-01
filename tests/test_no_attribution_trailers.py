@@ -52,6 +52,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import REPO_GIT
+
 PROJECT_ROOT = Path(__file__).parent.parent
 
 #: The v1.19.2 release commit. Verified 2026-09-21:
@@ -143,7 +145,7 @@ _RECORD_SEP = "\x1e"
 
 def _run_git(args: list[str]) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["git", *args],
+        [*REPO_GIT, *args],
         cwd=str(PROJECT_ROOT),
         capture_output=True,
         text=True,
