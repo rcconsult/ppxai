@@ -22,6 +22,7 @@ import hashlib
 import json
 import os
 import shutil
+import socket
 import sys
 import tempfile
 import threading
@@ -285,7 +286,15 @@ class TestProxy:
         assert asyncio.run(go()) == "echo:hi"
 
     def test_a_dead_forward_is_a_502_not_a_hang(self, env, monkeypatch):
-        dead = LocalEndpoint("tcp", "127.0.0.1:9")  # discard port: nothing listens
+        # A port the OS just handed out and we released: connects are refused
+        # at once. Not a well-known "closed" port: Windows' optional Simple
+        # TCP/IP Services listens on 9 and never answers, so the proxy hangs.
+        # (Holding a bound, unlistened socket instead refuses on Linux but
+        # makes macOS sit out the 10 s connect timeout.)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        dead = LocalEndpoint("tcp", f"127.0.0.1:{port}")
         hub_ = remote_hub.hub()
         monkeypatch.setattr(hub_.manager, "route", lambda h, s: (dead, TOKEN))
         r = env["client"].get(f"{P}/echo")
