@@ -92,6 +92,19 @@ real local server with `HTTP_PROXY` set to a recording stand-in proxy):
   — skip the proxy for a loopback `--base-url` only; a remote gateway still
   goes through the environment's proxy.
 
+Guarded since 2026-10-01, loopback-only because the URL comes from config
+and may name a hosted API (`trust_env=not is_loopback_url(url)`, from
+`ppxai/config/network.py`; same test file):
+
+- `ppxai/engine/providers/base.py` — an OpenAI-compatible provider's
+  `base_url` (local vLLM, Ollama, LM Studio, an SSH forward).
+- `ppxai/engine/multimodal_ops.py`, `caption_image` — the vision sidecar.
+- `ppxai/commands/doctor.py`, `_probe_provider_endpoint` — `/doctor`'s
+  `/models` probe.
+
+The OpenAI-native, Gemini and Anthropic providers have no configurable
+`base_url` (fixed hosted endpoints), so they keep the proxy environment.
+
 **What to do:** give every loopback or unix-socket client `trust_env=False`
 (httpx; on the transport too, when it passes `transport=`) or `urllib.request.build_opener(urllib.request.ProxyHandler({}))`
 (urllib). Outbound clients are the other case: they keep the proxy

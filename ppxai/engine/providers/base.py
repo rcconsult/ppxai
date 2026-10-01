@@ -23,6 +23,7 @@ from ...config import (
     get_provider_config,
     get_reasoning_trigger,
 )
+from ...config.network import is_loopback_url
 from ...config.tls import tls_verify
 from .. import facts_config as _facts_config
 from ..model_facts import ModelFacts, shipped_facts_for_model
@@ -123,10 +124,13 @@ class BaseProvider(ABC):
         # (see ppxai/config/tls.py). tls_verify() returns False (off) or an
         # SSLContext — never True — so the client always carries an explicit
         # policy; a `verify is True` fast path would be dead code.
+        # A loopback base_url (local vLLM/Ollama/LM Studio, an SSH forward)
+        # must not go through HTTP_PROXY; a hosted one keeps it.
         self.client = OpenAI(
             api_key=api_key,
             base_url=base_url,
-            http_client=httpx.Client(verify=tls_verify()),
+            http_client=httpx.Client(verify=tls_verify(),
+                                     trust_env=not is_loopback_url(base_url)),
             timeout=client_timeout(provider_id),
         )
 

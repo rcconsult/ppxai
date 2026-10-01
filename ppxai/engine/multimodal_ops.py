@@ -34,6 +34,7 @@ import httpx
 
 from ..common.logger import get_logger
 from ..config import get_vision_model_config
+from ..config.network import is_loopback_url
 from ..config.tls import tls_verify
 from .artifact_projector import ContextAttachmentProjector
 from .types import ImageAttachmentRef, OfficeAttachmentRef, PdfAttachmentRef
@@ -689,15 +690,18 @@ def caption_image(
     b64 = base64.b64encode(data).decode("ascii")
     data_uri = f"data:{media_type};base64,{b64}"
 
+    base_url = endpoint if endpoint.endswith("/v1") else f"{endpoint}/v1"
     try:
         client = OpenAI(
-            base_url=endpoint if endpoint.endswith("/v1") else f"{endpoint}/v1",
+            base_url=base_url,
             api_key=api_key,
             timeout=float(cfg.get("timeout", 30)),
             # The shared TLS policy and its cached context, like every
             # provider -- the SDK's own default is a fresh certifi context
-            # per client (~0.75s of CPU under OpenSSL 3.0).
-            http_client=httpx.Client(verify=tls_verify()),
+            # per client (~0.75s of CPU under OpenSSL 3.0). A loopback
+            # sidecar must not go through HTTP_PROXY; a hosted one keeps it.
+            http_client=httpx.Client(verify=tls_verify(),
+                                     trust_env=not is_loopback_url(base_url)),
         )
         response = client.chat.completions.create(
             model=cfg["model"],

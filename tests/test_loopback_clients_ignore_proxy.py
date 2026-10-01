@@ -22,7 +22,10 @@ from pathlib import Path
 
 import pytest
 
-from ppxai.engine import preview_backend
+from ppxai.commands import doctor
+from ppxai.config.network import is_loopback_url
+from ppxai.engine import multimodal_ops, preview_backend
+from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -144,3 +147,72 @@ def test_the_preview_proxy_route_does_not_read_the_proxy_env():
     body = src[src.index('target_url = f"http://localhost:{port}/{path}"'):]
     body = body[:body.index("except httpx.ConnectError")]
     assert "trust_env=False" in body
+
+
+# ---------------------------------------------------------------------------
+# Clients whose URL comes from config: skip the proxy for loopback ONLY
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(("url", "loopback"), [
+    ("http://127.0.0.1:8000/v1", True),
+    ("http://127.8.9.10/v1", True),
+    ("http://localhost:11434/v1", True),
+    ("http://LOCALHOST/v1", True),
+    ("http://[::1]:8000/v1", True),
+    ("https://api.openai.com/v1", False),
+    ("http://10.0.0.5:8000/v1", False),
+    ("http://localhost.example.com/v1", False),
+    ("http://[not-an-ip/v1", False),
+    ("", False),
+    (None, False),
+])
+def test_is_loopback_url(url, loopback):
+    assert is_loopback_url(url) is loopback
+
+
+def test_a_loopback_provider_base_url_bypasses_the_proxy(backend, proxy):
+    # A local vLLM / Ollama / LM Studio, or an SSH forward. The SDK's own
+    # httpx client is the one base.py built, so this is the real path.
+    provider = OpenAICompatibleProvider(api_key="k", base_url=f"http://127.0.0.1:{backend}/v1",
+                                        provider_id="local")
+    assert provider.client._client.get(f"http://127.0.0.1:{backend}/health").status_code == 200
+    assert proxy == []
+
+
+def test_a_hosted_provider_keeps_the_proxy_env():
+    provider = OpenAICompatibleProvider(api_key="k", base_url="https://api.example.test/v1",
+                                        provider_id="hosted")
+    assert provider.client._client.trust_env is True
+
+
+def test_the_doctor_probe_of_a_loopback_provider_bypasses_the_proxy(backend, proxy):
+    result = doctor._probe_provider_endpoint("local", {"base_url": f"http://127.0.0.1:{backend}/v1"})
+    assert result["reachable"] is True, result
+    assert proxy == []
+
+
+def test_a_loopback_vision_sidecar_bypasses_the_proxy(proxy, monkeypatch):
+    class Completion(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            body = (b'{"id": "c", "object": "chat.completion", "created": 0, "model": "vl",'
+                    b' "choices": [{"index": 0, "finish_reason": "stop",'
+                    b' "message": {"role": "assistant", "content": "a cat"}}]}')
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *a):
+            pass
+
+    srv, port = _serve(Completion)
+    try:
+        monkeypatch.setattr(multimodal_ops, "get_vision_model_config", lambda: {
+            "enabled": True, "endpoint": f"http://127.0.0.1:{port}", "model": "vl"})
+        caption = multimodal_ops.caption_image(None, "x.png", "image/png", b"\x89PNG")
+    finally:
+        srv.shutdown()
+    assert caption == "a cat"
+    assert proxy == []

@@ -36,6 +36,7 @@ import ppxai.config as _config
 
 from ..config import REMOVED_CHAT_PROVIDERS, find_config_file
 from ..config import execution as _execution
+from ..config.network import is_loopback_url
 from ..config.tls import resolve_tls_verify
 from ..engine.facts_config import (
     incomplete_blocks_in_config,
@@ -366,7 +367,9 @@ def _probe_provider_endpoint(
         return result
 
     try:
-        with httpx.Client(timeout=_PROBE_TIMEOUT_S, verify=tls_verify()) as client:
+        # A loopback base_url must not go through HTTP_PROXY; a hosted one keeps it.
+        with httpx.Client(timeout=_PROBE_TIMEOUT_S, verify=tls_verify(),
+                          trust_env=not is_loopback_url(base_url)) as client:
             response = client.get(url, headers=headers)
             response.raise_for_status()
             payload = response.json()
