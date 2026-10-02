@@ -673,12 +673,10 @@ class TestDeprecationTableInvariants:
 
     def test_openai_deprecation_count(self):
         # OpenAI family — bump when adding a new shutdown.
-        # Current (verified 2026-04-12): chatgpt-4o-latest, codex-mini-latest,
-        # gpt-4-0314, gpt-4-0125-preview, gpt-4-1106-preview, gpt-4-turbo-preview,
-        # gpt-4o-realtime-preview, gpt-4o-mini-realtime-preview,
-        # gpt-4o-audio-preview, gpt-4o-mini-audio-preview, dall-e-2, dall-e-3,
-        # gpt-3.5-turbo-instruct, gpt-3.5-turbo-1106, babbage-002, davinci-002.
-        assert len(OPENAI_DEPRECATIONS) == 16
+        # Current (verified 2026-10-02 against OpenAI's deprecations page):
+        # every exact model id listed there, minus fine-tuned `ft-*` ids,
+        # products/endpoints, non-callable family names, and Sora.
+        assert len(OPENAI_DEPRECATIONS) == 83
 
     def test_all_deprecations_merged_correctly(self):
         # ALL_DEPRECATIONS must be the union of every provider-specific dict.

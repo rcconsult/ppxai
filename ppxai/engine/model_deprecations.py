@@ -21,6 +21,7 @@ Sources:
                 (NVIDIA does not publish a deprecation calendar; "retired"
                 here means absent from the live catalog on the verification date).
 
+OpenAI rows re-verified 2026-10-02 against the deprecations page.
 Verification date: 2026-07-11 (live /models sweep across OpenAI, Gemini,
 NVIDIA NIM; Perplexity has no /models endpoint, verified via docs/changelog).
 2026-07-11 sweep result: every model in the shipped catalog is still live on
@@ -140,13 +141,13 @@ GEMINI_DEPRECATIONS: dict[str, Deprecation] = {
 
 
 # =============================================================================
-# OpenAI deprecations — verified 2026-04-12
+# OpenAI deprecations — verified 2026-10-02 against OpenAI's deprecations page
 # =============================================================================
 #
-# NONE of the models shipped in `ppxai-config.example.json` are scheduled for
-# shutdown in 2026: the widely-reported "GPT-4o API shutdown" is specifically
-# the `chatgpt-4o-latest` alias (not the base `gpt-4o` API model). Likewise
-# `codex-mini-latest` is a distinct alias from our shipped `gpt-5.1-codex-mini`.
+# Two shipped models are now deprecated: `gpt-5.3-codex` and `gpt-5.4-nano`
+# (announced 2026-10-01, shutdown 2027-04-01). Both stay in the shipped
+# configs, marked `__comment_RETIRES`, until then. OpenAI's replacements
+# (`gpt-6-sol`, `gpt-6-luna`) are not shipped or priced yet.
 #
 # This table is primarily for /doctor to warn users who still reference the
 # deprecated model IDs in their OWN local configs (hand-written configs that
@@ -154,54 +155,71 @@ GEMINI_DEPRECATIONS: dict[str, Deprecation] = {
 # tooling that used the older aliases).
 
 OPENAI_DEPRECATIONS: dict[str, Deprecation] = {
-    # ----- Already shut down (status auto-transitions to "shutdown") -----
+    # Exact model ids from OpenAI's deprecations page, verified 2026-10-02.
+    # Not listed: fine-tuned `ft-*` ids (per-account names), products and
+    # endpoints (Assistants, Evals, Agent Builder, reusable prompts), family
+    # names that are not callable ids (`gpt-4o-audio`, `gpt-4o-realtime`, ...),
+    # and Sora / the Videos API (retired 2026-09-24 with no replacement).
+
+    # ----- Shut down 2026-02/03 (replacements re-pointed 2026-10-02: OpenAI's original ones have since shut down too) -----
     "chatgpt-4o-latest": Deprecation(
         shutdown_date="2026-02-17",
-        replacement="gpt-5.1-chat-latest",
+        replacement="gpt-5.6-sol",
         reason=(
-            "ChatGPT-4o alias retired from API. Use base 'gpt-4o' or migrate "
-            "to 'gpt-5.1-chat-latest' / 'gpt-5.4'."
+            "ChatGPT-4o alias retired. Its original replacement, "
+            "gpt-5.1-chat-latest, shut down 2026-07-23; OpenAI's successor for that "
+            "is gpt-5.6-sol."
         ),
     ),
     "codex-mini-latest": Deprecation(
         shutdown_date="2026-02-12",
-        replacement="gpt-5.1-codex-mini",
+        replacement="gpt-5.6-terra",
         reason=(
-            "codex-mini-latest alias retired. Use the versioned "
-            "'gpt-5.1-codex-mini' or newer Codex variants."
+            "codex-mini-latest retired. Its original replacement, "
+            "gpt-5.1-codex-mini, shut down 2026-07-23; OpenAI's successor for that "
+            "is gpt-5.6-terra."
         ),
     ),
     "gpt-4-0314": Deprecation(
         shutdown_date="2026-03-26",
-        replacement="gpt-5",
-        reason="Original GPT-4 snapshot retired from API.",
+        replacement="gpt-5.6-sol",
+        reason=(
+            "Original GPT-4 snapshot retired. Was 'gpt-5'; gpt-5.6-sol is OpenAI's "
+            "current GPT-4 substitute."
+        ),
     ),
     "gpt-4-0125-preview": Deprecation(
         shutdown_date="2026-03-26",
-        replacement="gpt-5",
+        replacement="gpt-5.6-sol",
         reason="GPT-4 preview snapshot retired.",
     ),
     "gpt-4-1106-preview": Deprecation(
         shutdown_date="2026-03-26",
-        replacement="gpt-5",
-        reason="GPT-4 preview snapshot retired.",
+        replacement="gpt-5.6-sol",
+        reason=(
+            "GPT-4 preview snapshot retired. (OpenAI's page also lists it in the "
+            "2026-10-23 batch; the earlier date stands.)"
+        ),
     ),
     "gpt-4-turbo-preview": Deprecation(
         shutdown_date="2026-03-26",
-        replacement="gpt-5",
+        replacement="gpt-5.6-sol",
         reason="GPT-4 Turbo preview retired.",
     ),
 
-    # ----- Upcoming: Realtime + Audio preview APIs (2026-05-07) -----
+    # ----- Shut down 2026-05: realtime/audio previews and DALL·E -----
     "gpt-4o-realtime-preview": Deprecation(
         shutdown_date="2026-05-07",
-        replacement="gpt-realtime-1.5",
-        reason="Realtime API Beta retired; migrate to gpt-realtime-1.5.",
+        replacement="gpt-realtime-2.1",
+        reason=(
+            "Realtime API Beta retired. Was gpt-realtime-1.5; the gpt-realtime "
+            "family itself retires 2027-01-20."
+        ),
     ),
     "gpt-4o-mini-realtime-preview": Deprecation(
         shutdown_date="2026-05-07",
-        replacement="gpt-realtime-mini",
-        reason="Realtime API Beta retired.",
+        replacement="gpt-realtime-2.1-mini",
+        reason="Realtime API Beta retired. Was gpt-realtime-mini, which retires 2027-01-20.",
     ),
     "gpt-4o-audio-preview": Deprecation(
         shutdown_date="2026-05-07",
@@ -210,42 +228,395 @@ OPENAI_DEPRECATIONS: dict[str, Deprecation] = {
     ),
     "gpt-4o-mini-audio-preview": Deprecation(
         shutdown_date="2026-05-07",
-        replacement="gpt-audio-mini",
-        reason="Audio preview API retired.",
+        replacement="gpt-audio-1.5",
+        reason="Audio preview API retired. Was gpt-audio-mini, which retires 2027-01-20.",
     ),
-
-    # ----- Upcoming: DALL·E family (2026-05-12) -----
     "dall-e-2": Deprecation(
         shutdown_date="2026-05-12",
-        replacement="gpt-image-1-mini",
-        reason="DALL·E retired from API in favour of gpt-image-1 family.",
+        replacement="gpt-image-2.5-sunburst",
+        reason="DALL·E retired. Was gpt-image-1-mini, which retires 2026-12-01.",
     ),
     "dall-e-3": Deprecation(
         shutdown_date="2026-05-12",
-        replacement="gpt-image-1",
-        reason="DALL·E 3 retired from API in favour of gpt-image-1.",
+        replacement="gpt-image-2.5-sunburst",
+        reason="DALL·E 3 retired. Was gpt-image-1, which retires 2026-10-23.",
     ),
 
-    # ----- Far future: Legacy instruct + base + GPT-3.5 Turbo (2026-09-28) -----
+    # ----- Shut down 2026-07-23 (announced 2026-04-22) -----
+    "computer-use-preview": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-terra",
+        reason="Computer-use preview retired.",
+    ),
+    "computer-use-preview-2025-03-11": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-terra",
+        reason="Computer-use preview retired.",
+    ),
+    "gpt-4o-search-preview-2025-03-11": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-terra",
+        reason="Search preview retired.",
+    ),
+    "gpt-4o-mini-search-preview-2025-03-11": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-terra",
+        reason="Search preview retired.",
+    ),
+    "gpt-5-chat-latest": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-sol",
+        reason="Chat variant retired.",
+    ),
+    "gpt-5-codex": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-sol",
+        reason="Codex variant retired.",
+    ),
+    "gpt-5.1-chat-latest": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-sol",
+        reason="Chat variant retired.",
+    ),
+    "gpt-5.1-codex": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-sol",
+        reason="Codex variant retired.",
+    ),
+    "gpt-5.1-codex-max": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-sol",
+        reason="Codex variant retired.",
+    ),
+    "gpt-5.1-codex-mini": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-terra",
+        reason="Codex variant retired.",
+    ),
+    "gpt-5.2-codex": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-sol",
+        reason="Codex variant retired.",
+    ),
+    "gpt-audio-mini-2025-10-06": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-audio-1.5",
+        reason="Audio snapshot retired.",
+    ),
+    "gpt-realtime-mini-2025-10-06": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-realtime-2.1-mini",
+        reason="Realtime snapshot retired.",
+    ),
+    "o3-deep-research": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-sol",
+        reason="Deep-research variant retired.",
+    ),
+    "o3-deep-research-2025-06-26": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-sol",
+        reason="Deep-research variant retired.",
+    ),
+    "o4-mini-deep-research": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-sol",
+        reason="Deep-research variant retired.",
+    ),
+    "o4-mini-deep-research-2025-06-26": Deprecation(
+        shutdown_date="2026-07-23",
+        replacement="gpt-5.6-sol",
+        reason="Deep-research variant retired.",
+    ),
+
+    # ----- Shut down 2026-08-10 (announced 2026-05-08) -----
+    "gpt-5.2-chat-latest": Deprecation(
+        shutdown_date="2026-08-10",
+        replacement="gpt-5.6-sol",
+        reason="Chat variant retired.",
+    ),
+    "gpt-5.3-chat-latest": Deprecation(
+        shutdown_date="2026-08-10",
+        replacement="gpt-5.6-sol",
+        reason="Chat variant retired.",
+    ),
+
+    # ----- Shut down 2026-09-28 (announced 2025-09-26) -----
     "gpt-3.5-turbo-instruct": Deprecation(
         shutdown_date="2026-09-28",
-        replacement="gpt-5-mini",
-        reason="Legacy instruct model retired; GPT-5-mini covers the use case.",
+        replacement="gpt-5.6-terra",
+        reason="Legacy instruct model retired. Was gpt-5-mini, whose snapshot retires 2026-12-11.",
     ),
     "gpt-3.5-turbo-1106": Deprecation(
         shutdown_date="2026-09-28",
-        replacement="gpt-5-mini",
+        replacement="gpt-5.6-terra",
         reason="GPT-3.5 Turbo snapshot retired.",
     ),
     "babbage-002": Deprecation(
         shutdown_date="2026-09-28",
-        replacement="gpt-5-mini",
+        replacement="gpt-5.6-terra",
         reason="Legacy base model retired.",
     ),
     "davinci-002": Deprecation(
         shutdown_date="2026-09-28",
-        replacement="gpt-5-mini",
+        replacement="gpt-5.6-terra",
         reason="Legacy base model retired.",
+    ),
+
+    # ----- 2026-10-01 (announced 2026-09-11; access-gated model, no single successor id) -----
+    "gpt-5.4-cyber": Deprecation(
+        shutdown_date="2026-10-01",
+        replacement="the most capable cyber model available to you",
+        reason="Cyber variant retired; OpenAI names no single successor.",
+    ),
+
+    # ----- 2026-10-23 (announced 2026-04-22) -----
+    "gpt-3.5-turbo": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-terra",
+        reason="Alias of gpt-3.5-turbo-0125.",
+    ),
+    "gpt-3.5-turbo-0125": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-terra",
+        reason="Legacy GPT-3.5 Turbo snapshot.",
+    ),
+    "gpt-3.5-turbo-completions": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-terra",
+        reason="Alias of gpt-3.5-turbo-0125.",
+    ),
+    "gpt-4": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Alias of gpt-4-0613.",
+    ),
+    "gpt-4-0613": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Legacy GPT-4 snapshot.",
+    ),
+    "gpt-4-0613-completions": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Alias of gpt-4-0613.",
+    ),
+    "gpt-4-completions": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Alias of gpt-4-0613.",
+    ),
+    "gpt-4-turbo": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Legacy GPT-4 Turbo.",
+    ),
+    "gpt-4-turbo-2024-04-09": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Alias of gpt-4-turbo.",
+    ),
+    "gpt-4-turbo-completions": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Alias of gpt-4-turbo.",
+    ),
+    "gpt-4.1-nano": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-luna",
+        reason="Legacy GPT-4.1 nano.",
+    ),
+    "gpt-4.1-nano-2025-04-14": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-luna",
+        reason="Alias of gpt-4.1-nano.",
+    ),
+    "gpt-4o-2024-05-13": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Legacy GPT-4o snapshot.",
+    ),
+    "gpt-image-1": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-image-2.5-sunburst",
+        reason="First GPT Image model retired.",
+    ),
+    "o1": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Alias of o1-2024-12-17.",
+    ),
+    "o1-2024-12-17": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Legacy o1 snapshot.",
+    ),
+    "o1-pro": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Alias of o1-pro-2025-03-19. Use gpt-5.6-sol with reasoning.mode: pro.",
+    ),
+    "o1-pro-2025-03-19": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Legacy o1-pro snapshot. Use gpt-5.6-sol with reasoning.mode: pro.",
+    ),
+    "o3-mini": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Alias of o3-mini-2025-01-31.",
+    ),
+    "o3-mini-2025-01-31": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-sol",
+        reason="Legacy o3-mini snapshot.",
+    ),
+    "o4-mini": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-terra",
+        reason="Alias of o4-mini-2025-04-16.",
+    ),
+    "o4-mini-2025-04-16": Deprecation(
+        shutdown_date="2026-10-23",
+        replacement="gpt-5.6-terra",
+        reason="Legacy o4-mini snapshot.",
+    ),
+
+    # ----- 2026-12-01 (announced 2026-06-02) -----
+    "gpt-image-1-mini": Deprecation(
+        shutdown_date="2026-12-01",
+        replacement="gpt-image-2.5-sunburst",
+        reason="Older GPT Image model (or gpt-image-2.5-flare).",
+    ),
+    "gpt-image-1.5": Deprecation(
+        shutdown_date="2026-12-01",
+        replacement="gpt-image-2.5-sunburst",
+        reason="Older GPT Image model (or gpt-image-2.5-flare).",
+    ),
+    "chatgpt-image-latest": Deprecation(
+        shutdown_date="2026-12-01",
+        replacement="gpt-image-2.5-sunburst",
+        reason="Older GPT Image alias (or gpt-image-2.5-flare).",
+    ),
+
+    # ----- 2026-12-11 (announced 2026-06-11) -----
+    "gpt-5-2025-08-07": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-sol",
+        reason="Original GPT-5 snapshot.",
+    ),
+    "gpt-5-mini-2025-08-07": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-terra",
+        reason="Original GPT-5 mini snapshot.",
+    ),
+    "gpt-5-nano-2025-08-07": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-luna",
+        reason="Original GPT-5 nano snapshot.",
+    ),
+    "gpt-5-pro-2025-10-06": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-sol",
+        reason="GPT-5 pro snapshot. Use gpt-5.6-sol with reasoning.mode: pro.",
+    ),
+    "o3-2025-04-16": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-sol",
+        reason="o3 snapshot.",
+    ),
+    "o3-pro-2025-06-10": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-sol",
+        reason="o3-pro snapshot. Use gpt-5.6-sol with reasoning.mode: pro.",
+    ),
+
+    # ----- 2027-01-06 (announced 2026-10-01): text-to-speech -----
+    "tts-1": Deprecation(
+        shutdown_date="2027-01-06",
+        replacement="gpt-realtime-2.1-mini",
+        reason="Text-to-speech model retired.",
+    ),
+    "tts-1-hd": Deprecation(
+        shutdown_date="2027-01-06",
+        replacement="gpt-realtime-2.1-mini",
+        reason="Text-to-speech model retired.",
+    ),
+    "gpt-4o-mini-tts-2025-03-20": Deprecation(
+        shutdown_date="2027-01-06",
+        replacement="gpt-realtime-2.1-mini",
+        reason="Text-to-speech snapshot retired.",
+    ),
+    "gpt-4o-mini-tts-2025-12-15": Deprecation(
+        shutdown_date="2027-01-06",
+        replacement="gpt-realtime-2.1-mini",
+        reason="Text-to-speech snapshot retired.",
+    ),
+
+    # ----- 2027-01-20 (announced 2026-07-20): legacy audio/realtime ids -----
+    "gpt-realtime": Deprecation(
+        shutdown_date="2027-01-20",
+        replacement="gpt-realtime-2.1",
+        reason="Legacy realtime family.",
+    ),
+    "gpt-realtime-mini": Deprecation(
+        shutdown_date="2027-01-20",
+        replacement="gpt-realtime-2.1-mini",
+        reason="Legacy realtime family.",
+    ),
+    "gpt-audio": Deprecation(
+        shutdown_date="2027-01-20",
+        replacement="gpt-audio-1.5",
+        reason="Legacy audio family.",
+    ),
+    "gpt-audio-mini": Deprecation(
+        shutdown_date="2027-01-20",
+        replacement="gpt-audio-1.5",
+        reason="Legacy audio family.",
+    ),
+    "gpt-4o-mini-transcribe-2025-03-20": Deprecation(
+        shutdown_date="2027-01-20",
+        replacement="gpt-4o-mini-transcribe-2025-12-15",
+        reason="Transcription snapshot.",
+    ),
+
+    # ----- 2027-02-26 (announced 2026-08-26): transcription -----
+    "whisper-1": Deprecation(
+        shutdown_date="2027-02-26",
+        replacement="gpt-transcribe",
+        reason="Transcription model (or gpt-live-transcribe).",
+    ),
+    "gpt-4o-transcribe": Deprecation(
+        shutdown_date="2027-02-26",
+        replacement="gpt-transcribe",
+        reason="Transcription model (or gpt-live-transcribe).",
+    ),
+    "gpt-4o-mini-transcribe": Deprecation(
+        shutdown_date="2027-02-26",
+        replacement="gpt-transcribe",
+        reason="Transcription model (or gpt-live-transcribe).",
+    ),
+    "gpt-4o-transcribe-diarize": Deprecation(
+        shutdown_date="2027-02-26",
+        replacement="gpt-transcribe",
+        reason="Transcription model (or gpt-live-transcribe).",
+    ),
+
+    # ----- 2027-04-01 (announced 2026-10-01). gpt-5.3-codex and gpt-5.4-nano are in the shipped configs; the gpt-6 replacements are not yet shipped or priced -----
+    "gpt-5.1": Deprecation(
+        shutdown_date="2027-04-01",
+        replacement="gpt-6-sol",
+        reason="GPT-5.1 retired in favour of the GPT-6 line.",
+    ),
+    "gpt-5.3-codex": Deprecation(
+        shutdown_date="2027-04-01",
+        replacement="gpt-6-sol",
+        reason="Codex variant retired in favour of the GPT-6 line.",
+    ),
+    "gpt-5.4-nano": Deprecation(
+        shutdown_date="2027-04-01",
+        replacement="gpt-6-luna",
+        reason="GPT-5.4 nano retired in favour of the GPT-6 line.",
     ),
 }
 
@@ -456,16 +827,8 @@ RECOMMENDED_NEW_MODELS: list[dict[str, str]] = [
             "Stable default — cheaper than gpt-5.5 with proven track record."
         ),
     },
-    {
-        "provider": "openai",
-        "model": "gpt-5.3-codex",
-        "reason": (
-            "Code-specialized model — \"most capable agentic coding model "
-            "to date\" per OpenAI. 400K context. Note: gpt-5.4 mainline "
-            "absorbs these capabilities, but the dedicated Codex variant "
-            "remains a valid choice for long agentic coding sessions."
-        ),
-    },
+    # gpt-5.3-codex was recommended here until OpenAI deprecated it on
+    # 2026-10-01 (shutdown 2027-04-01, replacement gpt-6-sol).
     {
         "provider": "gemini",
         "model": "gemini-3.8-flash",

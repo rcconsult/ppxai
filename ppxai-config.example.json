@@ -475,59 +475,6 @@
             "restricted_params": [],
             "tier": "A"
           }
-        },
-        "gpt-5.4-nano": {
-          "name": "GPT-5.4 Nano",
-          "description": "Cheapest GPT-5.4 variant (released 2026-03-17). API-only. $0.20/$1.25 per MTok.",
-          "context_limit": 400000,
-          "__comment_best_for": "Simple edits, file operations, high-volume quick Q&A. Lowest-cost GPT-5.4 option.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
-          "generation_params": {
-            "max_tokens": 8192
-          },
-          "facts": {
-            "tool_mode": "native",
-            "fallback_on_empty": false,
-            "fallback_on_failure": false,
-            "strip_json_from_text": true,
-            "parallel_tool_calls": true,
-            "wire_protocol": "chat_completions",
-            "max_tokens": 128000,
-            "max_tool_iterations": 0,
-            "supports_reasoning": false,
-            "supports_vision": true,
-            "restricted_params": [
-              "temperature",
-              "top_p"
-            ],
-            "tier": "A"
-          }
-        },
-        "gpt-5.3-codex": {
-          "name": "GPT-5.3 Codex",
-          "description": "Code-specialized model — \"most capable agentic coding model to date\" per OpenAI. 400K context, 128K max output. Note: gpt-5.4 mainline has absorbed these capabilities, but the Codex variant remains for users who want the dedicated coding-tuned model.",
-          "context_limit": 400000,
-          "__comment_best_for": "Long-horizon agentic coding sessions, multi-file refactors with extensive tool chains.",
-          "generation_params": {
-            "max_tokens": 16384
-          },
-          "facts": {
-            "tool_mode": "native",
-            "fallback_on_empty": true,
-            "fallback_on_failure": false,
-            "strip_json_from_text": true,
-            "parallel_tool_calls": false,
-            "wire_protocol": "responses",
-            "max_tokens": 128000,
-            "max_tool_iterations": 20,
-            "supports_reasoning": false,
-            "supports_vision": true,
-            "restricted_params": [
-              "temperature",
-              "top_p"
-            ],
-            "tier": "A"
-          }
         }
       },
       "pricing": {
@@ -555,18 +502,9 @@
           "output": 75,
           "__comment": "Premium tier — verify against https://platform.openai.com/docs/pricing"
         },
-        "gpt-5.3-codex": {
-          "input": 1.75,
-          "output": 14,
-          "__comment": "Code-specialized variant. Pricing per devtk.ai 2026-03 listing. Verify against https://developers.openai.com/codex/pricing"
-        },
         "gpt-5.4-mini": {
           "input": 0.75,
           "output": 4.5
-        },
-        "gpt-5.4-nano": {
-          "input": 0.2,
-          "output": 1.25
         }
       },
       "facts": {

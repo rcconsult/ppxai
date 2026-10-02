@@ -303,6 +303,7 @@
           "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run."
         },
         "gpt-5.4-nano": {
+          "__comment_RETIRES": "OpenAI deprecated this 2026-10-01; shutdown 2027-04-01, replacement gpt-6-luna (not yet shipped or priced here).",
           "name": "GPT-5.4 Nano",
           "description": "Cheapest GPT-5.4 variant (released 2026-03-17). API-only. $0.20/$1.25 per MTok.",
           "context_limit": 400000,
@@ -313,6 +314,7 @@
           }
         },
         "gpt-5.3-codex": {
+          "__comment_RETIRES": "OpenAI deprecated this 2026-10-01; shutdown 2027-04-01, replacement gpt-6-sol (not yet shipped or priced here).",
           "name": "GPT-5.3 Codex",
           "description": "Code-specialized model — \"most capable agentic coding model to date\" per OpenAI. 400K context, 128K max output. Note: gpt-5.4 mainline has absorbed these capabilities, but the Codex variant remains for users who want the dedicated coding-tuned model.",
           "context_limit": 400000,

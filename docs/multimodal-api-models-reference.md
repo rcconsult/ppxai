@@ -70,9 +70,9 @@ All GPT-5.x models support image+text input natively. Audio requires the separat
 | `gpt-5.4` | ✅ | ✅ | ❌* | ❌ | Flagship; 1M context; computer use; tool search |
 | `gpt-5.4-pro` | ✅ | ✅ | ❌* | ❌ | More compute for harder problems |
 | `gpt-5.4-mini` | ✅ | ✅ | ❌* | ❌ | High-volume; faster |
-| `gpt-5.4-nano` | ✅ | ✅ | ❌* | ❌ | Cheapest; simple tasks |
+| `gpt-5.4-nano` | ✅ | ✅ | ❌* | ❌ | Cheapest; simple tasks. Deprecated 2026-10-01, shutdown 2027-04-01 (→ `gpt-6-luna`) |
 | `gpt-5.2` | ✅ | ✅ | ❌* | ❌ | Still available; more affordable than 5.4 |
-| `gpt-5.3-codex` | ✅ | ✅ | ❌ | ❌ | Agentic coding specialist |
+| `gpt-5.3-codex` | ✅ | ✅ | ❌ | ❌ | Agentic coding specialist. Deprecated 2026-10-01, shutdown 2027-04-01 (→ `gpt-6-sol`) |
 
 *Audio available via separate Realtime API endpoint (bidirectional streaming, different integration path)
 

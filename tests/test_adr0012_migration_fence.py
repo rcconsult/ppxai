@@ -187,6 +187,15 @@ RETIRED = {
         "endpoint record to compare — the whole record is gone, not one field "
         "of it, which is why this key moved here rather than into DECLARED."
     ),
+    "openai::gpt-5.3-codex": (
+        "2026-10-02 — OpenAI deprecated it 2026-10-01 (shutdown 2027-04-01, "
+        "replacement gpt-6-sol), and the example config may not advertise a "
+        "deprecated model. The root config keeps it, marked __comment_RETIRES."
+    ),
+    "openai::gpt-5.4-nano": (
+        "2026-10-02 — same announcement; replacement gpt-6-luna. Kept, "
+        "marked, in the root config only."
+    ),
 }
 
 
