@@ -21,7 +21,7 @@ For deferred multi-model routing automation, see [TODO-routing.md](TODO-routing.
 | **Architecture / planning** | **`gpt-5.5`** (raw, minimal hints) | $5 / $30 | 1M context, deepest reasoning of the GPT-5.x family, 91.7% raw on the suite |
 | **Hardest cross-cutting decisions** | `gpt-5.5-pro` | $30 / $180 | Premium ceiling for once-a-quarter ADRs |
 | **Implementation / coding** | **`gpt-5.4-mini`** | $0.75 / $4.50 | Champion at 97.5% with hints, 6.7× cheaper than gpt-5.5 |
-| Cheap quick tasks | `gpt-5.4-nano` (untested; **deprecated 2026-10-01**, shutdown 2027-04-01, replacement `gpt-6-luna`) | $0.20 / $1.25 | No longer in the example config; not worth benchmarking now |
+| Cheap quick tasks | `gpt-6-luna` (untested) | $0.10 / $0.50 | Replaces `gpt-5.4-nano` (deprecated 2026-10-01, shutdown 2027-04-01). Worth benchmarking before promoting |
 | Air-gapped / in-cluster | **`Qwen3.6-27B-FP8-agent`** | local ($0) | **93.6% no-hints (33/36)** — best self-hosted on the suite, agent-tuned native tool calling, 128K ctx. Prev pick `Qwen3-Coder-Next-NVFP4` (90% on DGX Spark) |
 | **Avoid** | `gpt-5.3-codex` | $1.75 / $14 | Dominated by both gpt-5.4-mini and gpt-5.5; structurally cautious about tool use. **Deprecated 2026-10-01** (shutdown 2027-04-01, replacement `gpt-6-sol`) |
 
@@ -169,7 +169,7 @@ Update this doc when any of the following change materially:
    benchmark run was deemed cost-prohibitive). If pro substantially
    outperforms 5.5 on architecture-shaped tests, promote it as the
    planning default.
-3. ~~**gpt-5.4-nano gets benchmarked.**~~ Moot: OpenAI deprecated it 2026-10-01 (shutdown 2027-04-01); benchmark `gpt-6-luna` instead once it is shipped and priced. At $0.20/$1.25 it's 4× cheaper than
+3. ~~**gpt-5.4-nano gets benchmarked.**~~ Moot: OpenAI deprecated it 2026-10-01 (shutdown 2027-04-01); benchmark `gpt-6-luna` instead (shipped 2026-10-03). At $0.20/$1.25 it's 4× cheaper than
    gpt-5.4-mini; if it scores ≥85%, it becomes the executor for
    high-volume low-stakes implementation work.
 4. **Multi-model routing lands.** The manual switch advice becomes

@@ -147,7 +147,7 @@ GEMINI_DEPRECATIONS: dict[str, Deprecation] = {
 # Two shipped models are now deprecated: `gpt-5.3-codex` and `gpt-5.4-nano`
 # (announced 2026-10-01, shutdown 2027-04-01). Both stay in the shipped
 # configs, marked `__comment_RETIRES`, until then. OpenAI's replacements
-# (`gpt-6-sol`, `gpt-6-luna`) are not shipped or priced yet.
+# (`gpt-6-sol`, `gpt-6-luna`) are shipped and priced since 2026-10-03.
 #
 # This table is primarily for /doctor to warn users who still reference the
 # deprecated model IDs in their OWN local configs (hand-written configs that
@@ -602,7 +602,7 @@ OPENAI_DEPRECATIONS: dict[str, Deprecation] = {
         reason="Transcription model (or gpt-live-transcribe).",
     ),
 
-    # ----- 2027-04-01 (announced 2026-10-01). gpt-5.3-codex and gpt-5.4-nano are in the shipped configs; the gpt-6 replacements are not yet shipped or priced -----
+    # ----- 2027-04-01 (announced 2026-10-01). gpt-5.3-codex and gpt-5.4-nano stay in the root config, marked; the gpt-6 replacements are shipped -----
     "gpt-5.1": Deprecation(
         shutdown_date="2027-04-01",
         replacement="gpt-6-sol",

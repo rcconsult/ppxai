@@ -227,6 +227,50 @@
           },
           "__comment_vision": "supports_vision is the conservative floor, NOT a measurement — the 2026-08-31 benchmark covered tool calling and quality only."
         },
+        "gpt-6-sol": {
+          "name": "GPT-6 Sol",
+          "description": "GPT-6 flagship. $2/$10 per MTok (cached input $0.20) per OpenAI's model page, read 2026-10-03; above 272K input tokens the whole request costs 2x input and 1.5x output. Replaces gpt-5.3-codex and gpt-5.1 (both retire 2027-04-01). NOT YET BENCHMARKED in ppxai.",
+          "context_limit": 922000,
+          "__comment_context": "OpenAI lists a 1,050,000 context window but a 922,000 maximum INPUT; context_limit budgets input, so it takes the smaller.",
+          "__comment_wire": "wire_protocol MUST be responses: OpenAI's page says Chat Completions supports function calling only with reasoning_effort none. Verified 2026-10-03 by calling it: a Responses request with one function tool returned a native function_call.",
+          "facts": {
+            "wire_protocol": "responses",
+            "tool_mode": "native",
+            "max_tokens": 128000,
+            "max_tool_iterations": 20,
+            "supports_reasoning": true,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "A",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": true
+          },
+          "__comment_vision": "supports_vision is the conservative floor, NOT a measurement: OpenAI's page lists image input, but ppxai has not tested it (same choice as gpt-5.6-terra)."
+        },
+        "gpt-6-luna": {
+          "name": "GPT-6 Luna",
+          "description": "Cheapest GPT-6 model. $0.10/$0.50 per MTok (cached input $0.01) per OpenAI's model page, read 2026-10-03; above 272K input tokens the whole request costs 2x input and 1.5x output. Replaces gpt-5.4-nano (retires 2027-04-01). NOT YET BENCHMARKED in ppxai.",
+          "context_limit": 922000,
+          "__comment_context": "OpenAI lists a 1,050,000 context window but a 922,000 maximum INPUT; context_limit budgets input, so it takes the smaller.",
+          "__comment_wire": "wire_protocol MUST be responses: OpenAI's page says Chat Completions supports function calling only with reasoning_effort none. Verified 2026-10-03 by calling it: a Responses request with one function tool returned a native function_call.",
+          "facts": {
+            "wire_protocol": "responses",
+            "tool_mode": "native",
+            "max_tokens": 128000,
+            "max_tool_iterations": 20,
+            "supports_reasoning": true,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "A",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": true
+          },
+          "__comment_vision": "supports_vision is the conservative floor, NOT a measurement: OpenAI's page lists image input, but ppxai has not tested it (same choice as gpt-5.6-terra)."
+        },
         "gpt-5.5": {
           "name": "GPT-5.5",
           "description": "Newest OpenAI flagship (released 2026-04-23). 1M context, $5/$30 per MTok — 2× the price of GPT-5.4. First fully retrained base since GPT-4.5.",
@@ -303,7 +347,7 @@
           "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run."
         },
         "gpt-5.4-nano": {
-          "__comment_RETIRES": "OpenAI deprecated this 2026-10-01; shutdown 2027-04-01, replacement gpt-6-luna (not yet shipped or priced here).",
+          "__comment_RETIRES": "OpenAI deprecated this 2026-10-01; shutdown 2027-04-01, replacement gpt-6-luna (shipped and priced here since 2026-10-03).",
           "name": "GPT-5.4 Nano",
           "description": "Cheapest GPT-5.4 variant (released 2026-03-17). API-only. $0.20/$1.25 per MTok.",
           "context_limit": 400000,
@@ -314,7 +358,7 @@
           }
         },
         "gpt-5.3-codex": {
-          "__comment_RETIRES": "OpenAI deprecated this 2026-10-01; shutdown 2027-04-01, replacement gpt-6-sol (not yet shipped or priced here).",
+          "__comment_RETIRES": "OpenAI deprecated this 2026-10-01; shutdown 2027-04-01, replacement gpt-6-sol (shipped and priced here since 2026-10-03).",
           "name": "GPT-5.3 Codex",
           "description": "Code-specialized model — \"most capable agentic coding model to date\" per OpenAI. 400K context, 128K max output. Note: gpt-5.4 mainline has absorbed these capabilities, but the Codex variant remains for users who want the dedicated coding-tuned model.",
           "context_limit": 400000,
@@ -347,6 +391,16 @@
           "input": 2,
           "output": 12,
           "__comment": "GA 2026-08-01 pricing, verified 2026-08-01 (debt Item 55). 40% of gpt-5.5."
+        },
+        "gpt-6-sol": {
+          "input": 2,
+          "output": 10,
+          "__comment": "OpenAI model page, read 2026-10-03. Cache reads/writes fall back to 0.1x/1.25x of input, OpenAI's published ratios ($0.20/$2.50 for sol, $0.01/$0.125 for luna)."
+        },
+        "gpt-6-luna": {
+          "input": 0.1,
+          "output": 0.5,
+          "__comment": "OpenAI model page, read 2026-10-03. Cache reads/writes fall back to 0.1x/1.25x of input, OpenAI's published ratios ($0.20/$2.50 for sol, $0.01/$0.125 for luna)."
         },
         "gpt-5.5": {
           "input": 5,
