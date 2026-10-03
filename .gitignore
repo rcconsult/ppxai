@@ -156,3 +156,8 @@ deploy/images/server/extra-certs/*.crt
 
 # Per-run test timings written by tests/conftest.py (compared run to run)
 .pytest_timings/
+
+# Pi coding agent: per-host project config, and its instruction-file override
+# (a symlink to CLAUDE.md on hosts that use Pi)
+.pi/
+AGENTS.override.md
