@@ -1579,6 +1579,46 @@
         "overall_score": 0.0,
         "agents_md_mode": "with"
       }
+    ],
+    "openai/gpt-6-luna": [
+      {
+        "filename": "openai_gpt-6-luna_2026-10-03_e8b5f401.json",
+        "timestamp": "2026-10-03T19:43:29.488686",
+        "overall_score": 90.8910891089109,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-6-luna_2026-10-03_76383bb6.json",
+        "timestamp": "2026-10-03T19:46:52.148552",
+        "overall_score": 87.12871287128714,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-6-luna_2026-10-03_684cfb00.json",
+        "timestamp": "2026-10-03T19:50:38.501398",
+        "overall_score": 83.06930693069307,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openrouter/qwen/qwen3.8-27b": [
+      {
+        "filename": "openrouter_qwen_qwen3.8-27b_2026-10-03_4159053a.json",
+        "timestamp": "2026-10-03T20:35:41.432373",
+        "overall_score": 82.67326732673267,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openrouter_qwen_qwen3.8-27b_2026-10-03_8ac35cdd.json",
+        "timestamp": "2026-10-03T20:44:41.950985",
+        "overall_score": 90.4950495049505,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openrouter_qwen_qwen3.8-27b_2026-10-03_fc8834df.json",
+        "timestamp": "2026-10-03T20:53:04.266578",
+        "overall_score": 90.0990099009901,
+        "agents_md_mode": "with"
+      }
     ]
   },
   "runs": [
@@ -3302,6 +3342,48 @@
       "filename": "vllm-qwen36_Qwen_Qwen3.6-27B-FP8_2026-05-05_7cc85625.json",
       "timestamp": "2026-05-05T14:28:34.942719",
       "overall_score": 0.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-6-luna",
+      "filename": "openai_gpt-6-luna_2026-10-03_e8b5f401.json",
+      "timestamp": "2026-10-03T19:43:29.488686",
+      "overall_score": 90.8910891089109,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-6-luna",
+      "filename": "openai_gpt-6-luna_2026-10-03_76383bb6.json",
+      "timestamp": "2026-10-03T19:46:52.148552",
+      "overall_score": 87.12871287128714,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-6-luna",
+      "filename": "openai_gpt-6-luna_2026-10-03_684cfb00.json",
+      "timestamp": "2026-10-03T19:50:38.501398",
+      "overall_score": 83.06930693069307,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openrouter/qwen/qwen3.8-27b",
+      "filename": "openrouter_qwen_qwen3.8-27b_2026-10-03_4159053a.json",
+      "timestamp": "2026-10-03T20:35:41.432373",
+      "overall_score": 82.67326732673267,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openrouter/qwen/qwen3.8-27b",
+      "filename": "openrouter_qwen_qwen3.8-27b_2026-10-03_8ac35cdd.json",
+      "timestamp": "2026-10-03T20:44:41.950985",
+      "overall_score": 90.4950495049505,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openrouter/qwen/qwen3.8-27b",
+      "filename": "openrouter_qwen_qwen3.8-27b_2026-10-03_fc8834df.json",
+      "timestamp": "2026-10-03T20:53:04.266578",
+      "overall_score": 90.0990099009901,
       "agents_md_mode": "with"
     }
   ]

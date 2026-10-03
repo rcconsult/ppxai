@@ -20,8 +20,9 @@ For deferred multi-model routing automation, see [TODO-routing.md](TODO-routing.
 |---|---|---|---|
 | **Architecture / planning** | **`gpt-5.5`** (raw, minimal hints) | $5 / $30 | 1M context, deepest reasoning of the GPT-5.x family, 91.7% raw on the suite |
 | **Hardest cross-cutting decisions** | `gpt-5.5-pro` | $30 / $180 | Premium ceiling for once-a-quarter ADRs |
-| **Implementation / coding** | **`gpt-5.4-mini`** | $0.75 / $4.50 | Champion at 97.5% with hints, 6.7× cheaper than gpt-5.5 |
-| Cheap quick tasks | `gpt-6-luna` (untested) | $0.10 / $0.50 | Replaces `gpt-5.4-nano` (deprecated 2026-10-01, shutdown 2027-04-01). Worth benchmarking before promoting |
+| **Implementation / coding** | **`gpt-5.4-mini`** | $0.75 / $4.50 | Best run 97.5% with hints (2026-04); median 85.6 in the [2026-10-03 same-day run](#same-day-run-2026-10-03-openai--openrouter). Fastest of the hosted models, 6.7× cheaper than gpt-5.5 |
+| Cheap quick tasks | `gpt-6-luna` | $0.10 / $0.50 | Median 87.1 on 2026-10-03, above gpt-5.4-mini at ~1/7 the price but ~2.5× slower. Replaces `gpt-5.4-nano` (deprecated 2026-10-01, shutdown 2027-04-01) |
+| Low-cost alternative via OpenRouter | `qwen/qwen3.8-27b` | $0.42 / $3.00 | Median 90.1 on 2026-10-03, level with `gpt-5.6-terra` (91.1) at ~1/5 the price; 3–5× slower per run |
 | Air-gapped / in-cluster | **`Qwen3.6-27B-FP8-agent`** | local ($0) | **93.6% no-hints (33/36)** — best self-hosted on the suite, agent-tuned native tool calling, 128K ctx. Prev pick `Qwen3-Coder-Next-NVFP4` (90% on DGX Spark) |
 | **Avoid** | `gpt-5.3-codex` | $1.75 / $14 | Dominated by both gpt-5.4-mini and gpt-5.5; structurally cautious about tool use. **Deprecated 2026-10-01** (shutdown 2027-04-01, replacement `gpt-6-sol`) |
 
@@ -169,9 +170,10 @@ Update this doc when any of the following change materially:
    benchmark run was deemed cost-prohibitive). If pro substantially
    outperforms 5.5 on architecture-shaped tests, promote it as the
    planning default.
-3. ~~**gpt-5.4-nano gets benchmarked.**~~ Moot: OpenAI deprecated it 2026-10-01 (shutdown 2027-04-01); benchmark `gpt-6-luna` instead (shipped 2026-10-03). At $0.20/$1.25 it's 4× cheaper than
-   gpt-5.4-mini; if it scores ≥85%, it becomes the executor for
-   high-volume low-stakes implementation work.
+3. ~~**gpt-5.4-nano gets benchmarked.**~~ Moot: OpenAI deprecated it 2026-10-01 (shutdown 2027-04-01). Its replacement `gpt-6-luna` was
+   benchmarked 2026-10-03: median 87.1, above the ≥85% bar, so it
+   qualifies as the executor for high-volume low-stakes implementation
+   work where its ~2.5× longer runs don't matter.
 4. **Multi-model routing lands.** The manual switch advice becomes
    historical — replace it with the automatic-routing config syntax.
 
@@ -191,6 +193,32 @@ Update this doc when any of the following change materially:
 - **Don't promote `gpt-5.5` as the universal default.** It's 6.7× the
   price of gpt-5.4-mini for marginal gain on implementation tasks.
   gpt-5.4-mini stays the daily-driver default.
+
+## Same-day run 2026-10-03 (OpenAI + OpenRouter)
+
+Six models, three runs each, the same day, the same 36-test suite, `--agents-md with`, native tool calling, real API tokens. The OpenAI models went through the `openai` provider; the two Qwen models through the **OpenRouter API** (`https://openrouter.ai/api/v1`, an `openrouter` provider block as in [provider-setup.md](provider-setup.md#openrouter)). This is the first benchmark of ppxai against OpenRouter: tool calling worked over its OpenAI-compatible Chat Completions endpoint with no code changes. The six OpenRouter runs cost $0.66 in total.
+
+| Model | Provider | Runs | Median | Passed | Time per run | Price (in / out per MTok) |
+|---|---|---|---:|---|---|---|
+| `gpt-5.6-terra` | openai | 92.1 / 91.1 / 87.1 | **91.1** | 32–33 | ~160 s | $2 / $12 |
+| `qwen/qwen3.8-27b` | openrouter | 82.7* / 90.5 / 90.1 | **90.1** | 30–33 | ~500–900 s | $0.42 / $3.00 |
+| `gpt-6-luna` | openai | 83.1 / 87.1 / 90.9 | **87.1** | 29–33 | ~205 s | $0.10 / $0.50 |
+| `gpt-5.4-mini` | openai | 89.6 / 85.2 / 85.6 | **85.6** | 30–32 | ~78 s | $0.75 / $4.50 |
+| `qwen/qwen3.7-flash` | openrouter | 79.6 / 81.2 / 81.7 | **81.2** | 28–29 | ~400–500 s | $0.03 / $0.13 |
+| `gpt-6-sol` | openai | 80.1 / 75.5 / 75.6 | **75.6** | 25–27 | ~200 s | $2 / $10 |
+
+\* Two infrastructure failures (OpenRouter-side errors, not wrong answers) in that run. `qwen3.7-flash` had 1–2 in every run, so its real score is probably a little higher.
+
+Reading it:
+
+- **`gpt-5.6-terra` is stable** (91.5 median on 2026-08-31, 91.1 here).
+- **`gpt-5.4-mini` measured lower than its April numbers** (median 91.7 then, 85.6 now): it fails `multi_tool_sequence` and `claim_without_action` in all three runs. The suite and the AGENTS.md hints changed in between; which one moved it is not tested.
+- **`qwen/qwen3.8-27b` via OpenRouter matches terra** on its two clean runs at about a fifth of the price, but OpenRouter routing plus the model make each run 3–5× slower.
+- **`qwen/qwen3.7-flash`** is about 1/25 the price of gpt-5.4-mini for about 4 points less; it fails the multi-step loop tests (`self_correction`, `consecutive_tool_loop`, `fix_verify`, `tool_call_efficiency`) every run. Fine for quick tasks, not for long agent loops.
+- **`gpt-6-sol` is under-ranked by the suite.** It checks before it writes (e.g. `ls -ld /src /src/functions.py` before a `write_file`), and several single-turn tests score only the first tool call, so `large_payload` reads as "0 chars written". It passes that test run alone. It also makes ~116 tool calls per run against terra's ~66, a real cost in latency and tokens.
+- **`respects_tool_failure` failed in all 18 runs, for every model.** Suspected test issue, not yet investigated.
+
+Result files: `benchmarks/llm-eval/results/{openai,openrouter}_*_2026-10-03_*.json`.
 
 ## Source data
 

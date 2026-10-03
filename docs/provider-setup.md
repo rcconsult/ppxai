@@ -161,68 +161,63 @@ provider, e.g. Gemini (see above).
 
 ## OpenRouter
 
-OpenRouter provides access to many models including Claude, Llama, Mistral, and more through a single API.
+OpenRouter provides access to many models (Qwen, Llama, Mistral, Claude and more) through one OpenAI-compatible API.
+
+**Tested 2026-10-03:** ppxai's 36-test benchmark ran against the OpenRouter API with `qwen/qwen3.8-27b` (median 90.1) and `qwen/qwen3.7-flash` (median 81.2), three runs each. Native tool calling works over OpenRouter's Chat Completions endpoint with no extra configuration. Expect slower turns than a direct provider, and the occasional OpenRouter-side error (1–2 per 36-test run for `qwen3.7-flash`). Results and caveats: [model-selection-guide.md](model-selection-guide.md#same-day-run-2026-10-03-openai--openrouter).
+
+Pick models that list `tools` in OpenRouter's supported parameters (`GET https://openrouter.ai/api/v1/models`, field `supported_parameters`). `:free` variants exist for some models but are rate-limited, which distorts benchmark scores.
 
 ### `.env`
 ```bash
 # OpenRouter API Key
 OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-MODEL_PROVIDER=openrouter
 ```
 
 ### `ppxai-config.json`
+
+The configuration that was tested:
+
 ```json
 {
-  "version": "1.0",
-  "default_provider": "openrouter",
   "providers": {
     "openrouter": {
       "name": "OpenRouter",
       "base_url": "https://openrouter.ai/api/v1",
       "api_key_env": "OPENROUTER_API_KEY",
-      "default_model": "anthropic/claude-sonnet-4",
-      "coding_model": "anthropic/claude-sonnet-4",
+      "default_model": "qwen/qwen3.8-27b",
+      "coding_model": "qwen/qwen3.8-27b",
       "models": {
-        "anthropic/claude-sonnet-4": {
-          "name": "Claude Sonnet 4",
-          "description": "Anthropic's balanced model"
+        "qwen/qwen3.8-27b": {
+          "name": "Qwen3.8 27B",
+          "description": "Qwen dense 27B via OpenRouter",
+          "context_limit": 1000000,
+          "facts": {
+            "tool_mode": "native",
+            "wire_protocol": "chat_completions",
+            "max_tokens": 65536,
+            "supports_reasoning": true,
+            "supports_vision": false
+          }
         },
-        "anthropic/claude-opus-4": {
-          "name": "Claude Opus 4",
-          "description": "Anthropic's most capable model"
-        },
-        "anthropic/claude-haiku": {
-          "name": "Claude Haiku",
-          "description": "Fast and affordable"
-        },
-        "meta-llama/llama-3.1-405b-instruct": {
-          "name": "Llama 3.1 405B",
-          "description": "Meta's largest open model"
-        },
-        "meta-llama/llama-3.1-70b-instruct": {
-          "name": "Llama 3.1 70B",
-          "description": "Excellent open-source model"
-        },
-        "mistralai/mistral-large": {
-          "name": "Mistral Large",
-          "description": "Mistral's flagship model"
-        },
-        "google/gemini-pro-1.5": {
-          "name": "Gemini Pro 1.5",
-          "description": "Google's model via OpenRouter"
+        "qwen/qwen3.7-flash": {
+          "name": "Qwen3.7 Flash",
+          "description": "Qwen fast and cheap via OpenRouter",
+          "context_limit": 1000000,
+          "facts": {
+            "tool_mode": "native",
+            "wire_protocol": "chat_completions",
+            "max_tokens": 65536,
+            "supports_reasoning": true,
+            "supports_vision": false
+          }
         }
       },
       "pricing": {
-        "anthropic/claude-sonnet-4": {"input": 3.00, "output": 15.00},
-        "anthropic/claude-opus-4": {"input": 15.00, "output": 75.00},
-        "anthropic/claude-haiku": {"input": 0.25, "output": 1.25},
-        "meta-llama/llama-3.1-405b-instruct": {"input": 3.00, "output": 3.00},
-        "meta-llama/llama-3.1-70b-instruct": {"input": 0.50, "output": 0.50},
-        "mistralai/mistral-large": {"input": 2.00, "output": 6.00},
-        "google/gemini-pro-1.5": {"input": 2.50, "output": 7.50}
+        "qwen/qwen3.8-27b": {"input": 0.42, "output": 3.00},
+        "qwen/qwen3.7-flash": {"input": 0.03, "output": 0.13}
       },
       "capabilities": {
+        "native_tool_calling": true,
         "web_search": false,
         "realtime_info": false
       }
@@ -231,7 +226,7 @@ MODEL_PROVIDER=openrouter
 }
 ```
 
-**Note**: OpenRouter is a great way to access Claude models since Anthropic's native API uses a different format that isn't OpenAI-compatible.
+Prices are OpenRouter's list prices on 2026-10-03, per million tokens; check `GET /api/v1/models` for current ones. For Claude, ppxai also has an opt-in native Anthropic provider ([ANTHROPIC-PROVIDER.md](ANTHROPIC-PROVIDER.md), untested against the live API); OpenRouter is the tested route to Claude-family models over the OpenAI-compatible format.
 
 ---
 
