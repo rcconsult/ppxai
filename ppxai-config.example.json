@@ -573,8 +573,8 @@
       "name": "OpenRouter",
       "base_url": "https://openrouter.ai/api/v1",
       "api_key_env": "OPENROUTER_API_KEY",
-      "default_model": "anthropic/claude-sonnet-4",
-      "coding_model": "anthropic/claude-sonnet-4",
+      "default_model": "qwen/qwen3.8-27b:free",
+      "coding_model": "qwen/qwen3.8-27b:free",
       "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "generation_params": {
         "temperature": 0.2,
@@ -582,6 +582,25 @@
         "frequency_penalty": 0.1
       },
       "models": {
+        "qwen/qwen3.8-27b:free": {
+          "name": "Qwen3.8 27B (free)",
+          "description": "Free tier of qwen/qwen3.8-27b on OpenRouter: 262K context, native tool calling. Rate-limited; the paid qwen/qwen3.8-27b scored a 90.1 median on ppxai's benchmark (2026-10-03).",
+          "context_limit": 262144,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 65536,
+            "max_tool_iterations": 0,
+            "supports_reasoning": true,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          }
+        },
         "anthropic/claude-sonnet-4": {
           "name": "Claude Sonnet 4",
           "description": "Anthropic's balanced model for most tasks",
@@ -710,6 +729,10 @@
         }
       },
       "pricing": {
+        "qwen/qwen3.8-27b:free": {
+          "input": 0.0,
+          "output": 0.0
+        },
         "anthropic/claude-sonnet-4": {
           "input": 3,
           "output": 15
