@@ -16,8 +16,9 @@ from urllib.parse import urlsplit
 
 
 def is_loopback_url(url: str | None) -> bool:
-    """True when `url`'s host is `localhost` or a loopback address
-    (127.0.0.0/8, ::1). False for anything else, including no URL."""
+    """True when `url`'s host is `localhost`, a `*.localhost` name (RFC 6761
+    reserves them for the local machine), or a loopback address (127.0.0.0/8,
+    ::1). False for anything else, including no URL."""
     if not url:
         return False
     try:
@@ -26,7 +27,8 @@ def is_loopback_url(url: str | None) -> bool:
         return False
     if not host:
         return False
-    if host.lower() == "localhost":
+    host = host.lower().rstrip(".")
+    if host == "localhost" or host.endswith(".localhost"):
         return True
     try:
         return ipaddress.ip_address(host).is_loopback
