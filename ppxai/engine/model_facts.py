@@ -981,7 +981,7 @@ SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {
         max_tool_iterations=25,
         supports_reasoning=False,
         supports_vision=True,
-        restricted_params=(),
+        restricted_params=('temperature', 'top_p', 'top_k'),
         tier='S',
     ),
     "gemini-3.7-flash*": ModelFacts(
@@ -995,7 +995,7 @@ SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {
         max_tool_iterations=25,
         supports_reasoning=False,
         supports_vision=True,
-        restricted_params=(),
+        restricted_params=('temperature', 'top_p', 'top_k'),
         tier='S',
     ),
     "gemini-3.6-flash*": ModelFacts(
@@ -1009,7 +1009,7 @@ SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {
         max_tool_iterations=25,
         supports_reasoning=False,
         supports_vision=True,
-        restricted_params=(),
+        restricted_params=('temperature', 'top_p', 'top_k'),
         tier='S',
     ),
     "gemini-3.5-flash*": ModelFacts(

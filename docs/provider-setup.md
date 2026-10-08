@@ -140,6 +140,9 @@ MODEL_PROVIDER=gemini
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enable_grounding` | boolean | `true` | Enable Google Search Grounding for real-time web search with citations |
+| `thinking_level` | string | model default | `"minimal"`, `"low"`, `"medium"` or `"high"`. Google's replacement for `thinking_budget`, which the upcoming Gemini models reject with 400 |
+
+Don't set `temperature`, `top_p` or `top_k` for Gemini: they have had no effect since Gemini 3.6 Flash and the upcoming models reject them. ppxai does not send them to 3.6 and newer even if `generation_params` names them.
 
 **Note**: The OpenAI-compatible endpoint is `https://generativelanguage.googleapis.com/v1beta/openai`. For native Google Search Grounding with citations (similar to Perplexity), install the `gemini` extra (`uv sync --extra gemini` in a checkout), which adds the native Gemini SDK.
 

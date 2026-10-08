@@ -101,10 +101,7 @@
         "enable_grounding": true,
         "__comment_enable_grounding": "Enable Google Search Grounding for native web search (default: true)"
       },
-      "generation_params": {
-        "temperature": 0.2,
-        "top_p": 0.9
-      },
+      "__comment_generation_params": "No temperature/top_p/top_k here (removed 2026-10-08): Google deprecated custom sampling for Gemini. Since 3.6 Flash they are fixed at their defaults and ignored; upcoming models answer 400 INVALID_ARGUMENT. ppxai also drops them for 3.6+ via the model facts restricted_params, so a value set here only reaches 3.5/3.1/Gemma.",
       "__comment_deprecations": "Gemini deprecation timeline (verified 2026-04-12 against https://ai.google.dev/gemini-api/docs/deprecations; gemini-3.1-flash-lite GA migration verified 2026-05-14). The Gemini 2.0 and 2.5 families were REMOVED from this example file in v1.17.4 because all variants are scheduled for shutdown between 2026-06-01 and 2026-07-22. `/doctor` still knows about them via `ppxai/engine/model_deprecations.py` — users with old local configs get a warning with upgrade targets. Recommended replacements: gemini-3-flash-preview (best benchmark score, 100%) for general coding, gemini-3.1-pro-preview for complex reasoning, gemini-3.1-flash-lite (GA 2026-05) for high-volume cost-sensitive workloads. gemini-3-pro-preview was SHUT DOWN 2026-03-09. gemini-3.1-flash-lite-preview retires 2026-05-25 — use the GA name gemini-3.1-flash-lite.",
       "models": {
         "gemini-3.8-flash": {
@@ -124,7 +121,7 @@
             "max_tool_iterations": 25,
             "supports_reasoning": false,
             "supports_vision": true,
-            "restricted_params": [],
+            "restricted_params": ["temperature", "top_p", "top_k"],
             "tier": "S"
           }
         },

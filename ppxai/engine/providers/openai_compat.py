@@ -254,6 +254,11 @@ class OpenAICompatibleProvider(BaseProvider):
                         generation_params["max_completion_tokens"] = generation_params.pop("max_tokens")
                     for param in self.RESTRICTED_GENERATION_PARAMS:
                         generation_params.pop(param, None)
+                # Per-model facts too (2026-10-08): e.g. Gemini 3.6+ served
+                # through its OpenAI-compat endpoint (the `gemini` provider
+                # when google-genai is absent) rejects sampling params.
+                for param in self.get_facts_for_model(model).restricted_params:
+                    generation_params.pop(param, None)
                 request_kwargs.update(generation_params)
 
             # Per-model, not per-provider: get_facts_for_model()
@@ -548,8 +553,12 @@ class OpenAICompatibleProvider(BaseProvider):
 
         # temperature: request override wins; otherwise pull configured
         # generation_params (filtered for restricted models).
+        fact_restricted = self.get_facts_for_model(model).restricted_params
         if temperature is not None:
-            if not (use_completion_tokens and "temperature" in self.RESTRICTED_GENERATION_PARAMS):
+            if not (
+                (use_completion_tokens and "temperature" in self.RESTRICTED_GENERATION_PARAMS)
+                or "temperature" in fact_restricted
+            ):
                 request_kwargs["temperature"] = temperature
         else:
             generation_params = self._get_generation_params(model)
@@ -559,6 +568,8 @@ class OpenAICompatibleProvider(BaseProvider):
                         generation_params["max_completion_tokens"] = generation_params.pop("max_tokens")
                     for param in self.RESTRICTED_GENERATION_PARAMS:
                         generation_params.pop(param, None)
+                for param in fact_restricted:
+                    generation_params.pop(param, None)
                 request_kwargs.update(generation_params)
 
         if response_format is not None:

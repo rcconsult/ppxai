@@ -248,7 +248,17 @@ class GeminiProvider(BaseProvider):
     #: tool-capable regardless of provider. The wire is a fact about the
     #: endpoint's protocol; tool support is a fact about the model, and only
     #: the first is knowable without measuring.
-    unmeasured_facts = ModelFacts(wire_protocol="generate_content")
+    #:
+    #: `restricted_params` is the other half of the floor (2026-10-08): an
+    #: unlisted Gemini model is a NEWER one, and Google's deprecation notice
+    #: says the upcoming models reject temperature/top_p/top_k with 400
+    #: INVALID_ARGUMENT (fixed defaults since 3.6 Flash). Restricting them on
+    #: the floor keeps a model the seed table has not caught up with
+    #: working, at no cost — the values had no effect since 3.6.
+    unmeasured_facts = ModelFacts(
+        wire_protocol="generate_content",
+        restricted_params=("temperature", "top_p", "top_k"),
+    )
 
     default_capabilities = ProviderCapabilities(
         web_search=True,   # Via Google Search Grounding
@@ -735,6 +745,24 @@ class GeminiProvider(BaseProvider):
 
         # Add generation parameters from config (v1.15.2)
         # Gemini SDK uses same parameter names as OpenAI: temperature, top_p, max_output_tokens
+        #
+        # Drop what the model's facts restrict (2026-10-08). Google: since
+        # Gemini 3.6 Flash sampling params are fixed at their defaults, so
+        # custom values change nothing, and the upcoming models answer 400
+        # INVALID_ARGUMENT to temperature/top_p/top_k. A provider-level
+        # `generation_params` used to reach every model unfiltered.
+        # `facts` was resolved above for this model (or the default one).
+        if generation_params and facts.restricted_params:
+            dropped = sorted(k for k in generation_params if k in facts.restricted_params)
+            if dropped:
+                logger.debug(
+                    f"Gemini {model or self.default_model_for_facts}: not sending "
+                    f"restricted params {dropped}"
+                )
+            generation_params = {
+                k: v for k, v in generation_params.items()
+                if k not in facts.restricted_params
+            }
         if generation_params:
             # Map OpenAI param names to Gemini param names
             if "temperature" in generation_params:

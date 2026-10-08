@@ -474,7 +474,10 @@ class TestTheExampleAgreesWithItsSeeds:
     exemption here; there are none, by design.
     """
 
-    FIELDS = ("wire_protocol", "parallel_tool_calls")
+    #: `restricted_params` joined 2026-10-08: the 3.8-flash row stated `[]`
+    #: and so kept sending temperature/top_p that the seed restricts (Google
+    #: deprecated them; upcoming models 400 on them).
+    FIELDS = ("wire_protocol", "parallel_tool_calls", "restricted_params")
 
     def test_no_row_contradicts_its_seed(self):
         cfg = json.loads(EXAMPLE.read_text(encoding="utf-8-sig"))
@@ -493,7 +496,10 @@ class TestTheExampleAgreesWithItsSeeds:
                     continue
                 seed = shipped_facts_for_model(mblock.get("id", mname), table, floor)
                 for field in self.FIELDS:
-                    if mblock["facts"].get(field) != getattr(seed, field):
+                    row = mblock["facts"].get(field)
+                    if isinstance(row, list):  # JSON has no tuples
+                        row = tuple(row)
+                    if row != getattr(seed, field):
                         contradicting.append(
                             f"{pname}::{mname}.{field}: row "
                             f"{mblock['facts'].get(field)!r}, seed "
