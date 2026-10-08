@@ -13,6 +13,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 # Add parent directory to path for ppxai imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -111,6 +112,40 @@ class EngineClientWrapper:
             return provider.get_facts_for_model(self.model).tool_mode != "prompt_based"
         return False
 
+    def hint_summary(self) -> dict[str, Any]:
+        """Which AGENTS.md hints this run actually sent, for the result file.
+
+        `agents_md_mode: "with"` only says hints were LOADED, not that any
+        matched: the 2026-10-03 OpenRouter qwen runs were recorded "with" yet
+        matched no model or provider hint ("Qwen/Qwen3.[56]*" stops at [56]),
+        and nothing in results/ could show it — the prompt length lived only
+        in `-d` debug logs. Persisted so a later reader can tell a hinted run
+        from an unhinted one without re-deriving the glob matching.
+        """
+        summary: dict[str, Any] = {
+            "bootstrap_prompt_length": 0,
+            "provider_hint_count": 0,
+            "model_hint_count": 0,
+            "matched_model_patterns": [],
+        }
+        if self._client is None:
+            return summary
+        try:
+            summary["bootstrap_prompt_length"] = len(
+                self._client.get_bootstrap_prompt() or ""
+            )
+            ctx = getattr(self._client, "_bootstrap_context", None)
+            if ctx is not None:
+                hints = ctx.get_active_hints_for(self.provider, self.model)
+                summary["provider_hint_count"] = len(hints.get("provider_hints", []))
+                summary["model_hint_count"] = len(hints.get("model_hints", []))
+                summary["matched_model_patterns"] = list(
+                    hints.get("matched_patterns", [])
+                )
+        except Exception as exc:  # noqa: BLE001 — never fail a run over metadata
+            summary["error"] = str(exc)
+        return summary
+
     async def initialize(self) -> bool:
         """Initialize the EngineClient with provider and model."""
         try:
@@ -122,6 +157,15 @@ class EngineClientWrapper:
             project_root = Path(__file__).parent.parent.parent
             self._client.context_injector.working_dir = str(project_root)
             if self.skip_agents_md:
+                # Skipping the reload below is NOT enough: EngineClient's
+                # constructor already loaded AGENTS.md (client.py, since
+                # v1.14.0), so get_bootstrap_prompt() still returned the full
+                # global + cwd hint set. Found 2026-10-08 via hint_summary():
+                # a "without" run reported an 11 KB bootstrap prompt. Every
+                # "without" result since the v1.17.4 injection fix therefore
+                # carried hints, and its WITH/WITHOUT delta measured nothing.
+                # Clear the loaded context so this mode means what it says.
+                self._client._bootstrap_context = None
                 if self.verbose:
                     print("  [INFO] Skipping AGENTS.md loading (--agents-md without)")
             else:
@@ -1097,5 +1141,6 @@ class EngineBenchmarkRunner:
                 "infrastructure_failures": len(infra_failures),
                 "infrastructure_failure_detail": infra_failures[:10],
                 "is_clean_run": not infra_failures,
+                "agents_md_hints": self.client.hint_summary(),
             },
         )
