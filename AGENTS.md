@@ -156,6 +156,21 @@ model_hints:
     - "Do NOT output tool calls as XML (<tool_call>) — use native function calling only."
     - "Chain multiple DIFFERENT tool calls without stopping to narrate between them."
     - "Reasoning mode is opt-in via NVIDIA's chat_template_kwargs.enable_thinking — see ppxai-config.json __example_extra_body block on this model. Default is reasoning OFF (faster). Enable when chain-of-thought is required, accept ~2x latency."
+  # qwen/qwen3.7* / qwen3.8* via OpenRouter (added 2026-10-08). They matched
+  # NO model hint before: the "Qwen/Qwen3.[56]*" key stops at [56], so the
+  # 2026-10-03 benchmark ran them unhinted (27b 90.1, flash 81.2). This is
+  # that block's model-generic subset — its vLLM qwen3_coder-parser line and
+  # NVIDIA chat_template_kwargs line are stack-specific and would be wrong on
+  # OpenRouter. NOT re-benchmarked with these hints yet.
+  "qwen/qwen3.[7-9]*":
+    - "CRITICAL: After EVERY tool call, read the COMPLETE result. If it contains 'FAILED', 'Error:', 'permission denied', acknowledge the exact error. Do NOT claim success."
+    - "After repeated tool failure (2+ attempts), STOP and report: 'Operation failed persistently: [error]'. Do NOT retry indefinitely."
+    - "For apply_patch: use UNIFIED DIFF format with '--- a/path' and '+++ b/path' headers, @@ line markers, and 3+ context lines."
+    - "For multi-file review: read ALL files in the directory, not just the first 2. Use list_dir then read_file for each."
+    - "Fix-verify chain: 1) apply_patch 2) run tests 3) read result 4) report status. Complete ALL steps."
+    - "When user specifies N output blocks/sections, produce exactly N — count before responding."
+    - "Do NOT output tool calls as XML (<tool_call>) — use native function calling only."
+    - "Chain multiple DIFFERENT tool calls without stopping to narrate between them."
   "gpt-oss*":
     - "You are a coding specialist - prioritize working code over explanations."
     - "Execute tools immediately rather than describing what you would do."
