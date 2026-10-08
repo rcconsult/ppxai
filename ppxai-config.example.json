@@ -570,19 +570,25 @@
       "name": "OpenRouter",
       "base_url": "https://openrouter.ai/api/v1",
       "api_key_env": "OPENROUTER_API_KEY",
-      "default_model": "qwen/qwen3.8-27b:free",
-      "coding_model": "qwen/qwen3.8-27b:free",
+      "default_model": "qwen/qwen3.8-27b",
+      "coding_model": "qwen/qwen3.8-27b",
       "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
+      "__comment_extra_body": "OpenRouter provider routing: data_collection deny = never route to an endpoint that may train on or retain prompts; require_parameters = only endpoints that honour every parameter sent (tools included). A 404 'No endpoints found' under these rules means no endpoint qualified - a policy result, not an outage. frequency_penalty was dropped from generation_params because under require_parameters it excluded every qwen/qwen3.7-flash endpoint (measured 2026-10-08).",
+      "extra_body": {
+        "provider": {
+          "data_collection": "deny",
+          "require_parameters": true
+        }
+      },
       "generation_params": {
         "temperature": 0.2,
-        "top_p": 0.9,
-        "frequency_penalty": 0.1
+        "top_p": 0.9
       },
       "models": {
-        "qwen/qwen3.8-27b:free": {
-          "name": "Qwen3.8 27B (free)",
-          "description": "Free tier of qwen/qwen3.8-27b on OpenRouter: 262K context, native tool calling. Rate-limited; the paid qwen/qwen3.8-27b scored a 90.1 median on ppxai's benchmark (2026-10-03).",
-          "context_limit": 262144,
+        "qwen/qwen3.8-27b": {
+          "name": "Qwen3.8 27B",
+          "description": "262K context, native tool calling; 90.1 median on ppxai's benchmark (2026-10-03). The free :free variant this row used to name was withdrawn by OpenRouter ('unavailable for free', checked 2026-10-08).",
+          "context_limit": 1000000,
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": false,
@@ -726,9 +732,9 @@
         }
       },
       "pricing": {
-        "qwen/qwen3.8-27b:free": {
-          "input": 0.0,
-          "output": 0.0
+        "qwen/qwen3.8-27b": {
+          "input": 0.425,
+          "output": 2.55
         },
         "anthropic/claude-sonnet-4": {
           "input": 3,

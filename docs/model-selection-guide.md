@@ -22,7 +22,7 @@ For deferred multi-model routing automation, see [TODO-routing.md](TODO-routing.
 | **Hardest cross-cutting decisions** | `gpt-5.5-pro` | $30 / $180 | Premium ceiling for once-a-quarter ADRs |
 | **Implementation / coding** | **`gpt-5.4-mini`** | $0.75 / $4.50 | Best run 97.5% with hints (2026-04); median 85.6 in the [2026-10-03 same-day run](#same-day-run-2026-10-03-openai--openrouter). Fastest of the hosted models, 6.7× cheaper than gpt-5.5 |
 | Cheap quick tasks | `gpt-6-luna` | $0.10 / $0.50 | Median 87.1 on 2026-10-03, above gpt-5.4-mini at ~1/7 the price but ~2.5× slower. Replaces `gpt-5.4-nano` (deprecated 2026-10-01, shutdown 2027-04-01) |
-| Low-cost alternative via OpenRouter | `qwen/qwen3.8-27b` | $0.42 / $3.00 | Median 90.1 on 2026-10-03, level with `gpt-5.6-terra` (91.1) at ~1/5 the price; 3–5× slower per run |
+| Low-cost alternative via OpenRouter | `qwen/qwen3.8-27b` | $0.425 / $2.55 (2026-10-08) | Median 90.1 on 2026-10-03, level with `gpt-5.6-terra` (91.1) at ~1/5 the price; 3–5× slower per run |
 | Air-gapped / in-cluster | **`Qwen3.6-27B-FP8-agent`** | local ($0) | **93.6% no-hints (33/36)** — best self-hosted on the suite, agent-tuned native tool calling, 128K ctx. Prev pick `Qwen3-Coder-Next-NVFP4` (90% on DGX Spark) |
 | **Avoid** | `gpt-5.3-codex` | $1.75 / $14 | Dominated by both gpt-5.4-mini and gpt-5.5; structurally cautious about tool use. **Deprecated 2026-10-01** (shutdown 2027-04-01, replacement `gpt-6-sol`) |
 

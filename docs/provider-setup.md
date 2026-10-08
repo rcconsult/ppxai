@@ -168,7 +168,15 @@ OpenRouter provides access to many models (Qwen, Llama, Mistral, Claude and more
 
 **Tested 2026-10-03:** ppxai's 36-test benchmark ran against the OpenRouter API with `qwen/qwen3.8-27b` (median 90.1) and `qwen/qwen3.7-flash` (median 81.2), three runs each. Native tool calling works over OpenRouter's Chat Completions endpoint with no extra configuration. Expect slower turns than a direct provider, and the occasional OpenRouter-side error (1–2 per 36-test run for `qwen3.7-flash`). Results and caveats: [model-selection-guide.md](model-selection-guide.md#same-day-run-2026-10-03-openai--openrouter).
 
-Pick models that list `tools` in OpenRouter's supported parameters (`GET https://openrouter.ai/api/v1/models`, field `supported_parameters`). `:free` variants exist for some models but are rate-limited, which distorts benchmark scores.
+Pick models that list `tools` in OpenRouter's supported parameters (`GET https://openrouter.ai/api/v1/models`, field `supported_parameters`). `:free` variants exist for some models but are rate-limited, which distorts benchmark scores, and OpenRouter can withdraw them: `qwen/qwen3.8-27b:free` answered "This model is unavailable for free" on 2026-10-08.
+
+**Provider routing.** OpenRouter picks an upstream endpoint per request. To keep prompts away from endpoints that may train on or retain them, and away from endpoints that would silently ignore a parameter you send, add this to the provider block (ppxai forwards `extra_body` as-is):
+
+```json
+"extra_body": {"provider": {"data_collection": "deny", "require_parameters": true}}
+```
+
+With `require_parameters`, every parameter in `generation_params` must be supported by some endpoint: `frequency_penalty` excluded every `qwen/qwen3.7-flash` endpoint (404 "No endpoints found that can handle the requested parameters", 2026-10-08), so leave it out. A 404 under these rules is the policy working, not an outage. Both models above made native tool calls under these rules on 2026-10-08.
 
 ### `.env`
 ```bash
@@ -216,7 +224,7 @@ The configuration that was tested:
         }
       },
       "pricing": {
-        "qwen/qwen3.8-27b": {"input": 0.42, "output": 3.00},
+        "qwen/qwen3.8-27b": {"input": 0.425, "output": 2.55},
         "qwen/qwen3.7-flash": {"input": 0.03, "output": 0.13}
       },
       "capabilities": {
@@ -229,7 +237,7 @@ The configuration that was tested:
 }
 ```
 
-Prices are OpenRouter's list prices on 2026-10-03, per million tokens; check `GET /api/v1/models` for current ones. For Claude, ppxai also has an opt-in native Anthropic provider ([ANTHROPIC-PROVIDER.md](ANTHROPIC-PROVIDER.md), untested against the live API); OpenRouter is the tested route to Claude-family models over the OpenAI-compatible format.
+Prices are OpenRouter's list prices, per million tokens (27B re-checked 2026-10-08: it was 0.42 / 3.00 on 2026-10-03); check `GET /api/v1/models` for current ones. For Claude, ppxai also has an opt-in native Anthropic provider ([ANTHROPIC-PROVIDER.md](ANTHROPIC-PROVIDER.md), untested against the live API); OpenRouter is the tested route to Claude-family models over the OpenAI-compatible format.
 
 ---
 
