@@ -199,6 +199,18 @@ RETIRED = {
         "2026-10-02 — same announcement; replacement gpt-6-luna. Kept, "
         "marked, in the root config only."
     ),
+    # 2026-10-08: the example's OpenRouter list was two generations old;
+    # replaced from the live /api/v1/models catalog. 405b was no longer listed
+    # at all. Gemini has no OpenRouter successor row on purpose: the provider
+    # sends temperature/top_p, which Gemini 3.6+ rejects, and the native
+    # `gemini` provider is the supported route.
+    "openrouter::anthropic/claude-sonnet-4": "2026-10-08 — stale OpenRouter example row, replaced.",
+    "openrouter::anthropic/claude-opus-4": "2026-10-08 — stale OpenRouter example row, replaced.",
+    "openrouter::anthropic/claude-haiku": "2026-10-08 — stale OpenRouter example row, replaced.",
+    "openrouter::deepseek/deepseek-r1": "2026-10-08 — stale OpenRouter example row, replaced.",
+    "openrouter::meta-llama/llama-3.1-70b-instruct": "2026-10-08 — stale OpenRouter example row, replaced.",
+    "openrouter::meta-llama/llama-3.1-405b-instruct": "2026-10-08 — stale OpenRouter example row, replaced.",
+    "openrouter::google/gemini-2.0-flash-001": "2026-10-08 — stale OpenRouter example row, replaced.",
 }
 
 
@@ -264,6 +276,9 @@ class TestBehaviourIsPreserved:
         # harvested serial floor.
         ("openai::gpt-5.5-pro", "wire_protocol"),
         ("openai::gpt-5.4-mini", "parallel_tool_calls"),
+        # 2026-10-08: gpt-5.4-pro 404s on Chat Completions ("not a chat
+        # model", probed live); its `gpt-5.4*` seed and this row were wrong.
+        ("openai::gpt-5.4-pro", "wire_protocol"),
     }
 
     def test_every_field_of_every_record_matches(self, head_effective, resolved):

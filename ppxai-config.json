@@ -220,7 +220,7 @@
             "fallback_on_empty": false,
             "fallback_on_failure": false,
             "strip_json_from_text": false,
-            "parallel_tool_calls": true
+            "parallel_tool_calls": false
           },
           "__comment_vision": "supports_vision is the conservative floor, NOT a measurement — the 2026-08-31 benchmark covered tool calling and quality only."
         },
@@ -242,7 +242,7 @@
             "fallback_on_empty": false,
             "fallback_on_failure": false,
             "strip_json_from_text": false,
-            "parallel_tool_calls": true
+            "parallel_tool_calls": false
           },
           "__comment_vision": "supports_vision is the conservative floor, NOT a measurement: OpenAI's page lists image input, but ppxai has not tested it (same choice as gpt-5.6-terra)."
         },
@@ -264,7 +264,7 @@
             "fallback_on_empty": false,
             "fallback_on_failure": false,
             "strip_json_from_text": false,
-            "parallel_tool_calls": true
+            "parallel_tool_calls": false
           },
           "__comment_vision": "supports_vision is the conservative floor, NOT a measurement: OpenAI's page lists image input, but ppxai has not tested it (same choice as gpt-5.6-terra)."
         },
@@ -533,7 +533,7 @@
             "fallback_on_empty": true,
             "fallback_on_failure": false,
             "strip_json_from_text": true,
-            "parallel_tool_calls": true
+            "parallel_tool_calls": false
           },
           "generation_params": {
             "top_p": 0.95,

@@ -87,14 +87,22 @@ RESPONSES_API_PREFIXES = ("gpt-5.1-codex", "codex", "gpt-5.2-pro", "gpt-5-pro", 
 #: (benchmarks/tuning/openai-5.6-tools-hazard.json); gpt-6-sol and gpt-6-luna
 #: were each called on Responses with a function tool and answered with a
 #: native function_call (2026-10-03, commit 6f0285bc). Until now only the
-#: example config's rows said `responses` — an operator without those rows
-#: got the `chat_completions` floor and a 400 on the first tool call.
+#: example config's rows said `responses`. Without those rows the three fell
+#: to the unmeasured floor: Chat Completions with `prompt_based` tools, so no
+#: tools array was sent and nothing 400'd, but native tool calling needed a
+#: config row.
+#:
+#: gpt-5.4-pro (2026-10-08): the same 404 as its siblings, verbatim, probed
+#: live on /v1/chat/completions — "This is not a chat model and thus not
+#: supported". Its seed row (`gpt-5.4*`) said chat_completions and the example
+#: config agreed; only the root config said responses.
 RESPONSES_WIRE_GLOBS = (
     "gpt-5.1-codex*",
     "gpt-5.3-codex*",
     "codex*",
     "gpt-5-pro*",
     "gpt-5.2-pro*",
+    "gpt-5.4-pro*",
     "gpt-5.5-pro*",
     "gpt-5.6*",
     "gpt-6-pro*",

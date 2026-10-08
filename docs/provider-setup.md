@@ -398,11 +398,11 @@ MODEL_PROVIDER=gemini
       "name": "OpenRouter (Claude)",
       "base_url": "https://openrouter.ai/api/v1",
       "api_key_env": "OPENROUTER_API_KEY",
-      "default_model": "anthropic/claude-sonnet-4",
-      "coding_model": "anthropic/claude-sonnet-4",
+      "default_model": "anthropic/claude-sonnet-5.5",
+      "coding_model": "anthropic/claude-sonnet-5.5",
       "models": {
-        "anthropic/claude-sonnet-4": {"name": "Claude Sonnet 4", "description": "Balanced"},
-        "anthropic/claude-opus-4": {"name": "Claude Opus 4", "description": "Most capable"}
+        "anthropic/claude-sonnet-5.5": {"name": "Claude Sonnet 5.5", "description": "Balanced"},
+        "anthropic/claude-opus-5.5": {"name": "Claude Opus 5.5", "description": "Most capable"}
       },
       "capabilities": {"web_search": false, "realtime_info": false}
     }

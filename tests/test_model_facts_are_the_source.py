@@ -38,7 +38,9 @@ GLOBS = sorted(SHIPPED_MODEL_FACTS)
 #: The count is a canary, not a target. It moves when a model is added or
 #: retired — both legitimate — but never silently: a diff that changes it
 #: has to say why.
-EXPECTED_ROWS = 68
+#: 71 (2026-10-08): +3 aggregator Claude 4.7+ rows (anthropic/claude-*-5*,
+#: -4.7*, -4.8*), sampling params restricted after a live OpenRouter probe.
+EXPECTED_ROWS = 71
 
 #: The rows whose wire is NOT the default. Before Item 65 these came from
 #: `_API_PATH_TO_WIRE` and `_WIRE_BY_GLOB`, outside the rows entirely; the

@@ -484,7 +484,7 @@
             "fallback_on_failure": false,
             "strip_json_from_text": true,
             "parallel_tool_calls": true,
-            "wire_protocol": "chat_completions",
+            "wire_protocol": "responses",
             "max_tokens": 128000,
             "max_tool_iterations": 0,
             "supports_reasoning": false,
@@ -604,9 +604,10 @@
             "tier": ""
           }
         },
-        "anthropic/claude-sonnet-4": {
-          "name": "Claude Sonnet 4",
+        "anthropic/claude-sonnet-5.5": {
+          "name": "Claude Sonnet 5.5",
           "description": "Anthropic's balanced model for most tasks",
+          "context_limit": 1000000,
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": false,
@@ -616,15 +617,20 @@
             "wire_protocol": "chat_completions",
             "max_tokens": 0,
             "max_tool_iterations": 0,
-            "supports_reasoning": false,
-            "supports_vision": false,
-            "restricted_params": [],
-            "tier": ""
+            "supports_reasoning": true,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p",
+              "top_k"
+            ],
+            "tier": "A"
           }
         },
-        "anthropic/claude-opus-4": {
-          "name": "Claude Opus 4",
+        "anthropic/claude-opus-5.5": {
+          "name": "Claude Opus 5.5",
           "description": "Anthropic's most capable model",
+          "context_limit": 1000000,
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": false,
@@ -634,15 +640,20 @@
             "wire_protocol": "chat_completions",
             "max_tokens": 0,
             "max_tool_iterations": 0,
-            "supports_reasoning": false,
-            "supports_vision": false,
-            "restricted_params": [],
-            "tier": ""
+            "supports_reasoning": true,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p",
+              "top_k"
+            ],
+            "tier": "A"
           }
         },
-        "anthropic/claude-haiku": {
-          "name": "Claude Haiku",
+        "anthropic/claude-haiku-5.5": {
+          "name": "Claude Haiku 5.5",
           "description": "Fast and affordable Claude model",
+          "context_limit": 1000000,
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": false,
@@ -652,15 +663,20 @@
             "wire_protocol": "chat_completions",
             "max_tokens": 0,
             "max_tool_iterations": 0,
-            "supports_reasoning": false,
-            "supports_vision": false,
-            "restricted_params": [],
-            "tier": ""
+            "supports_reasoning": true,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p",
+              "top_k"
+            ],
+            "tier": "A"
           }
         },
-        "deepseek/deepseek-r1": {
-          "name": "DeepSeek R1",
-          "description": "Reasoning model with Chain of Thought",
+        "deepseek/deepseek-v4.1-flash": {
+          "name": "DeepSeek V4.1 Flash",
+          "description": "DeepSeek's low-cost reasoning model; facts follow the measured */deepseek-v4* seed row",
+          "context_limit": 1048576,
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": false,
@@ -668,53 +684,18 @@
             "strip_json_from_text": false,
             "parallel_tool_calls": false,
             "wire_protocol": "chat_completions",
-            "max_tokens": 0,
-            "max_tool_iterations": 0,
+            "max_tokens": 8192,
+            "max_tool_iterations": 20,
             "supports_reasoning": false,
-            "supports_vision": false,
+            "supports_vision": true,
             "restricted_params": [],
-            "tier": ""
+            "tier": "B"
           }
         },
-        "meta-llama/llama-3.1-70b-instruct": {
-          "name": "Llama 3.1 70B",
-          "description": "Meta's open-weight model",
-          "facts": {
-            "tool_mode": "native",
-            "fallback_on_empty": false,
-            "fallback_on_failure": false,
-            "strip_json_from_text": false,
-            "parallel_tool_calls": false,
-            "wire_protocol": "chat_completions",
-            "max_tokens": 0,
-            "max_tool_iterations": 0,
-            "supports_reasoning": false,
-            "supports_vision": false,
-            "restricted_params": [],
-            "tier": ""
-          }
-        },
-        "meta-llama/llama-3.1-405b-instruct": {
-          "name": "Llama 3.1 405B",
-          "description": "Meta's largest open model",
-          "facts": {
-            "tool_mode": "native",
-            "fallback_on_empty": false,
-            "fallback_on_failure": false,
-            "strip_json_from_text": false,
-            "parallel_tool_calls": false,
-            "wire_protocol": "chat_completions",
-            "max_tokens": 0,
-            "max_tool_iterations": 0,
-            "supports_reasoning": false,
-            "supports_vision": false,
-            "restricted_params": [],
-            "tier": ""
-          }
-        },
-        "google/gemini-2.0-flash-001": {
-          "name": "Gemini 2.0 Flash",
-          "description": "Google's fast multimodal model",
+        "meta-llama/llama-4-maverick": {
+          "name": "Llama 4 Maverick",
+          "description": "Meta's open-weight MoE model",
+          "context_limit": 1048576,
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": false,
@@ -736,33 +717,25 @@
           "input": 0.425,
           "output": 2.55
         },
-        "anthropic/claude-sonnet-4": {
-          "input": 3,
-          "output": 15
+        "anthropic/claude-sonnet-5.5": {
+          "input": 2,
+          "output": 10
         },
-        "anthropic/claude-opus-4": {
-          "input": 15,
-          "output": 75
+        "anthropic/claude-opus-5.5": {
+          "input": 4,
+          "output": 20
         },
-        "anthropic/claude-haiku": {
-          "input": 0.25,
-          "output": 1.25
-        },
-        "deepseek/deepseek-r1": {
-          "input": 0.55,
-          "output": 2.19
-        },
-        "meta-llama/llama-3.1-70b-instruct": {
-          "input": 0.59,
-          "output": 0.79
-        },
-        "meta-llama/llama-3.1-405b-instruct": {
-          "input": 3,
-          "output": 3
-        },
-        "google/gemini-2.0-flash-001": {
+        "anthropic/claude-haiku-5.5": {
           "input": 0.1,
-          "output": 0.4
+          "output": 0.5
+        },
+        "deepseek/deepseek-v4.1-flash": {
+          "input": 0.028,
+          "output": 1.0
+        },
+        "meta-llama/llama-4-maverick": {
+          "input": 0.188,
+          "output": 0.652
         }
       },
       "facts": {

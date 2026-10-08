@@ -787,6 +787,58 @@ SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {
         restricted_params=(),
         tier='B',
     ),
+    # Claude 4.7+ reached through an OpenAI-compatible aggregator
+    # (OpenRouter's `anthropic/...` ids). Measured 2026-10-08 on OpenRouter
+    # with `require_parameters`: sonnet/opus/haiku-5.5 each made a native
+    # tool call, and each answered 404 "No endpoints found that can handle
+    # the requested parameters" to `temperature` alone and to `top_p` alone —
+    # the same restriction `AnthropicProvider._request_kwargs` documents for
+    # the native wire. Parallel is the serial floor: not measured here.
+    # `tier` 'A' is an ASSUMPTION, not a benchmark result: the table requires
+    # a tier in {S,A,B,C,D}, and no Claude model has been benchmarked in this
+    # repo. Do not cite it as measured.
+    "anthropic/claude-*-5*": ModelFacts(
+        wire_protocol='chat_completions',
+        tool_mode='native',
+        fallback_on_empty=False,
+        fallback_on_failure=False,
+        strip_json_from_text=False,
+        parallel_tool_calls=False,
+        max_tokens=0,
+        max_tool_iterations=0,
+        supports_reasoning=True,
+        supports_vision=True,
+        restricted_params=('temperature', 'top_p', 'top_k'),
+        tier='A',
+    ),
+    "anthropic/claude-*-4.7*": ModelFacts(
+        wire_protocol='chat_completions',
+        tool_mode='native',
+        fallback_on_empty=False,
+        fallback_on_failure=False,
+        strip_json_from_text=False,
+        parallel_tool_calls=False,
+        max_tokens=0,
+        max_tool_iterations=0,
+        supports_reasoning=True,
+        supports_vision=True,
+        restricted_params=('temperature', 'top_p', 'top_k'),
+        tier='A',
+    ),
+    "anthropic/claude-*-4.8*": ModelFacts(
+        wire_protocol='chat_completions',
+        tool_mode='native',
+        fallback_on_empty=False,
+        fallback_on_failure=False,
+        strip_json_from_text=False,
+        parallel_tool_calls=False,
+        max_tokens=0,
+        max_tool_iterations=0,
+        supports_reasoning=True,
+        supports_vision=True,
+        restricted_params=('temperature', 'top_p', 'top_k'),
+        tier='A',
+    ),
     "*/deepseek-v4*": ModelFacts(
         wire_protocol='chat_completions',
         tool_mode='native',
