@@ -79,6 +79,16 @@ RESPONSES_API_PREFIXES = ("gpt-5.1-codex", "codex", "gpt-5.2-pro", "gpt-5-pro", 
 #: v1/chat/completions endpoint"** — the same error, verbatim, that put its
 #: siblings on this list. Every row in this table now rests on an observed
 #: response rather than on pattern-matching a model name.
+#:
+#: The 5.6 / 6 rows (2026-10-08) are a different failure with the same
+#: answer: Chat Completions accepts these models but 400s on ANY tools array
+#: ("Function tools with reasoning_effort are not supported"), because the
+#: line defaults to a non-'none' reasoning effort. Measured for gpt-5.6-terra
+#: (benchmarks/tuning/openai-5.6-tools-hazard.json); gpt-6-sol and gpt-6-luna
+#: were each called on Responses with a function tool and answered with a
+#: native function_call (2026-10-03, commit 6f0285bc). Until now only the
+#: example config's rows said `responses` — an operator without those rows
+#: got the `chat_completions` floor and a 400 on the first tool call.
 RESPONSES_WIRE_GLOBS = (
     "gpt-5.1-codex*",
     "gpt-5.3-codex*",
@@ -86,7 +96,10 @@ RESPONSES_WIRE_GLOBS = (
     "gpt-5-pro*",
     "gpt-5.2-pro*",
     "gpt-5.5-pro*",
+    "gpt-5.6*",
     "gpt-6-pro*",
+    "gpt-6-sol*",
+    "gpt-6-luna*",
 )
 REASONING_MODEL_PREFIXES = ("o1", "o3", "o4")
 

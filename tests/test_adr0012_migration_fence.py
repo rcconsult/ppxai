@@ -79,6 +79,9 @@ from pathlib import Path
 
 import pytest
 
+from ppxai.engine.model_facts import shipped_facts_for_model
+from ppxai.engine.providers import get_provider_class
+
 REPO = Path(__file__).resolve().parents[1]
 FIXTURE = Path(__file__).parent / "fixtures" / "adr0012_head_effective.json"
 EXAMPLE = REPO / "ppxai-config.example.json"
@@ -228,8 +231,39 @@ class TestBehaviourIsPreserved:
     #: than baked into the fixture, so the fence measures them instead of
     #: hiding them — a fixture quietly edited to match new behaviour proves
     #: nothing at all.
+    #:
+    #: The nine `gemini::*` entries (2026-10-08): the example rows were a
+    #: W1 harvest of the PRE-ADR-0012 code, which said `chat_completions`
+    #: and serial. The shipped seeds (`SHIPPED_MODEL_FACTS`) say
+    #: `generate_content` for every Gemini/Gemma row and parallel for all
+    #: but `gemini-3.1-pro*`, and the example rows outranked them. The
+    #: wire half is inert at runtime — `GeminiProvider` drops `base_url` and
+    #: always sends via the `generate_content` handler — so it only stopped
+    #: `/provider` from reporting a wire the code never uses. The parallel
+    #: half is real: these four now allow parallel calls, which the seeds
+    #: carry from the v1.19.2 measurement campaign (over generateContent,
+    #: the wire GeminiProvider actually speaks). `gemini-3.1-pro-preview`
+    #: stays serial in both places. Fenced going forward by
+    #: `TestTheExampleAgreesWithItsSeeds`.
     DECLARED = {
         ("qwen36-agent::Qwen/Qwen3.6-27B-FP8-agent", "supports_vision"),
+        ("gemini::gemini-3.1-pro-preview", "wire_protocol"),
+        ("gemini::gemini-3.1-flash-lite", "wire_protocol"),
+        ("gemini::gemini-3.1-flash-lite", "parallel_tool_calls"),
+        ("gemini::gemma-4-31b-it", "wire_protocol"),
+        ("gemini::gemma-4-31b-it", "parallel_tool_calls"),
+        ("gemini::gemma-4-26b-a4b-it", "wire_protocol"),
+        ("gemini::gemma-4-26b-a4b-it", "parallel_tool_calls"),
+        ("gemini::gemini-3.5-flash", "wire_protocol"),
+        ("gemini::gemini-3.5-flash", "parallel_tool_calls"),
+        # Same sweep, OpenAI. gpt-5.5-pro: the harvested `chat_completions`
+        # is the pre-W2 value; probed live 2026-08-31 it 404s there ("not a
+        # chat model"), which is why `RESPONSES_WIRE_GLOBS` lists it — the
+        # example row was overriding that fix. gpt-5.4-mini: the seed's
+        # parallel=True is the v1.19.2 measurement; the row was the
+        # harvested serial floor.
+        ("openai::gpt-5.5-pro", "wire_protocol"),
+        ("openai::gpt-5.4-mini", "parallel_tool_calls"),
     }
 
     def test_every_field_of_every_record_matches(self, head_effective, resolved):
@@ -417,6 +451,58 @@ class TestTheVisionFixReachesTheConfig:
                 if mblock["facts"]["supports_vision"] != seed:
                     contradicting.append(f"{pname}::{mname}")
         assert contradicting == []
+
+
+class TestTheExampleAgreesWithItsSeeds:
+    """A config row must not contradict the shipped seed on a routing fact.
+
+    The example config is what operators copy, and a config row OUTRANKS
+    the seed (`apply_overrides`). So a stale row there silently overrides a
+    measured seed for everyone who copies it. Found 2026-10-08: five Gemini
+    rows said `chat_completions` (seed: `generate_content`), four said
+    serial (seed: parallel), `gpt-5.5-pro` said `chat_completions` (seed:
+    `responses`, measured 404 on Chat Completions), and `gpt-5.4-mini` said
+    serial against a measured parallel seed. In the other direction three
+    rows were RIGHT and the seed was missing (`gpt-5.6*`, `gpt-6-sol*`,
+    `gpt-6-luna*` need `responses`), so an operator without the rows got a
+    400 on the first tool call.
+
+    Seeds are looked up the way the resolver does it
+    (`ProviderFacts.facts`): the provider class's own table and floor
+    first, then the global table. Fix a disagreement by correcting
+    whichever side is wrong, the row or the seed, never by adding an
+    exemption here; there are none, by design.
+    """
+
+    FIELDS = ("wire_protocol", "parallel_tool_calls")
+
+    def test_no_row_contradicts_its_seed(self):
+        cfg = json.loads(EXAMPLE.read_text(encoding="utf-8-sig"))
+        contradicting = []
+        for pname, pblock in (cfg.get("providers") or {}).items():
+            if not isinstance(pblock, dict):
+                continue
+            try:
+                cls = get_provider_class(pname)
+            except Exception:  # noqa: BLE001 — unregistered id: global table only
+                cls = None
+            table = getattr(cls, "shipped_model_facts", {}) or {}
+            floor = getattr(cls, "unmeasured_facts", None)
+            for mname, mblock in (pblock.get("models") or {}).items():
+                if not isinstance(mblock, dict) or "facts" not in mblock:
+                    continue
+                seed = shipped_facts_for_model(mblock.get("id", mname), table, floor)
+                for field in self.FIELDS:
+                    if mblock["facts"].get(field) != getattr(seed, field):
+                        contradicting.append(
+                            f"{pname}::{mname}.{field}: row "
+                            f"{mblock['facts'].get(field)!r}, seed "
+                            f"{getattr(seed, field)!r}"
+                        )
+        assert contradicting == [], (
+            "example rows contradict their shipped seed (fix the wrong "
+            "side):\n  " + "\n  ".join(contradicting)
+        )
 
 
 class TestTheExampleShipsMigrated:
