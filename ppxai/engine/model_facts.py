@@ -290,6 +290,57 @@ SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {
         restricted_params=(),
         tier='S',
     ),
+    # gpt-5.6 / gpt-6-sol / gpt-6-luna — native function calling over
+    # Responses (Chat Completions 400s on any tools array for this line).
+    # Measured: gpt-5.6-terra benchmarked natively (2026-08-31, median 91.5;
+    # 2026-10-03, 91.1); sol and luna each answered a Responses function tool
+    # with a native function_call (2026-10-03, commit 6f0285bc). Until
+    # 2026-10-09 these values lived only in the example config, so an
+    # operator without config rows got the prompt_based floor. Parallel is
+    # serial: unmeasured. `tier` 'A' matches the example rows; for sol and
+    # luna it is an ASSUMPTION, not a benchmark result.
+    "gpt-5.6*": ModelFacts(
+        wire_protocol='responses',
+        tool_mode='native',
+        fallback_on_empty=False,
+        fallback_on_failure=False,
+        strip_json_from_text=False,
+        parallel_tool_calls=False,
+        max_tokens=128000,
+        max_tool_iterations=20,
+        supports_reasoning=True,
+        supports_vision=False,
+        restricted_params=(),
+        tier='A',
+    ),
+    "gpt-6-sol*": ModelFacts(
+        wire_protocol='responses',
+        tool_mode='native',
+        fallback_on_empty=False,
+        fallback_on_failure=False,
+        strip_json_from_text=False,
+        parallel_tool_calls=False,
+        max_tokens=128000,
+        max_tool_iterations=20,
+        supports_reasoning=True,
+        supports_vision=False,
+        restricted_params=(),
+        tier='A',
+    ),
+    "gpt-6-luna*": ModelFacts(
+        wire_protocol='responses',
+        tool_mode='native',
+        fallback_on_empty=False,
+        fallback_on_failure=False,
+        strip_json_from_text=False,
+        parallel_tool_calls=False,
+        max_tokens=128000,
+        max_tool_iterations=20,
+        supports_reasoning=True,
+        supports_vision=False,
+        restricted_params=(),
+        tier='A',
+    ),
     "gpt-5.5*": ModelFacts(
         wire_protocol='chat_completions',
         tool_mode='native',

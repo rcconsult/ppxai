@@ -40,7 +40,9 @@ GLOBS = sorted(SHIPPED_MODEL_FACTS)
 #: has to say why.
 #: 71 (2026-10-08): +3 aggregator Claude 4.7+ rows (anthropic/claude-*-5*,
 #: -4.7*, -4.8*), sampling params restricted after a live OpenRouter probe.
-EXPECTED_ROWS = 71
+#: 74 (2026-10-09): +3 native Responses rows (gpt-5.6*, gpt-6-sol*,
+#: gpt-6-luna*) that previously lived only in the example config.
+EXPECTED_ROWS = 74
 
 #: The rows whose wire is NOT the default. Before Item 65 these came from
 #: `_API_PATH_TO_WIRE` and `_WIRE_BY_GLOB`, outside the rows entirely; the
@@ -63,6 +65,11 @@ NON_DEFAULT_WIRES = {
     "gemma-4-31b*": "generate_content",
     "gemma-4-26b*": "generate_content",
     "gemma-4-e*": "generate_content",
+    # 2026-10-09: the gpt-5.6 / gpt-6 line 400s on tools over Chat
+    # Completions; its native seed rows state the Responses wire themselves.
+    "gpt-5.6*": "responses",
+    "gpt-6-sol*": "responses",
+    "gpt-6-luna*": "responses",
     "gemma-4*": "generate_content",
     "gpt-5.3-codex*": "responses",
     "gpt-5.1-codex-mini*": "responses",

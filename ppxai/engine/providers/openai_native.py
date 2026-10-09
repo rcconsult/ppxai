@@ -89,8 +89,8 @@ RESPONSES_API_PREFIXES = ("gpt-5.1-codex", "codex", "gpt-5.2-pro", "gpt-5-pro", 
 #: native function_call (2026-10-03, commit 6f0285bc). Until now only the
 #: example config's rows said `responses`. Without those rows the three fell
 #: to the unmeasured floor: Chat Completions with `prompt_based` tools, so no
-#: tools array was sent and nothing 400'd, but native tool calling needed a
-#: config row.
+#: tools array was sent and nothing 400'd. Since 2026-10-09 they have native
+#: seed rows of their own in `model_facts.py`.
 #:
 #: gpt-5.4-pro (2026-10-08): the same 404 as its siblings, verbatim, probed
 #: live on /v1/chat/completions — "This is not a chat model and thus not
