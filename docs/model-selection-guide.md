@@ -22,7 +22,7 @@ For deferred multi-model routing automation, see [TODO-routing.md](TODO-routing.
 | **Hardest cross-cutting decisions** | `gpt-5.5-pro` | $30 / $180 | Premium ceiling for once-a-quarter ADRs |
 | **Implementation / coding** | **`gpt-5.4-mini`** | $0.75 / $4.50 | Best run 97.5% with hints (2026-04); median 87.8 in the [2026-10-11 re-run](#re-run-2026-10-11-after-the-respects_tool_failure-fix) (85.6 on 2026-10-03). Fastest of the hosted models, 6.7× cheaper than gpt-5.5 |
 | Cheap quick tasks | `gpt-6-luna` | $0.10 / $0.50 | Median 90.1 on 2026-10-11 (87.1 on 2026-10-03), above gpt-5.4-mini at ~1/7 the price but ~2.5× slower. Replaces `gpt-5.4-nano` (deprecated 2026-10-01, shutdown 2027-04-01) |
-| Low-cost alternative via OpenRouter | `qwen/qwen3.8-27b` | $0.425 / $2.55 (2026-10-08) | Median 90.1 on 2026-10-03 without model hints; 83.8 on 2026-10-11 with them, against terra's 96.0, and the drop is not explained yet (see the re-run notes). ~1/5 of terra's price; 3–5× slower per run |
+| Low-cost alternative via OpenRouter | `qwen/qwen3.8-27b` | $0.425 / $2.55 (2026-10-08) | Median **96.9** on 2026-10-11 with `extra_body: {"reasoning": {"effort": "low"}}` on the model entry, level with `gpt-5.6-terra` (96.0) at ~1/5 the price; 83.8 without it (see the re-run notes). Set the effort: with none, it sometimes ends a turn with an empty reply. ~230 s per run |
 | Air-gapped / in-cluster | **`Qwen3.6-27B-FP8-agent`** | local ($0) | **93.6% no-hints (33/36)** — best self-hosted on the suite, agent-tuned native tool calling, 128K ctx. Prev pick `Qwen3-Coder-Next-NVFP4` (90% on DGX Spark) |
 | **Avoid** | `gpt-5.3-codex` | $1.75 / $14 | Dominated by both gpt-5.4-mini and gpt-5.5; structurally cautious about tool use. **Deprecated 2026-10-01** (shutdown 2027-04-01, replacement `gpt-6-sol`) |
 
@@ -213,7 +213,17 @@ Reading it:
 
 - **`respects_tool_failure` now passes** in all three runs for five of the six models; `qwen3.7-flash` still fails it in two of three.
 - **The four OpenAI models all rose** (terra +4.9, luna +3.0, mini +2.2, sol +2.6); run-to-run spread is 4–7 points, so treat the ranking, not the decimals.
-- **`qwen/qwen3.8-27b` fell 6.3 points, and this run is not like-for-like with 2026-10-03.** Three things changed for it on 2026-10-08: the `qwen/qwen3.[7-9]*` hints in AGENTS.md (8 hints; the 10-03 runs had none), OpenRouter routing through `extra_body` (`82ecf812`), and the end of the `:free` tier. Its new failures (`contradiction_detection` 3/3, `claim_without_action` 2/3, `multi_turn_consistency` 2/3) are **empty replies** (`content_preview: "\n\n"`) after a tool result, not wrong answers: 10 of 108 tests ended that way, against 6 on 10-03. Whether the hints, the routing or a reasoning-only response causes it is not tested; until it is, don't read 83.8 as the model's quality.
+- **`qwen/qwen3.8-27b` fell 6.3 points, and the cause was not the model's ability: it was reasoning effort.** Its new failures (`contradiction_detection` 3/3, `claim_without_action` 2/3, `multi_turn_consistency` 2/3) were **empty replies** (`content_preview: "\n\n"`) after a tool result, 10 of 108 tests against 6 on 10-03. ppxai sent no reasoning effort for it. A follow-up on the 12 hallucination and agent-loop tests, 3 runs per setup, settled it:
+
+  | Setup | Median | Empty replies (of 36) | Time per run |
+  |---|---:|---:|---|
+  | `reasoning.effort: low` | **91.3** | 1 | ~110 s |
+  | `reasoning.effort: high` | 87.0 | 3 | ~170 s |
+  | no `temperature`/`top_p` sent (model defaults) | 80.4 | 6 | ~380 s |
+  | as configured (no effort, `temperature` 0.2) | 73.9 | 6 | ~445 s |
+  | as configured plus fp8-only, price-sorted routing | 73.9 | 7 | ~490 s |
+
+  Then the full suite with `extra_body: {"reasoning": {"effort": "low"}}` on the model entry: **98.4 / 96.4 / 96.9, median 96.9**, 34–35 of 36 passed, no empty replies, ~230 s per run (from ~580 s). That puts it level with `gpt-5.6-terra` at about a fifth of the price. Pinning fp8 endpoints changed nothing, so it is not a quantization problem. The same setting on `qwen/qwen3.7-flash` did nothing measurable (81.0, runs 74.7–90.5, against 80.2), so the example config sets it only for qwen3.8.
 - **`gpt-6-sol` is still under-ranked** for the reason given below (it checks before writing; single-turn tests score only the first call).
 
 Result files: `benchmarks/llm-eval/results/{openai,openrouter}_*_2026-10-11_*.json`.

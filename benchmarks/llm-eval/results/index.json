@@ -1656,6 +1656,24 @@
         "timestamp": "2026-10-11T19:26:19.496950",
         "overall_score": 84.45544554455446,
         "agents_md_mode": "with"
+      },
+      {
+        "filename": "openrouter_qwen_qwen3.7-flash_2026-10-11_daf06887.json",
+        "timestamp": "2026-10-11T20:54:59.631839",
+        "overall_score": 80.990099009901,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openrouter_qwen_qwen3.7-flash_2026-10-11_b1afda57.json",
+        "timestamp": "2026-10-11T21:01:35.938469",
+        "overall_score": 90.4950495049505,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openrouter_qwen_qwen3.7-flash_2026-10-11_e3e9c09e.json",
+        "timestamp": "2026-10-11T21:07:21.444030",
+        "overall_score": 74.65346534653466,
+        "agents_md_mode": "with"
       }
     ]
   },
@@ -3464,6 +3482,27 @@
       "filename": "openrouter_qwen_qwen3.7-flash_2026-10-11_3a139f16.json",
       "timestamp": "2026-10-11T19:26:19.496950",
       "overall_score": 84.45544554455446,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openrouter/qwen/qwen3.7-flash",
+      "filename": "openrouter_qwen_qwen3.7-flash_2026-10-11_daf06887.json",
+      "timestamp": "2026-10-11T20:54:59.631839",
+      "overall_score": 80.990099009901,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openrouter/qwen/qwen3.7-flash",
+      "filename": "openrouter_qwen_qwen3.7-flash_2026-10-11_b1afda57.json",
+      "timestamp": "2026-10-11T21:01:35.938469",
+      "overall_score": 90.4950495049505,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openrouter/qwen/qwen3.7-flash",
+      "filename": "openrouter_qwen_qwen3.7-flash_2026-10-11_e3e9c09e.json",
+      "timestamp": "2026-10-11T21:07:21.444030",
+      "overall_score": 74.65346534653466,
       "agents_md_mode": "with"
     }
   ]

@@ -561,8 +561,13 @@
       "models": {
         "qwen/qwen3.8-27b": {
           "name": "Qwen3.8 27B",
-          "description": "262K context, native tool calling; 90.1 median on ppxai's benchmark (2026-10-03). The free :free variant this row used to name was withdrawn by OpenRouter ('unavailable for free', checked 2026-10-08).",
+          "description": "262K context, native tool calling; 96.9 median on ppxai's benchmark with reasoning effort low (2026-10-11), against 83.8 with no effort set. Without it the model sometimes ends a turn after a tool result with an empty reply. The free :free variant this row used to name was withdrawn by OpenRouter ('unavailable for free', checked 2026-10-08).",
           "context_limit": 1000000,
+          "extra_body": {
+            "reasoning": {
+              "effort": "low"
+            }
+          },
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": false,
