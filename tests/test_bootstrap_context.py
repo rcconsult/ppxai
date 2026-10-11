@@ -663,6 +663,35 @@ Extra instructions for this directory.
             # Provider hints from project file should be preserved
             assert "ollama" in ctx.provider_hints
 
+    def test_merged_hints_are_not_sent_twice(self):
+        """A file copied into a second scope (e.g. a global ~/.ppxai/AGENTS.md
+        copied from a project's) must not double every hint; a hint only one
+        scope has is still added."""
+        hints = """---
+provider_hints:
+  ollama:
+    - "Shared provider hint"
+model_hints:
+  "gpt-5*":
+    - "Shared model hint"
+---
+"""
+        with temp_dir() as project_root:
+            (project_root / ".git").mkdir()
+            (project_root / "AGENTS.md").write_text(hints, encoding="utf-8")
+            subdir = project_root / "src"
+            subdir.mkdir()
+            (subdir / "AGENTS.md").write_text(
+                hints.replace('"Shared model hint"',
+                              '"Shared model hint"\n    - "Subdir-only hint"'),
+                encoding="utf-8")
+
+            injector = ContextInjector(working_dir=str(subdir), bootstrap_files=["AGENTS.md"])
+            ctx, _ = injector.load_bootstrap_context_merged()
+
+            assert ctx.provider_hints["ollama"].count("Shared provider hint") == 1
+            assert ctx.model_hints["gpt-5*"] == ["Shared model hint", "Subdir-only hint"]
+
     def test_load_bootstrap_context_merged_returns_none_when_disabled(self):
         """load_bootstrap_context_merged() returns (None, []) when bootstrap disabled."""
         from ppxai.engine.context import ContextInjector

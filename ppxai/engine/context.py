@@ -316,17 +316,17 @@ class ContextInjector:
         instruction_parts: list[str] = []
 
         for ctx, source in parsed_contexts:
-            # Add provider hints (merge lists, don't overwrite)
+            # Add provider hints (merge lists, don't overwrite). A hint already
+            # present under the same key is skipped: a global ~/.ppxai/AGENTS.md
+            # copied from a project's file otherwise sends every hint twice.
             for provider, hints in ctx.provider_hints.items():
-                if provider not in merged_provider_hints:
-                    merged_provider_hints[provider] = []
-                merged_provider_hints[provider].extend(hints)
+                merged = merged_provider_hints.setdefault(provider, [])
+                merged.extend(h for h in hints if h not in merged)
 
-            # Add model hints (merge lists, don't overwrite)
+            # Add model hints (merge lists, don't overwrite; same dedup)
             for pattern, hints in ctx.model_hints.items():
-                if pattern not in merged_model_hints:
-                    merged_model_hints[pattern] = []
-                merged_model_hints[pattern].extend(hints)
+                merged = merged_model_hints.setdefault(pattern, [])
+                merged.extend(h for h in hints if h not in merged)
 
             # Add tool_calling overrides (merge dicts, later scopes override)
             for pattern, overrides in ctx.tool_calling_overrides.items():
