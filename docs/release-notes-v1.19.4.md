@@ -197,6 +197,11 @@ Also:
   Flash, Llama 4 Maverick, Qwen 3.8 27B), routes OpenRouter with
   `data_collection: deny` and `require_parameters`, drops the Gemini
   `generation_params` block, and orders web search Gemini first.
+- **`qwen/qwen3.8-27b` gets reasoning effort low** in the example config
+  (`extra_body: {"reasoning": {"effort": "low"}}` on its model row). With
+  no effort sent it sometimes answered a tool result with an empty reply;
+  with it, the benchmark median went from 83.8 to 96.9 and runs got about
+  2.5 times faster. Add the same line to an existing qwen3.8 row.
 
 ## Other fixes
 
@@ -213,7 +218,11 @@ Also:
   files carry the same hints.
 - **Benchmarks:** `--agents-md without` runs really are hint-free now, and
   `respects_tool_failure` no longer fails every model. Earlier scores for
-  that test are invalid, so earlier overall scores are understated.
+  that test are invalid, so earlier overall scores are understated. The
+  2026-10-11 re-run is in `docs/model-selection-guide.md`.
+- **The PyInstaller specs name the provider modules that exist** (a
+  deleted Perplexity module and two dead entries out, `openai_native` and
+  `anthropic` in), held by tests; the server build no longer logs errors.
 
 ## Verification
 
@@ -225,10 +234,18 @@ Also:
 - Full suite on the security patch alone: macOS 6,935 passed / 5 skipped;
   Linux (WSL2 Ubuntu 24.04) 6,933 passed / 7 skipped; Windows 6,890
   passed / 50 skipped (platform gates); 0 failed anywhere.
-- Full suite on `feature/v1.19.4`: macOS 7,435 passed / 7 skipped
-  (2026-10-11, after the sandbox, startup-refusal and hub-token fixes);
+- Full suite on `feature/v1.19.4`: macOS 7,439 passed / 7 skipped
+  (2026-10-11, after the sandbox, startup-refusal, hub-token and spec
+  fixes);
   Windows 7,197 passed / 80 skipped at `0eb4863a` (2026-10-04, before
   those fixes and the latest model and docs fixes).
+- Local macOS (Intel) install from `2f922541`: all four binaries and the
+  `.app` build and report 1.19.4, the PyInstaller server build logs no
+  errors, both frozen binaries carry all four provider modules, the
+  gateway smoke passes 8/8 (including a `/task` run under the new default
+  sandbox), and office preview renders a slide.
+- SSH-launcher Playwright spec: 35/35 over 5 repeats with its 90 s
+  per-test limit.
 - SSH hub: launch, attach, detach and stop against real sshd hosts from
   Windows (TCP local end) and Linux (unix-socket local end), and the
   owner's trial on real hosts and keys; see
