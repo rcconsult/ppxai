@@ -67,6 +67,11 @@ export default defineConfig({
       ? [{
           name: 'ssh',
           testMatch: 'ssh-launcher.spec.ts',
+          // Each remote `ppxai-server` probe pays ~3 s of start-up imports
+          // (every provider SDK), so launching takes ~22 s and stopping up to
+          // ~30 s: right at the 30 s default. ADR 0016 (v1.19.5) removes
+          // that cost; until then, give the spec room.
+          timeout: 90_000,
           use: { ...devices['Desktop Chrome'] },
         }]
       : []),

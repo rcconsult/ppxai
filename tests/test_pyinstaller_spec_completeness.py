@@ -28,6 +28,7 @@ Coverage
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -123,3 +124,40 @@ def test_at_least_session_provider_system_present() -> None:
             f"Expected '{must_have}' in _BUILTIN_COMMAND_MODULES, "
             f"got {builtin}. Did the factory's loader contract change?"
         )
+
+
+# ── Provider modules (2026-10-11) ─────────────────────────────────────────
+# The specs named `ppxai.engine.providers.perplexity` long after ADR 0015
+# deleted it, and never named `openai_native` or `anthropic`. Harmless only
+# while `providers/__init__.py` imports every provider statically; ADR 0016
+# (v1.19.5) makes that loading dynamic, and then a missing entry breaks a
+# binary at provider-switch time.
+
+PROVIDERS_DIR = REPO_ROOT / "ppxai" / "engine" / "providers"
+SPECS_WITH_PROVIDERS = ["ppxai-server.spec", "ppxai.spec"]
+
+
+def _provider_modules() -> set[str]:
+    return {
+        f"ppxai.engine.providers.{p.stem}"
+        for p in PROVIDERS_DIR.glob("*.py") if p.stem != "__init__"
+    }
+
+
+def _spec_provider_entries(spec_name: str) -> set[str]:
+    return set(re.findall(r"'(ppxai\.engine\.providers\.[a-z_]+)'", _read_spec(spec_name)))
+
+
+@pytest.mark.parametrize("spec_name", SPECS_WITH_PROVIDERS)
+def test_spec_names_every_provider_module(spec_name: str) -> None:
+    missing = _provider_modules() - _spec_provider_entries(spec_name)
+    assert not missing, (
+        f"{spec_name} hiddenimports lack {sorted(missing)}; add them, or the "
+        "binary cannot load that provider once loading is dynamic (ADR 0016)"
+    )
+
+
+@pytest.mark.parametrize("spec_name", SPECS_WITH_PROVIDERS)
+def test_spec_names_no_deleted_provider_module(spec_name: str) -> None:
+    stale = _spec_provider_entries(spec_name) - _provider_modules()
+    assert not stale, f"{spec_name} names provider modules that no longer exist: {sorted(stale)}"

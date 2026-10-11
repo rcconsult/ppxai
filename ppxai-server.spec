@@ -75,7 +75,8 @@ a = Analysis(
         'ppxai.engine.types',
         'ppxai.engine.providers',
         'ppxai.engine.providers.base',
-        'ppxai.engine.providers.perplexity',
+        'ppxai.engine.providers.openai_native',
+        'ppxai.engine.providers.anthropic',
         'ppxai.engine.providers.openai_compat',
         'ppxai.engine.providers.gemini',
         # typing_extensions (needed by pydantic, google.genai.types, etc.)
