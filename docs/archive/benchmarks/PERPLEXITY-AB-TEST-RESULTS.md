@@ -344,7 +344,7 @@ The infrastructure improvements (AGENTS.md loading, fingerprinting, SDK tracking
 
 - [PERPLEXITY-BENCHMARK-ANALYSIS.md](PERPLEXITY-BENCHMARK-ANALYSIS.md)
 - [GEMINI-AB-TEST-RESULTS.md](GEMINI-AB-TEST-RESULTS.md)
-- [AGENTS.md](../AGENTS.md)
+- [AGENTS.md](../../../AGENTS.md)
 
 ---
 

@@ -322,7 +322,7 @@ that doesn't shift under it.
 for v1.18.0 — were deferred to v1.18.1.** Each is substantial enough
 to deserve dedicated release notes; bundling four workstreams in one
 release would produce notes nobody can review in one sitting. See
-the v1.18.1 entry in [ROADMAP.md](../ROADMAP.md).
+the v1.18.1 entry in [ROADMAP.md](../../ROADMAP.md).
 
 ### Cumulative numbers
 

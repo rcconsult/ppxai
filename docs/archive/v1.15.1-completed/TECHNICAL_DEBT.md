@@ -12,7 +12,7 @@ This document tracks identified technical debt and refactoring opportunities in 
 ### 1. Global State Management
 
 **Status:** ✅ Completed (v1.13.10)
-**Files:** [ppxai/server/http.py](../ppxai/server/http.py), [ppxai/server/session_manager.py](../ppxai/server/session_manager.py)
+**Files:** [ppxai/server/http.py](../../../ppxai/server/http.py), [ppxai/server/session_manager.py](../../../ppxai/server/session_manager.py)
 
 **Resolution:** Refactored to `SessionManager` class with:
 - Thread-safe singleton pattern using `threading.Lock` for creation
@@ -37,15 +37,15 @@ This document tracks identified technical debt and refactoring opportunities in 
 
 | File | Lines | Issue | Status |
 |------|------:|-------|--------|
-| [ppxai/commands/handler.py](../ppxai/commands/handler.py) | 507 | CommandHandler class (legacy methods commented) | ✅ Command Factory |
-| [ppxai/server/http.py](../ppxai/server/http.py) | 2,247 | HTTP + session + consent mixed | ✅ SessionManager extracted |
-| [ppxai/engine/client.py](../ppxai/engine/client.py) | 1,311 | Core logic, providers, tools, sessions | ✅ Refactored (36% reduction) |
-| [ppxai/config/](../ppxai/config/) | ~700 | Config package with store, loader, public API | ✅ ConfigStore pattern |
-| [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts) | 2,773 | Event/command handling | ✅ Phase 4 Complete |
-| [vscode-extension/src/handlers/](../vscode-extension/src/handlers/) | 1,658 | Extracted handlers module | ✅ New (Phases 2-4) |
+| [ppxai/commands/handler.py](../../../ppxai/commands/handler.py) | 507 | CommandHandler class (legacy methods commented) | ✅ Command Factory |
+| [ppxai/server/http.py](../../../ppxai/server/http.py) | 2,247 | HTTP + session + consent mixed | ✅ SessionManager extracted |
+| [ppxai/engine/client.py](../../../ppxai/engine/client.py) | 1,311 | Core logic, providers, tools, sessions | ✅ Refactored (36% reduction) |
+| [ppxai/config/](../../../ppxai/config) | ~700 | Config package with store, loader, public API | ✅ ConfigStore pattern |
+| [vscode-extension/src/chatPanel.ts](../../../vscode-extension/src/chatPanel.ts) | 2,773 | Event/command handling | ✅ Phase 4 Complete |
+| [vscode-extension/src/handlers/](../../../vscode-extension/src/handlers) | 1,658 | Extracted handlers module | ✅ New (Phases 2-4) |
 
 **client.py Refactoring - ✅ Completed (v1.13.10):**
-See [DESIGN-CLIENT-REFACTOR.md](DESIGN-CLIENT-REFACTOR.md) for full details:
+See [DESIGN-CLIENT-REFACTOR.md](../v1.15.2-completed/DESIGN-CLIENT-REFACTOR.md) for full details:
 - Phase 1: Config cleanup - Created `config/defaults.py`, removed lazy imports
 - Phase 2: Tool parser - Extracted to `tools/parser.py` (308 lines)
 - Phase 3: Shell classify - Moved `classify_shell_command()` to consent.py
@@ -66,7 +66,7 @@ Migrated to Command Factory pattern in `ppxai/commands/` package:
 - Legacy methods in handler.py commented with deprecation notice (removal in v1.14.x)
 
 **chatPanel.ts Refactoring - ✅ Completed (v1.13.10):**
-See [DESIGN-CHATPANEL-REFACTOR.md](DESIGN-CHATPANEL-REFACTOR.md) for full details:
+See [DESIGN-CHATPANEL-REFACTOR.md](../v1.15.2-completed/DESIGN-CHATPANEL-REFACTOR.md) for full details:
 - Phase 1: Extracted webview CSS/JS to `media/webview/` (41% reduction, 5,123→3,045 lines)
 - Phase 2: Command handlers with IoC pattern (handlers/commands.ts, types.ts)
 - Phase 3: EventBus architecture (eventBus.ts, stream.ts, UI subscriptions)
@@ -122,7 +122,7 @@ Key improvements:
 ### 4. Code Duplication - Container Tools
 
 **Status:** ✅ Completed (v1.13.10)
-**File:** [ppxai/engine/tools/builtin/container.py](../ppxai/engine/tools/builtin/container.py) (738 lines)
+**File:** [ppxai/engine/tools/builtin/container.py](../../../ppxai/engine/tools/builtin/container.py) (738 lines)
 
 **Resolution:** Refactored to use inheritance hierarchy:
 - `CLITool` - Base class for read-only CLI tools
@@ -137,7 +137,7 @@ Each tool now only defines `build_command()` method and metadata, reducing boile
 ### 5. Code Duplication - Consent Manager
 
 **Status:** ✅ Completed (v1.13.10)
-**File:** [ppxai/common/consent.py](../ppxai/common/consent.py)
+**File:** [ppxai/common/consent.py](../../../ppxai/common/consent.py)
 
 **Resolution:** Extracted `BaseConsentManager` class with shared logic:
 - All state initialization (files, commands, patterns)
@@ -165,14 +165,14 @@ Both `ConsentManager` (async) and `SyncConsentManager` now inherit from `BaseCon
 
 **Note:** The only pattern truly needed is `TYPE_CHECKING` in `tools/builtin/*.py`.
 
-**Future Improvement:** A Tool Factory pattern could eliminate TYPE_CHECKING entirely and enable dynamic tool loading. See [DESIGN-TOOL-FACTORY.md](DESIGN-TOOL-FACTORY.md) for detailed analysis.
+**Future Improvement:** A Tool Factory pattern could eliminate TYPE_CHECKING entirely and enable dynamic tool loading. See [DESIGN-TOOL-FACTORY.md](../v1.15.2-completed/DESIGN-TOOL-FACTORY.md) for detailed analysis.
 
 ---
 
 ### 7. Dangerous eval() Usage
 
 **Status:** ✅ Completed (v1.13.10)
-**File:** [ppxai/engine/tools/builtin/calculator.py](../ppxai/engine/tools/builtin/calculator.py)
+**File:** [ppxai/engine/tools/builtin/calculator.py](../../../ppxai/engine/tools/builtin/calculator.py)
 
 **Resolution:** Replaced `eval()` with AST-based safe evaluation:
 - Uses `ast.parse()` to parse expressions into AST
@@ -204,7 +204,7 @@ Both `ConsentManager` (async) and `SyncConsentManager` now inherit from `BaseCon
 ### 9. Inconsistent Error Handling in HTTP Endpoints
 
 **Status:** ✅ Partially Addressed (v1.13.10)
-**File:** [ppxai/server/http.py](../ppxai/server/http.py)
+**File:** [ppxai/server/http.py](../../../ppxai/server/http.py)
 
 **Resolution (v1.13.10):**
 - Removed unused `JSONResponse` import
@@ -224,7 +224,7 @@ Both `ConsentManager` (async) and `SyncConsentManager` now inherit from `BaseCon
 ### 10. Configuration Complexity
 
 **Status:** ✅ Completed (v1.13.10)
-**File:** [ppxai/config/](../ppxai/config/) (~700 lines across 3 files)
+**File:** [ppxai/config/](../../../ppxai/config) (~700 lines across 3 files)
 
 **Resolution:** Split monolithic `config.py` into `config/` package:
 - `config/store.py` - Thread-safe ConfigStore singleton
@@ -242,7 +242,7 @@ Key improvements:
 ### 11. Abrupt Process Termination
 
 **Status:** ✅ Completed (v1.13.10)
-**File:** [ppxai/server/http.py](../ppxai/server/http.py)
+**File:** [ppxai/server/http.py](../../../ppxai/server/http.py)
 
 **Resolution (v1.13.10):**
 - Replaced `os._exit(0)` with graceful shutdown via `asyncio.Event`
@@ -259,7 +259,7 @@ Key improvements:
 ### 12. Legacy Backward Compatibility Code
 
 **Status:** ✅ Addressed (v1.13.10)
-**File:** [ppxai/commands/handler.py](../ppxai/commands/handler.py)
+**File:** [ppxai/commands/handler.py](../../../ppxai/commands/handler.py)
 
 **Resolution:** Added deprecation warning for legacy constructor signature:
 ```python
@@ -312,7 +312,7 @@ warnings.warn(
 ### 14. Magic String Literals
 
 **Status:** ✅ Completed (v1.13.10)
-**File:** [ppxai/constants.py](../ppxai/constants.py)
+**File:** [ppxai/constants.py](../../../ppxai/constants.py)
 
 **Resolution:** Converted class-based constants to `str, Enum` with validation helpers:
 - `ProviderName`, `MessageRole`, `ConsentMode`, `ConsentResponse` - Now proper enums
@@ -332,7 +332,7 @@ warnings.warn(
 ### 15. TypeScript let vs const
 
 **Status:** ✅ Verified Correct (v1.13.10)
-**File:** [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts)
+**File:** [vscode-extension/src/chatPanel.ts](../../../vscode-extension/src/chatPanel.ts)
 
 **Analysis (v1.13.10):** Reviewed all 46 `let` declarations in chatPanel.ts:
 - All are legitimately reassigned (if/else branches, loops, async operations)
@@ -350,11 +350,11 @@ warnings.warn(
 **Scope:** New files created
 
 **Resolution:** Full containerized deployment support added:
-- [Dockerfile](../Dockerfile) - Multi-stage build with uv package manager
-- [docker-compose.yaml](../docker-compose.yaml) - Local development setup
-- [kubernetes/deployment.yaml](../kubernetes/deployment.yaml) - Deployment with health probes
-- [kubernetes/service.yaml](../kubernetes/service.yaml) - ClusterIP service
-- [kubernetes/ingress.yaml](../kubernetes/ingress.yaml) - Nginx ingress with SSE support
+- [Dockerfile](../../../deploy/docker/Dockerfile) - Multi-stage build with uv package manager
+- [docker-compose.yaml](../../../deploy/compose/docker-compose.yaml) - Local development setup
+- [kubernetes/deployment.yaml](../../../deploy/k8s/standalone/deployment.yaml) - Deployment with health probes
+- [kubernetes/service.yaml](../../../deploy/k8s/standalone/service.yaml) - ClusterIP service
+- [kubernetes/ingress.yaml](../../../deploy/k8s/standalone/ingress.yaml) - Nginx ingress with SSE support
 
 **Health endpoints** (added in v1.13.10):
 - `/health` - Liveness probe (always returns 200)

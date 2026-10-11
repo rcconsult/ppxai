@@ -149,7 +149,7 @@ microk8s kubectl exec -n coder coder-server-<user> -- rtk gain --help | head -3
 
 ## Cross-references
 
-- Dockerfile current state: [deploy/images/server/Dockerfile](../deploy/images/server/Dockerfile)
-- Build script: [deploy/microk8s/build.sh](../deploy/microk8s/build.sh) (`./build.sh server`)
-- Kaniko job: [deploy/microk8s/kaniko-server-job.yaml](../deploy/microk8s/kaniko-server-job.yaml) — mounts `/path/to/ppxai` as build context, so the current working-tree commit IS the build source
+- Dockerfile current state: [deploy/images/server/Dockerfile](../../deploy/images/server/Dockerfile)
+- Build script: [deploy/microk8s/build.sh](../../deploy/examples/microk8s/build.sh) (`./build.sh server`)
+- Kaniko job: [deploy/microk8s/kaniko-server-job.yaml](../../deploy/examples/microk8s/kaniko-server-job.yaml) — mounts `/path/to/ppxai` as build context, so the current working-tree commit IS the build source
 - Live registry: `localhost:32000/coder-server:latest` (`sha256:de680b6d`, 2026-05-06; needs refresh)

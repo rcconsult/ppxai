@@ -1,9 +1,9 @@
 # Sequencing plan — enriched oneshot facade + command taxonomy
 
-Implements [ADR 0009](decisions/0009-task-execution-profiles.md) step ① via
+Implements [ADR 0009](../decisions/0009-task-execution-profiles.md) step ① via
 the facade plan
 ([plan-adr0009-step1-oneshot-enrichment.md](plan-adr0009-step1-oneshot-enrichment.md))
-and [ADR 0011](decisions/0011-command-taxonomy-streamline.md) (Accepted).
+and [ADR 0011](../decisions/0011-command-taxonomy-streamline.md) (Accepted).
 
 **Build contract** (same rules as the T1–T8a `/task` plan): one stage = one
 commit; **live-trial after each stage before starting the next**; commit on

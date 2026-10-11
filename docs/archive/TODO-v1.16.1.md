@@ -8,7 +8,7 @@ the left, with the existing chat + side panel on the right.
 
 Also: unify command execution across all clients via CommandFactory server pattern.
 
-**Reference:** [ROADMAP.md — v1.16.1](../ROADMAP.md)
+**Reference:** [ROADMAP.md — v1.16.1](../../ROADMAP.md)
 
 ## Target Layout
 

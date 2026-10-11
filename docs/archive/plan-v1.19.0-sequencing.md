@@ -56,7 +56,7 @@ observe response + on-disk `~/.ppxai/runs/<run_id>/`.
 1. Code + tests.
 2. "How to trial" recipe (in the hand-off).
 3. **Call-graph update** — add/amend the increment's section in
-   [agent-platform-call-graphs.md](agent-platform-call-graphs.md) in the
+   [agent-platform-call-graphs.md](../agent-platform-call-graphs.md) in the
    same commit. Reference map for future debugging/refactoring.
 
 ## Active this iteration — vertical-slice increments (in order)
@@ -76,7 +76,7 @@ runnable steps. Each is one PR-sized increment on
 > - [x] Inc 8 — /v1/tokens + per-run authz (pluggable secret sources; reads scoped to the run's owner) — committed + live-trial-verified
 > - [x] Inc 9 — AppState background_agents mirror — committed + live-trial-verified
 >
-> All nine increments are committed and live-trial-verified, plus post-Inc-9 hardening §A–§K (see [agent-platform-call-graphs.md](agent-platform-call-graphs.md)). Next: interactive sub-agent UX — the `/task` command family + interactive `/respond`·`/ack`·`/resume` endpoints. Design: [agent-task-lifecycle.html](agent-task-lifecycle.html) (run-state machine) and [agent-task-command-design.html](agent-task-command-design.html) (`/task` command surface + spec/skill files + `tools.agent.sandbox` sealing). Incremental build plan (T1–T9, each live-trialable): [plan-task-command-sequencing.md](plan-task-command-sequencing.md).
+> All nine increments are committed and live-trial-verified, plus post-Inc-9 hardening §A–§K (see [agent-platform-call-graphs.md](../agent-platform-call-graphs.md)). Next: interactive sub-agent UX — the `/task` command family + interactive `/respond`·`/ack`·`/resume` endpoints. Design: [agent-task-lifecycle.html](../agent-task-lifecycle.html) (run-state machine) and [agent-task-command-design.html](../agent-task-command-design.html) (`/task` command surface + spec/skill files + `tools.agent.sandbox` sealing). Incremental build plan (T1–T9, each live-trialable): [plan-task-command-sequencing.md](../plan-task-command-sequencing.md).
 >
 > **Trial-found fixes (2026-06-16), all committed:** `18373e31` v1 tier 400 lists eligible OpenAI-compatible providers (native openai/gemini/perplexity rejected); `227ea6f8` spawn consent policy + visible `spawn_denied` events (was silent auto-deny); `b4923bd3` surface `spawn_consent` through `get_agent_config` whitelist; `0a336645` ship `spawn_consent:"deny"` default. Plus Inc 5 ×4 + Inc 6/7 ×3 codex/copilot review rounds, all resolved.
 

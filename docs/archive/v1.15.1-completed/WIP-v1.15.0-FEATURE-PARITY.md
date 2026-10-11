@@ -344,6 +344,6 @@ uv run ppxaide
 
 ## Reference Documents
 
-- [FEATURE-PARITY-ANALYSIS.md](FEATURE-PARITY-ANALYSIS.md) - Full comparison
+- [FEATURE-PARITY-ANALYSIS.md](../v1.15.2-completed/FEATURE-PARITY-ANALYSIS.md) - Full comparison
 - [TUI-COMMAND-REFACTORING-PLAN.md](TUI-COMMAND-REFACTORING-PLAN.md) - Architecture plan
-- [architecture.md](architecture.md) - Transactional state pattern
+- [architecture.md](../../architecture.md) - Transactional state pattern

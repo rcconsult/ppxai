@@ -103,7 +103,7 @@ uv run python benchmarks/llm-eval/benchmark.py \
 
 - [GEMINI-SDK-REGRESSION-ANALYSIS.md](GEMINI-SDK-REGRESSION-ANALYSIS.md)
 - [GEMINI-SDK-WORKAROUNDS-APPLIED.md](GEMINI-SDK-WORKAROUNDS-APPLIED.md)
-- [GEMINI-TUNING-PLAN.md](GEMINI-TUNING-PLAN.md)
+- [GEMINI-TUNING-PLAN.md](../benchmarks/GEMINI-TUNING-PLAN.md)
 - [Issue #1789 - Empty Finish Messages](https://github.com/googleapis/python-genai/issues/1789)
 - [Issue #1818 - AFC Persistence](https://github.com/googleapis/python-genai/issues/1818)
 

@@ -516,7 +516,7 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 | **`/tree [depth]`** | Render directory tree structure (all clients) | ⏳ Planned |
 | **ppxaide file tree sidebar** | NvChad-inspired interactive file tree (Textual DirectoryTree) | ⏳ Planned |
 
-**Spec:** See [TODO-v1.16.0.md](../TODO-v1.16.0.md) (Phase 0: commands ~2 days, Phase 1: ppxaide sidebar ~5 days).
+**Spec:** See [TODO-v1.16.0.md](TODO-v1.16.0.md) (Phase 0: commands ~2 days, Phase 1: ppxaide sidebar ~5 days).
 
 ---
 
@@ -525,7 +525,7 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 **Status:** All items done, pre-release (pending merge)
 **Branch:** feature/benchmark-openai-models
 **Detailed Plan:** [RELEASE-PLAN-v1.15.6-v1.16.0.md](RELEASE-PLAN-v1.15.6-v1.16.0.md) (archived)
-**Release Notes:** [RELEASE-NOTES-v1.15.6.md](RELEASE-NOTES-v1.15.6.md)
+**Release Notes:** [RELEASE-NOTES-v1.15.6.md](release-notes/RELEASE-NOTES-v1.15.6.md)
 **Debug Sessions:** [ARCHIVE-v1.15.6-debug-sessions.md](ARCHIVE-v1.15.6-debug-sessions.md)
 
 | Feature | Description | Status |
@@ -564,5 +564,5 @@ The v1.15.x theme — "Next Generation TUI (ppxaide)" — is fully delivered:
 - [Textual Documentation](https://textual.textualize.io/)
 - [Textual CSS Reference](https://textual.textualize.io/guide/CSS/)
 - [TUI Side Panel Refactor Design Doc](design/tui-side-panel-refactor.md) (detailed specs)
-- [ROADMAP.md v1.15.x section](../ROADMAP.md)
-- [v1.14.x Release Plan](RELEASE-PLAN-v1.14.x.md) (completed series)
+- [ROADMAP.md v1.15.x section](../../ROADMAP.md)
+- [v1.14.x Release Plan](v1.15.1-completed/RELEASE-PLAN-v1.14.x.md) (completed series)

@@ -207,14 +207,14 @@ Response: {"ok": true, "backend": "git"}
 ### 8. Documentation
 
 **New User Guides:**
-- [docs/checkpoint-guide.md](../docs/checkpoint-guide.md) - Comprehensive 550+ line user guide
+- [docs/checkpoint-guide.md](../../checkpoint-guide.md) - Comprehensive 550+ line user guide
   - Quick start and configuration
   - Git vs file backend comparison
   - Workflow examples and troubleshooting
   - Advanced usage and FAQ
 
 **New Specifications:**
-- [docs/VSCODE-CHECKPOINT-UI-SPEC.md](../docs/VSCODE-CHECKPOINT-UI-SPEC.md) - VSCode extension UI spec
+- [docs/VSCODE-CHECKPOINT-UI-SPEC.md](../v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC.md) - VSCode extension UI spec
   - Enhanced agent toggle button (🔒/⚠️ indicators)
   - Undo button with confirmation modal
   - System notifications and status polling
@@ -610,22 +610,22 @@ You: /agent update dependencies
 
 ### User Guides
 
-- [Checkpoint System User Guide](../docs/checkpoint-guide.md) - Comprehensive guide (558 lines)
+- [Checkpoint System User Guide](../../checkpoint-guide.md) - Comprehensive guide (558 lines)
   - Quick start, configuration, troubleshooting
   - Git vs file backend comparison
   - Workflow examples and FAQ
 
 ### Specifications
 
-- [VSCode Checkpoint UI Spec](../docs/VSCODE-CHECKPOINT-UI-SPEC.md) - Implementation spec (216 lines)
+- [VSCode Checkpoint UI Spec](../v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC.md) - Implementation spec (216 lines)
   - UI mockups and component design
   - API endpoint usage
   - Event handling and status polling
 
 ### Updated Docs
 
-- [README.md](../README.md) - Updated feature list
-- [CLAUDE.md](../CLAUDE.md) - Updated version and feature summary
+- [README.md](../../../README.md) - Updated feature list
+- [CLAUDE.md](../../../CLAUDE.md) - Updated version and feature summary
 - Help text (`/help`) - Added Agent Mode section
 
 ---
@@ -671,8 +671,8 @@ You: /agent update dependencies
 - **Release Tag:** v1.12.0 (pending)
 - **Feature Branch:** `feature/agent-multi-file-atomic-edit`
 - **Previous Release:** [v1.11.9](https://github.com/rcconsult/ppxai/releases/tag/v1.11.9)
-- **Roadmap:** [ROADMAP.md](../ROADMAP.md)
-- **User Guide:** [checkpoint-guide.md](checkpoint-guide.md)
+- **Roadmap:** [ROADMAP.md](../../../ROADMAP.md)
+- **User Guide:** [checkpoint-guide.md](../../checkpoint-guide.md)
 
 ---
 

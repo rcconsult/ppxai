@@ -234,7 +234,7 @@ helper, same log file, same tool.
 v1.18.5 byte-identical to v1.18.4. No fields added, no fields
 removed, no status-code changes, no header changes. The v1
 stability commitment per
-[ADR 0004](decisions/0004-llm-gateway-features.md) is upheld.
+[ADR 0004](../../decisions/0004-llm-gateway-features.md) is upheld.
 
 ppxai-sre's outlook-monitor agent should consume v1.18.5 as a
 drop-in replacement for v1.18.4. The new `/v1/agent/run` endpoint

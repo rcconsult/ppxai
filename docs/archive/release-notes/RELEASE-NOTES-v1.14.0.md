@@ -129,4 +129,4 @@ Prompt Assembly Order:
 
 ## Full Changelog
 
-See [CHANGELOG.md](../CHANGELOG.md) for complete details.
+See [CHANGELOG.md](../../../CHANGELOG.md) for complete details.

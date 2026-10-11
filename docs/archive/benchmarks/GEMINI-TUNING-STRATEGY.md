@@ -409,7 +409,7 @@ If scores don't improve:
 ## References
 
 - [GEMINI-COMPREHENSIVE-BENCHMARK-ANALYSIS.md](GEMINI-COMPREHENSIVE-BENCHMARK-ANALYSIS.md) - Full regression analysis
-- [GEMINI-MODEL-REGRESSION.md](GEMINI-MODEL-REGRESSION.md) - Initial findings
-- [AGENTS.md](../AGENTS.md) - Current provider/model hints
-- [ppxai/engine/bootstrap.py](../ppxai/engine/bootstrap.py) - Hint loading logic
-- [ppxai/engine/chat.py](../ppxai/engine/chat.py) - Prompt assembly
+- [GEMINI-MODEL-REGRESSION.md](../v1.15.3/GEMINI-MODEL-REGRESSION.md) - Initial findings
+- [AGENTS.md](../../../AGENTS.md) - Current provider/model hints
+- [ppxai/engine/bootstrap.py](../../../ppxai/engine/bootstrap.py) - Hint loading logic
+- [ppxai/engine/chat.py](../../../ppxai/engine/chat.py) - Prompt assembly

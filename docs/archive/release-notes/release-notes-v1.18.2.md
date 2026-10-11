@@ -11,7 +11,7 @@
 ## Summary
 
 v1.18.2 is intentionally not a feature release. The branch closed
-9 of 10 open items in [DEBT-INVENTORY-v1.18.2.md](archive/DEBT-INVENTORY-v1.18.2.md)
+9 of 10 open items in [DEBT-INVENTORY-v1.18.2.md](../DEBT-INVENTORY-v1.18.2.md)
 and added 476 tests via the gpt-5.5 critique sweep + production
 testing on 2026-04-26. The user-visible product surface barely
 changes; the codebase health and the discipline around it does.
@@ -171,7 +171,7 @@ through v1.17.x. The narrow extraction landed; the larger
 
 ### ADR 0002 — CommandContext three-pattern split
 
-[docs/decisions/0002-command-context-three-pattern-split.md](decisions/0002-command-context-three-pattern-split.md)
+[docs/decisions/0002-command-context-three-pattern-split.md](../../decisions/0002-command-context-three-pattern-split.md)
 documents why the three contexts use three different patterns:
 
 | Client | Pattern | Why |
@@ -264,16 +264,16 @@ caught us out three times in the same shape:
 
 | Test file | Count | Coverage |
 |---|---:|---|
-| [test_server_state.py](../tests/test_server_state.py) | 28 | Session, get_or_create_session, get_session_or_query, preview backend, kill_preview_backend |
-| [test_session_persistence.py](../tests/test_session_persistence.py) (additions) | 21 | Path traversal, write-failure propagation, symlinks, state-pointer staleness, concurrent IO |
-| [test_execute_ai_task.py](../tests/test_execute_ai_task.py) | 20 | Model swap+restore, stream accumulation, async context, code blocks |
-| [test_tool_security.py](../tests/test_tool_security.py) | 18 | Consent boundary, tool isolation, sandbox enforcement |
-| [test_server_route_edges.py](../tests/test_server_route_edges.py) (additions) | 17 | X-Session-Id edges, invalid restore, preview referer parsing |
-| [test_command_envelope.py](../tests/test_command_envelope.py) (additions) | 3 | `/command/{name}` route logging (Item 7) |
-| [test_server_routes.py](../tests/test_server_routes.py) (additions) | 1 | `/state` route logging (Item 9) |
-| [test_version_banner.py](../tests/test_version_banner.py) (additions) | 3 | `_build_info` precedence + fall-through (Item 8) |
-| [test_engine_client_protocol.py](../tests/test_engine_client_protocol.py) | 9 | `EngineClientProtocol` surface + structural satisfaction + import hygiene (Item 10) |
-| [test_agent_logger_attribute.py](../tests/test_agent_logger_attribute.py) | 4 | Real-engine regression for the `engine.logger` AttributeError (Item 11) |
+| [test_server_state.py](../../../tests/test_server_state.py) | 28 | Session, get_or_create_session, get_session_or_query, preview backend, kill_preview_backend |
+| [test_session_persistence.py](../../../tests/test_session_persistence.py) (additions) | 21 | Path traversal, write-failure propagation, symlinks, state-pointer staleness, concurrent IO |
+| [test_execute_ai_task.py](../../../tests/test_execute_ai_task.py) | 20 | Model swap+restore, stream accumulation, async context, code blocks |
+| [test_tool_security.py](../../../tests/test_tool_security.py) | 18 | Consent boundary, tool isolation, sandbox enforcement |
+| [test_server_route_edges.py](../../../tests/test_server_route_edges.py) (additions) | 17 | X-Session-Id edges, invalid restore, preview referer parsing |
+| [test_command_envelope.py](../../../tests/test_command_envelope.py) (additions) | 3 | `/command/{name}` route logging (Item 7) |
+| [test_server_routes.py](../../../tests/test_server_routes.py) (additions) | 1 | `/state` route logging (Item 9) |
+| [test_version_banner.py](../../../tests/test_version_banner.py) (additions) | 3 | `_build_info` precedence + fall-through (Item 8) |
+| [test_engine_client_protocol.py](../../../tests/test_engine_client_protocol.py) | 9 | `EngineClientProtocol` surface + structural satisfaction + import hygiene (Item 10) |
+| [test_agent_logger_attribute.py](../../../tests/test_agent_logger_attribute.py) | 4 | Real-engine regression for the `engine.logger` AttributeError (Item 11) |
 
 **Suite: 3067 passing, 9 skipped.** The 7 skips are Unix-only
 `TestKillPreviewBackend` (`patch()` can't mock `os.getpgid`/`killpg`
@@ -292,10 +292,10 @@ are pre-existing.
 - **Agent loop unification across HTTP clients.** Inherited from
   v1.18.1 deferred list. Factory's `handle_agent` is TUI-shaped
   (`asyncio.run`, `console.print`); web/VSCode keep client-side
-  loops. See [docs/archive/TODO-v1.18.2-agent-loop-unification.md](archive/TODO-v1.18.2-agent-loop-unification.md).
+  loops. See [docs/archive/TODO-v1.18.2-agent-loop-unification.md](../TODO-v1.18.2-agent-loop-unification.md).
 - **`prompt_text` side-effect kind** for free-text follow-ups when
   `prompt_quick_pick`'s finite-choice shape doesn't fit. See
-  [docs/archive/TODO-v1.18.2-prompt-text-kind.md](archive/TODO-v1.18.2-prompt-text-kind.md).
+  [docs/archive/TODO-v1.18.2-prompt-text-kind.md](../TODO-v1.18.2-prompt-text-kind.md).
 - **AppState codegen + client wiring.** Inherited from v1.18.0
   deferred list. See `docs/TODO-appstate-codegen.md`.
 - **Multi-model routing infrastructure.** `RoutingRole`,

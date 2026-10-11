@@ -1,7 +1,7 @@
 # v1.18.2 — Per-client keyboard binding registries (Option A for `/keys`)
 
 **Status:** Deferred from v1.18.1
-**Decision record:** [docs/decisions/0001-keys-command-cross-client.md](decisions/0001-keys-command-cross-client.md)
+**Decision record:** [docs/decisions/0001-keys-command-cross-client.md](../decisions/0001-keys-command-cross-client.md)
 
 ## Background
 
@@ -16,7 +16,7 @@ This TODO tracks the deferred **Option A** work: structured per-client
 binding registries so `/keys` can return a correct, native table in
 every client.
 
-See [ADR 0001](decisions/0001-keys-command-cross-client.md) for the
+See [ADR 0001](../decisions/0001-keys-command-cross-client.md) for the
 full context, the trade-off accepted, and the triggers that should
 prompt re-evaluation.
 
@@ -47,7 +47,7 @@ prompt re-evaluation.
 
 ~250–350 LoC across web, VSCode, and engine. Not enormous; it's
 deferred only because there's no signal that v1.18.1's Option B is
-inadequate. Re-evaluate when the [ADR 0001 triggers](decisions/0001-keys-command-cross-client.md#triggers-to-revisit)
+inadequate. Re-evaluate when the [ADR 0001 triggers](../decisions/0001-keys-command-cross-client.md#triggers-to-revisit)
 fire.
 
 ## Acceptance criteria (when picked up)

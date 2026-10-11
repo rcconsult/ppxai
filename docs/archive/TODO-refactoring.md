@@ -564,12 +564,12 @@ a living architecture evidence trail.
 
 | Phase | Client | Detailed Plan | Why This Order |
 |-------|--------|---------------|----------------|
-| 0 | Schema + Generator | [`TODO-appstate-0-schema.md`](TODO-appstate-0-schema.md) | Prerequisite — produces the foundation |
-| 1 | Rich TUI | [`TODO-appstate-1-rich-tui.md`](TODO-appstate-1-rich-tui.md) | Simplest client (single thread, no event bus). Proves core works. |
-| 2 | Textual TUI | [`TODO-appstate-2-textual-tui.md`](TODO-appstate-2-textual-tui.md) | Adds threading + async. Proves thread-safety + observers. |
-| 3 | Desktop Web App | [`TODO-appstate-3-web-app.md`](TODO-appstate-3-web-app.md) | Cross-language (Python→JS). 200 Playwright tests as safety net. |
-| 4 | VSCode Extension | [`TODO-appstate-4-vscode.md`](TODO-appstate-4-vscode.md) | Distinct codebase (TS). More unknowns than k8s. |
-| 5 | k8s Web App | [`TODO-appstate-5-k8s.md`](TODO-appstate-5-k8s.md) | Same app as Phase 3 + `loadRuntime()`. Lightest phase. |
+| 0 | Schema + Generator | `TODO-appstate-0-schema.md` | Prerequisite — produces the foundation |
+| 1 | Rich TUI | `TODO-appstate-1-rich-tui.md` | Simplest client (single thread, no event bus). Proves core works. |
+| 2 | Textual TUI | `TODO-appstate-2-textual-tui.md` | Adds threading + async. Proves thread-safety + observers. |
+| 3 | Desktop Web App | `TODO-appstate-3-web-app.md` | Cross-language (Python→JS). 200 Playwright tests as safety net. |
+| 4 | VSCode Extension | `TODO-appstate-4-vscode.md` | Distinct codebase (TS). More unknowns than k8s. |
+| 5 | k8s Web App | `TODO-appstate-5-k8s.md` | Same app as Phase 3 + `loadRuntime()`. Lightest phase. |
 
 Each TODO includes:
 - **Current state** — what exists today, what needs to change

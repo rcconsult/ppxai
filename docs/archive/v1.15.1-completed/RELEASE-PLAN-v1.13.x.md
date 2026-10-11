@@ -32,7 +32,7 @@ The v1.13.x series focused on two main areas:
 - Enhanced tool parsing with dispatcher pattern
 - 525 tests passing (119 new tests)
 
-See [RELEASE-NOTES-v1.13.0.md](RELEASE-NOTES-v1.13.0.md) for full details.
+See [RELEASE-NOTES-v1.13.0.md](../release-notes/RELEASE-NOTES-v1.13.0.md) for full details.
 
 ---
 
@@ -55,7 +55,7 @@ See [RELEASE-NOTES-v1.13.0.md](RELEASE-NOTES-v1.13.0.md) for full details.
 - Filesystem tool classes (`SetWorkingDirectoryTool`, `GetWorkingDirectoryTool`, etc.)
 - HTTP endpoints for context management (`/context/working_dir`, `/files/read`, `/files/search`)
 
-See [RELEASE-NOTES-v1.13.1.md](RELEASE-NOTES-v1.13.1.md) for full details.
+See [RELEASE-NOTES-v1.13.1.md](../release-notes/RELEASE-NOTES-v1.13.1.md) for full details.
 
 ---
 
@@ -91,7 +91,7 @@ vscode-extension/src/shared/
 └── index.ts         # Module exports
 ```
 
-See [RELEASE-NOTES-v1.13.2.md](RELEASE-NOTES-v1.13.2.md) for full details.
+See [RELEASE-NOTES-v1.13.2.md](../release-notes/RELEASE-NOTES-v1.13.2.md) for full details.
 
 ---
 
@@ -107,7 +107,7 @@ See [RELEASE-NOTES-v1.13.2.md](RELEASE-NOTES-v1.13.2.md) for full details.
 - UTF-8 BOM handling for Windows config files
 - Windows PowerShell installer script
 
-See [RELEASE-NOTES-v1.13.3.md](RELEASE-NOTES-v1.13.3.md) for full details.
+See [RELEASE-NOTES-v1.13.3.md](../release-notes/RELEASE-NOTES-v1.13.3.md) for full details.
 
 ---
 
@@ -122,7 +122,7 @@ See [RELEASE-NOTES-v1.13.3.md](RELEASE-NOTES-v1.13.3.md) for full details.
 - Better tool parameter documentation
 - Actionable error tips for file operations
 
-See [RELEASE-NOTES-v1.13.4.md](RELEASE-NOTES-v1.13.4.md) for full details.
+See [RELEASE-NOTES-v1.13.4.md](../release-notes/RELEASE-NOTES-v1.13.4.md) for full details.
 
 ---
 
@@ -137,7 +137,7 @@ See [RELEASE-NOTES-v1.13.4.md](RELEASE-NOTES-v1.13.4.md) for full details.
 - Sessions auto-expire after 1 hour
 - `/sessions/list` monitoring endpoint
 
-See [RELEASE-NOTES-v1.13.5.md](RELEASE-NOTES-v1.13.5.md) for full details.
+See [RELEASE-NOTES-v1.13.5.md](../release-notes/RELEASE-NOTES-v1.13.5.md) for full details.
 
 ---
 
@@ -149,7 +149,7 @@ See [RELEASE-NOTES-v1.13.5.md](RELEASE-NOTES-v1.13.5.md) for full details.
 - Windows `gh` CLI compatibility for release script
 - UTF-8 encoding fixes for release scripts on all platforms
 
-See [RELEASE-NOTES-v1.13.6.md](RELEASE-NOTES-v1.13.6.md) for full details.
+See [RELEASE-NOTES-v1.13.6.md](../release-notes/RELEASE-NOTES-v1.13.6.md) for full details.
 
 ---
 
@@ -162,7 +162,7 @@ See [RELEASE-NOTES-v1.13.6.md](RELEASE-NOTES-v1.13.6.md) for full details.
 - `/status` command fixes for session methods and working directory
 - Gemini grounding pricing correction in example config
 
-See [RELEASE-NOTES-v1.13.7.md](RELEASE-NOTES-v1.13.7.md) for full details.
+See [RELEASE-NOTES-v1.13.7.md](../release-notes/RELEASE-NOTES-v1.13.7.md) for full details.
 
 ---
 
@@ -177,7 +177,7 @@ See [RELEASE-NOTES-v1.13.7.md](RELEASE-NOTES-v1.13.7.md) for full details.
 - **E2E Testing:** 55 Playwright browser tests for data viewer components
 - **Bug Fixes:** @filename autocomplete in Web App and VSCode, autocomplete popup hide on send, @git truncation
 
-See [RELEASE-NOTES-v1.13.8.md](RELEASE-NOTES-v1.13.8.md) for full details.
+See [RELEASE-NOTES-v1.13.8.md](../release-notes/RELEASE-NOTES-v1.13.8.md) for full details.
 
 ---
 
@@ -215,14 +215,14 @@ See [RELEASE-PLAN-v1.14.x.md](RELEASE-PLAN-v1.14.x.md) for the updated roadmap.
 
 ## References
 
-- [v1.13.0 Release Notes](RELEASE-NOTES-v1.13.0.md)
-- [v1.13.1 Release Notes](RELEASE-NOTES-v1.13.1.md)
-- [v1.13.2 Release Notes](RELEASE-NOTES-v1.13.2.md)
-- [v1.13.3 Release Notes](RELEASE-NOTES-v1.13.3.md)
-- [v1.13.4 Release Notes](RELEASE-NOTES-v1.13.4.md)
-- [v1.13.5 Release Notes](RELEASE-NOTES-v1.13.5.md)
-- [v1.13.6 Release Notes](RELEASE-NOTES-v1.13.6.md)
-- [v1.13.7 Release Notes](RELEASE-NOTES-v1.13.7.md)
-- [v1.13.8 Release Notes](RELEASE-NOTES-v1.13.8.md)
-- [ROADMAP.md](../ROADMAP.md)
+- [v1.13.0 Release Notes](../release-notes/RELEASE-NOTES-v1.13.0.md)
+- [v1.13.1 Release Notes](../release-notes/RELEASE-NOTES-v1.13.1.md)
+- [v1.13.2 Release Notes](../release-notes/RELEASE-NOTES-v1.13.2.md)
+- [v1.13.3 Release Notes](../release-notes/RELEASE-NOTES-v1.13.3.md)
+- [v1.13.4 Release Notes](../release-notes/RELEASE-NOTES-v1.13.4.md)
+- [v1.13.5 Release Notes](../release-notes/RELEASE-NOTES-v1.13.5.md)
+- [v1.13.6 Release Notes](../release-notes/RELEASE-NOTES-v1.13.6.md)
+- [v1.13.7 Release Notes](../release-notes/RELEASE-NOTES-v1.13.7.md)
+- [v1.13.8 Release Notes](../release-notes/RELEASE-NOTES-v1.13.8.md)
+- [ROADMAP.md](../../../ROADMAP.md)
 - [v1.14.x Release Plan](RELEASE-PLAN-v1.14.x.md)

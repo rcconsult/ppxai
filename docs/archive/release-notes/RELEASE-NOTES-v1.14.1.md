@@ -60,4 +60,4 @@ irm https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1
 
 ## Full Changelog
 
-See [CHANGELOG.md](../CHANGELOG.md) for complete list of changes.
+See [CHANGELOG.md](../../../CHANGELOG.md) for complete list of changes.

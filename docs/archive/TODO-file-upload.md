@@ -970,11 +970,11 @@ the marker remains in context, and the model continues to see the file
 on the next turn.
 
 **Root cause.** Tracking and removal use different rules.
-[`refresh_context_attachments()`](../ppxai/engine/multimodal_ops.py#L141-L169)
+[`refresh_context_attachments()`](../../ppxai/engine/multimodal_ops.py#L141-L169)
 at lines 141-169 scans **both** structured blocks (`image_url`,
 `input_file`, `file`) **and** `<uploaded_file>` XML markers embedded
 inside `text` blocks. But
-[`remove_context_attachment()`](../ppxai/engine/multimodal_ops.py#L244)
+[`remove_context_attachment()`](../../ppxai/engine/multimodal_ops.py#L244)
 at line 244 filters only the structured types:
 
 ```python
@@ -1009,7 +1009,7 @@ marker is stripped.
 
 ### R2. `files: List[FileAttachment] = []` mutable default — **fragile** 🟡
 
-**Location.** [`ppxai/server/models.py:45`](../ppxai/server/models.py#L45)
+**Location.** [`ppxai/server/models.py:45`](../../ppxai/server/models.py#L45)
 
 **Risk.** Pydantic v2 copies the default for each instance so this
 doesn't cross-contaminate in practice, but the pattern is easy to
@@ -1030,7 +1030,7 @@ files: List[FileAttachment] = Field(default_factory=list)
 
 ### R3. `_count_csv_rows_cols()` materializes entire CSV in memory — **performance** 🟡
 
-**Location.** [`ppxai/engine/file_preprocessing.py:359`](../ppxai/engine/file_preprocessing.py#L359)
+**Location.** [`ppxai/engine/file_preprocessing.py:359`](../../ppxai/engine/file_preprocessing.py#L359)
 
 ```python
 reader = _csv.reader(_io.StringIO(text), delimiter=delimiter)
@@ -1065,8 +1065,8 @@ assertion is nice-to-have).
 
 ### R4. `has_vision_model()` naming hides sidecar-vs-model distinction — **clarity** 🟡
 
-**Location.** [`ppxai/engine/multimodal_ops.py:285`](../ppxai/engine/multimodal_ops.py#L285)
-+ caller at [`ppxai/server/routes/chat.py::_build_chat_payload`](../ppxai/server/routes/chat.py)
+**Location.** [`ppxai/engine/multimodal_ops.py:285`](../../ppxai/engine/multimodal_ops.py#L285)
++ caller at [`ppxai/server/routes/chat.py::_build_chat_payload`](../../ppxai/server/routes/chat.py)
 
 **Risk.** The name reads as "is the active model vision-capable?" but
 the implementation checks the VL **sidecar** configuration
@@ -1174,7 +1174,7 @@ inevitable as soon as a user attaches two files with the same name.
 **Root cause — three sites, same bug.**
 
 1. **Removal is name-only**
-   [`multimodal_ops.py:247-253`](../ppxai/engine/multimodal_ops.py#L247):
+   [`multimodal_ops.py:247-253`](../../ppxai/engine/multimodal_ops.py#L247):
    ```python
    block_name = (
        block.get("name")
@@ -1190,9 +1190,9 @@ inevitable as soon as a user attaches two files with the same name.
    `file_id` to disambiguate. Same-name collisions remove every match.
 
 2. **Dedup falls back to name when `file_id` missing**
-   [`multimodal_ops.py:96`](../ppxai/engine/multimodal_ops.py#L96),
-   [`:130`](../ppxai/engine/multimodal_ops.py#L130),
-   [`:159`](../ppxai/engine/multimodal_ops.py#L159):
+   [`multimodal_ops.py:96`](../../ppxai/engine/multimodal_ops.py#L96),
+   [`:130`](../../ppxai/engine/multimodal_ops.py#L130),
+   [`:159`](../../ppxai/engine/multimodal_ops.py#L159):
    ```python
    dedup_key = file_id or name
    ```
@@ -1291,7 +1291,7 @@ is verified against the branch; none are v1.17.4 release-blockers.
 
 ### R8. `_count_csv_rows_cols` still materializes via `_decode_text` — **polish R3** 🟡
 
-**Location.** [`ppxai/engine/file_preprocessing.py`](../ppxai/engine/file_preprocessing.py#L342)
+**Location.** [`ppxai/engine/file_preprocessing.py`](../../ppxai/engine/file_preprocessing.py#L342)
 
 **Symptom.** R3 streamed the row count (O(1) memory for the counting
 step), but the function still calls `text = _decode_text(data)` on
@@ -1336,7 +1336,7 @@ correctness tests should pass unchanged.
 
 ### R9. `validate_and_fix_alternation` "longer wins" heuristic can drop tool_calls — **correctness edge** 🟡
 
-**Location.** [`ppxai/engine/session.py`](../ppxai/engine/session.py) — `validate_and_fix_alternation`
+**Location.** [`ppxai/engine/session.py`](../../ppxai/engine/session.py) — `validate_and_fix_alternation`
 
 **Symptom.** When two consecutive assistant messages are found, the
 "longer is better" heuristic picks the one with more text content
@@ -1372,7 +1372,7 @@ assistant response, reload, assert user turn still present.
 
 ### R10. `_has_multimodal_attachments` O(N) scan on every save — **micro-perf** 🟢
 
-**Location.** [`ppxai/engine/session.py`](../ppxai/engine/session.py) — `_has_multimodal_attachments`
+**Location.** [`ppxai/engine/session.py`](../../ppxai/engine/session.py) — `_has_multimodal_attachments`
 
 **Symptom.** Called from `save()` / `save_dirty()` to decide flat vs
 directory session format. Walks every content block of every message
@@ -1401,7 +1401,7 @@ removed in between).
 
 ### R11. Session format transition is not atomic — **crash-edge** 🟢
 
-**Location.** [`ppxai/engine/session.py`](../ppxai/engine/session.py) — `_write_session_json`
+**Location.** [`ppxai/engine/session.py`](../../ppxai/engine/session.py) — `_write_session_json`
 
 **Symptom.** When a session gains its first multimodal attachment
 mid-conversation, the writer transitions from flat `sessions/<name>.json`
@@ -1444,7 +1444,7 @@ orphan flat file.
 
 ### R12. Silent gaps during agentic tool loops — **architectural UX** 🟢
 
-**Location.** [`ppxai/engine/chat.py:584`](../ppxai/engine/chat.py#L584),
+**Location.** [`ppxai/engine/chat.py:584`](../../ppxai/engine/chat.py#L584),
 inside `while iteration < max_iterations`:
 
 ```python

@@ -30,7 +30,7 @@ Current ppxaide autocomplete implementation (v1.15.0):
 - ❌ Fixed 100 file limit
 - ❌ No lazy loading/virtual scrolling
 
-**Status:** Disabled in production (see [CLAUDE.md:81-96](../CLAUDE.md#L81-L96))
+**Status:** Disabled in production (see [CLAUDE.md:81-96](../../../CLAUDE.md#L81-L96))
 
 ### Solution: textual-autocomplete
 

@@ -65,8 +65,8 @@ have minimum test coverage.
 
 ### Item 12 — GitHub Actions Node.js 20 deprecation warnings (cosmetic)
 
-**Affected files:** [.github/workflows/build.yml](../.github/workflows/build.yml),
-[.github/workflows/docs.yml](../.github/workflows/docs.yml).
+**Affected files:** [.github/workflows/build.yml](../../.github/workflows/build.yml),
+[.github/workflows/docs.yml](../../.github/workflows/docs.yml).
 
 **What's wrong:** every CI run still emits a deprecation banner for
 `actions/checkout@v4`, `actions/setup-node@v4`, and
@@ -134,7 +134,7 @@ release branch — too small to need its own.
 
 ### Item 13 — `scripts/release.py` step 15 fails silently when `gh release view` errors
 
-**Affected file:** [scripts/release.py](../scripts/release.py),
+**Affected file:** [scripts/release.py](../../scripts/release.py),
 specifically the "Step 15/15: Verifying Release" block.
 
 **What's wrong:** when `gh release view v<version> --json assets`
@@ -268,7 +268,7 @@ ready.
 
 **Affected files:** new `ppxai/engine/providers/anthropic.py`, new
 `ppxai-config.example.json` entry, registration in
-[ppxai/engine/providers/__init__.py](../ppxai/engine/providers/__init__.py),
+[ppxai/engine/providers/__init__.py](../../ppxai/engine/providers/__init__.py),
 new tests, README provider table.
 
 **What's missing:** ppxai supports OpenAI, Perplexity, Gemini,
@@ -370,9 +370,9 @@ review independently.
 
 ### Item 15 — `deploy/shared/AGENTS.md` is a stale parallel copy
 
-**Affected files:** [deploy/shared/AGENTS.md](../deploy/shared/AGENTS.md)
+**Affected files:** [deploy/shared/AGENTS.md](../../AGENTS.md)
 (369 lines, last touched 2026-03-27 in commit `1862422c`),
-[deploy/shared/AGENTS-local.md](../deploy/shared/AGENTS-local.md)
+deploy/shared/AGENTS-local.md
 (82 lines, similar age).
 
 **What's wrong:** the file looks like an active source of truth
@@ -510,7 +510,7 @@ coverage; Windows devs get green local runs.
 
 Bundled via [esbuild](https://esbuild.github.io/) (VSCode's recommended
 bundler). Configuration in
-[vscode-extension/esbuild.js](../vscode-extension/esbuild.js) — pure
+[vscode-extension/esbuild.js](../../vscode-extension/esbuild.js) — pure
 Node, no shell-isms, works on Linux/macOS/Windows. esbuild's
 `optionalDependencies` install the right native binary per host on
 `npm install`.
@@ -548,7 +548,7 @@ are loaded by the webview's `media/main.js` as static assets via
 (it's a string literal in `config.ts` provider defaults).
 
 **CI alignment** in
-[`.github/workflows/build.yml`](../.github/workflows/build.yml):
+[`.github/workflows/build.yml`](../../.github/workflows/build.yml):
 
 - Replaced explicit `npm run compile` step with `npm run typecheck`
   (catches type errors fast; the bundle itself is built by
@@ -635,7 +635,7 @@ public resolveWebviewView(webviewView, _context, _token) {
 ```
 
 **Tests updated** in
-[`tests/test_vscode_visibility_reanchor.py`](../tests/test_vscode_visibility_reanchor.py)
+[`tests/test_vscode_visibility_reanchor.py`](../../tests/test_vscode_visibility_reanchor.py)
 to validate the **contract**, not the old code pattern:
 
 - `test_listener_guards_on_focused` — splits into two
@@ -681,7 +681,7 @@ condition.
 
 ### Item 11 — Latent AttributeError in `agent.py` Rich-TUI path — closed 2026-04-28
 
-[`ppxai/commands/agent.py:680`](../ppxai/commands/agent.py#L680)
+[`ppxai/commands/agent.py:680`](../../ppxai/commands/agent.py#L680)
 swapped from `context.engine_client.logger` (which did not exist
 on `EngineClient`) to a module-level `get_logger("tui")` import. The
 old construction would have raised `AttributeError` mid-`/agent`
@@ -689,7 +689,7 @@ run; tests passed because they substituted `Mock()` for the logger
 arg, masking the missing attribute.
 
 Regression tests in
-[`tests/test_agent_logger_attribute.py`](../tests/test_agent_logger_attribute.py)
+[`tests/test_agent_logger_attribute.py`](../../tests/test_agent_logger_attribute.py)
 pin four contracts:
 - `EngineClient` still has no `logger` attribute (catches drift if
   someone re-adds it).
@@ -710,18 +710,18 @@ remains separate; this fix lets the existing TUI path actually run.
 
 ### Item 10 — Introduce `EngineClientProtocol` for the commands layer — closed 2026-04-28
 
-Added [`EngineClientProtocol`](../ppxai/engine/types.py) alongside
+Added [`EngineClientProtocol`](../../ppxai/engine/types.py) alongside
 the existing `ToolEngineProtocol` / `ToolManagerProtocol`. Enumerates
 ~30 properties + methods that commands actually call on the engine,
 grouped functionally (AppState access, provider/model switching,
 working dir, tools/agent management, bootstrap/context, checkpoints,
-chat). [`commands/protocol.py`](../ppxai/commands/protocol.py) and
-[`commands/context.py`](../ppxai/commands/context.py) now type
+chat). [`commands/protocol.py`](../../ppxai/commands/protocol.py) and
+[`commands/context.py`](../../ppxai/commands/context.py) now type
 against the protocol; both files dropped their
 `from ..engine.client import EngineClient` import.
 
 Sentinel tests in
-[`tests/test_engine_client_protocol.py`](../tests/test_engine_client_protocol.py)
+[`tests/test_engine_client_protocol.py`](../../tests/test_engine_client_protocol.py)
 pin three contracts:
 - `EngineClient` satisfies the protocol structurally
   (`isinstance` runtime check).
@@ -747,7 +747,7 @@ removes nominal coupling, not the runtime call references.
 Tier 2 prediction "~20 fewer edges" → actual −17. Mission accomplished.
 
 **Latent bug spotted during the protocol enumeration step:**
-[`agent.py:680`](../ppxai/commands/agent.py#L680) accesses
+[`agent.py:680`](../../ppxai/commands/agent.py#L680) accesses
 `engine_client.logger` which doesn't exist on `EngineClient`. Filed
 as Item 11. Item 10 dropped `logger` from the protocol's surface
 rather than wishful-list it.
@@ -922,12 +922,12 @@ ones not in "Open" above were closed during the test sweep on
 
 ## Related documents
 
-- [docs/consent-contract.md](consent-contract.md) — security boundary for tool execution (created with critique #5)
-- [docs/model-selection-guide.md](model-selection-guide.md) — planner/executor pricing strategy
+- [docs/consent-contract.md](../consent-contract.md) — security boundary for tool execution (created with critique #5)
+- [docs/model-selection-guide.md](../model-selection-guide.md) — planner/executor pricing strategy
 - [docs/archive/TODO-v1.18.2-agent-loop-unification.md](TODO-v1.18.2-agent-loop-unification.md) — separate in-flight work (HTTP-streaming agent loop)
-- [docs/TODO-v1.18.2-keys-binding-registries.md](../TODO-v1.18.2-keys-binding-registries.md) — separate in-flight work
+- [docs/TODO-v1.18.2-keys-binding-registries.md](TODO-v1.18.2-keys-binding-registries.md) — separate in-flight work
 - [docs/archive/TODO-v1.18.2-prompt-text-kind.md](TODO-v1.18.2-prompt-text-kind.md) — separate in-flight work
-- [docs/TODO-v1.18.2-inline-markdown-images-tui.md](../TODO-v1.18.2-inline-markdown-images-tui.md) — separate in-flight work
+- [docs/TODO-v1.18.2-inline-markdown-images-tui.md](TODO-v1.18.2-inline-markdown-images-tui.md) — separate in-flight work
 
 The `TODO-v1.18.2-*.md` files describe in-flight planning for v1.18.2.
 This doc tracks debt **not** in any version's plan yet — items needing

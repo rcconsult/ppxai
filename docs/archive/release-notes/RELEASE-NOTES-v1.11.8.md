@@ -40,7 +40,7 @@ Agent mode allows the AI to autonomously execute multi-step tasks using availabl
 
 ## Documentation Updates
 
-- **NEW:** [docs/agent-mode-guide.md](agent-mode-guide.md) - Comprehensive agent mode documentation
+- **NEW:** docs/agent-mode-guide.md - Comprehensive agent mode documentation
 - **NEW:** Agent flow diagrams (current-non-agentic-flow.png, future-agentic-flow.png)
 - **FIXED:** All broken internal documentation links
 
@@ -62,5 +62,5 @@ To use Agent Mode in VSCode:
 ## Links
 
 - **GitHub Release:** https://github.com/rcconsult/ppxai/releases/tag/v1.11.8
-- **Full Changelog:** [CHANGELOG.md](../CHANGELOG.md)
-- **Agent Mode Guide:** [agent-mode-guide.md](agent-mode-guide.md)
+- **Full Changelog:** [CHANGELOG.md](../../../CHANGELOG.md)
+- **Agent Mode Guide:** agent-mode-guide.md

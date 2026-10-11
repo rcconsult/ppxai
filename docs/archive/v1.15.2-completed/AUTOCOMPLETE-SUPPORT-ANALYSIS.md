@@ -37,7 +37,7 @@ All 4 clients have **autocomplete support**, but with varying levels of sophisti
 All clients autocomplete slash commands when user types `/`.
 
 #### Shared Command List (VScode/Web)
-**Source:** [ppxai/web/shared/commands.js](../ppxai/web/shared/commands.js)
+**Source:** ppxai/web/shared/commands.js
 
 | Command | Category | Subcommands | Description |
 |---------|----------|-------------|-------------|
@@ -71,7 +71,7 @@ All clients autocomplete slash commands when user types `/`.
 **Total:** 26 commands
 
 #### Rich TUI Command List
-**Source:** [ppxai/rich/main.py:170-198](../ppxai/rich/main.py:170-198)
+**Source:** [ppxai/rich/main.py:170-198](../../../ppxai/rich/main.py#L170-L198)
 
 Same 26 commands as Web/VSCode, defined in `PPXAICompleter.COMMANDS`.
 
@@ -85,7 +85,7 @@ Same 26 commands as Web/VSCode, defined in `PPXAICompleter.COMMANDS`.
 **Total:** ~31 commands
 
 #### Textual TUI Command List
-**Source:** [ppxai/tui/completer.py:202-210](../ppxai/tui/completer.py:202-210)
+**Source:** [ppxai/tui/completer.py:202-210](../../../ppxai/tui/completer.py#L202-L210)
 
 Uses dynamic command discovery via `CommandFactory.list_all()`, ensuring it always has the latest commands.
 
@@ -98,7 +98,7 @@ Uses dynamic command discovery via `CommandFactory.list_all()`, ensuring it alwa
 Autocomplete for arguments after the main command (e.g., `/tools enable`, `/checkpoint status`).
 
 #### Rich TUI Subcommands
-**Source:** [ppxai/rich/main.py:337-459](../ppxai/rich/main.py:337-459)
+**Source:** [ppxai/rich/main.py:337-459](../../../ppxai/rich/main.py#L337-L459)
 
 | Parent Command | Subcommands Autocompleted | Implementation |
 |----------------|---------------------------|----------------|
@@ -115,7 +115,7 @@ Autocomplete for arguments after the main command (e.g., `/tools enable`, `/chec
 **Total:** 9 subcommand types (including nested levels)
 
 #### Textual TUI Subcommands
-**Source:** [ppxai/tui/completer.py:193-240](../ppxai/tui/completer.py:193-240)
+**Source:** [ppxai/tui/completer.py:193-240](../../../ppxai/tui/completer.py#L193-L240)
 
 **Status:** ✅ **FULLY FUNCTIONAL (v1.15.2)**
 
@@ -152,7 +152,7 @@ VSCode and Web apps do **not** autocomplete subcommands. They only autocomplete 
 Autocomplete for `@file` references (context injection).
 
 #### Rich TUI @file Autocomplete
-**Source:** [ppxai/rich/main.py:314-331](../ppxai/rich/main.py:314-331)
+**Source:** [ppxai/rich/main.py:314-331](../../../ppxai/rich/main.py#L314-L331)
 
 **Trigger:** Type `@` anywhere in message
 **Behavior:**
@@ -173,7 +173,7 @@ Autocomplete for `@file` references (context injection).
 **Missing:** No `@git`, `@tree`, `@clipboard`, `@url` suggestions
 
 #### Textual TUI @file Autocomplete
-**Source:** [ppxai/tui/completer.py:114-146](../ppxai/tui/completer.py:114-146)
+**Source:** [ppxai/tui/completer.py:114-146](../../../ppxai/tui/completer.py#L114-L146)
 
 **Trigger:** Type `@` anywhere in message
 **Behavior:**
@@ -195,7 +195,7 @@ Autocomplete for `@file` references (context injection).
 **Advantage:** Shows context providers as distinct options
 
 #### VSCode @file Autocomplete
-**Source:** [vscode-extension/src/chatPanel.ts:340-375](../vscode-extension/src/chatPanel.ts:340-375)
+**Source:** [vscode-extension/src/chatPanel.ts:340-375](../../../vscode-extension/src/chatPanel.ts#L340-L375)
 
 **Trigger:** Type `@` anywhere in message
 **Behavior:**
@@ -217,7 +217,7 @@ config.py           src/config.py
 **Advantage:** Uses VSCode's native search (fast, respects .gitignore)
 
 #### Web App @file Autocomplete
-**Source:** [ppxai/web/app.js:2177-2226](../ppxai/web/app.js:2177-2226)
+**Source:** [ppxai/web/app.js:2177-2226](../../../ppxai/web/app.js#L2177-L2226)
 
 **Trigger:** Type `@` anywhere in message
 **Behavior:**
@@ -237,7 +237,7 @@ config.py           src/config.py
 **NEW in v1.15.2** - Terminal-like file completion for `/show`, `/edit`, `/cat` commands.
 
 #### Textual TUI File Commands
-**Source:** [ppxai/tui/completer.py:155-191](../ppxai/tui/completer.py:155-191)
+**Source:** [ppxai/tui/completer.py:155-191](../../../ppxai/tui/completer.py#L155-L191)
 
 **Trigger:** Type `/show `, `/edit `, or `/cat ` then Tab
 **Behavior:**
@@ -271,7 +271,7 @@ This matches standard terminal UX where commands take bare filenames:
 Autocomplete for `/model <model_name>` command.
 
 #### Textual TUI Model Autocomplete ✅
-**Source:** [ppxai/tui/completer.py:224-250](../ppxai/tui/completer.py:224-250)
+**Source:** [ppxai/tui/completer.py:224-250](../../../ppxai/tui/completer.py#L224-L250)
 
 **Trigger:** Type `/model ` (with space after command)
 **Behavior:**
@@ -301,7 +301,7 @@ Users must manually type model names or use `/model list` to see options.
 Autocomplete for `/provider <provider_id>` command.
 
 #### Textual TUI Provider Autocomplete ✅
-**Source:** [ppxai/tui/completer.py:252-269](../ppxai/tui/completer.py:252-269)
+**Source:** [ppxai/tui/completer.py:252-269](../../../ppxai/tui/completer.py#L252-L269)
 
 **Trigger:** Type `/provider ` (with space after command)
 **Behavior:**
@@ -329,7 +329,7 @@ Users must manually type provider IDs or use `/provider list`.
 Autocomplete for `/theme <theme_name>` command.
 
 #### Textual TUI Theme Autocomplete ✅
-**Source:** [ppxai/tui/completer.py:271-303](../ppxai/tui/completer.py:271-303)
+**Source:** [ppxai/tui/completer.py:271-303](../../../ppxai/tui/completer.py#L271-L303)
 
 **Behavior:**
 - Shows `list` subcommand first
@@ -339,7 +339,7 @@ Autocomplete for `/theme <theme_name>` command.
   - textual-dark, textual-light, tron-legacy, matrix
 
 #### Rich TUI Theme Autocomplete ✅
-**Source:** [ppxai/rich/main.py:213-219, 362-395](../ppxai/rich/main.py:213-219)
+**Source:** [ppxai/rich/main.py:213-219, 362-395](../../../ppxai/rich/main.py#L213-L219)
 
 **Behavior:**
 - Shows `list` subcommand
@@ -356,7 +356,7 @@ Autocomplete for `/theme <theme_name>` command.
 Autocomplete for tool names in `/tools help <tool_name>` command.
 
 #### Rich TUI Tool Autocomplete ✅
-**Source:** [ppxai/rich/main.py:350-359, 471-495](../ppxai/rich/main.py:350-359)
+**Source:** [ppxai/rich/main.py:350-359, 471-495](../../../ppxai/rich/main.py#L350-L359)
 
 **Trigger:** Type `/tools help ` (with space after help)
 **Behavior:**
@@ -455,7 +455,7 @@ Users must use `/tools list` to see available tools.
 **Navigation:** `Tab` to cycle, `Enter` to select
 **Cancellation:** Continue typing or `Esc`
 
-**Code:** [ppxai/rich/main.py:167-495](../ppxai/rich/main.py:167-495)
+**Code:** [ppxai/rich/main.py:167-495](../../../ppxai/rich/main.py#L167-L495)
 
 ### Textual TUI (Custom Widget)
 **Library:** Textual Input + custom dropdown
@@ -463,7 +463,7 @@ Users must use `/tools list` to see available tools.
 **Navigation:** `↑`/`↓` to navigate, `Tab`/`Enter` to select
 **Cancellation:** Continue typing or `Esc`
 
-**Code:** [ppxai/tui/completer.py](../ppxai/tui/completer.py)
+**Code:** [ppxai/tui/completer.py](../../../ppxai/tui/completer.py)
 
 ### VSCode (Webview)
 **Library:** Custom JavaScript in webview
@@ -471,7 +471,7 @@ Users must use `/tools list` to see available tools.
 **Navigation:** Mouse click or keyboard navigation
 **Cancellation:** Click away or continue typing
 
-**Code:** [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts)
+**Code:** [vscode-extension/src/chatPanel.ts](../../../vscode-extension/src/chatPanel.ts)
 
 ### Web (Custom JavaScript)
 **Library:** Vanilla JavaScript DOM manipulation
@@ -479,7 +479,7 @@ Users must use `/tools list` to see available tools.
 **Navigation:** `↑`/`↓` arrows, `Tab`/`Enter` to select
 **Cancellation:** Click away or continue typing
 
-**Code:** [ppxai/web/app.js:2092-2280](../ppxai/web/app.js:2092-2280)
+**Code:** [ppxai/web/app.js:2092-2280](../../../ppxai/web/app.js#L2092-L2280)
 
 ---
 
@@ -619,9 +619,9 @@ For each client:
 ## Related Documents
 
 - [TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md](TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md) - Context injector autocomplete fixes
-- [context-injection.md](context-injection.md) - Context injection user guide
-- [ppxai/web/shared/commands.js](../ppxai/web/shared/commands.js) - Shared command definitions
-- [vscode-extension/src/shared/commands.ts](../vscode-extension/src/shared/commands.ts) - VSCode command definitions
+- [context-injection.md](../../context-injection.md) - Context injection user guide
+- ppxai/web/shared/commands.js - Shared command definitions
+- vscode-extension/src/shared/commands.ts - VSCode command definitions
 
 ---
 

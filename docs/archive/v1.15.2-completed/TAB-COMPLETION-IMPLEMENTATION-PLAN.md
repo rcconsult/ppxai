@@ -441,8 +441,8 @@ Compare to textual-autocomplete integration: ~200 lines (adapter + integration +
 ## Documentation Updates
 
 After implementation:
-1. Update [docs/RELEASE-NOTES-v1.15.0.md](RELEASE-NOTES-v1.15.0.md) - Add Tab completion feature
-2. Update [README.md](../README.md) - Mention Tab completion in ppxaide features
+1. Update [docs/RELEASE-NOTES-v1.15.0.md](../release-notes/RELEASE-NOTES-v1.15.0.md) - Add Tab completion feature
+2. Update [README.md](../../../README.md) - Mention Tab completion in ppxaide features
 3. Add usage guide to [docs/](.) - "How Tab Completion Works"
 4. Update inline help (`/help`) - Document Tab key
 
@@ -505,5 +505,5 @@ git push origin feature/new-tui-command
 
 - Bash completion: https://www.gnu.org/software/bash/manual/html_node/Programmable-Completion.html
 - Textual Key events: https://textual.textualize.io/guide/events/#key
-- Existing completer: [ppxai/tui/completer.py](../../ppxai/tui/completer.py)
-- InputBox widget: [ppxai/tui/widgets/input_box.py](../../ppxai/tui/widgets/input_box.py)
+- Existing completer: [ppxai/tui/completer.py](../../../ppxai/tui/completer.py)
+- InputBox widget: [ppxai/tui/widgets/input_box.py](../../../ppxai/tui/widgets/input_box.py)

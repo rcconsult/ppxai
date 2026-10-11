@@ -56,4 +56,4 @@ Deleted 39 obsolete documentation files (~13KB) that were no longer relevant. Th
 
 ## Full Changelog
 
-See [CHANGELOG.md](../CHANGELOG.md) for complete details.
+See [CHANGELOG.md](../../../CHANGELOG.md) for complete details.

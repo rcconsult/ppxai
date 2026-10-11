@@ -2,7 +2,7 @@
 
 **Created:** 2026-01-26
 **Status:** Planning
-**Related:** [vllm-tool-calling-guide.md](vllm-tool-calling-guide.md)
+**Related:** [vllm-tool-calling-guide.md](../../vllm-tool-calling-guide.md)
 
 ## Background
 
@@ -328,4 +328,4 @@ def test_parse_harmony_with_tool():
 - [OpenAI Harmony GitHub](https://github.com/openai/openai-harmony)
 - [vLLM Issue #22337](https://github.com/vllm-project/vllm/issues/22337)
 - [vLLM Issue #23567](https://github.com/vllm-project/vllm/issues/23567)
-- [ppxai vLLM Guide](vllm-tool-calling-guide.md)
+- [ppxai vLLM Guide](../../vllm-tool-calling-guide.md)

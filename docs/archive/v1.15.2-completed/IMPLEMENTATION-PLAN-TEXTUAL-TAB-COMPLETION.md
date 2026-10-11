@@ -12,7 +12,7 @@
 Re-enable autocomplete for Textual TUI using minimal tab-based completion instead of dropdown UI.
 
 **Key Decisions:**
-1. **Tab-based cycling** - Use existing [ppxai/tui/completer.py](../ppxai/tui/completer.py) logic with simple Tab cycling (proven in [test_tab_focus.py](../test_tab_focus.py))
+1. **Tab-based cycling** - Use existing [ppxai/tui/completer.py](../../../ppxai/tui/completer.py) logic with simple Tab cycling (proven in [test_tab_focus.py](../../../tests/test_tab_focus.py))
 2. **Terminal-like UX for file commands** - `/show README.md` (no @ prefix) matches standard shell behavior
 3. **@ prefix for context injection** - `@file:README.md` only in messages for context injection
 
@@ -617,9 +617,9 @@ Add entry:
 
 ## References
 
-- [test_tab_focus.py](../test_tab_focus.py) - Proof of concept
-- [ppxai/tui/completer.py](../ppxai/tui/completer.py) - Complete autocomplete logic
-- [docs/TODO-v1.15.2-TEXTUAL-TUI-AUTOCOMPLETE.md](TODO-v1.15.2-TEXTUAL-TUI-AUTOCOMPLETE.md) - Investigation
+- [test_tab_focus.py](../../../tests/test_tab_focus.py) - Proof of concept
+- [ppxai/tui/completer.py](../../../ppxai/tui/completer.py) - Complete autocomplete logic
+- [docs/TODO-v1.15.2-TEXTUAL-TUI-AUTOCOMPLETE.md](../v1.15.1-completed/TODO-v1.15.2-TEXTUAL-TUI-AUTOCOMPLETE.md) - Investigation
 - [docs/TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md](TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md) - Context provider parity
 - [docs/AUTOCOMPLETE-SUPPORT-ANALYSIS.md](AUTOCOMPLETE-SUPPORT-ANALYSIS.md) - Feature matrix
 

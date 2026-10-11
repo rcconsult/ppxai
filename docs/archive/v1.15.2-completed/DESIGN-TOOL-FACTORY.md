@@ -2,7 +2,7 @@
 
 **Status:** Proposed
 **Created:** 2026-01-15
-**Related:** [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) Item #6 (Import Structure)
+**Related:** [TECHNICAL_DEBT.md](../v1.15.1-completed/TECHNICAL_DEBT.md) Item #6 (Import Structure)
 
 ---
 
@@ -258,7 +258,7 @@ class EngineClient:
 3. Hot-reload capability via `/reload` command
 
 ### Phase 5: Documentation
-1. Create custom-tool-development-guide.md (similar to [custom-command-development-guide.md](custom-command-development-guide.md))
+1. Create custom-tool-development-guide.md (similar to [custom-command-development-guide.md](../../custom-command-development-guide.md))
 2. Add examples to `~/.ppxai/tools/examples/`
 3. Update README with custom tools section
 

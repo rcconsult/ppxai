@@ -96,7 +96,7 @@ v1.18.1 closes it:
 3. `handle_agent` in the factory uses the same helper.
 4. Friendlier rejection: not a red `ErrorResult`, a question framed as `NotificationResult(WARNING)` with concrete examples (`/agent Fix the off-by-one in src/parser.py:line_count()`).
 
-23 new tests in [tests/test_agent_task_validation.py](../tests/test_agent_task_validation.py).
+23 new tests in [tests/test_agent_task_validation.py](../../../tests/test_agent_task_validation.py).
 
 ### `/spec` rich templates ported to factory
 
@@ -127,12 +127,12 @@ Fix: every PyInstaller job in `.github/workflows/build.yml` now uses `uv sync --
 
 ## Architecture docs
 
-Two new "Critical Architecture Pattern" sections in [CLAUDE.md](../CLAUDE.md), added during the work:
+Two new "Critical Architecture Pattern" sections in [CLAUDE.md](../../../CLAUDE.md), added during the work:
 
 - §"Critical Architecture Pattern: Command Dispatch via Envelope (v1.18.1)" — the dispatch flow, side-effect kinds, the `prompt_quick_pick` resume protocol, the rules.
 - §"Critical Architecture Pattern: State-Sync Determinism (v1.18.1)" — the four channels (SSE during chat, `/state` snapshot on demand, REST piggyback, `cwd_anchor` mismatch), the rules.
 
-First ADR: [docs/decisions/0001-keys-command-cross-client.md](decisions/0001-keys-command-cross-client.md) — establishes the ADR convention and pins the cross-client routing for `/keys`.
+First ADR: [docs/decisions/0001-keys-command-cross-client.md](../../decisions/0001-keys-command-cross-client.md) — establishes the ADR convention and pins the cross-client routing for `/keys`.
 
 ## Test coverage
 
@@ -140,24 +140,24 @@ Major test additions:
 
 | Suite | New tests | Purpose |
 |-------|----------:|---------|
-| [test_command_envelope.py](../tests/test_command_envelope.py) | 21 | v1 envelope shape, side-effect taxonomy sentinel, handler emission |
-| [test_rest_event_piggyback.py](../tests/test_rest_event_piggyback.py) | ~15 | Phase B drain helper + per-route integration |
-| [test_files_cwd_anchor.py](../tests/test_files_cwd_anchor.py) | ~20 | Phase D 409 path on /files/read|write|image |
-| [test_web_command_dispatcher_v18_1.py](../tests/test_web_command_dispatcher_v18_1.py) | ~10 | Web dispatcher shape + drain |
-| [test_web_cwd_anchor_client.py](../tests/test_web_cwd_anchor_client.py) | ~12 | Web's `handleCwdAnchorMismatch` |
-| [test_agent_task_validation.py](../tests/test_agent_task_validation.py) | 23 | Cross-client agent-task validation gate |
-| [test_vscode_step5a_helpers.py](../tests/test_vscode_step5a_helpers.py) | ~25 | sideEffectsHandler.ts + commandRenderer.ts contracts |
-| [test_vscode_visibility_reanchor.py](../tests/test_vscode_visibility_reanchor.py) | ~6 | Phase A re-anchor parity |
-| [test_vscode_step5b2_dispatcher.py](../tests/test_vscode_step5b2_dispatcher.py) | 26 | VSCode dispatcher shape, removed-handler tombstones |
-| [test_vscode_step5c_state_sync.py](../tests/test_vscode_step5c_state_sync.py) | 20 | VSCode Phase B + D wiring + cross-client parity |
-| [test_server_smoke_e2e.py](../tests/test_server_smoke_e2e.py) | 2 | Spawned-server smoke for envelope events + 409 |
+| [test_command_envelope.py](../../../tests/test_command_envelope.py) | 21 | v1 envelope shape, side-effect taxonomy sentinel, handler emission |
+| [test_rest_event_piggyback.py](../../../tests/test_rest_event_piggyback.py) | ~15 | Phase B drain helper + per-route integration |
+| [test_files_cwd_anchor.py](../../../tests/test_files_cwd_anchor.py) | ~20 | Phase D 409 path on /files/read|write|image |
+| [test_web_command_dispatcher_v18_1.py](../../../tests/test_web_command_dispatcher_v18_1.py) | ~10 | Web dispatcher shape + drain |
+| [test_web_cwd_anchor_client.py](../../../tests/test_web_cwd_anchor_client.py) | ~12 | Web's `handleCwdAnchorMismatch` |
+| [test_agent_task_validation.py](../../../tests/test_agent_task_validation.py) | 23 | Cross-client agent-task validation gate |
+| [test_vscode_step5a_helpers.py](../../../tests/test_vscode_step5a_helpers.py) | ~25 | sideEffectsHandler.ts + commandRenderer.ts contracts |
+| [test_vscode_visibility_reanchor.py](../../../tests/test_vscode_visibility_reanchor.py) | ~6 | Phase A re-anchor parity |
+| [test_vscode_step5b2_dispatcher.py](../../../tests/test_vscode_step5b2_dispatcher.py) | 26 | VSCode dispatcher shape, removed-handler tombstones |
+| [test_vscode_step5c_state_sync.py](../../../tests/test_vscode_step5c_state_sync.py) | 20 | VSCode Phase B + D wiring + cross-client parity |
+| [test_server_smoke_e2e.py](../../../tests/test_server_smoke_e2e.py) | 2 | Spawned-server smoke for envelope events + 409 |
 
 **Suite: 2926 passing, 0 skipped** (was 2924 + 2 poppler-skipped at v1.18.0). 4 unrelated Perplexity-API integration failures pre-date this branch.
 
 ## Deferred to v1.18.2
 
-- **Agent loop unification across HTTP clients.** Validation unified in v1.18.1; the loop body still runs client-side in VSCode and via the streaming `/chat` path on web because factory's `handle_agent` is TUI-shaped (`asyncio.run`, `console.print`). [docs/archive/TODO-v1.18.2-agent-loop-unification.md](archive/TODO-v1.18.2-agent-loop-unification.md) tracks the work.
-- **`prompt_text` side-effect kind** for free-text follow-ups when `prompt_quick_pick`'s finite-choice shape doesn't fit. [docs/archive/TODO-v1.18.2-prompt-text-kind.md](archive/TODO-v1.18.2-prompt-text-kind.md).
+- **Agent loop unification across HTTP clients.** Validation unified in v1.18.1; the loop body still runs client-side in VSCode and via the streaming `/chat` path on web because factory's `handle_agent` is TUI-shaped (`asyncio.run`, `console.print`). [docs/archive/TODO-v1.18.2-agent-loop-unification.md](../TODO-v1.18.2-agent-loop-unification.md) tracks the work.
+- **`prompt_text` side-effect kind** for free-text follow-ups when `prompt_quick_pick`'s finite-choice shape doesn't fit. [docs/archive/TODO-v1.18.2-prompt-text-kind.md](../TODO-v1.18.2-prompt-text-kind.md).
 
 ## Upgrade notes
 

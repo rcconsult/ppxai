@@ -153,6 +153,6 @@ populating `failure_markers` on the rtk default.
 
 ## Cross-references
 
-- [shell-wrappers.md](shell-wrappers.md) — user-facing documentation
-- [ROADMAP.md](../ROADMAP.md) §"v1.18.5 - Shell wrapper framework — rtk as first wrapper"
+- [shell-wrappers.md](../shell-wrappers.md) — user-facing documentation
+- [ROADMAP.md](../../ROADMAP.md) §"v1.18.5 - Shell wrapper framework — rtk as first wrapper"
 - rtk upstream: https://github.com/rtk-ai/rtk

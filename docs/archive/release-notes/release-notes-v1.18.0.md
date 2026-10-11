@@ -1,12 +1,12 @@
 # Release Notes — v1.18.0
 
 > **Scope:** P0 agent heartbeat primitives + v1.18.0 stabilization
-> pass ([docs/STABILIZATION-v1.18.0.md](STABILIZATION-v1.18.0.md)).
+> pass ([docs/STABILIZATION-v1.18.0.md](../STABILIZATION-v1.18.0.md)).
 >
 > **Deferred to v1.18.1:** AppState codegen
-> ([docs/TODO-appstate-codegen.md](TODO-appstate-codegen.md)) and
+> ([docs/TODO-appstate-codegen.md](../TODO-appstate-codegen.md)) and
 > multi-model routing infrastructure
-> ([docs/TODO-routing.md](TODO-routing.md)). Both are substantial
+> ([docs/TODO-routing.md](../../TODO-routing.md)). Both are substantial
 > enough to deserve dedicated release notes; bundling them with
 > heartbeat would produce a release nobody can review in one sitting.
 
@@ -155,13 +155,13 @@ tend to get stuck in tool-retry loops:
 
 **Heartbeat P0 alone: 2,458 passed, 2 skipped, 0 regressions** (+~120 vs v1.17.7).
 After the stabilization pass: **2,591 passed**, 2 skipped, 0 failing
-(+181 vs v1.17.7) — see [STABILIZATION-v1.18.0.md](STABILIZATION-v1.18.0.md)
+(+181 vs v1.17.7) — see [STABILIZATION-v1.18.0.md](../STABILIZATION-v1.18.0.md)
 for the per-phase breakdown.
 
 ## Architecture
 
 See the new §"Agent Heartbeat Primitives (v1.18.0)" in
-[docs/architecture.md](architecture.md) for:
+[docs/architecture.md](../../architecture.md) for:
 
 - The emission contract for `chat_with_tools` (which events fire
   where, and what payload invariants to assume).
@@ -212,5 +212,5 @@ cdcc0369  docs(v1.18.0): AppState listener contract + error routing conventions
 502e4c0d  refactor(v1.18.0): extract I/O helpers to dedicated utility modules
 ```
 
-See [STABILIZATION-v1.18.0.md](STABILIZATION-v1.18.0.md) for what
+See [STABILIZATION-v1.18.0.md](../STABILIZATION-v1.18.0.md) for what
 each commit changed and what the audit verified vs. left alone.

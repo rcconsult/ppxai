@@ -165,4 +165,4 @@ None specific to this release.
 
 ## Full Changelog
 
-See [CHANGELOG.md](../CHANGELOG.md) for the complete list of changes.
+See [CHANGELOG.md](../../../CHANGELOG.md) for the complete list of changes.

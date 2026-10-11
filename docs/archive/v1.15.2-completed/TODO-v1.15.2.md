@@ -52,7 +52,7 @@
 
 ### ~~2. NvChad-Style File Tree for ppxaide~~
 
-**Status:** ➡️ Moved to v1.15.3 (bugfix/v1.15.3) — see [TODO-v1.16.0.md](TODO-v1.16.0.md) for full spec
+**Status:** ➡️ Moved to v1.15.3 (bugfix/v1.15.3) — see [TODO-v1.16.0.md](../TODO-v1.16.0.md) for full spec
 
 ---
 

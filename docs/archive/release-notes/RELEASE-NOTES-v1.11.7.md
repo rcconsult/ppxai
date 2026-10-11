@@ -23,7 +23,7 @@ All legacy code has been removed. EngineClient is now the only client interface:
 
 - **`/tools help <tool-name>`** - Get detailed documentation for any tool
 - **Autocomplete for `/tools`** - Tab completion for subcommands and tool names
-- **Custom Tool Development Guide** - Comprehensive guide at [docs/custom-tool-development-guide.md](custom-tool-development-guide.md)
+- **Custom Tool Development Guide** - Comprehensive guide at [docs/custom-tool-development-guide.md](../../custom-tool-development-guide.md)
 
 ## Bug Fixes
 
@@ -78,4 +78,4 @@ This is a drop-in replacement for v1.11.6. No configuration changes required.
 ## Links
 
 - **GitHub Release:** https://github.com/rcconsult/ppxai/releases/tag/v1.11.7
-- **Full Changelog:** [CHANGELOG.md](../CHANGELOG.md)
+- **Full Changelog:** [CHANGELOG.md](../../../CHANGELOG.md)

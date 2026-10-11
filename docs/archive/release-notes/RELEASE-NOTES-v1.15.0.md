@@ -516,8 +516,8 @@ ppxai-server:     38MB
 
 ## References
 
-- **Phase 6 Progress:** [docs/PHASE-6-PROGRESS.md](archive/v1.15.1-completed/PHASE-6-PROGRESS.md)
-- **Phase 7 Plan:** [docs/PHASE-7-POLISH-RELEASE.md](archive/v1.15.1-completed/PHASE-7-POLISH-RELEASE.md)
-- **Architecture:** [docs/architecture.md](architecture.md)
-- **Changelog:** [CHANGELOG.md](../CHANGELOG.md)
-- **Validation Scripts:** [scripts/validate_tui_*.py](../scripts/)
+- **Phase 6 Progress:** [docs/PHASE-6-PROGRESS.md](../v1.15.1-completed/PHASE-6-PROGRESS.md)
+- **Phase 7 Plan:** [docs/PHASE-7-POLISH-RELEASE.md](../v1.15.1-completed/PHASE-7-POLISH-RELEASE.md)
+- **Architecture:** [docs/architecture.md](../../architecture.md)
+- **Changelog:** [CHANGELOG.md](../../../CHANGELOG.md)
+- **Validation Scripts:** [scripts/validate_tui_*.py](../../../scripts)

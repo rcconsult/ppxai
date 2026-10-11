@@ -518,4 +518,4 @@ Provide users with a tool call audit log showing:
 
 - [GPT-OSS Behavior Issues Analysis](./GPT-OSS-BEHAVIOR-ISSUES-2026-02-03.md)
 - [vLLM Harmony Parser Issue #23567](https://github.com/vllm-project/vllm/issues/23567)
-- [CLAUDE.md - vLLM/GPT-OSS Tool Calling Reference](../CLAUDE.md)
+- [CLAUDE.md - vLLM/GPT-OSS Tool Calling Reference](../../../CLAUDE.md)

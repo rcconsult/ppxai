@@ -64,7 +64,7 @@ A consent-based security system for shell commands executed by AI tools.
 - `ppxai-config.json` - Added default shell patterns
 - `ppxai-config.example.json` - Added shell configuration template
 
-**Documentation**: See [docs/shell-consent-guide.md](shell-consent-guide.md)
+**Documentation**: See [docs/shell-consent-guide.md](../../shell-consent-guide.md)
 
 ---
 
@@ -207,7 +207,7 @@ Added `tools.shell` configuration section to `ppxai-config.json`:
 ## Documentation
 
 ### New Documentation:
-- [docs/shell-consent-guide.md](shell-consent-guide.md) - Comprehensive shell consent guide (500+ lines)
+- [docs/shell-consent-guide.md](../../shell-consent-guide.md) - Comprehensive shell consent guide (500+ lines)
   - Command classification reference
   - Consent flow explanation
   - Configuration examples
@@ -218,10 +218,10 @@ Added `tools.shell` configuration section to `ppxai-config.json`:
   - FAQ section
 
 ### Updated Documentation:
-- [README.md](../README.md) - Added shell consent feature description
-- [SECURITY.md](../SECURITY.md) - Added shell command consent section
-- [CLAUDE.md](../CLAUDE.md) - Updated to v1.11.2 with feature list
-- [docs/README.md](README.md) - Added link to shell consent guide
+- [README.md](../../../README.md) - Added shell consent feature description
+- [SECURITY.md](../../../SECURITY.md) - Added shell command consent section
+- [CLAUDE.md](../../../CLAUDE.md) - Updated to v1.11.2 with feature list
+- [docs/README.md](../../README.md) - Added link to shell consent guide
 
 ---
 
@@ -260,7 +260,7 @@ uv pip install --upgrade ppxai
 **Configuration**:
 - Default shell patterns work for most use cases
 - Copy `ppxai-config.example.json` to customize patterns
-- See [docs/shell-consent-guide.md](shell-consent-guide.md) for examples
+- See [docs/shell-consent-guide.md](../../shell-consent-guide.md) for examples
 
 ---
 
@@ -317,7 +317,7 @@ Potential features:
 - Rate limiting for shell commands
 - Additional tool consent types
 
-See [ROADMAP.md](../ROADMAP.md) for details.
+See [ROADMAP.md](../../../ROADMAP.md) for details.
 
 ---
 
@@ -334,8 +334,8 @@ See [ROADMAP.md](../ROADMAP.md) for details.
 
 - **GitHub Release**: https://github.com/rcconsult/ppxai/releases/tag/v1.11.2
 - **PyPI**: https://pypi.org/project/ppxai/1.11.2/
-- **Documentation**: [docs/shell-consent-guide.md](shell-consent-guide.md)
-- **Security**: [SECURITY.md](../SECURITY.md)
+- **Documentation**: [docs/shell-consent-guide.md](../../shell-consent-guide.md)
+- **Security**: [SECURITY.md](../../../SECURITY.md)
 
 ---
 

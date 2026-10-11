@@ -225,9 +225,9 @@ While gemini-3-flash-preview has lower overall score (51.6%), its code editing c
 
 ## References
 
-- [GEMINI-MODEL-REGRESSION.md](GEMINI-MODEL-REGRESSION.md) - Initial regression analysis
-- [GEMINI-SDK-REGRESSION-ANALYSIS.md](GEMINI-SDK-REGRESSION-ANALYSIS.md) - SDK investigation
-- [GEMINI-SDK-ROLLBACK-STATUS.md](GEMINI-SDK-ROLLBACK-STATUS.md) - Rollback details
+- [GEMINI-MODEL-REGRESSION.md](../v1.15.3/GEMINI-MODEL-REGRESSION.md) - Initial regression analysis
+- [GEMINI-SDK-REGRESSION-ANALYSIS.md](../v1.15.3/GEMINI-SDK-REGRESSION-ANALYSIS.md) - SDK investigation
+- [GEMINI-SDK-ROLLBACK-STATUS.md](../v1.15.3/GEMINI-SDK-ROLLBACK-STATUS.md) - Rollback details
 - [GEMINI-TUNING-PLAN.md](GEMINI-TUNING-PLAN.md) - Original testing plan
 
 ---

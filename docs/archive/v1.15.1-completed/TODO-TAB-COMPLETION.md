@@ -226,7 +226,7 @@ If implementation fails or causes issues:
 
 ## References
 
-- Implementation plan: [docs/TAB-COMPLETION-IMPLEMENTATION-PLAN.md](TAB-COMPLETION-IMPLEMENTATION-PLAN.md)
-- Current InputBox: [ppxai/tui/widgets/input_box.py](../ppxai/tui/widgets/input_box.py)
-- Completer logic: [ppxai/tui/completer.py](../ppxai/tui/completer.py)
+- Implementation plan: [docs/TAB-COMPLETION-IMPLEMENTATION-PLAN.md](../v1.15.2-completed/TAB-COMPLETION-IMPLEMENTATION-PLAN.md)
+- Current InputBox: [ppxai/tui/widgets/input_box.py](../../../ppxai/tui/widgets/input_box.py)
+- Completer logic: [ppxai/tui/completer.py](../../../ppxai/tui/completer.py)
 - Textual Key events: https://textual.textualize.io/guide/events/#key

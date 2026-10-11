@@ -245,13 +245,27 @@ MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)\s]+?)(?:\s+\"[^\"]*\")?\)")
 PLACEHOLDER = re.compile(r"[<{]|path/to/|TARGET|DESCRIPTIVE-NAME")
 
 
+# docs/archive/ is checked too since 2026-10-11 (debt Item 85: 357 links had
+# gone stale as files moved into archive subfolders). These are the only
+# misses left, and none is a real link: illustrative examples and code that
+# merely looks like a link. Keyed (file, target); never add a real dead link.
+ARCHIVE_LINK_EXEMPT = {
+    ("docs/archive/TODO-v1.18.2-inline-markdown-images-tui.md", "docs/foo.png"),
+    ("docs/archive/TODO-v1.18.2-inline-markdown-images-tui.md", "file.png"),
+    ("docs/archive/TODO-v1.18.2-inline-markdown-images-tui.md", "relative.png"),
+    ("docs/archive/release-notes/RELEASE-NOTES-v1.16.1.md", "url/f(v2"),
+    ("docs/archive/v1.15.2-completed/GPT-OSS-MITIGATION-PLAN.md",
+     "[^\\s`\\\"]+\\.(?:md|py|txt|json|yaml"),
+}
+
+
 class TestDocLinksResolve:
     """A link to an archived-away file is a dead end for the reader."""
 
     def test_relative_markdown_links_exist(self):
         broken = []
         for rel, path, text in _active_docs((".md",)):
-            if "docs/archive/" in rel or ".venv" in rel:
+            if ".venv" in rel:
                 continue
             for lineno, line in enumerate(text.splitlines(), 1):
                 for match in MD_LINK.finditer(line):
@@ -272,7 +286,7 @@ class TestDocLinksResolve:
                     # This suite cannot speak to their existence.
                     if not resolved.is_relative_to(PROJECT_ROOT):
                         continue
-                    if not resolved.exists():
+                    if not resolved.exists() and (rel, target) not in ARCHIVE_LINK_EXEMPT:
                         broken.append(f"{rel}:{lineno} -> {target}")
         assert not broken, (
             "Broken relative links in documentation:\n  " + "\n  ".join(broken)

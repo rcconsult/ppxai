@@ -3,7 +3,7 @@
 **Status:** ✅ Complete
 **Created:** 2026-01-17
 **Completed:** 2026-01-18
-**Related:** [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) Item #2 (Monolithic Files)
+**Related:** [TECHNICAL_DEBT.md](../v1.15.1-completed/TECHNICAL_DEBT.md) Item #2 (Monolithic Files)
 
 ---
 

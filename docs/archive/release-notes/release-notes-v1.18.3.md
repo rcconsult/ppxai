@@ -99,7 +99,7 @@ restructure (CLAUDE.md slim + two ADRs).
    em-dash separator: `args = "<original_args> — <reply>"`. TUI ignores
    the kind (open-enum invariant); the notification text serves as the
    user-visible nudge in that fallback path. +8 tests. Closes
-   [docs/archive/TODO-v1.18.2-prompt-text-kind.md](archive/TODO-v1.18.2-prompt-text-kind.md).
+   [docs/archive/TODO-v1.18.2-prompt-text-kind.md](../TODO-v1.18.2-prompt-text-kind.md).
 
 8. **v1 API gateway tier** (`38c2743d`, `9953b1df`). New external-facing
    surface with semver-style stability commitments, paired with opt-in
@@ -125,7 +125,7 @@ restructure (CLAUDE.md slim + two ADRs).
    Token read per-request so operators can rotate without restart.
    +19 tests.
 
-   See [docs/api-gateway.md](api-gateway.md) for the policy, threat
+   See [docs/api-gateway.md](../../api-gateway.md) for the policy, threat
    model, deployment-shape table, and future direction (multi-token
    `/v1/tokens` registry, OIDC/JWT validation under `/v1/auth/...`).
 
@@ -138,7 +138,7 @@ restructure (CLAUDE.md slim + two ADRs).
    (c) `tests/test_release_dry_run.py` (3 tests) pins
    `merge_to_master_if_needed(..., dry_run=True)` invokes zero
    subprocess calls; sanity test confirms dry_run=False still calls
-   git. Closes [docs/archive/TODO-release-tooling.md](archive/TODO-release-tooling.md).
+   git. Closes [docs/archive/TODO-release-tooling.md](../TODO-release-tooling.md).
 
 10. **Documentation restructure: CLAUDE.md slim + two ADRs**
     (`8a899051`, `0ed03d26`, `e9b8733d`). CLAUDE.md was 59 KB,
@@ -151,10 +151,10 @@ restructure (CLAUDE.md slim + two ADRs).
     TUI internals + terminal images), `docs/vllm-notes.md` (Hermes
     vs Harmony cheat sheet). CLAUDE.md becomes a slim navigable map
     (16.9 KB) with one-line links. Two ADRs filed:
-    [`0003-agent-platform-architecture.md`](decisions/0003-agent-platform-architecture.md)
+    [`0003-agent-platform-architecture.md`](../../decisions/0003-agent-platform-architecture.md)
     captures the design space for sub-agents and autonomous agents
     (status: Proposed, pending Stage 1 instrumentation).
-    [`0004-llm-gateway-features.md`](decisions/0004-llm-gateway-features.md)
+    [`0004-llm-gateway-features.md`](../../decisions/0004-llm-gateway-features.md)
     is the retroactive rationale for the v1 gateway shipped this
     release.
 
@@ -186,7 +186,7 @@ The user-visible changes span several paths:
   shell tool is async and registers itself for SIGTERM-on-interrupt.
 - **New external-facing surface: `POST /v1/oneshot`.** Stateless
   single-turn LLM call for classifiers, routers, and structured-
-  extraction pipelines. See [docs/api-gateway.md](api-gateway.md)
+  extraction pipelines. See [docs/api-gateway.md](../../api-gateway.md)
   for the full contract and stability commitments.
 - **Optional bearer-token auth.** Set `PPXAI_API_TOKEN` to require
   `Authorization: Bearer <token>` on every non-OPTIONS request.
@@ -220,7 +220,7 @@ The 480B's 19% is **NOT** a quality measurement — only 9 tool calls
 in 75s vs 74-89 calls in 197-1836s for healthy peers, with multiple
 test results showing `{"message":"Operation not allowed"}` from NIM's
 free-tier 403 quota-block. See `__comment_benchmark` in both repo
-configs and Item 17 in [DEBT-INVENTORY-v1.18.3.md](archive/DEBT-INVENTORY-v1.18.3.md)
+configs and Item 17 in [DEBT-INVENTORY-v1.18.3.md](../DEBT-INVENTORY-v1.18.3.md)
 for the paid-tier rerun plan.
 
 ### ModelProfile entries for namespaced NIM IDs (Tier 1 #3)
@@ -564,7 +564,7 @@ Renderers:
 First user: `validate_agent_task` rejection. `/agent fix` now emits
 `NotificationResult(WARNING)` + a `prompt_text` side-effect →
 web/VSCode auto-resume the elaboration without retyping the slash
-command. Closes [TODO-v1.18.2-prompt-text-kind.md](archive/TODO-v1.18.2-prompt-text-kind.md).
+command. Closes [TODO-v1.18.2-prompt-text-kind.md](../TODO-v1.18.2-prompt-text-kind.md).
 
 ### v1 API gateway tier (theme 8)
 
@@ -632,13 +632,13 @@ What v1 auth is NOT (deliberately): multi-token per-agent identity,
 token rotation/expiry, scoped tokens, rate limiting, OIDC/JWT
 integration. Single shared token is the foot-in-the-door for v1.
 The future direction `/v1/tokens` (CRUD on API tokens, GitHub-PAT
-style) is documented in [docs/api-gateway.md](api-gateway.md)
+style) is documented in [docs/api-gateway.md](../../api-gateway.md)
 "Future directions"; OIDC/JWT lands as `/v1/auth/...` if that
 direction is taken.
 
-See [`docs/api-gateway.md`](api-gateway.md) for the full policy
+See [`docs/api-gateway.md`](../../api-gateway.md) for the full policy
 (stability tiers, threat model, deployment shapes, future
-directions) and [ADR 0004](decisions/0004-llm-gateway-features.md)
+directions) and [ADR 0004](../../decisions/0004-llm-gateway-features.md)
 for the rationale.
 
 ### Release tooling closure (theme 9)
@@ -690,7 +690,7 @@ the graphify section.
 **Two ADRs filed** capturing strategic decisions surfaced during the
 branch:
 
-- [`ADR 0003 — Agent platform architecture`](decisions/0003-agent-platform-architecture.md)
+- [`ADR 0003 — Agent platform architecture`](../../decisions/0003-agent-platform-architecture.md)
   (`0ed03d26`). Status: Proposed. Captures the design space for
   sub-agents and autonomous (long-running) agents. Three-stage path:
   Stage 1 instruments the outer continuation-loop firing rate over
@@ -702,7 +702,7 @@ branch:
   data), registry storage (filesystem first), sub-agent execution
   model (asyncio.Task to start), engine lifecycle per sub-agent
   (per-sub-agent `EngineClient` if construction is cheap).
-- [`ADR 0004 — LLM gateway features`](decisions/0004-llm-gateway-features.md)
+- [`ADR 0004 — LLM gateway features`](../../decisions/0004-llm-gateway-features.md)
   (`e9b8733d`). Status: Accepted. Retroactive rationale for the v1
   gateway shipped this release. Documents three sub-decisions
   (path-versioned `/v1/...` prefix, stateless `oneshot` bypassing
@@ -713,7 +713,7 @@ branch:
   streaming/tool-calls in oneshot).
 
 The agent-loop unification TODO
-([`docs/archive/TODO-v1.18.2-agent-loop-unification.md`](archive/TODO-v1.18.2-agent-loop-unification.md))
+([`docs/archive/TODO-v1.18.2-agent-loop-unification.md`](../TODO-v1.18.2-agent-loop-unification.md))
 was re-scoped in `6f1201ef` based on actual code state (premise was
 partly outdated: AGENT_BEAT events already fire from
 `engine/chat.py`; web doesn't run a client-side loop; only VSCode's
@@ -793,7 +793,7 @@ as compliance.
 ## Resume context
 
 If picking this up on a different machine, see
-[DEBT-INVENTORY-v1.18.3.md](archive/DEBT-INVENTORY-v1.18.3.md) for the open
+[DEBT-INVENTORY-v1.18.3.md](../DEBT-INVENTORY-v1.18.3.md) for the open
 follow-ups. The branch is `feature/v1.18.3`. Commits over master, in
 chronological order:
 

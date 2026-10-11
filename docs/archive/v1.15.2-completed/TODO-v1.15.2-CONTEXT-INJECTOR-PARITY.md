@@ -24,28 +24,28 @@ The engine fully supports 5 context injectors since v1.14.2, but UIs inconsisten
 ## Current State Analysis
 
 ### Engine (✅ Complete)
-- **File:** [ppxai/engine/context.py](../ppxai/engine/context.py)
+- **File:** [ppxai/engine/context.py](../../../ppxai/engine/context.py)
 - **Status:** All 5 injectors fully implemented with hash deduplication, size limits, truncation
 
 ### Rich TUI (⚠️ 1/5 Complete)
-- **File:** [ppxai/rich/main.py](../ppxai/rich/main.py:167-331)
+- **File:** [ppxai/rich/main.py](../../../ppxai/rich/main.py#L167-L331)
 - **Has:** `@file` only in autocomplete
 - **Missing:** `@git`, `@tree`, `@clipboard`, `@url` autocomplete
-- **Hint text:** [Line 691](../ppxai/rich/main.py:691) - Only mentions `@file`
-- **Comment:** [Line 738](../ppxai/rich/main.py:738) - Outdated, only mentions 3 injectors
+- **Hint text:** [Line 691](../../../ppxai/rich/main.py#L691) - Only mentions `@file`
+- **Comment:** [Line 738](../../../ppxai/rich/main.py#L738) - Outdated, only mentions 3 injectors
 
 ### Textual TUI (⚠️ 3/5 Complete)
-- **File:** [ppxai/tui/completer.py](../ppxai/tui/completer.py:26-30)
+- **File:** [ppxai/tui/completer.py](../../../ppxai/tui/completer.py#L26-L30)
 - **Has:** `@file`, `@clipboard`, `@url` in `CONTEXT_PROVIDERS`
 - **Missing:** `@git`, `@tree` autocomplete
 
 ### VSCode Extension (⚠️ 3/5 Complete)
-- **File:** [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts)
+- **File:** [vscode-extension/src/chatPanel.ts](../../../vscode-extension/src/chatPanel.ts)
 - **Has:** `@file`, `@git`, `@tree` in autocomplete (lines 348-351) and help (lines 1834-1836)
 - **Missing:** `@clipboard`, `@url` in autocomplete and help
 
 ### Web App (⚠️ 3/5 Complete)
-- **File:** [ppxai/web/app.js](../ppxai/web/app.js)
+- **File:** [ppxai/web/app.js](../../../ppxai/web/app.js)
 - **Has:** `@file`, `@git`, `@tree` in autocomplete (lines 2198-2199, 2210-2211) and help (lines 1141-1143)
 - **Missing:** `@clipboard`, `@url` in autocomplete and help
 
@@ -53,7 +53,7 @@ The engine fully supports 5 context injectors since v1.14.2, but UIs inconsisten
 
 ### 1. Rich TUI - Add All Special Providers (⚠️ Priority 1)
 
-**File:** [ppxai/rich/main.py](../ppxai/rich/main.py)
+**File:** [ppxai/rich/main.py](../../../ppxai/rich/main.py)
 
 #### 1.1 Update Autocomplete (Lines 314-331)
 Replace file-only autocomplete with special providers + files:
@@ -123,7 +123,7 @@ console.print("[dim]Tab: autocomplete • @file/@git/@tree/@clipboard/@url: inje
 
 ### 2. Textual TUI - Add Git/Tree Providers (⚠️ Priority 2)
 
-**File:** [ppxai/tui/completer.py](../ppxai/tui/completer.py)
+**File:** [ppxai/tui/completer.py](../../../ppxai/tui/completer.py)
 
 #### 2.1 Update CONTEXT_PROVIDERS (Lines 26-30)
 ```python
@@ -148,7 +148,7 @@ CONTEXT_PROVIDERS = [
 
 ### 3. VSCode Extension - Add Clipboard/URL (⚠️ Priority 3)
 
-**File:** [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts)
+**File:** [vscode-extension/src/chatPanel.ts](../../../vscode-extension/src/chatPanel.ts)
 
 #### 3.1 Update File Picker Autocomplete (Lines 348-351)
 ```typescript
@@ -196,7 +196,7 @@ const specialContextProviders = ['tree', 'git', 'clipboard', 'url'];
 
 ### 4. Web App - Add Clipboard/URL (⚠️ Priority 4)
 
-**File:** [ppxai/web/app.js](../ppxai/web/app.js)
+**File:** [ppxai/web/app.js](../../../ppxai/web/app.js)
 
 #### 4.1 Update Autocomplete Fallback (Lines 2198-2199)
 ```javascript
@@ -234,8 +234,8 @@ helpText += '- `@url` - Fetch URL contents (e.g., @https://example.com)\n';
 ### 5. Update Shared Command Definitions (Optional)
 
 **Files:**
-- [vscode-extension/src/shared/commands.ts](../vscode-extension/src/shared/commands.ts:164,169,184)
-- [ppxai/web/shared/commands.js](../ppxai/web/shared/commands.js:146,151,166)
+- vscode-extension/src/shared/commands.ts
+- ppxai/web/shared/commands.js
 
 Update usage strings that mention `@file` to include other providers:
 
@@ -301,18 +301,18 @@ For **each client** (Rich TUI, Textual TUI, VSCode, Web):
 ## Documentation Updates
 
 ### Files to Update
-1. [docs/context-injection.md](../docs/context-injection.md)
+1. [docs/context-injection.md](../../context-injection.md)
    - Already documents all 5 providers correctly ✅
    - No changes needed
 
-2. [README.md](../README.md)
+2. [README.md](../../../README.md)
    - Check if context providers are mentioned
    - Update examples if needed
 
-3. [CLAUDE.md](../CLAUDE.md)
+3. [CLAUDE.md](../../../CLAUDE.md)
    - Update v1.14.2 highlights to emphasize all clients now expose `@clipboard/@url`
 
-4. [CHANGELOG.md](../CHANGELOG.md)
+4. [CHANGELOG.md](../../../CHANGELOG.md)
    - Add v1.15.2 entry:
      ```markdown
      ## [1.15.2] - YYYY-MM-DD
@@ -379,10 +379,10 @@ Backend already handles URL pattern detection via regex: `r'@(https?://[^\s<>\"\
 
 ## Related Documents
 
-- [docs/context-injection.md](../docs/context-injection.md) - User-facing guide (already complete)
-- [docs/bootstrap-context-guide.md](../docs/bootstrap-context-guide.md) - Bootstrap context (different feature)
-- [ppxai/engine/context.py](../ppxai/engine/context.py) - Implementation reference
-- [CHANGELOG.md](../CHANGELOG.md) - Release notes
+- [docs/context-injection.md](../../context-injection.md) - User-facing guide (already complete)
+- [docs/bootstrap-context-guide.md](../../bootstrap-context-guide.md) - Bootstrap context (different feature)
+- [ppxai/engine/context.py](../../../ppxai/engine/context.py) - Implementation reference
+- [CHANGELOG.md](../../../CHANGELOG.md) - Release notes
 
 ---
 

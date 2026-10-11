@@ -22,7 +22,7 @@ Major release with **one-line installer**, server binary fix, premium web search
 - **Platform Detection** - Automatically detects OS (Linux/macOS/Windows) and architecture (ARM64/Intel)
 - **Options** - `--version`, `--server-only`, `--tui-only`, `--with-extension`, `--install-dir`
 - **Post-Install Guidance** - PATH setup instructions and API key configuration
-- **Documentation** - Comprehensive [installation.md](docs/installation.md) guide
+- **Documentation** - Comprehensive [installation.md](../../installation.md) guide
 
 ### Premium Web Search Tool
 - **Custom Provider Support** - vLLM, Ollama, and other custom providers can now use premium web search

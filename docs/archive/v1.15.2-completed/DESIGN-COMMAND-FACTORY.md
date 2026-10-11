@@ -4,7 +4,7 @@
 **Created:** 2026-01-16
 **Completed:** 2026-01-16
 **Related:**
-- [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) Item #2 (Monolithic Files)
+- [TECHNICAL_DEBT.md](../v1.15.1-completed/TECHNICAL_DEBT.md) Item #2 (Monolithic Files)
 - [DESIGN-TOOL-FACTORY.md](DESIGN-TOOL-FACTORY.md) (Aligned pattern)
 
 ---
@@ -471,7 +471,7 @@ commands/__init__.py                         (re-exports)
 2. Update `ppxai/__init__.py` lazy loading path
 
 ### Phase 6: Documentation
-1. Finalize [custom-command-development-guide.md](custom-command-development-guide.md)
+1. Finalize [custom-command-development-guide.md](../../custom-command-development-guide.md)
 2. Add examples to `~/.ppxai/commands/examples/`
 3. Update README with custom command section
 

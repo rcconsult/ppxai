@@ -16,11 +16,11 @@
 > dict.` v1.18.6 reorganizes the data: image_url blocks now carry
 > ONLY the spec keys (`{type, image_url}`); engine-internal metadata
 > lives on `Message.attachments` as typed
-> [MarshallableArtifact](../ppxai/engine/types.py) refs (`ImageAttachmentRef`,
+> [MarshallableArtifact](../../../ppxai/engine/types.py) refs (`ImageAttachmentRef`,
 > `PdfAttachmentRef`, `OfficeAttachmentRef`, `TextAttachmentRef`).
 > Session JSON gains `schema_version: 2` with a per-message
 > `attachments` array round-tripped via the new
-> [ArtifactRegistry](../ppxai/engine/artifact_registry.py)
+> [ArtifactRegistry](../../../ppxai/engine/artifact_registry.py)
 > kind-discriminated dispatch.
 >
 > **Theme 2 — ArtifactRegistry + ArtifactProjector plug-n-play
@@ -69,12 +69,12 @@
 ## Summary
 
 v1.18.6 ships the architectural foundation that v1.19.x agent platform
-work (per [ADR 0003](decisions/0003-agent-platform-architecture.md))
+work (per [ADR 0003](../../decisions/0003-agent-platform-architecture.md))
 inherits or extends. Every infrastructure primitive ADR 0003 needs —
 artifact identity, persistence, cross-process readers, sub-agent
 message construction — derives from what this release establishes.
 Strategic rationale captured in
-[ADR 0006 strategic-rationale section](decisions/0006-content-block-schema-separation.md#strategic-rationale).
+[ADR 0006 strategic-rationale section](../../decisions/0006-content-block-schema-separation.md#strategic-rationale).
 
 The breaking change is contained: only multimodal v1 sessions lose
 their in-conversation image rendering, and the original bytes survive
@@ -437,7 +437,7 @@ platform on top:
 - Sub-agents producing typed `MarshallableArtifact` outputs (plan
   documents, tool artifacts, image renderings)
 - `events.jsonl` per agent run with the same `schema_version`
-  discipline (per [ADR 0005 Inspection Triplet](decisions/0005-inspection-triplet.md))
+  discipline (per [ADR 0005 Inspection Triplet](../../decisions/0005-inspection-triplet.md))
 - `WireBlockProjector` for sub-agent → root-agent message construction
 - Cross-process artifact reading by ppxai-sre (per [ADR 0004 v1
   API gateway](decisions/0004-v1-api-gateway.md))
@@ -445,7 +445,7 @@ platform on top:
 All of these inherit the v1.18.6 framework primitives — no new
 dispatch system, no new schema-version discipline, no new
 registration model. See
-[ADR 0006 strategic-rationale](decisions/0006-content-block-schema-separation.md#strategic-rationale)
+[ADR 0006 strategic-rationale](../../decisions/0006-content-block-schema-separation.md#strategic-rationale)
 for the full chain.
 
 ## Acknowledgments

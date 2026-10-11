@@ -345,7 +345,7 @@ pip install ppxai
 
 - [TUI Side Panel Refactor](tui-side-panel-refactor.md) - Overall design spec
 - [Release Plan v1.15.x](../RELEASE-PLAN-v1.15.x.md) - Development roadmap
-- [Terminal Capabilities](../../ppxai/tui/terminal.py) - Detection implementation
+- [Terminal Capabilities](../../../ppxai/tui/terminal.py) - Detection implementation
 
 ## Changelog
 

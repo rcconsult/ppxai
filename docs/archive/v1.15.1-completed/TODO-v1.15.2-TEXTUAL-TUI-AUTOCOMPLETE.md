@@ -11,9 +11,9 @@
 The Textual TUI has **fully implemented autocomplete logic** but it's **completely disconnected** from the UI and non-functional.
 
 **Evidence:**
-- [ppxai/tui/completer.py](../ppxai/tui/completer.py) - Complete `TextualCompleter` class (409 lines)
-- [ppxai/tui/widgets/input_box.py:27](../ppxai/tui/widgets/input_box.py#L27) - Completer marked as "unused"
-- [ppxai/tui/widgets/completion_popup.py.deprecated](../ppxai/tui/widgets/completion_popup.py.deprecated) - UI widget deprecated
+- [ppxai/tui/completer.py](../../../ppxai/tui/completer.py) - Complete `TextualCompleter` class (409 lines)
+- [ppxai/tui/widgets/input_box.py:27](../../../ppxai/tui/widgets/input_box.py#L27) - Completer marked as "unused"
+- ppxai/tui/widgets/completion_popup.py.deprecated - UI widget deprecated
 
 ## What's Implemented But Not Working
 
@@ -43,7 +43,7 @@ The `TextualCompleter` class has the **most comprehensive** autocomplete logic o
 
 ### Evidence in Code
 
-**[ppxai/tui/widgets/input_box.py](../ppxai/tui/widgets/input_box.py)**
+**[ppxai/tui/widgets/input_box.py](../../../ppxai/tui/widgets/input_box.py)**
 ```python
 def __init__(self, id: str = None, completer=None):
     super().__init__(id=id)
@@ -60,7 +60,7 @@ def set_completer(self, completer) -> None:
     self._completer = completer
 ```
 
-**[ppxai/tui/app.py:222-227](../ppxai/tui/app.py#L222-L227)**
+**[ppxai/tui/app.py:222-227](../../../ppxai/tui/app.py#L222-L227)**
 ```python
 # Initialize autocomplete completer (Phase 1.1)
 completer = TextualCompleter(
@@ -189,7 +189,7 @@ git mv ppxai/tui/widgets/completion_popup.py.deprecated \
        ppxai/tui/widgets/completion_popup.py
 ```
 
-**2.2 Update InputBox** ([input_box.py](../ppxai/tui/widgets/input_box.py)):
+**2.2 Update InputBox** ([input_box.py](../../../ppxai/tui/widgets/input_box.py)):
 
 ```python
 from ppxai.tui.widgets.completion_popup import CompletionPopup
@@ -325,8 +325,8 @@ Based on testing, fix:
 ### Step 5: Documentation (30 min)
 
 Update:
-- [AUTOCOMPLETE-SUPPORT-ANALYSIS.md](AUTOCOMPLETE-SUPPORT-ANALYSIS.md) - Change Textual TUI from DISABLED to working
-- [CHANGELOG.md](../CHANGELOG.md) - Add v1.15.2 entry
+- [AUTOCOMPLETE-SUPPORT-ANALYSIS.md](../v1.15.2-completed/AUTOCOMPLETE-SUPPORT-ANALYSIS.md) - Change Textual TUI from DISABLED to working
+- [CHANGELOG.md](../../../CHANGELOG.md) - Add v1.15.2 entry
 - User-facing help text if needed
 
 ## Success Criteria
@@ -367,8 +367,8 @@ Update:
 
 ## Related Issues
 
-- [TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md](TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md) - Context provider autocomplete
-- [AUTOCOMPLETE-SUPPORT-ANALYSIS.md](AUTOCOMPLETE-SUPPORT-ANALYSIS.md) - Full autocomplete analysis
+- [TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md](../v1.15.2-completed/TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md) - Context provider autocomplete
+- [AUTOCOMPLETE-SUPPORT-ANALYSIS.md](../v1.15.2-completed/AUTOCOMPLETE-SUPPORT-ANALYSIS.md) - Full autocomplete analysis
 
 ## Notes
 

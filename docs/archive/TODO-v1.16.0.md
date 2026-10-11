@@ -1,8 +1,8 @@
 # TODO: v1.16.0 — Profile-Driven Tool Loop
 
 **Branch:** feature/v1.16.0
-**Previous:** v1.15.6 (released, tagged) — [RELEASE-PLAN-v1.15.6-v1.16.0.md](archive/RELEASE-PLAN-v1.15.6-v1.16.0.md)
-**Debug Sessions:** [ARCHIVE-v1.15.6-debug-sessions.md](archive/ARCHIVE-v1.15.6-debug-sessions.md)
+**Previous:** v1.15.6 (released, tagged) — [RELEASE-PLAN-v1.15.6-v1.16.0.md](RELEASE-PLAN-v1.15.6-v1.16.0.md)
+**Debug Sessions:** [ARCHIVE-v1.15.6-debug-sessions.md](ARCHIVE-v1.15.6-debug-sessions.md)
 
 ---
 

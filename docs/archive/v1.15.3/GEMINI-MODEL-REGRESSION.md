@@ -117,7 +117,7 @@ The model is now **less likely to use specialized tools** like apply_patch, pref
 
 ## Next Steps
 
-Per [GEMINI-TUNING-PLAN.md](GEMINI-TUNING-PLAN.md):
+Per [GEMINI-TUNING-PLAN.md](../benchmarks/GEMINI-TUNING-PLAN.md):
 
 1. ✅ Document model regression (this file)
 2. ⏳ Run gemini-2.5-pro benchmark
@@ -131,7 +131,7 @@ Per [GEMINI-TUNING-PLAN.md](GEMINI-TUNING-PLAN.md):
 
 - [GEMINI-SDK-REGRESSION-ANALYSIS.md](GEMINI-SDK-REGRESSION-ANALYSIS.md) - Initial SDK investigation
 - [GEMINI-SDK-ROLLBACK-STATUS.md](GEMINI-SDK-ROLLBACK-STATUS.md) - Rollback details
-- [GEMINI-TUNING-PLAN.md](GEMINI-TUNING-PLAN.md) - Model testing plan
+- [GEMINI-TUNING-PLAN.md](../benchmarks/GEMINI-TUNING-PLAN.md) - Model testing plan
 
 ---
 

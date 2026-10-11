@@ -6,9 +6,9 @@
 **Class:** bugfix / post-release regression follow-up. No new features.
 **Source:** post-v1.18.7 code review. Two waves:
 - **Wave 1 — `/files/*` cross-client parity** (original branch charter):
-  debt items [25](debt-inventory.md), 26, 27, 28.
+  debt items [25](../debt-inventory.md), 26, 27, 28.
 - **Wave 2 — broader code-review findings** (scope extension, owner-directed):
-  debt items [29](debt-inventory.md), 30, 31, 32. Architectural-leaning
+  debt items [29](../debt-inventory.md), 30, 31, 32. Architectural-leaning
   findings scoped to their **bugfix-grade minimum** so the branch stays
   bugfix-class; the maximal refactors are split out / deferred per item.
 
@@ -53,7 +53,7 @@ code-review phases (B, C, D, E) is under "Extended-scope work detail".
 
 A and B land first. C, E, F are mutually independent and can land in any
 order after B. **D's review gate is done** — outcome in
-[ADR 0007](decisions/0007-completion-first-class-service.md): land the
+[ADR 0007](../decisions/0007-completion-first-class-service.md): land the
 accessor seed on this branch, defer the first-class `CompletionService` +
 AppState roster to v1.19.x.
 Item 6 / debt 22 (`PpxaiApp` decomposition) is **not triggered**: Phase F
@@ -94,7 +94,7 @@ edits a few `app.js` methods in place; no decomposition required.
 ### Phase D — Item 29: decouple `completion` from `commands` internals (seed; review gate done → ADR 0007)
 - **Gate outcome (2026-06-14):** completion reframed as a capability over
   `(command-space × live-context)` — see
-  [ADR 0007](decisions/0007-completion-first-class-service.md). Land the
+  [ADR 0007](../decisions/0007-completion-first-class-service.md). Land the
   **accessor seed (option a)** here; the first-class `CompletionService` +
   AppState roster are v1.19.x.
 - **Seed (this branch):** added `CommandFactory.iter_completion_specs()` +

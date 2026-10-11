@@ -167,4 +167,4 @@ The v1.14.x series focuses on **Session Bootstrap & Context** - reproducible sta
 - **`/context` extensions** - Show, reload, and edit bootstrap context files
 - **Enhanced context providers** - `@url` for web content, `@clipboard` support, conditional sections
 
-See [ROADMAP.md](../ROADMAP.md) for detailed v1.14.x planning.
+See [ROADMAP.md](../../../ROADMAP.md) for detailed v1.14.x planning.

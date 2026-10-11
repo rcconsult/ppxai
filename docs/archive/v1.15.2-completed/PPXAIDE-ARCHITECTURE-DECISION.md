@@ -330,7 +330,7 @@ print(response.json())  # {'message': 'Hello from thread!'}
 - [PPXAIDE-REARCHITECTURE-OPTIONS.md](PPXAIDE-REARCHITECTURE-OPTIONS.md) - All options considered
 - [PPXAIDE-EMBEDDED-SERVER-THREAD.md](PPXAIDE-EMBEDDED-SERVER-THREAD.md) - Detailed embedded server design
 - [SERVER-REFACTORING-PLAN.md](SERVER-REFACTORING-PLAN.md) - Server refactoring details
-- [PPXAIDE-TECHNICAL-DEBT-2026-01-27.md](PPXAIDE-TECHNICAL-DEBT-2026-01-27.md) - Current issues
+- [PPXAIDE-TECHNICAL-DEBT-2026-01-27.md](../v1.15.1-completed/PPXAIDE-TECHNICAL-DEBT-2026-01-27.md) - Current issues
 
 ---
 
