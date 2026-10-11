@@ -1285,10 +1285,11 @@ Two byte-identical guards, 68 lines apart, in different functions. A
 <p>The first three happened on 2026-08-31, the fourth on 2026-09-01. All four
 were produced by people deliberately being careful. None raised an error.</p>
 <h3 id="1-the-anchor-matched-twice">1. The anchor matched twice<a class="headerlink" href="#1-the-anchor-matched-twice" title="Permanent link">&para;</a></h3>
-<p><code>if not probe or not probe.get("reachable"):</code> appears at
-<code>ppxai/commands/doctor.py:429</code> (<code>detect_context_limit_drift</code>) and <code>:497</code>
-(<code>detect_uncatalogued_models</code>). Mutating "the guard" patched line 429 while
-the tests exercised the function at 497, so the suite passed — and that reads
+<p><code>if not probe or not probe.get("reachable"):</code> appears twice in
+<code>ppxai/commands/doctor.py</code>: once in <code>detect_context_limit_drift</code> and once in
+<code>detect_uncatalogued_models</code> (<code>grep -n 'not probe or not probe.get' ppxai/commands/doctor.py</code>
+finds both). Mutating "the guard" patched the anchor inside one function while
+the tests exercised the other, so the suite passed — and that reads
 exactly like <em>this guard has no fence under it</em>.</p>
 <p>Two sessions ran the same mutation independently and both got the same wrong
 reading. It surfaced only when one of them could not explain <strong>why</strong> the

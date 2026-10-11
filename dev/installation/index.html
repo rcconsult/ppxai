@@ -3556,14 +3556,14 @@
 <h3 id="2-set-up-api-key">2. Set Up API Key<a class="headerlink" href="#2-set-up-api-key" title="Permanent link">&para;</a></h3>
 <h4 id="linux-macos_2">Linux / macOS<a class="headerlink" href="#linux-macos_2" title="Permanent link">&para;</a></h4>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.ppxai
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'PERPLEXITY_API_KEY=your-key-here'</span><span class="w"> </span>&gt;<span class="w"> </span>~/.ppxai/.env
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'GEMINI_API_KEY=your-key-here'</span><span class="w"> </span>&gt;<span class="w"> </span>~/.ppxai/.env
 </span></code></pre></div>
 <h4 id="windows_2">Windows<a class="headerlink" href="#windows_2" title="Permanent link">&para;</a></h4>
 <div class="language-powershell highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c"># The installer creates a template .env file</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c"># Edit it with your API keys:</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">notepad</span> <span class="nv">$env:USERPROFILE</span><span class="p">\.</span><span class="n">ppxai</span><span class="p">\.</span><span class="n">env</span>
 </span></code></pre></div>
-<p>Get your API key at: https://www.perplexity.ai/settings/api</p>
+<p>Get your API key at: https://aistudio.google.com/apikey</p>
 <h3 id="3-verify-installation">3. Verify Installation<a class="headerlink" href="#3-verify-installation" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Check Rich TUI</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>ppxai<span class="w"> </span>--version
@@ -3750,7 +3750,7 @@
 <h2 id="using-the-vscode-extension">Using the VSCode Extension<a class="headerlink" href="#using-the-vscode-extension" title="Permanent link">&para;</a></h2>
 <h3 id="option-a-install-from-vsix-downloaded-with-with-extension">Option A: Install from VSIX (Downloaded with --with-extension)<a class="headerlink" href="#option-a-install-from-vsix-downloaded-with-with-extension" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Install the extension</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>code<span class="w"> </span>--install-extension<span class="w"> </span>~/.local/bin/ppxai-1.15.1.vsix
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>code<span class="w"> </span>--install-extension<span class="w"> </span>~/.local/bin/ppxai-&lt;version&gt;.vsix
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
 </span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># Or drag and drop the .vsix file into VSCode</span>
 </span></code></pre></div>
@@ -3781,12 +3781,14 @@
 <li><strong>Real-time Streaming</strong> - SSE-based streaming with instant responses</li>
 </ul>
 <h2 id="alternative-install-with-pipuv">Alternative: Install with pip/uv<a class="headerlink" href="#alternative-install-with-pipuv" title="Permanent link">&para;</a></h2>
-<p>For Python developers who prefer package managers:</p>
+<p>For Python developers who prefer package managers. ppxai is <strong>not on PyPI</strong>
+(the <code>ppxai</code> package there is an unrelated project), so install it from this
+repository:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># With pip</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>pip<span class="w"> </span>install<span class="w"> </span>ppxai<span class="o">[</span>server<span class="o">]</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"ppxai[server] @ git+https://github.com/rcconsult/ppxai"</span>
 </span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
 </span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="c1"># With uv</span>
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>ppxai<span class="o">[</span>server<span class="o">]</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"ppxai[server] @ git+https://github.com/rcconsult/ppxai"</span>
 </span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>
 </span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="c1"># Run TUI</span>
 </span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>ppxai
@@ -3861,28 +3863,28 @@
 <p>This creates:
 - <code>~/.ppxai/ppxai-config.json</code> - Provider configuration with all built-in providers
 - <code>~/.ppxai/.env</code> - Template with all API key options documented
-- <code>~/.ppxai/sessions/</code> - Session storage
-- <code>~/.ppxai/exports/</code> - Exported answers
-- <code>~/.ppxai/checkpoints/</code> - Agent checkpoints</p>
+- <code>~/.ppxai/sessions/</code> - Session storage (file checkpoints live at
+  <code>~/.ppxai/sessions/checkpoints/&lt;session_id&gt;/</code>)
+- <code>~/.ppxai/exports/</code> - Exported answers</p>
 <p>Then edit <code>~/.ppxai/.env</code> to uncomment and add your API keys.</p>
 <h3 id="api-keys">API Keys<a class="headerlink" href="#api-keys" title="Permanent link">&para;</a></h3>
 <p>ppxai supports multiple AI providers. Add keys to <code>~/.ppxai/.env</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Perplexity (default - includes web search)</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="nv">PERPLEXITY_API_KEY</span><span class="o">=</span>pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Google Gemini (default provider, free tier available)</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="nv">GEMINI_API_KEY</span><span class="o">=</span>AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 </span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="c1"># Google Gemini (free tier available)</span>
-</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="nv">GEMINI_API_KEY</span><span class="o">=</span>AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="c1"># OpenAI</span>
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 </span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>
-</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="c1"># OpenAI</span>
-</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="c1"># OpenRouter (access multiple providers)</span>
+</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="nv">OPENROUTER_API_KEY</span><span class="o">=</span>sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 </span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>
-</span><span id="__span-25-10"><a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a><span class="c1"># OpenRouter (access multiple providers)</span>
-</span><span id="__span-25-11"><a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a><span class="nv">OPENROUTER_API_KEY</span><span class="o">=</span>sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+</span><span id="__span-25-10"><a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a><span class="c1"># Perplexity (optional: web-search/grounding backend only, not a chat provider)</span>
+</span><span id="__span-25-11"><a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a><span class="nv">PERPLEXITY_API_KEY</span><span class="o">=</span>pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 </span></code></pre></div>
 <h3 id="provider-configuration">Provider Configuration<a class="headerlink" href="#provider-configuration" title="Permanent link">&para;</a></h3>
 <p>For advanced provider configuration, create <code>~/.ppxai/ppxai-config.json</code>:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="p">{</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">  </span><span class="nt">"default_provider"</span><span class="p">:</span><span class="w"> </span><span class="s2">"perplexity"</span><span class="p">,</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">  </span><span class="nt">"default_provider"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini"</span><span class="p">,</span>
 </span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">    </span><span class="nt">"custom-vllm"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Local vLLM"</span><span class="p">,</span>
@@ -4346,7 +4348,7 @@ Use <code>.wezterm.lua</code> config (see WezTerm Setup section above).</p>
 <h3 id="no-api-key-configured">"No API key configured"<a class="headerlink" href="#no-api-key-configured" title="Permanent link">&para;</a></h3>
 <p>Add your API key to <code>~/.ppxai/.env</code>:</p>
 <p><strong>Linux/macOS:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-54-1"><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'PERPLEXITY_API_KEY=your-key-here'</span><span class="w"> </span>&gt;<span class="w"> </span>~/.ppxai/.env
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-54-1"><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'GEMINI_API_KEY=your-key-here'</span><span class="w"> </span>&gt;<span class="w"> </span>~/.ppxai/.env
 </span></code></pre></div></p>
 <p><strong>Windows:</strong>
 <div class="language-powershell highlight"><pre><span></span><code><span id="__span-55-1"><a id="__codelineno-55-1" name="__codelineno-55-1" href="#__codelineno-55-1"></a><span class="n">notepad</span> <span class="nv">$env:USERPROFILE</span><span class="p">\.</span><span class="n">ppxai</span><span class="p">\.</span><span class="n">env</span>

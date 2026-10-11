@@ -1221,7 +1221,8 @@ shipped. Authoritative plan: <a href="../../mcp-integration-plan/"><code>../mcp-
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>grep<span class="w"> </span>-n<span class="w"> </span><span class="s1">'"source"'</span><span class="w"> </span>ppxai/engine/tools/manager.py
 </span></code></pre></div></p>
 <p>The first returns nothing. The second shows
-<code>tool_manager.py:193</code> hardcodes <code>"source": "engine"</code> with no
+<code>ppxai/engine/tools/manager.py</code> hardcodes <code>"source": "engine"</code> (line
+number drifts — cite by the grep, not a line number) with no
 extension point for non-builtin tool sources.</p>
 <h2 id="why-this-trips-people-up">Why this trips people up<a class="headerlink" href="#why-this-trips-people-up" title="Permanent link">&para;</a></h2>
 <p>Three filename-level signals make ppxai look MCP-enabled:</p>
@@ -1233,11 +1234,11 @@ extension point for non-builtin tool sources.</p>
    intent, not shipped functionality.</p>
 </li>
 <li>
-<p><strong><code>.mcp.json</code> at repo root</strong> is now an empty <code>{"mcpServers": {}}</code>.
-   It previously listed <code>code-review-graph</code> as if it were a wired MCP
-   server config; either way it is not evidence of integration —
-   <strong>zero Python code in <code>ppxai/</code> loads this file</strong>, verified by grep
-   across the whole tree.</p>
+<p><strong><code>.mcp.json</code> at repo root</strong>, when it exists, is a per-host file
+   (<code>.gitignore:122</code>) — it has never been tracked, so whether it holds
+   <code>{"mcpServers": {}}</code> or something else varies by host. On any host,
+   it is not evidence of integration — <strong>zero Python code in <code>ppxai/</code>
+   loads this file</strong>, verified by grep across the whole tree.</p>
 </li>
 <li>
 <p><strong><code>tests/test_mcp.py</code></strong> exists. It's a <em>diagnostic script</em> — "can
@@ -1251,7 +1252,7 @@ build downstream code against a feature that isn't there.</p>
 <ul>
 <li>The old <code>tool_manager.py</code> MCP loader from pre-v1.11.7 was <strong>deleted</strong>
   in v1.11.7. There has been no in-tree MCP code since.</li>
-<li><code>ppxai/engine/tools/manager.py:193</code> hardcodes <code>"source": "engine"</code>
+<li><code>ppxai/engine/tools/manager.py</code> (<code>grep -n '"source"' ppxai/engine/tools/manager.py</code>) hardcodes <code>"source": "engine"</code>
   with no extension point. External tool sources (MCP servers,
   ppxai-sre's <code>tools_adapter.py</code> workaround, etc.) have no public
   way to surface tools through the engine today.</li>

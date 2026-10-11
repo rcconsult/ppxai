@@ -1168,10 +1168,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-test-suite-reads-whichever-file-wins-including-yours" class="md-nav__link">
+  <a href="#history-the-test-suite-used-to-read-whichever-file-won-including-yours" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The test suite reads whichever file wins — including yours
+        History: the test suite used to read whichever file won — including yours
       
     </span>
   </a>
@@ -1262,36 +1262,40 @@ to <code>~/.ppxai/ppxai-config.json</code>.</p>
   (<code>ppxai/server/http.py::run_server</code>). Read that line before assuming which
   file is live.</li>
 </ul>
-<h2 id="the-test-suite-reads-whichever-file-wins-including-yours">The test suite reads whichever file wins — including yours<a class="headerlink" href="#the-test-suite-reads-whichever-file-wins-including-yours" title="Permanent link">&para;</a></h2>
-<p>The same search order applies <strong>inside pytest</strong>, and nothing in
-<code>tests/conftest.py</code> pins it. So a test that resolves model facts reads the
-first of <code>PPXAI_CONFIG_FILE</code> / <code>./ppxai-config.json</code> / <code>~/.ppxai/ppxai-config.json</code>
-that exists — on a developer machine, routinely the developer's own config.</p>
-<p>Measured 2026-08-31: <code>tests/test_perplexity_two_wires.py</code> failed on a dev host
-because that host's <code>~/.ppxai/ppxai-config.json</code> carried a
-<code>facts.tool_mode = "native"</code> override for <code>perplexity/sonar</code>, while the test
-asserts the shipped <code>auto</code>. Nothing was wrong with the repo. The same test
-passes on CI, where no user config exists.</p>
-<p>Two consequences worth internalising:</p>
+<h2 id="history-the-test-suite-used-to-read-whichever-file-won-including-yours">History: the test suite used to read whichever file won — including yours<a class="headerlink" href="#history-the-test-suite-used-to-read-whichever-file-won-including-yours" title="Permanent link">&para;</a></h2>
+<p><strong>This section describes a problem that is fixed.</strong> Until debt Items 69 and
+78 landed, the search order above applied <strong>inside pytest too</strong>, and nothing
+in <code>tests/conftest.py</code> pinned it. A test that resolved model facts read the
+first of <code>PPXAI_CONFIG_FILE</code> / <code>./ppxai-config.json</code> /
+<code>~/.ppxai/ppxai-config.json</code> that existed — on a developer machine, routinely
+the developer's own config. That was measured to fail in the dangerous
+direction: a stale personal config masked a real regression on one host while
+CI (which has no user config) stayed green.</p>
+<p>Since then, <code>tests/conftest.py::pytest_configure</code> copies the <strong>tracked</strong>
+<code>ppxai-config.json</code> into the throwaway test home and pins
+<code>PPXAI_CONFIG_FILE</code> at that copy (Item 69, <code>conftest.py:264-296</code>), and the
+session-scoped <code>_the_developers_config_is_unreachable</code> fixture points the
+<code>USER_CONFIG_FILE</code> fallback constant at a path that does not exist
+(<code>conftest.py:336-360</code>). <code>_redirect_home_to_tmp()</code> also moves <code>HOME</code> itself
+before the first <code>ppxai</code> import (Item 78), so the suite cannot resolve the
+real <code>~/.ppxai/ppxai-config.json</code> even from a cleared environment.</p>
+<p><strong>Practical effect today:</strong> your own <code>~/.ppxai/ppxai-config.json</code> cannot
+reach the suite unless you explicitly set <code>PPXAI_CONFIG_FILE</code> yourself before
+running pytest. A red test is very unlikely to be "your config, not the
+code" any more — but if you <em>did</em> export <code>PPXAI_CONFIG_FILE</code>, that override
+still wins, so check for it first:
+  <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">"</span><span class="nv">$PPXAI_CONFIG_FILE</span><span class="s2">"</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"from ppxai.config.loader import find_config_file; print(find_config_file())"</span>
+</span></code></pre></div></p>
+<p>One consequence still worth internalising:</p>
 <ul>
-<li>
-<p><strong>A red test can be your config, not the code.</strong> Before debugging, check
-  what the suite is actually reading:
-  <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"from ppxai.config.loader import find_config_file; print(find_config_file())"</span>
-</span></code></pre></div>
-  Run it <em>inside</em> pytest if the answer looks surprising — <code>initialize()</code> may
-  not have run in your shell, so a bare invocation can report the
-  project-local file while the suite reads the user-global one.</p>
-</li>
-<li>
-<p><strong>A green suite is not proof either.</strong> The reverse case is worse: a config
+<li><strong>A green suite is not proof either.</strong> The reverse case is worse: a config
   the suite reads can <em>mask</em> a defect. The repo-root <code>ppxai-config.json</code> is
   <strong>tracked</strong>, and it drifted for a day (a deprecated default, plus NVIDIA ids
   that had answered HTTP 410 for six weeks) with the suite green throughout —
   because every deprecation invariant scoped only <code>ppxai-config.example.json</code>.
   Fixed by iterating the tracked set (<code>git ls-files 'ppxai-config*.json'</code>) in
-  <code>tests/test_doctor.py::TestDeprecationTableInvariants</code>.</p>
-</li>
+  <code>tests/test_doctor.py::TestDeprecationTableInvariants</code>.</li>
 </ul>
 <p><strong>Rule:</strong> a test that reads config resolution must either pin the file it
 means (<code>monkeypatch.setattr(fc, "find_config_file", ...)</code>) or assert against

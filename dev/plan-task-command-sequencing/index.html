@@ -1304,6 +1304,13 @@
 
 
 <h1 id="task-command-incremental-build-plan"><code>/task</code> command — incremental build plan<a class="headerlink" href="#task-command-incremental-build-plan" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Status (2026-09-28): T1–T8b shipped</strong> (v1.19.0 for T1–T7/T8a,
+v1.19.1 for T8b) — all marked ✅ DONE in the body below. Only <strong>T3.b</strong>
+(<code>--system-file</code>/<code>--batch</code>, deferred) and <strong>T9</strong> (container tier-d,
+future) remain open. The "Where we start" paragraph below describes the
+<strong>pre-T1 baseline</strong>, not current state — read it as history.</p>
+</blockquote>
 <p>Sequencing plan for the interactive <strong><code>/task</code></strong> command family (design:
 <a href="../agent-task-command-design.html">agent-task-command-design.html</a>; lifecycle:
 <a href="../agent-task-lifecycle.html">agent-task-lifecycle.html</a>; architecture:
@@ -1329,7 +1336,7 @@ nothing speculative. Bring a seam early only when it's the right shape
 late port. Every increment ships with tests and a concrete trial before the
 next one starts.</p>
 </blockquote>
-<p><strong>Where we start.</strong> The tool-capable tier already exists server-side:
+<p><strong>Where we start (pre-T1 baseline — historical, not current state).</strong> The tool-capable tier already exists server-side:
 <code>POST /v1/agent/task</code>, <code>GET /runs</code>, <code>GET /runs/{id}</code>, <code>GET /runs/{id}/events</code>
 (SSE), <code>POST /runs/{id}/cancel</code>, owner-scoped authz, <code>execution.task.enabled</code>
 default-off gate, no-shell rejection. There is <strong>no <code>/task</code> client command in

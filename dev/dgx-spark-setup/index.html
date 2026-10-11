@@ -1608,7 +1608,7 @@
 <strong>Purpose:</strong> Feasibility study testbed for evaluating local LLM coding assistants
 <strong>Hardware:</strong> ASUS Ascent GX10 / DGX Spark
 <strong>Host IP:</strong> <code>&lt;dgx-spark-ip&gt;</code>
-<strong>Provider ID:</strong> <code>asusai-vllm</code> (vLLM)
+<strong>Provider ID:</strong> <code>dgx-vllm</code> (vLLM)
 <strong>HF Cache:</strong> <code>/opt/hf/cache</code> (287GB, <code>root:users</code>, 775)
 <strong>Launch Script:</strong> <code>/opt/hf/launch-vllm.sh</code></p>
 <h2 id="hardware-specifications">Hardware Specifications<a class="headerlink" href="#hardware-specifications" title="Permanent link">&para;</a></h2>
@@ -1849,7 +1849,7 @@
 <blockquote>
 <p>⚠️ <strong>The <code>"providers"</code> wrapper is required.</strong> <code>ppxai/config/loader.py:412</code>
 only reads provider definitions nested under a top-level <code>"providers"</code>
-key. Until 2026-09-20 this snippet was a bare <code>{"asusai-vllm": {…}}</code>
+key. Until 2026-09-20 this snippet was a bare <code>{"dgx-vllm": {…}}</code>
 object — pasted as-is it parses fine, loads nothing, and gives you no
 error; the provider simply never appears. Note also that
 <code>capabilities.native_tool_calling</code> below is a <strong>dead key</strong> since ADR 0012
@@ -1860,7 +1860,7 @@ ignored.</p>
 </blockquote>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">"asusai-vllm"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">"dgx-vllm"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ASUS DGX Spark vLLM (GB10)"</span><span class="p">,</span>
 </span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://&lt;dgx-spark-ip&gt;:8000/v1"</span><span class="p">,</span>
 </span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">      </span><span class="nt">"api_key_env"</span><span class="p">:</span><span class="w"> </span><span class="s2">"VLLM_API_KEY"</span><span class="p">,</span>
@@ -1905,7 +1905,7 @@ ignored.</p>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Quick test via ppxai</span>
 </span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>uv<span class="w"> </span>run<span class="w"> </span>ppxai
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># Then: /provider asusai-vllm</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># Then: /provider dgx-vllm</span>
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># Then: Hello, write a Python hello world</span>
 </span></code></pre></div>
 <hr />
@@ -2230,7 +2230,7 @@ Model weights + KV cache + CUDA graphs + profiling overhead must fit in 128 GB. 
 <h3 id="latency-benchmark">Latency benchmark<a class="headerlink" href="#latency-benchmark" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nv">PPXAI_CONFIG_FILE</span><span class="o">=</span>~/.ppxai/ppxai-config.json<span class="w"> </span><span class="nv">SSL_VERIFY</span><span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span>--provider<span class="w"> </span>asusai-vllm<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span>--provider<span class="w"> </span>dgx-vllm<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span>--model<span class="w"> </span><span class="s2">"Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8"</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span>--iterations<span class="w"> </span><span class="m">3</span>
 </span></code></pre></div>
@@ -2238,7 +2238,7 @@ Model weights + KV cache + CUDA graphs + profiling overhead must fit in 128 GB. 
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nb">cd</span><span class="w"> </span>benchmarks/llm-eval
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nv">PPXAI_CONFIG_FILE</span><span class="o">=</span>~/.ppxai/ppxai-config.json<span class="w"> </span><span class="nv">SSL_VERIFY</span><span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmark.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span>--provider<span class="w"> </span>asusai-vllm<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span>--provider<span class="w"> </span>dgx-vllm<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span>--model<span class="w"> </span><span class="s2">"Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8"</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">    </span>--timeout<span class="w"> </span><span class="m">120</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">    </span>-v

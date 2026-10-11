@@ -3287,11 +3287,11 @@ structural schema change that retires R7's workaround.</p>
 the marker remains in context, and the model continues to see the file
 on the next turn.</p>
 <p><strong>Root cause.</strong> Tracking and removal use different rules.
-<a href="../ppxai/engine/multimodal_ops.py#L141-L169"><code>refresh_context_attachments()</code></a>
+<a href="../../ppxai/engine/multimodal_ops.py#L141-L169"><code>refresh_context_attachments()</code></a>
 at lines 141-169 scans <strong>both</strong> structured blocks (<code>image_url</code>,
 <code>input_file</code>, <code>file</code>) <strong>and</strong> <code>&lt;uploaded_file&gt;</code> XML markers embedded
 inside <code>text</code> blocks. But
-<a href="../ppxai/engine/multimodal_ops.py#L244"><code>remove_context_attachment()</code></a>
+<a href="../../ppxai/engine/multimodal_ops.py#L244"><code>remove_context_attachment()</code></a>
 at line 244 filters only the structured types:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">if</span> <span class="n">btype</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"image_url"</span><span class="p">,</span> <span class="s2">"input_file"</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">):</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">kept</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
@@ -3318,7 +3318,7 @@ equivalent) with a user turn containing a mix of: text, image_url block,
 marker is stripped.</p>
 <hr />
 <h3 id="r2-files-listfileattachment-mutable-default-fragile">R2. <code>files: List[FileAttachment] = []</code> mutable default — <strong>fragile</strong> 🟡<a class="headerlink" href="#r2-files-listfileattachment-mutable-default-fragile" title="Permanent link">&para;</a></h3>
-<p><strong>Location.</strong> <a href="../ppxai/server/models.py#L45"><code>ppxai/server/models.py:45</code></a></p>
+<p><strong>Location.</strong> <a href="../../ppxai/server/models.py#L45"><code>ppxai/server/models.py:45</code></a></p>
 <p><strong>Risk.</strong> Pydantic v2 copies the default for each instance so this
 doesn't cross-contaminate in practice, but the pattern is easy to
 regress when the model is copied, inherited, or ported — and it fails
@@ -3332,7 +3332,7 @@ static-analysis rules the project has been tightening elsewhere.</p>
 <code>ChatRequest().files is not ChatRequest().files</code> (different identity).</p>
 <hr />
 <h3 id="r3-_count_csv_rows_cols-materializes-entire-csv-in-memory-performance">R3. <code>_count_csv_rows_cols()</code> materializes entire CSV in memory — <strong>performance</strong> 🟡<a class="headerlink" href="#r3-_count_csv_rows_cols-materializes-entire-csv-in-memory-performance" title="Permanent link">&para;</a></h3>
-<p><strong>Location.</strong> <a href="../ppxai/engine/file_preprocessing.py#L359"><code>ppxai/engine/file_preprocessing.py:359</code></a></p>
+<p><strong>Location.</strong> <a href="../../ppxai/engine/file_preprocessing.py#L359"><code>ppxai/engine/file_preprocessing.py:359</code></a></p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">reader</span> <span class="o">=</span> <span class="n">_csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">_io</span><span class="o">.</span><span class="n">StringIO</span><span class="p">(</span><span class="n">text</span><span class="p">),</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">)</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">rows</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>        <span class="c1"># ← materializes every row</span>
 </span></code></pre></div>
@@ -3357,8 +3357,8 @@ rows/cols on a 10 MB synthetic CSV and asserts peak memory stays below
 assertion is nice-to-have).</p>
 <hr />
 <h3 id="r4-has_vision_model-naming-hides-sidecar-vs-model-distinction-clarity">R4. <code>has_vision_model()</code> naming hides sidecar-vs-model distinction — <strong>clarity</strong> 🟡<a class="headerlink" href="#r4-has_vision_model-naming-hides-sidecar-vs-model-distinction-clarity" title="Permanent link">&para;</a></h3>
-<p><strong>Location.</strong> <a href="../ppxai/engine/multimodal_ops.py#L285"><code>ppxai/engine/multimodal_ops.py:285</code></a>
-+ caller at <a href="../ppxai/server/routes/chat.py"><code>ppxai/server/routes/chat.py::_build_chat_payload</code></a></p>
+<p><strong>Location.</strong> <a href="../../ppxai/engine/multimodal_ops.py#L285"><code>ppxai/engine/multimodal_ops.py:285</code></a>
++ caller at <a href="../../ppxai/server/routes/chat.py"><code>ppxai/server/routes/chat.py::_build_chat_payload</code></a></p>
 <p><strong>Risk.</strong> The name reads as "is the active model vision-capable?" but
 the implementation checks the VL <strong>sidecar</strong> configuration
 (<code>tools.vision_model</code> block). When the active model is vision-capable
@@ -3443,7 +3443,7 @@ inevitable as soon as a user attaches two files with the same name.</p>
 <ol>
 <li>
 <p><strong>Removal is name-only</strong>
-   <a href="../ppxai/engine/multimodal_ops.py#L247"><code>multimodal_ops.py:247-253</code></a>:
+   <a href="../../ppxai/engine/multimodal_ops.py#L247"><code>multimodal_ops.py:247-253</code></a>:
    <div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">block_name</span> <span class="o">=</span> <span class="p">(</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="n">block</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="ow">or</span> <span class="n">block</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"filename"</span><span class="p">)</span>
@@ -3459,9 +3459,9 @@ inevitable as soon as a user attaches two files with the same name.</p>
 </li>
 <li>
 <p><strong>Dedup falls back to name when <code>file_id</code> missing</strong>
-   <a href="../ppxai/engine/multimodal_ops.py#L96"><code>multimodal_ops.py:96</code></a>,
-   <a href="../ppxai/engine/multimodal_ops.py#L130"><code>:130</code></a>,
-   <a href="../ppxai/engine/multimodal_ops.py#L159"><code>:159</code></a>:
+   <a href="../../ppxai/engine/multimodal_ops.py#L96"><code>multimodal_ops.py:96</code></a>,
+   <a href="../../ppxai/engine/multimodal_ops.py#L130"><code>:130</code></a>,
+   <a href="../../ppxai/engine/multimodal_ops.py#L159"><code>:159</code></a>:
    <div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">dedup_key</span> <span class="o">=</span> <span class="n">file_id</span> <span class="ow">or</span> <span class="n">name</span>
 </span></code></pre></div>
    Good intent (stable content-addressed identity when we have it),
@@ -3559,7 +3559,7 @@ R4 and R5 are follow-ups that don't need to land for v1.17.4.</p>
 fully met yet, plus three smaller risks in session handling. Each
 is verified against the branch; none are v1.17.4 release-blockers.</p>
 <h3 id="r8-_count_csv_rows_cols-still-materializes-via-_decode_text-polish-r3">R8. <code>_count_csv_rows_cols</code> still materializes via <code>_decode_text</code> — <strong>polish R3</strong> 🟡<a class="headerlink" href="#r8-_count_csv_rows_cols-still-materializes-via-_decode_text-polish-r3" title="Permanent link">&para;</a></h3>
-<p><strong>Location.</strong> <a href="../ppxai/engine/file_preprocessing.py#L342"><code>ppxai/engine/file_preprocessing.py</code></a></p>
+<p><strong>Location.</strong> <a href="../../ppxai/engine/file_preprocessing.py#L342"><code>ppxai/engine/file_preprocessing.py</code></a></p>
 <p><strong>Symptom.</strong> R3 streamed the row count (O(1) memory for the counting
 step), but the function still calls <code>text = _decode_text(data)</code> on
 the full byte buffer before sniffing the delimiter. For a 10 MB CSV
@@ -3597,7 +3597,7 @@ growth stays under ~15 MB (one buffer, not two). Existing metadata
 correctness tests should pass unchanged.</p>
 <hr />
 <h3 id="r9-validate_and_fix_alternation-longer-wins-heuristic-can-drop-tool_calls-correctness-edge">R9. <code>validate_and_fix_alternation</code> "longer wins" heuristic can drop tool_calls — <strong>correctness edge</strong> 🟡<a class="headerlink" href="#r9-validate_and_fix_alternation-longer-wins-heuristic-can-drop-tool_calls-correctness-edge" title="Permanent link">&para;</a></h3>
-<p><strong>Location.</strong> <a href="../ppxai/engine/session.py"><code>ppxai/engine/session.py</code></a> — <code>validate_and_fix_alternation</code></p>
+<p><strong>Location.</strong> <a href="../../ppxai/engine/session.py"><code>ppxai/engine/session.py</code></a> — <code>validate_and_fix_alternation</code></p>
 <p><strong>Symptom.</strong> When two consecutive assistant messages are found, the
 "longer is better" heuristic picks the one with more text content
 and drops the other. But an assistant message carrying structured
@@ -3626,7 +3626,7 @@ case: save immediately after appending a user message with no
 assistant response, reload, assert user turn still present.</p>
 <hr />
 <h3 id="r10-_has_multimodal_attachments-on-scan-on-every-save-micro-perf">R10. <code>_has_multimodal_attachments</code> O(N) scan on every save — <strong>micro-perf</strong> 🟢<a class="headerlink" href="#r10-_has_multimodal_attachments-on-scan-on-every-save-micro-perf" title="Permanent link">&para;</a></h3>
-<p><strong>Location.</strong> <a href="../ppxai/engine/session.py"><code>ppxai/engine/session.py</code></a> — <code>_has_multimodal_attachments</code></p>
+<p><strong>Location.</strong> <a href="../../ppxai/engine/session.py"><code>ppxai/engine/session.py</code></a> — <code>_has_multimodal_attachments</code></p>
 <p><strong>Symptom.</strong> Called from <code>save()</code> / <code>save_dirty()</code> to decide flat vs
 directory session format. Walks every content block of every message
 on every save. Long conversations (200+ messages, tool-heavy) add
@@ -3648,7 +3648,7 @@ at most twice (once on first save, once if attachments were
 removed in between).</p>
 <hr />
 <h3 id="r11-session-format-transition-is-not-atomic-crash-edge">R11. Session format transition is not atomic — <strong>crash-edge</strong> 🟢<a class="headerlink" href="#r11-session-format-transition-is-not-atomic-crash-edge" title="Permanent link">&para;</a></h3>
-<p><strong>Location.</strong> <a href="../ppxai/engine/session.py"><code>ppxai/engine/session.py</code></a> — <code>_write_session_json</code></p>
+<p><strong>Location.</strong> <a href="../../ppxai/engine/session.py"><code>ppxai/engine/session.py</code></a> — <code>_write_session_json</code></p>
 <p><strong>Symptom.</strong> When a session gains its first multimodal attachment
 mid-conversation, the writer transitions from flat <code>sessions/&lt;name&gt;.json</code>
 to directory <code>sessions/&lt;name&gt;/session.json</code>. The current sequence is
@@ -3688,7 +3688,7 @@ next load picks the directory version and logs a warning about the
 orphan flat file.</p>
 <hr />
 <h3 id="r12-silent-gaps-during-agentic-tool-loops-architectural-ux">R12. Silent gaps during agentic tool loops — <strong>architectural UX</strong> 🟢<a class="headerlink" href="#r12-silent-gaps-during-agentic-tool-loops-architectural-ux" title="Permanent link">&para;</a></h3>
-<p><strong>Location.</strong> <a href="../ppxai/engine/chat.py#L584"><code>ppxai/engine/chat.py:584</code></a>,
+<p><strong>Location.</strong> <a href="../../ppxai/engine/chat.py#L584"><code>ppxai/engine/chat.py:584</code></a>,
 inside <code>while iteration &lt; max_iterations</code>:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">ctx</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span><span class="n">messages</span><span class="p">,</span> <span class="n">ctx</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">tools</span><span class="o">=</span><span class="n">openai_tools</span><span class="p">):</span>
 </span></code></pre></div>
@@ -3964,7 +3964,7 @@ three back-to-back 400 errors from Perplexity sonar-reasoning-pro:</p>
 1. Previous turn ended with an <code>assistant</code> message in session history
 2. VSCode sent <code>POST /chat</code> carrying a "user" turn whose body was
    ONLY a context block: <code>"[Context: Working in VSCode workspace
-   \"ppxai\" at /Users/rado/git/utils/ppxai]"</code> — no actual user
+   \"ppxai\" at /path/to/ppxai]"</code> — no actual user
    prompt following
 3. Perplexity saw <code>assistant → context (treated as user) → assistant</code>
    but somewhere in the sequence the pattern broke its strict

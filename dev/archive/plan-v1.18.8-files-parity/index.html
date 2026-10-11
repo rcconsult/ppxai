@@ -1372,9 +1372,9 @@
 <strong>Class:</strong> bugfix / post-release regression follow-up. No new features.
 <strong>Source:</strong> post-v1.18.7 code review. Two waves:
 - <strong>Wave 1 — <code>/files/*</code> cross-client parity</strong> (original branch charter):
-  debt items <a href="debt-inventory.md">25</a>, 26, 27, 28.
+  debt items <a href="../../debt-inventory/">25</a>, 26, 27, 28.
 - <strong>Wave 2 — broader code-review findings</strong> (scope extension, owner-directed):
-  debt items <a href="debt-inventory.md">29</a>, 30, 31, 32. Architectural-leaning
+  debt items <a href="../../debt-inventory/">29</a>, 30, 31, 32. Architectural-leaning
   findings scoped to their <strong>bugfix-grade minimum</strong> so the branch stays
   bugfix-class; the maximal refactors are split out / deferred per item.</p>
 <h2 id="why">Why<a class="headerlink" href="#why" title="Permanent link">&para;</a></h2>
@@ -1463,7 +1463,7 @@ code-review phases (B, C, D, E) is under "Extended-scope work detail".</p>
 </table>
 <p>A and B land first. C, E, F are mutually independent and can land in any
 order after B. <strong>D's review gate is done</strong> — outcome in
-<a href="decisions/0007-completion-first-class-service.md">ADR 0007</a>: land the
+<a href="../../decisions/0007-completion-first-class-service/">ADR 0007</a>: land the
 accessor seed on this branch, defer the first-class <code>CompletionService</code> +
 AppState roster to v1.19.x.
 Item 6 / debt 22 (<code>PpxaiApp</code> decomposition) is <strong>not triggered</strong>: Phase F
@@ -1505,7 +1505,7 @@ edits a few <code>app.js</code> methods in place; no decomposition required.</p>
 <ul>
 <li><strong>Gate outcome (2026-06-14):</strong> completion reframed as a capability over
   <code>(command-space × live-context)</code> — see
-  <a href="decisions/0007-completion-first-class-service.md">ADR 0007</a>. Land the
+  <a href="../../decisions/0007-completion-first-class-service/">ADR 0007</a>. Land the
   <strong>accessor seed (option a)</strong> here; the first-class <code>CompletionService</code> +
   AppState roster are v1.19.x.</li>
 <li><strong>Seed (this branch):</strong> added <code>CommandFactory.iter_completion_specs()</code> +

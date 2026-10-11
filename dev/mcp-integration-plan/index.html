@@ -1400,7 +1400,7 @@ prompt-injection defenses + sentinel tests + user-facing doc.</p>
 </tr>
 <tr>
 <td>ToolManager source field</td>
-<td>hardcoded <code>"source": "engine"</code> (<code>tools/manager.py:193</code>) — no extension point for non-builtin tools</td>
+<td>hardcoded <code>"source": "engine"</code> (<code>tools/manager.py:233</code>) — no extension point for non-builtin tools</td>
 </tr>
 </tbody>
 </table>
@@ -1506,10 +1506,10 @@ plan.</p>
    same <code>ToolManager</code>.</li>
 <li><strong>Shutdown hook</strong> — engine shutdown path sends <code>terminate()</code> to
    each child + reaps PIDs. Reuses the lifecycle discipline from
-   <code>PreviewBackend</code> (<code>ppxai/server/preview_backend.py</code>) — the only
+   <code>PreviewBackend</code> (<code>ppxai/engine/preview_backend.py</code>) — the only
    existing precedent for engine-owned long-lived subprocesses.</li>
 <li><strong>Tool-source field</strong> — <code>ToolManager.list_tools()</code> currently
-   hardcodes <code>"source": "engine"</code> at <code>tools/manager.py:193</code>. Extend
+   hardcodes <code>"source": "engine"</code> at <code>tools/manager.py:233</code>. Extend
    to <code>"source": "mcp:&lt;server-name&gt;"</code> for MCP-sourced tools so
    <code>/tools</code> listing and AppState DTOs distinguish them.</li>
 <li><strong>Tool-name namespacing</strong> — adopt <code>&lt;server&gt;.&lt;tool&gt;</code> so two

@@ -1347,7 +1347,7 @@ after v1.18.0/v1.18.1's two big architectural pushes.</p>
 </blockquote>
 <h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
 <p>v1.18.2 is intentionally not a feature release. The branch closed
-9 of 10 open items in <a href="archive/DEBT-INVENTORY-v1.18.2.md">DEBT-INVENTORY-v1.18.2.md</a>
+9 of 10 open items in <a href="../../DEBT-INVENTORY-v1.18.2/">DEBT-INVENTORY-v1.18.2.md</a>
 and added 476 tests via the gpt-5.5 critique sweep + production
 testing on 2026-04-26. The user-visible product surface barely
 changes; the codebase health and the discipline around it does.</p>
@@ -1544,7 +1544,7 @@ healthy orchestrator pattern, refactor done correctly in v1.15.0
 through v1.17.x. The narrow extraction landed; the larger
 "refactor" framing was retired.</p>
 <h3 id="adr-0002-commandcontext-three-pattern-split">ADR 0002 — CommandContext three-pattern split<a class="headerlink" href="#adr-0002-commandcontext-three-pattern-split" title="Permanent link">&para;</a></h3>
-<p><a href="decisions/0002-command-context-three-pattern-split.md">docs/decisions/0002-command-context-three-pattern-split.md</a>
+<p><a href="../../../decisions/0002-command-context-three-pattern-split/">docs/decisions/0002-command-context-three-pattern-split.md</a>
 documents why the three contexts use three different patterns:</p>
 <table>
 <thead>
@@ -1684,52 +1684,52 @@ caught us out three times in the same shape:</p>
 </thead>
 <tbody>
 <tr>
-<td><a href="../tests/test_server_state.py">test_server_state.py</a></td>
+<td><a href="../../../tests/test_server_state.py">test_server_state.py</a></td>
 <td style="text-align: right;">28</td>
 <td>Session, get_or_create_session, get_session_or_query, preview backend, kill_preview_backend</td>
 </tr>
 <tr>
-<td><a href="../tests/test_session_persistence.py">test_session_persistence.py</a> (additions)</td>
+<td><a href="../../../tests/test_session_persistence.py">test_session_persistence.py</a> (additions)</td>
 <td style="text-align: right;">21</td>
 <td>Path traversal, write-failure propagation, symlinks, state-pointer staleness, concurrent IO</td>
 </tr>
 <tr>
-<td><a href="../tests/test_execute_ai_task.py">test_execute_ai_task.py</a></td>
+<td><a href="../../../tests/test_execute_ai_task.py">test_execute_ai_task.py</a></td>
 <td style="text-align: right;">20</td>
 <td>Model swap+restore, stream accumulation, async context, code blocks</td>
 </tr>
 <tr>
-<td><a href="../tests/test_tool_security.py">test_tool_security.py</a></td>
+<td><a href="../../../tests/test_tool_security.py">test_tool_security.py</a></td>
 <td style="text-align: right;">18</td>
 <td>Consent boundary, tool isolation, sandbox enforcement</td>
 </tr>
 <tr>
-<td><a href="../tests/test_server_route_edges.py">test_server_route_edges.py</a> (additions)</td>
+<td><a href="../../../tests/test_server_route_edges.py">test_server_route_edges.py</a> (additions)</td>
 <td style="text-align: right;">17</td>
 <td>X-Session-Id edges, invalid restore, preview referer parsing</td>
 </tr>
 <tr>
-<td><a href="../tests/test_command_envelope.py">test_command_envelope.py</a> (additions)</td>
+<td><a href="../../../tests/test_command_envelope.py">test_command_envelope.py</a> (additions)</td>
 <td style="text-align: right;">3</td>
 <td><code>/command/{name}</code> route logging (Item 7)</td>
 </tr>
 <tr>
-<td><a href="../tests/test_server_routes.py">test_server_routes.py</a> (additions)</td>
+<td><a href="../../../tests/test_server_routes.py">test_server_routes.py</a> (additions)</td>
 <td style="text-align: right;">1</td>
 <td><code>/state</code> route logging (Item 9)</td>
 </tr>
 <tr>
-<td><a href="../tests/test_version_banner.py">test_version_banner.py</a> (additions)</td>
+<td><a href="../../../tests/test_version_banner.py">test_version_banner.py</a> (additions)</td>
 <td style="text-align: right;">3</td>
 <td><code>_build_info</code> precedence + fall-through (Item 8)</td>
 </tr>
 <tr>
-<td><a href="../tests/test_engine_client_protocol.py">test_engine_client_protocol.py</a></td>
+<td><a href="../../../tests/test_engine_client_protocol.py">test_engine_client_protocol.py</a></td>
 <td style="text-align: right;">9</td>
 <td><code>EngineClientProtocol</code> surface + structural satisfaction + import hygiene (Item 10)</td>
 </tr>
 <tr>
-<td><a href="../tests/test_agent_logger_attribute.py">test_agent_logger_attribute.py</a></td>
+<td><a href="../../../tests/test_agent_logger_attribute.py">test_agent_logger_attribute.py</a></td>
 <td style="text-align: right;">4</td>
 <td>Real-engine regression for the <code>engine.logger</code> AttributeError (Item 11)</td>
 </tr>
@@ -1751,10 +1751,10 @@ are pre-existing.</p>
 <li><strong>Agent loop unification across HTTP clients.</strong> Inherited from
   v1.18.1 deferred list. Factory's <code>handle_agent</code> is TUI-shaped
   (<code>asyncio.run</code>, <code>console.print</code>); web/VSCode keep client-side
-  loops. See <a href="archive/TODO-v1.18.2-agent-loop-unification.md">docs/archive/TODO-v1.18.2-agent-loop-unification.md</a>.</li>
+  loops. See <a href="../../TODO-v1.18.2-agent-loop-unification/">docs/archive/TODO-v1.18.2-agent-loop-unification.md</a>.</li>
 <li><strong><code>prompt_text</code> side-effect kind</strong> for free-text follow-ups when
   <code>prompt_quick_pick</code>'s finite-choice shape doesn't fit. See
-  <a href="archive/TODO-v1.18.2-prompt-text-kind.md">docs/archive/TODO-v1.18.2-prompt-text-kind.md</a>.</li>
+  <a href="../../TODO-v1.18.2-prompt-text-kind/">docs/archive/TODO-v1.18.2-prompt-text-kind.md</a>.</li>
 <li><strong>AppState codegen + client wiring.</strong> Inherited from v1.18.0
   deferred list. See <code>docs/TODO-appstate-codegen.md</code>.</li>
 <li><strong>Multi-model routing infrastructure.</strong> <code>RoutingRole</code>,

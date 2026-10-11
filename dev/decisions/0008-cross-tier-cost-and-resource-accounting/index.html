@@ -1328,12 +1328,13 @@
 
 <h1 id="adr-0008-cross-tier-cost-and-shared-resource-accounting">ADR 0008 — Cross-tier cost and shared-resource accounting<a class="headerlink" href="#adr-0008-cross-tier-cost-and-shared-resource-accounting" title="Permanent link">&para;</a></h1>
 <p><strong>Date:</strong> 2026-07-15
-<strong>Status:</strong> <strong>Accepted 2026-09-06 — Option A implemented</strong> (<code>ppxai/usage_events.py</code>, taps in <code>engine/task_runner.py</code> + <code>engine/session.py</code>, rollup in <code>/cost</code>). Debt Item 49 closed. See §Sign-off for what was decided on each open question.
+<strong>Status:</strong> <strong>Accepted 2026-09-06 — Option A implemented</strong> (<code>ppxai/usage_events.py</code>, taps in <code>engine/task_runner.py</code> + <code>engine/session.py</code>, rollup in <code>/usage</code>). Debt Item 49 closed. See §Sign-off for what was decided on each open question.</p>
+<p><strong>Note (2026-09-28):</strong> ppxai has no <code>/cost</code> command and never had one — the earlier wording above and below was wrong. The cross-tier rollup is part of the <code>/usage</code> command (<code>ppxai/commands/tools.py</code>, <code>name="usage"</code>).
 <strong>Related:</strong>
 - <a href="../0004-llm-gateway-features/"><code>0004-llm-gateway-features.md</code></a> — established the stateless <code>/v1/oneshot</code> tier that bypasses <code>EngineClient</code> (the origin of gap #1 below)
 - <a href="../0003-agent-platform-architecture/"><code>0003-agent-platform-architecture.md</code></a> — established the per-run <code>EngineClient</code> (D1 isolation) for <code>/v1/agent/task</code>
 - <code>ppxai/engine/session.py::save_usage_to_persistent_storage</code> — the only writer of <code>usage.json</code>
-- <code>ppxai/usage.py</code> — usage persistence + <code>/cost</code> rollup
+- <code>ppxai/usage.py</code> — usage persistence + <code>/usage</code> rollup
 - <code>ppxai/server/routes/oneshot.py</code> — stateless, no <code>EngineClient</code>, usage returned then dropped
 - <code>ppxai/server/routes/agent_v1.py</code> — per-run engine; per-run token budget (<code>control.tokens_used = engine.session.live_run_tokens</code>, ~L1045) but no global rollup
 - Debt inventory: <strong>Item 49</strong> (this ADR's tracking entry)</p>

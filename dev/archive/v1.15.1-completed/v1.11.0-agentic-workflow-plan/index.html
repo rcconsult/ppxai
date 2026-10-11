@@ -1841,18 +1841,18 @@
 </table>
 <p><strong>Note</strong>: v1.11.7 removed all legacy code (AIClient, PerplexityClientPromptTools, tool_manager). EngineClient is now the only client interface.</p>
 <p><strong>Branch</strong>: <code>feature/adding-agent-loop</code> (Phase 5 work)</p>
-<p><strong>User Guide</strong>: <a href="agent-mode-guide.md">agent-mode-guide.md</a> - Practical examples for research and development workflows</p>
+<p><strong>User Guide</strong>: agent-mode-guide.md - Practical examples for research and development workflows</p>
 <hr />
 <h2 id="workflow-diagrams">Workflow Diagrams<a class="headerlink" href="#workflow-diagrams" title="Permanent link">&para;</a></h2>
 <h3 id="current-turn-based-flow-pre-v1118">Current Turn-Based Flow (Pre-v1.11.8)<a class="headerlink" href="#current-turn-based-flow-pre-v1118" title="Permanent link">&para;</a></h3>
-<p><img alt="Current Non-Agentic Flow" src="current-non-agentic-flow.png" /></p>
+<p><img alt="Current Non-Agentic Flow" src="../../current-non-agentic-flow.png" /></p>
 <p>The current workflow is <strong>turn-based</strong>:
 1. User sends a message
 2. AI processes and optionally calls tools
 3. AI returns a single response
 4. User must manually direct the next action</p>
 <h3 id="autonomous-agent-flow-v1118">Autonomous Agent Flow (v1.11.8+)<a class="headerlink" href="#autonomous-agent-flow-v1118" title="Permanent link">&para;</a></h3>
-<p><img alt="Future Agentic Flow" src="future-agentic-flow.png" /></p>
+<p><img alt="Future Agentic Flow" src="../../future-agentic-flow.png" /></p>
 <p>The <code>/agent</code> command enables <strong>autonomous execution</strong>:
 1. User issues <code>/agent &lt;task&gt;</code> command
 2. AI enters an autonomous loop (max 5 iterations)

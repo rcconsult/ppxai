@@ -2295,7 +2295,7 @@ fourth name, or to drop one:</p>
 </span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>Total: 5.3 KB (~1,325 tokens)
 </span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
 </span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>Hints Defined:
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>  Provider: local, ollama, perplexity
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>  Provider: local, ollama, openai
 </span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>  Model: deepseek*, qwen*
 </span></code></pre></div>
 <h2 id="provider-hints">Provider Hints<a class="headerlink" href="#provider-hints" title="Permanent link">&para;</a></h2>
@@ -2306,8 +2306,8 @@ fourth name, or to drop one:</p>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Hint</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">Ollama"</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">gemini</span><span class="p">:</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Hint</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">Gemini"</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">perplexity</span><span class="p">:</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Hint</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">Perplexity"</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">anthropic</span><span class="p">:</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Hint</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">Anthropic"</span>
 </span></code></pre></div>
 <h3 id="the-local-provider">The <code>local</code> Provider<a class="headerlink" href="#the-local-provider" title="Permanent link">&para;</a></h3>
 <p>The special <code>local</code> key applies to all local model providers:
@@ -2344,8 +2344,8 @@ fourth name, or to drop one:</p>
 <td>"Use Google Search grounding for current information"</td>
 </tr>
 <tr>
-<td><code>perplexity</code></td>
-<td>"Use native web search - don't use web_search tool"</td>
+<td><code>openai</code></td>
+<td>"Use the web_search tool for current information"</td>
 </tr>
 <tr>
 <td><code>custom</code></td>
@@ -2593,8 +2593,8 @@ fourth name, or to drop one:</p>
 </span></code></pre></div>
 <h3 id="for-cloud-providers">For Cloud Providers<a class="headerlink" href="#for-cloud-providers" title="Permanent link">&para;</a></h3>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nt">provider_hints</span><span class="p">:</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="nt">perplexity</span><span class="p">:</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Use</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">native</span><span class="nv"> </span><span class="s">web</span><span class="nv"> </span><span class="s">search</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">current</span><span class="nv"> </span><span class="s">information."</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="nt">openai</span><span class="p">:</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Use</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">web_search</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">current</span><span class="nv"> </span><span class="s">information."</span>
 </span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Cite</span><span class="nv"> </span><span class="s">sources</span><span class="nv"> </span><span class="s">as</span><span class="nv"> </span><span class="s">markdown</span><span class="nv"> </span><span class="s">links</span><span class="nv"> </span><span class="s">inline."</span>
 </span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">  </span><span class="nt">gemini</span><span class="p">:</span>
 </span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Use</span><span class="nv"> </span><span class="s">Google</span><span class="nv"> </span><span class="s">Search</span><span class="nv"> </span><span class="s">grounding</span><span class="nv"> </span><span class="s">when</span><span class="nv"> </span><span class="s">available."</span>

@@ -2751,15 +2751,16 @@ rollback.</p>
 <p><strong>Corrected 2026-09-20.</strong> This said one press "gracefully stops the
 current iteration" and that two presses within 2s "force stops" — that is
 not how <code>/auto</code> behaves. A single Ctrl-C raises <code>KeyboardInterrupt</code>,
-which <code>handle_agent</code> catches (<code>ppxai/commands/agent.py:788-799</code>) and
-takes straight to <code>_handle_agent_interrupt</code> — the rollback prompt — on
-the <strong>first</strong> press. There is no second-press escalation inside <code>/auto</code>
+which <code>handle_agent</code> catches (<code>ppxai/commands/agent.py:823,876</code>, line
+cites refreshed 2026-09-28 — was <code>:788-799</code>) and takes straight to
+<code>_handle_agent_interrupt</code> — the rollback prompt — on the <strong>first</strong>
+press. There is no second-press escalation inside <code>/auto</code>
 (<code>grep -rn "force_stop\|double_interrupt\|interrupt_count" ppxai/</code>
 returns nothing).</p>
 <p>The 2-second double-tap is real but belongs to the <strong>top-level chat
 REPL</strong> — press Ctrl-C twice to exit the application
-(<code>ppxai/rich/main.py:452-483</code>, <code>ctrl_c_timeout = 2.0</code>). It is unrelated
-to agent iterations.</p>
+(<code>ppxai/rich/main.py:465</code>, <code>ctrl_c_timeout = 2.0</code>; line cite refreshed
+2026-09-28 — was <code>:452-483</code>). It is unrelated to agent iterations.</p>
 <h3 id="iteration-limits">Iteration Limits<a class="headerlink" href="#iteration-limits" title="Permanent link">&para;</a></h3>
 <p>The default max is 10 iterations (configurable via <code>tools.agent.max_iterations</code>). If your task needs more:</p>
 <ol>
@@ -2997,7 +2998,8 @@ normal task instead.</p>
 <li><a href="../checkpoint-guide/">Checkpoint Guide</a> - Atomic rollback for agent tasks</li>
 <li><a href="../shell-consent-guide/">Shell Consent Guide</a> - Shell command security</li>
 <li><a href="../custom-tool-development-guide/">Custom Tools Guide</a> - Creating custom tools</li>
-<li><a href="../archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan/">Agentic Workflow Plan</a> - Technical implementation details</li>
+<li><a href="../architecture/">Architecture</a> / <a href="../debt-inventory/">Debt Inventory</a> - Current technical implementation details and known issues</li>
+<li><a href="../archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan/">Agentic Workflow Plan</a> - (historical, v1.11 design)</li>
 </ul>
 <hr />
 <p><strong>Agent mode introduced:</strong> v1.13.0</p>

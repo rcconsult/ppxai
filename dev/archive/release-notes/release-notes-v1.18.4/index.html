@@ -1336,7 +1336,7 @@ the connective narrative.</p>
 <li>
 <p><strong><code>/ls</code> and <code>/tree</code> web/VSCode renderer dispatch</strong> (<code>462e6739</code>).
    Surfaced from a v1.18.3 user report: typing <code>/ls</code> in the web UI
-   returned only <code>"44 items in /Users/rado/git/exps"</code> — the
+   returned only <code>"44 items in /path/to/exps"</code> — the
    <code>result.message</code> — instead of the actual rows. Two related root
    causes: (a) Web/VSCode renderers dispatch on the wire <code>result.type</code>
    STRING, not Python class hierarchy. <code>DirectoryListingResult</code> is a
@@ -1389,7 +1389,7 @@ the connective narrative.</p>
 <p><strong><code>list_directory</code> tool echoes the resolved path in its header</strong>
    (<code>ee90bff4</code>). Reported 2026-05-04 from the web UI: after
    <code>/cd ppxai_demo</code>, asking the model "ls" produced
-   <code>"/Users/rado/git/exps contains the files and folders listed
+   <code>"/path/to/exps contains the files and folders listed
    above"</code> — the PARENT of the actual working dir. Root cause: the
    tool returned bare item names (e.g. <code>DIR foo\nFILE bar</code>) with no
    path header. The model called the tool with <code>path="."</code> (default)
@@ -1584,7 +1584,7 @@ at all:</p>
 v1.18.4 byte-identical to v1.18.3. No fields added, no fields
 removed, no status-code changes, no header changes. The v1 stability
 commitment per
-<a href="decisions/0004-llm-gateway-features.md">ADR 0004</a> is upheld.</p>
+<a href="../../../decisions/0004-llm-gateway-features/">ADR 0004</a> is upheld.</p>
 <p>ppxai-sre's outlook-monitor agent should consume v1.18.4 as a
 drop-in replacement for v1.18.3. If you observe any v1 wire-shape
 difference, that's a bug — file it.</p>

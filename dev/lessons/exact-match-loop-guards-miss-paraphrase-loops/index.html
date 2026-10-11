@@ -1253,7 +1253,7 @@ reached the threshold of 3.</p>
 <li><strong>Add an argument-independent per-tool budget for retrieval tools
    only, generous.</strong> <code>is_tool_budget_exceeded</code> (<code>manager.py:645</code>) caps
    <code>web_search</code> and <code>fetch_url</code> at 10 calls per turn by default
-   (<code>Default.TOOL_CALL_BUDGETS</code>, <code>ppxai/constants.py:242-245</code>; absent or
+   (<code>Default.TOOL_CALL_BUDGETS</code>, <code>ppxai/constants.py:180-183</code>; absent or
    0 = unlimited; every other tool stays uncapped). This is the guard
    that catches the incident's ten <em>paraphrased</em> calls, which
    exact-match matching structurally cannot see no matter how it counts.
@@ -1285,9 +1285,18 @@ reached the threshold of 3.</p>
    model that doesn't take the hint burns every remaining iteration
    re-offering arguments to a tool that will never run again this turn.
    Guard A (the repeat rule) has <strong>no equivalent escalation</strong> — only
-   guard B's budget trip is terminal; see Item 80 in
-   <code>docs/debt-inventory.md</code> for the gap this leaves.</li>
+   guard B's budget trip is terminal.</li>
 </ol>
+<p><strong>Update (2026-09-26, Item 80 closed):</strong> the alternating-cycle gap below
+that neither guard trips on is no longer a silent give-up. The iteration
+cap now runs one forced-synthesis pass instead of a canned "limit reached"
+line (<code>ToolGuardReason.ITERATION_CAP</code>, additive), sends a single converge
+notice at ~70% of the cap, and both guards plus the cap and the zombie
+breaker log the loop's shape via <code>ToolManager.describe_call_pattern()</code>
+(repeating cycle, per-tool distinct-args counts, tail) — evidence for
+designing a real detector if the pattern recurs, not a detector itself.
+See the closed <a href="../../archive/DEBT-INVENTORY-CLOSED/">Item 80</a> for the full
+body.</p>
 <p>A guard limited to only the old two properties (exact-match, trailing
 streak) is provably weaker than the five-item version above — it is a
 strict subset of what the per-turn, budgeted, escalating guard catches.</p>
@@ -1300,8 +1309,10 @@ The accepted gap this leaves — an alternating two-tool cycle with
 non-repeating arguments (<code>A, B, A, B, …</code>, never twice with the same
 arguments) — is recorded in
 <code>tests/fixtures/tool_loops/call-graph-cycle-alternating-distinct-args.json</code>
-rather than hidden, and is bounded only by the iteration cap and the
-zombie circuit breaker.</p>
+rather than hidden. As of the 2026-09-26 update above, it is no longer
+left to run to a canned give-up: the iteration cap now answers with a
+forced-synthesis pass and the loop's shape is logged, though no guard
+detects the alternating pattern itself.</p>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../a-check-that-never-ran-reports-success/">a-check-that-never-ran-reports-success.md</a> —

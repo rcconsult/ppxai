@@ -1759,38 +1759,38 @@
 <h2 id="current-state-analysis">Current State Analysis<a class="headerlink" href="#current-state-analysis" title="Permanent link">&para;</a></h2>
 <h3 id="engine-complete">Engine (✅ Complete)<a class="headerlink" href="#engine-complete" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>File:</strong> <a href="../ppxai/engine/context.py">ppxai/engine/context.py</a></li>
+<li><strong>File:</strong> <a href="../../../ppxai/engine/context.py">ppxai/engine/context.py</a></li>
 <li><strong>Status:</strong> All 5 injectors fully implemented with hash deduplication, size limits, truncation</li>
 </ul>
 <h3 id="rich-tui-15-complete">Rich TUI (⚠️ 1/5 Complete)<a class="headerlink" href="#rich-tui-15-complete" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>File:</strong> <a href="../ppxai/rich/main.py:167-331">ppxai/rich/main.py</a></li>
+<li><strong>File:</strong> <a href="../../../ppxai/rich/main.py#L167-L331">ppxai/rich/main.py</a></li>
 <li><strong>Has:</strong> <code>@file</code> only in autocomplete</li>
 <li><strong>Missing:</strong> <code>@git</code>, <code>@tree</code>, <code>@clipboard</code>, <code>@url</code> autocomplete</li>
-<li><strong>Hint text:</strong> <a href="../ppxai/rich/main.py:691">Line 691</a> - Only mentions <code>@file</code></li>
-<li><strong>Comment:</strong> <a href="../ppxai/rich/main.py:738">Line 738</a> - Outdated, only mentions 3 injectors</li>
+<li><strong>Hint text:</strong> <a href="../../../ppxai/rich/main.py#L691">Line 691</a> - Only mentions <code>@file</code></li>
+<li><strong>Comment:</strong> <a href="../../../ppxai/rich/main.py#L738">Line 738</a> - Outdated, only mentions 3 injectors</li>
 </ul>
 <h3 id="textual-tui-35-complete">Textual TUI (⚠️ 3/5 Complete)<a class="headerlink" href="#textual-tui-35-complete" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>File:</strong> <a href="../ppxai/tui/completer.py:26-30">ppxai/tui/completer.py</a></li>
+<li><strong>File:</strong> <a href="../../../ppxai/tui/completer.py#L26-L30">ppxai/tui/completer.py</a></li>
 <li><strong>Has:</strong> <code>@file</code>, <code>@clipboard</code>, <code>@url</code> in <code>CONTEXT_PROVIDERS</code></li>
 <li><strong>Missing:</strong> <code>@git</code>, <code>@tree</code> autocomplete</li>
 </ul>
 <h3 id="vscode-extension-35-complete">VSCode Extension (⚠️ 3/5 Complete)<a class="headerlink" href="#vscode-extension-35-complete" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>File:</strong> <a href="../vscode-extension/src/chatPanel.ts">vscode-extension/src/chatPanel.ts</a></li>
+<li><strong>File:</strong> <a href="../../../vscode-extension/src/chatPanel.ts">vscode-extension/src/chatPanel.ts</a></li>
 <li><strong>Has:</strong> <code>@file</code>, <code>@git</code>, <code>@tree</code> in autocomplete (lines 348-351) and help (lines 1834-1836)</li>
 <li><strong>Missing:</strong> <code>@clipboard</code>, <code>@url</code> in autocomplete and help</li>
 </ul>
 <h3 id="web-app-35-complete">Web App (⚠️ 3/5 Complete)<a class="headerlink" href="#web-app-35-complete" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>File:</strong> <a href="../ppxai/web/app.js">ppxai/web/app.js</a></li>
+<li><strong>File:</strong> <a href="../../../ppxai/web/app.js">ppxai/web/app.js</a></li>
 <li><strong>Has:</strong> <code>@file</code>, <code>@git</code>, <code>@tree</code> in autocomplete (lines 2198-2199, 2210-2211) and help (lines 1141-1143)</li>
 <li><strong>Missing:</strong> <code>@clipboard</code>, <code>@url</code> in autocomplete and help</li>
 </ul>
 <h2 id="action-items">Action Items<a class="headerlink" href="#action-items" title="Permanent link">&para;</a></h2>
 <h3 id="1-rich-tui-add-all-special-providers-priority-1">1. Rich TUI - Add All Special Providers (⚠️ Priority 1)<a class="headerlink" href="#1-rich-tui-add-all-special-providers-priority-1" title="Permanent link">&para;</a></h3>
-<p><strong>File:</strong> <a href="../ppxai/rich/main.py">ppxai/rich/main.py</a></p>
+<p><strong>File:</strong> <a href="../../../ppxai/rich/main.py">ppxai/rich/main.py</a></p>
 <h4 id="11-update-autocomplete-lines-314-331">1.1 Update Autocomplete (Lines 314-331)<a class="headerlink" href="#11-update-autocomplete-lines-314-331" title="Permanent link">&para;</a></h4>
 <p>Replace file-only autocomplete with special providers + files:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_completions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">document</span><span class="p">,</span> <span class="n">complete_event</span><span class="p">):</span>
@@ -1850,7 +1850,7 @@
 </span></code></pre></div>
 <hr />
 <h3 id="2-textual-tui-add-gittree-providers-priority-2">2. Textual TUI - Add Git/Tree Providers (⚠️ Priority 2)<a class="headerlink" href="#2-textual-tui-add-gittree-providers-priority-2" title="Permanent link">&para;</a></h3>
-<p><strong>File:</strong> <a href="../ppxai/tui/completer.py">ppxai/tui/completer.py</a></p>
+<p><strong>File:</strong> <a href="../../../ppxai/tui/completer.py">ppxai/tui/completer.py</a></p>
 <h4 id="21-update-context_providers-lines-26-30">2.1 Update CONTEXT_PROVIDERS (Lines 26-30)<a class="headerlink" href="#21-update-context_providers-lines-26-30" title="Permanent link">&para;</a></h4>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># OLD</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">CONTEXT_PROVIDERS</span> <span class="o">=</span> <span class="p">[</span>
@@ -1870,7 +1870,7 @@
 </span></code></pre></div>
 <hr />
 <h3 id="3-vscode-extension-add-clipboardurl-priority-3">3. VSCode Extension - Add Clipboard/URL (⚠️ Priority 3)<a class="headerlink" href="#3-vscode-extension-add-clipboardurl-priority-3" title="Permanent link">&para;</a></h3>
-<p><strong>File:</strong> <a href="../vscode-extension/src/chatPanel.ts">vscode-extension/src/chatPanel.ts</a></p>
+<p><strong>File:</strong> <a href="../../../vscode-extension/src/chatPanel.ts">vscode-extension/src/chatPanel.ts</a></p>
 <h4 id="31-update-file-picker-autocomplete-lines-348-351">3.1 Update File Picker Autocomplete (Lines 348-351)<a class="headerlink" href="#31-update-file-picker-autocomplete-lines-348-351" title="Permanent link">&para;</a></h4>
 <div class="language-typescript highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// OLD</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">'@git'</span><span class="p">,</span><span class="w"> </span><span class="nx">path</span><span class="o">:</span><span class="w"> </span><span class="s1">'Include git diff'</span><span class="w"> </span><span class="p">},</span>
@@ -1908,7 +1908,7 @@
 - <code>@https://...</code> → This is the actual URL pattern (already handled by backend)</p>
 <hr />
 <h3 id="4-web-app-add-clipboardurl-priority-4">4. Web App - Add Clipboard/URL (⚠️ Priority 4)<a class="headerlink" href="#4-web-app-add-clipboardurl-priority-4" title="Permanent link">&para;</a></h3>
-<p><strong>File:</strong> <a href="../ppxai/web/app.js">ppxai/web/app.js</a></p>
+<p><strong>File:</strong> <a href="../../../ppxai/web/app.js">ppxai/web/app.js</a></p>
 <h4 id="41-update-autocomplete-fallback-lines-2198-2199">4.1 Update Autocomplete Fallback (Lines 2198-2199)<a class="headerlink" href="#41-update-autocomplete-fallback-lines-2198-2199" title="Permanent link">&para;</a></h4>
 <div class="language-javascript highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// OLD</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="p">{</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">'@git'</span><span class="p">,</span><span class="w"> </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s1">'Include git diff'</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">'@git'</span><span class="w"> </span><span class="p">},</span>
@@ -1938,8 +1938,8 @@
 <hr />
 <h3 id="5-update-shared-command-definitions-optional">5. Update Shared Command Definitions (Optional)<a class="headerlink" href="#5-update-shared-command-definitions-optional" title="Permanent link">&para;</a></h3>
 <p><strong>Files:</strong>
-- <a href="../vscode-extension/src/shared/commands.ts:164,169,184">vscode-extension/src/shared/commands.ts</a>
-- <a href="../ppxai/web/shared/commands.js:146,151,166">ppxai/web/shared/commands.js</a></p>
+- vscode-extension/src/shared/commands.ts
+- ppxai/web/shared/commands.js</p>
 <p>Update usage strings that mention <code>@file</code> to include other providers:</p>
 <div class="language-typescript highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1">// Example: /test command</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nx">usage</span><span class="o">:</span><span class="w"> </span><span class="s1">'/test &lt;code or @file/@git&gt;'</span><span class="p">,</span>
@@ -2000,26 +2000,26 @@
 <h2 id="documentation-updates">Documentation Updates<a class="headerlink" href="#documentation-updates" title="Permanent link">&para;</a></h2>
 <h3 id="files-to-update">Files to Update<a class="headerlink" href="#files-to-update" title="Permanent link">&para;</a></h3>
 <ol>
-<li><a href="../docs/context-injection.md">docs/context-injection.md</a></li>
+<li><a href="../../../context-injection/">docs/context-injection.md</a></li>
 <li>Already documents all 5 providers correctly ✅</li>
 <li>
 <p>No changes needed</p>
 </li>
 <li>
-<p><a href="../README.md">README.md</a></p>
+<p><a href="../../../README.md">README.md</a></p>
 </li>
 <li>Check if context providers are mentioned</li>
 <li>
 <p>Update examples if needed</p>
 </li>
 <li>
-<p><a href="../CLAUDE.md">CLAUDE.md</a></p>
+<p><a href="../../../CLAUDE.md">CLAUDE.md</a></p>
 </li>
 <li>
 <p>Update v1.14.2 highlights to emphasize all clients now expose <code>@clipboard/@url</code></p>
 </li>
 <li>
-<p><a href="../CHANGELOG.md">CHANGELOG.md</a></p>
+<p><a href="../../../CHANGELOG.md">CHANGELOG.md</a></p>
 </li>
 <li>Add v1.15.2 entry:
      <div class="language-markdown highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="gu">## [1.15.2] - YYYY-MM-DD</span>
@@ -2139,10 +2139,10 @@
 <hr />
 <h2 id="related-documents">Related Documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../docs/context-injection.md">docs/context-injection.md</a> - User-facing guide (already complete)</li>
-<li><a href="../docs/bootstrap-context-guide.md">docs/bootstrap-context-guide.md</a> - Bootstrap context (different feature)</li>
-<li><a href="../ppxai/engine/context.py">ppxai/engine/context.py</a> - Implementation reference</li>
-<li><a href="../CHANGELOG.md">CHANGELOG.md</a> - Release notes</li>
+<li><a href="../../../context-injection/">docs/context-injection.md</a> - User-facing guide (already complete)</li>
+<li><a href="../../../bootstrap-context-guide/">docs/bootstrap-context-guide.md</a> - Bootstrap context (different feature)</li>
+<li><a href="../../../ppxai/engine/context.py">ppxai/engine/context.py</a> - Implementation reference</li>
+<li><a href="../../../CHANGELOG.md">CHANGELOG.md</a> - Release notes</li>
 </ul>
 <hr />
 <h2 id="implementation-order">Implementation Order<a class="headerlink" href="#implementation-order" title="Permanent link">&para;</a></h2>

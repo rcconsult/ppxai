@@ -1253,7 +1253,7 @@
 Each entry includes root cause, workaround status, and upgrade/resolution criteria.</p>
 <hr />
 <h2 id="ki-001-google-genai-sdk-1570-code-editing-regression">[KI-001] google-genai SDK ≥1.57.0 — Code Editing Regression<a class="headerlink" href="#ki-001-google-genai-sdk-1570-code-editing-regression" title="Permanent link">&para;</a></h2>
-<p><strong>Status:</strong> RESOLVED BY UPGRADE (2026-07-11) — SDK raised to 2.11.0, ceiling-pinned <code>&lt;2.12.0</code>
+<p><strong>Status:</strong> RESOLVED BY UPGRADE (2026-07-11) — SDK raised to 2.11.0; the ceiling was later raised twice without the benchmark gate below and now stands at <code>&lt;3.0.0</code> (see "Workarounds in place" #1)
 <strong>Detected:</strong> February 8, 2026
 <strong>Affected versions:</strong> google-genai 1.57.0 through at least 1.65.0 (observed Feb 2026). <strong>Not reproducible on 2.11.0</strong>: the 2026-07-11 benchmark gate ran 3× on gemini-2.5-flash — code editing <strong>100% in all three runs</strong> (was 0% on 1.62.0), overall 70.2–74.4% vs 68.6% for the prior same-suite run on 1.56.0. The upstream v1.57.0 change was never reverted (full changelog sweep to 2.11.0), so the healing happened elsewhere in the SDK/stack — treat the regression as version-specific, keep the ceiling pin and the benchmark gate for every future raise.
 <strong>Upstream tracking:</strong> <strong>none.</strong> Upstream shipped the behavior deliberately as a fix ("keep the history in chat when the API yields such a part", commit <a href="https://github.com/googleapis/python-genai/commit/215c8524659c0b2ca945b6cd7887b3501db61be4"><code>215c852</code></a>); no upstream issue tracks this regression. <a href="https://github.com/googleapis/python-genai/issues/1789">#1789</a> (empty finish message on MALFORMED_FUNCTION_CALL — still open) and <a href="https://github.com/googleapis/python-genai/issues/1818">#1818</a> (AFC config persistence — closed as not planned) are <strong>related-but-different</strong> bugs from the original v1.15.3 analysis; an earlier revision of this entry wrongly promoted them to the upgrade gate. Waiting on them can never signal a fix — the only valid gate is our own benchmark (below).</p>
@@ -1338,9 +1338,13 @@ a candidate version:</p>
 <li>Run the Gemini unit suites first (cheap gate):
    <code>pytest tests/test_gemini_tool_schema.py tests/test_gemini_null_parts.py tests/test_gemini_extras.py</code>.</li>
 <li>Run the benchmark suite (3 separate invocations — there is no <code>--runs</code>
-   flag) against gemini-2.5-flash (or gemini-3-flash-preview):
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>benchmarks/llm-eval<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>python<span class="w"> </span>benchmark.py<span class="w"> </span>--provider<span class="w"> </span>gemini<span class="w"> </span>--model<span class="w"> </span>gemini-2.5-flash
+   flag) against the current default, gemini-3.8-flash:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>benchmarks/llm-eval<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>python<span class="w"> </span>benchmark.py<span class="w"> </span>--provider<span class="w"> </span>gemini<span class="w"> </span>--model<span class="w"> </span>gemini-3.8-flash
 </span></code></pre></div>
+   The gate runs recorded above used gemini-2.5-flash, which shuts down
+   2026-10-16 (the 2.5 line's earliest sunset). Its scores are no baseline
+   for gemini-3.8-flash: run the current pin 3x first to set one, then
+   compare the candidate against that.
    Beware free-tier rate-limit contamination — throttled runs read as fake
    quality regressions.</li>
 <li>Verify code editing score ≥50% and overall score ≥75%.</li>

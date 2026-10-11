@@ -1481,7 +1481,7 @@ determinism (Phases A–D) + <code>validate_agent_task</code> safety gate +
 <li><code>handle_agent</code> in the factory uses the same helper.</li>
 <li>Friendlier rejection: not a red <code>ErrorResult</code>, a question framed as <code>NotificationResult(WARNING)</code> with concrete examples (<code>/agent Fix the off-by-one in src/parser.py:line_count()</code>).</li>
 </ol>
-<p>23 new tests in <a href="../tests/test_agent_task_validation.py">tests/test_agent_task_validation.py</a>.</p>
+<p>23 new tests in <a href="../../../tests/test_agent_task_validation.py">tests/test_agent_task_validation.py</a>.</p>
 <h3 id="spec-rich-templates-ported-to-factory"><code>/spec</code> rich templates ported to factory<a class="headerlink" href="#spec-rich-templates-ported-to-factory" title="Permanent link">&para;</a></h3>
 <p>Pre-v1.18.1, <code>/spec</code> returned a 5-line stub from the factory while VSCode had ~50-line rich templates inline. Cross-client divergence — TUI users got the stub, VSCode users got the full template, web users got nothing useful.</p>
 <p>v1.18.1 ports the full templates (<code>api</code>, <code>cli</code>, <code>lib</code>, <code>algo</code>, <code>ui</code>) + guidelines into <code>ppxai/commands/system.py::handle_spec</code>. All four clients see identical content. VSCode's <code>handleSpecCommand</code> is gone.</p>
@@ -1499,12 +1499,12 @@ determinism (Phases A–D) + <code>validate_agent_task</code> safety gate +
 <p>Fix: every PyInstaller job in <code>.github/workflows/build.yml</code> now uses <code>uv sync --frozen --all-extras</code>, matching the test job. Adds &lt;2s to install steps and ensures the build venv covers every spec's hiddenimports + every dynamic import in the command-loading and file-preprocessing chains.</p>
 <p><code>uv.lock</code> was also stale after the pypdfium2 swap — regenerated in the same commit.</p>
 <h2 id="architecture-docs">Architecture docs<a class="headerlink" href="#architecture-docs" title="Permanent link">&para;</a></h2>
-<p>Two new "Critical Architecture Pattern" sections in <a href="../CLAUDE.md">CLAUDE.md</a>, added during the work:</p>
+<p>Two new "Critical Architecture Pattern" sections in <a href="../../../CLAUDE.md">CLAUDE.md</a>, added during the work:</p>
 <ul>
 <li>§"Critical Architecture Pattern: Command Dispatch via Envelope (v1.18.1)" — the dispatch flow, side-effect kinds, the <code>prompt_quick_pick</code> resume protocol, the rules.</li>
 <li>§"Critical Architecture Pattern: State-Sync Determinism (v1.18.1)" — the four channels (SSE during chat, <code>/state</code> snapshot on demand, REST piggyback, <code>cwd_anchor</code> mismatch), the rules.</li>
 </ul>
-<p>First ADR: <a href="decisions/0001-keys-command-cross-client.md">docs/decisions/0001-keys-command-cross-client.md</a> — establishes the ADR convention and pins the cross-client routing for <code>/keys</code>.</p>
+<p>First ADR: <a href="../../../decisions/0001-keys-command-cross-client/">docs/decisions/0001-keys-command-cross-client.md</a> — establishes the ADR convention and pins the cross-client routing for <code>/keys</code>.</p>
 <h2 id="test-coverage">Test coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h2>
 <p>Major test additions:</p>
 <table>
@@ -1517,57 +1517,57 @@ determinism (Phases A–D) + <code>validate_agent_task</code> safety gate +
 </thead>
 <tbody>
 <tr>
-<td><a href="../tests/test_command_envelope.py">test_command_envelope.py</a></td>
+<td><a href="../../../tests/test_command_envelope.py">test_command_envelope.py</a></td>
 <td style="text-align: right;">21</td>
 <td>v1 envelope shape, side-effect taxonomy sentinel, handler emission</td>
 </tr>
 <tr>
-<td><a href="../tests/test_rest_event_piggyback.py">test_rest_event_piggyback.py</a></td>
+<td><a href="../../../tests/test_rest_event_piggyback.py">test_rest_event_piggyback.py</a></td>
 <td style="text-align: right;">~15</td>
 <td>Phase B drain helper + per-route integration</td>
 </tr>
 <tr>
-<td><a href="../tests/test_files_cwd_anchor.py">test_files_cwd_anchor.py</a></td>
+<td><a href="../../../tests/test_files_cwd_anchor.py">test_files_cwd_anchor.py</a></td>
 <td style="text-align: right;">~20</td>
 <td>Phase D 409 path on /files/read</td>
 </tr>
 <tr>
-<td><a href="../tests/test_web_command_dispatcher_v18_1.py">test_web_command_dispatcher_v18_1.py</a></td>
+<td><a href="../../../tests/test_web_command_dispatcher_v18_1.py">test_web_command_dispatcher_v18_1.py</a></td>
 <td style="text-align: right;">~10</td>
 <td>Web dispatcher shape + drain</td>
 </tr>
 <tr>
-<td><a href="../tests/test_web_cwd_anchor_client.py">test_web_cwd_anchor_client.py</a></td>
+<td><a href="../../../tests/test_web_cwd_anchor_client.py">test_web_cwd_anchor_client.py</a></td>
 <td style="text-align: right;">~12</td>
 <td>Web's <code>handleCwdAnchorMismatch</code></td>
 </tr>
 <tr>
-<td><a href="../tests/test_agent_task_validation.py">test_agent_task_validation.py</a></td>
+<td><a href="../../../tests/test_agent_task_validation.py">test_agent_task_validation.py</a></td>
 <td style="text-align: right;">23</td>
 <td>Cross-client agent-task validation gate</td>
 </tr>
 <tr>
-<td><a href="../tests/test_vscode_step5a_helpers.py">test_vscode_step5a_helpers.py</a></td>
+<td><a href="../../../tests/test_vscode_step5a_helpers.py">test_vscode_step5a_helpers.py</a></td>
 <td style="text-align: right;">~25</td>
 <td>sideEffectsHandler.ts + commandRenderer.ts contracts</td>
 </tr>
 <tr>
-<td><a href="../tests/test_vscode_visibility_reanchor.py">test_vscode_visibility_reanchor.py</a></td>
+<td><a href="../../../tests/test_vscode_visibility_reanchor.py">test_vscode_visibility_reanchor.py</a></td>
 <td style="text-align: right;">~6</td>
 <td>Phase A re-anchor parity</td>
 </tr>
 <tr>
-<td><a href="../tests/test_vscode_step5b2_dispatcher.py">test_vscode_step5b2_dispatcher.py</a></td>
+<td><a href="../../../tests/test_vscode_step5b2_dispatcher.py">test_vscode_step5b2_dispatcher.py</a></td>
 <td style="text-align: right;">26</td>
 <td>VSCode dispatcher shape, removed-handler tombstones</td>
 </tr>
 <tr>
-<td><a href="../tests/test_vscode_step5c_state_sync.py">test_vscode_step5c_state_sync.py</a></td>
+<td><a href="../../../tests/test_vscode_step5c_state_sync.py">test_vscode_step5c_state_sync.py</a></td>
 <td style="text-align: right;">20</td>
 <td>VSCode Phase B + D wiring + cross-client parity</td>
 </tr>
 <tr>
-<td><a href="../tests/test_server_smoke_e2e.py">test_server_smoke_e2e.py</a></td>
+<td><a href="../../../tests/test_server_smoke_e2e.py">test_server_smoke_e2e.py</a></td>
 <td style="text-align: right;">2</td>
 <td>Spawned-server smoke for envelope events + 409</td>
 </tr>
@@ -1576,8 +1576,8 @@ determinism (Phases A–D) + <code>validate_agent_task</code> safety gate +
 <p><strong>Suite: 2926 passing, 0 skipped</strong> (was 2924 + 2 poppler-skipped at v1.18.0). 4 unrelated Perplexity-API integration failures pre-date this branch.</p>
 <h2 id="deferred-to-v1182">Deferred to v1.18.2<a class="headerlink" href="#deferred-to-v1182" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Agent loop unification across HTTP clients.</strong> Validation unified in v1.18.1; the loop body still runs client-side in VSCode and via the streaming <code>/chat</code> path on web because factory's <code>handle_agent</code> is TUI-shaped (<code>asyncio.run</code>, <code>console.print</code>). <a href="archive/TODO-v1.18.2-agent-loop-unification.md">docs/archive/TODO-v1.18.2-agent-loop-unification.md</a> tracks the work.</li>
-<li><strong><code>prompt_text</code> side-effect kind</strong> for free-text follow-ups when <code>prompt_quick_pick</code>'s finite-choice shape doesn't fit. <a href="archive/TODO-v1.18.2-prompt-text-kind.md">docs/archive/TODO-v1.18.2-prompt-text-kind.md</a>.</li>
+<li><strong>Agent loop unification across HTTP clients.</strong> Validation unified in v1.18.1; the loop body still runs client-side in VSCode and via the streaming <code>/chat</code> path on web because factory's <code>handle_agent</code> is TUI-shaped (<code>asyncio.run</code>, <code>console.print</code>). <a href="../../TODO-v1.18.2-agent-loop-unification/">docs/archive/TODO-v1.18.2-agent-loop-unification.md</a> tracks the work.</li>
+<li><strong><code>prompt_text</code> side-effect kind</strong> for free-text follow-ups when <code>prompt_quick_pick</code>'s finite-choice shape doesn't fit. <a href="../../TODO-v1.18.2-prompt-text-kind/">docs/archive/TODO-v1.18.2-prompt-text-kind.md</a>.</li>
 </ul>
 <h2 id="upgrade-notes">Upgrade notes<a class="headerlink" href="#upgrade-notes" title="Permanent link">&para;</a></h2>
 <ul>

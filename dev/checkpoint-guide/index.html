@@ -2215,6 +2215,10 @@ everywhere (it is <code>~/.ppxai/sessions/checkpoints/</code>, and the top-level
 is no <code>Confirm undo? (y/n)</code> prompt, the status line is a <code>↶</code> glyph
 rather than <code>Checkpoints: &lt;backend&gt;</code> text, and the two-commit mechanism
 (<code>ppxai checkpoint:</code> vs <code>ppxai agent:</code>) was undocumented.</p>
+<p><strong>Updated 2026-09-28 (not a full re-verify):</strong> <code>/checkpoint clear</code> now
+asks for confirmation first in all four clients (landed <code>beffa197</code>,
+2026-09-21, after the last full verification above) — see the <code>clear</code>
+section below.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>The checkpoint system provides <strong>atomic multi-file rollback</strong> for agent mode tasks. Works with both <strong>ppxai</strong> (Rich TUI) and <strong>ppxaide</strong> (Textual TUI). Before executing autonomous tasks, a checkpoint is created that lets you undo all changes with a single <code>/undo</code> command.</p>
 <p><strong>Key Features:</strong>
@@ -2234,7 +2238,7 @@ rather than <code>Checkpoints: &lt;backend&gt;</code> text, and the two-commit m
 </li>
 <li>
 <p><strong>Check status</strong> (see checkpoint backend in status line):
-   <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | ↶]
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>[Gemini | gemini-3.8-flash | Tools: ON | Agent: ON | ↶]
 </span></code></pre></div>
    The checkpoint indicator is the compact <code>↶</code> glyph, not the words
    <code>Checkpoints: git</code> — see the table below.</p>
@@ -2452,8 +2456,8 @@ Commit or stash first.</p>
 <td>Set checkpoint backend for this session</td>
 </tr>
 <tr>
-<td><code>clear</code></td>
-<td>Clear old file-based snapshots</td>
+<td><code>clear [--yes\|--no]</code></td>
+<td>Clear old file-based snapshots — asks for confirmation first; <code>--yes</code>/<code>--no</code> skip the prompt for scripted use</td>
 </tr>
 <tr>
 <td><code>info &lt;id&gt;</code></td>
@@ -2514,10 +2518,14 @@ Both TUI and VSCode extension support autocomplete for subcommands and backend o
 <h4 id="checkpoint-clear"><code>/checkpoint clear</code><a class="headerlink" href="#checkpoint-clear" title="Permanent link">&para;</a></h4>
 <p>Delete <strong>all</strong> file-based checkpoint snapshots (not a "keep recent N" prune —
 it calls <code>cleanup_old_checkpoints(keep_last=0)</code>, which removes every
-snapshot):</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>/checkpoint clear
+snapshot). Since 2026-09-21, this asks for confirmation first in all four
+clients (a <code>prompt_quick_pick</code> with Cancel as the first row, so a stray
+Enter never deletes anything):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>/checkpoint clear            # asks; deletes nothing until confirmed
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>/checkpoint clear --yes      # delete, no prompt (scripted use)
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>/checkpoint clear --no       # say so, delete nothing
 </span></code></pre></div>
-<p><strong>Output:</strong>
+<p><strong>Output (after confirming):</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>🗑️  Cleared 8 old checkpoint snapshots
 </span></code></pre></div></p>
 <p><strong>Note:</strong> This only affects file-based checkpoints and deletes them all —
@@ -2550,8 +2558,8 @@ history and are unaffected.</p>
 <hr />
 <h2 id="workflow-examples">Workflow Examples<a class="headerlink" href="#workflow-examples" title="Permanent link">&para;</a></h2>
 <h3 id="example-1-git-project-with-undo">Example 1: Git Project with Undo<a class="headerlink" href="#example-1-git-project-with-undo" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a># Status shows git checkpoints
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: git]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a># Status shows a checkpoint exists (the ↶ glyph, not "Checkpoints: git" text)
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>[Gemini | gemini-3.8-flash | Tools: ON | Agent: ON | ↶]
 </span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
 </span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a># Run agent task
 </span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>You: /auto add user registration endpoint
@@ -2576,8 +2584,8 @@ history and are unaffected.</p>
 </span></code></pre></div>
 <hr />
 <h3 id="example-2-non-git-project">Example 2: Non-Git Project<a class="headerlink" href="#example-2-non-git-project" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a># No git repo, file backend active
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: file]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a># No git repo, file backend active (the ↶ glyph, not "Checkpoints: file" text)
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>[Gemini | gemini-3.8-flash | Tools: ON | Agent: ON | ↶]
 </span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
 </span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a># Run agent task
 </span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>You: /auto refactor config.py to use environment variables
@@ -2601,8 +2609,8 @@ history and are unaffected.</p>
 </span></code></pre></div>
 <hr />
 <h3 id="example-3-disabled-checkpoints">Example 3: Disabled Checkpoints<a class="headerlink" href="#example-3-disabled-checkpoints" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a># Checkpoints explicitly disabled
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>[Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: OFF]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a># Checkpoints explicitly disabled — there is no "OFF" indicator; absence of ↶ is the only signal
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>[Gemini | gemini-3.8-flash | Tools: ON | Agent: ON]
 </span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
 </span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a># Warning shown when running agent
 </span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>You: /auto update dependencies
@@ -2909,7 +2917,7 @@ the commit message that gets created.</p>
 - Same HTTP API endpoints (<code>/agent/status</code>, <code>/checkpoint/undo</code>)
 - Same backend selection logic
 - Same checkpoint creation/restore behavior</p>
-<p>See <a href="../archive/v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC/">docs/VSCODE-CHECKPOINT-UI-SPEC.md</a> for implementation details.</p>
+<p>See <a href="../archive/v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC/">VSCode Checkpoint UI Spec</a> (historical, v1.15.2) for implementation details.</p>
 <hr />
 <h2 id="faq">FAQ<a class="headerlink" href="#faq" title="Permanent link">&para;</a></h2>
 <p><strong>Q: Do checkpoints work with file editing tools?</strong>
@@ -2961,7 +2969,7 @@ A: Use <code>/checkpoint list</code> to see the last 10 checkpoints, or <code>/c
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../session-agent-guide/">Session Agent Guide</a> - Autonomous agent mode documentation</li>
-<li><a href="../archive/v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC/">VSCode Checkpoint UI Spec</a> - VSCode extension implementation</li>
+<li><a href="../archive/v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC/">VSCode Checkpoint UI Spec</a> - (historical, v1.15.2) VSCode extension implementation</li>
 <li><a href="../archive/release-notes/RELEASE-NOTES-v1.12.0/">Release Notes v1.12.0</a> - Full feature list and changelog</li>
 </ul>
 

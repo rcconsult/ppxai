@@ -1190,15 +1190,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#graph-2c-one-account-two-wires-adr-0012-w3" class="md-nav__link">
+  <a href="#graph-2c-one-account-two-wires-adr-0012-w3-historical-superseded-by-adr-0015" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Graph 2c — one account, two wires (ADR 0012 W3)
+        Graph 2c — one account, two wires (ADR 0012 W3) — HISTORICAL, superseded by ADR 0015
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Graph 2c — one account, two wires (ADR 0012 W3)">
+    <nav class="md-nav" aria-label="Graph 2c — one account, two wires (ADR 0012 W3) — HISTORICAL, superseded by ADR 0015">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1336,7 +1336,7 @@
 traced from code. Use it for debugging (where does this answer come from?),
 refactoring (what depends on this seam?), and onboarding (the shape of the
 capability system at a glance).</p>
-<p>Created in W1 of <a href="../plan-adr-0012-implementation/"><code>plan-adr-0012-implementation.md</code></a>.
+<p>Created in W1 of <a href="../archive/plan-adr-0012-implementation/"><code>plan-adr-0012-implementation.md</code></a>.
 The design record is <a href="../decisions/0012-wire-protocol-as-per-model-capability/">ADR 0012</a>.</p>
 <p>Traced by hand and cross-checked against <code>graphify update .</code> (refreshed
 2026-08-30 in W1: 8,261 nodes / 39,569 edges). That check is what confirms
@@ -1457,8 +1457,11 @@ in W4.)</p>
 <p><strong>This paragraph used to predict that the branches "collapse in W4, when
 <code>chat_completions</code> becomes a handler and dispatch is a dict lookup with
 no <code>if</code> at all". W4 shipped; that did not happen</strong> (checked 2026-09-20).
-Dispatch is still five explicit <code>if self._wire_for(model) == "responses"</code>
-branches — <code>openai_native.py:278,303,355</code> and <code>perplexity.py:325,534</code>.</p>
+Dispatch is still explicit <code>if self._wire_for(model) == "responses"</code>
+branches. <strong>Updated 2026-09-28 (ADR 0015): <code>perplexity.py</code> is deleted —
+Perplexity is no longer a chat provider.</strong> Today there are only two such
+branches, both in <code>openai_native.py:280,317</code> (was five across
+<code>openai_native.py:278,303,355</code> and <code>perplexity.py:325,534</code>).</p>
 <p>The reason is deliberate and documented in
 <code>wire/chat_completions.py</code>: only <code>ResponsesHandler</code> owns send paths
 (7 methods); <code>ChatCompletionsHandler</code> and <code>MessagesHandler</code> implement
@@ -1479,8 +1482,16 @@ sets that build <code>shipped_model_facts</code> state <em>different fields</em>
 (<code>tool_mode</code> vs <code>wire_protocol</code>) and must stay disjoint — a model in both
 would lose one fact to dict-merge order, so a fence asserts they never
 overlap.</p>
-<h2 id="graph-2c-one-account-two-wires-adr-0012-w3">Graph 2c — one account, two wires (ADR 0012 W3)<a class="headerlink" href="#graph-2c-one-account-two-wires-adr-0012-w3" title="Permanent link">&para;</a></h2>
-<p>Perplexity is the first provider to speak two protocols. Nothing about the
+<h2 id="graph-2c-one-account-two-wires-adr-0012-w3-historical-superseded-by-adr-0015">Graph 2c — one account, two wires (ADR 0012 W3) — HISTORICAL, superseded by ADR 0015<a class="headerlink" href="#graph-2c-one-account-two-wires-adr-0012-w3-historical-superseded-by-adr-0015" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Superseded 2026-09-28 (ADR 0015).</strong> <code>PerplexityProvider</code> and <code>_WireCtx</code>
+are both deleted — Perplexity was removed as a chat provider and kept
+only as a web-search/grounding backend (ADR 0014, <code>ppxai/engine/search/</code>).
+<code>grep -rn "class PerplexityProvider\|_WireCtx" ppxai</code> finds nothing. This
+graph is kept as a historical record of the two-wire-per-account design;
+no provider today speaks two protocols off one account.</p>
+</blockquote>
+<p>Perplexity was the first provider to speak two protocols. Nothing about the
 routing changed to allow it — the same <code>_wire_for</code> reader, the same handler
 registry. What it needed was a second <em>transport</em>, because the two wires sit
 at different paths on one host.</p>
@@ -1531,12 +1542,20 @@ the wire never sees is <em>exactly</em> debt Item 61, reproduced inside the hand
 built to fix Item 61. Two sources for one value is the bug; <code>_budget_for</code>
 now reads config first, then the fact, in one place.</p>
 <h2 id="graph-2d-the-end-state-5-providers-4-wires-adr-0012-w4-6">Graph 2d — the end state: 5 providers, 4 wires (ADR 0012 W4 + §6)<a class="headerlink" href="#graph-2d-the-end-state-5-providers-4-wires-adr-0012-w4-6" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Updated 2026-09-28 (ADR 0015): the <code>perplexity</code> provider box below no
+longer exists.</strong> Perplexity was removed as a chat provider (kept only as
+a web-search/grounding backend, ADR 0014, <code>ppxai/engine/search/</code>); today's
+provider set is <code>anthropic</code>, <code>gemini</code>, <code>openai_compat</code>, <code>openai_native</code>
+(<code>ls ppxai/engine/providers/</code>). The box is kept below as drawn, dated to
+ADR 0012 W4.</p>
+</blockquote>
 <p>Every wire is a handler. Conversion is protocol-owned, so there is no shared
 method left for two protocols to disagree about — the shape debt Item 62 (b)
 described.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>  PROVIDERS (own an ACCOUNT: key, base_url, price table)
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  ┌──────────────────┬───────────────────┬──────────────┬───────────────┐
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  │ openai_native    │ perplexity        │ openai_compat│ gemini        │
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  │ openai_native    │ perplexity (REMOVED, ADR 0015) │ openai_compat│ gemini │
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  └────────┬─────────┴─────────┬─────────┴──────┬───────┴───────┬───────┘
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>           │                   │                │               │
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>           │  get_facts_for_model(model).wire_protocol           │
@@ -1690,11 +1709,12 @@ will actually do, and labels each field's source (<code>config</code> / <code>bu
 a flat <code>is_unmeasured(...)</code> leaf, which was the pre-v1.19.3 shape: one
 boolean deciding the label for all twelve fields at once. That answered
 <em>"did a row match"</em>, not <em>"is this value measured"</em> — and
-<code>PerplexityProvider</code> seeds its gateway rows from
-<code>shipped_facts_for_model("openai/")</code> and four sibling globs that match
-<strong>nothing</strong>, so the seed IS <code>UNMEASURED</code> with three fields then set
+<code>PerplexityProvider</code> (removed as a chat provider in v1.19.3, ADR 0015 —
+see the note above) seeded its gateway rows from
+<code>shipped_facts_for_model("openai/")</code> and four sibling globs that matched
+<strong>nothing</strong>, so the seed WAS <code>UNMEASURED</code> with three fields then set
 deliberately. The other nine printed <code>(built-in)</code> for every model those
-globs serve, across four vendors.</p>
+globs served, across four vendors.</p>
 <p>The <code>has_global_row</code> guard is what keeps the fix from over-reaching:
 comparing a value to <code>UNMEASURED</code> cannot by itself tell a guess from a
 measurement that happens to agree with the guess, so a model with its own
@@ -1765,10 +1785,14 @@ above — that is the disjointness, restated as a table:</p>
 correctness does not depend on where a row was pasted. Between rungs, a
 provider row wins <strong>whole</strong> — rows are complete records, so there is no
 field-level merge and nothing to arbitrate.</p>
-<p>The provider dimension at rung 2 is load-bearing, not decoration:
-<code>anthropic/claude-sonnet-5</code> is reached over <code>responses</code> on Perplexity and
-<code>chat_completions</code> on OpenRouter, so one global row cannot state its
-<code>wire_protocol</code> correctly for both. That is the seam W3's fleet rows land in.</p>
+<p>The provider dimension at rung 2 is load-bearing, not decoration: while
+Perplexity's gateway existed, <code>anthropic/claude-sonnet-5</code> was reached over
+<code>responses</code> on Perplexity and <code>chat_completions</code> on OpenRouter, so one
+global row could not state its <code>wire_protocol</code> correctly for both. That was
+the seam W3's fleet rows landed in. <strong>Perplexity's gateway is gone since
+ADR 0015</strong>, but the principle — one global row cannot serve every
+provider's wire for the same model id — still holds for OpenRouter versus
+a <code>vLLM</code>/NIM/Ollama host serving the same model name over a different wire.</p>
 <hr />
 <h2 id="not-yet-consumed-consumed-since-w2">~~Not yet consumed~~ — consumed since W2<a class="headerlink" href="#not-yet-consumed-consumed-since-w2" title="Permanent link">&para;</a></h2>
 <blockquote>

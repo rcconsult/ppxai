@@ -1349,7 +1349,7 @@
 
 <h1 id="ppxai-coder-upload-defense-in-depth-plan-draft">ppxai / Coder Upload Defense-in-Depth Plan (DRAFT)<a class="headerlink" href="#ppxai-coder-upload-defense-in-depth-plan-draft" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p>Status: DRAFT for the sister-session (upload feature implementation). Not committed.
+<p>Status: DRAFT for the sister-session (upload feature implementation). Committed to the repo (<code>d73ebdd3</code>) as a reference doc.
 Author: research session, 2026-06-08. Target: ppxai-server <code>/files/upload</code> + coder per-user pods.
 Companion to the codebase upload-path map (see §7 integration points).</p>
 </blockquote>
@@ -1630,9 +1630,10 @@ agent to act.</p>
 <h2 id="7-ppxai-integration-points-from-codebase-map">7. ppxai integration points (from codebase map)<a class="headerlink" href="#7-ppxai-integration-points-from-codebase-map" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Primary hook — workspace population:</strong> <code>ppxai/server/routes/files.py</code> <code>upload_file()</code>
-  (~L921–1045). Streams 1 MB chunks, <strong>writes directly to resolved workspace path</strong> (~L1015–1033),
-  bypassing SessionFileStore. Insert L0+L1 here: buffer/temp-file → scan → atomic-rename on clean.
-  Accepts <em>any</em> content-type today (100 MB cap) — add the type allowlist here.</li>
+  (line numbers drift; find it by function name — was <code>~L921–1045</code>, now starts at <code>:1022</code>). Streams
+  1 MB chunks, <strong>writes directly to resolved workspace path</strong>, bypassing SessionFileStore. Insert
+  L0+L1 here: buffer/temp-file → scan → atomic-rename on clean. Accepts <em>any</em> content-type today
+  (100 MB cap) — add the type allowlist here.</li>
 <li><strong>Secondary hook — chat attachments:</strong> <code>routes/chat.py</code> base64 decode (~L128) →
   <code>engine/file_preprocessing.py:preprocess_file()</code> → <code>engine/session_store.py:SessionFileStore.save()</code>
   (single <code>write_bytes</code>, ~L215). One chokepoint for this path.</li>

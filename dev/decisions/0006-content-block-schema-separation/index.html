@@ -1594,7 +1594,7 @@
 
 <h1 id="adr-0006-separate-engine-internal-content-schema-from-wire-schema">ADR 0006 — Separate engine-internal content schema from wire schema<a class="headerlink" href="#adr-0006-separate-engine-internal-content-schema-from-wire-schema" title="Permanent link">&para;</a></h1>
 <p><strong>Date:</strong> 2026-05-14
-<strong>Status:</strong> Accepted — full implementation lands on <code>bugfix/v1.18.6</code> (all 4 phases). No stopgap; the producer-side fix is shipping directly.
+<strong>Status:</strong> Accepted — implemented, shipped in v1.18.6 (all 4 phases). No stopgap; the producer-side fix shipped directly.
 <strong>Related:</strong>
 - <a href="../0003-agent-platform-architecture/">ADR 0003</a> — agent platform (sub-agents + autonomous agents) for v1.19.x. Strategic motivation for v1.18.6's schema_version: 2 work — every architectural primitive ADR 0003 needs (run identity, persistence, cross-process readers, sub-agent message construction) inherits or extends what this ADR establishes. See "Strategic rationale" section below.
 - <a href="../0004-llm-gateway-features/">ADR 0004</a> — v1 API gateway; this ADR's wire-schema discipline is what makes the gateway safe across strict OpenAI-compatible endpoints
@@ -1650,8 +1650,8 @@ cover this case.</p>
 <h3 id="why-it-bites-now">Why it bites now<a class="headerlink" href="#why-it-bites-now" title="Permanent link">&para;</a></h3>
 <p>Three concurrent pressures surfaced the entanglement on 2026-05-14:</p>
 <ol>
-<li><strong>A user attached a screenshot to gpt-5.5 on the corporate
-   <code>codeai.internal</code> OpenAI-compat endpoint.</strong> The endpoint's strict
+<li><strong>A user attached a screenshot to gpt-5.5 on an internal
+   <code>https://your-vllm-host/v1</code>-style OpenAI-compat endpoint.</strong> The endpoint's strict
    validator returned <code>"Invalid chat format. Unexpected keys in a
    message content image dict."</code> The attachment was silently
    dropped — the model never saw it.</li>

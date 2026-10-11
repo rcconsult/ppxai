@@ -2009,10 +2009,10 @@ forced, since rephrasing the arguments won't reopen the budget.</p>
 <p>This prevents infinite loops like <code>get_weather → get_weather → get_weather → ...</code>, including ones where the arguments change slightly on every call.</p>
 <h3 id="2-use-cloud-providers-for-complex-tasks">2. Use Cloud Providers for Complex Tasks<a class="headerlink" href="#2-use-cloud-providers-for-complex-tasks" title="Permanent link">&para;</a></h3>
 <p>For queries requiring synthesis (research, explanations, complex reasoning):
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>/provider perplexity  # or gemini
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>/provider gemini
 </span></code></pre></div></p>
-<p>Perplexity and Gemini have:
-- Native web search (no tool overhead)
+<p>Gemini has:
+- Native web search grounding (no tool overhead)
 - Better reasoning capabilities
 - Proper response synthesis</p>
 <h3 id="3-use-ollama-for-simple-file-operations">3. Use Ollama for Simple File Operations<a class="headerlink" href="#3-use-ollama-for-simple-file-operations" title="Permanent link">&para;</a></h3>
@@ -2027,7 +2027,7 @@ forced, since rephrasing the arguments won't reopen the budget.</p>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>cd ~/project &amp;&amp; ls
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a># Cloud for research (accurate, synthesized)
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>/provider perplexity
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>/provider gemini
 </span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>explain the authentication flow in this codebase
 </span></code></pre></div>
 <h2 id="future-multi-model-orchestration">Future: Multi-Model Orchestration<a class="headerlink" href="#future-multi-model-orchestration" title="Permanent link">&para;</a></h2>

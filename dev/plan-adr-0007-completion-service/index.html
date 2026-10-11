@@ -1450,8 +1450,9 @@
 <h1 id="plan-closing-adr-0007-one-command-registry">Plan — closing ADR 0007 (one command registry)<a class="headerlink" href="#plan-closing-adr-0007-one-command-registry" title="Permanent link">&para;</a></h1>
 <p><strong>Status: ALL FIVE STEPS IMPLEMENTED</strong> — 1 (1a + 1b), 2, 2.5, 3a (web),
 3a-sec (sensitive subcommands), 3b (VSCode), 4 (derive, don't restate)
-and <strong>5 (the parity fence, 2026-09-21)</strong>. The ADR's own Status line is
-the owner's to flip; implementation is complete.
+and <strong>5 (the parity fence, 2026-09-21)</strong>. <strong>Accepted 2026-09-21; shipped
+in v1.19.3 (released 2026-09-28)</strong> — the ADR's own Status line has
+already been flipped to Accepted/implemented.
 Written 2026-09-20 on <code>bugfix/v1.19.3</code>; <strong>rewritten the same day</strong> after
 the owner restated the goal. The first draft split the work (a) invert the
 edge / (b) relocate / (c) roster, called (c) "a feature wearing the ADR's
@@ -1464,7 +1465,7 @@ file is written not to repeat that.</p>
 <p><strong>Record:</strong> <a href="../decisions/0007-completion-first-class-service/">decisions/0007-completion-first-class-service.md</a>
 · step 1 shipped v1.18.8 · steps 2 and 2.5 landed 2026-09-20, steps 3a
 (web), 3a-sec, 3b (VSCode) and 4 on 2026-09-21, all on <code>bugfix/v1.19.3</code>,
-no target release.</p>
+<strong>shipped in v1.19.3 (released 2026-09-28)</strong>.</p>
 <h2 id="the-goal">The goal<a class="headerlink" href="#the-goal" title="Permanent link">&para;</a></h2>
 <p><strong>A command is defined once; everything else is derived.</strong> One declaration
 in the Python registry propagates to completion, <code>/help</code>, palettes and
@@ -2643,6 +2644,20 @@ not exercised. The Rich and Textual lists above are <strong>still NOT RUN</stron
    re-fetched state but not <code>/schema/app-state</code> (the only hit on the new
    server was my own curl). Web re-checks on heartbeat recovery; VSCode
    does not.</p>
+<p><strong>Desktop extension host, 2026-09-28: connect + chat verified, command
+list not re-run.</strong> VSCode desktop with the 1.19.4 VSIX, against the
+installed <code>ppxai-server.exe</code> 1.19.4 (the <code>/ws/terminal</code> guard build, which
+refused a probe from <code>http://evil.example</code> with 403 in the same window).
+From the "ppxai HTTP" and "ppxai" output channels: the extension connected
+once the server came up, streamed 3 chat turns, two of them 6-step tool
+loops, and sent a shell consent reply the server acted on. The "ppxai"
+channel stayed empty, so schema-guard item 1 (matched pair: silent) also
+holds in the desktop host. Disconnecting called <code>/shutdown</code>; the server
+logged a graceful stop (<code>reason: api_request</code>, no ERROR lines), and no
+<code>ppxai</code> process or port 54320 listener was left. Not covered by this run: the eight step-C
+commands, SecretStorage, and defect 1's CSP fix on desktop. They passed in
+VSCode web and nothing points to a desktop-only difference, but this run
+did not exercise them.</p>
 <p>Minor: <code>/checkpoint list</code> cuts file-backend ids to 8 characters, so every
 same-day id reads <code>cp-20260</code>. Message timestamps (and the usage badge)
 render dark-on-blue and are near-unreadable in VS Code web's light theme.

@@ -1334,10 +1334,21 @@
 <h1 id="adr-0013-ssh-remote-backend-a-local-hub-reaching-remote-ppxai-servers">ADR 0013 — SSH remote backend: a local hub reaching remote ppxai servers<a class="headerlink" href="#adr-0013-ssh-remote-backend-a-local-hub-reaching-remote-ppxai-servers" title="Permanent link">&para;</a></h1>
 <p><strong>Date:</strong> 2026-09-26 (revised 2026-09-26 — owner decided open questions 1, 2
 and 5; 3 and 4 measured against a WSL2 sshd the same day)
-<strong>Status:</strong> 🚧 <strong>In progress.</strong> Phase 1 (S3, the remote-side contract) was
+<strong>Status:</strong> ✅ <strong>Accepted</strong> (owner, 2026-09-29), implemented on
+<code>feature/v1.19.4</code>, unreleased. History: phase 1 (S3, the remote-side contract) was
 implemented on 2026-09-27 (<code>78e34b8e</code>): <code>ppxai-server --uds/--announce/--detach/--list</code>,
-the contract-1 registry, verified on Windows, macOS and Ubuntu 24.04. Phases 2
-and later (the hub and SSH transport) are not started. Revise in place.
+the contract-1 registry, verified on Windows, macOS and Ubuntu 24.04. Phase 2
+(S2, the transport) was implemented on 2026-09-28 on <code>feature/v1.19.4</code>:
+<code>ppxai/remote/transport.py</code> + <code>openssh.py</code>. Phase 3 (S1 parsing + S4, the
+session manager) the same day: <code>ppxai/remote/{inventory,contract,manager}.py</code>.
+Phase 4 (S5, the hub proxy and <code>/hub/*</code> control API, wired to <code>remote.hosts</code>)
+the same day: <code>ppxai/server/routes/remote_hub.py</code>. Phase 5 (S6, the web
+client: <code>/h/</code> prefix recognition and the SSH Launcher in the split pane) the
+same day, see S6 "As built". Phase 6 (owner trial) <strong>passed on 2026-09-29</strong>
+(Windows hub → WSL2 Ubuntu 24.04 over real OpenSSH; see the plan's phase 6
+for the checklist and the findings it fixed). After the trial the hub
+retired registry contract 1 (S3 "As built"), and the SSH Launcher got a
+Playwright spec (<code>tests/e2e/ssh-launcher.spec.ts</code>). Revise in place.
 <strong>Related:</strong>
 - <a href="../../plan-ssh-remote-backend/"><code>../plan-ssh-remote-backend.md</code></a> — the phased plan that implements this record
 - <a href="../../patterns/protocol-dependency-inversion/"><code>../patterns/protocol-dependency-inversion.md</code></a> — the <code>Protocol</code>-in-leaf-module pattern the transport seam uses
@@ -1470,8 +1481,14 @@ protocol-dependency-inversion pattern:</p>
 <li><code>forward()</code> returns an endpoint the hub proxies to. On Windows the local end
   is a loopback TCP port (OpenSSH for Windows forwards TCP→remote-UDS); on
   POSIX it may be a local UDS.</li>
-<li>Errors are typed (<code>HostUnreachable</code>, <code>AuthFailed</code>, <code>HostKeyRejected</code>,
-  <code>RemoteCommandFailed</code>, <code>ForwardFailed</code>) and carry OpenSSH's stderr verbatim.
+<li>Errors are typed (<code>HostUnreachableError</code>, <code>AuthFailedError</code>,
+  <code>HostKeyRejectedError</code>, <code>RemoteCommandFailedError</code>, <code>ForwardFailedError</code>,
+  plus <code>TransportTimeoutError</code>; all subclass <code>RemoteTransportError</code>) and carry
+  OpenSSH's stderr verbatim. <code>run()</code> returns a non-zero <em>remote</em> exit as a
+  <code>RunResult</code> (<code>.check()</code> raises <code>RemoteCommandFailedError</code>); only ssh's own
+  failures raise. ssh exits 255 for both its own failures and a remote command
+  that exits 255, so a 255 is an ssh failure only when stderr carries a
+  recognised OpenSSH message.
   The transport never prompts: it runs <code>ssh -o BatchMode=yes</code>, so a missing
   key or unknown host key fails fast instead of hanging the hub.</li>
 </ul>
@@ -1492,12 +1509,12 @@ S3–S6 are testable with no network.</p>
 is alive and whose socket answers <code>/health</code>, and deletes dead entries.</p>
 <p>Registry entry, <code>~/.ppxai/run/servers/&lt;id&gt;.json</code>, mode 0600:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"contract"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"contract"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"9f2c…"</span><span class="p">,</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">"pid"</span><span class="p">:</span><span class="w"> </span><span class="mi">41233</span><span class="p">,</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">"socket"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/home/u/.ppxai/run/sock/9f2c.sock"</span><span class="p">,</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">"token"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">,</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.19.3"</span><span class="p">,</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.19.4"</span><span class="p">,</span>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">"app_state_schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.1"</span><span class="p">,</span>
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nt">"workdir"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/home/u/src/project"</span><span class="p">,</span>
 </span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="nt">"started_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-09-26T10:14:03Z"</span><span class="p">,</span>
@@ -1508,6 +1525,21 @@ is alive and whose socket answers <code>/health</code>, and deletes dead entries
 know, with a message naming both numbers. The token lives in a 0600 file inside
 the owner's home — the same trust boundary as <code>~/.ppxai/.env</code>, and the hub reads
 it only through the user's own SSH session.</p>
+<p><strong>As built (2026-09-29): contract 2, and contract 1 is retired.</strong> A
+PyInstaller one-file <code>ppxai-server</code> from before <code>e3746f65</code> starts under
+<code>--detach</code>, answers <code>/health</code>, and then fails every chat (its unpacked
+bundle was deleted when the launcher exited). That fix did not change the
+version number, so <code>version</code> cannot tell the two builds apart. Contract 2
+has the same fields as 1; what it adds is the meaning "this server's
+<code>--detach</code> works from a one-file build". The hub reads contract 2 only and
+refuses contract 1 by name, with the reason (<code>RETIRED_CONTRACTS</code> in
+<code>ppxai/remote/contract.py</code>). Before a launch the hub runs
+<code>ppxai-server --registry-contract</code> on the host, which prints the contract
+the binary writes. A binary without the flag (argparse exits 2) or with a
+contract the hub does not read is refused before anything starts; the
+message names the remote's version and says to install the hub's version or
+rebuild from the same source. A version floor could not do this: the hub
+ships in a release after 1.19.4, and <code>e3746f65</code> did not change the number.</p>
 <h3 id="s4-remotesessionmanager-local-service">S4 — <code>RemoteSessionManager</code> (local service)<a class="headerlink" href="#s4-remotesessionmanager-local-service" title="Permanent link">&para;</a></h3>
 <p>Owns one connection per host and a small state machine:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>disconnected ──connect──▶ connecting ──forward ok──▶ tunneled ──/health ok──▶ healthy
@@ -1521,6 +1553,30 @@ label)</code>, <code>attach(host, server_id)</code>, <code>detach(host, server_i
 forward, leave the server running), <code>stop(host, server_id)</code> (ask the server to
 shut down). <strong>Detach is the default</strong> when the browser leaves; stopping a
 remote server is always an explicit act.</p>
+<p><strong>As built (2026-09-28):</strong></p>
+<ul>
+<li>A sixth, terminal state, <strong><code>gone</code></strong>: the server is no longer in the host's
+  registry (stopped, crashed, host rebooted). The 2026-09-26 trial asked for
+  it: a server that ends is a normal outcome, not <code>degraded</code>. <code>degraded</code>
+  retries re-list the host first; a server missing from the list is <code>gone</code>.</li>
+<li><code>degraded</code> also covers a forward that works but whose <code>/health</code> fails
+  (e.g. 401). Retries back off exponentially (1 s doubling, capped at 30 s)
+  and emit no event while nothing changes.</li>
+<li><code>stop()</code> sends <code>POST /shutdown</code> through the server's own forward (attaching
+  first if needed); it never signals a pid.</li>
+<li><code>route(host, id)</code> gives S5 the endpoint and token, and only for a
+  <code>healthy</code> attachment. Every public view omits the token, and so does
+  <code>RemoteServer</code>'s <code>repr</code>.</li>
+<li>The hub keeps its own record of each contract it can read
+  (<code>ppxai/remote/contract.py</code>) instead of importing the server's, and a test
+  pins it to <code>ppxai/server/registry.py</code>. A listing with one unreadable entry
+  returns the rest plus a refusal message; it does not fail whole.</li>
+<li>The remote binary is the configured <code>ppxai_server</code>, else <code>ppxai-server</code> on
+  the login PATH, else <code>~/.local/bin/ppxai-server</code> (non-interactive SSH login
+  PATHs often lack <code>~/.local/bin</code>). An old server (argparse rejects <code>--list</code>
+  or <code>--uds</code>, or <code>--registry-contract</code> before a launch) is refused with its
+  <code>--version</code> and the hub's own version to install (S3 "As built").</li>
+</ul>
 <p>The manager lives in a new package <code>ppxai/remote/</code> that imports nothing from
 <code>ppxai/engine/</code> or <code>ppxai/commands/</code> — it moves bytes and never interprets a
 chat. A fence joins <code>tests/test_no_new_lazy_imports.py</code>'s layering checks.</p>
@@ -1541,6 +1597,12 @@ The proxy must:</p>
 </ul>
 <p><code>/</code> on the hub is the host/session picker. <code>/h/&lt;host&gt;/</code> with no server id
 lists that host's servers.</p>
+<p><strong>As built (2026-09-29):</strong> the proxy streams, upgrades websockets, injects
+the token, sends <code>Host: localhost</code>, and keeps one pooled keep-alive client
+per attached server (<code>remote_hub.py</code>), as Q4 requires. The two picker
+routes were not built: <code>/</code> stays the chat UI, and <code>/h/&lt;host&gt;/</code> has no route
+of its own. A host's servers are listed by <code>GET /hub/hosts/&lt;host&gt;/servers</code>
+and shown by the SSH Launcher (S6 "As built").</p>
 <h3 id="s6-web-client">S6 — Web client<a class="headerlink" href="#s6-web-client" title="Permanent link">&para;</a></h3>
 <p>Two small changes, both generalising what <code>/s/&lt;user&gt;/</code> already does:</p>
 <ol>
@@ -1556,6 +1618,19 @@ lists that host's servers.</p>
 <p>The UI inside <code>/h/&lt;host&gt;/&lt;id&gt;/</code> is <strong>served by the remote server itself</strong>, so
 UI and server versions always match. The AppState schema guard that landed
 2026-09-21 remains the backstop, not the mechanism.</p>
+<p><strong>As built (2026-09-28), owner design:</strong> the picker is not a page but the
+<strong>SSH Launcher</strong>, a view in the web UI's right split pane (the
+<code>RightPanelFrame</code> that already hosts files and task runs), opened by a header
+"SSH" button with its own icon (the brand bubble with a <code>&gt;_</code> prompt). The button appears only on the local page, and only when
+<code>GET /hub/hosts</code> answers 200 (a hub is configured); <code>/</code> stays the ordinary
+chat UI. <strong>Open</strong> puts the remote's UI in a new browser tab, one named tab
+per server. <strong>Leave</strong> on a remote page detaches and lands on <code>/#ssh</code>, which
+reopens the launcher. A remote page names its host in a header badge and the
+tab title. Stop is only offered in the launcher, and asks first. Session and
+run counts are read only through a <em>healthy</em> attachment and with
+<code>X-Ppxai-Hub-Attach: no</code>, which makes the hub answer 503 instead of
+auto-attaching: without it, a refresh whose host list predated a Detach
+re-attached the server (found in a live browser run).</p>
 <p>All hosts share one browser origin, so <code>localStorage</code> is shared across hosts.
 Today's keys are viewer preferences (theme, layout) where sharing is fine; any
 future host-specific key must be namespaced by prefix.</p>
@@ -1592,8 +1667,17 @@ future host-specific key must be namespaced by prefix.</p>
 <td>Path smuggling via host id</td>
 <td><code>id</code> pattern <code>[a-z0-9-]{1,32}</code>, looked up in the inventory, never interpolated into a command</td>
 </tr>
+<tr>
+<td>Another local OS user, or a non-browser program, drives the hub over loopback (added 2026-10-11)</td>
+<td>Hub token in <code>~/.ppxai/run/hub-token</code> (0600, dir 0700). Every <code>/hub/*</code> and <code>/h/*</code> request, websocket included, needs it as the <code>ppxai_hub</code> cookie (HttpOnly, SameSite=Strict) or the <code>X-Ppxai-Hub-Token</code> header. <code>GET /hub/auth?token=</code> sets the cookie; <code>ppxai-server</code> prints that URL and <code>ppxai-desktop</code> opens it. Neither credential is forwarded to a remote, and a remote cannot set the cookie. An <code>Origin</code> check alone could not do this: a non-browser can send any <code>Origin</code></td>
+</tr>
 </tbody>
 </table>
+<p><strong>Residual (accepted):</strong> a remote server's web UI is served under the hub's
+own origin, so a compromised remote's page could call <code>/hub/*</code> with the
+owner's cookie. That holds for any proxied remote page, and predates the hub
+token. The token also appears in the printed URL and so in browser history,
+as with Jupyter.</p>
 <p>Out of scope for v1: multi-user hubs, exposing the hub beyond loopback, and
 running the hub on a machine other than the browser's.</p>
 <hr />
@@ -1672,7 +1756,10 @@ exists to detect. Serving the remote's own UI removes the skew.</p>
    <strong>Real-server re-measure (2026-09-26, <code>ppxai-server</code> 1.19.3 on WSL2 over a
    loopback-TCP forward):</strong> <code>/health</code> keep-alive ×50 = 64 ms avg, 31 min, 80
    max — the same shape as the <code>http.server</code> numbers, so the spread is the
-   tunnel, not the test server. Still undiagnosed.</p>
+   tunnel, not the test server. Still undiagnosed. <strong>Deferred at acceptance
+   (2026-09-29):</strong> the proxy pools keep-alive connections as (b) requires.
+   The spread itself was not re-measured through the hub. Diagnosing it is
+   a tuning task; revisit if remote sessions feel slow.</p>
 <p><strong>Real-server perimeter test, same run — 10/10 through the forward:</strong>
    <code>/health</code>; <code>/</code> (web UI served, <code>APP_STATE_SCHEMA</code> injected);
    <code>/schema/app-state</code>; <code>/commands?client=web</code>; <code>/state</code>; <code>/v1/agent/runs</code>
@@ -1699,7 +1786,8 @@ exists to detect. Serving the remote's own UI removes the skew.</p>
      <code>degraded</code>.</li>
 <li><strong>Remote hosts without the S3 contract — DECIDED: refuse</strong> with a message
    naming the remote's version and the minimum that has the contract. No TCP
-   fallback launch.</li>
+   fallback launch. As built: the same rule covers a server that has the
+   contract but an older one (contract 1, S3 "As built").</li>
 </ul>
 <h2 id="future-proper-solution">Future / proper solution<a class="headerlink" href="#future-proper-solution" title="Permanent link">&para;</a></h2>
 <ul>

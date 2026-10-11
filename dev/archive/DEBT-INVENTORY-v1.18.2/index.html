@@ -1471,8 +1471,8 @@ have minimum test coverage.</p>
 <p><strong>Branch when ready:</strong> <code>feat/k8s-session-manager-tests</code>.</p>
 <hr />
 <h3 id="item-12-github-actions-nodejs-20-deprecation-warnings-cosmetic">Item 12 — GitHub Actions Node.js 20 deprecation warnings (cosmetic)<a class="headerlink" href="#item-12-github-actions-nodejs-20-deprecation-warnings-cosmetic" title="Permanent link">&para;</a></h3>
-<p><strong>Affected files:</strong> <a href="../.github/workflows/build.yml">.github/workflows/build.yml</a>,
-<a href="../.github/workflows/docs.yml">.github/workflows/docs.yml</a>.</p>
+<p><strong>Affected files:</strong> <a href="../../.github/workflows/build.yml">.github/workflows/build.yml</a>,
+<a href="../../.github/workflows/docs.yml">.github/workflows/docs.yml</a>.</p>
 <p><strong>What's wrong:</strong> every CI run still emits a deprecation banner for
 <code>actions/checkout@v4</code>, <code>actions/setup-node@v4</code>, and
 <code>actions/upload-artifact@v4</code>:</p>
@@ -1526,7 +1526,7 @@ the input level.</p>
 release branch — too small to need its own.</p>
 <hr />
 <h3 id="item-13-scriptsreleasepy-step-15-fails-silently-when-gh-release-view-errors">Item 13 — <code>scripts/release.py</code> step 15 fails silently when <code>gh release view</code> errors<a class="headerlink" href="#item-13-scriptsreleasepy-step-15-fails-silently-when-gh-release-view-errors" title="Permanent link">&para;</a></h3>
-<p><strong>Affected file:</strong> <a href="../scripts/release.py">scripts/release.py</a>,
+<p><strong>Affected file:</strong> <a href="../../scripts/release.py">scripts/release.py</a>,
 specifically the "Step 15/15: Verifying Release" block.</p>
 <p><strong>What's wrong:</strong> when <code>gh release view v&lt;version&gt; --json assets</code>
 returns "release not found" (because CI failed and the <code>release</code>
@@ -1642,7 +1642,7 @@ ready.</p>
 <h3 id="item-14-add-anthropic-provider-with-explicit-tos-aware-auth-fallback">Item 14 — Add Anthropic provider (with explicit TOS-aware auth fallback)<a class="headerlink" href="#item-14-add-anthropic-provider-with-explicit-tos-aware-auth-fallback" title="Permanent link">&para;</a></h3>
 <p><strong>Affected files:</strong> new <code>ppxai/engine/providers/anthropic.py</code>, new
 <code>ppxai-config.example.json</code> entry, registration in
-<a href="../ppxai/engine/providers/__init__.py">ppxai/engine/providers/<strong>init</strong>.py</a>,
+<a href="../../ppxai/engine/providers/__init__.py">ppxai/engine/providers/<strong>init</strong>.py</a>,
 new tests, README provider table.</p>
 <p><strong>What's missing:</strong> ppxai supports OpenAI, Perplexity, Gemini,
 OpenAI-compat (vLLM/local), but not Anthropic directly. Users who
@@ -1733,9 +1733,9 @@ review independently.</p>
   off the table — too easy to surprise a user into TOS exposure.</p>
 <hr />
 <h3 id="item-15-deploysharedagentsmd-is-a-stale-parallel-copy">Item 15 — <code>deploy/shared/AGENTS.md</code> is a stale parallel copy<a class="headerlink" href="#item-15-deploysharedagentsmd-is-a-stale-parallel-copy" title="Permanent link">&para;</a></h3>
-<p><strong>Affected files:</strong> <a href="../deploy/shared/AGENTS.md">deploy/shared/AGENTS.md</a>
+<p><strong>Affected files:</strong> <a href="../../AGENTS.md">deploy/shared/AGENTS.md</a>
 (369 lines, last touched 2026-03-27 in commit <code>1862422c</code>),
-<a href="../deploy/shared/AGENTS-local.md">deploy/shared/AGENTS-local.md</a>
+deploy/shared/AGENTS-local.md
 (82 lines, similar age).</p>
 <p><strong>What's wrong:</strong> the file looks like an active source of truth
 ("data we use to inject AGENTS.md into coder pods") but in fact
@@ -1852,7 +1852,7 @@ coverage; Windows devs get green local runs.</p>
 <h3 id="item-5-bundle-the-vscode-extension-closed-2026-04-29">Item 5 — Bundle the VSCode extension — closed 2026-04-29<a class="headerlink" href="#item-5-bundle-the-vscode-extension-closed-2026-04-29" title="Permanent link">&para;</a></h3>
 <p>Bundled via <a href="https://esbuild.github.io/">esbuild</a> (VSCode's recommended
 bundler). Configuration in
-<a href="../vscode-extension/esbuild.js">vscode-extension/esbuild.js</a> — pure
+<a href="../../vscode-extension/esbuild.js">vscode-extension/esbuild.js</a> — pure
 Node, no shell-isms, works on Linux/macOS/Windows. esbuild's
 <code>optionalDependencies</code> install the right native binary per host on
 <code>npm install</code>.</p>
@@ -1931,7 +1931,7 @@ are loaded by the webview's <code>media/main.js</code> as static assets via
 <code>openai</code> is listed in <code>package.json</code> but unused by extension code
 (it's a string literal in <code>config.ts</code> provider defaults).</p>
 <p><strong>CI alignment</strong> in
-<a href="../.github/workflows/build.yml"><code>.github/workflows/build.yml</code></a>:</p>
+<a href="../../.github/workflows/build.yml"><code>.github/workflows/build.yml</code></a>:</p>
 <ul>
 <li>Replaced explicit <code>npm run compile</code> step with <code>npm run typecheck</code>
   (catches type errors fast; the bundle itself is built by
@@ -2010,7 +2010,7 @@ Adding a message type is now: <code>WebviewMessage</code> member + map entry.</p
 </span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <p><strong>Tests updated</strong> in
-<a href="../tests/test_vscode_visibility_reanchor.py"><code>tests/test_vscode_visibility_reanchor.py</code></a>
+<a href="../../tests/test_vscode_visibility_reanchor.py"><code>tests/test_vscode_visibility_reanchor.py</code></a>
 to validate the <strong>contract</strong>, not the old code pattern:</p>
 <ul>
 <li><code>test_listener_guards_on_focused</code> — splits into two
@@ -2047,14 +2047,14 @@ to fold a "Windows developer setup" subsection into
 <code>docs/installation.md</code> per the original "trigger to revisit"
 condition.</p>
 <h3 id="item-11-latent-attributeerror-in-agentpy-rich-tui-path-closed-2026-04-28">Item 11 — Latent AttributeError in <code>agent.py</code> Rich-TUI path — closed 2026-04-28<a class="headerlink" href="#item-11-latent-attributeerror-in-agentpy-rich-tui-path-closed-2026-04-28" title="Permanent link">&para;</a></h3>
-<p><a href="../ppxai/commands/agent.py#L680"><code>ppxai/commands/agent.py:680</code></a>
+<p><a href="../../ppxai/commands/agent.py#L680"><code>ppxai/commands/agent.py:680</code></a>
 swapped from <code>context.engine_client.logger</code> (which did not exist
 on <code>EngineClient</code>) to a module-level <code>get_logger("tui")</code> import. The
 old construction would have raised <code>AttributeError</code> mid-<code>/agent</code>
 run; tests passed because they substituted <code>Mock()</code> for the logger
 arg, masking the missing attribute.</p>
 <p>Regression tests in
-<a href="../tests/test_agent_logger_attribute.py"><code>tests/test_agent_logger_attribute.py</code></a>
+<a href="../../tests/test_agent_logger_attribute.py"><code>tests/test_agent_logger_attribute.py</code></a>
 pin four contracts:
 - <code>EngineClient</code> still has no <code>logger</code> attribute (catches drift if
   someone re-adds it).
@@ -2072,17 +2072,17 @@ across HTTP clients" work tracked in
 <a href="../TODO-v1.18.2-agent-loop-unification/">docs/archive/TODO-v1.18.2-agent-loop-unification.md</a>
 remains separate; this fix lets the existing TUI path actually run.</p>
 <h3 id="item-10-introduce-engineclientprotocol-for-the-commands-layer-closed-2026-04-28">Item 10 — Introduce <code>EngineClientProtocol</code> for the commands layer — closed 2026-04-28<a class="headerlink" href="#item-10-introduce-engineclientprotocol-for-the-commands-layer-closed-2026-04-28" title="Permanent link">&para;</a></h3>
-<p>Added <a href="../ppxai/engine/types.py"><code>EngineClientProtocol</code></a> alongside
+<p>Added <a href="../../ppxai/engine/types.py"><code>EngineClientProtocol</code></a> alongside
 the existing <code>ToolEngineProtocol</code> / <code>ToolManagerProtocol</code>. Enumerates
 ~30 properties + methods that commands actually call on the engine,
 grouped functionally (AppState access, provider/model switching,
 working dir, tools/agent management, bootstrap/context, checkpoints,
-chat). <a href="../ppxai/commands/protocol.py"><code>commands/protocol.py</code></a> and
-<a href="../ppxai/commands/context.py"><code>commands/context.py</code></a> now type
+chat). <a href="../../ppxai/commands/protocol.py"><code>commands/protocol.py</code></a> and
+<a href="../../ppxai/commands/context.py"><code>commands/context.py</code></a> now type
 against the protocol; both files dropped their
 <code>from ..engine.client import EngineClient</code> import.</p>
 <p>Sentinel tests in
-<a href="../tests/test_engine_client_protocol.py"><code>tests/test_engine_client_protocol.py</code></a>
+<a href="../../tests/test_engine_client_protocol.py"><code>tests/test_engine_client_protocol.py</code></a>
 pin three contracts:
 - <code>EngineClient</code> satisfies the protocol structurally
   (<code>isinstance</code> runtime check).
@@ -2133,7 +2133,7 @@ class; only the import was decoupled. Expected — the protocol
 removes nominal coupling, not the runtime call references.</p>
 <p>Tier 2 prediction "~20 fewer edges" → actual −17. Mission accomplished.</p>
 <p><strong>Latent bug spotted during the protocol enumeration step:</strong>
-<a href="../ppxai/commands/agent.py#L680"><code>agent.py:680</code></a> accesses
+<a href="../../ppxai/commands/agent.py#L680"><code>agent.py:680</code></a> accesses
 <code>engine_client.logger</code> which doesn't exist on <code>EngineClient</code>. Filed
 as Item 11. Item 10 dropped <code>logger</code> from the protocol's surface
 rather than wishful-list it.</p>
@@ -2399,12 +2399,12 @@ ones not in "Open" above were closed during the test sweep on
 <hr />
 <h2 id="related-documents">Related documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="consent-contract.md">docs/consent-contract.md</a> — security boundary for tool execution (created with critique #5)</li>
-<li><a href="model-selection-guide.md">docs/model-selection-guide.md</a> — planner/executor pricing strategy</li>
+<li><a href="../../consent-contract/">docs/consent-contract.md</a> — security boundary for tool execution (created with critique #5)</li>
+<li><a href="../../model-selection-guide/">docs/model-selection-guide.md</a> — planner/executor pricing strategy</li>
 <li><a href="../TODO-v1.18.2-agent-loop-unification/">docs/archive/TODO-v1.18.2-agent-loop-unification.md</a> — separate in-flight work (HTTP-streaming agent loop)</li>
-<li><a href="../TODO-v1.18.2-keys-binding-registries.md">docs/TODO-v1.18.2-keys-binding-registries.md</a> — separate in-flight work</li>
+<li><a href="../TODO-v1.18.2-keys-binding-registries/">docs/TODO-v1.18.2-keys-binding-registries.md</a> — separate in-flight work</li>
 <li><a href="../TODO-v1.18.2-prompt-text-kind/">docs/archive/TODO-v1.18.2-prompt-text-kind.md</a> — separate in-flight work</li>
-<li><a href="../TODO-v1.18.2-inline-markdown-images-tui.md">docs/TODO-v1.18.2-inline-markdown-images-tui.md</a> — separate in-flight work</li>
+<li><a href="../TODO-v1.18.2-inline-markdown-images-tui/">docs/TODO-v1.18.2-inline-markdown-images-tui.md</a> — separate in-flight work</li>
 </ul>
 <p>The <code>TODO-v1.18.2-*.md</code> files describe in-flight planning for v1.18.2.
 This doc tracks debt <strong>not</strong> in any version's plan yet — items needing

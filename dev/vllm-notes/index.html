@@ -1275,19 +1275,26 @@
 <tbody>
 <tr>
 <td>Native</td>
-<td><code>native_tool_calling: true</code></td>
+<td><code>facts.tool_mode: "native"</code> on the model</td>
 <td><code>--enable-auto-tool-choice --tool-call-parser openai</code></td>
 <td>⚠️ HarmonyError risk</td>
 </tr>
 <tr>
 <td>Prompt-based</td>
-<td><code>native_tool_calling: false</code></td>
+<td><code>facts.tool_mode: "prompt_based"</code> on the model</td>
 <td>None required</td>
-<td>Stable (recommended)</td>
+<td>Stable (recommended; the shipped default for <code>openai/gpt-oss*</code>)</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Key insight:</strong> vLLM only triggers Harmony parsing when <code>request.tools</code> is provided. With <code>native_tool_calling: false</code>, ppxai doesn't send <code>tools</code>, so vLLM returns plain text that ppxai parses client-side. This bypasses the unstable Harmony parser.</p>
+<blockquote>
+<p><code>native_tool_calling</code> (provider- or capability-level) is a <strong>dead key</strong>
+since ADR 0012 — parsed and ignored. Set <code>tool_mode</code> on the model's
+<code>facts</code> block instead; see
+<a href="../tool-calling/#configuration-reference">docs/tool-calling.md</a> for the
+full form.</p>
+</blockquote>
+<p><strong>Key insight:</strong> vLLM only triggers Harmony parsing when <code>request.tools</code> is provided. With <code>tool_mode: "prompt_based"</code>, ppxai doesn't send <code>tools</code>, so vLLM returns plain text that ppxai parses client-side. This bypasses the unstable Harmony parser.</p>
 <p>Implementation:
 - Tool prompt injection: <code>ppxai/engine/tools/manager.py:get_tools_prompt()</code>
 - Multi-strategy parser: <code>ppxai/engine/tools/parser.py:parse_tool_call()</code>
@@ -1297,8 +1304,11 @@
 - vLLM 0.11.x nightly with LMCache
 - <code>--tool-call-parser openai</code>
 - Model: <code>openai/gpt-oss-120b</code>
-- ppxai default: <code>native_tool_calling: true</code></p>
-<p>For developers hitting HarmonyError: set <code>native_tool_calling: false</code>.</p>
+- ppxai default: <code>openai/gpt-oss*</code> is pinned <code>facts.tool_mode: "prompt_based"</code>
+  in the shipped facts table (<code>ppxai/engine/model_facts.py</code>), regardless of
+  vLLM flags</p>
+<p>For developers hitting HarmonyError: set <code>facts.tool_mode: "prompt_based"</code>
+on the model.</p>
 <h2 id="qwen3-qwen25-hermes-format">Qwen3 / Qwen2.5 (Hermes format)<a class="headerlink" href="#qwen3-qwen25-hermes-format" title="Permanent link">&para;</a></h2>
 <p>Generally more stable than Harmony.</p>
 <p>vLLM server:
@@ -1312,19 +1322,23 @@
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">"custom"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://localhost:8000/v1"</span><span class="p">,</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">        </span><span class="nt">"Qwen/Qwen3-..."</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"max_tokens"</span><span class="p">:</span><span class="w"> </span><span class="mi">8192</span><span class="p">,</span><span class="w"> </span><span class="nt">"temperature"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="w"> </span><span class="p">}</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="p">}</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">        </span><span class="nt">"Qwen/Qwen3-..."</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">          </span><span class="nt">"max_tokens"</span><span class="p">:</span><span class="w"> </span><span class="mi">8192</span><span class="p">,</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">          </span><span class="nt">"temperature"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">          </span><span class="nt">"facts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"tool_mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"native"</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="p">}</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <p>Known issues:
 - Same truncation issues as GPT-OSS if <code>max_tokens</code> too low
 - Unicode whitespace in code
 - May still exhibit "I'll use X tool" behavior</p>
-<p>Fallback: if native tool calling fails, set <code>native_tool_calling: false</code>.</p>
+<p>Fallback: if native tool calling fails, set <code>facts.tool_mode: "prompt_based"</code>
+on the model.</p>
 <h2 id="known-issue-ill-use-x-tool-followed-by-json-text">Known issue: "I'll use X tool" followed by JSON text<a class="headerlink" href="#known-issue-ill-use-x-tool-followed-by-json-text" title="Permanent link">&para;</a></h2>
 <p>GPT-OSS sometimes outputs tool calls as JSON text instead of using native tool calling:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>I'll use the apply_patch tool.

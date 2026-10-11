@@ -3428,7 +3428,7 @@ its description in one table:</p>
 </span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">"Search the web"</span><span class="p">,</span>
 </span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>    <span class="n">parameters</span><span class="o">=</span><span class="p">{</span><span class="o">...</span><span class="p">},</span>
 </span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>    <span class="n">handler</span><span class="o">=</span><span class="n">search_function</span><span class="p">,</span>
-</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>    <span class="n">provider_excluded</span><span class="o">=</span><span class="p">[</span><span class="s2">"perplexity"</span><span class="p">]</span>  <span class="c1"># Perplexity has native search</span>
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>    <span class="n">provider_excluded</span><span class="o">=</span><span class="p">[</span><span class="s2">"ollama"</span><span class="p">]</span>  <span class="c1"># e.g. a provider whose models you don't want calling it</span>
 </span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="consent-based-tools">Consent-Based Tools<a class="headerlink" href="#consent-based-tools" title="Permanent link">&para;</a></h3>
@@ -3654,8 +3654,9 @@ as either a file edit or a shell command.</p>
 <ul>
 <li><a href="../file-editing-guide/">File Editing Guide</a> - Built-in file editing tools</li>
 <li><a href="../shell-consent-guide/">Shell Consent Guide</a> - Shell command consent system</li>
-<li><a href="../archive/v1.15.2-completed/architecture-refactoring/">Architecture Refactoring</a> - EngineClient design</li>
-<li><a href="../archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan/">Agentic Workflow Plan</a> - Tool system internals</li>
+<li><a href="../architecture/">Architecture</a> - Current EngineClient design and tool system internals</li>
+<li><a href="../archive/v1.15.2-completed/architecture-refactoring/">Architecture Refactoring</a> - (historical, v1.15.2 EngineClient design)</li>
+<li><a href="../archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan/">Agentic Workflow Plan</a> - (historical, v1.11 tool system design)</li>
 </ul>
 <hr />
 <p><strong>Version:</strong> v1.13.0+

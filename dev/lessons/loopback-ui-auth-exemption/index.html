@@ -1189,6 +1189,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#extended-by-the-hub-v1194" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extended by the hub (v1.19.4)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1285,6 +1296,18 @@ identity. Options if you decide to close THAT too:
   send it (removes the "any local process" hole while keeping desktop UX).
 - Gate the exemption behind an explicit <code>server.auth.trust_loopback_ui</code> flag,
   default on for desktop builds, off for server/cluster builds.</p>
+<h2 id="extended-by-the-hub-v1194">Extended by the hub (v1.19.4)<a class="headerlink" href="#extended-by-the-hub-v1194" title="Permanent link">&para;</a></h2>
+<p>ADR 0013 phase 4's remote hub (<code>ppxai/server/routes/remote_hub.py</code>) reuses
+the same IP-only <code>_is_loopback()</code> for its own gate: <code>_gate()</code> answers any
+<code>Hub</code> request "if ... this is a direct loopback peer" (<code>remote_hub.py:216</code>),
+and <code>_upstream_headers()</code> injects the remote server's own bearer token onto
+every proxied request (<code>remote_hub.py:349-353</code>). So when <code>remote.hosts</code> is
+configured, any local process on the hub machine can drive <code>/hub/*</code> and the
+<code>/h/&lt;host&gt;/&lt;id&gt;/</code> proxy — reach the remote servers — without holding any
+credential of its own; the hub holds the credential and hands it out to
+whoever is loopback. The per-session loopback token option above, if ever
+built, would now also have to cover <code>/hub</code> and <code>/h/</code>, not just the
+interactive UI surface.</p>
 
 
 

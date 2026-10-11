@@ -23,7 +23,7 @@
     
     
       
-        <title>The recurring tools-chat 400 is orphan assistant.tool_calls, not Perplexity alternation - ppxai Documentation</title>
+        <title>The recurring tools-chat 400 is orphan assistant.tool_calls, not provider alternation - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#the-recurring-tools-chat-400-is-orphan-assistanttool_calls-not-perplexity-alternation" class="md-skip">
+        <a href="#the-recurring-tools-chat-400-is-orphan-assistanttool_calls-not-provider-alternation" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              The recurring tools-chat 400 is orphan assistant.tool_calls, not Perplexity alternation
+              The recurring tools-chat 400 is orphan assistant.tool_calls, not provider alternation
             
           </span>
         </div>
@@ -1198,17 +1198,17 @@
   
 
 
-<h1 id="the-recurring-tools-chat-400-is-orphan-assistanttool_calls-not-perplexity-alternation">The recurring tools-chat 400 is orphan <code>assistant.tool_calls</code>, not Perplexity alternation<a class="headerlink" href="#the-recurring-tools-chat-400-is-orphan-assistanttool_calls-not-perplexity-alternation" title="Permanent link">&para;</a></h1>
-<p><strong>TL;DR:</strong> Perplexity Sonar has <strong>relaxed</strong> its old strict
-user/assistant alternation rule — consecutive same-role messages,
-assistant-first, and tool round-trips are all accepted (200) as of
-2026-07-13. The 400 that keeps coming back on tools-enabled chats is
-the <strong>provider-agnostic</strong> orphan <code>assistant.tool_calls</code> error
-(<code>"An assistant message with 'tool_calls' must be followed by tool
-messages ... tool_call_ids did not have response"</code>), which fires on
-OpenAI and any OpenAI-compatible endpoint whenever an assistant message
-carrying <code>tool_calls</code> reaches the wire without its matching <code>tool</code>
-replies.</p>
+<h1 id="the-recurring-tools-chat-400-is-orphan-assistanttool_calls-not-provider-alternation">The recurring tools-chat 400 is orphan <code>assistant.tool_calls</code>, not provider alternation<a class="headerlink" href="#the-recurring-tools-chat-400-is-orphan-assistanttool_calls-not-provider-alternation" title="Permanent link">&para;</a></h1>
+<p><strong>TL;DR:</strong> The 400 that keeps coming back on tools-enabled chats is the
+<strong>provider-agnostic</strong> orphan <code>assistant.tool_calls</code> error (<code>"An assistant
+message with 'tool_calls' must be followed by tool messages ...
+tool_call_ids did not have response"</code>), which fires on OpenAI and any
+OpenAI-compatible endpoint whenever an assistant message carrying
+<code>tool_calls</code> reaches the wire without its matching <code>tool</code> replies. Do not
+pattern-match it to a provider-specific alternation rule — see the dated
+history below for why that used to be the wrong frame specifically for
+Perplexity, which is now moot (ADR 0015 removed Perplexity as a chat
+provider; its chat-completions API retired 2026-09-27).</p>
 <p><strong>Verify with:</strong>
 <code>grep -n "def strip_orphan_tool_calls" ppxai/engine/session.py</code> (the
 single cleanup pass), and
@@ -1216,27 +1216,34 @@ single cleanup pass), and
 before the in-loop provider calls — chat.py calls the composed
 <code>sanitize_outbound</code>, which runs the orphan strip plus the empty-assistant
 strip; the bare <code>strip_orphan_tool_calls</code> name resolves only in
-<code>session.py</code>). Live-check the alternation
-claim: send <code>[{"role":"user"},{"role":"user"}]</code> to <code>sonar</code> — it returns
-200, not the historical "messages must alternate" 400.</p>
+<code>session.py</code>). A live check against any current chat provider: send
+<code>[{"role":"assistant","tool_calls":[...]}]</code> with no following <code>tool</code>
+message — the 400 comes back on the missing tool reply, not on message
+ordering.</p>
 <h2 id="why-this-trips-people-up">Why this trips people up<a class="headerlink" href="#why-this-trips-people-up" title="Permanent link">&para;</a></h2>
-<p>The error was <em>first</em> seen against Perplexity (<code>sonar</code>) years of
-release-notes ago, so every recurrence gets pattern-matched to
-"Perplexity alternation" and fixed at the session-history alternation
-layer. Two things make that the wrong frame:</p>
+<p><strong>History (Perplexity chat provider, removed 2026-09-27 by ADR 0015 —
+kept for the pattern, not because it is still reachable):</strong> the error was
+<em>first</em> seen against Perplexity (<code>sonar</code>) years of release-notes ago, so
+every recurrence got pattern-matched to "Perplexity alternation" and fixed
+at the session-history alternation layer. Two things made that the wrong
+frame, while Perplexity was still a chat provider:</p>
 <ol>
 <li>
-<p><strong>Perplexity relaxed the rule.</strong> Verified live across all four Sonar
-   models (2026-07-13): consecutive user/user, consecutive
-   assistant/assistant, assistant-first, <code>assistant(tool_calls)+tool</code>
-   round-trips, and double-system all return <strong>200 OK</strong>. Only
-   <code>[user, tool]</code> (orphan tool) and <code>[assistant]</code>-alone still 400, and
-   they return a <strong>generic</strong> <code>{'message':'invalid request'}</code> — never
-   the "alternate" wording. An empty-content assistant returns
-   <code>{'message':'Message content was empty','type':'invalid_message'}</code>.</p>
+<p><strong>Perplexity had relaxed its old strict alternation rule.</strong> Verified
+   live across all four Sonar models (2026-07-13): consecutive user/user,
+   consecutive assistant/assistant, assistant-first,
+   <code>assistant(tool_calls)+tool</code> round-trips, and double-system all
+   returned <strong>200 OK</strong>. Only <code>[user, tool]</code> (orphan tool) and
+   <code>[assistant]</code>-alone still 400'd, and they returned a <strong>generic</strong>
+   <code>{'message':'invalid request'}</code> — never the "alternate" wording. An
+   empty-content assistant returned
+   <code>{'message':'Message content was empty','type':'invalid_message'}</code>.
+   This entire Sonar-specific behavior is no longer reachable through
+   ppxai — Perplexity is search/grounding-only now (ADR 0014).</p>
 </li>
 <li>
-<p><strong>The real 400 is OpenAI's, and provider-agnostic.</strong> The verbatim
+<p><strong>The real 400 is OpenAI's, and provider-agnostic — still true today.</strong>
+   The verbatim
    <code>"tool_call_ids did not have response messages"</code> with
    <code>param: messages.[N].role</code> is OpenAI's <code>invalid_request_error</code>
    format, not Perplexity's. It bites whenever the transcript contains
@@ -1265,7 +1272,7 @@ layer. Two things make that the wrong frame:</p>
   in <code>session.py</code>), or the question silently vanishes and reappears on
   every retry (the recurring <code>DROPPED UNSENT USER PROMPT</code> log line).</li>
 </ul>
-<p>Before adding an Nth alternation patch for "Perplexity", confirm the
+<p>Before adding an Nth alternation patch for any provider, confirm the
 actual on-the-wire error string first — it is almost certainly the
 orphan-tool_calls case above.</p>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>

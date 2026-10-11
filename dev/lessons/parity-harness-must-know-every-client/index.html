@@ -1276,12 +1276,12 @@ integration the server wraps around it:</p>
 </tr>
 <tr>
 <td>registry <code>on_change</code></td>
-<td><code>server/state.py:215</code></td>
+<td><code>server/state.py</code>'s <code>_mirror_to_app_state</code> registration</td>
 <td><code>AppState.background_agents</code> never written, though <code>tui/app.py:254</code> already subscribes and renders a badge</td>
 </tr>
 <tr>
 <td><code>sweep_orphans()</code></td>
-<td><code>server/state.py:209</code></td>
+<td><code>server/state.py</code>'s call into <code>AgentRunRegistry.sweep_orphans()</code></td>
 <td>a run orphaned by a TUI exit stays <code>running</code>; <code>ls</code> lies after a restart</td>
 </tr>
 </tbody>

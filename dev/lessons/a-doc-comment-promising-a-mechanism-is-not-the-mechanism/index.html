@@ -1209,8 +1209,11 @@ had 22 fields, the interface 20. <code>lastMessageRole</code> (added v1.18.0) an
 <code>modelSupportsVision</code> (added v1.18.6) were missing from the interface the
 whole time, while web had gated its attach badge on <code>modelSupportsVision</code>
 since v1.18.6.</p>
-<p><strong>Verify with:</strong> the file is gone now (deleted in the fix below), so point
-at history:
+<p><strong>Verify with:</strong> <code>vscode-extension/src/appState.ts</code> still exists — it is
+the <code>AppState</code> store class. What's gone is the hand-written
+<code>AppStateFields</code> interface and its stale header comment (deleted in the
+fix below, see "What's actually true / what to do"). Point at history for
+the deleted interface:
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>log<span class="w"> </span>-S<span class="w"> </span><span class="s2">"will auto-generate"</span><span class="w"> </span>--oneline<span class="w"> </span>--<span class="w"> </span>vscode-extension/src/appState.ts
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># -&gt; 1953c29c, f351f43f</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>

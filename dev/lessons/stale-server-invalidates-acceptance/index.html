@@ -1218,7 +1218,9 @@ trying to replace.</p>
 <p><strong>Verify with:</strong> <code>grep -rn "54320" ppxai/server/ scripts/gateway-smoke.py</code>
 (the port is a hardcoded default, not auto-negotiated) — and reproduce:
 start one server, spawn a second; the second logs <code>[Errno 48] address
-already in use</code> and exits while the first keeps answering.</p>
+already in use</code> (macOS/BSD errno for <code>EADDRINUSE</code>; Linux prints
+<code>[Errno 98]</code> for the same condition) and exits while the first keeps
+answering.</p>
 <h2 id="why-this-trips-people-up">Why this trips people up<a class="headerlink" href="#why-this-trips-people-up" title="Permanent link">&para;</a></h2>
 <p>The obvious mental model is "I spawned the new binary, so I'm testing
 the new binary." But ppxai-server does not fail loud to the <em>caller</em>
@@ -1267,10 +1269,19 @@ it forks a <strong>bootloader parent</strong> plus the real server as a <strong>
 (<code>pgrep -fl ppxai-server</code> after launch shows two PIDs). Consequences for
 any script that manages the server's lifecycle:</p>
 <ul>
-<li><code>subprocess.Popen(...).terminate()</code> / <code>.kill()</code> signals only the parent
-  (the bootloader). The <strong>child keeps running and keeps port 54320</strong>, so
-  the script leaks a server on exit and the <em>next</em> run either trips the
-  port guard or — worse — talks to the orphan.</li>
+<li><code>subprocess.Popen(...).terminate()</code> used to signal only the parent (the
+  bootloader), which never forwarded it. <strong>Fixed since <code>24ad6d67</code>
+  (v1.19.3):</strong> <code>ppxai-server.spec</code> had <code>bootloader_ignore_signals=True</code>
+  since <code>9bc121d3</code>, for no recorded reason, unlike the other three specs.
+  With it True, the bootloader swallowed SIGTERM instead of forwarding it
+  to the child — so <code>kill &lt;pid&gt;</code> / <code>.terminate()</code> / a systemd stop did
+  nothing, and the child kept running and kept port 54320. The flag is now
+  <code>False</code>, matching the other specs, so on POSIX a <code>.terminate()</code> (SIGTERM)
+  to the bootloader PID now reaches the child. <code>.kill()</code> (SIGKILL) is
+  <strong>not</strong> forwarded by any bootloader setting — PyInstaller has no chance
+  to relay it — so it still orphans the child; on Windows there is no
+  SIGTERM equivalent either. Both cases still need the process-group /
+  tree kill below.</li>
 <li>This produced a phantom "product bug" during the T7 lifecycle trial
   (2026-07-12): a server was "restarted" between a park and a GET, but the
   restart silently failed to bind (old child still held the port), so the

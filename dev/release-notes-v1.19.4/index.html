@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/handoff-item-65/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/release-notes-v1.19.4/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>Item 65 — implementation plan (auditor → builder) - ppxai Documentation</title>
+        <title>Release Notes — v1.19.4 - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#item-65-implementation-plan-auditor-builder" class="md-skip">
+        <a href="#release-notes-v1194" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Item 65 — implementation plan (auditor → builder)
+              Release Notes — v1.19.4
             
           </span>
         </div>
@@ -1146,10 +1146,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#0-sizing-correction-supersedes-an-earlier-auditor-claim" class="md-nav__link">
+  <a href="#branch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0. Sizing correction (supersedes an earlier auditor claim)
+        Branch
       
     </span>
   </a>
@@ -1157,55 +1157,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#1-the-one-field-that-can-silently-change-meaning" class="md-nav__link">
+  <a href="#security" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. The one field that can silently change meaning
+        Security
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2-wire_protocol-is-not-in-the-seed-rows-15-rows-need-it-stated" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. wire_protocol is not in the seed rows — 15 rows need it stated
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-two-different-auto-values-do-not-conflate" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Two different auto values — do not conflate
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-reference-data-validation-pass-owner-approved-addition" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Reference-data validation pass (owner-approved addition)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="4. Reference-data validation pass (owner-approved addition)">
+    <nav class="md-nav" aria-label="Security">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#4a-what-was-probed-and-rejected" class="md-nav__link">
+  <a href="#a-web-page-could-open-a-shell-through-the-terminal-websocket" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4a. What was probed and REJECTED
+        A web page could open a shell through the terminal websocket
       
     </span>
   </a>
@@ -1213,10 +1180,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4b-what-to-actually-validate-against-published-data" class="md-nav__link">
+  <a href="#task-runs-are-confined-to-their-working-folder-by-default" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4b. What to actually validate against published data
+        /task runs are confined to their working folder by default
       
     </span>
   </a>
@@ -1224,10 +1191,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4c-provenance-owner-to-confirm-scope" class="md-nav__link">
+  <a href="#ppxai-refuses-to-start-while-the-config-has-toolsagentsandbox" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4c. Provenance (owner to confirm scope)
+        ppxai refuses to start while the config has tools.agent.sandbox
       
     </span>
   </a>
@@ -1240,10 +1207,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-sequencing-two-commits-deliberately" class="md-nav__link">
+  <a href="#new-ssh-remote-hub-and-ssh-launcher-adr-0013" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Sequencing — two commits, deliberately
+        New: SSH remote hub and SSH Launcher (ADR 0013)
       
     </span>
   </a>
@@ -1251,10 +1218,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-defect-found-while-planning-fix-in-step-2" class="md-nav__link">
+  <a href="#model-and-config-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Defect found while planning (fix in step 2)
+        Model and config changes
       
     </span>
   </a>
@@ -1262,10 +1229,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7-ground-rules" class="md-nav__link">
+  <a href="#other-fixes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. Ground rules
+        Other fixes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade
       
     </span>
   </a>
@@ -1292,202 +1281,335 @@
   
 
 
-<h1 id="item-65-implementation-plan-auditor-builder">Item 65 — implementation plan (auditor → builder)<a class="headerlink" href="#item-65-implementation-plan-auditor-builder" title="Permanent link">&para;</a></h1>
+<h1 id="release-notes-v1194">Release Notes — v1.19.4<a class="headerlink" href="#release-notes-v1194" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p>✅ <strong>DONE — this plan was executed; it is a record, not outstanding work.</strong>
-Item 65 completed 2026-08-31: <code>BUILTIN_PROFILES</code> retired and
-<code>ppxai/engine/model_profiles.py</code> <strong>deleted entirely</strong> (step 2, <code>ed3c069a</code>,
-net −1,035 lines). <code>supports_vision()</code> moved to
-<code>ppxai/engine/model_facts.py:1368</code> with the data it reads. Every
-<code>model_profiles.py:NN</code> citation below is to a file that no longer exists,
-and the §"are corrected there and here" note was never actually applied to
-this file — <code>git log -- docs/handoff-item-65.md</code> shows only the original
-commit. Marked 2026-09-20.</p>
+<p><strong>Scope:</strong> A security patch to v1.19.3, plus ADR 0013's SSH remote hub
+and a round of model, config and tooling fixes that accumulated on the
+same branch. The owner decided on 2026-10-11 that all of it ships as
+1.19.4.</p>
+<ul>
+<li><strong>Security:</strong> a shell through the terminal websocket (fixed), and
+  <code>/task</code> runs are now confined to their working folder with credentials
+  always denied, and ppxai refuses to start rather than silently drop a
+  configured sandbox (see below).</li>
+<li><strong>Who should upgrade first:</strong> anyone who browses the web on a machine
+  that runs <code>ppxai-server</code> or <code>ppxai-desktop</code>, and anyone running the k8s
+  coder deployment.</li>
+<li><strong>New, opt-in: the SSH remote hub and SSH Launcher.</strong> Drive ppxai
+  servers on other hosts from your local browser. Off unless
+  <code>remote.hosts</code> is configured.</li>
+<li><strong>Model and config changes.</strong> Several shipped model facts changed
+  (which wire a model uses, whether it calls tools in parallel, which
+  sampling parameters it accepts), and the example config was brought in
+  line. Configs copied from an older example can override the new facts;
+  see "Upgrade".</li>
+</ul>
+<p>The v1 API gateway (<code>POST /v1/oneshot</code>) is <strong>byte-identical to
+v1.19.3</strong>, as is the <code>/v1/agent/*</code> surface. ppxai-sre and any other
+consumer of those are unaffected.</p>
 </blockquote>
-<p><strong>Written 2026-08-31 by the auditor session (ppxai-28) for the builder
-(ppxai-c7), against branch <code>bugfix/v1.19.1</code> @ <code>4b49e960</code>.</strong></p>
-<p>Item 65 = retire <code>BUILTIN_PROFILES</code> as the seed vocabulary for
-<code>ModelFacts</code>. Debt entry: <code>docs/debt-inventory.md</code> §Item 65.</p>
-<p>This file is the durable record. Every number below was derived by
-running against the tree at <code>4b49e960</code>, not recalled — re-derive before
-trusting it if the branch has moved.</p>
-<hr />
-<h2 id="0-sizing-correction-supersedes-an-earlier-auditor-claim">0. Sizing correction (supersedes an earlier auditor claim)<a class="headerlink" href="#0-sizing-correction-supersedes-an-earlier-auditor-claim" title="Permanent link">&para;</a></h2>
-<p>An earlier read reported <code>ModelProfile</code> at 85 refs and
-<code>ToolCallingProfile</code> at 75, and inferred that retiring the types was the
-larger share of the work. <strong>That was wrong</strong> — it counted raw grep hits
-without separating self-references inside the defining module.</p>
+<h2 id="branch">Branch<a class="headerlink" href="#branch" title="Permanent link">&para;</a></h2>
+<p><code>feature/v1.19.4</code>. It merged <code>fix/v1.19.4</code> (the security patch, from
+master @ v1.19.3) and carries the rest. <code>CHANGELOG.md</code> <code>[1.19.4]</code> lists
+every change; these notes cover what an operator needs to know.</p>
+<h2 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h2>
+<h3 id="a-web-page-could-open-a-shell-through-the-terminal-websocket">A web page could open a shell through the terminal websocket<a class="headerlink" href="#a-web-page-could-open-a-shell-through-the-terminal-websocket" title="Permanent link">&para;</a></h3>
+<p><strong>What was wrong.</strong> The web UI's terminal is a websocket at <code>/ws/terminal</code>
+that runs a PTY shell on the server's machine. The server's three
+protections are HTTP middleware:</p>
+<ul>
+<li>the Host check that stops DNS rebinding;</li>
+<li>the bearer-token gate (<code>PPXAI_API_TOKEN</code>);</li>
+<li>CORS.</li>
+</ul>
+<p>Starlette never passes a websocket through HTTP middleware, and browsers do
+not apply CORS to websockets. So while <code>ppxai-server</code> or <code>ppxai-desktop</code>
+was running, <strong>any web page the user visited could open
+<code>ws://127.0.0.1:&lt;port&gt;/ws/terminal</code> and run commands as the user</strong>. Setting
+<code>PPXAI_API_TOKEN</code> did not help.</p>
+<p><strong>Who was exposed.</strong></p>
+<ul>
+<li><strong>Desktop and local web UI users</strong>, whenever the server was running. On
+  Windows the terminal reports "requires a Unix host" and runs no shell, but
+  the handshake was still accepted unchecked.</li>
+<li><strong>k8s coder users</strong>, to a lesser degree. The session cookie is
+  <code>SameSite=Lax</code>, so other sites could not ride it. A page on the same parent
+  domain, such as another app under the same <code>*.example.com</code>, could.</li>
+<li><strong>Remote servers announced for ADR 0013</strong> (<code>ppxai-server --uds --announce</code>)
+  were not reachable from a browser: they listen only on a 0600 unix socket.</li>
+</ul>
+<p><strong>The fix.</strong> A websocket handshake is now refused, and the client sees HTTP
+403, unless all three hold:</p>
+<ol>
+<li>its <code>Host</code> passes the same allowlist as HTTP requests;</li>
+<li>its <code>Origin</code>, when it sends one, is allowed: listed in
+   <code>PPXAI_ALLOWED_ORIGINS</code>, a loopback origin, or the server's own origin
+   (the same host and port as a <code>Host</code> that passed step 1). A client that
+   sends no <code>Origin</code> is not a browser and is judged by steps 1 and 3 alone;</li>
+<li>the bearer-token gate passes, exactly as it would for a GET of the same
+   path. The local UI stays exempt on loopback, as it is for HTTP.</li>
+</ol>
+<p>The guard wraps the whole app, so a websocket route added later is covered
+without further work.</p>
+<p><strong>What this does not change.</strong> "The same auth as HTTP" includes HTTP's
+loopback rule. A process on the same machine that sends no <code>Origin</code> (not a
+browser) still opens the terminal without a token, just as it can already
+call the local chat API, tools included, without one. Browsers always send
+<code>Origin</code>, so a web page can no longer get in. On a machine shared with other
+users, the loopback trust model is unchanged by this release.</p>
+<p><strong>What keeps working</strong> (each case is pinned by <code>tests/test_websocket_guard.py</code>):</p>
 <table>
 <thead>
 <tr>
-<th>Symbol</th>
-<th>In <code>model_profiles.py</code></th>
-<th>External prod</th>
-<th>Tests</th>
+<th>Client</th>
+<th>Result</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>ModelProfile</code></td>
-<td>79</td>
-<td><strong>3</strong></td>
-<td>25</td>
+<td>The desktop/web UI's own terminal (<code>http://127.0.0.1:&lt;port&gt;</code>, <code>http://localhost:&lt;port&gt;</code>)</td>
+<td>opens, with or without a token</td>
 </tr>
 <tr>
-<td><code>ToolCallingProfile</code></td>
-<td>67</td>
-<td><strong>2</strong></td>
-<td>—</td>
+<td>A coder pod (wide bind, <code>PPXAI_TRUSTED_HOSTS</code> and <code>PPXAI_ALLOWED_ORIGINS</code> as the session-manager sets them)</td>
+<td>its UI opens its terminal; a sibling-domain page is refused</td>
+</tr>
+<tr>
+<td>A gateway bound wide without either variable</td>
+<td>its same-origin UI opens its terminal; other origins are refused</td>
+</tr>
+<tr>
+<td>A non-browser client with no <code>Origin</code></td>
+<td>same as before, subject to Host and token</td>
 </tr>
 </tbody>
 </table>
-<p>Four of those five external production references are <strong>prose in
-docstrings/comments</strong>. The only real code import is
-<code>ppxai/engine/model_facts.py:74</code>. Deleting the types is nearly free once
-the data moves; <strong>re-authoring the 65 rows is the whole job.</strong></p>
-<hr />
-<h2 id="1-the-one-field-that-can-silently-change-meaning">1. The one field that can silently change meaning<a class="headerlink" href="#1-the-one-field-that-can-silently-change-meaning" title="Permanent link">&para;</a></h2>
-<p><code>ToolCallingProfile.mode</code> defaults to <code>"native"</code>.
-<code>ModelFacts.tool_mode</code> defaults to <code>"prompt_based"</code> (ADR 0012 Q0a
-deliberately inverted it: "unmeasured implies assume not capable").</p>
-<p>Measured distribution across the 65 rows:</p>
-<div class="language-text highlight"><pre><span></span><code>native: 52   prompt_based: 11   auto: 2
-</code></pre></div>
-<p>So ~52 rows currently rely on the <em>profile's</em> default and would flip
-meaning under mechanical transcription.</p>
-<blockquote>
-<p><strong>RULE: every re-authored row states <code>tool_mode</code> explicitly.</strong>
-No row inherits the <code>ModelFacts</code> default.</p>
-</blockquote>
-<p>The comment at <code>model_facts.py:194-199</code> argues code rows <em>may</em> rely on
-dataclass defaults. That holds while rows are generated; it stops
-holding the moment a human types them.</p>
-<hr />
-<h2 id="2-wire_protocol-is-not-in-the-seed-rows-15-rows-need-it-stated">2. <code>wire_protocol</code> is not in the seed rows — 15 rows need it stated<a class="headerlink" href="#2-wire_protocol-is-not-in-the-seed-rows-15-rows-need-it-stated" title="Permanent link">&para;</a></h2>
-<p>Today it is supplied by two mechanisms <em>outside</em> <code>BUILTIN_PROFILES</code>:
-<code>_API_PATH_TO_WIRE</code> (3 rows with <code>api_path="responses"</code>) and
-<code>_WIRE_BY_GLOB</code> (12 gemini/gemma globs to <code>generate_content</code>).</p>
-<p>Transcription checklist — each must appear as an explicit
-<code>wire_protocol=</code> on its re-authored row:</p>
-<p><strong><code>responses</code> (3):</strong>
-<code>gpt-5.3-codex*</code>, <code>gpt-5.1-codex-mini*</code>, <code>gpt-5.1-codex*</code></p>
-<p><strong><code>generate_content</code> (12):</strong>
-<code>gemini-2.5-pro*</code>, <code>gemini-2.5-flash-lite*</code>, <code>gemini-2.5-flash*</code>,
-<code>gemini-3.5-flash*</code>, <code>gemini-3-flash*</code>, <code>gemini-3.1-flash-lite*</code>,
-<code>gemini-3.1-pro*customtools*</code>, <code>gemini-3.1-pro*</code>,
-<code>gemma-4-31b*</code>, <code>gemma-4-26b*</code>, <code>gemma-4-e*</code>, <code>gemma-4*</code></p>
-<p>The remaining 50 take the <code>chat_completions</code> default, which matches.</p>
-<p><strong>Live migration pressure:</strong> the 2026-08-31 fleet refresh established
-that the whole gpt-5.6 line needs <code>wire_protocol: responses</code> (it 400s on
-a tools array alone over chat-completions). That is currently expressed
-in <strong>config only</strong>. Check whether a <code>gpt-5.6*</code> glob belongs in the
-re-authored shipped table rather than living only in config.</p>
-<hr />
-<h2 id="3-two-different-auto-values-do-not-conflate">3. Two different <code>auto</code> values — do not conflate<a class="headerlink" href="#3-two-different-auto-values-do-not-conflate" title="Permanent link">&para;</a></h2>
+<h3 id="task-runs-are-confined-to-their-working-folder-by-default"><code>/task</code> runs are confined to their working folder by default<a class="headerlink" href="#task-runs-are-confined-to-their-working-folder-by-default" title="Permanent link">&para;</a></h3>
+<p>Until now the <code>/task</code> filesystem sandbox was off unless an operator turned
+it on. Once the task tier was enabled (<code>execution.task.enabled</code>), a run
+granted <code>read_file</code> could read any file the ppxai process could, including
+<code>~/.ppxai/.env</code> with every provider key, without a prompt.</p>
 <ul>
-<li><code>api_path="auto"</code> — <em>documented but never implemented</em>. Maps to
-  <code>chat_completions</code> because mapping it to a handler name would route to
-  one that does not exist. After migration <code>_API_PATH_TO_WIRE</code>
-  disappears, so <strong>this decision must survive as an explicit row value
-  plus a comment</strong>, or the knowledge is lost.</li>
-<li><code>tool_mode="auto"</code> — a different field, and this one <strong>is</strong>
-  implemented. 2 rows use it.</li>
+<li><strong>On by default:</strong> <code>execution.task.sandbox.enforcement</code> now defaults to
+  <code>"in_process"</code>.</li>
+<li><strong>Confined to the project, not to a scratch folder:</strong> the run's working
+  folder (<code>--work-dir</code>, or the session's folder, which every client now
+  sends) is its only writable root and a read root, plus
+  <code>read_paths.allow</code> and the skills/specs folders. Before, the sandbox
+  always moved a run into an empty scratch folder and ignored <code>--work-dir</code>.
+  A run with no folder at all, such as a bare API call, still gets one.</li>
+<li><strong>Credentials are always denied</strong> to <code>/task</code> file tools, reads and writes,
+  sandbox on or off: <code>.env</code> and <code>.env.*</code>, <code>.ssh</code> and SSH key files,
+  <code>.gnupg</code>, <code>.aws</code>, <code>.azure</code>, <code>.kube</code>, <code>.docker</code>, <code>.netrc</code>,
+  <code>.git-credentials</code>, <code>.npmrc</code>, <code>.pypirc</code>, <code>~/.ppxai/run</code>,
+  <code>~/.ppxai/tokens*</code>, <code>~/.config/gcloud</code>, <code>~/.config/gh</code>. Opt out with
+  <code>read_paths.builtin_deny: false</code>. Your own <code>read_paths.deny</code> now applies
+  with the sandbox off too.</li>
+<li><strong>Explicit <code>"off"</code> is respected:</strong> a config that writes
+  <code>enforcement: "off"</code> stays unconfined, apart from the deny lists.</li>
+<li><code>/v1/oneshot</code> and other runs without file tools are unaffected.</li>
 </ul>
-<hr />
-<h2 id="4-reference-data-validation-pass-owner-approved-addition">4. Reference-data validation pass (owner-approved addition)<a class="headerlink" href="#4-reference-data-validation-pass-owner-approved-addition" title="Permanent link">&para;</a></h2>
-<p>Owner asked that published model data (HF / publisher model cards) be
-used to sanity-check seeded values rather than transcribing blind.</p>
-<h3 id="4a-what-was-probed-and-rejected">4a. What was probed and REJECTED<a class="headerlink" href="#4a-what-was-probed-and-rejected" title="Permanent link">&para;</a></h3>
-<p>The original framing — "fill in default guesses from published profiles
-where we have no measured data" — does not survive contact with the
-table. Two findings, both verified:</p>
-<ol>
-<li><strong>All 65 rows carry a benchmark tier</strong> (S:8, A:16, B:24, C:14, D:3).
-   There is no unmeasured row. The premise does not hold here.</li>
-<li><strong><code>max_tokens: 0</code> / <code>max_tool_iterations: 0</code> are not missing values.</strong>
-   Per <code>model_profiles.py:57</code>, <code>0</code> means <em>"use provider default"</em> — a
-   deliberate delegation. 6 rows are <code>0</code> on <code>max_tokens</code>, 41 on
-   <code>max_tool_iterations</code>.</li>
-</ol>
-<p>The 5 rows unstated on BOTH limits are all open-weight VL <strong>globs</strong>:
-<code>*qwen3-vl*</code>, <code>*qwen2-vl*</code>, <code>*llava*</code>, <code>*pixtral*</code>, <code>*minicpm-v*</code>.</p>
-<p>A glob has no single published number. <code>*minicpm-v*</code> matches
-MiniCPM-V / V-2 / V-2_6 / V-4_5 / V-4.6, whose published context lengths
-run 4K to 32K to 64K to 262K. <code>*pixtral*</code> matches Pixtral-12B (128K) and
-Pixtral-Large. Verified by search 2026-08-31.</p>
-<p>Worse, the quantities differ in kind: HF publishes <strong>context window</strong>
-(input capacity); <code>max_tokens</code> is an <strong>output cap</strong>. Conflating them
-turns a 128K context into a nonsense 128K output request.</p>
-<blockquote>
-<p><strong>DO NOT fill these five.</strong> Re-author them as <code>0</code>, with a comment
-stating that <code>0</code> means provider-delegation for a family glob. This
-turns an apparent hole into documented intent.</p>
-</blockquote>
-<h3 id="4b-what-to-actually-validate-against-published-data">4b. What to actually validate against published data<a class="headerlink" href="#4b-what-to-actually-validate-against-published-data" title="Permanent link">&para;</a></h3>
-<p>Three fields where publisher data genuinely decides something:</p>
-<ol>
-<li><strong>The 15 <code>wire_protocol</code> rows (§2).</strong> Hard fact about which endpoint
-   serves a model; wrong means requests break outright. The gpt-5.6 line
-   already proved the failure mode.</li>
-<li><strong>The 23 <code>supports_vision: False</code> rows.</strong> This flag routes images
-   through a VL sidecar vs. sending natively
-   (<code>ppxai/engine/file_preprocessing.py</code>). A wrong <code>False</code> <strong>silently
-   degrades output</strong> rather than erroring — the worst failure shape.</li>
-<li><strong>The 14 <code>restricted_params</code> rows</strong> (all <code>('temperature','top_p')</code>).
-   Publisher-documented; wrong means hard API rejection.</li>
-</ol>
-<p>All three are unambiguous in a model card, unlike a context number.</p>
-<p>Any correction found lands as <strong>its own commit</strong>, separate from the
-transcription — so the byte-identical check in step 1 stays meaningful.</p>
-<h3 id="4c-provenance-owner-to-confirm-scope">4c. Provenance (owner to confirm scope)<a class="headerlink" href="#4c-provenance-owner-to-confirm-scope" title="Permanent link">&para;</a></h3>
-<p>No row records <em>where its value came from</em>. That is precisely Item 63
-("benchmark conclusions are hand-typed into code, unlinked and
-unchecked"). A <code>source</code> comment per re-authored row would make the next
-refresh checkable. <strong>Open question: in scope for Item 65, or deferred to
-Item 63?</strong> Do not decide this unilaterally.</p>
-<hr />
-<h2 id="5-sequencing-two-commits-deliberately">5. Sequencing — two commits, deliberately<a class="headerlink" href="#5-sequencing-two-commits-deliberately" title="Permanent link">&para;</a></h2>
-<p><strong>Step 1 — re-author, delete nothing.</strong>
-Replace the <code>SHIPPED_MODEL_FACTS</code> dict comprehension with 65 literal
-<code>ModelFacts(...)</code> rows. Keep <code>BUILTIN_PROFILES</code> and the flattener in
-place.</p>
-<p>This is the whole reviewable data diff, and the existing fence proves
-it: <code>tests/test_model_facts_are_the_source.py</code>
-::<code>test_every_profile_row_flattens_to_its_facts_row</code> compares each
-literal against the flattened original <strong>field for field</strong>. Green means
-byte-identical semantics.</p>
-<p><code>test_the_seed_table_is_still_the_expected_size</code> asserts
-<code>len(BUILTIN_PROFILES) == 65</code>. It should keep passing through step 1
-(seed table untouched); step 2 retires it.</p>
-<p><strong>Step 2 — delete the bridge, separate commit.</strong>
-Remove <code>ModelProfile</code>, <code>ToolCallingProfile</code>, <code>facts_from_profile</code>,
-<code>_seed_row</code>, <code>_wire_for</code>, <code>_API_PATH_TO_WIRE</code>, <code>_WIRE_BY_GLOB</code>,
-<code>BUILTIN_PROFILES</code>, and <code>model_profiles.py</code> itself if nothing else lives
-there. Retarget the ~25 test refs and 4 prose mentions.</p>
-<p>The comparison fence loses its left-hand side. <strong>Rewrite it, do not
-delete it</strong> — as invariants over <code>SHIPPED_MODEL_FACTS</code>: row count, every
-row states <code>tool_mode</code>, the 15 known non-default wires.</p>
-<p>Two commits is what makes step 1 reviewable — the same argument the debt
-item makes for why this was kept out of W4.</p>
-<hr />
-<h2 id="6-defect-found-while-planning-fix-in-step-2">6. Defect found while planning (fix in step 2)<a class="headerlink" href="#6-defect-found-while-planning-fix-in-step-2" title="Permanent link">&para;</a></h2>
-<p><code>facts_from_profile</code>'s docstring (<code>model_facts.py:221-224</code>) says it is
-<em>"the migration helper <code>/doctor</code> uses to show an operator what a legacy
-row becomes."</em></p>
-<p>Grep across <code>ppxai/</code> and <code>tests/</code> finds <strong>no <code>/doctor</code> caller</strong>. The only
-production call site is <code>_seed_row</code>, in the same file. Either the feature
-was never built or it was removed, and the docstring is now the sole
-evidence for a capability that does not exist — the same "declared is not
-consumed" shape that produced Item 61. It gets deleted in step 2 anyway,
-so correcting the record costs nothing.</p>
-<hr />
-<h2 id="7-ground-rules">7. Ground rules<a class="headerlink" href="#7-ground-rules" title="Permanent link">&para;</a></h2>
+<h3 id="ppxai-refuses-to-start-while-the-config-has-toolsagentsandbox">ppxai refuses to start while the config has <code>tools.agent.sandbox</code><a class="headerlink" href="#ppxai-refuses-to-start-while-the-config-has-toolsagentsandbox" title="Permanent link">&para;</a></h3>
+<p>ADR 0010 (v1.19.1) moved the <code>/task</code> filesystem sandbox from
+<code>tools.agent.sandbox</code> to <code>execution.task.sandbox</code>, with no fallback. An
+operator who had configured a jail (<code>enforcement: "in_process"</code>) lost it
+silently on upgrade: the seal reverted to <code>"off"</code>, and the <code>read_paths.deny</code>
+list (<code>.env</code>, <code>.ssh</code>, secrets) stopped applying to <code>/task</code> runs. With the
+new default above, an ignored block would now silently fall back to the
+defaults instead, which still loses your own paths and deny rules.</p>
+<p>Now every entry point (<code>ppxai</code>, <code>ppxaide</code>, <code>ppxai-server</code>,
+<code>ppxai-desktop</code>) refuses to start while that key is present, and prints the
+file and the fix. An embedder's <code>EngineClient()</code> raises
+<code>ppxai.config.RetiredSecurityKeyError</code>. It refuses even if
+<code>execution.task.sandbox</code> is also set. No other key refuses; <code>/doctor</code> still
+warns about the other moved <code>tools.agent.*</code> keys.</p>
+<h2 id="new-ssh-remote-hub-and-ssh-launcher-adr-0013">New: SSH remote hub and SSH Launcher (ADR 0013)<a class="headerlink" href="#new-ssh-remote-hub-and-ssh-launcher-adr-0013" title="Permanent link">&para;</a></h2>
+<p>Keep the client in your local browser while the engine, tools and files
+stay on a remote host where ppxai is installed.</p>
 <ul>
-<li>Owner approved this plan 2026-08-31, explicitly allowing a second
-  iteration if issues surface. Surface them rather than improvising.</li>
-<li>§4c is an open owner question. Do not settle it in code.</li>
-<li>Derive counts; never restate one from this file without re-running it.</li>
+<li><strong>Turn it on</strong> by listing hosts under <code>remote.hosts</code> in
+  <code>ppxai-config.json</code> (each an <code>id</code> and an ssh destination). Without it,
+  every hub path answers 404 and no <code>ssh</code> ever starts; the k8s coder pods
+  are unaffected.</li>
+<li><strong>Transport:</strong> your own <code>ssh</code> (<code>BatchMode=yes</code>, your <code>known_hosts</code>, your
+  agent and <code>~/.ssh/config</code>), one <code>ssh -N -L</code> per remote server to a 0600
+  unix socket on the remote. ppxai stores no keys.</li>
+<li><strong>Use it:</strong> the header "SSH" button opens the launcher: hosts, their
+  ppxai servers and attachment state; launch a server in a chosen
+  directory, open its own web UI in a new tab, detach, stop. Everything
+  under <code>/h/&lt;host&gt;/&lt;id&gt;/</code> is proxied, websockets and streams included.</li>
+<li><strong>Tokens:</strong> the hub injects each remote server's token itself; it never
+  reaches the browser.</li>
+<li><strong>Tools run on the remote,</strong> under that host's own config
+  (<code>execution.task.*</code>, sandbox, egress ceiling).</li>
+<li>
+<p><strong>Remote hosts need a build from this release</strong> (registry contract 2).
+  The hub refuses older remote <code>ppxai-server</code> binaries with their version,
+  because those failed every chat after a detached launch from a one-file
+  build.</p>
+</li>
+<li>
+<p><strong>The hub needs its own token.</strong> Loopback alone is not enough: any local
+  program, and any other OS user, is a loopback peer. The hub keeps a token
+  in <code>~/.ppxai/run/hub-token</code> (readable only by you) and requires it on
+  every hub request. <code>ppxai-server</code> prints <code>SSH hub: open
+  http://127.0.0.1:&lt;port&gt;/hub/auth?token=…</code> at startup; opening it sets a
+  browser cookie (HttpOnly, SameSite=Strict). <code>ppxai-desktop</code> opens that
+  URL for you. A script sends the token as <code>X-Ppxai-Hub-Token</code>. Without
+  it, the launcher shows "The SSH hub is locked".</p>
+</li>
 </ul>
+<p><strong>Limits:</strong> web UI only (VSCode and TUI clients are future work); one
+user; the hub answers loopback requests only. A remote server's pages are
+served under the hub's origin, so trust the remote hosts you add.</p>
+<h2 id="model-and-config-changes">Model and config changes<a class="headerlink" href="#model-and-config-changes" title="Permanent link">&para;</a></h2>
+<p>These change what ppxai sends for some models. Each is a shipped seed row
+in <code>ppxai/engine/model_facts.py</code>, so it applies without a config row. <strong>A
+config row outranks the seed</strong>, so a row copied from an older example can
+undo it; <code>/doctor</code> and the example config show the current values.</p>
+<table>
+<thead>
+<tr>
+<th>Models</th>
+<th>Change</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gpt-5.4-pro</code>, <code>gpt-5.6*</code>, <code>gpt-6-sol</code>, <code>gpt-6-luna</code></td>
+<td>Responses wire; native tool calls without a config row</td>
+<td>Chat Completions answers 404 (<code>gpt-5.4-pro</code>) or 400 on tools</td>
+</tr>
+<tr>
+<td><code>gpt-6-sol</code>, <code>gpt-6-luna</code></td>
+<td>Serial tool calls</td>
+<td>Parallel calls not measured yet</td>
+</tr>
+<tr>
+<td>OpenRouter <code>anthropic/claude-*</code> 4.7 and newer</td>
+<td><code>temperature</code>, <code>top_p</code>, <code>top_k</code> not sent; native tools</td>
+<td>Under <code>require_parameters</code> routing they answer 404 to either</td>
+</tr>
+<tr>
+<td>Gemini 3.6 Flash and newer, and unlisted (newer) Gemini models</td>
+<td><code>temperature</code>, <code>top_p</code>, <code>top_k</code> not sent</td>
+<td>Google: fixed defaults, 400 on upcoming models</td>
+</tr>
+<tr>
+<td><code>gemini-3.5-flash</code></td>
+<td>Deprecated, replacement <code>gemini-3.6-flash</code></td>
+<td>Google redirects every request to 3.6 (and bills 3.6)</td>
+</tr>
+<tr>
+<td>Gemini 2.5 line</td>
+<td>Nothing ppxai ships points at it any more</td>
+<td>Sunset from 2026-10-16 (earliest)</td>
+</tr>
+</tbody>
+</table>
+<p>Also:</p>
+<ul>
+<li><strong><code>/doctor</code> knows OpenAI's current deprecations</strong> (83 rows, was 16),
+  including the 2027-04-01 retirement of <code>gpt-5.3-codex</code>, <code>gpt-5.4-nano</code>
+  and <code>gpt-5.1</code>.</li>
+<li><strong>The example config</strong> (which seeds new installs) no longer contradicts
+  its seeds, lists current OpenRouter models (Claude 5.5, DeepSeek V4.1
+  Flash, Llama 4 Maverick, Qwen 3.8 27B), routes OpenRouter with
+  <code>data_collection: deny</code> and <code>require_parameters</code>, drops the Gemini
+  <code>generation_params</code> block, and orders web search Gemini first.</li>
+<li><strong><code>qwen/qwen3.8-27b</code> gets reasoning effort low</strong> in the example config
+  (<code>extra_body: {"reasoning": {"effort": "low"}}</code> on its model row). With
+  no effort sent it sometimes answered a tool result with an empty reply;
+  with it, the benchmark median went from 83.8 to 96.9 and runs got about
+  2.5 times faster. Add the same line to an existing qwen3.8 row.</li>
+</ul>
+<h2 id="other-fixes">Other fixes<a class="headerlink" href="#other-fixes" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Behind a corporate proxy, local connections no longer go to the
+  proxy:</strong> <code>/preview</code>, <code>ppxai-desktop</code>'s start-up check, and providers at
+  <code>localhost</code> (local vLLM, Ollama, an SSH forward) now bypass
+  <code>HTTP_PROXY</code>.</li>
+<li><strong>Saving the config, a session, the restore pointer or <code>usage.json</code> can
+  no longer leave the file empty;</strong> a failed read no longer wipes the
+  config.</li>
+<li><strong>No hint tells you to <code>pip install ppxai</code>:</strong> that PyPI name belongs to
+  another project.</li>
+<li><strong>AGENTS.md hints are no longer sent twice</strong> when the global and project
+  files carry the same hints.</li>
+<li><strong>Benchmarks:</strong> <code>--agents-md without</code> runs really are hint-free now, and
+  <code>respects_tool_failure</code> no longer fails every model. Earlier scores for
+  that test are invalid, so earlier overall scores are understated. The
+  2026-10-11 re-run is in <code>docs/model-selection-guide.md</code>.</li>
+<li><strong>The PyInstaller specs name the provider modules that exist</strong> (a
+  deleted Perplexity module and two dead entries out, <code>openai_native</code> and
+  <code>anthropic</code> in), held by tests; the server build no longer logs errors.</li>
+</ul>
+<h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>tests/test_websocket_guard.py</code>: 18 tests. With the guard disabled, the
+  9 tests that expect a refusal fail, the attack among them.</li>
+<li>Against a live <code>ppxai-server</code> over TCP (uvicorn, not the test client):
+  the UI's own origins get a working shell; <code>http://evil.example</code> gets
+  HTTP 403.</li>
+<li>Full suite on the security patch alone: macOS 6,935 passed / 5 skipped;
+  Linux (WSL2 Ubuntu 24.04) 6,933 passed / 7 skipped; Windows 6,890
+  passed / 50 skipped (platform gates); 0 failed anywhere.</li>
+<li>Full suite on <code>feature/v1.19.4</code>: macOS 7,439 passed / 7 skipped
+  (2026-10-11, after the sandbox, startup-refusal, hub-token and spec
+  fixes);
+  Windows 7,197 passed / 80 skipped at <code>0eb4863a</code> (2026-10-04, before
+  those fixes and the latest model and docs fixes).
+  <strong>The full suite was not re-run on Windows after those fixes</strong> (owner
+  decision 2026-10-11: release now, fix any Windows issue in v1.19.5). The
+  Windows-sensitive parts are the default sandbox's path matching and
+  built-in deny list, the hub token file's permissions, and the
+  start-up refusal. CI's test job runs on Ubuntu; its Windows job builds
+  the binaries but runs no tests.</li>
+<li>Local macOS (Intel) install from <code>2f922541</code>: all four binaries and the
+  <code>.app</code> build and report 1.19.4, the PyInstaller server build logs no
+  errors, both frozen binaries carry all four provider modules, the
+  gateway smoke passes 8/8 (including a <code>/task</code> run under the new default
+  sandbox), and office preview renders a slide.</li>
+<li>SSH-launcher Playwright spec: 35/35 over 5 repeats with its 90 s
+  per-test limit.</li>
+<li>SSH hub: launch, attach, detach and stop against real sshd hosts from
+  Windows (TCP local end) and Linux (unix-socket local end), and the
+  owner's trial on real hosts and keys; see
+  <code>docs/plan-ssh-remote-backend.md</code>.</li>
+<li>Linux, live: the fixed server gives the UI's origins a shell and refuses
+  <code>http://evil.example</code> with 403. The unfixed v1.19.3 binary on the same
+  host gave <code>http://evil.example</code> a shell, which reproduces the hole.</li>
+<li>Windows, live: the same results with and without <code>PPXAI_API_TOKEN</code>. Origin
+  <code>null</code> and a rebinding Host are refused too, a wrong bearer from the UI's
+  own origin is refused, and a right bearer from a foreign origin is still
+  refused. The desktop app's terminal view, in a real Chromium, still
+  connects and shows its "requires a Unix host" message.</li>
+</ul>
+<h2 id="upgrade">Upgrade<a class="headerlink" href="#upgrade" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong><code>/task</code> sandbox:</strong> runs are now confined to their working folder. A
+   task that must read elsewhere needs those paths in
+   <code>execution.task.sandbox.read_paths.allow</code>. To keep the old unconfined
+   behaviour, write <code>enforcement: "off"</code> (the credential deny list still
+   applies; <code>read_paths.builtin_deny: false</code> removes it).</li>
+<li><strong>If ppxai refuses to start</strong> with "<code>tools.agent.sandbox</code> is no longer
+   read": move that block under <code>execution.task.sandbox</code> (merge it if that
+   key exists) and delete <code>tools.agent.sandbox</code>.</li>
+<li><strong>Websocket clients:</strong> if a browser client of yours opens the terminal
+   from an origin other than the server's own, add that origin to
+   <code>PPXAI_ALLOWED_ORIGINS</code>.</li>
+<li><strong>Model rows copied from an older example config</strong> can override the new
+   facts. Run <code>/doctor</code>, and compare your <code>providers.*.models</code> rows for the
+   models in the table above with <code>ppxai-config.example.json</code>; delete a
+   row's <code>facts</code> block to fall back to the shipped seed.</li>
+<li><strong>Gemini:</strong> drop <code>gemini-3.5-flash</code> and any 2.5 model from your config,
+   and drop a Gemini <code>generation_params</code> block that sets <code>temperature</code> or
+   <code>top_p</code> (3.6+ ignores it; upcoming models reject it).</li>
+<li><strong>SSH hub (optional):</strong> add <code>remote.hosts</code>, open the hub URL that
+   <code>ppxai-server</code> prints (or start <code>ppxai-desktop</code>), and install this release on
+   each remote host.</li>
+</ol>
 
 
 

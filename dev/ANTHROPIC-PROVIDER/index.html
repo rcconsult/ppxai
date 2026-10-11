@@ -1297,7 +1297,7 @@ most likely are named under <a href="#limits-of-phase-1">Limits of Phase 1</a>.<
 </blockquote>
 <p>Native support for Claude over Anthropic's Messages API. Optional — install
 the extra to enable it:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>anthropic<span class="w">     </span><span class="c1"># or: pip install 'ppxai[anthropic]'</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>anthropic<span class="w">     </span><span class="c1"># or: pip install "ppxai[anthropic] @ git+https://github.com/rcconsult/ppxai"</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span>sk-ant-...
 </span></code></pre></div>
 <p>Without the extra the provider does not register, and <code>create_provider("anthropic")</code>

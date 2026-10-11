@@ -1255,9 +1255,9 @@
 
 <h1 id="plan-ssh-remote-backend-adr-0013">Plan — SSH remote backend (ADR 0013)<a class="headerlink" href="#plan-ssh-remote-backend-adr-0013" title="Permanent link">&para;</a></h1>
 <p><strong>Date:</strong> 2026-09-26
-<strong>Status:</strong> Draft, not started. Implements
-<a href="../decisions/0013-ssh-remote-backend/">ADR 0013</a> once the ADR's open questions
-are resolved.
+<strong>Status:</strong> ✅ <strong>Complete.</strong> Phases 0–6 implemented on <code>feature/v1.19.4</code>
+(unreleased); the owner trial passed 2026-09-29 and the owner accepted ADR 0013
+the same day, after the two items the trial left open were done (below). Implements <a href="../decisions/0013-ssh-remote-backend/">ADR 0013</a>.
 <strong>Scope:</strong> web client first. VSCode and the TUIs follow only after the web
 path is proven.</p>
 <p>Each phase is a gate: it lands with its tests, is tried by the owner, and the
@@ -1291,7 +1291,7 @@ next phase starts on instruction.</p>
 <tr>
 <td>Q4</td>
 <td>Connection reuse</td>
-<td>✅ Measured: one long-lived forward per server; the proxy must pool keep-alive connections. The 6-vs-61 ms spread is undiagnosed — re-measure against uvicorn in Phase 4</td>
+<td>✅ Measured: one long-lived forward per server; the proxy must pool keep-alive connections. The 6-vs-61 ms spread is undiagnosed; deferred at acceptance (ADR Q4)</td>
 </tr>
 <tr>
 <td>Q5</td>
@@ -1320,6 +1320,15 @@ in the repo.</p>
 <p>Tests: launch → list → <code>/health</code> over the socket with and without the token →
 kill → list prunes. All local, POSIX-gated where the OS demands it.</p>
 <h2 id="phase-2-s2-remotetransport-opensshtransport">Phase 2 — S2, <code>RemoteTransport</code> + <code>OpenSSHTransport</code><a class="headerlink" href="#phase-2-s2-remotetransport-opensshtransport" title="Permanent link">&para;</a></h2>
+<p><strong>Status (2026-09-28): implemented</strong> on <code>feature/v1.19.4</code> — <code>ppxai/remote/{transport,openssh}.py</code>, <code>tests/test_remote_transport.py</code>, <code>tests/remote_fakes.py</code> (<code>FakeTransport</code>), <code>tests/fake_ssh.py</code> (a stand-in ssh binary: runs the command through a real local <code>sh</code>, so the quoting table is end-to-end, and relays <code>-L</code> forwards to a unix socket), and Guard 3b in <code>tests/test_no_new_lazy_imports.py</code>. Decisions made while building it:</p>
+<ul>
+<li><strong>Local end of a forward:</strong> a unix socket in a private 0700 <code>mkdtemp</code> dir on POSIX (<code>StreamLocalBindMask=0177</code>), loopback TCP on Windows. The hub is then the only local process that can reach a forward on POSIX.</li>
+<li><strong>CR/LF refused in argv</strong>, not quoted: <code>sh</code> accepts them inside single quotes, csh-family login shells do not, and no ppxai command needs one.</li>
+<li><strong>Destination validation:</strong> one <code>ssh</code> word, never starting with <code>-</code> (option injection such as <code>-oProxyCommand=…</code>).</li>
+<li><strong>A forward's readiness is "the local end accepts"</strong>, not "the remote socket answers". Real ssh accepts locally and only fails the channel; liveness is S4's <code>/health</code> probe.</li>
+<li><strong>Exception names end in <code>Error</code></strong> (repo lint, N818); the ADR's S2 text is updated to match.</li>
+</ul>
+<p>Verified against the real OpenSSH 8.6 client on macOS: unknown host → <code>HostUnreachableError</code>, closed port → the same. The opt-in live class runs with <code>PPXAI_TEST_SSH_DEST=&lt;destination&gt;</code> (and <code>PPXAI_TEST_SSH_COMMAND</code> for an ssh argv prefix, e.g. a scratch <code>UserKnownHostsFile</code>). <strong>Linux (WSL2 Ubuntu 24.04, 706a60dd):</strong> all 95 incl. the live class against a real sshd. <strong>Windows (706a60dd):</strong> a live <code>OpenSSHTransport</code> TCP forward from Windows OpenSSH to a WSL2 <code>ppxai-server --uds</code> reached the server (<code>/health</code> 401 without the token, as designed) and the port closed after <code>close()</code>; two test-only defects found by the peers were fixed (an echo server dying on EPIPE on Linux, <code>706a60dd</code>; the fake ssh writing stderr in text mode on Windows).</p>
 <ul>
 <li><code>ppxai/remote/transport.py</code>: the Protocol, <code>RunResult</code>, <code>LocalEndpoint</code>,
   typed errors.</li>
@@ -1333,6 +1342,7 @@ kill → list prunes. All local, POSIX-gated where the OS demands it.</p>
 table from captured real OpenSSH messages; one opt-in live test against a host
 named by an env var, skipped otherwise.</p>
 <h2 id="phase-3-s4-remotesessionmanager">Phase 3 — S4, <code>RemoteSessionManager</code><a class="headerlink" href="#phase-3-s4-remotesessionmanager" title="Permanent link">&para;</a></h2>
+<p><strong>Status (2026-09-28): implemented</strong> on <code>feature/v1.19.4</code> — <code>ppxai/remote/inventory.py</code> (S1 <code>remote.hosts</code> validation; not yet read from config — Phase 4 wires it), <code>contract.py</code> (the hub's own contract record, pinned to the server's by a test), <code>manager.py</code>; <code>tests/test_remote_manager.py</code>. What the ADR did not say and the build decided is recorded under S4 "As built". Besides the fake-driven state-machine tests, the remote shell snippets (binary discovery, <code>cd</code> into the workdir) run through a real <code>sh</code>, and one slow test launches a real <code>ppxai-server --uds --announce --detach</code> through the fake ssh, attaches over a real forward, health-checks it and stops it with <code>POST /shutdown</code>.</p>
 <ul>
 <li>State machine exactly as drawn in the ADR; every transition an event the
   picker can render.</li>
@@ -1343,6 +1353,17 @@ named by an env var, skipped otherwise.</p>
 <p>Tests: every transition driven through <code>FakeTransport</code>, including health
 failure → degraded → recovery, and a transport dying mid-forward.</p>
 <h2 id="phase-4-s5-the-hub-proxy">Phase 4 — S5, the hub proxy<a class="headerlink" href="#phase-4-s5-the-hub-proxy" title="Permanent link">&para;</a></h2>
+<p><strong>Status (2026-09-28): implemented</strong> on <code>feature/v1.19.4</code> — <code>ppxai/server/routes/remote_hub.py</code> (the <code>/h/&lt;host&gt;/&lt;id&gt;/…</code> proxy plus a <code>/hub/*</code> control API the picker will use), <code>ppxai/config/remote.py</code> + the <code>remote</code> key in the loader's top-level whitelist, and the lifespan hook in <code>ppxai/server/http.py</code>. Built on top of the v1.19.4 websocket guard (<code>fix/v1.19.4</code>, merged in), which the investigation for this phase found. Decisions:</p>
+<ul>
+<li><strong>Off means absent.</strong> Without <code>remote.hosts</code>, every hub path answers byte-for-byte like an unknown path, no manager exists and nothing is spawned. An announced (remote-side) server never runs a hub. A malformed <code>remote</code> block is logged and leaves the hub off; it never stops the server. The owner required that the k8s coder pods be unaffected: <code>tests/test_remote_hub_coder_fence.py</code> runs the real app with the coder pods' env and pins all of this, including that a pod which <em>had</em> <code>remote.hosts</code> still shows nothing to the ingress.</li>
+<li><strong>Loopback only, same-origin for writes.</strong> The hub answers a direct loopback peer (no forwarding headers) only. A proxied non-GET, a websocket and every control POST must be same-origin (Origin equal to the hub's own, <code>Sec-Fetch-Site</code> not cross/same-site); control POSTs also need <code>application/json</code>, which forces a preflight.</li>
+<li><strong>Auto-attach on first proxied request</strong>, so a reload after a hub restart works; a non-healthy attachment is a 503 with <code>Retry-After: 5</code>, a dead forward a 502, and a forward that accepts but sends no response headers within 660 s a 504 <code>remote_timeout</code> (past the OpenAI SDK's 600 s read timeout, so a slow <code>/v1/oneshot</code> still gets its own answer).</li>
+<li><strong>Proxy details:</strong> streamed both ways (SSE measured unbuffered), keep-alive client pooled per attachment (ADR Q4), <code>Host: localhost</code>, token injected, the browser's <code>Authorization</code>/<code>Cookie</code>/<code>Origin</code>/<code>Referer</code>/forwarding headers dropped; relative <code>Location</code> and cookie <code>Path</code> get the prefix; repeated <code>Set-Cookie</code> preserved. <code>trust_env=False</code> / <code>proxy=None</code> everywhere: an <code>HTTP(S)_PROXY</code> in the environment must never route a loopback or socket hop through a corporate proxy.</li>
+<li><strong>Control API:</strong> <code>GET /hub/hosts</code>, <code>GET /hub/hosts/&lt;host&gt;/servers</code>, <code>POST /hub/hosts/&lt;host&gt;/servers</code> (launch), <code>POST /hub/hosts/&lt;host&gt;/servers/&lt;id&gt;/attach|detach|stop</code>. Errors are typed: 404 unknown host/server, 409 unsupported/old/unknown-contract, 502 transport, with OpenSSH's text in <code>detail</code>.</li>
+</ul>
+<p>Tests: <code>tests/test_remote_hub.py</code> (two real uvicorn servers — the hub router and a fake remote on a unix socket and on TCP — 25 cases × 2 transports; mutation-checked: a buffering proxy and a missing loopback gate both fail it), the coder fence (22 cases; mutation-checked: dropping <code>remote</code> from the loader whitelist or the loopback gate fails it), and <code>tests/test_remote_hub_e2e.py</code> (slow): a real <code>ppxai-server</code> hub, configured by a real config file, launches a second real <code>ppxai-server</code> through the production <code>OpenSSHTransport</code> (its <code>ssh</code> a PATH shim around <code>tests/fake_ssh.py</code>), serves the remote's own web UI and terminal through <code>/h/lab/&lt;id&gt;/</code>, and stops it.</p>
+<p><strong>Windows note:</strong> "<code>ssh</code> from PATH" means <code>ssh.exe</code>. <code>CreateProcess</code> appends only <code>.exe</code> and ignores PATHEXT, so an <code>ssh.cmd</code>/<code>ssh.bat</code> wrapper earlier on PATH is never run (measured by win32-ppxai, 2026-09-28). Host-specific options belong in <code>~/.ssh/config</code>, as S1 says.</p>
+<p>Live results recorded for Phases 2–3 (2026-09-28): a Windows hub (TCP local end) and a Linux hub (real OpenSSH, unix-socket local end: socket 0600 in a 0700 dir) each ran launch → attach (healthy) → stop (gone) against a real WSL2 sshd, with nothing left behind.</p>
 <ul>
 <li><code>/h/&lt;host&gt;/&lt;server-id&gt;/…</code> → forwarded endpoint, prefix stripped.</li>
 <li>Streaming for SSE and chunked bodies; websocket upgrade for <code>/ws/terminal</code>.</li>
@@ -1354,6 +1375,8 @@ loopback port) behind <code>FakeTransport</code>: an SSE chat stream arrives unb
 the terminal websocket round-trips; a request never carries the token back to
 the browser; an unknown host id is a 404, never a forward.</p>
 <h2 id="phase-5-s6-web-client">Phase 5 — S6, web client<a class="headerlink" href="#phase-5-s6-web-client" title="Permanent link">&para;</a></h2>
+<p><strong>Status (2026-09-28): item 1 (prefix recognition) landed early</strong>, because without it phase 4 was misleading, not merely incomplete. win32-ppxai's live hub run from Windows loaded <code>/h/wsl/&lt;id&gt;/</code>: HTML and assets came through the proxy, but every API call went to the LOCAL hub server, so the page showed and restored the Windows session. <code>app.js</code> now derives its prefix in one place (<code>servedPathPrefix()</code>: <code>/h/&lt;host&gt;/&lt;id&gt;</code> or <code>/s/&lt;slug&gt;</code>), and <code>handleQuit()</code> under <code>/h/</code> detaches and returns to <code>/</code>, never stopping anything; the coder <code>/s/</code> branch is unchanged (<code>tests/test_web_hub_prefix.py</code>, <code>tests/test_session_end_workflows.py</code>). The same run found that a FROZEN <code>ppxai-server</code> reports and runs in its binary's directory, because the entry script chdirs there; the launch directory is now recorded first and restored on the announce path (<code>tests/test_announced_workdir.py</code>). The picker (item 2) is still to do.</p>
+<p><strong>Status (2026-09-28, later): items 2–4 implemented</strong> as the owner's design, the <strong>SSH Launcher</strong> in the right split pane (ADR S6 "As built"): <code>ppxai/web/components/views/ssh-launcher-view.js</code>, the header button, host badge and <code>/#ssh</code> wiring in <code>app.js</code>, styles in <code>styles.css</code>. Tests: <code>tests/test_ssh_launcher_view.py</code> runs the renderer and the view under node with a fake <code>fetch</code> (escaping, no token rendered, counts only through healthy attachments and never attaching, Stop asks, Detach doesn't, one named tab per server, overlapping refreshes coalesce; mutation-checked), <code>tests/test_web_hub_prefix.py</code> pins Leave → <code>/#ssh</code>. A live Playwright run against a real hub and a real remote <code>ppxai-server</code> (fake ssh shim, as in the e2e test) walked button → launcher → New server → Open (new tab: badge <code>🖥 lab · &lt;id8&gt;</code>, title <code>ppxai — lab</code>, no SSH button) → Leave (back on <code>/</code>, launcher open, server "not attached") → Stop, with no console errors. That run found the one server change: the launcher's count reads re-attached a just-detached server through the proxy's auto-attach, so <code>X-Ppxai-Hub-Attach: no</code> now disables auto-attach per request (<code>tests/test_remote_hub.py::TestObserveOnly</code>). The scratch run became <code>tests/e2e/ssh-launcher.spec.ts</code> on 2026-09-29 (<code>npm run test:ssh</code>). The run on Windows against a real sshd is done: phase 6.</p>
 <ul>
 <li><code>app.js</code> prefix recognition: <code>/h/&lt;host&gt;/&lt;id&gt;</code> alongside <code>/s/&lt;user&gt;</code>.</li>
 <li><code>handleQuit()</code>: under <code>/h/</code>, detach and return to the picker.</li>
@@ -1366,6 +1389,59 @@ the browser; an unknown host id is a 404, never a forward.</p>
 <p>Real hosts, real keys: launch from the picker, chat with tools, open the
 terminal, detach, re-attach from another tab, see the session still there,
 stop. Findings feed back into the ADR before acceptance.</p>
+<p><strong>Status (2026-09-29): PASSED</strong>, run by the owner with win32-ppxai.</p>
+<ul>
+<li><strong>Setup.</strong> Hub: the installed Windows <code>ppxai-server</code> 1.19.4 (built from
+  <code>297f65d8</code>) with <code>remote.hosts = [{"id": "wsl", "ssh": "&lt;alias&gt;"}]</code>, the
+  alias an <code>~/.ssh/config</code> entry for a WSL2 sshd on a local port. Remote:
+  WSL2 Ubuntu 24.04 with a one-file <code>ppxai-server</code> (PyInstaller 6.17) built
+  from <code>e3746f65</code>. Real OpenSSH, real keys; everything driven from the web
+  SSH Launcher.</li>
+<li><strong>Launch.</strong> "New server" started a detached server; its own unpack dir
+  intact, no deleted mappings.</li>
+<li><strong>Open.</strong> The remote UI in a new tab, its API under <code>/h/wsl/&lt;id&gt;/</code>.</li>
+<li><strong>Chat.</strong> A plain turn answered in 2.0 s (<code>gemini-3.8-flash</code>); a tool turn
+  (<code>get_weather</code>) in 7.5 s; three more turns, no errors in the logs.</li>
+<li><strong>Commands and terminal.</strong> <code>/help</code>; <code>/terminal</code> opened a login shell in the
+  remote home directory, used twice.</li>
+<li><strong>Detach and re-attach.</strong> Leave, then Open again: the same session was
+  restored with its new messages (68 → 82), so it persisted across the
+  detach.</li>
+<li><strong>Stop.</strong> <code>POST /shutdown</code> 200, a clean stop after about 6 minutes; the
+  registry entry, the socket and the unpack dir were gone, with no new stale
+  unpack dir.</li>
+</ul>
+<p><strong>Findings, all fixed before the pass:</strong></p>
+<ol>
+<li>A one-file <code>ppxai-server --detach</code> ran out of an unpack dir its launcher
+   had deleted (the launcher forked, then exited, so the bootloader cleaned
+   up under the daemon): every lazily loaded module failed, and chat with it
+   (<code>…/_MEI…/base_library.zip: No such file</code>). Fixed in <code>e3746f65</code>: a frozen
+   launcher re-spawns the binary with <code>PYINSTALLER_RESET_ENVIRONMENT=1</code>, so
+   the daemon's bootloader owns its own unpack dir
+   (<code>tests/test_detach_frozen.py</code>). Verified with real one-file builds on
+   WSL and macOS Intel; Windows has no <code>--detach</code>.</li>
+<li><code>scripts/gateway-smoke.py</code> left a slow-starting server running after a
+   startup timeout. Fixed in <code>cbd0d8e2</code> (60 s start wait on Windows; cleanup
+   watches for a late listener).</li>
+<li>The web client's API calls escaped the <code>/h/</code> prefix, and a frozen server
+   reported its binary's directory as its workdir. Both fixed in <code>5c539936</code>
+   (phase 5 above).</li>
+</ol>
+<p><strong>Left open by the trial, done 2026-09-29</strong> (the owner first deferred both,
+then asked for them before accepting the ADR):</p>
+<ul>
+<li>A Playwright spec for the Launcher: <code>tests/e2e/ssh-launcher.spec.ts</code>,
+  its own <code>ssh</code> project, run with <code>npm run test:ssh</code> in <code>tests/e2e/</code>
+  (POSIX only; the remote is <code>tests/fake_ssh.py</code>, so no host or key).</li>
+<li>Remote builds without <code>e3746f65</code>: an older one-file build launched, then
+  failed every chat, and the version number could not say so. The registry
+  moved to contract 2 (same fields; the new meaning is "<code>--detach</code> works
+  from a one-file build"), the hub retired contract 1, and before a launch
+  the hub runs <code>ppxai-server --registry-contract</code> on the host and refuses a
+  binary without it, or with a contract it does not read, before anything
+  starts. <code>MIN_SERVER_VERSION</code> is gone. See ADR S3 "As built".</li>
+</ul>
 <hr />
 <h2 id="not-in-this-plan">Not in this plan<a class="headerlink" href="#not-in-this-plan" title="Permanent link">&para;</a></h2>
 <p>VSCode/TUI clients of the hub, remote tool execution from a local engine,

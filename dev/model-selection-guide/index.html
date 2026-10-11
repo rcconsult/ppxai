@@ -1251,6 +1251,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#re-run-2026-10-11-after-the-respects_tool_failure-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Re-run 2026-10-11 (after the respects_tool_failure fix)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#same-day-run-2026-10-03-openai-openrouter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Same-day run 2026-10-03 (OpenAI + OpenRouter)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#source-data" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1331,13 +1353,19 @@ For deferred multi-model routing automation, see <a href="../TODO-routing/">TODO
 <td><strong>Implementation / coding</strong></td>
 <td><strong><code>gpt-5.4-mini</code></strong></td>
 <td>$0.75 / $4.50</td>
-<td>Champion at 97.5% with hints, 6.7× cheaper than gpt-5.5</td>
+<td>Best run 97.5% with hints (2026-04); median 87.8 in the <a href="#re-run-2026-10-11-after-the-respects_tool_failure-fix">2026-10-11 re-run</a> (85.6 on 2026-10-03). Fastest of the hosted models, 6.7× cheaper than gpt-5.5</td>
 </tr>
 <tr>
 <td>Cheap quick tasks</td>
-<td><code>gpt-5.4-nano</code> (untested)</td>
-<td>$0.20 / $1.25</td>
-<td>Worth benchmarking before promoting</td>
+<td><code>gpt-6-luna</code></td>
+<td>$0.10 / $0.50</td>
+<td>Median 90.1 on 2026-10-11 (87.1 on 2026-10-03), above gpt-5.4-mini at ~1/7 the price but ~2.5× slower. Replaces <code>gpt-5.4-nano</code> (deprecated 2026-10-01, shutdown 2027-04-01)</td>
+</tr>
+<tr>
+<td>Low-cost alternative via OpenRouter</td>
+<td><code>qwen/qwen3.8-27b</code></td>
+<td>$0.425 / $2.55 (2026-10-08)</td>
+<td>Median <strong>96.9</strong> on 2026-10-11 with <code>extra_body: {"reasoning": {"effort": "low"}}</code> on the model entry, level with <code>gpt-5.6-terra</code> (96.0) at ~1/5 the price; 83.8 without it (see the re-run notes). Set the effort: with none, it sometimes ends a turn with an empty reply. ~230 s per run</td>
 </tr>
 <tr>
 <td>Air-gapped / in-cluster</td>
@@ -1349,7 +1377,7 @@ For deferred multi-model routing automation, see <a href="../TODO-routing/">TODO
 <td><strong>Avoid</strong></td>
 <td><code>gpt-5.3-codex</code></td>
 <td>$1.75 / $14</td>
-<td>Dominated by both gpt-5.4-mini and gpt-5.5; structurally cautious about tool use</td>
+<td>Dominated by both gpt-5.4-mini and gpt-5.5; structurally cautious about tool use. <strong>Deprecated 2026-10-01</strong> (shutdown 2027-04-01, replacement <code>gpt-6-sol</code>)</td>
 </tr>
 </tbody>
 </table>
@@ -1491,9 +1519,10 @@ the manual <code>/model</code> switch is the workaround.</p>
    benchmark run was deemed cost-prohibitive). If pro substantially
    outperforms 5.5 on architecture-shaped tests, promote it as the
    planning default.</li>
-<li><strong>gpt-5.4-nano gets benchmarked.</strong> At $0.20/$1.25 it's 4× cheaper than
-   gpt-5.4-mini; if it scores ≥85%, it becomes the executor for
-   high-volume low-stakes implementation work.</li>
+<li>~~<strong>gpt-5.4-nano gets benchmarked.</strong>~~ Moot: OpenAI deprecated it 2026-10-01 (shutdown 2027-04-01). Its replacement <code>gpt-6-luna</code> was
+   benchmarked 2026-10-03: median 87.1, above the ≥85% bar, so it
+   qualifies as the executor for high-volume low-stakes implementation
+   work where its ~2.5× longer runs don't matter.</li>
 <li><strong>Multi-model routing lands.</strong> The manual switch advice becomes
    historical — replace it with the automatic-routing config syntax.</li>
 </ol>
@@ -1514,6 +1543,211 @@ the manual <code>/model</code> switch is the workaround.</p>
   price of gpt-5.4-mini for marginal gain on implementation tasks.
   gpt-5.4-mini stays the daily-driver default.</li>
 </ul>
+<h2 id="re-run-2026-10-11-after-the-respects_tool_failure-fix">Re-run 2026-10-11 (after the <code>respects_tool_failure</code> fix)<a class="headerlink" href="#re-run-2026-10-11-after-the-respects_tool_failure-fix" title="Permanent link">&para;</a></h2>
+<p>The same six models, three runs each, <code>--agents-md with</code>, after <code>503f298c</code> fixed the <code>respects_tool_failure</code> test (it now answers a retry with the same failure, up to twice, instead of failing every model). Every score from before that fix is understated by about one test.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Provider</th>
+<th>Runs</th>
+<th style="text-align: right;">Median</th>
+<th>Passed</th>
+<th>Time per run</th>
+<th style="text-align: right;">2026-10-03 median</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gpt-5.6-terra</code></td>
+<td>openai</td>
+<td>96.0 / 90.9 / 96.0</td>
+<td style="text-align: right;"><strong>96.0</strong></td>
+<td>32–34</td>
+<td>~171 s</td>
+<td style="text-align: right;">91.1</td>
+</tr>
+<tr>
+<td><code>gpt-6-luna</code></td>
+<td>openai</td>
+<td>88.0 / 90.1 / 91.3</td>
+<td style="text-align: right;"><strong>90.1</strong></td>
+<td>31–32</td>
+<td>~204 s</td>
+<td style="text-align: right;">87.1</td>
+</tr>
+<tr>
+<td><code>gpt-5.4-mini</code></td>
+<td>openai</td>
+<td>91.4* / 87.4 / 87.8</td>
+<td style="text-align: right;"><strong>87.8</strong></td>
+<td>31</td>
+<td>~86 s</td>
+<td style="text-align: right;">85.6</td>
+</tr>
+<tr>
+<td><code>qwen/qwen3.8-27b</code></td>
+<td>openrouter</td>
+<td>82.9 / 83.8 / 85.6</td>
+<td style="text-align: right;"><strong>83.8</strong></td>
+<td>30–31</td>
+<td>~580 s</td>
+<td style="text-align: right;">90.1</td>
+</tr>
+<tr>
+<td><code>qwen/qwen3.7-flash</code></td>
+<td>openrouter</td>
+<td>80.2* / 77.5 / 84.5</td>
+<td style="text-align: right;"><strong>80.2</strong></td>
+<td>28–30</td>
+<td>~340 s</td>
+<td style="text-align: right;">81.2</td>
+</tr>
+<tr>
+<td><code>gpt-6-sol</code></td>
+<td>openai</td>
+<td>78.2 / 77.4 / 84.7</td>
+<td style="text-align: right;"><strong>78.2</strong></td>
+<td>26–29</td>
+<td>~193 s</td>
+<td style="text-align: right;">75.6</td>
+</tr>
+</tbody>
+</table>
+<p>* Infrastructure failures in that run: one for gpt-5.4-mini, two for qwen3.7-flash.</p>
+<p>Reading it:</p>
+<ul>
+<li><strong><code>respects_tool_failure</code> now passes</strong> in all three runs for five of the six models; <code>qwen3.7-flash</code> still fails it in two of three.</li>
+<li><strong>The four OpenAI models all rose</strong> (terra +4.9, luna +3.0, mini +2.2, sol +2.6); run-to-run spread is 4–7 points, so treat the ranking, not the decimals.</li>
+<li><strong><code>qwen/qwen3.8-27b</code> fell 6.3 points, and the cause was not the model's ability: it was reasoning effort.</strong> Its new failures (<code>contradiction_detection</code> 3/3, <code>claim_without_action</code> 2/3, <code>multi_turn_consistency</code> 2/3) were <strong>empty replies</strong> (<code>content_preview: "\n\n"</code>) after a tool result, 10 of 108 tests against 6 on 10-03. ppxai sent no reasoning effort for it. A follow-up on the 12 hallucination and agent-loop tests, 3 runs per setup, settled it:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Setup</th>
+<th style="text-align: right;">Median</th>
+<th style="text-align: right;">Empty replies (of 36)</th>
+<th>Time per run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reasoning.effort: low</code></td>
+<td style="text-align: right;"><strong>91.3</strong></td>
+<td style="text-align: right;">1</td>
+<td>~110 s</td>
+</tr>
+<tr>
+<td><code>reasoning.effort: high</code></td>
+<td style="text-align: right;">87.0</td>
+<td style="text-align: right;">3</td>
+<td>~170 s</td>
+</tr>
+<tr>
+<td>no <code>temperature</code>/<code>top_p</code> sent (model defaults)</td>
+<td style="text-align: right;">80.4</td>
+<td style="text-align: right;">6</td>
+<td>~380 s</td>
+</tr>
+<tr>
+<td>as configured (no effort, <code>temperature</code> 0.2)</td>
+<td style="text-align: right;">73.9</td>
+<td style="text-align: right;">6</td>
+<td>~445 s</td>
+</tr>
+<tr>
+<td>as configured plus fp8-only, price-sorted routing</td>
+<td style="text-align: right;">73.9</td>
+<td style="text-align: right;">7</td>
+<td>~490 s</td>
+</tr>
+</tbody>
+</table>
+<p>Then the full suite with <code>extra_body: {"reasoning": {"effort": "low"}}</code> on the model entry: <strong>98.4 / 96.4 / 96.9, median 96.9</strong>, 34–35 of 36 passed, no empty replies, ~230 s per run (from ~580 s). That puts it level with <code>gpt-5.6-terra</code> at about a fifth of the price. Pinning fp8 endpoints changed nothing, so it is not a quantization problem. The same setting on <code>qwen/qwen3.7-flash</code> did nothing measurable (81.0, runs 74.7–90.5, against 80.2), so the example config sets it only for qwen3.8.
+- <strong><code>gpt-6-sol</code> is still under-ranked</strong> for the reason given below (it checks before writing; single-turn tests score only the first call).</p>
+<p>Result files: <code>benchmarks/llm-eval/results/{openai,openrouter}_*_2026-10-11_*.json</code>.</p>
+<h2 id="same-day-run-2026-10-03-openai-openrouter">Same-day run 2026-10-03 (OpenAI + OpenRouter)<a class="headerlink" href="#same-day-run-2026-10-03-openai-openrouter" title="Permanent link">&para;</a></h2>
+<p>Six models, three runs each, the same day, the same 36-test suite, <code>--agents-md with</code>, native tool calling, real API tokens. The OpenAI models went through the <code>openai</code> provider; the two Qwen models through the <strong>OpenRouter API</strong> (<code>https://openrouter.ai/api/v1</code>, an <code>openrouter</code> provider block as in <a href="../provider-setup/#openrouter">provider-setup.md</a>). This is the first benchmark of ppxai against OpenRouter: tool calling worked over its OpenAI-compatible Chat Completions endpoint with no code changes. The six OpenRouter runs cost $0.66 in total.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Provider</th>
+<th>Runs</th>
+<th style="text-align: right;">Median</th>
+<th>Passed</th>
+<th>Time per run</th>
+<th>Price (in / out per MTok)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gpt-5.6-terra</code></td>
+<td>openai</td>
+<td>92.1 / 91.1 / 87.1</td>
+<td style="text-align: right;"><strong>91.1</strong></td>
+<td>32–33</td>
+<td>~160 s</td>
+<td>$2 / $12</td>
+</tr>
+<tr>
+<td><code>qwen/qwen3.8-27b</code></td>
+<td>openrouter</td>
+<td>82.7* / 90.5 / 90.1</td>
+<td style="text-align: right;"><strong>90.1</strong></td>
+<td>30–33</td>
+<td>~500–900 s</td>
+<td>$0.42 / $3.00</td>
+</tr>
+<tr>
+<td><code>gpt-6-luna</code></td>
+<td>openai</td>
+<td>83.1 / 87.1 / 90.9</td>
+<td style="text-align: right;"><strong>87.1</strong></td>
+<td>29–33</td>
+<td>~205 s</td>
+<td>$0.10 / $0.50</td>
+</tr>
+<tr>
+<td><code>gpt-5.4-mini</code></td>
+<td>openai</td>
+<td>89.6 / 85.2 / 85.6</td>
+<td style="text-align: right;"><strong>85.6</strong></td>
+<td>30–32</td>
+<td>~78 s</td>
+<td>$0.75 / $4.50</td>
+</tr>
+<tr>
+<td><code>qwen/qwen3.7-flash</code></td>
+<td>openrouter</td>
+<td>79.6 / 81.2 / 81.7</td>
+<td style="text-align: right;"><strong>81.2</strong></td>
+<td>28–29</td>
+<td>~400–500 s</td>
+<td>$0.03 / $0.13</td>
+</tr>
+<tr>
+<td><code>gpt-6-sol</code></td>
+<td>openai</td>
+<td>80.1 / 75.5 / 75.6</td>
+<td style="text-align: right;"><strong>75.6</strong></td>
+<td>25–27</td>
+<td>~200 s</td>
+<td>$2 / $10</td>
+</tr>
+</tbody>
+</table>
+<p>* Two infrastructure failures (OpenRouter-side errors, not wrong answers) in that run. <code>qwen3.7-flash</code> had 1–2 in every run, so its real score is probably a little higher.</p>
+<p>Reading it:</p>
+<ul>
+<li><strong><code>gpt-5.6-terra</code> is stable</strong> (91.5 median on 2026-08-31, 91.1 here).</li>
+<li><strong><code>gpt-5.4-mini</code> measured lower than its April numbers</strong> (median 91.7 then, 85.6 now): it fails <code>multi_tool_sequence</code> and <code>claim_without_action</code> in all three runs. The suite and the AGENTS.md hints changed in between; which one moved it is not tested.</li>
+<li><strong><code>qwen/qwen3.8-27b</code> via OpenRouter matches terra</strong> on its two clean runs at about a fifth of the price, but OpenRouter routing plus the model make each run 3–5× slower.</li>
+<li><strong><code>qwen/qwen3.7-flash</code></strong> is about 1/25 the price of gpt-5.4-mini for about 4 points less; it fails the multi-step loop tests (<code>self_correction</code>, <code>consecutive_tool_loop</code>, <code>fix_verify</code>, <code>tool_call_efficiency</code>) every run. Fine for quick tasks, not for long agent loops.</li>
+<li><strong><code>gpt-6-sol</code> is under-ranked by the suite.</strong> It checks before it writes (e.g. <code>ls -ld /src /src/functions.py</code> before a <code>write_file</code>), and several single-turn tests score only the first tool call, so <code>large_payload</code> reads as "0 chars written". It passes that test run alone. It also makes ~116 tool calls per run against terra's ~66, a real cost in latency and tokens.</li>
+<li><strong><code>respects_tool_failure</code> failed in all 18 runs, for every model.</strong> It was a test bug, fixed in <code>503f298c</code>; see the <a href="#re-run-2026-10-11-after-the-respects_tool_failure-fix">2026-10-11 re-run</a>.</li>
+</ul>
+<p>Result files: <code>benchmarks/llm-eval/results/{openai,openrouter}_*_2026-10-03_*.json</code>.</p>
 <h2 id="source-data">Source data<a class="headerlink" href="#source-data" title="Permanent link">&para;</a></h2>
 <p>Last benchmark run: <strong>2026-04-26</strong> (this commit). Methodology: 36 tests
 across 9 categories, <code>--agents-md both</code> to measure WITH-vs-WITHOUT-hints

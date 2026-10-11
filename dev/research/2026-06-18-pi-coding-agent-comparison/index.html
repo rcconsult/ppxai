@@ -1309,7 +1309,7 @@ governed agent backend for other services.</p>
 <tr>
 <td>Providers</td>
 <td>Anthropic, OpenAI, Google, xAI, Groq, Cerebras, OpenRouter, OpenAI-compat</td>
-<td>Perplexity, Gemini, OpenAI, OpenRouter, vLLM/NIM/Ollama; Anthropic in progress</td>
+<td>Perplexity, Gemini, OpenAI, OpenRouter, vLLM/NIM/Ollama; Anthropic in progress [^providers-2026-09]</td>
 </tr>
 <tr>
 <td>Headless/API</td>
@@ -1328,6 +1328,7 @@ governed agent backend for other services.</p>
 </tr>
 </tbody>
 </table>
+<p>[^providers-2026-09]: <strong>Dated note (2026-09-28), not a rewrite of the original research.</strong> Since ADR 0015, Perplexity is no longer a chat provider (kept only as a web-search/grounding backend, ADR 0014); Anthropic shipped opt-in in v1.19.1.</p>
 <h2 id="the-sharpest-contrast-relevant-to-v1190">The sharpest contrast (relevant to v1.19.0)<a class="headerlink" href="#the-sharpest-contrast-relevant-to-v1190" title="Permanent link">&para;</a></h2>
 <p>Pi <strong>deliberately rejects</strong> exactly what ppxai v1.19.0 just <em>built</em>: sub-agents,
 an orchestrated agent platform, and "safety theater." Pi's stance: externalize

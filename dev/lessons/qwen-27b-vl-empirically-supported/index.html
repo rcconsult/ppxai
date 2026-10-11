@@ -1249,7 +1249,7 @@ conservative default silently sides with the card — is unchanged.</p>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># The reader moved out of the retired module with the data it reads:</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>grep<span class="w"> </span>-n<span class="w"> </span><span class="s1">'def supports_vision'</span><span class="w"> </span>ppxai/engine/model_facts.py
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Expected: 1368:def supports_vision(model: str) -&gt; bool:</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Expected (line number drifts — cite by grep): 1337:def supports_vision(model: str) -&gt; bool:</span>
 </span></code></pre></div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Confirms current ppxai detection:</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.engine.model_facts</span><span class="w"> </span><span class="kn">import</span> <span class="n">supports_vision</span>
@@ -1307,7 +1307,7 @@ generates 3 fixture images inline via Pillow and POSTs OpenAI-style
 </tr>
 <tr>
 <td>Baseline</td>
-<td><code>https://codeai.internal/qwen35/v1</code> model <code>Qwen/Qwen3.5-27B-FP8</code></td>
+<td><code>https://your-vllm-host/v1</code> (in-cluster vLLM deployment) model <code>Qwen/Qwen3.5-27B-FP8</code></td>
 </tr>
 <tr>
 <td>Score</td>

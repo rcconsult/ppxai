@@ -1672,13 +1672,8 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>Perplexity</strong></td>
-<td><code>perplexity/sonar</code></td>
-<td>The Responses-wire id; the bare <code>sonar</code> chat-wire id retires 2026-09-27</td>
-</tr>
-<tr>
 <td><strong>Gemini</strong></td>
-<td><code>gemini-3.5-flash</code></td>
+<td><code>gemini-3.8-flash</code></td>
 <td>Fast model, current default in the shipped config</td>
 </tr>
 <tr>
@@ -1707,8 +1702,8 @@
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Google Gemini"</span><span class="p">,</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://generativelanguage.googleapis.com/v1beta/openai"</span><span class="p">,</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">      </span><span class="nt">"api_key_env"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GEMINI_API_KEY"</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-2.5-flash"</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.1-pro-preview"</span><span class="p">,</span><span class="w">  </span><span class="c1">// Changed from gemini-2.5-pro</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.8-flash"</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.1-pro-preview"</span><span class="p">,</span><span class="w">  </span><span class="c1">// Use the Pro tier for coding</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="c1">// ... model definitions ...</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">      </span><span class="p">}</span>
@@ -1739,8 +1734,8 @@
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Google Gemini"</span><span class="p">,</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://generativelanguage.googleapis.com/v1beta/openai"</span><span class="p">,</span>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">      </span><span class="nt">"api_key_env"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GEMINI_API_KEY"</span><span class="p">,</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-2.5-flash-lite"</span><span class="p">,</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">      </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-2.5-flash-lite"</span><span class="p">,</span><span class="w">  </span><span class="c1">// Same as default, no switching</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.1-flash-lite"</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">      </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.1-flash-lite"</span><span class="p">,</span><span class="w">  </span><span class="c1">// Same as default, no switching</span>
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">        </span><span class="c1">// ... model definitions ...</span>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="p">}</span>
@@ -1813,16 +1808,15 @@ file is found at all. In practice, first-run seeding copies the bundled
 <a href="../ppxai-config.example.json"><code>ppxai-config.example.json</code></a> to
 <code>~/.ppxai/ppxai-config.json</code>, which currently ships:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">"perplexity"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"perplexity/sonar"</span><span class="p">,</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"perplexity/sonar"</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.5-flash"</span><span class="p">,</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.5-flash"</span>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="p">}</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">"gemini"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.8-flash"</span><span class="p">,</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">"coding_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gemini-3.8-flash"</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="p">}</span>
 </span></code></pre></div>
+<p>(Perplexity is no longer a chat provider — ADR 0015 — so it has no
+<code>coding_model</code> entry; it remains a <code>web_search</code>/grounding backend under
+<code>tools.web_search</code>.)</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="autorouting-uses-wrong-model">Autorouting Uses Wrong Model<a class="headerlink" href="#autorouting-uses-wrong-model" title="Permanent link">&para;</a></h3>
 <p><strong>Problem:</strong> Using Gemini provider, but <code>/convert</code> auto-routes to Perplexity's <code>sonar-pro</code>.</p>
@@ -1836,7 +1830,7 @@ file is found at all. In practice, first-run seeding copies the bundled
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Output shows:</span>
 </span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Auto-routing is currently: enabled</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># Auto-routing uses gemini-3.5-flash for coding commands</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># Auto-routing uses gemini-3.8-flash for coding commands</span>
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># Use /autoroute on or /autoroute off to change</span>
 </span></code></pre></div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>

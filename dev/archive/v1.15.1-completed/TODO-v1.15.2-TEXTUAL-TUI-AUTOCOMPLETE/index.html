@@ -1434,9 +1434,9 @@
 <h2 id="problem-statement">Problem Statement<a class="headerlink" href="#problem-statement" title="Permanent link">&para;</a></h2>
 <p>The Textual TUI has <strong>fully implemented autocomplete logic</strong> but it's <strong>completely disconnected</strong> from the UI and non-functional.</p>
 <p><strong>Evidence:</strong>
-- <a href="../ppxai/tui/completer.py">ppxai/tui/completer.py</a> - Complete <code>TextualCompleter</code> class (409 lines)
-- <a href="../ppxai/tui/widgets/input_box.py#L27">ppxai/tui/widgets/input_box.py:27</a> - Completer marked as "unused"
-- <a href="../ppxai/tui/widgets/completion_popup.py.deprecated">ppxai/tui/widgets/completion_popup.py.deprecated</a> - UI widget deprecated</p>
+- <a href="../../../ppxai/tui/completer.py">ppxai/tui/completer.py</a> - Complete <code>TextualCompleter</code> class (409 lines)
+- <a href="../../../ppxai/tui/widgets/input_box.py#L27">ppxai/tui/widgets/input_box.py:27</a> - Completer marked as "unused"
+- ppxai/tui/widgets/completion_popup.py.deprecated - UI widget deprecated</p>
 <h2 id="whats-implemented-but-not-working">What's Implemented But Not Working<a class="headerlink" href="#whats-implemented-but-not-working" title="Permanent link">&para;</a></h2>
 <p>The <code>TextualCompleter</code> class has the <strong>most comprehensive</strong> autocomplete logic of all clients:</p>
 <table>
@@ -1496,7 +1496,7 @@
 <li><strong>Current State:</strong> Code exists, completer initialized, but never called</li>
 </ol>
 <h3 id="evidence-in-code">Evidence in Code<a class="headerlink" href="#evidence-in-code" title="Permanent link">&para;</a></h3>
-<p><strong><a href="../ppxai/tui/widgets/input_box.py">ppxai/tui/widgets/input_box.py</a></strong>
+<p><strong><a href="../../../ppxai/tui/widgets/input_box.py">ppxai/tui/widgets/input_box.py</a></strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">completer</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1511,7 +1511,7 @@
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="sd">    """</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_completer</span> <span class="o">=</span> <span class="n">completer</span>
 </span></code></pre></div></p>
-<p><strong><a href="../ppxai/tui/app.py#L222-L227">ppxai/tui/app.py:222-227</a></strong>
+<p><strong><a href="../../../ppxai/tui/app.py#L222-L227">ppxai/tui/app.py:222-227</a></strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Initialize autocomplete completer (Phase 1.1)</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">completer</span> <span class="o">=</span> <span class="n">TextualCompleter</span><span class="p">(</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">working_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_working_dir</span><span class="p">),</span>
@@ -1608,7 +1608,7 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>git<span class="w"> </span>mv<span class="w"> </span>ppxai/tui/widgets/completion_popup.py.deprecated<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">       </span>ppxai/tui/widgets/completion_popup.py
 </span></code></pre></div></p>
-<p><strong>2.2 Update InputBox</strong> (<a href="../ppxai/tui/widgets/input_box.py">input_box.py</a>):</p>
+<p><strong>2.2 Update InputBox</strong> (<a href="../../../ppxai/tui/widgets/input_box.py">input_box.py</a>):</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.tui.widgets.completion_popup</span><span class="w"> </span><span class="kn">import</span> <span class="n">CompletionPopup</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">InputBox</span><span class="p">(</span><span class="n">Static</span><span class="p">):</span>
@@ -1772,8 +1772,8 @@
 - Theme compatibility</p>
 <h3 id="step-5-documentation-30-min">Step 5: Documentation (30 min)<a class="headerlink" href="#step-5-documentation-30-min" title="Permanent link">&para;</a></h3>
 <p>Update:
-- <a href="AUTOCOMPLETE-SUPPORT-ANALYSIS.md">AUTOCOMPLETE-SUPPORT-ANALYSIS.md</a> - Change Textual TUI from DISABLED to working
-- <a href="../CHANGELOG.md">CHANGELOG.md</a> - Add v1.15.2 entry
+- <a href="../../v1.15.2-completed/AUTOCOMPLETE-SUPPORT-ANALYSIS/">AUTOCOMPLETE-SUPPORT-ANALYSIS.md</a> - Change Textual TUI from DISABLED to working
+- <a href="../../../CHANGELOG.md">CHANGELOG.md</a> - Add v1.15.2 entry
 - User-facing help text if needed</p>
 <h2 id="success-criteria">Success Criteria<a class="headerlink" href="#success-criteria" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1853,8 +1853,8 @@
 </ol>
 <h2 id="related-issues">Related Issues<a class="headerlink" href="#related-issues" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md">TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md</a> - Context provider autocomplete</li>
-<li><a href="AUTOCOMPLETE-SUPPORT-ANALYSIS.md">AUTOCOMPLETE-SUPPORT-ANALYSIS.md</a> - Full autocomplete analysis</li>
+<li><a href="../../v1.15.2-completed/TODO-v1.15.2-CONTEXT-INJECTOR-PARITY/">TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md</a> - Context provider autocomplete</li>
+<li><a href="../../v1.15.2-completed/AUTOCOMPLETE-SUPPORT-ANALYSIS/">AUTOCOMPLETE-SUPPORT-ANALYSIS.md</a> - Full autocomplete analysis</li>
 </ul>
 <h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
 <p><strong>Why this matters:</strong>

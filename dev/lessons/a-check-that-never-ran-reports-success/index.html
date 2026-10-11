@@ -1320,7 +1320,8 @@ buffers until the upstream pipeline ends.</p>
 unpiped, §2's file looked alive because the bytes came from the <code>git log</code>
 <em>before</em> the pipe, never from pytest at all. Byte count answers "is the
 pipeline flushing", not "is the work running". <strong>Check the process</strong>
-(<code>tasklist | grep -ci python</code>) — that is what settled both cases: zero
+(Windows: <code>tasklist | grep -ci python</code>; POSIX: <code>pgrep -fc pytest</code>, or
+<code>kill -0 &lt;pid&gt;</code> for one known process) — that is what settled both cases: zero
 processes when it had died, six when it was fine.</p>
 <h3 id="3-ruff-select-rule-reports-a-different-count-than-a-full-run">3. <code>ruff --select &lt;RULE&gt;</code> reports a different count than a full run<a class="headerlink" href="#3-ruff-select-rule-reports-a-different-count-than-a-full-run" title="Permanent link">&para;</a></h3>
 <p>Selecting a rule changes which files are examined, because per-file ignores

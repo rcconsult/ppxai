@@ -1522,9 +1522,10 @@
 <h1 id="adr-0003-agent-platform-architecture">ADR 0003 — Agent platform architecture<a class="headerlink" href="#adr-0003-agent-platform-architecture" title="Permanent link">&para;</a></h1>
 <p><strong>Date:</strong> 2026-05-03 (revised 2026-06-15 — MVP design resolved)
 <strong>Status:</strong> Accepted — implemented (Stage 2 shipped in v1.19.0: Inc 1-9 +
-/task T1-T8a; Question A resolved 2026-06-15 as A1). Wire shapes in §11 are
-the original PROPOSAL and differ from the shipped API — agent_v1.py is
-authoritative.
+/task T1-T8a; T8b, the TUI port, shipped in v1.19.1, <code>1615b9d1</code>; T9
+(container tier-d) stays deferred; Question A resolved 2026-06-15 as A1).
+Wire shapes in §11 are the original PROPOSAL and differ from the shipped
+API — agent_v1.py is authoritative.
 <strong>MVP design resolved 2026-06-15</strong> — see "Resolved MVP design — read-only
 research sub-agents" below. The MVP sidesteps Question A by defining a run as
 a single <code>chat_with_tools</code> invocation, so Stage 2 can proceed for the
@@ -1535,7 +1536,7 @@ read-only research slice without waiting on the week-of-usage data.
 - <code>ppxai/engine/chat.py</code> — <code>chat_with_tools</code> inner tool loop, AGENT_BEAT emission (lines 559, 875, 1066, 1138)
 - <code>ppxai/engine/types.py</code> — <code>EventType.AGENT_BEAT</code> / <code>AGENT_RUN_START</code> / <code>AGENT_RUN_COMPLETE</code> / <code>AGENT_RUN_ERROR</code> / <code>AGENT_ZOMBIE</code> (v1.18.0); planned v1.19.x additions: <code>AGENT_SERVICE_DOWN</code> (per §13 / caveat C5)
 - <code>vscode-extension/src/chatPanel.ts::handleAgentCommand</code> — VSCode-side replica of the outer loop (~150 LoC)
-- <a href="../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code></a> — consumer-side integration plan with caveats (C1-C5) and asks (A1-A3) folded into "Open decisions" §6-§13 below
+- <a href="https://github.com/rcconsult/ppxai-sre/blob/master/docs/PPXAI-INTEGRATION-V1.19.md"><code>ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code></a> (private repo) — consumer-side integration plan with caveats (C1-C5) and asks (A1-A3) folded into "Open decisions" §6-§13 below
 - <a href="../../research/2026-05-10-ppxai-sre-requirements/"><code>../research/2026-05-10-ppxai-sre-requirements.md</code></a> — gap analysis driving Stage 2 scope</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>ppxai has agent execution today, but the design predates the
@@ -2312,7 +2313,7 @@ isolation (tier d) and restart-durable persistence stay additive upgrades.</p>
 <h2 id="open-decisions">Open decisions<a class="headerlink" href="#open-decisions" title="Permanent link">&para;</a></h2>
 <p>These are gaps this ADR cannot close without input or measurement.
 Items 1-5 are ppxai-internal; items 6-13 are consumer-driven, surfaced
-2026-05-10 in <a href="../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code></a>
+2026-05-10 in <a href="https://github.com/rcconsult/ppxai-sre/blob/master/docs/PPXAI-INTEGRATION-V1.19.md"><code>ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code></a> (private repo)
 (caveats C1-C5 and asks A1-A3) and need answers before Stage 2 implementation
 lands. Items 6-12 (C1-C4, A1-A3) were folded in commit <code>42ed8f00</code> (2026-05-10).
 Item 13 (C5 — agent-served services routing) was filed by the consumer in

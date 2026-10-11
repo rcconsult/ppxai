@@ -1600,7 +1600,7 @@ server) with dedicated PVCs. Designed to extend naturally to LDAP auth in a futu
 local-path provisioner). All session state is queried via REST from the session manager.</p>
 <h3 id="image-build-kaniko">Image Build (Kaniko)<a class="headerlink" href="#image-build-kaniko" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Source:</strong> hostPath mount of <code>/Users/rado/git/utils/ppxai</code> (colima mounts macOS home at
+<li><strong>Source:</strong> hostPath mount of <code>/path/to/ppxai</code> (colima mounts macOS home at
   same path inside VM — no copy needed)</li>
 <li><strong>Registry:</strong> <code>registry:2</code> pod + ClusterIP service (<code>registry.ppxai-system.svc:5000</code>),
   HTTP only, Kaniko uses <code>--insecure</code> flag</li>

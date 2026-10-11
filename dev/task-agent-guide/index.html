@@ -1689,7 +1689,7 @@ verbs <code>task run</code>, and <code>show</code>/<code>ack</code> as <em>canon
 </tr>
 <tr>
 <td><code>--work-dir &lt;path&gt;</code></td>
-<td>Working directory for relative tool paths. Default: <strong>your session's working dir</strong> rides along automatically. Must exist (400 otherwise). With the sandbox seal ON the per-run jail wins and you get a warning instead.</td>
+<td>Working directory for relative tool paths. Default: <strong>your session's working dir</strong> rides along automatically. Must exist (400 otherwise). With the sandbox seal ON (the default since 1.19.4) the run is confined <strong>to</strong> this folder (writable + readable); with no <code>--work-dir</code> the session's folder is that root.</td>
 </tr>
 </tbody>
 </table>
@@ -1804,10 +1804,13 @@ Examples: <a href="../examples/task-skills/README.md"><code>examples/task-skills
 <li>Otherwise your <strong>session working dir</strong> is threaded automatically — so
    <code>"summarize README.md"</code> means the same thing in chat and in a task run.</li>
 <li>Otherwise the server default: <code>server.working_dir</code> config, else home.</li>
-<li><strong>Seal ON</strong> (<code>execution.task.sandbox.enforcement: "in_process"</code>): the
-   per-run jail always wins; a requested workdir is ignored with a "⚠️
-   sandbox seal active" warning (warn-don't-fail, so the same command works
-   across sealed and unsealed hosts).</li>
+<li><strong>Seal ON</strong> (<code>execution.task.sandbox.enforcement: "in_process"</code>, the
+   default since 1.19.4): the run is confined <strong>to</strong> the workdir resolved
+   above — it is the run's writable root and a read root (plus
+   <code>read_paths.allow</code> and the skills/specs dirs). Only with no workdir at
+   all (a bare API call) does it get a per-run scratch folder
+   <code>&lt;workdir.root&gt;/&lt;run_id&gt;/work</code>. Before 1.19.4 the seal always used the
+   scratch folder and ignored <code>--work-dir</code>.</li>
 </ol>
 <p><code>/task get &lt;id&gt;</code> prints the effective <code>wd:</code>; resume reuses it; spawned
 children inherit it.</p>
@@ -1816,21 +1819,32 @@ children inherit it.</p>
 flag (there is deliberately no "unseal this run"):</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>"execution": { "task": {
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  "sandbox": {
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    "enforcement": "in_process",          // "off" (default) | "in_process"
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    "enforcement": "in_process",          // "in_process" (default since 1.19.4) | "off"
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    "workdir":   { "root": "~/.ppxai/runs", "writable": true, "cleanup": "keep" },
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    "read_paths": { "allow": ["~/projects"], "deny": [], "follow_symlinks": false },
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    "read_paths": { "allow": ["~/projects"], "deny": [], "builtin_deny": true, "follow_symlinks": false },
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    "specs_dir": "/path/to/task-specs",
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    "skills_dir": "/path/to/task-skills",
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    "allow_skill_scripts": false
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>  }
 </span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>} }
 </span></code></pre></div>
-<p>Sealed runs get an empty per-run <code>work/</code> dir as their only writable root;
-reads are confined to <code>read_paths.allow</code> + skill mounts; denials surface as
-<code>path_denied</code> events. Typical postures: <strong>desktop = seal off</strong> (you are the
-trust boundary; the assistant works your repo), <strong>k8s coder pod = seal off</strong>
-(the pod is the boundary), <strong>embedded unattended agents = seal on</strong>
-(least-privilege over untrusted input). Details + rationale:
+<p>Sealed runs (the default since 1.19.4) are confined to their working folder
+— <code>--work-dir</code>, else your session's folder, else (no workdir at all, e.g. a
+bare API call) an empty per-run <code>work/</code> scratch dir — which is the only
+writable root; reads are confined to that folder + <code>read_paths.allow</code> + skill
+mounts; denials surface as <code>path_denied</code> events. Runs whose grant has no
+file tool get no policy and no scratch folder. Writing <code>"off"</code> explicitly
+restores the unconfined behaviour.</p>
+<p>A <strong>built-in deny list</strong> applies to file tools (reads and writes) sealed or
+not: <code>.env</code>, <code>.env.*</code>, <code>.ssh</code>, <code>.gnupg</code>, <code>.aws</code>, <code>.azure</code>, <code>.kube</code>, <code>.docker</code>,
+<code>.netrc</code>, <code>.git-credentials</code>, <code>.npmrc</code>, <code>.pypirc</code>, <code>id_rsa*</code>, <code>id_ed25519*</code>,
+<code>id_ecdsa*</code>, <code>id_dsa*</code>, <code>~/.ppxai/run</code>, <code>~/.ppxai/tokens*</code>,
+<code>~/.config/gcloud</code>, <code>~/.config/gh</code>. Opt out with
+<code>read_paths.builtin_deny: false</code>. The operator <code>read_paths.deny</code> list also
+applies when enforcement is <code>"off"</code>. Postures: <strong>desktop</strong> = default seal
+(confined to the project you launch from), <strong>k8s coder pod</strong> = <code>"off"</code> is
+reasonable (the pod is the boundary), <strong>embedded unattended agents</strong> = seal
+on with a tight <code>read_paths.allow</code>. Details + rationale:
 <a href="../api-gateway/">api-gateway.md</a> §"Run working directory".</p>
 <h2 id="10-troubleshooting">10. Troubleshooting<a class="headerlink" href="#10-troubleshooting" title="Permanent link">&para;</a></h2>
 <table>
@@ -1862,16 +1876,16 @@ trust boundary; the assistant works your repo), <strong>k8s coder pod = seal off
 <td><code>--work-dir</code> points at a missing directory.</td>
 </tr>
 <tr>
-<td><code>⚠️ sandbox seal active — --work-dir ignored</code></td>
-<td>Expected on sealed hosts; the jail wins.</td>
+<td><code>path_denied</code> for a file inside your project</td>
+<td>The built-in deny list (<code>.env</code>, <code>.ssh</code>, keys, …) or <code>read_paths.deny</code> matched; opt out with <code>read_paths.builtin_deny: false</code>.</td>
 </tr>
 <tr>
 <td>Agent says a file "does not exist"</td>
 <td>Check <code>wd:</code> in <code>/task get</code> — pass <code>--work-dir</code> or an absolute path.</td>
 </tr>
 <tr>
-<td>Perplexity <code>/task</code> refuses, confabulates, or summarizes an <em>external</em> URL</td>
-<td><strong>Fixed — Item 43, closed 2026-08-24 (<code>0490ce87</code>).</strong> The cause was ours, not Perplexity's: a hardcoded <code>native_tool_calling=False</code> gone stale plus a profile row pinning <code>prompt_based</code>. Sonar tool-calls on <code>/v1/responses</code>, which is where <code>ModelFacts</code> now routes it. If you still see this, check <code>/model info</code> for the resolved <code>tool_mode</code>.</td>
+<td>Perplexity was a chat provider for <code>/task</code></td>
+<td><strong>No longer possible (ADR 0015).</strong> Perplexity was removed as a chat provider — <code>REMOVED_CHAT_PROVIDERS</code> (<code>ppxai/config/providers.py</code>) refuses <code>--provider perplexity</code> before a <code>/task</code> can even launch. It is kept only as a web-search/grounding backend (ADR 0014). Item 43's Sonar tool-calling fix (closed 2026-08-24, <code>0490ce87</code>) is now historical.</td>
 </tr>
 <tr>
 <td>Gemini 3.x <code>/task</code> fails with <code>400 … missing a thought_signature</code></td>

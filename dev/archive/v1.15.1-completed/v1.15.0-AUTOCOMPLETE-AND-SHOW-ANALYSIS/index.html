@@ -1592,8 +1592,8 @@
 <strong>Status:</strong> ✅ <strong>AUTOCOMPLETE IMPLEMENTED</strong> (updated v1.15.0)</p>
 <blockquote>
 <p><strong>UPDATE (v1.15.0):</strong> The autocomplete issues documented below have been resolved by replacing the custom
-CompletionPopup with the <code>textual-autocomplete</code> library. See <a href="TEXTUAL-WIDGETS-RESEARCH.md">TEXTUAL-WIDGETS-RESEARCH.md</a>
-and <a href="IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md">IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md</a> for details.</p>
+CompletionPopup with the <code>textual-autocomplete</code> library. See <a href="../../v1.15.2-completed/TEXTUAL-WIDGETS-RESEARCH/">TEXTUAL-WIDGETS-RESEARCH.md</a>
+and <a href="../../v1.15.2-completed/IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0/">IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md</a> for details.</p>
 </blockquote>
 <hr />
 <h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
@@ -1677,7 +1677,7 @@ and <a href="IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md">IMPLEMENTATION-PLAN-AU
 </span></code></pre></div></p>
 </li>
 </ol>
-<p><strong>Code reference:</strong> <a href="../ppxai/tui/completer.py#L57-L409">ppxai/tui/completer.py:57-409</a></p>
+<p><strong>Code reference:</strong> <a href="../../../ppxai/tui/completer.py#L57-L409">ppxai/tui/completer.py:57-409</a></p>
 <h3 id="13-completionpopup-widget">1.3 CompletionPopup Widget<a class="headerlink" href="#13-completionpopup-widget" title="Permanent link">&para;</a></h3>
 <p><strong>Features:</strong>
 - Keyboard navigation (up/down arrows, Enter/Tab to select, Escape to cancel)
@@ -1691,9 +1691,9 @@ and <a href="IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md">IMPLEMENTATION-PLAN-AU
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="n">offset-y</span><span class="p">:</span><span class="w"> </span><span class="mi">90</span><span class="kt">%</span><span class="p">;</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="err">Fixed</span><span class="w"> </span><span class="err">positioning</span><span class="w"> </span><span class="err">-</span><span class="w"> </span><span class="err">THIS</span><span class="w"> </span><span class="err">IS</span><span class="w"> </span><span class="err">THE</span><span class="w"> </span><span class="err">PROBLEM</span>
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">}</span>
 </span></code></pre></div></p>
-<p><strong>Code reference:</strong> <a href="../ppxai/tui/widgets/completion_popup.py#L1-L145">ppxai/tui/widgets/completion_popup.py:1-145</a></p>
+<p><strong>Code reference:</strong> ppxai/tui/widgets/completion_popup.py:1-145</p>
 <h3 id="14-why-autocomplete-is-disabled">1.4 Why Autocomplete is Disabled<a class="headerlink" href="#14-why-autocomplete-is-disabled" title="Permanent link">&para;</a></h3>
-<p><strong>Location:</strong> <a href="../ppxai/tui/widgets/input_box.py#L81-L96">ppxai/tui/widgets/input_box.py:81-96</a></p>
+<p><strong>Location:</strong> <a href="../../../ppxai/tui/widgets/input_box.py#L81-L96">ppxai/tui/widgets/input_box.py:81-96</a></p>
 <p><strong>Critical TODO comment:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># TODO: Autocomplete disabled - Phase 4/5 refactoring needed</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># Current implementation issues:</span>
@@ -1801,7 +1801,7 @@ and <a href="IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md">IMPLEMENTATION-PLAN-AU
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>Specialized Viewer Widget (DataViewer, TableViewer, etc.)
 </span></code></pre></div>
 <h3 id="22-file-type-detection-flow">2.2 File Type Detection Flow<a class="headerlink" href="#22-file-type-detection-flow" title="Permanent link">&para;</a></h3>
-<p><strong>Location:</strong> <a href="../ppxai/common/file_type.py#L246-L307">ppxai/common/file_type.py:246-307</a></p>
+<p><strong>Location:</strong> <a href="../../../ppxai/common/file_type.py#L246-L307">ppxai/common/file_type.py:246-307</a></p>
 <p><strong>Detection hierarchy:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">detect_file_type</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FileType</span><span class="p">:</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="c1"># 1. Try libmagic (python-magic)</span>
@@ -1905,7 +1905,7 @@ and <a href="IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md">IMPLEMENTATION-PLAN-AU
 </tbody>
 </table>
 <h3 id="23-show-command-implementation">2.3 /show Command Implementation<a class="headerlink" href="#23-show-command-implementation" title="Permanent link">&para;</a></h3>
-<p><strong>Location:</strong> <a href="../ppxai/commands/display.py#L125-L323">ppxai/commands/display.py:125-323</a></p>
+<p><strong>Location:</strong> <a href="../../../ppxai/commands/display.py#L125-L323">ppxai/commands/display.py:125-323</a></p>
 <p><strong>Key features:</strong></p>
 <ol>
 <li>
@@ -1970,7 +1970,7 @@ and <a href="IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md">IMPLEMENTATION-PLAN-AU
 - <strong>Cross-platform:</strong> Works on Linux (libmagic), macOS (libmagic), Windows (python-magic-bin)</p>
 <h3 id="25-viewer-widgets-implementation">2.5 Viewer Widgets Implementation<a class="headerlink" href="#25-viewer-widgets-implementation" title="Permanent link">&para;</a></h3>
 <h4 id="dataviewer-tree-source-toggle">DataViewer (Tree + Source Toggle)<a class="headerlink" href="#dataviewer-tree-source-toggle" title="Permanent link">&para;</a></h4>
-<p><strong>Location:</strong> <a href="../ppxai/tui/widgets/data_viewer.py#L1-L358">ppxai/tui/widgets/data_viewer.py:1-358</a></p>
+<p><strong>Location:</strong> <a href="../../../ppxai/tui/widgets/data_viewer.py#L1-L358">ppxai/tui/widgets/data_viewer.py:1-358</a></p>
 <p><strong>Features:</strong>
 - <strong>Tree view:</strong> Hierarchical display with expand/collapse
 - <strong>Source view:</strong> Syntax-highlighted code editor
@@ -1987,7 +1987,7 @@ and <a href="IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md">IMPLEMENTATION-PLAN-AU
 </span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>        <span class="k">return</span> <span class="p">{</span><span class="s2">"label"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="p">)[:</span><span class="mi">50</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"children"</span><span class="p">:</span> <span class="p">[]}</span>
 </span></code></pre></div></p>
 <h4 id="tableviewer-table-source-toggle">TableViewer (Table + Source Toggle)<a class="headerlink" href="#tableviewer-table-source-toggle" title="Permanent link">&para;</a></h4>
-<p><strong>Location:</strong> <a href="../ppxai/tui/widgets/table_viewer.py#L1-L469">ppxai/tui/widgets/table_viewer.py:1-469</a></p>
+<p><strong>Location:</strong> <a href="../../../ppxai/tui/widgets/table_viewer.py#L1-L469">ppxai/tui/widgets/table_viewer.py:1-469</a></p>
 <p><strong>Features:</strong>
 - <strong>Table view:</strong> Textual's <code>DataTable</code> with grid display
 - <strong>Source view:</strong> Raw CSV/TSV in code editor
@@ -2002,7 +2002,7 @@ and <a href="IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md">IMPLEMENTATION-PLAN-AU
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">counts</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
 </span></code></pre></div></p>
 <h4 id="imageviewer-terminal-images-with-fallback">ImageViewer (Terminal Images with Fallback)<a class="headerlink" href="#imageviewer-terminal-images-with-fallback" title="Permanent link">&para;</a></h4>
-<p><strong>Location:</strong> <a href="../ppxai/tui/widgets/image_viewer.py#L1-L272">ppxai/tui/widgets/image_viewer.py:1-272</a></p>
+<p><strong>Location:</strong> <a href="../../../ppxai/tui/widgets/image_viewer.py#L1-L272">ppxai/tui/widgets/image_viewer.py:1-272</a></p>
 <p><strong>Features:</strong>
 - <strong>Full mode:</strong> Uses <code>textual-image&gt;=0.8.0</code> for terminal image protocols (iTerm2, Kitty)
 - <strong>Fallback mode:</strong> Shows file info (dimensions, size, format) if library missing or terminal doesn't support images
@@ -2018,12 +2018,12 @@ and <a href="IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md">IMPLEMENTATION-PLAN-AU
 </span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>            <span class="k">return</span> <span class="n">FallbackHandler</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">viewer</span><span class="p">)</span>
 </span></code></pre></div></p>
 <h4 id="codeeditor-syntax-highlighting">CodeEditor (Syntax Highlighting)<a class="headerlink" href="#codeeditor-syntax-highlighting" title="Permanent link">&para;</a></h4>
-<p><strong>Location:</strong> <a href="../ppxai/tui/widgets/code_editor.py">ppxai/tui/widgets/code_editor.py</a></p>
+<p><strong>Location:</strong> <a href="../../../ppxai/tui/widgets/code_editor.py">ppxai/tui/widgets/code_editor.py</a></p>
 <p><strong>Features:</strong>
 - <strong>Syntax highlighting:</strong> Via <code>tree-sitter-*</code> packages (Python, JS, JSON, YAML, etc.)
 - <strong>Line numbers:</strong> Built-in with Textual's <code>TextArea</code>
 - <strong>Read-only mode:</strong> For <code>/show</code> command (editable for <code>/edit</code>)
-- <strong>Theme sync:</strong> Syntax theme matches app theme (see <a href="../CLAUDE.md#L162-L231">CLAUDE.md:162-231</a>)</p>
+- <strong>Theme sync:</strong> Syntax theme matches app theme (see <a href="../../../CLAUDE.md#L162-L231">CLAUDE.md:162-231</a>)</p>
 <p><strong>Language detection:</strong>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">EXTENSION_TO_LANGUAGE</span> <span class="o">=</span> <span class="p">{</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>    <span class="s2">".py"</span><span class="p">:</span> <span class="s2">"python"</span><span class="p">,</span>
@@ -2237,47 +2237,47 @@ and <a href="IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md">IMPLEMENTATION-PLAN-AU
 </thead>
 <tbody>
 <tr>
-<td><a href="../ppxai/tui/completer.py">ppxai/tui/completer.py</a></td>
+<td><a href="../../../ppxai/tui/completer.py">ppxai/tui/completer.py</a></td>
 <td>409</td>
 <td>Autocomplete logic</td>
 </tr>
 <tr>
-<td><a href="../ppxai/tui/widgets/completion_popup.py">ppxai/tui/widgets/completion_popup.py</a></td>
+<td>ppxai/tui/widgets/completion_popup.py</td>
 <td>145</td>
 <td>Autocomplete popup UI</td>
 </tr>
 <tr>
-<td><a href="../ppxai/tui/widgets/input_box.py">ppxai/tui/widgets/input_box.py</a></td>
+<td><a href="../../../ppxai/tui/widgets/input_box.py">ppxai/tui/widgets/input_box.py</a></td>
 <td>81-96</td>
 <td>Disabled autocomplete handler</td>
 </tr>
 <tr>
-<td><a href="../ppxai/common/file_type.py">ppxai/common/file_type.py</a></td>
+<td><a href="../../../ppxai/common/file_type.py">ppxai/common/file_type.py</a></td>
 <td>246-307</td>
 <td>File type detection</td>
 </tr>
 <tr>
-<td><a href="../ppxai/commands/display.py">ppxai/commands/display.py</a></td>
+<td><a href="../../../ppxai/commands/display.py">ppxai/commands/display.py</a></td>
 <td>125-323</td>
 <td>/show command</td>
 </tr>
 <tr>
-<td><a href="../ppxai/tui/widgets/data_viewer.py">ppxai/tui/widgets/data_viewer.py</a></td>
+<td><a href="../../../ppxai/tui/widgets/data_viewer.py">ppxai/tui/widgets/data_viewer.py</a></td>
 <td>1-358</td>
 <td>Tree viewer (JSON/YAML/TOML)</td>
 </tr>
 <tr>
-<td><a href="../ppxai/tui/widgets/table_viewer.py">ppxai/tui/widgets/table_viewer.py</a></td>
+<td><a href="../../../ppxai/tui/widgets/table_viewer.py">ppxai/tui/widgets/table_viewer.py</a></td>
 <td>1-469</td>
 <td>Table viewer (CSV/TSV)</td>
 </tr>
 <tr>
-<td><a href="../ppxai/tui/widgets/image_viewer.py">ppxai/tui/widgets/image_viewer.py</a></td>
+<td><a href="../../../ppxai/tui/widgets/image_viewer.py">ppxai/tui/widgets/image_viewer.py</a></td>
 <td>1-272</td>
 <td>Image viewer</td>
 </tr>
 <tr>
-<td><a href="../ppxai/tui/widgets/code_editor.py">ppxai/tui/widgets/code_editor.py</a></td>
+<td><a href="../../../ppxai/tui/widgets/code_editor.py">ppxai/tui/widgets/code_editor.py</a></td>
 <td>-</td>
 <td>Code editor with syntax highlighting</td>
 </tr>

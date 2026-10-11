@@ -1516,10 +1516,18 @@ dated 2026-09-27. The <code>/v1</code> base-url suffix needs no install-script c
 trailing slash or an existing <code>/v1</code>. Nothing about the cutover remains
 pending on the ppxai side.
 Supersedes the <code>api_path</code> routing sketch in
-<a href="../../plan-per-model-capabilities/"><code>../plan-per-model-capabilities.md</code></a> §I4b,
-which assumed the slot merely needed filling in.
+<a href="../../archive/plan-per-model-capabilities/"><code>../archive/plan-per-model-capabilities.md</code></a> §I4b,
+which assumed the slot merely needed filling in.</p>
+<p><strong>Revised in part by <a href="../0015-remove-perplexity-chat-provider/">ADR 0015</a>
+(2026-09-27):</strong> the Perplexity chat provider described above (the
+Responses-wire cutover, <code>PerplexityProvider._responses_base_url()</code>,
+<code>RECOMMENDED_DEFAULTS["perplexity"]</code> pointing at a chat model) was removed
+— <code>ppxai/engine/providers/perplexity.py</code> no longer exists. Perplexity
+remains a web-search / grounding backend under <code>engine/search/</code> (ADR 0014).
+The wire-protocol unification itself (steps 0-4, the three remaining
+handlers) is unaffected.
 <strong>Related:</strong>
-- <a href="../../plan-per-model-capabilities/"><code>../plan-per-model-capabilities.md</code></a> — the arc this lands in; I1–I4 shipped, I4b is the first consumer of this ADR
+- <a href="../../archive/plan-per-model-capabilities/"><code>../archive/plan-per-model-capabilities.md</code></a> — the arc this lands in; I1–I4 shipped, I4b is the first consumer of this ADR
 - <a href="../../patterns/protocol-dependency-inversion/"><code>../patterns/protocol-dependency-inversion.md</code></a> — the <code>Protocol</code>-in-leaf-module pattern this uses
 - <a href="../0010-config-shape-review/"><code>0010-config-shape-review.md</code></a> — the config axes an operator-declared protocol would land on
 - <a href="../../debt-inventory/">debt Item 38</a> — Perplexity's Agent-API fleet, the fleet that surfaced this
@@ -2681,14 +2689,19 @@ change.</p>
   pre-armed trigger is worth less than a contract that does not need it.</li>
 <li>A fifth provider or a fourth protocol arrives before step 4 lands — the
   handler set is still small enough to reshape cheaply, and would not stay so.</li>
-<li>Perplexity exposes a real <code>/models</code> endpoint. Capability and protocol could
-  then be partly enumerated rather than declared, changing what the table is
-  for (see <code>scripts/probe-perplexity-capabilities.py</code>, which exists precisely
-  because no such endpoint does).</li>
+<li><strong>Moot per ADR 0015 (2026-09-27):</strong> the two Perplexity-chat triggers below
+  no longer apply — the chat provider was removed and
+  <code>scripts/probe-perplexity-capabilities.py</code> was deleted in the same commit
+  (<code>7592dfef</code>). Kept as a record of what would have mattered had the
+  provider stayed.</li>
+<li>Perplexity exposes a real <code>/models</code> endpoint. Capability and protocol
+    could then be partly enumerated rather than declared, changing what the
+    table is for (the deleted probe script existed precisely because no such
+    endpoint did).</li>
 <li>The Responses shape diverges between OpenAI and Perplexity. One shared
-  handler is correct only while the two remain the same wire; if they fork,
-  this becomes two handlers, and the composition model absorbs that without a
-  provider change.</li>
+    handler is correct only while the two remain the same wire; if they fork,
+    this becomes two handlers, and the composition model absorbs that without
+    a provider change.</li>
 </ul>
 
 

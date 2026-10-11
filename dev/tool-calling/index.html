@@ -1207,15 +1207,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#perplexity-sonar-models-prompt-based" class="md-nav__link">
+  <a href="#perplexity-sonar-models-prompt-based-historical-chat-provider-removed-adr-0015" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Perplexity Sonar Models (Prompt-Based)
+        Perplexity Sonar Models (Prompt-Based) — historical (chat provider removed, ADR 0015)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Perplexity Sonar Models (Prompt-Based)">
+    <nav class="md-nav" aria-label="Perplexity Sonar Models (Prompt-Based) — historical (chat provider removed, ADR 0015)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1670,12 +1670,16 @@
 <strong>Updated:</strong> 2026-08-04</p>
 <blockquote>
 <p><strong>Note (v1.19.x):</strong> Web search backend selection now goes through
-<code>resolve_web_search_backend()</code> (<code>ppxai/engine/tools/search_backends.py</code>).
-<code>tools.web_search.preferred</code> (global) or <code>providers.&lt;name&gt;.web_search.preferred</code>
-is an <strong>ordering</strong> — first choice, then the rest of the usable fallback
-chain — not a hard pin. Add <code>strict: true</code> in the same scope to make it a
-hard pin (no fallback, egress narrowed to just that backend). See
-<a href="../provider-setup/#web-search-backend-ordering-v1191">provider-setup.md</a>.</p>
+<code>resolve_web_search_backend()</code> (<code>ppxai/engine/search/resolver.py</code>, the
+ADR 0014 search layer). Default order is gemini → perplexity →
+duckduckgo. <code>tools.web_search.preferred</code> (global) or
+<code>providers.&lt;name&gt;.web_search.preferred</code> is an <strong>ordering</strong> — first
+choice, then the rest of the usable fallback chain — not a hard pin. Add
+<code>strict: true</code> in the same scope to make it a hard pin (no fallback,
+egress narrowed to just that backend). See
+<a href="../provider-setup/#web-search-backend-ordering-v1191">provider-setup.md</a>.
+Perplexity was removed as a <strong>chat</strong> provider in v1.19.3 (ADR 0015) and
+remains only a web-search/grounding backend here.</p>
 </blockquote>
 <hr />
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
@@ -1702,12 +1706,6 @@ hard pin (no fallback, egress narrowed to just that backend). See
 <td>Native</td>
 <td>✅ Yes</td>
 <td><code>generate_content</code> wire, <code>function_declarations</code></td>
-</tr>
-<tr>
-<td><strong>Perplexity</strong></td>
-<td><strong>Per-model, per-wire</strong></td>
-<td>✅ on <code>/v1/responses</code></td>
-<td><strong>Not "no" any more.</strong> Bare <code>sonar</code> on chat-completions is <code>prompt_based</code>; the namespaced <code>perplexity/sonar</code> on the Responses wire is <code>auto</code> and <strong>measured calling the tool</strong> (2026-08-31, <code>scripts/probe-perplexity-capabilities.py --api-path responses</code>). The gateway fleet (<code>anthropic/*</code>, <code>openai/*</code>, <code>google/*</code>, <code>xai/*</code>) is <code>auto</code> on Responses too.</td>
 </tr>
 <tr>
 <td><strong>Anthropic</strong></td>
@@ -1741,6 +1739,9 @@ hard pin (no fallback, egress narrowed to just that backend). See
 </tr>
 </tbody>
 </table>
+<p>Perplexity is no longer a chat provider (ADR 0015, v1.19.3) and has no
+row here; it remains a web-search/grounding backend (ADR 0014), which is
+not a tool-calling endpoint.</p>
 <blockquote>
 <p>This table is <strong>per provider</strong>, which is a simplification that ADR 0012
 retired: tool mode is a property of the <strong>model and the endpoint serving
@@ -1767,7 +1768,6 @@ above say what the provider's models typically do. Row-verified against
 - Gemini (2.5+)
 - OpenAI (all models with function calling)
 - Anthropic (opt-in; untested against the live API — Item 71)
-- Perplexity, on <code>/v1/responses</code> only (<code>perplexity/sonar</code> and the gateway fleet)
 - OpenRouter (varies by model)
 - vLLM (requires <code>--enable-auto-tool-choice</code>; <code>gpt-oss</code> is pinned prompt-based anyway)
 - Ollama (Qwen2.5 models only)</p>
@@ -1788,10 +1788,11 @@ above say what the provider's models typically do. Row-verified against
 - ⚠️ May include extra explanation text
 - ⚠️ Prone to formatting errors</p>
 <p><strong>Providers:</strong>
-- Perplexity (all Sonar models)
-- Any provider without native tool calling</p>
+- Any provider without native tool calling (e.g. <code>openai/gpt-oss*</code> on vLLM)
+- Perplexity used this method while it was a chat provider (removed
+  ADR 0015, v1.19.3); the history below is kept for the reusable lesson</p>
 <hr />
-<h2 id="perplexity-sonar-models-prompt-based">Perplexity Sonar Models (Prompt-Based)<a class="headerlink" href="#perplexity-sonar-models-prompt-based" title="Permanent link">&para;</a></h2>
+<h2 id="perplexity-sonar-models-prompt-based-historical-chat-provider-removed-adr-0015">Perplexity Sonar Models (Prompt-Based) — historical (chat provider removed, ADR 0015)<a class="headerlink" href="#perplexity-sonar-models-prompt-based-historical-chat-provider-removed-adr-0015" title="Permanent link">&para;</a></h2>
 <h3 id="test-results-2026-02-08">Test Results (2026-02-08)<a class="headerlink" href="#test-results-2026-02-08" title="Permanent link">&para;</a></h3>
 <p>Direct API tests confirmed that <strong>Perplexity Sonar models do NOT support native function calling</strong>:</p>
 <p><strong>Test:</strong> Sent <code>tools</code> parameter to Perplexity API with <code>sonar-pro</code> and <code>sonar-reasoning-pro</code></p>
@@ -1892,7 +1893,7 @@ reached through two providers legitimately answers differently.</p>
 </tr>
 </tbody>
 </table>
-<p>The dispatch site is one line, <code>ppxai/engine/chat.py:646</code>:</p>
+<p>The dispatch site is one line, <code>ppxai/engine/chat.py</code> (<code>use_native_tools = facts.tool_mode != "prompt_based"</code>):</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">use_native_tools</span> <span class="o">=</span> <span class="n">facts</span><span class="o">.</span><span class="n">tool_mode</span> <span class="o">!=</span> <span class="s2">"prompt_based"</span>
 </span></code></pre></div>
 <h3 id="overriding-a-models-facts">Overriding a model's facts<a class="headerlink" href="#overriding-a-models-facts" title="Permanent link">&para;</a></h3>
@@ -1996,25 +1997,23 @@ benchmark payload, not a key you should set:</p>
 - ✅ Use OpenAI (native support, highly reliable)
 - ✅ Use vLLM with proper flags (native support)</p>
 <p><strong>For Web Search + Tools:</strong>
-- ✅ Use Perplexity (prompt-based works reliably with AGENTS.md hints)
-- ⚠️ Expect slightly lower tool calling scores vs native providers</p>
+- ✅ Use Gemini (or any tool-capable model) with ppxai's <code>web_search</code> tool,
+  which searches through the ADR 0014 layer (<code>ppxai/engine/search/</code>). Gemini's
+  <em>native</em> Google Search grounding is off whenever ppxai tools are sent:
+  <code>generate_content</code> rejects grounding plus function declarations, so
+  function calling wins (<code>ppxai/engine/providers/gemini.py</code>)
+- Perplexity is no longer a chat provider (ADR 0015, v1.19.3) and is not
+  selectable for tool calling; it remains available only as a
+  web-search/grounding backend (ADR 0014).</p>
 <h3 id="improving-prompt-based-tool-calling">Improving Prompt-Based Tool Calling<a class="headerlink" href="#improving-prompt-based-tool-calling" title="Permanent link">&para;</a></h3>
-<p>If using Perplexity or other prompt-based providers:</p>
+<p>If using a prompt-based provider (e.g. <code>openai/gpt-oss*</code> on vLLM):</p>
 <ol>
 <li>
 <p><strong>Add model-specific hints</strong> in <code>AGENTS.md</code>:
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">sonar*</span><span class="p">:</span>
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">gpt-oss*</span><span class="p">:</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"CRITICAL:</span><span class="nv"> </span><span class="s">For</span><span class="nv"> </span><span class="s">code</span><span class="nv"> </span><span class="s">editing,</span><span class="nv"> </span><span class="s">call</span><span class="nv"> </span><span class="s">apply_patch</span><span class="nv"> </span><span class="s">ONCE</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">detected</span><span class="nv"> </span><span class="s">issue:</span><span class="nv"> </span><span class="s">you</span><span class="nv"> </span><span class="s">make</span><span class="nv"> </span><span class="s">5-6</span><span class="nv"> </span><span class="s">duplicate</span><span class="nv"> </span><span class="s">calls."</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Do</span><span class="nv"> </span><span class="s">NOT</span><span class="nv"> </span><span class="s">output</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">call</span><span class="nv"> </span><span class="s">JSON</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">response</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">use</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">calling</span><span class="nv"> </span><span class="s">directly."</span>
 </span></code></pre></div></p>
-</li>
-<li>
-<p><strong>Use specific models:</strong></p>
-</li>
-<li><code>sonar</code> (75.0% benchmark) - Best cost/utility ratio</li>
-<li><code>sonar-pro</code> - More thorough but higher cost</li>
-<li>
-<p>Avoid <code>sonar-reasoning-pro</code> (poor tool calling: 67.2%)</p>
 </li>
 <li>
 <p><strong>Check AGENTS.md exists</strong> in your project for model-specific tuning</p>

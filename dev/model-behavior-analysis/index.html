@@ -1710,6 +1710,14 @@ in roughly three months. Debt Items 54 (Gemini fleet migration) and 55
 (OpenAI fleet refresh) both change the model set it ranks, so treat the
 per-model conclusions as a snapshot of its Created date, not current
 guidance. The architectural reasoning is unaffected.</p>
+<p>⚠️ <strong>The "Phase 1: Model Profile System" recommendation below was
+implemented, then superseded.</strong> <code>ppxai/engine/model_profiles.py</code>
+(<code>ModelProfile</code>, <code>ToolCallingProfile</code>, the profile registry) was built and
+later <strong>deleted</strong> when ADR 0012 / debt Item 65 replaced the whole profile
+vocabulary with <code>ModelFacts</code> in <code>ppxai/engine/model_facts.py</code> (commit
+<code>ed3c069a</code>). Do not create <code>model_profiles.py</code> — read
+<a href="../tool-calling/#configuration-reference">docs/tool-calling.md</a> for the
+current mechanism.</p>
 </blockquote>
 <p><strong>Created:</strong> 2026-02-19
 <strong>Last updated:</strong> 2026-02-22
@@ -1921,7 +1929,7 @@ guidance. The architectural reasoning is unaffected.</p>
 <td>2</td>
 <td>Qwen3-Coder-30B-A3B-FP8</td>
 <td>81.25%</td>
-<td>asusai-vllm</td>
+<td>dgx-vllm</td>
 <td>native</td>
 <td>1</td>
 </tr>
@@ -2017,7 +2025,7 @@ guidance. The architectural reasoning is unaffected.</p>
 <td>14</td>
 <td>Qwen3-Coder-Next-FP8</td>
 <td>60.94%</td>
-<td>asusai-vllm</td>
+<td>dgx-vllm</td>
 <td>n/a</td>
 <td>3</td>
 </tr>

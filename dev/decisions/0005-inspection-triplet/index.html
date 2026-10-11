@@ -1315,7 +1315,7 @@
 <strong>Related:</strong>
 - <a href="../0003-agent-platform-architecture/">ADR 0003</a> — Agent platform architecture; Stage 2's <code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/</code> namespace IS this pattern, scoped to agent runs only
 - <a href="../../research/2026-05-10-openshell-coordination-patterns/"><code>docs/research/2026-05-10-openshell-coordination-patterns.md</code></a> — prior art (NVIDIA OpenShell <code>runs/&lt;run_id&gt;/</code> namespace)
-- <a href="../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md</code></a> — caveat C5 (agent-served services routing) builds on this pattern
+- <a href="https://github.com/rcconsult/ppxai-sre/blob/master/docs/PPXAI-INTEGRATION-V1.19.md">ppxai-sre <code>docs/PPXAI-INTEGRATION-V1.19.md</code></a> — caveat C5 (agent-served services routing) builds on this pattern (cross-repo link to a private repo; default branch <code>master</code>, confirmed by ppxai-sre 2026-09-28)
 - <code>ppxai/server/routes/preview.py</code> — v1.18.5 preview-backend log file is an <code>events.jsonl</code>-shaped artifact today
 - <code>ppxai/engine/session.py</code> — session JSON files are <code>state.json</code>-shaped artifacts today</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
@@ -1327,7 +1327,10 @@ state for inspection:</p>
 <li><code>~/.ppxai/logs/preview-backend-&lt;pid&gt;.log</code> (v1.18.5) — captured
   subprocess output from <code>/preview --serve</code></li>
 <li><code>~/.ppxai/usage/usage.json</code> — provider call counters and costs</li>
-<li><code>~/.ppxai/checkpoints/&lt;id&gt;/</code> — git checkpoints for <code>/agent</code> rollback</li>
+<li><code>~/.ppxai/sessions/checkpoints/&lt;session_id&gt;/</code> — git checkpoints for
+  <code>/agent</code> rollback (dated factual correction, 2026-09-28: <code>checkpoint.py</code>
+  has rooted this under <code>SESSIONS_DIR / "checkpoints"</code> since <code>f3e67b5d</code>,
+  2025-12-27, before this ADR was written)</li>
 </ul>
 <p>The ADR 0003 Stage 2 plan adds another:</p>
 <ul>

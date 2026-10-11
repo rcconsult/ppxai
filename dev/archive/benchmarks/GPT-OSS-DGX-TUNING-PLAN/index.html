@@ -1158,10 +1158,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#qwen3-coder-fp8-asusai-vllm-best-750-188" class="md-nav__link">
+  <a href="#qwen3-coder-fp8-dgx-vllm-best-750-188" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Qwen3-Coder FP8 (asusai-vllm) - Best: 75.0% (+18.8%)
+        Qwen3-Coder FP8 (dgx-vllm) - Best: 75.0% (+18.8%)
       
     </span>
   </a>
@@ -1386,10 +1386,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#qwen3-coder-30b-fp8-asusai-vllm" class="md-nav__link">
+  <a href="#qwen3-coder-30b-fp8-dgx-vllm" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Qwen3-Coder-30B FP8 (asusai-vllm)
+        Qwen3-Coder-30B FP8 (dgx-vllm)
       
     </span>
   </a>
@@ -1425,10 +1425,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#asusai-vllm-add-tool-result-verification" class="md-nav__link">
+  <a href="#dgx-vllm-add-tool-result-verification" class="md-nav__link">
     <span class="md-ellipsis">
       
-        asusai-vllm — Add tool result verification
+        dgx-vllm — Add tool result verification
       
     </span>
   </a>
@@ -1540,12 +1540,12 @@
 <h1 id="gpt-oss-dgx-spark-vllm-tuning-plan-v1153">GPT-OSS &amp; DGX Spark vLLM Tuning Plan (v1.15.3)<a class="headerlink" href="#gpt-oss-dgx-spark-vllm-tuning-plan-v1153" title="Permanent link">&para;</a></h1>
 <p><strong>Created:</strong> 2026-02-09
 <strong>Status:</strong> COMPLETED 2026-02-09
-<strong>Models:</strong> GPT-OSS 120B (<code>custom</code>), Qwen3-Coder-30B-A3B FP8 (<code>asusai-vllm</code>)
+<strong>Models:</strong> GPT-OSS 120B (<code>custom</code>), Qwen3-Coder-30B-A3B FP8 (<code>dgx-vllm</code>)
 <strong>Scope:</strong> 2 vLLM endpoints only (Ollama models deferred)
 <strong>Objective:</strong> Apply the same evidence-based tuning that achieved +25.2% avg improvement across Gemini/Perplexity</p>
 <hr />
 <h2 id="results-summary">Results Summary<a class="headerlink" href="#results-summary" title="Permanent link">&para;</a></h2>
-<h3 id="qwen3-coder-fp8-asusai-vllm-best-750-188">Qwen3-Coder FP8 (asusai-vllm) - Best: 75.0% (+18.8%)<a class="headerlink" href="#qwen3-coder-fp8-asusai-vllm-best-750-188" title="Permanent link">&para;</a></h3>
+<h3 id="qwen3-coder-fp8-dgx-vllm-best-750-188">Qwen3-Coder FP8 (dgx-vllm) - Best: 75.0% (+18.8%)<a class="headerlink" href="#qwen3-coder-fp8-dgx-vllm-best-750-188" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -1877,8 +1877,8 @@
 </table>
 <h3 id="changes-made">Changes Made<a class="headerlink" href="#changes-made" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>AGENTS.md</strong> - Added 38+13 hints (custom: 7, asusai-vllm: 9, gpt-oss<em>: 8, Qwen/Qwen3-Coder</em>: 10, <em>Qwen3-Next</em>: 13, qwen2.5-coder*: 4)</li>
-<li><strong>ppxai-config.json</strong> - Set <code>frequency_penalty: 0.0</code> for asusai-vllm; added Qwen3-Next FP8 + NVFP4 + Qwen3-Coder-Next FP8 model entries</li>
+<li><strong>AGENTS.md</strong> - Added 38+13 hints (custom: 7, dgx-vllm: 9, gpt-oss<em>: 8, Qwen/Qwen3-Coder</em>: 10, <em>Qwen3-Next</em>: 13, qwen2.5-coder*: 4)</li>
+<li><strong>ppxai-config.json</strong> - Set <code>frequency_penalty: 0.0</code> for dgx-vllm; added Qwen3-Next FP8 + NVFP4 + Qwen3-Coder-Next FP8 model entries</li>
 <li><strong>benchmark.py</strong> - UTF-8 stdout/stderr encoding fix for Windows</li>
 <li><strong>engine_runner.py</strong> - (encoding fix reverted, handled at benchmark.py level)</li>
 </ol>
@@ -1888,7 +1888,7 @@
 1. <code>PPXAI_CONFIG_FILE</code> environment variable
 2. <code>./ppxai-config.json</code> (project-local — the repo config)
 3. <code>~/.ppxai/ppxai-config.json</code> (user config)</p>
-<p>The <code>custom</code> and <code>asusai-vllm</code> providers are defined <strong>only in the user config</strong> at <code>~/.ppxai/ppxai-config.json</code>. The repo config does NOT contain these providers.</p>
+<p>The <code>custom</code> and <code>dgx-vllm</code> providers are defined <strong>only in the user config</strong> at <code>~/.ppxai/ppxai-config.json</code>. The repo config does NOT contain these providers.</p>
 <p><strong>All benchmark commands MUST set <code>PPXAI_CONFIG_FILE</code>:</strong></p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Windows cmd</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">set</span><span class="w"> </span><span class="nv">PPXAI_CONFIG_FILE</span><span class="o">=</span>%USERPROFILE%<span class="se">\.</span>ppxai<span class="se">\p</span>pxai-config.json
@@ -1902,7 +1902,7 @@
 <p><strong>Verify before running benchmarks:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">set</span><span class="w"> </span><span class="nv">PPXAI_CONFIG_FILE</span><span class="o">=</span>%USERPROFILE%<span class="se">\.</span>ppxai<span class="se">\p</span>pxai-config.json<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">UV_NATIVE_TLS</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"from ppxai.config import initialize, PROVIDERS; initialize(); print([p for p in PROVIDERS])"</span>
 </span></code></pre></div></p>
-<p>Expected output should include <code>custom</code> and <code>asusai-vllm</code>.</p>
+<p>Expected output should include <code>custom</code> and <code>dgx-vllm</code>.</p>
 <hr />
 <h2 id="current-state-from-ppxaippxai-configjson">Current State (from <code>~/.ppxai/ppxai-config.json</code>)<a class="headerlink" href="#current-state-from-ppxaippxai-configjson" title="Permanent link">&para;</a></h2>
 <h3 id="provider-configurations">Provider Configurations<a class="headerlink" href="#provider-configurations" title="Permanent link">&para;</a></h3>
@@ -1911,7 +1911,7 @@
 <tr>
 <th>Setting</th>
 <th><code>custom</code> (GPT-OSS 120B)</th>
-<th><code>asusai-vllm</code> (Qwen3-Coder FP8)</th>
+<th><code>dgx-vllm</code> (Qwen3-Coder FP8)</th>
 </tr>
 </thead>
 <tbody>
@@ -1988,7 +1988,7 @@
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>On Windows: Use PowerShell syntax. Bash heredocs (&lt;&lt;EOF) and $() don't work.
 </span></code></pre></div></p>
-<p><strong><code>asusai-vllm</code> — Generic, not tuned:</strong>
+<p><strong><code>dgx-vllm</code> — Generic, not tuned:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.
 </span></code></pre></div></p>
 <h3 id="agentsmd-hints">AGENTS.md Hints<a class="headerlink" href="#agentsmd-hints" title="Permanent link">&para;</a></h3>
@@ -2012,7 +2012,7 @@
 <td>gemini-3-flash<em>: 7, sonar</em>: 7</td>
 </tr>
 <tr>
-<td><code>asusai-vllm</code> provider</td>
+<td><code>dgx-vllm</code> provider</td>
 <td><strong>0</strong></td>
 <td>—</td>
 </tr>
@@ -2050,7 +2050,7 @@
 <td>large_payload (0 chars), patch_multiline (missing import), respects_tool_failure</td>
 </tr>
 <tr>
-<td><strong>asusai-vllm</strong></td>
+<td><strong>dgx-vllm</strong></td>
 <td>Qwen3-Coder FP8</td>
 <td><strong>81.2%</strong></td>
 <td>100%</td>
@@ -2110,14 +2110,14 @@
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks<span class="se">\l</span>lm-eval<span class="se">\b</span>enchmark.py<span class="w"> </span>--provider<span class="w"> </span>custom<span class="w"> </span>--model<span class="w"> </span>openai/gpt-oss-120b<span class="w"> </span>--debug<span class="w"> </span>--verbose
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># Qwen3-Coder-30B FP8 (DGX vLLM)</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks<span class="se">\l</span>lm-eval<span class="se">\b</span>enchmark.py<span class="w"> </span>--provider<span class="w"> </span>asusai-vllm<span class="w"> </span>--model<span class="w"> </span>Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8<span class="w"> </span>--debug<span class="w"> </span>--verbose
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks<span class="se">\l</span>lm-eval<span class="se">\b</span>enchmark.py<span class="w"> </span>--provider<span class="w"> </span>dgx-vllm<span class="w"> </span>--model<span class="w"> </span>Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8<span class="w"> </span>--debug<span class="w"> </span>--verbose
 </span></code></pre></div></p>
 <p><strong>PowerShell:</strong>
 <div class="language-powershell highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">$env:PPXAI_CONFIG_FILE</span> <span class="p">=</span> <span class="s2">"$env:USERPROFILE\.ppxai\ppxai-config.json"</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nv">$env:UV_NATIVE_TLS</span> <span class="p">=</span> <span class="s2">"true"</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">.</span><span class="n">uv</span><span class="p">\</span><span class="n">uv</span> <span class="n">run</span> <span class="n">python</span> <span class="n">benchmarks</span><span class="p">\</span><span class="n">llm-eval</span><span class="p">\</span><span class="n">benchmark</span><span class="p">.</span><span class="n">py</span> <span class="p">-</span><span class="n">-provider</span> <span class="n">custom</span> <span class="p">-</span><span class="n">-model</span> <span class="n">openai</span><span class="p">/</span><span class="n">gpt-oss</span><span class="p">-</span><span class="n">120b</span> <span class="p">-</span><span class="n">-debug</span> <span class="p">-</span><span class="n">-verbose</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">.</span><span class="n">uv</span><span class="p">\</span><span class="n">uv</span> <span class="n">run</span> <span class="n">python</span> <span class="n">benchmarks</span><span class="p">\</span><span class="n">llm-eval</span><span class="p">\</span><span class="n">benchmark</span><span class="p">.</span><span class="n">py</span> <span class="p">-</span><span class="n">-provider</span> <span class="n">asusai-vllm</span> <span class="p">-</span><span class="n">-model</span> <span class="s2">"Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8"</span> <span class="p">-</span><span class="n">-debug</span> <span class="p">-</span><span class="n">-verbose</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">.</span><span class="n">uv</span><span class="p">\</span><span class="n">uv</span> <span class="n">run</span> <span class="n">python</span> <span class="n">benchmarks</span><span class="p">\</span><span class="n">llm-eval</span><span class="p">\</span><span class="n">benchmark</span><span class="p">.</span><span class="n">py</span> <span class="p">-</span><span class="n">-provider</span> <span class="n">dgx-vllm</span> <span class="p">-</span><span class="n">-model</span> <span class="s2">"Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8"</span> <span class="p">-</span><span class="n">-debug</span> <span class="p">-</span><span class="n">-verbose</span>
 </span></code></pre></div></p>
 <p><strong>What to look for in debug logs:</strong>
 - <code>tool_json_in_content</code> — tool JSON in response text instead of native calls
@@ -2137,7 +2137,7 @@
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Do</span><span class="nv"> </span><span class="s">NOT</span><span class="nv"> </span><span class="s">output</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">call</span><span class="nv"> </span><span class="s">JSON</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">response</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">use</span><span class="nv"> </span><span class="s">native</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">calling</span><span class="nv"> </span><span class="s">only."</span>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"For</span><span class="nv"> </span><span class="s">large</span><span class="nv"> </span><span class="s">file</span><span class="nv"> </span><span class="s">writes,</span><span class="nv"> </span><span class="s">ensure</span><span class="nv"> </span><span class="s">complete</span><span class="nv"> </span><span class="s">content</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">truncated</span><span class="nv"> </span><span class="s">output</span><span class="nv"> </span><span class="s">fails</span><span class="nv"> </span><span class="s">silently."</span>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"When</span><span class="nv"> </span><span class="s">tools</span><span class="nv"> </span><span class="s">return</span><span class="nv"> </span><span class="s">errors,</span><span class="nv"> </span><span class="s">report</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">actual</span><span class="nv"> </span><span class="s">error</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">user."</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span><span class="nt">asusai-vllm</span><span class="p">:</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span><span class="nt">dgx-vllm</span><span class="p">:</span>
 </span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">running</span><span class="nv"> </span><span class="s">on</span><span class="nv"> </span><span class="s">NVIDIA</span><span class="nv"> </span><span class="s">GB10</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">native</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">calling</span><span class="nv"> </span><span class="s">via</span><span class="nv"> </span><span class="s">vLLM."</span>
 </span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"Execute</span><span class="nv"> </span><span class="s">tools</span><span class="nv"> </span><span class="s">directly</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">never</span><span class="nv"> </span><span class="s">describe</span><span class="nv"> </span><span class="s">what</span><span class="nv"> </span><span class="s">you</span><span class="nv"> </span><span class="s">would</span><span class="nv"> </span><span class="s">do."</span>
 </span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"CRITICAL:</span><span class="nv"> </span><span class="s">After</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">failures,</span><span class="nv"> </span><span class="s">acknowledge</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">error</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">do</span><span class="nv"> </span><span class="s">NOT</span><span class="nv"> </span><span class="s">claim</span><span class="nv"> </span><span class="s">success."</span>
@@ -2163,7 +2163,7 @@
 <p><strong>A/B test command:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">set</span><span class="w"> </span><span class="nv">PPXAI_CONFIG_FILE</span><span class="o">=</span>%USERPROFILE%<span class="se">\.</span>ppxai<span class="se">\p</span>pxai-config.json<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">UV_NATIVE_TLS</span><span class="o">=</span><span class="nb">true</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks<span class="se">\l</span>lm-eval<span class="se">\b</span>enchmark.py<span class="w"> </span>--provider<span class="w"> </span>custom<span class="w"> </span>--model<span class="w"> </span>openai/gpt-oss-120b<span class="w"> </span>--debug<span class="w"> </span>--verbose
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks<span class="se">\l</span>lm-eval<span class="se">\b</span>enchmark.py<span class="w"> </span>--provider<span class="w"> </span>asusai-vllm<span class="w"> </span>--model<span class="w"> </span>Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8<span class="w"> </span>--debug<span class="w"> </span>--verbose
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks<span class="se">\l</span>lm-eval<span class="se">\b</span>enchmark.py<span class="w"> </span>--provider<span class="w"> </span>dgx-vllm<span class="w"> </span>--model<span class="w"> </span>Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8<span class="w"> </span>--debug<span class="w"> </span>--verbose
 </span></code></pre></div></p>
 <hr />
 <h3 id="phase-3-generation-parameter-tuning-2-hours">Phase 3: Generation Parameter Tuning (2 hours)<a class="headerlink" href="#phase-3-generation-parameter-tuning-2-hours" title="Permanent link">&para;</a></h3>
@@ -2222,8 +2222,8 @@
 </tr>
 </tbody>
 </table>
-<h4 id="qwen3-coder-30b-fp8-asusai-vllm">Qwen3-Coder-30B FP8 (<code>asusai-vllm</code>)<a class="headerlink" href="#qwen3-coder-30b-fp8-asusai-vllm" title="Permanent link">&para;</a></h4>
-<p>Edit: <code>providers["asusai-vllm"].generation_params</code> (provider-level, applies to default model)</p>
+<h4 id="qwen3-coder-30b-fp8-dgx-vllm">Qwen3-Coder-30B FP8 (<code>dgx-vllm</code>)<a class="headerlink" href="#qwen3-coder-30b-fp8-dgx-vllm" title="Permanent link">&para;</a></h4>
+<p>Edit: <code>providers["dgx-vllm"].generation_params</code> (provider-level, applies to default model)</p>
 <table>
 <thead>
 <tr>
@@ -2295,8 +2295,8 @@
 </span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>
 </span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>On Windows: Use PowerShell syntax. Bash heredocs (&lt;&lt;EOF) and $() don't work.
 </span></code></pre></div>
-<h4 id="asusai-vllm-add-tool-result-verification"><code>asusai-vllm</code> — Add tool result verification<a class="headerlink" href="#asusai-vllm-add-tool-result-verification" title="Permanent link">&para;</a></h4>
-<p>Edit: <code>providers["asusai-vllm"].system_prompt</code> in <code>~/.ppxai/ppxai-config.json</code></p>
+<h4 id="dgx-vllm-add-tool-result-verification"><code>dgx-vllm</code> — Add tool result verification<a class="headerlink" href="#dgx-vllm-add-tool-result-verification" title="Permanent link">&para;</a></h4>
+<p>Edit: <code>providers["dgx-vllm"].system_prompt</code> in <code>~/.ppxai/ppxai-config.json</code></p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. Be concise and precise. Execute tools directly and report results briefly. Focus on code quality, correctness, and best practices. CRITICAL: Check tool results before claiming success - if a tool fails, acknowledge the failure honestly. Never fabricate tool output.
 </span></code></pre></div>
 <hr />
@@ -2452,7 +2452,7 @@
 </span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks<span class="se">\l</span>lm-eval<span class="se">\b</span>enchmark.py<span class="w"> </span>--provider<span class="w"> </span>custom<span class="w"> </span>--model<span class="w"> </span>openai/gpt-oss-120b<span class="w"> </span>--debug<span class="w"> </span>--verbose
 </span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
 </span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="c1"># Qwen3-Coder FP8 benchmark</span>
-</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks<span class="se">\l</span>lm-eval<span class="se">\b</span>enchmark.py<span class="w"> </span>--provider<span class="w"> </span>asusai-vllm<span class="w"> </span>--model<span class="w"> </span>Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8<span class="w"> </span>--debug<span class="w"> </span>--verbose
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks<span class="se">\l</span>lm-eval<span class="se">\b</span>enchmark.py<span class="w"> </span>--provider<span class="w"> </span>dgx-vllm<span class="w"> </span>--model<span class="w"> </span>Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8<span class="w"> </span>--debug<span class="w"> </span>--verbose
 </span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>
 </span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="c1"># Compare results for a provider/model</span>
 </span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks<span class="se">\l</span>lm-eval<span class="se">\b</span>enchmark.py<span class="w"> </span>--provider<span class="w"> </span>custom<span class="w"> </span>--model<span class="w"> </span>openai/gpt-oss-120b<span class="w"> </span>--compare

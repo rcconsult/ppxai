@@ -1480,7 +1480,7 @@ helper, same log file, same tool.</p>
 v1.18.5 byte-identical to v1.18.4. No fields added, no fields
 removed, no status-code changes, no header changes. The v1
 stability commitment per
-<a href="decisions/0004-llm-gateway-features.md">ADR 0004</a> is upheld.</p>
+<a href="../../../decisions/0004-llm-gateway-features/">ADR 0004</a> is upheld.</p>
 <p>ppxai-sre's outlook-monitor agent should consume v1.18.5 as a
 drop-in replacement for v1.18.4. The new <code>/v1/agent/run</code> endpoint
 (consumer-side asks C1-C5) is NOT in v1.18.5 — it remains v1.19.x
@@ -1509,7 +1509,7 @@ Stage 2 scope. v1.18.5 does NOT change the v1 wire shape.</p>
 <li>Local install validation done on macOS Intel via the
   <code>/build-install</code> skill end-to-end, plus interactive testing in
   both ppxaide (TUI) and the web app against the
-  <code>/Users/rado/git/exps/ppxai_demo/</code> test target. Both <code>--serve</code>
+  <code>/path/to/demo-project/</code> test target. Both <code>--serve</code>
   paths verified to spawn the backend and produce JSONL logs.</li>
 <li><code>uv.lock</code> refreshed via <code>uv sync</code> at the version bump.</li>
 <li>ADR 0005 status is <strong>Proposed</strong> — retroactive naming of an

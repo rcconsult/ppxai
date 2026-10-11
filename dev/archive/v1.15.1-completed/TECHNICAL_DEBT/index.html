@@ -1461,7 +1461,7 @@
 <h2 id="critical-priority">Critical Priority<a class="headerlink" href="#critical-priority" title="Permanent link">&para;</a></h2>
 <h3 id="1-global-state-management">1. Global State Management<a class="headerlink" href="#1-global-state-management" title="Permanent link">&para;</a></h3>
 <p><strong>Status:</strong> ✅ Completed (v1.13.10)
-<strong>Files:</strong> <a href="../ppxai/server/http.py">ppxai/server/http.py</a>, <a href="../ppxai/server/session_manager.py">ppxai/server/session_manager.py</a></p>
+<strong>Files:</strong> <a href="../../../ppxai/server/http.py">ppxai/server/http.py</a>, <a href="../../../ppxai/server/session_manager.py">ppxai/server/session_manager.py</a></p>
 <p><strong>Resolution:</strong> Refactored to <code>SessionManager</code> class with:
 - Thread-safe singleton pattern using <code>threading.Lock</code> for creation
 - Async-safe operations using <code>asyncio.Lock</code> for session access
@@ -1488,37 +1488,37 @@
 </thead>
 <tbody>
 <tr>
-<td><a href="../ppxai/commands/handler.py">ppxai/commands/handler.py</a></td>
+<td><a href="../../../ppxai/commands/handler.py">ppxai/commands/handler.py</a></td>
 <td style="text-align: right;">507</td>
 <td>CommandHandler class (legacy methods commented)</td>
 <td>✅ Command Factory</td>
 </tr>
 <tr>
-<td><a href="../ppxai/server/http.py">ppxai/server/http.py</a></td>
+<td><a href="../../../ppxai/server/http.py">ppxai/server/http.py</a></td>
 <td style="text-align: right;">2,247</td>
 <td>HTTP + session + consent mixed</td>
 <td>✅ SessionManager extracted</td>
 </tr>
 <tr>
-<td><a href="../ppxai/engine/client.py">ppxai/engine/client.py</a></td>
+<td><a href="../../../ppxai/engine/client.py">ppxai/engine/client.py</a></td>
 <td style="text-align: right;">1,311</td>
 <td>Core logic, providers, tools, sessions</td>
 <td>✅ Refactored (36% reduction)</td>
 </tr>
 <tr>
-<td><a href="../ppxai/config/">ppxai/config/</a></td>
+<td><a href="../../../ppxai/config">ppxai/config/</a></td>
 <td style="text-align: right;">~700</td>
 <td>Config package with store, loader, public API</td>
 <td>✅ ConfigStore pattern</td>
 </tr>
 <tr>
-<td><a href="../vscode-extension/src/chatPanel.ts">vscode-extension/src/chatPanel.ts</a></td>
+<td><a href="../../../vscode-extension/src/chatPanel.ts">vscode-extension/src/chatPanel.ts</a></td>
 <td style="text-align: right;">2,773</td>
 <td>Event/command handling</td>
 <td>✅ Phase 4 Complete</td>
 </tr>
 <tr>
-<td><a href="../vscode-extension/src/handlers/">vscode-extension/src/handlers/</a></td>
+<td><a href="../../../vscode-extension/src/handlers">vscode-extension/src/handlers/</a></td>
 <td style="text-align: right;">1,658</td>
 <td>Extracted handlers module</td>
 <td>✅ New (Phases 2-4)</td>
@@ -1526,7 +1526,7 @@
 </tbody>
 </table>
 <p><strong>client.py Refactoring - ✅ Completed (v1.13.10):</strong>
-See <a href="DESIGN-CLIENT-REFACTOR.md">DESIGN-CLIENT-REFACTOR.md</a> for full details:
+See <a href="../../v1.15.2-completed/DESIGN-CLIENT-REFACTOR/">DESIGN-CLIENT-REFACTOR.md</a> for full details:
 - Phase 1: Config cleanup - Created <code>config/defaults.py</code>, removed lazy imports
 - Phase 2: Tool parser - Extracted to <code>tools/parser.py</code> (308 lines)
 - Phase 3: Shell classify - Moved <code>classify_shell_command()</code> to consent.py
@@ -1545,7 +1545,7 @@ Migrated to Command Factory pattern in <code>ppxai/commands/</code> package:
 - <code>agent.py</code> - /agent, /undo, /checkpoint
 - Legacy methods in handler.py commented with deprecation notice (removal in v1.14.x)</p>
 <p><strong>chatPanel.ts Refactoring - ✅ Completed (v1.13.10):</strong>
-See <a href="DESIGN-CHATPANEL-REFACTOR.md">DESIGN-CHATPANEL-REFACTOR.md</a> for full details:
+See <a href="../../v1.15.2-completed/DESIGN-CHATPANEL-REFACTOR/">DESIGN-CHATPANEL-REFACTOR.md</a> for full details:
 - Phase 1: Extracted webview CSS/JS to <code>media/webview/</code> (41% reduction, 5,123→3,045 lines)
 - Phase 2: Command handlers with IoC pattern (handlers/commands.ts, types.ts)
 - Phase 3: EventBus architecture (eventBus.ts, stream.ts, UI subscriptions)
@@ -1588,7 +1588,7 @@ Converted monolithic <code>config.py</code> (1,352 lines) to <code>config/</code
 <h2 id="high-priority">High Priority<a class="headerlink" href="#high-priority" title="Permanent link">&para;</a></h2>
 <h3 id="4-code-duplication-container-tools">4. Code Duplication - Container Tools<a class="headerlink" href="#4-code-duplication-container-tools" title="Permanent link">&para;</a></h3>
 <p><strong>Status:</strong> ✅ Completed (v1.13.10)
-<strong>File:</strong> <a href="../ppxai/engine/tools/builtin/container.py">ppxai/engine/tools/builtin/container.py</a> (738 lines)</p>
+<strong>File:</strong> <a href="../../../ppxai/engine/tools/builtin/container.py">ppxai/engine/tools/builtin/container.py</a> (738 lines)</p>
 <p><strong>Resolution:</strong> Refactored to use inheritance hierarchy:
 - <code>CLITool</code> - Base class for read-only CLI tools
 - <code>ConsentCLITool</code> - Base class for tools requiring user consent
@@ -1598,7 +1598,7 @@ Converted monolithic <code>config.py</code> (1,352 lines) to <code>config/</code
 <hr />
 <h3 id="5-code-duplication-consent-manager">5. Code Duplication - Consent Manager<a class="headerlink" href="#5-code-duplication-consent-manager" title="Permanent link">&para;</a></h3>
 <p><strong>Status:</strong> ✅ Completed (v1.13.10)
-<strong>File:</strong> <a href="../ppxai/common/consent.py">ppxai/common/consent.py</a></p>
+<strong>File:</strong> <a href="../../../ppxai/common/consent.py">ppxai/common/consent.py</a></p>
 <p><strong>Resolution:</strong> Extracted <code>BaseConsentManager</code> class with shared logic:
 - All state initialization (files, commands, patterns)
 - Pattern loading and command classification
@@ -1617,11 +1617,11 @@ Converted monolithic <code>config.py</code> (1,352 lines) to <code>config/</code
 - Verified no circular dependencies exist in the codebase
 - Updated <code>docs/architecture.md</code> with accurate DAG documentation</p>
 <p><strong>Note:</strong> The only pattern truly needed is <code>TYPE_CHECKING</code> in <code>tools/builtin/*.py</code>.</p>
-<p><strong>Future Improvement:</strong> A Tool Factory pattern could eliminate TYPE_CHECKING entirely and enable dynamic tool loading. See <a href="DESIGN-TOOL-FACTORY.md">DESIGN-TOOL-FACTORY.md</a> for detailed analysis.</p>
+<p><strong>Future Improvement:</strong> A Tool Factory pattern could eliminate TYPE_CHECKING entirely and enable dynamic tool loading. See <a href="../../v1.15.2-completed/DESIGN-TOOL-FACTORY/">DESIGN-TOOL-FACTORY.md</a> for detailed analysis.</p>
 <hr />
 <h3 id="7-dangerous-eval-usage">7. Dangerous eval() Usage<a class="headerlink" href="#7-dangerous-eval-usage" title="Permanent link">&para;</a></h3>
 <p><strong>Status:</strong> ✅ Completed (v1.13.10)
-<strong>File:</strong> <a href="../ppxai/engine/tools/builtin/calculator.py">ppxai/engine/tools/builtin/calculator.py</a></p>
+<strong>File:</strong> <a href="../../../ppxai/engine/tools/builtin/calculator.py">ppxai/engine/tools/builtin/calculator.py</a></p>
 <p><strong>Resolution:</strong> Replaced <code>eval()</code> with AST-based safe evaluation:
 - Uses <code>ast.parse()</code> to parse expressions into AST
 - Custom <code>_safe_eval()</code> function walks the AST
@@ -1643,7 +1643,7 @@ Converted monolithic <code>config.py</code> (1,352 lines) to <code>config/</code
 <hr />
 <h3 id="9-inconsistent-error-handling-in-http-endpoints">9. Inconsistent Error Handling in HTTP Endpoints<a class="headerlink" href="#9-inconsistent-error-handling-in-http-endpoints" title="Permanent link">&para;</a></h3>
 <p><strong>Status:</strong> ✅ Partially Addressed (v1.13.10)
-<strong>File:</strong> <a href="../ppxai/server/http.py">ppxai/server/http.py</a></p>
+<strong>File:</strong> <a href="../../../ppxai/server/http.py">ppxai/server/http.py</a></p>
 <p><strong>Resolution (v1.13.10):</strong>
 - Removed unused <code>JSONResponse</code> import
 - Standardized static file 404 error messages to include requested filename
@@ -1657,7 +1657,7 @@ Converted monolithic <code>config.py</code> (1,352 lines) to <code>config/</code
 <hr />
 <h3 id="10-configuration-complexity">10. Configuration Complexity<a class="headerlink" href="#10-configuration-complexity" title="Permanent link">&para;</a></h3>
 <p><strong>Status:</strong> ✅ Completed (v1.13.10)
-<strong>File:</strong> <a href="../ppxai/config/">ppxai/config/</a> (~700 lines across 3 files)</p>
+<strong>File:</strong> <a href="../../../ppxai/config">ppxai/config/</a> (~700 lines across 3 files)</p>
 <p><strong>Resolution:</strong> Split monolithic <code>config.py</code> into <code>config/</code> package:
 - <code>config/store.py</code> - Thread-safe ConfigStore singleton
 - <code>config/loader.py</code> - Loading, validation, built-in providers
@@ -1670,7 +1670,7 @@ Converted monolithic <code>config.py</code> (1,352 lines) to <code>config/</code
 <hr />
 <h3 id="11-abrupt-process-termination">11. Abrupt Process Termination<a class="headerlink" href="#11-abrupt-process-termination" title="Permanent link">&para;</a></h3>
 <p><strong>Status:</strong> ✅ Completed (v1.13.10)
-<strong>File:</strong> <a href="../ppxai/server/http.py">ppxai/server/http.py</a></p>
+<strong>File:</strong> <a href="../../../ppxai/server/http.py">ppxai/server/http.py</a></p>
 <p><strong>Resolution (v1.13.10):</strong>
 - Replaced <code>os._exit(0)</code> with graceful shutdown via <code>asyncio.Event</code>
 - Added <code>_shutdown_event</code> global for signaling shutdown
@@ -1682,7 +1682,7 @@ Converted monolithic <code>config.py</code> (1,352 lines) to <code>config/</code
 <h2 id="low-priority">Low Priority<a class="headerlink" href="#low-priority" title="Permanent link">&para;</a></h2>
 <h3 id="12-legacy-backward-compatibility-code">12. Legacy Backward Compatibility Code<a class="headerlink" href="#12-legacy-backward-compatibility-code" title="Permanent link">&para;</a></h3>
 <p><strong>Status:</strong> ✅ Addressed (v1.13.10)
-<strong>File:</strong> <a href="../ppxai/commands/handler.py">ppxai/commands/handler.py</a></p>
+<strong>File:</strong> <a href="../../../ppxai/commands/handler.py">ppxai/commands/handler.py</a></p>
 <p><strong>Resolution:</strong> Added deprecation warning for legacy constructor signature:
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="s2">"Passing client object to CommandHandler is deprecated. "</span>
@@ -1725,7 +1725,7 @@ Converted monolithic <code>config.py</code> (1,352 lines) to <code>config/</code
 <hr />
 <h3 id="14-magic-string-literals">14. Magic String Literals<a class="headerlink" href="#14-magic-string-literals" title="Permanent link">&para;</a></h3>
 <p><strong>Status:</strong> ✅ Completed (v1.13.10)
-<strong>File:</strong> <a href="../ppxai/constants.py">ppxai/constants.py</a></p>
+<strong>File:</strong> <a href="../../../ppxai/constants.py">ppxai/constants.py</a></p>
 <p><strong>Resolution:</strong> Converted class-based constants to <code>str, Enum</code> with validation helpers:
 - <code>ProviderName</code>, <code>MessageRole</code>, <code>ConsentMode</code>, <code>ConsentResponse</code> - Now proper enums
 - <code>SystemPromptMode</code>, <code>ShellRiskLevel</code>, <code>FileEncoding</code>, <code>CheckpointBackend</code> - Now proper enums
@@ -1740,7 +1740,7 @@ Converted monolithic <code>config.py</code> (1,352 lines) to <code>config/</code
 <hr />
 <h3 id="15-typescript-let-vs-const">15. TypeScript let vs const<a class="headerlink" href="#15-typescript-let-vs-const" title="Permanent link">&para;</a></h3>
 <p><strong>Status:</strong> ✅ Verified Correct (v1.13.10)
-<strong>File:</strong> <a href="../vscode-extension/src/chatPanel.ts">vscode-extension/src/chatPanel.ts</a></p>
+<strong>File:</strong> <a href="../../../vscode-extension/src/chatPanel.ts">vscode-extension/src/chatPanel.ts</a></p>
 <p><strong>Analysis (v1.13.10):</strong> Reviewed all 46 <code>let</code> declarations in chatPanel.ts:
 - All are legitimately reassigned (if/else branches, loops, async operations)
 - Original line numbers were outdated/incorrect
@@ -1752,11 +1752,11 @@ Converted monolithic <code>config.py</code> (1,352 lines) to <code>config/</code
 <p><strong>Status:</strong> ✅ Completed (v1.13.10)
 <strong>Scope:</strong> New files created</p>
 <p><strong>Resolution:</strong> Full containerized deployment support added:
-- <a href="../Dockerfile">Dockerfile</a> - Multi-stage build with uv package manager
-- <a href="../docker-compose.yaml">docker-compose.yaml</a> - Local development setup
-- <a href="../kubernetes/deployment.yaml">kubernetes/deployment.yaml</a> - Deployment with health probes
-- <a href="../kubernetes/service.yaml">kubernetes/service.yaml</a> - ClusterIP service
-- <a href="../kubernetes/ingress.yaml">kubernetes/ingress.yaml</a> - Nginx ingress with SSE support</p>
+- <a href="../../../deploy/docker/Dockerfile">Dockerfile</a> - Multi-stage build with uv package manager
+- <a href="../../../deploy/compose/docker-compose.yaml">docker-compose.yaml</a> - Local development setup
+- <a href="../../../deploy/k8s/standalone/deployment.yaml">kubernetes/deployment.yaml</a> - Deployment with health probes
+- <a href="../../../deploy/k8s/standalone/service.yaml">kubernetes/service.yaml</a> - ClusterIP service
+- <a href="../../../deploy/k8s/standalone/ingress.yaml">kubernetes/ingress.yaml</a> - Nginx ingress with SSE support</p>
 <p><strong>Health endpoints</strong> (added in v1.13.10):
 - <code>/health</code> - Liveness probe (always returns 200)
 - <code>/ready</code> - Readiness probe (checks session manager)</p>

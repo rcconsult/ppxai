@@ -1702,7 +1702,7 @@
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>Re-enable autocomplete for Textual TUI using minimal tab-based completion instead of dropdown UI.</p>
 <p><strong>Key Decisions:</strong>
-1. <strong>Tab-based cycling</strong> - Use existing <a href="../ppxai/tui/completer.py">ppxai/tui/completer.py</a> logic with simple Tab cycling (proven in <a href="../test_tab_focus.py">test_tab_focus.py</a>)
+1. <strong>Tab-based cycling</strong> - Use existing <a href="../../../ppxai/tui/completer.py">ppxai/tui/completer.py</a> logic with simple Tab cycling (proven in <a href="../../../tests/test_tab_focus.py">test_tab_focus.py</a>)
 2. <strong>Terminal-like UX for file commands</strong> - <code>/show README.md</code> (no @ prefix) matches standard shell behavior
 3. <strong>@ prefix for context injection</strong> - <code>@file:README.md</code> only in messages for context injection</p>
 <p><strong>What This Provides:</strong>
@@ -2452,9 +2452,9 @@
 <hr />
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../test_tab_focus.py">test_tab_focus.py</a> - Proof of concept</li>
-<li><a href="../ppxai/tui/completer.py">ppxai/tui/completer.py</a> - Complete autocomplete logic</li>
-<li><a href="TODO-v1.15.2-TEXTUAL-TUI-AUTOCOMPLETE.md">docs/TODO-v1.15.2-TEXTUAL-TUI-AUTOCOMPLETE.md</a> - Investigation</li>
+<li><a href="../../../tests/test_tab_focus.py">test_tab_focus.py</a> - Proof of concept</li>
+<li><a href="../../../ppxai/tui/completer.py">ppxai/tui/completer.py</a> - Complete autocomplete logic</li>
+<li><a href="../../v1.15.1-completed/TODO-v1.15.2-TEXTUAL-TUI-AUTOCOMPLETE/">docs/TODO-v1.15.2-TEXTUAL-TUI-AUTOCOMPLETE.md</a> - Investigation</li>
 <li><a href="../TODO-v1.15.2-CONTEXT-INJECTOR-PARITY/">docs/TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md</a> - Context provider parity</li>
 <li><a href="../AUTOCOMPLETE-SUPPORT-ANALYSIS/">docs/AUTOCOMPLETE-SUPPORT-ANALYSIS.md</a> - Feature matrix</li>
 </ul>

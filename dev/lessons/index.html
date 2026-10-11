@@ -1263,8 +1263,9 @@ criteria:</p>
 <ul>
 <li>"ppxai imports <code>mcp</code> nowhere — the <code>[mcp]</code> optional extra is intent,
   not implementation" (verifiable: <code>Grep "import mcp" ppxai/</code>)</li>
-<li>"<code>tool_manager.py:193</code> hardcodes <code>source: engine</code>, blocking
-  extension by external tool sources" (verifiable: open the file)</li>
+<li>"<code>ppxai/engine/tools/manager.py</code> hardcodes <code>source: engine</code>, blocking
+  extension by external tool sources" (verifiable:
+  <code>grep -n '"source": "engine"' ppxai/engine/tools/manager.py</code>)</li>
 <li>"ADR 0006 producer-side keys MUST stay off the wire — the
   <code>__debug__</code>-gated <code>assert_wire_blocks_clean</code> validator enforces it"
   (verifiable: read <code>engine/uploaded_file.py</code>)</li>
@@ -1306,8 +1307,13 @@ hazards) with noise (per-developer prefs) and hurt both.</p>
 </span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
 </span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>Links to ADRs, ROADMAP entries, or other lessons.
 </span></code></pre></div>
-<p>Keep each lesson under 100 lines. If the topic needs more space,
-it's probably an ADR or design doc, not a lesson.</p>
+<p>Aim to keep each lesson under 100 lines, but this is a guideline, not a
+fence: a lesson accumulates dated "Update" sections as the hazard it
+records gets fixed or sharpened, and several run well past 100 lines in
+practice (measured 2026-09-28: 9 of 22 do). If a lesson keeps growing
+because the underlying mechanism keeps changing shape, that's a signal
+it may deserve its own ADR or design doc instead — but don't trim a
+lesson just to hit the number.</p>
 <h2 id="promotion-workflow-for-ai-agents">Promotion workflow (for AI agents)<a class="headerlink" href="#promotion-workflow-for-ai-agents" title="Permanent link">&para;</a></h2>
 <p>When you discover a hazard during a session:</p>
 <ol>
@@ -1325,7 +1331,7 @@ discoverable later.</p>
 <ul>
 <li><a href="mcp-not-yet-integrated/">mcp-not-yet-integrated.md</a> — ppxai
   has filename-level MCP breadcrumbs but zero integration; v1.20.x
-  plan at <code>docs/MCP-INTEGRATION-PLAN.md</code></li>
+  plan at <code>docs/mcp-integration-plan.md</code></li>
 <li><a href="config-source-resolution/">config-source-resolution.md</a> —
   <code>PPXAI_CONFIG_FILE</code> (often set via repo-root <code>.env</code>) overrides
   <code>./ppxai-config.json</code>; editing the obvious project config can
@@ -1343,10 +1349,12 @@ discoverable later.</p>
   spawned binary die silently, so acceptance tests the OLD process — free
   the port first (<code>gateway-smoke.py</code> now guards this)</li>
 <li><a href="perplexity-alternation-retired-orphan-toolcalls-is-real/">perplexity-alternation-retired-orphan-toolcalls-is-real.md</a> —
-  Perplexity Sonar relaxed the old "messages must alternate" rule (verified
-  live); the recurring tools-chat 400 is the provider-agnostic orphan
-  <code>assistant.tool_calls</code> case — check the actual wire error before adding
-  another alternation patch</li>
+  the recurring tools-chat 400 is the provider-agnostic orphan
+  <code>assistant.tool_calls</code> case, not a provider-specific alternation rule —
+  check the actual wire error before adding another alternation patch.
+  Perplexity Sonar (which had relaxed its old "messages must alternate"
+  rule) is the historical origin of the pattern-match, now moot since
+  ADR 0015 removed it as a chat provider</li>
 <li><a href="stale-tests-outlive-deleted-behavior/">stale-tests-outlive-deleted-behavior.md</a> —
   removing a behavior leaves its tests behind; they fail as assumed-
   environmental noise or keep passing against a renamed surface while
@@ -1407,6 +1415,14 @@ discoverable later.</p>
   patching idiom declared a batch safe that then shipped 15 failures. Read
   the COUNTS, never the exit code — "5,684 passed" cannot be forged by a
   pipe. A false "fine" ships; a false "broken" only costs time (2026-09-01).</li>
+<li><a href="outbound-http-clients-take-the-shared-tls-context/">outbound-http-clients-take-the-shared-tls-context.md</a>
+  — a new outbound client passes <code>verify=tls_verify()</code> (or <code>context=tls_ssl_context()</code>
+  for urllib). httpx's default trusts certifi only (fails behind TLS
+  inspection); a CA path replaces the system roots (fails off that network).</li>
+<li><a href="loopback-http-hops-must-not-read-proxy-env/">loopback-http-hops-must-not-read-proxy-env.md</a>
+  — with <code>HTTP_PROXY</code> set, httpx and urllib send <code>localhost</code>/<code>127.0.0.1</code> to the
+  proxy. Loopback and socket hops need <code>trust_env=False</code> (or an explicit
+  <code>transport=</code>, or urllib <code>ProxyHandler({})</code>); four unguarded ones listed.</li>
 <li><a href="mutation-tests-that-never-ran/">mutation-tests-that-never-ran.md</a> — a
   mutation test's failure modes all resolve to "all green", which is what a
   covered guard also looks like. An anchor that matches twice patches the
@@ -1429,8 +1445,10 @@ discoverable later.</p>
 <li><a href="measure-against-a-clean-export-not-a-dirty-tree/">measure-against-a-clean-export-not-a-dirty-tree.md</a>
   — a measurement taken against a tree with uncommitted changes describes
   code no commit contains; stamp a sha next to it and it becomes a
-  confident wrong number about that sha. <code>git status --short</code> before
-  trusting any "measured on this tree" claim; to pin a number to a commit,
+  confident wrong number about that sha. <code>git status --short
+  --ignored=matching</code> before trusting any "measured on this tree" claim —
+  plain <code>--short</code> hides ignored-but-present entries (<code>.env</code>,
+  <code>__pycache__</code>, ...); to pin a number to a commit,
   export it clean first (<code>git archive &lt;sha&gt; | tar -x</code>) and measure there.</li>
 <li><a href="a-doc-comment-promising-a-mechanism-is-not-the-mechanism/">a-doc-comment-promising-a-mechanism-is-not-the-mechanism.md</a>
   — <code>vscode-extension/src/appState.ts</code>'s header claimed a runtime

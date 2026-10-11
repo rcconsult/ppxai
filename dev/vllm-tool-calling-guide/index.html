@@ -2051,7 +2051,7 @@
 <thead>
 <tr>
 <th>Mode</th>
-<th>Config Flag</th>
+<th>Config (model's <code>facts</code> block)</th>
 <th>vLLM Flags Required</th>
 <th>Reliability</th>
 </tr>
@@ -2059,18 +2059,24 @@
 <tbody>
 <tr>
 <td><strong>Prompt-Based</strong></td>
-<td><code>native_tool_calling: false</code></td>
+<td><code>"tool_mode": "prompt_based"</code></td>
 <td>None</td>
 <td>✅ High</td>
 </tr>
 <tr>
 <td><strong>Native</strong></td>
-<td><code>native_tool_calling: true</code></td>
+<td><code>"tool_mode": "native"</code></td>
 <td><code>--enable-auto-tool-choice</code></td>
 <td>⚠️ May hit HarmonyError</td>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><code>native_tool_calling</code> (as a provider <code>capabilities</code> flag) is a <strong>dead
+key</strong> since ADR 0012 — parsed and ignored. The live control is
+<code>providers.&lt;p&gt;.models.&lt;m&gt;.facts.tool_mode</code>; see
+<a href="../tool-calling/#configuration-reference">docs/tool-calling.md</a>.</p>
+</blockquote>
 <h3 id="recommended-prompt-based-tool-calling">Recommended: Prompt-Based Tool Calling<a class="headerlink" href="#recommended-prompt-based-tool-calling" title="Permanent link">&para;</a></h3>
 <p><strong>This mode bypasses vLLM's Harmony parsing entirely.</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
@@ -2080,17 +2086,21 @@
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://your-vllm-endpoint:8000/v1"</span><span class="p">,</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">"api_key_env"</span><span class="p">:</span><span class="w"> </span><span class="s2">"VLLM_API_KEY"</span><span class="p">,</span>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"openai/gpt-oss-120b"</span><span class="p">,</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">        </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">}</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">        </span><span class="nt">"openai/gpt-oss-120b"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">          </span><span class="nt">"facts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"tool_mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"prompt_based"</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="p">}</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="p">}</span>
 </span></code></pre></div>
+<p>(This is also the shipped default for <code>openai/gpt-oss*</code> — see the caveat
+under "Recommended Configuration" below.)</p>
 <hr />
 <h2 id="how-prompt-based-tool-calling-works">How Prompt-Based Tool Calling Works<a class="headerlink" href="#how-prompt-based-tool-calling-works" title="Permanent link">&para;</a></h2>
 <h3 id="1-system-prompt-injection">1. System Prompt Injection<a class="headerlink" href="#1-system-prompt-injection" title="Permanent link">&para;</a></h3>
-<p>When <code>native_tool_calling: false</code>, ppxai injects tool definitions into the system prompt:</p>
+<p>When a model's <code>facts.tool_mode</code> is <code>"prompt_based"</code>, ppxai injects tool definitions into the system prompt:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># From ppxai/engine/tools/manager.py — see the `get_tools_prompt` method</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># (line numbers drift; search for the symbol name rather than citing a range)</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
@@ -2412,7 +2422,7 @@ def normalize_tool_call(data):
 <hr />
 <h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Use prompt-based mode</strong> (<code>native_tool_calling: false</code>) to avoid HarmonyError</li>
+<li><strong>Use prompt-based mode</strong> (<code>facts.tool_mode: "prompt_based"</code>) to avoid HarmonyError</li>
 <li><strong>Inject tool descriptions</strong> into system prompt with JSON format instructions</li>
 <li><strong>Parse responses</strong> using multiple strategies (JSON, code blocks, brace matching)</li>
 <li><strong>Handle GPT-OSS quirks</strong>: nested structures, parameter name variations</li>
@@ -2433,14 +2443,14 @@ def normalize_tool_call(data):
 </thead>
 <tbody>
 <tr>
-<td><strong>Native</strong> (<code>native_tool_calling: true</code>)</td>
+<td><strong>Native</strong> (<code>facts.tool_mode: "native"</code>)</td>
 <td>✅ Works</td>
 <td>Requires vLLM with Harmony fix (PR #30205)</td>
 </tr>
 <tr>
-<td><strong>Prompt-based</strong> (<code>native_tool_calling: false</code>)</td>
+<td><strong>Prompt-based</strong> (<code>facts.tool_mode: "prompt_based"</code>)</td>
 <td>✅ Works</td>
-<td>Fallback for older vLLM versions</td>
+<td>Fallback for older vLLM versions; also the shipped default for <code>openai/gpt-oss*</code></td>
 </tr>
 </tbody>
 </table>
@@ -2475,33 +2485,36 @@ Harmony parsing issue "has been fixed in vLLM (PR #30205)" until 2026-09-20,
 which overclaims on both counts.</p>
 <h3 id="recommended-configuration">Recommended Configuration<a class="headerlink" href="#recommended-configuration" title="Permanent link">&para;</a></h3>
 <blockquote>
-<p>⚠️ <strong>ppxai overrides this today, whatever your vLLM version.</strong> The
+<p>⚠️ <strong>ppxai defaults gpt-oss to prompt-based tool calling.</strong> The shipped
 <code>openai/gpt-oss*</code> facts row pins <code>tool_mode='prompt_based'</code>
-(<code>ppxai/engine/model_facts.py:944</code>), and since ADR 0012 that row answers
-the whole question at dispatch (<code>ppxai/engine/chat.py:646</code>,
-<code>use_native_tools = facts.tool_mode != "prompt_based"</code>) — so setting
-<code>native_tool_calling: true</code> for a gpt-oss model is accepted by config and
-then ignored. (This used to be a <code>model_profiles.py</code> profile; that module
-was deleted in Item 65 and the pin moved to the facts table with it.)
-Treat the block below as what to use <em>once that pin is lifted</em>, not as a
-working configuration; the prompt-based block underneath is what actually
-runs. On upstream state, see the table above — #23567 is closed <strong>as not
-planned</strong>, which is not the same as fixed.</p>
+(<code>ppxai/engine/model_facts.py</code>), and since ADR 0012 the resolved facts
+decide dispatch (<code>ppxai/engine/chat.py</code>:
+<code>use_native_tools = facts.tool_mode != "prompt_based"</code>). <strong>Your per-model
+facts override that row:</strong> <code>providers.&lt;p&gt;.models.&lt;m&gt;.facts.tool_mode:
+"native"</code> is applied on top of the shipped row (<code>resolve_model_facts()</code> in
+<code>ppxai/engine/facts_config.py</code>), so the native block below is a working
+opt-in. Only the older <code>capabilities.native_tool_calling</code> key is dead and
+ignored. (The pin used to be a <code>model_profiles.py</code> profile; that module was
+deleted in Item 65 and the pin moved to the facts table.) Opt in knowing
+the upstream state in the table above: #23567 (the multi-turn HarmonyError)
+is closed <strong>as not planned</strong>, which is not the same as fixed.</p>
 </blockquote>
-<p><strong>With vLLM past PR #30205, once the facts-row pin is lifted:</strong> native tool
-calling gives the best performance — but see the caveat above; #30205 is not
-a fix for #23567's HarmonyError:</p>
+<p><strong>With vLLM past PR #30205 — the native opt-in:</strong> native tool calling gives
+the best performance, with the HarmonyError caveat above; #30205 is not a fix
+for #23567:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p">{</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nt">"vllm-gpt-oss"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://your-vllm:8000/v1"</span><span class="p">,</span>
 </span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"openai/gpt-oss-120b"</span><span class="p">,</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">      </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">        </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="p">}</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">        </span><span class="nt">"openai/gpt-oss-120b"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">          </span><span class="nt">"facts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"tool_mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"native"</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">        </span><span class="p">}</span>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>With older vLLM (pre-fix):</strong> Use prompt-based mode to avoid HarmonyError:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="p">{</span>
@@ -2509,12 +2522,14 @@ a fix for #23567's HarmonyError:</p>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">"vllm-gpt-oss"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">      </span><span class="nt">"base_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://your-vllm:8000/v1"</span><span class="p">,</span>
 </span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">      </span><span class="nt">"default_model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"openai/gpt-oss-120b"</span><span class="p">,</span>
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">      </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">        </span><span class="nt">"native_tool_calling"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-17-10"><a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-17-11"><a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a><span class="p">}</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">      </span><span class="nt">"models"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">        </span><span class="nt">"openai/gpt-oss-120b"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">          </span><span class="nt">"facts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"tool_mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"prompt_based"</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="w">        </span><span class="p">}</span>
+</span><span id="__span-17-10"><a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-17-11"><a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-17-12"><a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-17-13"><a id="__codelineno-17-13" name="__codelineno-17-13" href="#__codelineno-17-13"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="future-considerations">Future Considerations<a class="headerlink" href="#future-considerations" title="Permanent link">&para;</a></h3>
 <ol>

@@ -1662,16 +1662,19 @@ the 3 <code>/v1/tokens</code> paths verified present). What has drifted is <stro
 the work happens inside a route</strong>, plus two web-client sections that
 describe commands which no longer exist.</p>
 <p><strong>1. Admission moved out of the routes (<code>135abf48</code>).</strong>
-<code>ppxai/engine/task_authorizer.py::authorize_task()</code> (<code>:1274</code>) is the
-single admission point for the task tier, called from
-<code>routes/agent_v1.py:714</code>. <code>authorize_oneshot()</code> is its <code>/run</code> sibling,
-called at <code>:364</code>. These graphs draw those gates inline in the route.
+<code>ppxai/engine/task_authorizer.py::authorize_task()</code> (<code>:1275</code>, banner
+previously said <code>:1274</code>) is the single admission point for the task
+tier, called from <code>routes/agent_v1.py:728</code> (banner previously said
+<code>:714</code>). <code>authorize_oneshot()</code> is its <code>/run</code> sibling, called at <code>:371</code>
+(banner previously said <code>:364</code>). These graphs draw those gates inline
+in the route. Line cites drift fast here — prefer the symbol names.
 Specifically superseded: <strong>Increment 4</strong> (provider/model resolution —
 <code>create_agent_task</code> no longer calls <code>_v1_provider_or_400</code> at all; that
 now happens inside <code>authorize()</code> via <code>validate_provider_or_error</code>),
 <strong>Increment 5</strong> (the <code>grant_has_shell</code> reject, now at
 <code>task_authorizer.py:1139</code>), and <strong>§N</strong> (the workdir/seal decision, now
-gate 7 of <code>authorize()</code>, read back as <code>auth.workdir_ignored</code>).
+gate 7 of <code>authorize()</code>, read back as <code>auth.workdir_ignored</code> — always
+false since 1.19.4, when a sealed run began honoring its requested workdir).
 <strong>Increment 6 is NOT affected</strong> — the budget dict is still built in the
 route and passed through unchanged.</p>
 <p><strong>Worth knowing for the redraw:</strong> the in-process TUI path does <em>not</em> call
@@ -1680,8 +1683,8 @@ parameter</strong>, so admission is enforced by the type rather than by a call �
 "was this authorized?" is unanswerable-in-the-negative at that seam. That
 is a genuinely different topology from the HTTP route and is why a
 mechanical find-and-replace of the gate boxes would be wrong.</p>
-<p><strong>2. <code>build_task_runner</code> moved</strong> to <code>ppxai/engine/task_runner.py:152</code>
-(v1.19.1, for the T8b in-process port). Inc 7 and T2 still attribute it
+<p><strong>2. <code>build_task_runner</code> moved</strong> to <code>ppxai/engine/task_runner.py:240</code>
+(banner previously said <code>:152</code>; v1.19.1, for the T8b in-process port). Inc 7 and T2 still attribute it
 to <code>routes/agent_v1.py</code>, which now only re-exports it — and its own
 comment says <em>"NOT a patch point… Patch
 <code>ppxai.engine.task_runner.build_task_runner</code> instead."</em></p>
@@ -1696,11 +1699,24 @@ the Inc 2 and Inc 3 web-client surfaces and <strong>§K</strong> in its entirety
 run goes through the <strong>full task-tier sandbox</strong> with a hardwired
 <code>{web_search}</code> grant, not the plain oneshot path Inc 1/2 draw
 (<code>agent_v1.py:385-410</code>). No section covers this.</p>
-<p><strong>5. <code>NetworkPolicy</code> gained <code>provider_name</code></strong> (<code>network_policy.py:364</code>) and
+<p><strong>5. <code>NetworkPolicy</code> gained <code>provider_name</code></strong> (<code>ppxai/engine/tools/network_policy.py:298</code>,
+banner previously omitted the path and said <code>:364</code>) and
 <code>tool_targets()</code> now resolves web_search hosts per-provider via
 <code>resolve_web_search_backend()</code> rather than the fixed four-host superset
 Inc 5 shows. The allow-list is also passed through <code>apply_egress_ceiling()</code>
-before construction (<code>task_runner.py:305-315</code>).</p>
+before construction (<code>task_runner.py:393</code>, banner previously said
+<code>:305-315</code>).</p>
+<p><strong>6. §I is superseded by ADR 0014/0015.</strong> §I still describes oneshot
+grounding as native-only, gated on <code>tools.web_search.oneshot_grounding</code>,
+with a Perplexity "sonar* searches intrinsically" branch. Since v1.19.3,
+the gate is <code>execution.run.grounding</code> with modes <code>off</code>/<code>retrieve</code>/<code>native</code>
+(<code>ppxai/config/execution.py::GROUNDING_MODES</code>; <code>True</code> means <code>"retrieve"</code> —
+a search through the <code>ppxai/engine/search/</code> layer, for ANY provider, not
+just Gemini) and the Perplexity chat provider no longer exists (ADR 0015).
+§N's example command (<code>"/task run "…" [--work-dir &lt;p&gt;]"</code>) is
+also stale — ADR 0011 renamed this to <code>/task "…" [--work-dir &lt;p&gt;]</code>. The
+same stale <code>/task run</code> form also appears below at "§N — workdir
+alignment" and in the <code>run_in_background._drive success</code> graph.</p>
 <p>Redrawing remains open work; this banner is the map of what to redraw.</p>
 </blockquote>
 <p><strong>Purpose:</strong> a reference map of what each <code>/v1/agent/*</code> endpoint actually
@@ -2536,8 +2552,8 @@ per-run intent, uniform across <code>/task</code>, resume, and spawned children:
 <div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>"/task run "…" [--work-dir &lt;p&gt;]"        [web task-controller.js / VSCode taskController.ts]
 </span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>  -&gt; body.workdir = --work-dir | session workingDir (appState)   # like provider/model
 </span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>  -&gt; POST /v1/agent/task {…, workdir}
-</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>       -&gt; seal ON  -&gt; ignore + respond {workdir_ignored:true}    # jail always wins
-</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>                       client renders "⚠️ sandbox seal active …" # warn-don't-fail
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>       -&gt; seal ON  -&gt; workdir becomes the jail's write+read root # since 1.19.4 (was: ignored,
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>                       respond {workdir_ignored:false}            #  workdir_ignored:true)
 </span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>       -&gt; seal OFF -&gt; 400 unless isdir; meta.workdir = abspath   # fail at launch, not mid-run
 </span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>  _runner (build_task_runner(workdir=…))
 </span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>       -&gt; sealed:   engine.set_working_dir(&lt;jail&gt;/work)          # unchanged (T2)
@@ -2613,8 +2629,14 @@ Live-verified: launch → tool loop → <code>completed</code>; <code>cancel</co
 <code>NetworkPolicy</code>). Changed: <code>config/tools.py</code> (parse <code>sandbox</code>),
 <code>agent_scoped_tools.py</code> (path chokepoint), <code>agent_v1.build_task_runner</code>
 (per-run workdir + policy wiring), <code>task-run-view.js</code> (<code>path_denied</code> in the log).
-<strong>Off by default</strong> — the jail engages only on <code>enforcement:"in_process"</code>, so an
-unconfigured tool-capable run reads/writes as before (non-breaking).</p>
+<strong>On by default since 1.19.4</strong> (debt Item 46) — <code>enforcement</code> defaults to
+<code>"in_process"</code>; the jail is off only when <code>"off"</code> is written explicitly. A
+built-in deny list (<code>BUILTIN_DENY</code>) applies to file tools sealed or not, and
+<code>read_paths.deny</code> applies even when <code>"off"</code>. Runs with no file tool in the
+grant get no policy and no scratch folder. The block below is the original T2
+(pre-1.19.4) shape: today a requested workdir is the jail root, and the
+<code>&lt;root&gt;/&lt;run_id&gt;/work</code> scratch folder is only the fallback when none was
+requested.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>build_task_runner._runner(m):                   [engine/task_runner.py]
 </span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>  sandbox = get_execution_task_config()["sandbox"]      [config/execution.py]
 </span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>  if sandbox.enforcement == "in_process":
@@ -2701,7 +2723,7 @@ branch (hold split), GET read paths (lazy reap), <code>config/execution.py</code
 out of the AppState badge set (the run consumes nothing).</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>run_in_background._drive success:                     [engine/agent_runs.py]
 </span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>  body = await runner(meta)
-</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>  ├─ meta.hold_result (top-level /task run — the route sets it)
+</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>  ├─ meta.hold_result (top-level /task — the route sets it)
 </span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>  │    finish_run(status="completed_pending_ack", result=body)   ← record persists
 </span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>  │    persist_state({status, result_ready_at, result_chars})    ← state.json
 </span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>  │    emit_event("agent_result_ready", category="result")       ← INSTEAD of agent_run_complete

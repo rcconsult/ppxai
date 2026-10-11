@@ -1378,9 +1378,12 @@
 PDFs and video are handled, the unified-architecture point) still holds.
 The <strong>model ids and tier claims do not</strong>: this file presents <code>gpt-5.4</code> as
 OpenAI's flagship and <code>gemini-3.1-*</code> as Gemini's newest line, while the
-shipped defaults are <strong><code>gpt-5.6-terra</code></strong> and <strong><code>gemini-3.5-flash</code></strong>, with
-measured <code>gemini-3.6/3.7/3.8-flash</code> rows in <code>ppxai/engine/model_facts.py</code>
-and an Anthropic provider that did not exist when this was written.</p>
+shipped defaults are <strong><code>gpt-5.6-terra</code></strong> and <strong><code>gemini-3.8-flash</code></strong> (since
+2026-09-27), with measured <code>gemini-3.6/3.7/3.8-flash</code> rows in
+<code>ppxai/engine/model_facts.py</code> and an Anthropic provider that did not exist
+when this was written. <strong>Perplexity is also no longer a chat provider</strong>
+(ADR 0015, v1.19.3) — the Sonar matrix below is a historical record;
+Perplexity now ships only as a web-search/grounding backend (ADR 0014).</p>
 <p><strong>For what a given model can actually do today, read
 <code>ppxai/engine/model_facts.py</code> or run <code>/model info</code></strong> — those are the
 resolution sources; this document is not, and nothing in the code reads
@@ -1419,7 +1422,7 @@ it. Treat the matrices below as a research record.</p>
 <td>✅</td>
 <td>✅</td>
 <td>❌</td>
-<td>Best price/perf; production-stable</td>
+<td>Shuts down 2026-10-16 (earliest; the whole 2.5 line); use <code>gemini-3.6-flash</code> or <code>gemini-3.8-flash</code></td>
 </tr>
 <tr>
 <td><code>gemini-3.1-flash-lite</code></td>
@@ -1570,7 +1573,7 @@ it. Treat the matrices below as a research record.</p>
 <td>✅</td>
 <td>❌*</td>
 <td>❌</td>
-<td>Cheapest; simple tasks</td>
+<td>Cheapest; simple tasks. Deprecated 2026-10-01, shutdown 2027-04-01 (→ <code>gpt-6-luna</code>)</td>
 </tr>
 <tr>
 <td><code>gpt-5.2</code></td>
@@ -1586,7 +1589,7 @@ it. Treat the matrices below as a research record.</p>
 <td>✅</td>
 <td>❌</td>
 <td>❌</td>
-<td>Agentic coding specialist</td>
+<td>Agentic coding specialist. Deprecated 2026-10-01, shutdown 2027-04-01 (→ <code>gpt-6-sol</code>)</td>
 </tr>
 </tbody>
 </table>
@@ -1654,7 +1657,7 @@ it. Treat the matrices below as a research record.</p>
 <td>❌</td>
 <td>❌</td>
 <td>✅</td>
-<td>Multi-step reasoning. <strong>This is the id in the shipped config</strong> — plain <code>sonar-reasoning</code> is not configured.</td>
+<td>Multi-step reasoning. Plain <code>sonar-reasoning</code> is not configured. No Perplexity chat model ships any more (ADR 0015) — Perplexity appears only as the <code>web_search</code> backend's <code>perplexity_model</code> (<code>perplexity/sonar</code>).</td>
 </tr>
 <tr>
 <td><code>sonar-deep-research</code></td>

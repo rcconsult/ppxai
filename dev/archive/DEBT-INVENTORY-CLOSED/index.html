@@ -1644,6 +1644,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#closed-on-featurev1194-archived-2026-10-11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Closed on feature/v1.19.4 (archived 2026-10-11)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Closed on feature/v1.19.4 (archived 2026-10-11)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#item-46-task-read_file-and-non-spawn_subagent-tools-are-consent-free-and-path-unconfined-by-default-agent-platform-security-posture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 46 — /task read_file (and non-spawn_subagent tools) are consent-free AND path-unconfined by default [agent platform / security posture]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-85-296-relative-links-inside-docsarchive-dont-resolve-docs-fixed-2026-10-11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 85 — ~296 relative links inside docs/archive/ don't resolve [docs] — ✅ FIXED 2026-10-11
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1679,7 +1718,7 @@ archive for the branch-by-branch closes since then.</p>
 <p><strong>(1) Detection — already fixed earlier this cycle.</strong>
 <code>model_profiles.py</code> now carries <code>supports_vision=True</code> globs for
 <code>Qwen/Qwen3.[56]-27B-FP8*</code> (and <code>Qwen3.6-35B-A3B-FP8*</code>); this session
-also pinned the <code>-agent</code> suffix variant the codeai cluster serves
+also pinned the <code>-agent</code> suffix variant the internal vLLM cluster serves
 (<code>Qwen/Qwen3.6-27B-FP8-agent</code>) in <code>test_model_profiles.py</code>. The
 originally-reported diagram now routes as a real <code>image_url</code> block.</p>
 <p><strong>(2) Fail-loud + tool route — this session.</strong> The secondary "fallback
@@ -1790,8 +1829,9 @@ two artifacts that prove the user was right and reframe this item:</p>
 <li><code>/path/to/trad-ai-chat/scripts/test-vl-capabilities.sh</code>
    (commit <code>916772c</code>, 2026-04-23) — 9-test VL probe (Test 0 image accept,
    Test 1 OCR, Test 2 tables, Test 3 charts). Baseline run against
-   <code>https://codeai.internal/qwen35/v1</code> model <code>Qwen/Qwen3.5-27B-FP8</code>
-   scored <strong>8/9 PASS</strong>. The one fail (Test 2b) was arithmetic-over-OCR'd-data
+   an in-cluster vLLM deployment (<code>https://your-vllm-host/v1</code>) model
+   <code>Qwen/Qwen3.5-27B-FP8</code> scored <strong>8/9 PASS</strong>. The one fail (Test 2b) was
+   arithmetic-over-OCR'd-data
    reasoning — NOT vision.</li>
 <li><code>/path/to/trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md</code>
    (2026-04-30) — confirms Qwen3.6-27B-FP8 has an <strong>explicit vision
@@ -1914,7 +1954,7 @@ document the auth-off requirement loudly in the release notes.</p>
 <h3 id="item-41-gemini-provider-tool-loop-fidelity-no-tool_call_id-threading-_filter_empty_parts-is-dead-code-providers-gemini-resolved-2026-07-12-same-day">Item 41 — Gemini provider tool-loop fidelity: no <code>tool_call_id</code> threading; <code>_filter_empty_parts</code> is dead code [providers / gemini] — ✅ RESOLVED (2026-07-12, same-day)<a class="headerlink" href="#item-41-gemini-provider-tool-loop-fidelity-no-tool_call_id-threading-_filter_empty_parts-is-dead-code-providers-gemini-resolved-2026-07-12-same-day" title="Permanent link">&para;</a></h3>
 <p>Found while diagnosing the deny-path empty-result bug (T5/T7 trials; the
 symptom fixes landed with §M — see
-<a href="agent-platform-call-graphs.md">agent-platform-call-graphs.md</a>). Two
+<a href="../../agent-platform-call-graphs/">agent-platform-call-graphs.md</a>). Two
 structural gaps, both verified by source read + grep, both fixed same day:</p>
 <ol>
 <li><strong><code>_convert_messages</code> (gemini.py) never threaded <code>Message.tool_calls</code> /
@@ -2341,7 +2381,7 @@ archived snapshots:</p>
   corruption); and the <strong>session auto-restore-mode</strong> bug (<code>1fe60ea5</code> — web
   client ignored <code>auto_restore</code> and used a fragile <code>confirm()</code>, so restore
   landed on fresh defaults; <code>/status</code> now exposes the mode). All with
-  regression tests. See <a href="../CHANGELOG.md">CHANGELOG.md</a> <code>[1.18.8]</code>.</p>
+  regression tests. See <a href="../../CHANGELOG.md">CHANGELOG.md</a> <code>[1.18.8]</code>.</p>
 </li>
 <li>
 <p><strong>Item 28 — OfficeFileView blob-revoke race + attachment text_fallback (closed 2026-06-14):</strong>
@@ -2434,7 +2474,7 @@ archived snapshots:</p>
   (it migrated <code>read_file</code>/<code>write_file</code> only). <code>TestServeImageConfinement</code>
   added (sibling-prefix path → 403 via <code>/files/image/</code>, verified to fail
   404 against the old check; in-tree image → 200). v1.18.8 Phase A — see
-  <a href="archive/plan-v1.18.8-files-parity.md">archive/plan-v1.18.8-files-parity.md</a>.</p>
+  <a href="../plan-v1.18.8-files-parity/">archive/plan-v1.18.8-files-parity.md</a>.</p>
 </li>
 <li>
 <p><strong>Item 20 — v1.19.x alignment paperwork (closed 2026-05-24):</strong> merged to
@@ -2452,7 +2492,7 @@ archived snapshots:</p>
   excluded after rerun confirmed contamination), 18 (NIM probe rerun),
   19 (Qwen3.5 <code>enable_thinking</code> config example), plus Tier 1 #1-3 and
   Tier 2 #4-5 from the v1.18.3 NIM engine work. See
-  <a href="archive/DEBT-INVENTORY-v1.18.3.md">docs/archive/DEBT-INVENTORY-v1.18.3.md</a>.</p>
+  <a href="../DEBT-INVENTORY-v1.18.3/">docs/archive/DEBT-INVENTORY-v1.18.3.md</a>.</p>
 </li>
 <li>
 <p><strong>v1.18.2 branch (closed 2026-04-29):</strong> Items 1 (god-node refactoring
@@ -2460,7 +2500,7 @@ archived snapshots:</p>
   refactor), 4 (focused-subtree graphify runs), 5 (esbuild VSIX bundle),
   6 (Windows <code>code</code> CLI shim), 7-9 (Tier 1 observability), 10
   (EngineClientProtocol), 11 (agent.py logger AttributeError). See
-  <a href="archive/DEBT-INVENTORY-v1.18.2.md">docs/archive/DEBT-INVENTORY-v1.18.2.md</a>.</p>
+  <a href="../DEBT-INVENTORY-v1.18.2/">docs/archive/DEBT-INVENTORY-v1.18.2.md</a>.</p>
 </li>
 </ul>
 <hr />
@@ -2474,7 +2514,7 @@ are the evidence the ADR's decisions rest on, and a one-line summary in the
 rolling inventory cannot carry that.</p>
 <h3 id="item-61-api_path-is-declared-config-overridable-displayed-and-never-routed-on-providers-config">Item 61 — <code>api_path</code> is declared, config-overridable, displayed — and never routed on [providers / config]<a class="headerlink" href="#item-61-api_path-is-declared-config-overridable-displayed-and-never-routed-on-providers-config" title="Permanent link">&para;</a></h3>
 <p><strong>Filed 2026-08-30</strong> while designing
-<a href="decisions/0012-wire-protocol-as-per-model-capability.md">ADR 0012</a>.
+<a href="../../decisions/0012-wire-protocol-as-per-model-capability/">ADR 0012</a>.
 Independent of that ADR: this is a live defect today.</p>
 <p><code>ToolCallingProfile.api_path</code> (<code>model_profiles.py:43</code>) is set on built-in
 profiles, merged through the full precedence ladder (<code>chat.py:206</code>), exposed
@@ -2589,7 +2629,7 @@ the resolved table rests on an observed response.</p>
 <hr />
 <h3 id="item-62-adr-0006s-wire-validator-covers-only-one-of-three-protocols-_convert_messages-is-one-protocols-emitter-in-the-shared-base-providers-multimodal">Item 62 — ADR 0006's wire validator covers only ONE of three protocols; <code>_convert_messages</code> is one protocol's emitter in the shared base [providers / multimodal]<a class="headerlink" href="#item-62-adr-0006s-wire-validator-covers-only-one-of-three-protocols-_convert_messages-is-one-protocols-emitter-in-the-shared-base-providers-multimodal" title="Permanent link">&para;</a></h3>
 <p><strong>Filed 2026-08-30</strong> while designing
-<a href="decisions/0012-wire-protocol-as-per-model-capability.md">ADR 0012</a>.
+<a href="../../decisions/0012-wire-protocol-as-per-model-capability/">ADR 0012</a>.
 Independent of that ADR; two coupled defects, both live.</p>
 <p><strong>(a) The ADR 0006 validator has exactly one call site.</strong>
 <code>assert_wire_blocks_clean</code> is called only at <code>base.py:384</code>, inside
@@ -3335,7 +3375,7 @@ addition and nothing in Option A depends on it.</p>
 write proving no line is corrupted, and two that assert the taps exist,
 because a sink nothing calls is the same bug with more code.</p>
 <p><strong>Planned:</strong> <code>v1.19.x</code>+ (<strong>needs an architecture decision, not a patch</strong> —
-design in <a href="decisions/0008-cross-tier-cost-and-resource-accounting.md">decisions/0008-cross-tier-cost-and-resource-accounting.md</a>,
+design in <a href="../../decisions/0008-cross-tier-cost-and-resource-accounting/">decisions/0008-cross-tier-cost-and-resource-accounting.md</a>,
 Status: Proposed). Surfaced 2026-07-15 while reviewing Item 48's engine
 isolation.</p>
 <p><strong>Gap #1 (verified) — local cost view under-reports true spend.</strong>
@@ -3594,7 +3634,7 @@ downgrade nobody needs — a wrong migration hint the user <em>will</em> follow.
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/probe-perplexity-capabilities.py<span class="w"> </span>--api-path<span class="w"> </span>responses<span class="w">   </span>--model<span class="w"> </span><span class="s2">"perplexity/sonar-pro"</span><span class="w"> </span>--model<span class="w"> </span><span class="s2">"perplexity/sonar-reasoning-pro"</span><span class="w">   </span>--model<span class="w"> </span><span class="s2">"sonar-pro"</span>
 </span></code></pre></div>
 <p>If any answers, update <code>replacement</code> in
-<a href="../ppxai/engine/model_deprecations.py"><code>ppxai/engine/model_deprecations.py</code></a>
+<a href="../../ppxai/engine/model_deprecations.py"><code>ppxai/engine/model_deprecations.py</code></a>
 and re-add the entries to <code>ppxai-config.example.json</code> (with a pricing row and
 the migration fence's <code>RETIRED</code> set trimmed to match).</p>
 <p><strong>Why this is an inventory item and not just a code comment.</strong> It was one: a
@@ -4102,6 +4142,101 @@ Refusing the shape is still declined. A cycle needs 3 full repeats to
 be named, so A,B,A,B,A (the notice point in the fixture) reads as
 <code>mixed</code>. The fall-through exit after the loop is now reached only when
 <code>max_iterations &lt;= 0</code>; its test was split to keep that exit covered.</p>
+<hr />
+<h2 id="closed-on-featurev1194-archived-2026-10-11">Closed on <code>feature/v1.19.4</code> (archived 2026-10-11)<a class="headerlink" href="#closed-on-featurev1194-archived-2026-10-11" title="Permanent link">&para;</a></h2>
+<h3 id="item-46-task-read_file-and-non-spawn_subagent-tools-are-consent-free-and-path-unconfined-by-default-agent-platform-security-posture">Item 46 — <code>/task</code> <code>read_file</code> (and non-<code>spawn_subagent</code> tools) are consent-free AND path-unconfined by default [agent platform / security posture]<a class="headerlink" href="#item-46-task-read_file-and-non-spawn_subagent-tools-are-consent-free-and-path-unconfined-by-default-agent-platform-security-posture" title="Permanent link">&para;</a></h3>
+<p><strong>2026-10-11 — the POSTURE half is DECIDED and BUILT (owner: confine to
+the project).</strong> <code>enforcement</code> defaults to <code>"in_process"</code>; the seal confines a
+run TO its requested workdir (the session's folder when none is given),
+falling back to a per-run scratch folder; <code>BUILTIN_DENY</code> (credentials)
+applies to reads and writes sealed or not (<code>read_paths.builtin_deny: false</code>
+opts out), and <code>read_paths.deny</code> now applies with the seal off. Runs with no
+file tool get no policy. <strong>Item 46 is closed</strong> once this ships; move it to
+the closed archive at the next sweep.</p>
+<p><strong>2026-10-11 — the UPGRADE-REGRESSION half is CLOSED (owner: refuse to
+start).</strong> <code>config.initialize()</code> raises <code>RetiredSecurityKeyError</code> while the
+config still has <code>tools.agent.sandbox</code>; every entry point exits with the
+message, and <code>EngineClient()</code> raises it to embedders
+(<code>ppxai/config/execution.py::RETIRED_SECURITY_KEYS</code>,
+<code>tests/test_retired_security_key_refusal.py</code>).</p>
+<p><strong>2026-09-10 — the UPGRADE-REGRESSION half is mitigated; the posture
+decision is untouched.</strong> Releasing v1.19.1 turns this from a standing
+posture question into an active regression for one specific operator: ADR
+0010 moved <code>tools.agent.sandbox</code> with no dual-read, so someone who had
+configured <code>enforcement: "in_process"</code> — a working jail — gets it silently
+ignored on upgrade and reverted to <code>"off"</code>, which makes the whole
+<code>read_paths.deny</code> list inert (the seal is gated on
+<code>enforcement == "in_process"</code> as a unit, <code>task_runner.py:334</code>). The operator
+careful enough to build a jail is the one the upgrade removes it from.</p>
+<p><code>/doctor</code> now reports that row with <strong>what reverting costs</strong> — naming
+<code>~/.ppxai/.env</code> explicitly — sorts security losses above behaviour changes,
+and the release notes carry it as its own upgrade step rather than one line
+in a six-key table. Fenced by <code>tests/test_doctor_stale_key_cost.py</code>,
+including a test pinning that <code>sandbox</code> is the only security-class move, so
+a second one cannot ride in as an ordinary row.</p>
+<p><strong>This does not answer the item.</strong> The default posture — tool-capable runs
+being consent-free and path-unconfined when the tier is enabled — is still
+an owner decision, and the three fix directions below still stand. What
+changed is that an operator who already made the opposite decision no longer
+loses it silently.</p>
+<p><strong>2026-09-05 — this stopped being hypothetical.</strong> An operator config audited
+today still had the six ADR 0010 keys at <code>tools.agent.*</code>, where they are
+silently ignored, so <code>task_tier_enabled: true</code> was reading as <strong>disabled</strong> —
+the tool-capable tier was unreachable and the posture question was moot in
+practice. After migrating those keys the tier is live with
+<code>sandbox.enforcement: "off"</code>, which is exactly the shape this item
+describes: tools that are consent-free and path-unconfined, on a host whose
+<code>~/.ppxai/.env</code> is readable. The decision is now load-bearing rather than
+theoretical. See [[Item 70]] for how the same config-resolution rule bites
+from the other side.</p>
+<p><strong>Planned:</strong> <code>v1.19.x</code> (posture decision, not a spec violation). Surfaced by
+the 2026-07-13 trial observation that the nvidia/deepseek direct run read the
+file with <strong>no consent prompt</strong>. Confirmed by source + live config:</p>
+<ul>
+<li>The <code>/task</code> interactive consent gate is wired <strong>only</strong> for <code>spawn_subagent</code>
+  (<code>agent_v1.py:923–952</code>, <code>consent_policy = spawn_consent or "deny"</code>,
+  deny-by-default → parks <code>waiting{consent}</code> + card). Proven live: subagent
+  run <code>run_f07d4f8c3209</code> fired <code>agent_waiting kind=consent</code> → <code>agent_resumed
+  approved:true</code>.</li>
+<li><strong><code>read_file</code> and every non-spawn tool have no consent tier</strong> — they are
+  gated <em>solely</em> by the <code>--tools</code> allowlist. Granting the tool IS the consent.</li>
+<li>The <strong>T2 filesystem seal</strong> (path jail) is the intended confinement, but it
+  is <strong>off by default</strong> (<code>execution.task.sandbox</code> — moved from
+  <code>tools.agent.sandbox</code> in v1.19.1, ADR 0010 — engages only when
+  <code>enforcement == "in_process"</code>; live config has <code>sandbox: null</code>). With it
+  off, a <code>/task … --tools read_file</code> can silently read <strong>any file the process
+  can reach</strong> (e.g. <code>~/.ppxai/.env</code>), unconfined and unprompted.</li>
+</ul>
+<p><strong>Why it matters (defense-in-depth).</strong> Combined with Item 43's mis-grounding
+class, a <code>/task</code> run can silently read arbitrary local files and fold them
+into a result with no prompt and no jail. Not a spec violation — the
+confinement mechanism exists and ships intentionally-off — but the default
+posture is worth an explicit decision.</p>
+<p><strong>Fix direction (posture, not yet decided):</strong> either default the T2 seal on
+for tool-capable runs, add a read-consent tier for filesystem tools outside
+the workdir, or document the posture prominently so operators opt into the
+seal. Owner decision required before code.</p>
+<h3 id="item-85-296-relative-links-inside-docsarchive-dont-resolve-docs-fixed-2026-10-11">Item 85 — ~296 relative links inside <code>docs/archive/</code> don't resolve [docs] — ✅ FIXED 2026-10-11<a class="headerlink" href="#item-85-296-relative-links-inside-docsarchive-dont-resolve-docs-fixed-2026-10-11" title="Permanent link">&para;</a></h3>
+<p><strong>Fixed 2026-10-11.</strong> The real count was 357 (same rules as <code>TestDocLinksResolve</code>). About 320 now point at moved targets, 29 with deleted targets became plain text, 2 ambiguous ones were resolved from their neighbours (<code>deploy/docker/Dockerfile</code>, <code>deploy/k8s/standalone/ingress.yaml</code>). <code>TestDocLinksResolve</code> now covers <code>docs/archive/</code>, with five non-links (examples, code) listed in <code>ARCHIVE_LINK_EXEMPT</code>. Move to the closed archive at the next sweep.</p>
+<p><strong>Filed 2026-09-28</strong> (owner decision: record as debt, fix later).</p>
+<p>The 2026-09-28 docs audit (wsl2-builder, 144 findings) and win32-ppxai's
+repo-wide scan of every git-tracked <code>*.md</code> counted 296 unresolved relative
+links, about 95% of them inside <code>docs/archive/</code> across ~60 files. They were
+correct when written: the documents moved into subdirectories of the
+archive, or their targets were deleted or renamed. Typical cases are old
+release notes pointing at <code>../CHANGELOG.md</code> or <code>docs/...</code> with the depth
+they had before archiving, and links to source files that no longer exist.
+The live docs were fixed in <code>27456f1a</code>/<code>6ece7e30</code>; what remains in live
+files is false positives (link syntax inside inline code, template
+placeholders in <code>.claude/commands/docs-consolidate.md</code>).</p>
+<p><strong>Fix sketch:</strong> a script that, per archived file, re-resolves each link
+against the file's current location, rewrites the ones whose target still
+exists (at any depth), and turns the rest into plain text marked
+"(removed)". Then a <code>tests/test_docs_consistency.py</code> check that fails on a
+NEW unresolved link in <code>docs/archive/</code> (a baseline count, shrink-only),
+so the number cannot grow again.</p>
+<p><strong>Why not now:</strong> the archive is historical by design; nobody navigates it
+link by link, and no live document depends on it.</p>
 
 
 

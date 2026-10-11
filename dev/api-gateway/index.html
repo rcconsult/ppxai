@@ -1532,11 +1532,24 @@ never against the server process launch dir:</p>
    the same thing in chat and in a task run. Must exist (400 otherwise).</li>
 <li>Absent: the <strong>server default</strong> — <code>server.working_dir</code> config, else the
    user's home (the same default every new UI session gets).</li>
-<li>Filesystem seal ON (<code>execution.task.sandbox.enforcement: "in_process"</code>):
-   the per-run jail <strong>always wins</strong>; a requested <code>workdir</code> is ignored and
-   the launch response carries <code>workdir_ignored: true</code> (clients render a
-   warning). Warn-don't-fail keeps the same invocation portable across
-   sealed and unsealed hosts.</li>
+<li>Filesystem seal (<code>execution.task.sandbox.enforcement</code>, <strong><code>"in_process"</code>
+   by default since 1.19.4</strong>; <code>"off"</code> only when written explicitly): a sealed
+   run is confined <strong>to</strong> its requested <code>workdir</code> — that folder is its
+   writable root and a read root, plus <code>read_paths.allow</code> and the
+   skills/specs dirs. With no <code>workdir</code> at all (a bare API call) it gets a
+   per-run scratch folder <code>&lt;workdir.root&gt;/&lt;run_id&gt;/work</code>. (Before 1.19.4 the
+   seal always used the scratch folder and ignored the requested <code>workdir</code>;
+   <code>workdir_ignored</code> stays in the launch response for compatibility but is
+   now always <code>false</code>.)</li>
+<li>A built-in deny list (<code>.env*</code>, <code>.ssh</code>, <code>.gnupg</code>, <code>.aws</code>, <code>.azure</code>,
+   <code>.kube</code>, <code>.docker</code>, <code>.netrc</code>, <code>.git-credentials</code>, <code>.npmrc</code>, <code>.pypirc</code>,
+   <code>id_rsa*</code>/<code>id_ed25519*</code>/<code>id_ecdsa*</code>/<code>id_dsa*</code>, <code>~/.ppxai/run</code>,
+   <code>~/.ppxai/tokens*</code>, <code>~/.config/gcloud</code>, <code>~/.config/gh</code>) always applies to
+   a run's file tools, reads and writes, sealed or not (since 1.19.4).
+   Opt out with <code>execution.task.sandbox.read_paths.builtin_deny: false</code>.
+   Runs whose grant has no file tool (every <code>/v1/oneshot</code>, an enriched
+   <code>/v1/agent/run</code> with only <code>web_search</code>) get no filesystem policy and no
+   scratch folder.</li>
 </ol>
 <p>The effective workdir is recorded on the run meta (<code>workdir</code>, <code>null</code> =
 default/jail), returned by <code>GET /v1/agent/runs/&lt;id&gt;</code>, reused verbatim by
@@ -2008,7 +2021,9 @@ trail — concurrent requests cannot cross-attribute cost.</p>
 <li><strong>Provider support.</strong> v1.19.x: <strong>all configured providers</strong> are
   supported. <code>oneshot()</code> is part of the <code>BaseProvider</code> contract, so
   <code>local</code>/<code>custom</code>/NIM/vLLM/Ollama/OpenRouter <strong>and</strong> native
-  OpenAI/Perplexity/Gemini all work. The only 400 is an <em>unbuildable</em>
+  OpenAI/Anthropic/Gemini all work (Perplexity is no longer a chat
+  provider — ADR 0015 — and is not reachable through this endpoint). The
+  only 400 is an <em>unbuildable</em>
   provider (unknown name / missing API key). (Pre-1.19.x this endpoint
   rejected native providers by class — that restriction is removed.)</li>
 <li><strong><code>response_format</code>.</strong> Reaches the model on every provider, but the
@@ -2027,8 +2042,9 @@ the wrong keys is a handled failure, not a parse.</p>
   <code>response_format</code> field, so ppxai maps it onto <code>response_mime_type</code> /
   <code>response_schema</code> (<code>providers/gemini.py::response_format_to_gemini</code>),
   which additionally strips <code>additionalProperties</code> (the SDK's <code>Schema</code>
-  model accepts it, the REST API 400s on it) and suppresses Google Search
-  grounding for that call, since Gemini refuses the combination.</p>
+  model accepts it, the REST API 400s on it). Structured output and
+  Google Search grounding <strong>coexist</strong> — grounding stays on; only ppxai
+  function tools disable Gemini grounding for that call.</p>
 <p>This boundary is not theoretical. Before v1.19.1 the Gemini path
   accepted <code>response_format</code> and silently dropped it: callers pinning a
   JSON schema got <code>200</code> with well-formed JSON whose keys the model chose,
@@ -2135,7 +2151,13 @@ native grounding, which reaches no new host.</p>
     is opt-in, default-off, with the wire byte-identical when off.</li>
 <li><strong>Legacy key.</strong> <code>tools.web_search.oneshot_grounding</code> (v1.19.0) is
     dual-read as <code>execution.run.grounding</code>; an explicit <code>execution.run.*</code>
-    value wins. New configs should use the <code>execution.run</code> block.</li>
+    value wins. A legacy <code>true</code> now resolves to <code>"retrieve"</code> (an outbound
+    search through the ADR 0014 search layer before the model call), not
+    the v1.19.0 meaning of native in-call grounding — operators who left
+    the legacy key set get new egress on upgrade. Set
+    <code>execution.run.grounding: "native"</code> explicitly to keep the old
+    (Gemini-only) behaviour. New configs should use the <code>execution.run</code>
+    block.</li>
 <li>For general tool-using agent work (custom grants, egress allowlists,
     specs/skills), use <code>POST /v1/agent/task</code> — oneshot's search-loop is the
     single-tool special case of that tier.</li>

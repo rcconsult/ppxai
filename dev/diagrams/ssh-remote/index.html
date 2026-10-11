@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/handoff-lazy-imports/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/diagrams/ssh-remote/">
       
       
       
@@ -18,19 +18,19 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Lazy imports — sequenced cleanup plan (auditor → builder) - ppxai Documentation</title>
+        <title>SSH remote hub — diagrams (ADR 0013) - ppxai Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#lazy-imports-sequenced-cleanup-plan-auditor-builder" class="md-skip">
+        <a href="#ssh-remote-hub-diagrams-adr-0013" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +94,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Lazy imports — sequenced cleanup plan (auditor → builder)
+              SSH remote hub — diagrams (ADR 0013)
             
           </span>
         </div>
@@ -232,7 +232,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -262,7 +262,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -343,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   
@@ -371,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../provider-setup/" class="md-nav__link">
+      <a href="../../provider-setup/" class="md-nav__link">
         
   
   
@@ -460,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../task-agent-guide/" class="md-nav__link">
+      <a href="../../task-agent-guide/" class="md-nav__link">
         
   
   
@@ -488,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../session-agent-guide/" class="md-nav__link">
+      <a href="../../session-agent-guide/" class="md-nav__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../bootstrap-context-guide/" class="md-nav__link">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
         
   
   
@@ -544,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../context-injection/" class="md-nav__link">
+      <a href="../../context-injection/" class="md-nav__link">
         
   
   
@@ -572,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../checkpoint-guide/" class="md-nav__link">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
         
   
   
@@ -600,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../file-editing-guide/" class="md-nav__link">
+      <a href="../../file-editing-guide/" class="md-nav__link">
         
   
   
@@ -628,7 +628,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../shell-consent-guide/" class="md-nav__link">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
         
   
   
@@ -717,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom-tool-development-guide/" class="md-nav__link">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
         
   
   
@@ -745,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom-command-development-guide/" class="md-nav__link">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
         
   
   
@@ -773,7 +773,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
+      <a href="../../architecture/" class="md-nav__link">
         
   
   
@@ -862,7 +862,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ollama-limitations/" class="md-nav__link">
+      <a href="../../ollama-limitations/" class="md-nav__link">
         
   
   
@@ -890,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
         
   
   
@@ -918,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../container-tools-guide/" class="md-nav__link">
+      <a href="../../container-tools-guide/" class="md-nav__link">
         
   
   
@@ -946,7 +946,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../autorouter-config/" class="md-nav__link">
+      <a href="../../autorouter-config/" class="md-nav__link">
         
   
   
@@ -1035,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
         
   
   
@@ -1063,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
         
   
   
@@ -1091,7 +1091,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
         
   
   
@@ -1146,76 +1146,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-finding" class="md-nav__link">
+  <a href="#editing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The finding
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#why-this-is-in-scope-at-all" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why this is in scope at all
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-1-fence-first-do-this-before-any-cleanup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 1 — fence first (do this before any cleanup)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-2-hoist-the-122" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 2 — hoist the 122
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-3-fix-the-12-structurally" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 3 — fix the 12 structurally
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#excluded-from-all-three-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Excluded from all three steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ground-rules" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ground rules
+        Editing
       
     </span>
   </a>
@@ -1242,246 +1176,50 @@
   
 
 
-<h1 id="lazy-imports-sequenced-cleanup-plan-auditor-builder">Lazy imports — sequenced cleanup plan (auditor → builder)<a class="headerlink" href="#lazy-imports-sequenced-cleanup-plan-auditor-builder" title="Permanent link">&para;</a></h1>
-<blockquote>
-<p>✅ <strong>DONE — this plan was executed; it is a record, not outstanding work.</strong>
-The fence landed (<code>bc42103a</code>), followed by five hoist batches and the
-cycle fixes; debt Item 68 closed 2026-09-01. The live fence
-(<code>tests/test_no_new_lazy_imports.py</code>) now baselines a different, smaller
-set than the 143-import / 12-cycle figures quoted below, and Item 73 later
-widened it from six package roots to a sweep of <strong>every module</strong> under
-<code>ppxai/</code>. One real cycle survives (<code>rendering.textual_renderer</code> ↔
-<code>tui.app</code>, Item 73), carried as the single <code>KNOWN_IMPORT_CYCLES</code> row.
-Read the numbers below as the starting state, not the current one.
-Marked 2026-09-20.</p>
-</blockquote>
-<p><strong>Written 2026-08-31 by the auditor session (ppxai-28) for the builder
-(ppxai-c7). Owner authorised: "we fix the imports issues one after
-another as proposed, go".</strong></p>
-<p>Measured against <code>3a1c4d9c</code>. <strong>Re-derive before trusting any number
-here</strong> — the branch moves, and a stale baseline makes the step-1 fence
-wrong in the direction that matters (too permissive).</p>
-<hr />
-<h2 id="the-finding">The finding<a class="headerlink" href="#the-finding" title="Permanent link">&para;</a></h2>
-<p><code>ppxai/</code> contains <strong>143 internal lazy imports</strong> (a <code>from ppxai...</code> /
-<code>from ..x</code> inside a function body). Classified by AST, with the
-module-level dependency graph used to ask <em>would hoisting this create a
-cycle?</em>:</p>
+<h1 id="ssh-remote-hub-diagrams-adr-0013">SSH remote hub — diagrams (ADR 0013)<a class="headerlink" href="#ssh-remote-hub-diagrams-adr-0013" title="Permanent link">&para;</a></h1>
+<p>Architecture infographics for the SSH hub, drawn from the code at
+<code>feature/v1.19.4</code> (phases 1–5). Each diagram is an <strong>SVG source</strong> plus a
+<strong>PNG</strong> rendered from it at 2×.</p>
 <table>
 <thead>
 <tr>
-<th>Category</th>
-<th>Count</th>
-<th>Disposition</th>
+<th>Diagram</th>
+<th>Shows</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Hoistable — no cycle results</strong></td>
-<td><strong>122</strong></td>
-<td>step 2, mechanical</td>
+<td><a href="ssh-hub-architecture.svg">ssh-hub-architecture</a> (<a href="ssh-hub-architecture.png">PNG</a>)</td>
+<td>The local flow and the hub flow side by side: browser, local <code>ppxai-server</code> lanes (local routes, <code>/hub/*</code>, <code>/h/&lt;host&gt;/&lt;id&gt;/…</code>), the <code>ssh</code> processes, and the remote <code>ppxai-server</code> behind its private unix socket</td>
 </tr>
 <tr>
-<td><strong>Genuinely cycle-breaking</strong></td>
-<td><strong>12</strong></td>
-<td>step 3, structural</td>
+<td><a href="ssh-hub-sequence.svg">ssh-hub-sequence</a> (<a href="ssh-hub-sequence.png">PNG</a>)</td>
+<td>One server's life: launch (<code>ssh -T … --uds --announce --detach</code>), open (auto-attach, <code>ssh -N -L</code>, <code>/health</code>, proxied UI), terminal websocket, stop (<code>POST /shutdown</code>)</td>
 </tr>
 <tr>
-<td>Self-import inside a package <code>__init__</code></td>
-<td>9</td>
-<td>leave; see §Excluded</td>
+<td><a href="ssh-attachment-states.svg">ssh-attachment-states</a> (<a href="ssh-attachment-states.png">PNG</a>)</td>
+<td><code>RemoteSessionManager</code>'s states and every transition in <code>ALLOWED_TRANSITIONS</code></td>
 </tr>
 </tbody>
 </table>
-<p>Two further categories are <strong>not</strong> part of this work and must not be
-touched:</p>
-<ul>
-<li><strong>28</strong> optional-dependency guards — a <code>try: import yaml / except
-  ImportError</code>. These are correct and deliberate.</li>
-<li><strong>31</strong> stdlib/third-party imports inside functions (<code>subprocess</code> et
-  al.). Deferring a heavy stdlib import is a legitimate startup-cost
-  choice, not a cycle evasion.</li>
-</ul>
-<p><strong>Verified empirically, not only statically:</strong> hoisting
-<code>config.execution</code> to module scope in <code>ppxai/commands/doctor.py</code>
-imports cleanly with no cycle.</p>
-<hr />
-<h2 id="why-this-is-in-scope-at-all">Why this is in scope at all<a class="headerlink" href="#why-this-is-in-scope-at-all" title="Permanent link">&para;</a></h2>
-<p><a href="../patterns/protocol-dependency-inversion/"><code>docs/patterns/protocol-dependency-inversion.md</code></a>
-is marked <strong>"CRITICAL — Required for all cross-module type
-dependencies"</strong> and states:</p>
-<blockquote>
-<ol>
-<li><strong>NEVER use <code>TYPE_CHECKING</code></strong> — <em>it's a lazy import in disguise</em></li>
-<li><strong>NEVER use <code>Any</code> to dodge a circular import</strong></li>
-</ol>
-</blockquote>
-<p>A function-level <code>from ..config import X</code> is the same evasion spelled
-differently. The rule already exists; nothing enforces it.
-<a href="../decisions/0007-completion-first-class-service/">ADR 0007</a> line 104
-already flags a location as "not where a lazy import could plausibly
-live", so the concern is live in the repo's own docs.</p>
-<hr />
-<h2 id="step-1-fence-first-do-this-before-any-cleanup">Step 1 — fence first (do this before any cleanup)<a class="headerlink" href="#step-1-fence-first-do-this-before-any-cleanup" title="Permanent link">&para;</a></h2>
-<p>A test that fails on any <strong>new</strong> internal lazy import, with the current
-set as an explicit baseline.</p>
-<p>This is first because it is cheap and permanent while steps 2–3 are
-large. It also means steps 2 and 3 shrink a number the fence already
-watches, rather than racing an unbounded backlog.</p>
-<p><strong>Requirements, each learned the hard way this session:</strong></p>
-<ul>
-<li><strong>Guard the vacuous pass FIRST.</strong> An AST sweep that stops matching
-  passes every check built on it. <code>test_the_sweep_finds_modules</code> before
-  anything else — same shape as <code>test_the_parser_sees_every_row</code> and
-  <code>test_the_sweep_finds_modules_to_check</code>, both of which you wrote.</li>
-<li><strong>Baseline as a data set, not a count.</strong> <code>assert len(found) &lt;= 143</code>
-  passes while one import is fixed and a worse one is added. Pin
-  <code>(module, target)</code> pairs so a swap is caught.</li>
-<li><strong>Resolve relative imports correctly.</strong> My first pass did not, and
-  produced phantom targets (<code>ppxai.commands.config.defaults</code>). For
-  <code>__init__.py</code> the module IS its own package; for everything else the
-  package is <code>name.rsplit('.',1)[0]</code>. Assert zero unresolved
-  <code>ppxai.*</code> targets as part of the fence — that check is what caught
-  my error.</li>
-<li><strong>Do not count the three exempt categories</strong> (optional-dep guards,
-  stdlib-in-function, package self-import) or the fence will fight
-  correct code.</li>
-</ul>
-<hr />
-<h2 id="step-2-hoist-the-122">Step 2 — hoist the 122<a class="headerlink" href="#step-2-hoist-the-122" title="Permanent link">&para;</a></h2>
-<p>Mechanical, low risk. Move each to module scope, delete the inner
-import.</p>
-<p>Verify per batch, not per file:</p>
-<ol>
-<li><code>python -c "import &lt;module&gt;"</code> for each touched module — an actual
-   import, not a static claim.</li>
-<li>Full suite green.</li>
-<li>Re-run the sweep: the hoistable count must fall by exactly the number
-   moved, and the cycle-breaking count must <strong>not</strong> rise.</li>
-</ol>
-<p>That third check is the one that matters. If hoisting turns a
-"hoistable" import into a cycle, the graph was misread and the analysis
-needs revisiting before continuing.</p>
-<p>Batch by owning package (<code>commands/</code>, <code>engine/</code>, <code>server/</code>, <code>tui/</code>,
-<code>config/</code>) so a regression bisects to a small diff.</p>
-<hr />
-<h2 id="step-3-fix-the-12-structurally">Step 3 — fix the 12 structurally<a class="headerlink" href="#step-3-fix-the-12-structurally" title="Permanent link">&para;</a></h2>
-<p>These are real. Hoisting them creates a cycle, so they need the
-Protocol pattern (a <code>Protocol</code> in a leaf module, per the CRITICAL
-pattern doc) or a genuine dependency-shape change.</p>
-<p>Full list, measured at <code>3a1c4d9c</code>:</p>
-<table>
-<thead>
-<tr>
-<th>Source</th>
-<th>Line</th>
-<th>Target</th>
-<th>Note</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>engine.model_facts</code></td>
-<td>1287</td>
-<td><code>engine.providers</code></td>
-<td><strong>layering inversion</strong></td>
-</tr>
-<tr>
-<td><code>engine.model_facts</code></td>
-<td>1305</td>
-<td><code>engine.providers</code></td>
-<td>”</td>
-</tr>
-<tr>
-<td><code>engine.model_facts</code></td>
-<td>1288</td>
-<td><code>engine.providers.openai_compat</code></td>
-<td>”</td>
-</tr>
-<tr>
-<td><code>engine.model_facts</code></td>
-<td>1314</td>
-<td><code>config.facts_config</code></td>
-<td>”</td>
-</tr>
-<tr>
-<td><code>engine.model_facts</code></td>
-<td>1322</td>
-<td><code>config.facts_config</code></td>
-<td>”</td>
-</tr>
-<tr>
-<td><code>server.routes.oneshot</code></td>
-<td>345</td>
-<td><code>server.routes.agent_v1</code></td>
-<td>route↔route</td>
-</tr>
-<tr>
-<td><code>server.routes.oneshot</code></td>
-<td>595</td>
-<td><code>server.routes.agent_v1</code></td>
-<td>”</td>
-</tr>
-<tr>
-<td><code>server.routes.oneshot</code></td>
-<td>619</td>
-<td><code>server.routes.agent_v1</code></td>
-<td>”</td>
-</tr>
-<tr>
-<td><code>tui.app</code></td>
-<td>771</td>
-<td><code>tui.session_restore_ops</code></td>
-<td>app↔ops</td>
-</tr>
-<tr>
-<td><code>tui.app</code></td>
-<td>780</td>
-<td><code>tui.session_restore_ops</code></td>
-<td>”</td>
-</tr>
-<tr>
-<td><code>config.loader</code></td>
-<td>183</td>
-<td><code>config.tls</code></td>
-<td>intra-config</td>
-</tr>
-<tr>
-<td><code>version</code></td>
-<td>37</td>
-<td><code>ppxai</code></td>
-<td>package self-reference</td>
-</tr>
-</tbody>
-</table>
-<p><strong><code>model_facts → engine.providers</code> is the interesting one.</strong> The facts
-table reaching back into providers is backwards: facts should be a leaf
-that providers consume. This is the ADR 0012 area just refactored, so
-the shape is fresh and the fix is likeliest to be clean. Do it first —
-it is the one most likely to teach something about the other eleven.</p>
-<p><code>version → ppxai</code> may be irreducible (a module importing its own
-package root). If so, say so and exempt it explicitly with a reason
-rather than contorting the code.</p>
-<hr />
-<h2 id="excluded-from-all-three-steps">Excluded from all three steps<a class="headerlink" href="#excluded-from-all-three-steps" title="Permanent link">&para;</a></h2>
-<ul>
-<li>The <strong>9 package self-imports</strong> (<code>engine.tools.builtin</code> importing from
-  itself in <code>__init__.py</code>). That is how a package re-exports its own
-  submodules; it is not an evasion.</li>
-<li>The <strong>28</strong> optional-dependency <code>try/except ImportError</code> guards.</li>
-<li>The <strong>31</strong> stdlib/third-party function-level imports.</li>
-</ul>
-<hr />
-<h2 id="ground-rules">Ground rules<a class="headerlink" href="#ground-rules" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>One step per commit, and stop between steps.</strong> The owner said "one
-  after another"; a single commit doing all three is unreviewable and
-  is what §5 of the Item 65 plan got wrong by inviting a merged diff.</li>
-<li>Prove the fence catches a NEW lazy import (add one, watch it fail,
-  remove it) — a baseline fence that cannot fail is this session's
-  recurring defect.</li>
-<li>Re-derive every count in this file before quoting it.</li>
-</ul>
+<p><img alt="ppxai local flow and SSH hub flow side by side" src="ssh-hub-architecture.png" /></p>
+<p><img alt="One server's life: launch, open, terminal, stop" src="ssh-hub-sequence.png" /></p>
+<p><img alt="Attachment state machine" src="ssh-attachment-states.png" /></p>
+<h2 id="editing">Editing<a class="headerlink" href="#editing" title="Permanent link">&para;</a></h2>
+<p>Edit the SVG, then regenerate the PNGs:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>node<span class="w"> </span>scripts/render-svg-diagrams.js<span class="w"> </span>docs/diagrams/ssh-remote
+</span></code></pre></div>
+<p>The script uses the Playwright Chromium that <code>tests/e2e</code> installs
+(<code>npm install</code> there once). The PNG is always regenerated from the SVG; never
+edit it by hand.</p>
+<p>Style: navy/blue palette (<code>#032B46</code> headers, <code>#0072B8</code> / <code>#005A93</code>
+emphasis, <code>#62B2E0</code> / <code>#A1D4F0</code> fills, <code>#5D5D60</code> / <code>#98989B</code> muted,
+<code>#F2F2F3</code> page), fonts <code>'IBM Plex Sans','Segoe UI','Noto Sans',Arial,sans-serif</code>
+and the IBM Plex Sans Condensed / Arial Narrow chain for headings. Every
+diagram draws its own opaque background, so it reads the same in light and
+dark viewers.</p>
+<p>The walkthrough in words, with <code>file:line</code> anchors, is
+<a href="../../remote-ssh-call-graphs/">../../remote-ssh-call-graphs.md</a>.</p>
 
 
 
@@ -1553,10 +1291,10 @@ rather than contorting the code.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

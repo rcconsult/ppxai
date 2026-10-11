@@ -1471,19 +1471,29 @@ Options A+C already close. Recorded only to close it explicitly.</p>
    per-user pods. 16 tests in <code>tests/test_host_cors_security.py</code>; documented in
    <a href="../../api-gateway/">api-gateway.md</a> §"Transport perimeter". The sharpest edge is
    now blunted.</li>
-<li><strong>Near term (A.2–A.4):</strong> random port + <code>0600</code> port file + per-launch loopback
+</ol>
+<p><strong>Dated note (2026-09-28):</strong> this fix used HTTP middleware, which never sees a
+   websocket scope. <code>/ws/terminal</code> — a shell — stayed open to any origin, with or
+   without a token, until v1.19.4's <code>5129540a</code> (<code>fix(server): websocket handshakes
+   get the Host, Origin and auth checks HTTP gets</code>) added a pure-ASGI
+   <code>_WebSocketGuard</code> in <code>ppxai/server/http.py</code> that applies the same checks to the
+   websocket handshake.
+2. <strong>Near term (A.2–A.4):</strong> random port + <code>0600</code> port file + per-launch loopback
    token, so the desktop default becomes auth-<em>on</em> and un-discoverable. Consider
-   UDS/named-pipe to remove the TCP surface on macOS/Linux.</li>
-<li><strong>Structural (Option C):</strong> land the embeddable-runner API (debt <strong>(t)</strong>) so
+   UDS/named-pipe to remove the TCP surface on macOS/Linux.</p>
+<p><strong>Dated note (2026-09-28):</strong> partly built by ADR 0013 — <code>ppxai-server --uds
+   [PATH] --announce</code> (<code>ppxai/server/http.py</code>) binds a Unix domain socket <code>0600</code>
+   before the first accept and generates a per-launch token, removing the TCP
+   surface and the un-authed default on POSIX hosts.
+3. <strong>Structural (Option C):</strong> land the embeddable-runner API (debt <strong>(t)</strong>) so
    ppxai-sre consumes ppxai as an in-process SDK and never depends on the local
    HTTP server. This is already on the roadmap for the mutation-tool work; it
-   <em>also</em> happens to remove the sister repo from the "needs the server" column.</li>
-<li><strong>Long horizon (Option B):</strong> if/when the desktop shell moves to Tauri (separate
+   <em>also</em> happens to remove the sister repo from the "needs the server" column.
+4. <strong>Long horizon (Option B):</strong> if/when the desktop shell moves to Tauri (separate
    analysis), fold the web client onto Rust↔JS IPC and make the HTTP server
    <strong>opt-in for remote-gateway deployments only</strong>. At that point the pure-desktop
    install has no network listener — the Pi security posture, achieved without a
-   rewrite, and without losing the multi-client fan-out or the external gateway.</li>
-</ol>
+   rewrite, and without losing the multi-client fan-out or the external gateway.</p>
 <p><strong>The framing that resolves the tension:</strong> ppxai should not choose "server vs no
 server" globally. It should make the HTTP server <strong>the remote-gateway transport,
 not the default-local transport.</strong> Local desktop use and ppxai-sre-as-SDK both go
