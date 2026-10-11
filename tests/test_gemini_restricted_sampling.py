@@ -44,6 +44,8 @@ def _make_provider() -> GeminiProvider:
         "gemini-3.8-flash",
         "gemini-3.7-flash",
         "gemini-3.6-flash",
+        # Redirected to 3.6-flash by Google (notice received 2026-10-11).
+        "gemini-3.5-flash",
         # Unlisted: resolves to the provider floor, which must restrict too.
         "gemini-3.9-flash",
         "gemini-4-pro-preview",
@@ -58,7 +60,7 @@ def test_sampling_params_are_not_sent_to_36_and_newer(model):
 
 
 @pytest.mark.parametrize(
-    "model", ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemma-4-31b-it"]
+    "model", ["gemini-3.1-pro-preview", "gemma-4-31b-it"]
 )
 def test_older_models_still_get_them(model):
     """Positive control: the filter is per model, not a blanket drop."""
@@ -96,7 +98,8 @@ def test_the_floor_restricts_sampling():
 
 
 @pytest.mark.parametrize(
-    "model", ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash"]
+    "model",
+    ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash"],
 )
 def test_the_seed_rows_restrict_sampling(model):
     assert RESTRICTED <= set(shipped_facts_for_model(model).restricted_params)

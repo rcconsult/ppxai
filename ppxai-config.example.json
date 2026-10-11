@@ -106,7 +106,7 @@
       "models": {
         "gemini-3.8-flash": {
           "name": "Gemini 3.8 Flash",
-          "description": "Newest GA flash model (2026-09). Measured 2026-09-13: native function calling, two parallel calls per turn, vision, 1M context / 65K output. Half the price of gemini-3.5-flash through 2026-12-31.",
+          "description": "Newest GA flash model (2026-09). Measured 2026-09-13: native function calling, two parallel calls per turn, vision, 1M context / 65K output. 50% promotional price through 2026-12-31.",
           "context_limit": 1048576,
           "__comment_best_for": "Recommended default (2026-09-27). Everyday coding, editing, agentic tool loops.",
           "__comment_benchmark_status": "Capabilities MEASURED 2026-09-13 (these facts mirror the built-in row); tier S is inherited from the 3.5 line, not benchmarked.",
@@ -203,27 +203,6 @@
             "restricted_params": [],
             "tier": "B"
           }
-        },
-        "gemini-3.5-flash": {
-          "name": "Gemini 3.5 Flash",
-          "description": "Google's newest GA flash model (2026) — most intelligent flash tier for agentic and coding tasks. Supersedes gemini-3-flash-preview. 1M context, text + image + video input.",
-          "context_limit": 1048576,
-          "__comment_best_for": "Previous default (until 2026-09-27); gemini-3.8-flash is cheaper and newer.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — profile cloned from gemini-3-flash (Tier S). Run benchmarks/llm-eval before tuning.",
-          "facts": {
-            "tool_mode": "native",
-            "fallback_on_empty": true,
-            "fallback_on_failure": false,
-            "strip_json_from_text": true,
-            "parallel_tool_calls": true,
-            "wire_protocol": "generate_content",
-            "max_tokens": 65536,
-            "max_tool_iterations": 25,
-            "supports_reasoning": false,
-            "supports_vision": true,
-            "restricted_params": [],
-            "tier": "S"
-          }
         }
       },
       "pricing": {
@@ -249,11 +228,6 @@
           "input": 0,
           "output": 0,
           "__comment": "Free tier via Gemini API; self-host for unlimited"
-        },
-        "gemini-3.5-flash": {
-          "input": 1.5,
-          "output": 9,
-          "__comment": "Google list price, checked 2026-09-27 (was 0.5/3, never verified)."
         }
       },
       "facts": {

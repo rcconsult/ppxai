@@ -199,6 +199,11 @@ RETIRED = {
         "2026-10-02 — same announcement; replacement gpt-6-luna. Kept, "
         "marked, in the root config only."
     ),
+    "gemini::gemini-3.5-flash": (
+        "2026-10-11 — Google deprecated it and auto-redirects every request "
+        "to gemini-3.6-flash; the example config may not advertise a "
+        "deprecated model. The root config keeps it, marked __comment_RETIRES."
+    ),
     # 2026-10-08: the example's OpenRouter list was two generations old;
     # replaced from the live /api/v1/models catalog. 405b was no longer listed
     # at all. Gemini has no OpenRouter successor row on purpose: the provider
@@ -266,8 +271,6 @@ class TestBehaviourIsPreserved:
         ("gemini::gemma-4-31b-it", "parallel_tool_calls"),
         ("gemini::gemma-4-26b-a4b-it", "wire_protocol"),
         ("gemini::gemma-4-26b-a4b-it", "parallel_tool_calls"),
-        ("gemini::gemini-3.5-flash", "wire_protocol"),
-        ("gemini::gemini-3.5-flash", "parallel_tool_calls"),
         # Same sweep, OpenAI. gpt-5.5-pro: the harvested `chat_completions`
         # is the pre-W2 value; probed live 2026-08-31 it 404s there ("not a
         # chat model"), which is why `RESPONSES_WIRE_GLOBS` lists it — the

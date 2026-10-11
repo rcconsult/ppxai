@@ -669,7 +669,8 @@ class TestDeprecationTableInvariants:
         # Current (verified 2026-05-14): 3-pro-preview, 2.0-flash, 2.0-flash-lite,
         # 2.5-pro, 2.5-flash, 2.5-flash-lite, 2.5-flash-image,
         # 3.1-flash-lite-preview (preview→GA migration, retires 2026-05-25).
-        assert len(GEMINI_DEPRECATIONS) == 8
+        # 2026-10-11: + 3.5-flash (auto-redirected to 3.6-flash).
+        assert len(GEMINI_DEPRECATIONS) == 9
 
     def test_openai_deprecation_count(self):
         # OpenAI family — bump when adding a new shutdown.

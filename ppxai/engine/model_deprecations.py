@@ -78,6 +78,19 @@ GEMINI_DEPRECATIONS: dict[str, Deprecation] = {
             "verified live 2026-09-01."
         ),
     ),
+    "gemini-3.5-flash": Deprecation(
+        shutdown_date="2026-10-11",
+        replacement="gemini-3.6-flash",
+        reason=(
+            "Deprecated and AUTO-REDIRECTED: Google's notice (email received "
+            "2026-10-11, no date given) says gemini-3.5-flash is no longer an "
+            "independent model and every request is served by "
+            "gemini-3.6-flash. Requests still succeed, but they are billed at "
+            "3.6 prices ($0.75/$3.75 per MTok promotional, $1.50/$7.50 list) "
+            "and 3.6 ignores temperature/top_p/top_k. Call gemini-3.6-flash "
+            "(or the default gemini-3.8-flash) directly."
+        ),
+    ),
     "gemini-2.0-flash-lite": Deprecation(
         shutdown_date="2026-06-01",
         replacement="gemini-3.1-flash-lite",
@@ -836,17 +849,11 @@ RECOMMENDED_NEW_MODELS: list[dict[str, str]] = [
             "Newest GA Gemini flash; recommended default for the Gemini "
             "provider since 2026-09-27. Native tools, parallel calls, vision "
             "and 1M context measured 2026-09-13. $0.75/$3.75 per MTok through "
-            "2026-12-31 -- half of gemini-3.5-flash -- then $1.50/$7.50."
+            "2026-12-31 (a 50% promotion), then $1.50/$7.50."
         ),
     },
-    {
-        "provider": "gemini",
-        "model": "gemini-3.5-flash",
-        "reason": (
-            "Previous default (GA 2026), still supported. Costs more than "
-            "gemini-3.8-flash ($1.50/$9.00 per MTok)."
-        ),
-    },
+    # gemini-3.5-flash was recommended here until Google redirected it to
+    # gemini-3.6-flash (notice received 2026-10-11).
     {
         "provider": "gemini",
         "model": "gemini-3.1-flash-lite",

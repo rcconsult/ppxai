@@ -1115,6 +1115,10 @@ SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {
         restricted_params=('temperature', 'top_p', 'top_k'),
         tier='S',
     ),
+    # gemini-3.5-flash is AUTO-REDIRECTED to gemini-3.6-flash (Google notice
+    # received 2026-10-11), so this row now describes the model that answers:
+    # sampling params restricted like the 3.6 row. Kept so an operator's
+    # leftover id resolves correctly; /doctor reports it as deprecated.
     "gemini-3.5-flash*": ModelFacts(
         wire_protocol='generate_content',
         tool_mode='native',
@@ -1126,7 +1130,7 @@ SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {
         max_tool_iterations=25,
         supports_reasoning=False,
         supports_vision=True,
-        restricted_params=(),
+        restricted_params=('temperature', 'top_p', 'top_k'),
         tier='S',
     ),
     "gemini-3-flash*": ModelFacts(

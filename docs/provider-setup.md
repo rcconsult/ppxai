@@ -112,9 +112,9 @@ MODEL_PROVIDER=gemini
           "name": "Gemini 3.8 Flash",
           "description": "Newest GA flash model, best price/performance (default since 2026-09-27)"
         },
-        "gemini-3.5-flash": {
-          "name": "Gemini 3.5 Flash",
-          "description": "Previous default flash model"
+        "gemini-3.6-flash": {
+          "name": "Gemini 3.6 Flash",
+          "description": "Previous flash model (gemini-3.5-flash now redirects here)"
         },
         "gemini-3.1-flash-lite": {
           "name": "Gemini 3.1 Flash Lite",
@@ -123,7 +123,7 @@ MODEL_PROVIDER=gemini
       },
       "pricing": {
         "gemini-3.8-flash": {"input": 0.75, "output": 3.75},
-        "gemini-3.5-flash": {"input": 1.5, "output": 9},
+        "gemini-3.6-flash": {"input": 0.75, "output": 3.75},
         "gemini-3.1-flash-lite": {"input": 0.25, "output": 1.5}
       },
       "capabilities": {
