@@ -150,6 +150,8 @@ release that would put it in front of users.
 
 ### Item 72 — the additive-CA TLS guarantee is pinned only on cafile hosts [testing / tls]
 
+**Parked 2026-10-11 (owner): not for v1.19.4; revisit in a later version's iteration.**
+
 **Filed 2026-09-10.** Surfaced while fixing the Linux-only trust-store
 failures (`34c07e99`), and deliberately not hidden by that fix.
 
@@ -1135,6 +1137,9 @@ NOT FOUND.
 successor in the Pro tier**, re-confirmed live rather than inherited from
 the August note. `gemini-3.1-flash-lite` carries its own 2027-05-07 sunset.
 Revisit when Google ships a GA Pro.
+Re-probed 2026-10-11 (`scripts/probe-gemini-pro-tier.py`, 62 models): still
+no GA 3.x Pro, only the two `gemini-3.1-pro-preview` ids. Next check is the
+2026-11-14 dated obligation.
 
 **Facts (verified on ai.google.dev 2026-08-01):**
 1. **2.5-line shutdown, earliest 2026-10-16:** `gemini-2.5-flash` →
@@ -2586,7 +2591,32 @@ and not on Windows in July.
 timing report added 2026-09-27 now names setup-heavy tests, so a
 regression of this kind shows up in the report instead of hiding.
 
+**Root-caused 2026-10-11 (macOS, 4 physical / 8 logical cores):** no
+single code regression. Two causes:
+
+1. **Oversubscription.** `-n auto` starts 8 workers on 4 physical cores,
+   and many tests spawn interpreters or servers at once. Summed test time
+   on the same 7,342 tests: 1,126 s and 771 s at `-n 8` (two back-to-back
+   runs, wall 182 s and 131 s), 629–635 s at `-n 6` (wall 135 s), 525 s at
+   `-n 4` (wall 157 s: long subprocess files form a tail that
+   `--dist loadfile` can't split). That is the "2x per test" signature,
+   and host load explains most of the 123–182 s wall spread between runs.
+2. **Heavier interpreter start-up, multiplied.** `import ppxai.server.http`
+   costs ~2.8 s CPU at HEAD against ~2.1 s at `v1.19.0`; 1.78 s of it is
+   `ppxai.engine.providers`, which imports every provider SDK eagerly
+   (`ppxai.engine.providers.anthropic` alone 0.79 s, for an opt-in provider).
+   Interpreter-spawning test sites grew from 3 (`v1.19.0`) to 31, so each
+   pays the heavier start, mostly as SETUP time.
+
+**Options (owner):** cap the default worker count (e.g. `-n 6`; machine
+specific); share or cache the fresh-interpreter probes; stop importing
+provider SDKs that no configured provider uses, which the no-lazy-imports
+rule currently forbids; or accept the cost. Not done: a commit bisect, and
+a re-measure of the Windows serial baseline.
+
 ### Item 84 — the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell [server / tools / Windows]
+
+**Parked 2026-10-11 (owner): not for v1.19.4; revisit in a later version's iteration.**
 
 **Filed 2026-09-28** (owner decision: record as debt, don't build it now).
 
@@ -2631,7 +2661,9 @@ syntax fails unless the model itself wraps the command in
 terminal has been Unix-only since v1.17.1 and nobody has asked for it
 until now.
 
-### Item 85 — ~296 relative links inside `docs/archive/` don't resolve [docs]
+### Item 85 — ~296 relative links inside `docs/archive/` don't resolve [docs] — ✅ FIXED 2026-10-11
+
+**Fixed 2026-10-11.** The real count was 357 (same rules as `TestDocLinksResolve`). About 320 now point at moved targets, 29 with deleted targets became plain text, 2 ambiguous ones were resolved from their neighbours (`deploy/docker/Dockerfile`, `deploy/k8s/standalone/ingress.yaml`). `TestDocLinksResolve` now covers `docs/archive/`, with five non-links (examples, code) listed in `ARCHIVE_LINK_EXEMPT`. Move to the closed archive at the next sweep.
 
 **Filed 2026-09-28** (owner decision: record as debt, fix later).
 

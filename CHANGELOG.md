@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Branch: `feature/v1.19.4` (the branch name predates the 1.19.4 security patch; this work ships in a later version). Work stream: ADR 0013's SSH remote backend.
+Nothing beyond 1.19.4 yet.
 
-### Groundwork (not yet a supported feature) — SSH remote hub (ADR 0013 phases 2–5)
+## [1.19.4] - unreleased
+
+Branch: `feature/v1.19.4`, which carries `fix/v1.19.4` (the websocket security patch, from master @ v1.19.3) plus ADR 0013's SSH remote hub and the model and config fixes below. The owner decided on 2026-10-11 that all of it ships as 1.19.4.
+
+### Security
+
+- **Websocket connections now get the same Host, Origin and auth checks as HTTP requests.** Until now, any web page the user visited could open `ws://127.0.0.1:<port>/ws/terminal` on a running `ppxai-server` or `ppxai-desktop` and run shell commands in a server-side terminal. Setting `PPXAI_API_TOKEN` did not prevent it. The server's Host check, bearer-token gate and CORS policy are HTTP middleware, which never sees a websocket, and browsers do not apply CORS to websockets. On the k8s coder deployment the `SameSite=Lax` session cookie kept other sites out, but not pages on the same parent domain. A websocket handshake is now refused (HTTP 403) unless its Host passes the same allowlist as HTTP, its Origin (if it sends one) is an allowed origin (`PPXAI_ALLOWED_ORIGINS`, loopback, or the server's own origin), and the bearer gate passes as it would for a GET of the same path. The web UI's own terminal, the coder pods' terminal and a same-origin gateway UI keep working. Found while building ADR 0013's hub proxy; reproduced with a live server and pinned by `tests/test_websocket_guard.py`.
+
+### Added — SSH remote hub and SSH Launcher (ADR 0013)
 
 - New package `ppxai/remote/`, used by the hub below. `RemoteTransport` is the Protocol the hub will reach remote hosts through: run a command, forward a local endpoint to a remote unix socket, close. `OpenSSHTransport` implements it over the user's own `ssh`, so SSH config aliases, the agent, `ProxyJump`, hardware keys and `known_hosts` work unchanged and ppxai stores none of them. Every invocation uses `BatchMode=yes`, so a missing key or an unknown host key fails at once instead of waiting on a prompt. The remote command is quoted in one place and refuses line breaks. OpenSSH's failures map to typed errors that keep its stderr verbatim. On POSIX a forward's local end is a unix socket in a private directory. The package may not import the engine or the command layer (fenced).
 - `RemoteSessionManager` (ADR 0013 phase 3): lists the announced servers on a configured host, launches a detached one in a chosen directory, attaches (forward, then `/health` with the server's token), detaches without stopping the server, and stops a server by asking it (`POST /shutdown`), never by signalling a pid. Each attachment runs the ADR's state machine, plus a terminal `gone` for a server that left the host's registry, and reports every transition to subscribers. A degraded attachment is retried with capped exponential backoff. A remote `ppxai-server` without the hub's registry contract is refused with its version (see below), and a registry entry with an unknown contract number is refused naming both numbers, without hiding the host's other servers. `remote.hosts` entries are validated (URL-safe `id`, `local` reserved, one ssh destination, unknown keys refused) but not yet read from config.
@@ -24,6 +32,9 @@ Branch: `feature/v1.19.4` (the branch name predates the 1.19.4 security patch; t
 - ADR 0013 is accepted (owner, 2026-09-29).
 
 ### Fixed
+
+- **Model hints from AGENTS.md are no longer sent twice when two scopes carry the same file.** The global `~/.ppxai/AGENTS.md`, the project's and a subdirectory's are merged additively; a global file copied from a project's (the common way to start one) doubled every provider and model hint in the system prompt. A hint already present under the same provider or pattern is now skipped; a hint only one scope has is still added (`tests/test_bootstrap_context.py::test_merged_hints_are_not_sent_twice`).
+- **The benchmark's `respects_tool_failure` test no longer fails every model.** It offered tools on the follow-up turn but read only the reply's text; every model reacted to the failed test run by re-running it (a tool call, empty text), which the test scored as "didn't acknowledge the failures" (all 18 results of the 2026-10-03 runs). A retry is now answered with the same failure, up to twice, and the last round withholds the tools so the model has to report. Past results for this test (weight 2.0, a gate test) are invalid for every model, so earlier overall scores are understated; re-run for exact numbers. Pinned by `tests/test_benchmark_harness_integrity.py::TestRespectsToolFailureAcceptsARetry`.
 
 - **Nothing ppxai ships still points at a Gemini 2.5 model ahead of the line's 2026-10-16 sunset (earliest).** The shipped configs had already dropped every 2.5 row. The Gemini provider's stand-in model for a call with no target model was still `gemini-2.5-pro`; it is now the shipped default, `gemini-3.8-flash`, so such a call also honours that model's sampling restrictions instead of sending `temperature`/`top_p`. The autorouter guide's examples, the multimodal model reference and the google-genai upgrade gate in `docs/known-issues.md` now name 3.x models; the gate notes that its recorded 2.5-flash scores are no baseline for 3.8-flash. `/doctor` already lists the three 2.5 models with replacements (`gemini-3.1-pro-preview`, `gemini-3.6-flash`, `gemini-3.1-flash-lite`) and reports them shut down from 2026-10-16; their seed rows stay for anyone still calling them until Google turns them off.
 
@@ -46,19 +57,12 @@ Branch: `feature/v1.19.4` (the branch name predates the 1.19.4 security patch; t
 
 ### Documentation
 
+- **Links in `docs/archive/` resolve again** (debt Item 85). 357 relative links had gone stale as documents moved into archive subfolders: about 320 now point at the moved targets, 29 whose targets were deleted are plain text. `tests/test_docs_consistency.py::TestDocLinksResolve` now checks the archive too, with five listed non-links (illustrative examples and code) exempt.
 - **OpenRouter is tested.** The 36-test benchmark ran against the OpenRouter API for the first time (2026-10-03): `qwen/qwen3.8-27b` (median 90.1, level with `gpt-5.6-terra` at about a fifth of its price) and `qwen/qwen3.7-flash` (median 81.2), three runs each, in a same-day run with `gpt-5.6-terra`, `gpt-6-luna`, `gpt-5.4-mini` and `gpt-6-sol`. Native tool calling works over OpenRouter's Chat Completions endpoint with no code changes. `docs/provider-setup.md`'s OpenRouter section now shows the tested configuration (its old example listed retired models such as `google/gemini-pro-1.5`), and `docs/model-selection-guide.md` carries the full table and its caveats. The example config's `openrouter` provider defaults to `qwen/qwen3.8-27b` (1M context, $0.425/$2.55 per MTok on 2026-10-08) and routes with `extra_body.provider` `data_collection: "deny"` + `require_parameters: true`; `frequency_penalty` is gone from its `generation_params` because under `require_parameters` it excluded every `qwen3.7-flash` endpoint. (It briefly defaulted to `qwen/qwen3.8-27b:free`, which OpenRouter withdrew by 2026-10-08.)
 
 ### Changed
 
 - The shipped example config (`ppxai-config.example.json`, which seeds new installs) now lists web search backends Gemini first: `tools.web_search.order` = `gemini`, `perplexity`, `duckduckgo`. It still pinned Perplexity first after the built-in default moved to Gemini first on 2026-09-27, so a fresh install tried Perplexity before Gemini. An existing config is not changed. A test now keeps the example's order equal to the built-in default.
-
-## [1.19.4] - unreleased
-
-Branch: `fix/v1.19.4` (from master @ v1.19.3). Security patch, one fix.
-
-### Security
-
-- **Websocket connections now get the same Host, Origin and auth checks as HTTP requests.** Until now, any web page the user visited could open `ws://127.0.0.1:<port>/ws/terminal` on a running `ppxai-server` or `ppxai-desktop` and run shell commands in a server-side terminal. Setting `PPXAI_API_TOKEN` did not prevent it. The server's Host check, bearer-token gate and CORS policy are HTTP middleware, which never sees a websocket, and browsers do not apply CORS to websockets. On the k8s coder deployment the `SameSite=Lax` session cookie kept other sites out, but not pages on the same parent domain. A websocket handshake is now refused (HTTP 403) unless its Host passes the same allowlist as HTTP, its Origin (if it sends one) is an allowed origin (`PPXAI_ALLOWED_ORIGINS`, loopback, or the server's own origin), and the bearer gate passes as it would for a GET of the same path. The web UI's own terminal, the coder pods' terminal and a same-origin gateway UI keep working. Found while building ADR 0013's hub proxy; reproduced with a live server and pinned by `tests/test_websocket_guard.py`.
 
 ## [1.19.3] - 2026-09-28
 

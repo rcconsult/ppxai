@@ -28,6 +28,8 @@ OBLIGATIONS = [
         date(2026, 11, 14),
         "debt Item 54 — re-probe Gemini's Pro tier for a GA successor",
         (
+            "RE-PROBED 2026-10-11 (62 models): STILL NO GA 3.x Pro; same two "
+            "previews (version 3.1-pro-preview-01-2026), due date kept.\n"
             "RE-PROBED 2026-09-20 (58 models, was 52 on 09-01): STILL NO GA "
             "3.x Pro. Only `gemini-3.1-pro-preview` and "
             "`gemini-3.1-pro-preview-customtools`; the one new GA-looking id, "
