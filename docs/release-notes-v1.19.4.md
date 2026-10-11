@@ -239,6 +239,12 @@ Also:
   fixes);
   Windows 7,197 passed / 80 skipped at `0eb4863a` (2026-10-04, before
   those fixes and the latest model and docs fixes).
+  **The full suite was not re-run on Windows after those fixes** (owner
+  decision 2026-10-11: release now, fix any Windows issue in v1.19.5). The
+  Windows-sensitive parts are the default sandbox's path matching and
+  built-in deny list, the hub token file's permissions, and the
+  start-up refusal. CI's test job runs on Ubuntu; its Windows job builds
+  the binaries but runs no tests.
 - Local macOS (Intel) install from `2f922541`: all four binaries and the
   `.app` build and report 1.19.4, the PyInstaller server build logs no
   errors, both frozen binaries carry all four provider modules, the
