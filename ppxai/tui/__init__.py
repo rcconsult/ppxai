@@ -18,7 +18,7 @@ import sys
 
 from ppxai import __version__
 from ppxai.common.logger import get_logger
-from ppxai.config import initialize
+from ppxai.config import RetiredSecurityKeyError, initialize
 from ppxai.tui.app import PPXAIDEApp
 
 from ..config import get_debug_log_enabled
@@ -67,7 +67,10 @@ def main():
     # Initialize config and load .env BEFORE starting event loop (matches Rich TUI).
     # initialize() also restores persisted debug-log state — the logger is
     # already writing by the time any TUI code runs.
-    initialize()
+    try:
+        initialize()
+    except RetiredSecurityKeyError as exc:
+        sys.exit(f"ppxaide: {exc}")
 
     # Pick up persisted state for the app's internal debug flags
     persisted_debug = get_debug_log_enabled()

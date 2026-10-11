@@ -936,6 +936,14 @@ hook-rewritten commands, OR `rtk gain` totals plateau across sessions
 
 ### Item 46 — `/task` `read_file` (and non-`spawn_subagent` tools) are consent-free AND path-unconfined by default [agent platform / security posture]
 
+**2026-10-11 — the UPGRADE-REGRESSION half is CLOSED (owner: refuse to
+start).** `config.initialize()` raises `RetiredSecurityKeyError` while the
+config still has `tools.agent.sandbox`; every entry point exits with the
+message, and `EngineClient()` raises it to embedders
+(`ppxai/config/execution.py::RETIRED_SECURITY_KEYS`,
+`tests/test_retired_security_key_refusal.py`). **The posture half below
+(tools consent-free and unconfined by default) is still open.**
+
 **2026-09-10 — the UPGRADE-REGRESSION half is mitigated; the posture
 decision is untouched.** Releasing v1.19.1 turns this from a standing
 posture question into an active regression for one specific operator: ADR
@@ -2607,6 +2615,10 @@ single code regression. Two causes:
    (`ppxai.engine.providers.anthropic` alone 0.79 s, for an opt-in provider).
    Interpreter-spawning test sites grew from 3 (`v1.19.0`) to 31, so each
    pays the heavier start, mostly as SETUP time.
+
+**Owner, 2026-10-11:** cap at 6 on the macOS dev host only, through
+`PYTEST_XDIST_AUTO_NUM_WORKERS=6` in that host's shell environment
+(pytest-xdist reads it for `-n auto`); `addopts` is unchanged.
 
 **Options (owner):** cap the default worker count (e.g. `-n 6`; machine
 specific); share or cache the fresh-interpreter probes; stop importing

@@ -52,6 +52,8 @@ from .defaults import (
 
 # Execution surfaces (ADR 0010 third axis; ADR 0011 one-off tier)
 from .execution import (
+    RetiredSecurityKeyError,
+    check_retired_security_keys,
     get_execution_collect,
     get_execution_config,
     get_execution_default_subagent,
@@ -223,6 +225,10 @@ def initialize():
     # Then populate PROVIDERS/MODELS from config
     _refresh_module_dicts()
 
+    # Debt Item 46: a retired key that held a security control refuses to
+    # start, every time config is (re)loaded, instead of being ignored.
+    check_retired_security_keys(ConfigStore.get_instance().config, find_config_file())
+
     # ADR 0015: a leftover block for a removed chat provider is ignored,
     # never rewritten. Say so once per process, so a headless deployment
     # sees it without running /doctor.
@@ -276,6 +282,8 @@ def ensure_initialized() -> None:
 
 __all__ = [
     "ensure_initialized",
+    "RetiredSecurityKeyError",
+    "check_retired_security_keys",
     "REMOVED_CHAT_PROVIDERS",
     "removed_providers_in_config",
     "FALLBACK_PROVIDER",

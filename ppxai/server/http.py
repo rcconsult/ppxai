@@ -43,7 +43,13 @@ from starlette.datastructures import Headers
 import ppxai.config.loader as _loader
 
 from ..common.logger import get_logger
-from ..config import get_idle_timeout, get_remote_config, get_shutdown_grace_s, initialize
+from ..config import (
+    RetiredSecurityKeyError,
+    get_idle_timeout,
+    get_remote_config,
+    get_shutdown_grace_s,
+    initialize,
+)
 from ..version import __version__
 from . import registry
 from . import state as _state  # noqa: F401 — backing store for session_manager
@@ -904,7 +910,7 @@ def run_server():
     _set_bind_host(args.host)
 
     # Initialize configuration system (v1.13.10: explicit initialization)
-    initialize()
+    _initialize_or_exit()
 
     print(f"Starting ppxai HTTP server on http://{args.host}:{args.port}")
     print("Endpoints:")
@@ -1036,7 +1042,7 @@ def _run_announced(args) -> int:
     # Loopback bind semantics for Host validation: the hub forwards to the
     # socket and names the server as localhost.
     _set_bind_host("127.0.0.1")
-    initialize()
+    _initialize_or_exit()
     if args.announce:
         chain = get_secret_provider()
         if not any(isinstance(p, EnvSecretProvider) and p.var == "PPXAI_API_TOKEN"
@@ -1184,6 +1190,15 @@ def _daemon_stdio() -> None:
     os.dup2(log_fd, 2)
 
 
+def _initialize_or_exit() -> None:
+    """`initialize()`, or exit with its message when the config holds a
+    retired security key (debt Item 46) instead of a traceback."""
+    try:
+        initialize()
+    except RetiredSecurityKeyError as exc:
+        sys.exit(f"ppxai: {exc}")
+
+
 def run_desktop():
     """Run desktop web app - starts server and opens browser (CLI entry point)."""
     parser = argparse.ArgumentParser(description="ppxai Desktop Web App")
@@ -1196,6 +1211,7 @@ def run_desktop():
 
     # Host-validation bind context (debt (u)) — desktop binds loopback by default.
     _set_bind_host(args.host)
+    _initialize_or_exit()
 
     url = f"http://{args.host}:{args.port}"
 

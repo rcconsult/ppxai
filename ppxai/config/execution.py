@@ -28,6 +28,44 @@ class _ConfigUnavailable(Exception):
     """
 
 
+class RetiredSecurityKeyError(RuntimeError):
+    """A retired config key whose silent loss would widen what a run can reach.
+
+    ppxai refuses to start rather than run without it (owner decision
+    2026-10-11, debt Item 46). The message names the file and the move.
+    """
+
+
+#: Retired key path -> where its setting lives now. Only keys whose loss is a
+#: SECURITY loss belong here; `/doctor` warns about the rest
+#: (`commands/doctor.py::ADR_0010_KEY_MOVES`). `tools.agent.sandbox` held the
+#: filesystem seal: ignored, it reverts to `enforcement: "off"`, and the
+#: `read_paths.deny` list (.env, .ssh, secrets) stops applying.
+RETIRED_SECURITY_KEYS: dict[tuple[str, ...], str] = {
+    ("tools", "agent", "sandbox"): "execution.task.sandbox",
+}
+
+
+def check_retired_security_keys(config_data: dict[str, Any], source: Any = None) -> None:
+    """Raise `RetiredSecurityKeyError` if the config still has a retired
+    security key. Its presence alone refuses: with the new key also set,
+    which one the operator meant is not ours to guess."""
+    where = source or "ppxai-config.json"
+    for path, new in RETIRED_SECURITY_KEYS.items():
+        node: Any = config_data
+        for segment in path:
+            node = node.get(segment) if isinstance(node, dict) else None
+        if node is not None:
+            old = ".".join(path)
+            raise RetiredSecurityKeyError(
+                f"{where}: `{old}` is no longer read (ADR 0010); its setting "
+                f"moved to `{new}`. Running without it would turn the /task "
+                f"filesystem sandbox off, so ppxai refuses to start. Move the "
+                f"block to `{new}` (merge it if that key exists) and delete "
+                f"`{old}`."
+            )
+
+
 def _read_execution_block() -> dict[str, Any]:
     """The raw top-level `execution` block, or raise `_ConfigUnavailable`."""
     try:

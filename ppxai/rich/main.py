@@ -7,6 +7,7 @@ import asyncio
 import os
 import sys
 import time
+from pathlib import Path  # noqa: F401 — patched by tests
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -20,6 +21,7 @@ from ..common.autosave_guard import AutosaveFailureGuard
 from ..common.logger import get_logger
 from ..config import (
     PROVIDERS,
+    RetiredSecurityKeyError,
     get_api_key,
     get_auto_restore_mode,
     get_auto_save_interval,
@@ -37,7 +39,6 @@ from .event_handler import TUIEventHandler
 from .themes import get_theme
 from .ui import console, display_welcome, select_model, select_provider
 from .ui_components import format_usage_string, render_status_panel
-from pathlib import Path  # noqa: F401 — patched by tests
 
 logger = get_logger("tui")
 
@@ -367,7 +368,10 @@ def main():
     # Initialize configuration system (v1.13.10: explicit initialization).
     # initialize() also restores persisted debug-log state — so the logger
     # is writing to tui-debug.log BEFORE the session-recovery prompt runs.
-    initialize()
+    try:
+        initialize()
+    except RetiredSecurityKeyError as exc:
+        sys.exit(f"ppxai: {exc}")
 
     # Session recovery check — BEFORE provider/model selection so the user
     # always sees the restore prompt even if they Ctrl+C during selection.

@@ -5,9 +5,12 @@
 > same branch. The owner decided on 2026-10-11 that all of it ships as
 > 1.19.4.
 >
-> - **Security (upgrade if you browse the web on a machine that runs
->   `ppxai-server` or `ppxai-desktop`, or run the k8s coder deployment):**
->   any web page could open a shell through the terminal websocket. Fixed.
+> - **Security:** a shell through the terminal websocket (fixed), and
+>   ppxai now refuses to start rather than silently drop a configured
+>   `/task` sandbox (see below).
+> - **Who should upgrade first:** anyone who browses the web on a machine
+>   that runs `ppxai-server` or `ppxai-desktop`, and anyone running the k8s
+>   coder deployment.
 > - **New, opt-in: the SSH remote hub and SSH Launcher.** Drive ppxai
 >   servers on other hosts from your local browser. Off unless
 >   `remote.hosts` is configured.
@@ -85,6 +88,21 @@ users, the loopback trust model is unchanged by this release.
 | A coder pod (wide bind, `PPXAI_TRUSTED_HOSTS` and `PPXAI_ALLOWED_ORIGINS` as the session-manager sets them) | its UI opens its terminal; a sibling-domain page is refused |
 | A gateway bound wide without either variable | its same-origin UI opens its terminal; other origins are refused |
 | A non-browser client with no `Origin` | same as before, subject to Host and token |
+
+### ppxai refuses to start while the config has `tools.agent.sandbox`
+
+ADR 0010 (v1.19.1) moved the `/task` filesystem sandbox from
+`tools.agent.sandbox` to `execution.task.sandbox`, with no fallback. An
+operator who had configured a jail (`enforcement: "in_process"`) lost it
+silently on upgrade: the seal reverted to `"off"`, and the `read_paths.deny`
+list (`.env`, `.ssh`, secrets) stopped applying to `/task` runs.
+
+Now every entry point (`ppxai`, `ppxaide`, `ppxai-server`,
+`ppxai-desktop`) refuses to start while that key is present, and prints the
+file and the fix. An embedder's `EngineClient()` raises
+`ppxai.config.RetiredSecurityKeyError`. It refuses even if
+`execution.task.sandbox` is also set. No other key refuses; `/doctor` still
+warns about the other moved `tools.agent.*` keys.
 
 ## New: SSH remote hub and SSH Launcher (ADR 0013)
 
@@ -190,15 +208,18 @@ Also:
 
 ## Upgrade
 
-1. **Websocket clients:** if a browser client of yours opens the terminal
+1. **If ppxai refuses to start** with "`tools.agent.sandbox` is no longer
+   read": move that block under `execution.task.sandbox` (merge it if that
+   key exists) and delete `tools.agent.sandbox`.
+2. **Websocket clients:** if a browser client of yours opens the terminal
    from an origin other than the server's own, add that origin to
    `PPXAI_ALLOWED_ORIGINS`.
-2. **Model rows copied from an older example config** can override the new
+3. **Model rows copied from an older example config** can override the new
    facts. Run `/doctor`, and compare your `providers.*.models` rows for the
    models in the table above with `ppxai-config.example.json`; delete a
    row's `facts` block to fall back to the shipped seed.
-3. **Gemini:** drop `gemini-3.5-flash` and any 2.5 model from your config,
+4. **Gemini:** drop `gemini-3.5-flash` and any 2.5 model from your config,
    and drop a Gemini `generation_params` block that sets `temperature` or
    `top_p` (3.6+ ignores it; upcoming models reject it).
-4. **SSH hub (optional):** add `remote.hosts`, and install this release on
+5. **SSH hub (optional):** add `remote.hosts`, and install this release on
    each remote host.
