@@ -1,0 +1,1527 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.4/plan-ssh-remote-backend/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Plan — SSH remote backend (ADR 0013) - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#plan-ssh-remote-backend-adr-0013" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Plan — SSH remote backend (ADR 0013)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#phase-0-resolve-the-adrs-open-questions-no-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 0 — Resolve the ADR's open questions (no code)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-s3-the-remote-side-contract-ppxai-server-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 — S3, the remote-side contract (ppxai-server only)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-s2-remotetransport-opensshtransport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 — S2, RemoteTransport + OpenSSHTransport
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-s4-remotesessionmanager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 — S4, RemoteSessionManager
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-s5-the-hub-proxy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 — S5, the hub proxy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-s6-web-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5 — S6, web client
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-6-owner-trial" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6 — Owner trial
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-in-this-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not in this plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="plan-ssh-remote-backend-adr-0013">Plan — SSH remote backend (ADR 0013)<a class="headerlink" href="#plan-ssh-remote-backend-adr-0013" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-09-26
+<strong>Status:</strong> ✅ <strong>Complete.</strong> Phases 0–6 implemented on <code>feature/v1.19.4</code>
+(unreleased); the owner trial passed 2026-09-29 and the owner accepted ADR 0013
+the same day, after the two items the trial left open were done (below). Implements <a href="../decisions/0013-ssh-remote-backend/">ADR 0013</a>.
+<strong>Scope:</strong> web client first. VSCode and the TUIs follow only after the web
+path is proven.</p>
+<p>Each phase is a gate: it lands with its tests, is tried by the owner, and the
+next phase starts on instruction.</p>
+<hr />
+<h2 id="phase-0-resolve-the-adrs-open-questions-no-code">Phase 0 — Resolve the ADR's open questions (no code)<a class="headerlink" href="#phase-0-resolve-the-adrs-open-questions-no-code" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Question</th>
+<th>How it is decided</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Q1</td>
+<td>Where the hub runs</td>
+<td>✅ Owner: mounted in the local <code>ppxai-server</code></td>
+</tr>
+<tr>
+<td>Q2</td>
+<td>Config key for the host inventory</td>
+<td>✅ Owner: new top-level <code>remote.*</code></td>
+</tr>
+<tr>
+<td>Q3</td>
+<td>Windows OpenSSH → remote unix-socket forward</td>
+<td>✅ Measured 2026-09-26 against WSL2 sshd: works with the stock Windows client</td>
+</tr>
+<tr>
+<td>Q4</td>
+<td>Connection reuse</td>
+<td>✅ Measured: one long-lived forward per server; the proxy must pool keep-alive connections. The 6-vs-61 ms spread is undiagnosed; deferred at acceptance (ADR Q4)</td>
+</tr>
+<tr>
+<td>Q5</td>
+<td>Hosts without the S3 contract</td>
+<td>✅ Owner: refuse</td>
+</tr>
+</tbody>
+</table>
+<p>Exit: ADR 0013 revised in place with the answers, still Proposed. <strong>Phase 0 is complete.</strong></p>
+<p><strong>Test rig for every later phase:</strong> Ubuntu 24.04 on WSL2 with sshd on port 2222
+(<code>ssh -p 2222 &lt;user&gt;@localhost</code>-style), which has <code>ppxai-server</code> installed. The live
+opt-in tests read the destination from an env var; nothing host-specific goes
+in the repo.</p>
+<h2 id="phase-1-s3-the-remote-side-contract-ppxai-server-only">Phase 1 — S3, the remote-side contract (<code>ppxai-server</code> only)<a class="headerlink" href="#phase-1-s3-the-remote-side-contract-ppxai-server-only" title="Permanent link">&para;</a></h2>
+<p><strong>Status (2026-09-27): implemented</strong> — <code>ppxai/server/registry.py</code>, <code>ppxai-server --uds/--announce/--detach/--list</code>, <code>tests/test_server_registry.py</code>. Two findings shaped it: uvicorn makes a socket it binds itself 0666, so the server binds it and passes the fd; and <code>/health</code> is NOT exempt from auth (only from the Host check), so liveness probes and <code>--list</code> present the entry's token. The POSIX launch tests run on Ubuntu 24.04 (WSL2) and macOS before the owner trial.</p>
+<ul>
+<li><code>--uds &lt;path&gt;</code>: <code>uvicorn.Config(uds=...)</code>, socket dir 0700, socket 0600
+  before the first accept.</li>
+<li><code>--announce</code>: per-launch token into the process's <code>PPXAI_API_TOKEN</code>,
+  registry entry written 0600, JSON echoed on stdout.</li>
+<li><code>--detach</code>: daemonise (POSIX); refuse with a clear message on Windows.</li>
+<li><code>--list --json</code>: live entries only; dead pid or dead socket → entry removed.</li>
+<li>Registry schema pinned by a JSON fixture and a test that fails on an
+  unversioned change (<code>contract</code> must bump).</li>
+</ul>
+<p>Tests: launch → list → <code>/health</code> over the socket with and without the token →
+kill → list prunes. All local, POSIX-gated where the OS demands it.</p>
+<h2 id="phase-2-s2-remotetransport-opensshtransport">Phase 2 — S2, <code>RemoteTransport</code> + <code>OpenSSHTransport</code><a class="headerlink" href="#phase-2-s2-remotetransport-opensshtransport" title="Permanent link">&para;</a></h2>
+<p><strong>Status (2026-09-28): implemented</strong> on <code>feature/v1.19.4</code> — <code>ppxai/remote/{transport,openssh}.py</code>, <code>tests/test_remote_transport.py</code>, <code>tests/remote_fakes.py</code> (<code>FakeTransport</code>), <code>tests/fake_ssh.py</code> (a stand-in ssh binary: runs the command through a real local <code>sh</code>, so the quoting table is end-to-end, and relays <code>-L</code> forwards to a unix socket), and Guard 3b in <code>tests/test_no_new_lazy_imports.py</code>. Decisions made while building it:</p>
+<ul>
+<li><strong>Local end of a forward:</strong> a unix socket in a private 0700 <code>mkdtemp</code> dir on POSIX (<code>StreamLocalBindMask=0177</code>), loopback TCP on Windows. The hub is then the only local process that can reach a forward on POSIX.</li>
+<li><strong>CR/LF refused in argv</strong>, not quoted: <code>sh</code> accepts them inside single quotes, csh-family login shells do not, and no ppxai command needs one.</li>
+<li><strong>Destination validation:</strong> one <code>ssh</code> word, never starting with <code>-</code> (option injection such as <code>-oProxyCommand=…</code>).</li>
+<li><strong>A forward's readiness is "the local end accepts"</strong>, not "the remote socket answers". Real ssh accepts locally and only fails the channel; liveness is S4's <code>/health</code> probe.</li>
+<li><strong>Exception names end in <code>Error</code></strong> (repo lint, N818); the ADR's S2 text is updated to match.</li>
+</ul>
+<p>Verified against the real OpenSSH 8.6 client on macOS: unknown host → <code>HostUnreachableError</code>, closed port → the same. The opt-in live class runs with <code>PPXAI_TEST_SSH_DEST=&lt;destination&gt;</code> (and <code>PPXAI_TEST_SSH_COMMAND</code> for an ssh argv prefix, e.g. a scratch <code>UserKnownHostsFile</code>). <strong>Linux (WSL2 Ubuntu 24.04, 706a60dd):</strong> all 95 incl. the live class against a real sshd. <strong>Windows (706a60dd):</strong> a live <code>OpenSSHTransport</code> TCP forward from Windows OpenSSH to a WSL2 <code>ppxai-server --uds</code> reached the server (<code>/health</code> 401 without the token, as designed) and the port closed after <code>close()</code>; two test-only defects found by the peers were fixed (an echo server dying on EPIPE on Linux, <code>706a60dd</code>; the fake ssh writing stderr in text mode on Windows).</p>
+<ul>
+<li><code>ppxai/remote/transport.py</code>: the Protocol, <code>RunResult</code>, <code>LocalEndpoint</code>,
+  typed errors.</li>
+<li><code>OpenSSHTransport</code>: <code>BatchMode=yes</code>, argv quoting in one function,
+  <code>ssh -N -L</code> for forwards, stderr mapped to typed errors.</li>
+<li><code>FakeTransport</code> for every later phase's tests.</li>
+<li>Layering fence: <code>ppxai/remote/</code> imports nothing from <code>engine/</code> or
+  <code>commands/</code>.</li>
+</ul>
+<p>Tests: argv quoting table (spaces, quotes, <code>$</code>, newlines); stderr → error-type
+table from captured real OpenSSH messages; one opt-in live test against a host
+named by an env var, skipped otherwise.</p>
+<h2 id="phase-3-s4-remotesessionmanager">Phase 3 — S4, <code>RemoteSessionManager</code><a class="headerlink" href="#phase-3-s4-remotesessionmanager" title="Permanent link">&para;</a></h2>
+<p><strong>Status (2026-09-28): implemented</strong> on <code>feature/v1.19.4</code> — <code>ppxai/remote/inventory.py</code> (S1 <code>remote.hosts</code> validation; not yet read from config — Phase 4 wires it), <code>contract.py</code> (the hub's own contract record, pinned to the server's by a test), <code>manager.py</code>; <code>tests/test_remote_manager.py</code>. What the ADR did not say and the build decided is recorded under S4 "As built". Besides the fake-driven state-machine tests, the remote shell snippets (binary discovery, <code>cd</code> into the workdir) run through a real <code>sh</code>, and one slow test launches a real <code>ppxai-server --uds --announce --detach</code> through the fake ssh, attaches over a real forward, health-checks it and stops it with <code>POST /shutdown</code>.</p>
+<ul>
+<li>State machine exactly as drawn in the ADR; every transition an event the
+  picker can render.</li>
+<li><code>servers(host)</code> parses S3 <code>--list --json</code>; unknown <code>contract</code> → typed
+  refusal naming both numbers.</li>
+<li><code>detach</code> never stops a remote server; <code>stop</code> is explicit.</li>
+</ul>
+<p>Tests: every transition driven through <code>FakeTransport</code>, including health
+failure → degraded → recovery, and a transport dying mid-forward.</p>
+<h2 id="phase-4-s5-the-hub-proxy">Phase 4 — S5, the hub proxy<a class="headerlink" href="#phase-4-s5-the-hub-proxy" title="Permanent link">&para;</a></h2>
+<p><strong>Status (2026-09-28): implemented</strong> on <code>feature/v1.19.4</code> — <code>ppxai/server/routes/remote_hub.py</code> (the <code>/h/&lt;host&gt;/&lt;id&gt;/…</code> proxy plus a <code>/hub/*</code> control API the picker will use), <code>ppxai/config/remote.py</code> + the <code>remote</code> key in the loader's top-level whitelist, and the lifespan hook in <code>ppxai/server/http.py</code>. Built on top of the v1.19.4 websocket guard (<code>fix/v1.19.4</code>, merged in), which the investigation for this phase found. Decisions:</p>
+<ul>
+<li><strong>Off means absent.</strong> Without <code>remote.hosts</code>, every hub path answers byte-for-byte like an unknown path, no manager exists and nothing is spawned. An announced (remote-side) server never runs a hub. A malformed <code>remote</code> block is logged and leaves the hub off; it never stops the server. The owner required that the k8s coder pods be unaffected: <code>tests/test_remote_hub_coder_fence.py</code> runs the real app with the coder pods' env and pins all of this, including that a pod which <em>had</em> <code>remote.hosts</code> still shows nothing to the ingress.</li>
+<li><strong>Loopback only, same-origin for writes.</strong> The hub answers a direct loopback peer (no forwarding headers) only. A proxied non-GET, a websocket and every control POST must be same-origin (Origin equal to the hub's own, <code>Sec-Fetch-Site</code> not cross/same-site); control POSTs also need <code>application/json</code>, which forces a preflight.</li>
+<li><strong>Auto-attach on first proxied request</strong>, so a reload after a hub restart works; a non-healthy attachment is a 503 with <code>Retry-After: 5</code>, a dead forward a 502, and a forward that accepts but sends no response headers within 660 s a 504 <code>remote_timeout</code> (past the OpenAI SDK's 600 s read timeout, so a slow <code>/v1/oneshot</code> still gets its own answer).</li>
+<li><strong>Proxy details:</strong> streamed both ways (SSE measured unbuffered), keep-alive client pooled per attachment (ADR Q4), <code>Host: localhost</code>, token injected, the browser's <code>Authorization</code>/<code>Cookie</code>/<code>Origin</code>/<code>Referer</code>/forwarding headers dropped; relative <code>Location</code> and cookie <code>Path</code> get the prefix; repeated <code>Set-Cookie</code> preserved. <code>trust_env=False</code> / <code>proxy=None</code> everywhere: an <code>HTTP(S)_PROXY</code> in the environment must never route a loopback or socket hop through a corporate proxy.</li>
+<li><strong>Control API:</strong> <code>GET /hub/hosts</code>, <code>GET /hub/hosts/&lt;host&gt;/servers</code>, <code>POST /hub/hosts/&lt;host&gt;/servers</code> (launch), <code>POST /hub/hosts/&lt;host&gt;/servers/&lt;id&gt;/attach|detach|stop</code>. Errors are typed: 404 unknown host/server, 409 unsupported/old/unknown-contract, 502 transport, with OpenSSH's text in <code>detail</code>.</li>
+</ul>
+<p>Tests: <code>tests/test_remote_hub.py</code> (two real uvicorn servers — the hub router and a fake remote on a unix socket and on TCP — 25 cases × 2 transports; mutation-checked: a buffering proxy and a missing loopback gate both fail it), the coder fence (22 cases; mutation-checked: dropping <code>remote</code> from the loader whitelist or the loopback gate fails it), and <code>tests/test_remote_hub_e2e.py</code> (slow): a real <code>ppxai-server</code> hub, configured by a real config file, launches a second real <code>ppxai-server</code> through the production <code>OpenSSHTransport</code> (its <code>ssh</code> a PATH shim around <code>tests/fake_ssh.py</code>), serves the remote's own web UI and terminal through <code>/h/lab/&lt;id&gt;/</code>, and stops it.</p>
+<p><strong>Windows note:</strong> "<code>ssh</code> from PATH" means <code>ssh.exe</code>. <code>CreateProcess</code> appends only <code>.exe</code> and ignores PATHEXT, so an <code>ssh.cmd</code>/<code>ssh.bat</code> wrapper earlier on PATH is never run (measured by win32-ppxai, 2026-09-28). Host-specific options belong in <code>~/.ssh/config</code>, as S1 says.</p>
+<p>Live results recorded for Phases 2–3 (2026-09-28): a Windows hub (TCP local end) and a Linux hub (real OpenSSH, unix-socket local end: socket 0600 in a 0700 dir) each ran launch → attach (healthy) → stop (gone) against a real WSL2 sshd, with nothing left behind.</p>
+<ul>
+<li><code>/h/&lt;host&gt;/&lt;server-id&gt;/…</code> → forwarded endpoint, prefix stripped.</li>
+<li>Streaming for SSE and chunked bodies; websocket upgrade for <code>/ws/terminal</code>.</li>
+<li><code>Authorization</code> injected; <code>Host: localhost</code>; no <code>X-Forwarded-*</code>.</li>
+<li>Host id validated against the inventory before any lookup.</li>
+</ul>
+<p>Tests: an in-process fake remote (a real <code>ppxai-server</code> app on a UDS or a
+loopback port) behind <code>FakeTransport</code>: an SSE chat stream arrives unbuffered;
+the terminal websocket round-trips; a request never carries the token back to
+the browser; an unknown host id is a 404, never a forward.</p>
+<h2 id="phase-5-s6-web-client">Phase 5 — S6, web client<a class="headerlink" href="#phase-5-s6-web-client" title="Permanent link">&para;</a></h2>
+<p><strong>Status (2026-09-28): item 1 (prefix recognition) landed early</strong>, because without it phase 4 was misleading, not merely incomplete. win32-ppxai's live hub run from Windows loaded <code>/h/wsl/&lt;id&gt;/</code>: HTML and assets came through the proxy, but every API call went to the LOCAL hub server, so the page showed and restored the Windows session. <code>app.js</code> now derives its prefix in one place (<code>servedPathPrefix()</code>: <code>/h/&lt;host&gt;/&lt;id&gt;</code> or <code>/s/&lt;slug&gt;</code>), and <code>handleQuit()</code> under <code>/h/</code> detaches and returns to <code>/</code>, never stopping anything; the coder <code>/s/</code> branch is unchanged (<code>tests/test_web_hub_prefix.py</code>, <code>tests/test_session_end_workflows.py</code>). The same run found that a FROZEN <code>ppxai-server</code> reports and runs in its binary's directory, because the entry script chdirs there; the launch directory is now recorded first and restored on the announce path (<code>tests/test_announced_workdir.py</code>). The picker (item 2) is still to do.</p>
+<p><strong>Status (2026-09-28, later): items 2–4 implemented</strong> as the owner's design, the <strong>SSH Launcher</strong> in the right split pane (ADR S6 "As built"): <code>ppxai/web/components/views/ssh-launcher-view.js</code>, the header button, host badge and <code>/#ssh</code> wiring in <code>app.js</code>, styles in <code>styles.css</code>. Tests: <code>tests/test_ssh_launcher_view.py</code> runs the renderer and the view under node with a fake <code>fetch</code> (escaping, no token rendered, counts only through healthy attachments and never attaching, Stop asks, Detach doesn't, one named tab per server, overlapping refreshes coalesce; mutation-checked), <code>tests/test_web_hub_prefix.py</code> pins Leave → <code>/#ssh</code>. A live Playwright run against a real hub and a real remote <code>ppxai-server</code> (fake ssh shim, as in the e2e test) walked button → launcher → New server → Open (new tab: badge <code>🖥 lab · &lt;id8&gt;</code>, title <code>ppxai — lab</code>, no SSH button) → Leave (back on <code>/</code>, launcher open, server "not attached") → Stop, with no console errors. That run found the one server change: the launcher's count reads re-attached a just-detached server through the proxy's auto-attach, so <code>X-Ppxai-Hub-Attach: no</code> now disables auto-attach per request (<code>tests/test_remote_hub.py::TestObserveOnly</code>). The scratch run became <code>tests/e2e/ssh-launcher.spec.ts</code> on 2026-09-29 (<code>npm run test:ssh</code>). The run on Windows against a real sshd is done: phase 6.</p>
+<ul>
+<li><code>app.js</code> prefix recognition: <code>/h/&lt;host&gt;/&lt;id&gt;</code> alongside <code>/s/&lt;user&gt;</code>.</li>
+<li><code>handleQuit()</code>: under <code>/h/</code>, detach and return to the picker.</li>
+<li>Picker view: hosts + state, servers per host, sessions and runs per server
+  via the remote's existing <code>/sessions</code> and <code>/v1/agent/runs</code>.</li>
+<li>Playwright: picker renders a fake inventory; attaching navigates into
+  <code>/h/&lt;host&gt;/&lt;id&gt;/</code>; Leave returns to the picker without a stop call.</li>
+</ul>
+<h2 id="phase-6-owner-trial">Phase 6 — Owner trial<a class="headerlink" href="#phase-6-owner-trial" title="Permanent link">&para;</a></h2>
+<p>Real hosts, real keys: launch from the picker, chat with tools, open the
+terminal, detach, re-attach from another tab, see the session still there,
+stop. Findings feed back into the ADR before acceptance.</p>
+<p><strong>Status (2026-09-29): PASSED</strong>, run by the owner with win32-ppxai.</p>
+<ul>
+<li><strong>Setup.</strong> Hub: the installed Windows <code>ppxai-server</code> 1.19.4 (built from
+  <code>297f65d8</code>) with <code>remote.hosts = [{"id": "wsl", "ssh": "&lt;alias&gt;"}]</code>, the
+  alias an <code>~/.ssh/config</code> entry for a WSL2 sshd on a local port. Remote:
+  WSL2 Ubuntu 24.04 with a one-file <code>ppxai-server</code> (PyInstaller 6.17) built
+  from <code>e3746f65</code>. Real OpenSSH, real keys; everything driven from the web
+  SSH Launcher.</li>
+<li><strong>Launch.</strong> "New server" started a detached server; its own unpack dir
+  intact, no deleted mappings.</li>
+<li><strong>Open.</strong> The remote UI in a new tab, its API under <code>/h/wsl/&lt;id&gt;/</code>.</li>
+<li><strong>Chat.</strong> A plain turn answered in 2.0 s (<code>gemini-3.8-flash</code>); a tool turn
+  (<code>get_weather</code>) in 7.5 s; three more turns, no errors in the logs.</li>
+<li><strong>Commands and terminal.</strong> <code>/help</code>; <code>/terminal</code> opened a login shell in the
+  remote home directory, used twice.</li>
+<li><strong>Detach and re-attach.</strong> Leave, then Open again: the same session was
+  restored with its new messages (68 → 82), so it persisted across the
+  detach.</li>
+<li><strong>Stop.</strong> <code>POST /shutdown</code> 200, a clean stop after about 6 minutes; the
+  registry entry, the socket and the unpack dir were gone, with no new stale
+  unpack dir.</li>
+</ul>
+<p><strong>Findings, all fixed before the pass:</strong></p>
+<ol>
+<li>A one-file <code>ppxai-server --detach</code> ran out of an unpack dir its launcher
+   had deleted (the launcher forked, then exited, so the bootloader cleaned
+   up under the daemon): every lazily loaded module failed, and chat with it
+   (<code>…/_MEI…/base_library.zip: No such file</code>). Fixed in <code>e3746f65</code>: a frozen
+   launcher re-spawns the binary with <code>PYINSTALLER_RESET_ENVIRONMENT=1</code>, so
+   the daemon's bootloader owns its own unpack dir
+   (<code>tests/test_detach_frozen.py</code>). Verified with real one-file builds on
+   WSL and macOS Intel; Windows has no <code>--detach</code>.</li>
+<li><code>scripts/gateway-smoke.py</code> left a slow-starting server running after a
+   startup timeout. Fixed in <code>cbd0d8e2</code> (60 s start wait on Windows; cleanup
+   watches for a late listener).</li>
+<li>The web client's API calls escaped the <code>/h/</code> prefix, and a frozen server
+   reported its binary's directory as its workdir. Both fixed in <code>5c539936</code>
+   (phase 5 above).</li>
+</ol>
+<p><strong>Left open by the trial, done 2026-09-29</strong> (the owner first deferred both,
+then asked for them before accepting the ADR):</p>
+<ul>
+<li>A Playwright spec for the Launcher: <code>tests/e2e/ssh-launcher.spec.ts</code>,
+  its own <code>ssh</code> project, run with <code>npm run test:ssh</code> in <code>tests/e2e/</code>
+  (POSIX only; the remote is <code>tests/fake_ssh.py</code>, so no host or key).</li>
+<li>Remote builds without <code>e3746f65</code>: an older one-file build launched, then
+  failed every chat, and the version number could not say so. The registry
+  moved to contract 2 (same fields; the new meaning is "<code>--detach</code> works
+  from a one-file build"), the hub retired contract 1, and before a launch
+  the hub runs <code>ppxai-server --registry-contract</code> on the host and refuses a
+  binary without it, or with a contract it does not read, before anything
+  starts. <code>MIN_SERVER_VERSION</code> is gone. See ADR S3 "As built".</li>
+</ul>
+<hr />
+<h2 id="not-in-this-plan">Not in this plan<a class="headerlink" href="#not-in-this-plan" title="Permanent link">&para;</a></h2>
+<p>VSCode/TUI clients of the hub, remote tool execution from a local engine,
+multi-user hubs, a hub reachable beyond loopback.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

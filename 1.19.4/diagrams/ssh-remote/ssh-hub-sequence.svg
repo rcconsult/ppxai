@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1360" width="1600" height="1360" role="img" aria-labelledby="t d">
+  <title id="t">ppxai SSH hub — launch, open, terminal, stop</title>
+  <desc id="d">Sequence of calls between the browser, the local hub routes, the RemoteSessionManager, the SSH hop and the remote ppxai-server: launching a server with ssh -T, the first proxied request that auto-attaches through an ssh -N -L forward, the terminal websocket, and stopping the server with POST /shutdown.</desc>
+  <defs>
+    <style>
+      .t  { font-family: 'IBM Plex Sans','Segoe UI','Noto Sans',Arial,sans-serif; fill: #1D1F20; }
+      .c  { font-family: 'IBM Plex Sans Condensed','Arial Narrow','Noto Sans Condensed',sans-serif; }
+      .m  { font-family: 'IBM Plex Mono',Consolas,'Noto Sans Mono',monospace; }
+      .h1 { font-size: 30px; font-weight: 700; fill: #F2F2F3; }
+      .hd { font-size: 16px; font-weight: 700; fill: #FFFFFF; }
+      .sec{ font-size: 17px; font-weight: 700; fill: #032B46; }
+      .msg{ font-size: 13.5px; }
+      .s  { font-size: 12px; fill: #5D5D60; }
+      .n  { font-size: 12px; font-weight: 700; fill: #FFFFFF; }
+      .halo text { stroke: #FFFFFF; stroke-width: 9px; paint-order: stroke; stroke-linejoin: round; }
+    </style>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0072B8"/></marker>
+    <marker id="ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#005A93"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5D5D60"/></marker>
+  </defs>
+
+  <rect width="1600" height="1360" fill="#F2F2F3"/>
+  <rect width="1600" height="72" fill="#032B46"/>
+  <text x="32" y="46" class="t c h1">ppxai SSH hub — one server's life: launch, open, terminal, stop</text>
+  <text x="1568" y="44" text-anchor="end" class="t msg" style="fill:#A1D4F0">ADR 0013 · feature/v1.19.4</text>
+
+  <!-- section bands -->
+  <rect x="16" y="168" width="1568" height="290" rx="10" fill="#FFFFFF"/>
+  <rect x="16" y="470" width="1568" height="430" rx="10" fill="#FFFFFF"/>
+  <rect x="16" y="912" width="1568" height="190" rx="10" fill="#FFFFFF"/>
+  <rect x="16" y="1114" width="1568" height="190" rx="10" fill="#FFFFFF"/>
+  <!-- lifelines -->
+  <g>
+    <line x1="140" y1="148" x2="140" y2="1316" stroke="#98989B" stroke-width="1.5" stroke-dasharray="4 5"/>
+    <line x1="460" y1="148" x2="460" y2="1316" stroke="#98989B" stroke-width="1.5" stroke-dasharray="4 5"/>
+    <line x1="780" y1="148" x2="780" y2="1316" stroke="#98989B" stroke-width="1.5" stroke-dasharray="4 5"/>
+    <line x1="1100" y1="148" x2="1100" y2="1316" stroke="#98989B" stroke-width="1.5" stroke-dasharray="4 5"/>
+    <line x1="1420" y1="148" x2="1420" y2="1316" stroke="#98989B" stroke-width="1.5" stroke-dasharray="4 5"/>
+  </g>
+  <g class="halo">
+  <text x="32" y="194" class="t c sec">A · Launch — SSH Launcher “New server”</text>
+  <text x="32" y="496" class="t c sec">B · Open — the first proxied request auto-attaches</text>
+  <text x="32" y="938" class="t c sec">C · Terminal — a shell on the REMOTE host</text>
+  <text x="32" y="1140" class="t c sec">D · Stop — through the server, never a pid signal</text>
+  </g>
+
+  <g>
+    <rect x="40"   y="92" width="200" height="56" rx="8" fill="#5D5D60"/>
+    <text x="140"  y="118" text-anchor="middle" class="t hd">Browser</text>
+    <text x="140"  y="138" text-anchor="middle" class="t s" style="fill:#E9F4FB">127.0.0.1:54320</text>
+    <rect x="345"  y="92" width="230" height="56" rx="8" fill="#032B46"/>
+    <text x="460"  y="118" text-anchor="middle" class="t hd">Hub routes</text>
+    <text x="460"  y="138" text-anchor="middle" class="t s" style="fill:#A1D4F0">server/routes/remote_hub.py</text>
+    <rect x="665"  y="92" width="230" height="56" rx="8" fill="#005A93"/>
+    <text x="780"  y="118" text-anchor="middle" class="t hd">RemoteSessionManager</text>
+    <text x="780"  y="138" text-anchor="middle" class="t s" style="fill:#E9F4FB">remote/manager.py</text>
+    <rect x="985"  y="92" width="230" height="56" rx="8" fill="#0072B8"/>
+    <text x="1100" y="118" text-anchor="middle" class="t hd">ssh ⇄ sshd</text>
+    <text x="1100" y="138" text-anchor="middle" class="t s" style="fill:#E9F4FB">OpenSSHTransport, BatchMode</text>
+    <rect x="1305" y="92" width="230" height="56" rx="8" fill="#032B46"/>
+    <text x="1420" y="118" text-anchor="middle" class="t hd">Remote ppxai-server</text>
+    <text x="1420" y="138" text-anchor="middle" class="t s" style="fill:#A1D4F0">--uds --announce --detach</text>
+  </g>
+
+  <!-- ===== A: launch ===== -->
+  <g class="t msg halo">
+    <line x1="140" y1="228" x2="456" y2="228" stroke="#005A93" stroke-width="2" marker-end="url(#ac)"/>
+    <text x="150" y="220" class="m">POST /hub/hosts/wsl/servers {"label"}</text>
+    <text x="150" y="246" class="s">same-origin + application/json</text>
+
+    <line x1="460" y1="270" x2="776" y2="270" stroke="#005A93" stroke-width="2" marker-end="url(#ac)"/>
+    <text x="470" y="262">manager.launch("wsl")</text>
+
+    <line x1="780" y1="304" x2="1096" y2="304" stroke="#005A93" stroke-width="2" marker-end="url(#ac)"/>
+    <text x="790" y="296" class="m">ssh -T wsl 'sh -c &lt;discover&gt; …'</text>
+    <line x1="1100" y1="326" x2="784" y2="326" stroke="#5D5D60" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+    <text x="1090" y="344" text-anchor="end" class="s">~/.local/bin/ppxai-server (cached per host)</text>
+
+    <line x1="780" y1="372" x2="1416" y2="372" stroke="#005A93" stroke-width="2" marker-end="url(#ac)"/>
+    <text x="790" y="364" class="m">ssh -T wsl 'ppxai-server --uds --announce --detach --label …'</text>
+    <rect x="1438" y="352" width="136" height="84" rx="6" fill="#E9F4FB" stroke="#62B2E0"/>
+    <text x="1446" y="370" class="s">bind socket 0600</text>
+    <text x="1446" y="386" class="s">token → own env</text>
+    <text x="1446" y="402" class="s">write registry 0600</text>
+    <text x="1446" y="418" class="s">no idle exit, no hub</text>
+    <line x1="1420" y1="410" x2="784" y2="410" stroke="#5D5D60" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+    <text x="1410" y="428" text-anchor="end" class="s">entry JSON on stdout: id · pid · socket · token · version · workdir</text>
+
+    <line x1="460" y1="440" x2="144" y2="440" stroke="#5D5D60" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+    <text x="450" y="432" text-anchor="end" class="s">201 RemoteServer.public() — no token</text>
+  </g>
+
+  <!-- ===== B: open ===== -->
+  <g class="t msg halo">
+    <line x1="140" y1="530" x2="456" y2="530" stroke="#0072B8" stroke-width="3" marker-end="url(#a)"/>
+    <text x="150" y="522" class="m">GET /h/wsl/&lt;id&gt;/   (Open ⇒ new tab)</text>
+
+    <line x1="460" y1="570" x2="776" y2="570" stroke="#005A93" stroke-width="2" marker-end="url(#ac)"/>
+    <text x="470" y="562">_route: not attached ⇒ attach()</text>
+
+    <line x1="780" y1="606" x2="1096" y2="606" stroke="#005A93" stroke-width="2" marker-end="url(#ac)"/>
+    <text x="790" y="598" class="m">ssh -T wsl 'ppxai-server --list --json'</text>
+    <line x1="1100" y1="628" x2="784" y2="628" stroke="#5D5D60" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+    <text x="1090" y="646" text-anchor="end" class="s">live entries (pid alive + socket answers) → parse_entry</text>
+
+    <line x1="780" y1="680" x2="1096" y2="680" stroke="#0072B8" stroke-width="3" marker-end="url(#a)"/>
+    <text x="790" y="672" class="m">ssh -N -L 127.0.0.1:&lt;p&gt;:&lt;socket&gt; wsl</text>
+    <rect x="1112" y="660" width="176" height="42" rx="6" fill="#E9F4FB" stroke="#0072B8"/>
+    <text x="1122" y="678" class="s">long-lived forward,</text>
+    <text x="1122" y="694" class="s">one per attached server</text>
+    <text x="790" y="700" class="s">connecting → tunneled</text>
+
+    <line x1="780" y1="738" x2="1416" y2="738" stroke="#0072B8" stroke-width="2" marker-end="url(#a)"/>
+    <text x="790" y="730" class="m">GET /health  Authorization: Bearer &lt;token&gt;</text>
+    <line x1="1420" y1="758" x2="784" y2="758" stroke="#5D5D60" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+    <text x="1410" y="776" text-anchor="end" class="s">200 ⇒ healthy (else degraded, backoff 1 s × 2ⁿ ≤ 30 s)</text>
+
+    <line x1="460" y1="812" x2="1416" y2="812" stroke="#0072B8" stroke-width="3" marker-end="url(#a)"/>
+    <text x="470" y="804" class="m">GET /   Host: localhost · Bearer &lt;token&gt; · no Cookie/Origin/X-Forwarded-*</text>
+    <text x="470" y="830" class="s">pooled keep-alive httpx client per attachment, trust_env=False</text>
+
+    <line x1="1420" y1="866" x2="144" y2="866" stroke="#0072B8" stroke-width="3" stroke-dasharray="10 5" marker-end="url(#a)"/>
+    <text x="1410" y="858" text-anchor="end">the REMOTE's own web UI, streamed; its API base is /h/wsl/&lt;id&gt; (servedPathPrefix)</text>
+    <text x="1410" y="886" text-anchor="end" class="s">every later call — /state, /chat SSE, /commands — goes through the same forward</text>
+  </g>
+
+  <!-- ===== C: terminal ===== -->
+  <g class="t msg halo">
+    <line x1="140" y1="972" x2="456" y2="972" stroke="#0072B8" stroke-width="3" marker-end="url(#a)"/>
+    <text x="150" y="964" class="m">WS /h/wsl/&lt;id&gt;/ws/terminal</text>
+    <text x="150" y="990" class="s">local _WebSocketGuard: Host + Origin + auth</text>
+
+    <line x1="460" y1="1024" x2="1416" y2="1024" stroke="#0072B8" stroke-width="3" marker-end="url(#a)"/>
+    <text x="470" y="1016" class="m">websockets.connect(ws://127.0.0.1:&lt;p&gt;/ws/terminal)  + Bearer, no Origin</text>
+    <rect x="1438" y="1004" width="136" height="54" rx="6" fill="#E9F4FB" stroke="#62B2E0"/>
+    <text x="1446" y="1024" class="s">pty.fork() → login</text>
+    <text x="1446" y="1042" class="s">shell on the remote</text>
+
+    <line x1="144" y1="1076" x2="1416" y2="1076" stroke="#0072B8" stroke-width="2" marker-start="url(#a)" marker-end="url(#a)"/>
+    <text x="780" y="1068" text-anchor="middle">two pumps: to_browser() / to_remote(), text and bytes, until either side closes</text>
+  </g>
+
+  <!-- ===== D: stop ===== -->
+  <g class="t msg halo">
+    <line x1="140" y1="1172" x2="456" y2="1172" stroke="#005A93" stroke-width="2" marker-end="url(#ac)"/>
+    <text x="150" y="1164" class="m">POST …/servers/&lt;id&gt;/stop</text>
+    <text x="150" y="1190" class="s">Launcher asks first</text>
+
+    <line x1="460" y1="1206" x2="776" y2="1206" stroke="#005A93" stroke-width="2" marker-end="url(#ac)"/>
+    <text x="470" y="1198">manager.stop()</text>
+
+    <line x1="780" y1="1236" x2="1416" y2="1236" stroke="#005A93" stroke-width="2" marker-end="url(#ac)"/>
+    <text x="790" y="1228" class="m">POST /shutdown  Bearer &lt;token&gt;   (through its own forward)</text>
+    <rect x="1438" y="1214" width="136" height="54" rx="6" fill="#E9F4FB" stroke="#62B2E0"/>
+    <text x="1446" y="1234" class="s">exit: remove entry</text>
+    <text x="1446" y="1252" class="s">+ socket</text>
+    <text x="790" y="1258" class="s">drop forward ⇒ gone “stopped”</text>
+
+    <line x1="460" y1="1284" x2="144" y2="1284" stroke="#5D5D60" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+    <text x="450" y="1276" text-anchor="end" class="s">{"action":"stop","ok":true}</text>
+  </g>
+
+  <!-- legend -->
+  <text x="32" y="1340" class="t s">Blue solid: proxied traffic over the forward · dark blue: control over ssh -T · grey dashed: replies. Detach (not drawn) only drops the forward; the remote server keeps running.</text>
+</svg>
