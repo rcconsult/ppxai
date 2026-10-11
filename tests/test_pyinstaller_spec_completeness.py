@@ -161,3 +161,22 @@ def test_spec_names_every_provider_module(spec_name: str) -> None:
 def test_spec_names_no_deleted_provider_module(spec_name: str) -> None:
     stale = _spec_provider_entries(spec_name) - _provider_modules()
     assert not stale, f"{spec_name} names provider modules that no longer exist: {sorted(stale)}"
+
+
+ALL_SPECS = ["ppxai-server.spec", "ppxai.spec", "ppxaide.spec", "ppxai-desktop.spec"]
+
+
+def _module_exists(dotted: str) -> bool:
+    path = REPO_ROOT.joinpath(*dotted.split("."))
+    return path.with_suffix(".py").is_file() or (path / "__init__.py").is_file()
+
+
+@pytest.mark.parametrize("spec_name", ALL_SPECS)
+def test_every_ppxai_hiddenimport_exists(spec_name: str) -> None:
+    """A retired module lingers in a spec as build-log ERROR noise, and hides
+    a real gap in the same list: `ppxai.engine.model_profiles` sat in
+    ppxai-server.spec after Item 65 retired it (found 2026-10-11)."""
+    named = set(re.findall(r"'(ppxai(?:\.[a-z_0-9]+)+)'", _read_spec(spec_name)))
+    # `ppxai.py` is the entry script Analysis() takes, not a module name.
+    gone = sorted(m for m in named if not m.endswith(".py") and not _module_exists(m))
+    assert not gone, f"{spec_name} hiddenimports name modules that no longer exist: {gone}"
