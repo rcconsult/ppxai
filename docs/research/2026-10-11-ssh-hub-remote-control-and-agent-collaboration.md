@@ -183,7 +183,7 @@ TCP port. Status 0.3.0, experimental, built for one user's own agents.
      receives a message also needs deciding, because a server hosts the
      session rather than a terminal.
    - **Layering:** this belongs in the engine or the server, not the hub,
-     and `remote/` may not import either (`tests/test_no_new_lazy_imports.py`).
+     and `remote/` may not import `engine/` or `commands/` (Guard 3b in `tests/test_no_new_lazy_imports.py`).
 3. **Consent can stay where the work runs.** pi-peers asks the human at the
    *receiving* agent's terminal; it doesn't relay approvals back to the
    sender. For one owner using the hub, the remote's own consent UI is
@@ -201,26 +201,81 @@ TCP port. Status 0.3.0, experimental, built for one user's own agents.
 6. **Version the cross-host surface.** Hosts upgrade at different times.
    pi-peers plans for mixed versions; `/v1/agent/*` doesn't yet.
 
+## Options
+
+Four independent choices. Each table ends with a lean, not a decision.
+
+### A. The hub's gate for non-browser callers
+
+| Option | What | For | Against |
+|---|---|---|---|
+| A1 Keep, document | Treat loopback as trusted; state it in ADR 0013's threat table | No change | Other OS users on the machine keep a path to the owner's remote shells |
+| A2 Local bearer for no-`Origin` calls | A request with no `Origin` must carry the local server's bearer token | Browser path unchanged | Does nothing when local auth is off, which is the desktop default |
+| A3 Hub token file | The hub writes a token to a 0600 file under `~/.ppxai/run/`; a no-`Origin` caller must present it. This is pi-peers' model | Works with local auth off; only the owner can read the file | One more secret file; existing scripts need updating |
+| A4 Path allowlist | Proxy only the paths the web UI needs | Smaller surface | The web UI needs nearly everything, `/v1/agent/*` and the terminal included, so little is removed |
+| A5 Hub on a unix socket | Serve `/h/...` on a 0700 socket, not TCP | OS-level access control | Browsers can't reach a unix socket; it breaks the hub's purpose |
+
+**Lean: A3.** Also take A1's documentation step whichever option is picked.
+
+### B. Shape of collaboration
+
+| Option | What | For | Against |
+|---|---|---|---|
+| B0 Manual only | The owner drives each remote through the hub UI | Exists today | No agent-to-agent anything |
+| B1 Messaging, pi-peers protocol | ppxai sessions become pi-peers peers | Versioned, tested cross-host protocol including Windows and reverse links; pi and ppxai interoperate; the remote side needs only the Node bridge | Node needed on hosts that bridge; protocol shaped after pi's RPC (no steer in ppxai); a session-targeting decision (axis D) |
+| B2 Messaging, new ppxai protocol | Same idea, designed for ppxai | Fits ppxai's events and consent exactly | Rebuilds what B1 already has, and gets no pi interoperability |
+| B3 Delegation, remote subagent | A local run starts a run on a remote `/v1/agent/task` and collects its result | Budgets, grants, cancellation and `/cost` already exist per host | Needs the gap table above; `/v1/agent/*` has no version contract |
+| B4 B1 + B3 | Messaging for conversations, delegation for bounded, tool-capable work | Each shape used where it fits | Two surfaces to secure and test |
+| B5 Local engine, remote tools | One engine, tools execute remotely | One transcript, one consent UI | ADR 0013:35-42 rules it out: no exec/filesystem abstraction exists |
+| B6 Open agent-interop standard (e.g. A2A) or MCP | Expose ppxai sessions through a standard protocol | Interop beyond our own agents | Not evaluated here. MCP isn't integrated in ppxai at all (`docs/lessons/`). Neither carries SSH discovery or the single-user trust model pi-peers is built on |
+
+**Lean: B4, built B1 first.** Gate it on the spike in "Order" below.
+
+### C. Transport for engine-side cross-host calls (B3, or B1 sends)
+
+| Option | What | For | Against |
+|---|---|---|---|
+| C1 Through the local hub over HTTP | The engine calls `/h/<host>/<id>/...` on its own server | No new transport | An engine calling its own server over HTTP; depends on axis A's fix; a TUI with no server can't use it |
+| C2 Use `ppxai/remote/` directly | The engine opens or reuses the SSH tunnel and adds the token itself | No HTTP loop back into the server; works in the TUIs, which embed the runner in-process | Check the layering fence: Guard 3b forbids `remote/` importing `engine/` or `commands/`; `engine/` importing `remote/` is not fenced either way and needs a decision |
+| C3 Stdio bridge, pi-peers style | `ssh <host> ppxai-peers bridge <id>`, a new CLI verb | No forwarded sockets; same shape as pi-peers; carries B1 directly | A new remote CLI entry point |
+
+**Lean: C3 for messaging (it *is* B1's transport), C2 for delegation.**
+
+### D. Where an inbound message lands, and who approves (B1)
+
+| Option | What | For | Against |
+|---|---|---|---|
+| D1 The server's active chat session | Inject as a user turn with a provenance header | Closest to pi's model | Mixes peer requests into the owner's conversation; the owner may not be watching |
+| D2 A dedicated peer-inbox session | One session per server for peer traffic | Keeps the owner's chat clean | Another session to surface in every client |
+| D3 Each message starts a `/task` run | The message becomes the task text; an `execution.profiles` entry names the grant | Reuses the registry, sandbox, consent, budgets and `/cost`; joins messaging to delegation | Loses conversational follow-up unless runs can be resumed by peer messages |
+
+Approval follows from the landing place. ppxai's own consent applies to
+tools in every option. On top of that, pi-peers' `ask` / `allow` / `deny`
+inbound policy decides whether a message is delivered at all.
+
+**Lean: D3.** It turns a peer message into the kind of run ppxai already
+secures best. The approval prompt stays on the host where the work runs, as
+in pi-peers.
+
 ## Order, if pursued
 
 1. **Fleet view, read-only:** list each attached remote's
    `/v1/agent/runs` in the hub UI. No tool risk.
 2. **Settle the no-`Origin` gate behaviour** and record it in ADR 0013's
-   threat table. pi-peers' posture (a token for every non-browser caller,
-   or a 0700 socket instead of TCP) is the reference.
-3. **Spike: one ppxai session as a pi-peers peer,** on one host. A pi agent
+   threat table. Lean A3 (a hub token file, pi-peers' model).
+3. **Spike for B1 + D3: one ppxai session as a pi-peers peer,** on one host. A pi agent
    lists it, sends a `prompt`, and reads the answer. This answers the open
    question of whether pi-peers assumes anything pi-specific, cheaply,
    before any ADR.
-4. **One ADR covering both shapes:** messaging (pi-peers protocol, if the
+4. **One ADR deciding axes B–D, covering both shapes:** messaging (pi-peers protocol, if the
    spike holds) and delegation (remote subagents over `/v1/agent/task`,
    covering the gap table above).
 5. **Build behind default-off grants.** Messaging first, since it reuses a
-   tested protocol and the pi-peers bridge. Then `/task --host <id>` for
-   delegation.
+   tested protocol and the pi-peers bridge (C3). Then `/task --host <id>` for
+   delegation (B3 over C2).
 
 ## Open next steps (not started)
 
 - Reproduce the no-`Origin` finding against a test hub.
 - The pi-peers spike (step 3 above).
-- Decide whether to draft the ADR.
+- Owner picks per axis in "Options", or asks for the ADR draft.
