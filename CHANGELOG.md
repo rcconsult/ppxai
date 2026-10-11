@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing beyond 1.19.4 yet.
 
-## [1.19.4] - unreleased
+## [1.19.4] - 2026-10-12
 
 Branch: `feature/v1.19.4`, which carries `fix/v1.19.4` (the websocket security patch, from master @ v1.19.3) plus ADR 0013's SSH remote hub and the model and config fixes below. The owner decided on 2026-10-11 that all of it ships as 1.19.4.
 
