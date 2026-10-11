@@ -11,6 +11,26 @@
 
 `fix/v1.19.4` (from master @ v1.19.3).
 
+**Not in this release.** These notes cover `fix/v1.19.4` only. The same file
+also sits on `feature/v1.19.4`, which merged this patch and carries more
+work. `CHANGELOG.md` lists that work under `[Unreleased]` and plans it for a
+later version:
+
+- ADR 0013's SSH remote hub and SSH Launcher (`remote.hosts`, `/h/<host>/<id>/`,
+  `/hub/*`, registry contract 2);
+- model-facts and config changes:
+  - `gpt-5.4-pro`, `gpt-5.6*`, `gpt-6-sol` and `gpt-6-luna` on the Responses
+    wire;
+  - OpenRouter Claude 4.7+ seed rows;
+  - Gemini 3.6+ sampling restrictions and the `gemini-3.5-flash`
+    deprecation;
+  - the 83-row OpenAI deprecation table;
+  - a refreshed example config;
+- loopback-proxy, atomic-save and install-hint fixes.
+
+If that work ships under this version number instead, these notes need
+rewriting: their "no config-shape changes" claim would no longer hold.
+
 ## Security
 
 ### A web page could open a shell through the terminal websocket
