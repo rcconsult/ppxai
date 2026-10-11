@@ -1,8 +1,8 @@
 # ADR 0016: Load provider SDKs on demand, through the provider factory
 
-- **Status:** Proposed (2026-10-11, `feature/v1.19.4`)
+- **Status:** Accepted (2026-10-11): owner answered all four open questions, below. Not implemented yet
 - **Deciders:** owner
-- **Target:** not set. The owner decides the release.
+- **Target:** v1.19.5 (owner, 2026-10-11). Not part of v1.19.4.
 - **Amends:** the project's no-lazy-imports rule
   (`docs/patterns/protocol-dependency-inversion.md`,
   `tests/test_no_new_lazy_imports.py`). It adds one named exception: a
@@ -258,7 +258,22 @@ Each step lands green on its own:
 6. Re-measure: import table, remote probe time, SSH-launcher spec, the
    suite's wall time. Record the numbers here and in Item 83.
 
-## Open questions for the owner
+## Owner decisions (2026-10-11)
+
+1. **Prewarm: yes.** Start-up loads the configured default provider, as
+   today. Only a switch to another provider loads on demand and shows the
+   loading message.
+2. **`from ppxai import EngineClient`: dropped.** No PEP 562 shim. Goes in
+   the v1.19.5 release notes as a breaking change, with the replacement
+   `from ppxai.engine import EngineClient`.
+3. **Search backends: left as they are.** `engine/search/perplexity.py`
+   keeps its module-top `openai` import; revisit only if a session without
+   `openai` becomes possible.
+4. **Release: v1.19.5.**
+
+## Open questions as proposed
+
+These were the questions put to the owner; the answers are above.
 
 1. **Prewarm.** Should start-up load the default provider in the
    background (the first message doesn't wait) or on first use (start-up
