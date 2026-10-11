@@ -318,11 +318,6 @@ class TaskController extends _AgentRunControllerBase {
             return;
         }
 
-        if (started.workdir_ignored) {
-            this.app.showSystemMessage(
-                '⚠️ sandbox seal active — --work-dir ignored; the run stays in its per-run jail.'
-            );
-        }
         const runId = started.run_id;
         // Optimistic pane info from what the client parsed.
         let paneInfo = {

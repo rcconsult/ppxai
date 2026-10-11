@@ -325,9 +325,9 @@ class AgentRunResponse(BaseModel):
 
     run_id: str
     status: str
-    # v1.19.x workdir-alignment: True when the request carried a `workdir`
-    # but the filesystem seal is ON — the run keeps its per-run jail and the
-    # client should surface a warning. Absent/False otherwise.
+    # Always False since debt Item 46 (2026-10-11): a sealed run is confined
+    # TO its requested workdir instead of ignoring it. Kept in the response
+    # shape so older clients keep parsing it.
     workdir_ignored: bool = False
 
 
@@ -594,9 +594,9 @@ class AgentTaskRequest(BaseModel):
         description=(
             "Working directory for the run's relative tool paths — per-run "
             "intent like provider/model (clients thread their session "
-            "working dir; `--work-dir` overrides). Honored ONLY while the "
-            "filesystem seal is OFF: a sealed run keeps its per-run jail and "
-            "the response flags `workdir_ignored`. Absent = the server "
+            "working dir; `--work-dir` overrides). Honored sealed or not: a "
+            "sealed run is confined to it. `workdir_ignored` in the response "
+            "is always false (kept for older clients). Absent = the server "
             "default (`server.working_dir` config, else home) — never the "
             "server process launch dir. Must exist (400 otherwise)."
         ),

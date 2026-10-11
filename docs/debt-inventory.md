@@ -51,7 +51,6 @@ quoting them** — this table is a map, not a source.
 | **73** | `rendering.textual_renderer` ↔ `tui.app` import cycle, hidden by import order | **fenced 2026-09-20** — a module-wide standalone-import sweep now catches any NEW cycle; the cycle itself is still open |
 | **74** | `/preview --serve` cannot start ANY Node project on Windows | auto-detect returns `npm start`, which CreateProcess cannot launch because `npm` is a `.cmd`/`.ps1`, not an `.exe` |
 | **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
-| **46** | `/task` tools consent-free AND path-unconfined by default | posture decision — **now live**, see the 2026-09-05 note |
 | **3** | k8s session-manager security tests | trigger-deferred; quick pass done, full suite postponed |
 | **36** | per-session sub-agent config + `/subagent` command, persisted in checkpoint | deferred — natural fit alongside session/spawn machinery |
 | **37** | agent-platform (v1.19.0) watchlist | low-severity, correctness-neutral items from Inc 5-7 reviews; none block the MVP |
@@ -74,7 +73,6 @@ quoting them** — this table is a map, not a source.
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
 | **83** | the SERIAL test suite is ~2x slower per test than in July, cause unfound | owner decision 2026-09-27: record, not fix; the parallel default (~3 min) hides it |
 | **84** | the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell | owner decision 2026-09-28: record as debt, don't build it now |
-| **85** | ~296 relative links inside `docs/archive/` don't resolve | owner decision 2026-09-28: record as debt; live docs are clean, the archive is historical |
 
 ---
 
@@ -933,87 +931,6 @@ hook-rewritten commands, OR `rtk gain` totals plateau across sessions
 **Effort:** none (documentation-only entry).
 
 ---
-
-### Item 46 — `/task` `read_file` (and non-`spawn_subagent` tools) are consent-free AND path-unconfined by default [agent platform / security posture]
-
-**2026-10-11 — the POSTURE half is DECIDED and BUILT (owner: confine to
-the project).** `enforcement` defaults to `"in_process"`; the seal confines a
-run TO its requested workdir (the session's folder when none is given),
-falling back to a per-run scratch folder; `BUILTIN_DENY` (credentials)
-applies to reads and writes sealed or not (`read_paths.builtin_deny: false`
-opts out), and `read_paths.deny` now applies with the seal off. Runs with no
-file tool get no policy. **Item 46 is closed** once this ships; move it to
-the closed archive at the next sweep.
-
-**2026-10-11 — the UPGRADE-REGRESSION half is CLOSED (owner: refuse to
-start).** `config.initialize()` raises `RetiredSecurityKeyError` while the
-config still has `tools.agent.sandbox`; every entry point exits with the
-message, and `EngineClient()` raises it to embedders
-(`ppxai/config/execution.py::RETIRED_SECURITY_KEYS`,
-`tests/test_retired_security_key_refusal.py`).
-
-**2026-09-10 — the UPGRADE-REGRESSION half is mitigated; the posture
-decision is untouched.** Releasing v1.19.1 turns this from a standing
-posture question into an active regression for one specific operator: ADR
-0010 moved `tools.agent.sandbox` with no dual-read, so someone who had
-configured `enforcement: "in_process"` — a working jail — gets it silently
-ignored on upgrade and reverted to `"off"`, which makes the whole
-`read_paths.deny` list inert (the seal is gated on
-`enforcement == "in_process"` as a unit, `task_runner.py:334`). The operator
-careful enough to build a jail is the one the upgrade removes it from.
-
-`/doctor` now reports that row with **what reverting costs** — naming
-`~/.ppxai/.env` explicitly — sorts security losses above behaviour changes,
-and the release notes carry it as its own upgrade step rather than one line
-in a six-key table. Fenced by `tests/test_doctor_stale_key_cost.py`,
-including a test pinning that `sandbox` is the only security-class move, so
-a second one cannot ride in as an ordinary row.
-
-**This does not answer the item.** The default posture — tool-capable runs
-being consent-free and path-unconfined when the tier is enabled — is still
-an owner decision, and the three fix directions below still stand. What
-changed is that an operator who already made the opposite decision no longer
-loses it silently.
-
-**2026-09-05 — this stopped being hypothetical.** An operator config audited
-today still had the six ADR 0010 keys at `tools.agent.*`, where they are
-silently ignored, so `task_tier_enabled: true` was reading as **disabled** —
-the tool-capable tier was unreachable and the posture question was moot in
-practice. After migrating those keys the tier is live with
-`sandbox.enforcement: "off"`, which is exactly the shape this item
-describes: tools that are consent-free and path-unconfined, on a host whose
-`~/.ppxai/.env` is readable. The decision is now load-bearing rather than
-theoretical. See [[Item 70]] for how the same config-resolution rule bites
-from the other side.
-
-**Planned:** `v1.19.x` (posture decision, not a spec violation). Surfaced by
-the 2026-07-13 trial observation that the nvidia/deepseek direct run read the
-file with **no consent prompt**. Confirmed by source + live config:
-
-- The `/task` interactive consent gate is wired **only** for `spawn_subagent`
-  (`agent_v1.py:923–952`, `consent_policy = spawn_consent or "deny"`,
-  deny-by-default → parks `waiting{consent}` + card). Proven live: subagent
-  run `run_f07d4f8c3209` fired `agent_waiting kind=consent` → `agent_resumed
-  approved:true`.
-- **`read_file` and every non-spawn tool have no consent tier** — they are
-  gated *solely* by the `--tools` allowlist. Granting the tool IS the consent.
-- The **T2 filesystem seal** (path jail) is the intended confinement, but it
-  is **off by default** (`execution.task.sandbox` — moved from
-  `tools.agent.sandbox` in v1.19.1, ADR 0010 — engages only when
-  `enforcement == "in_process"`; live config has `sandbox: null`). With it
-  off, a `/task … --tools read_file` can silently read **any file the process
-  can reach** (e.g. `~/.ppxai/.env`), unconfined and unprompted.
-
-**Why it matters (defense-in-depth).** Combined with Item 43's mis-grounding
-class, a `/task` run can silently read arbitrary local files and fold them
-into a result with no prompt and no jail. Not a spec violation — the
-confinement mechanism exists and ships intentionally-off — but the default
-posture is worth an explicit decision.
-
-**Fix direction (posture, not yet decided):** either default the T2 seal on
-for tool-capable runs, add a read-consent tier for filesystem tools outside
-the workdir, or document the posture prominently so operators opt into the
-seal. Owner decision required before code.
 
 ### Item 47 — VSCode `/task` lacks the web split-pane; run/sub-agent dynamics collapse into flat chat lines [agent platform / clients / vscode / UX]
 
@@ -2681,32 +2598,6 @@ syntax fails unless the model itself wraps the command in
 terminal has been Unix-only since v1.17.1 and nobody has asked for it
 until now.
 
-### Item 85 — ~296 relative links inside `docs/archive/` don't resolve [docs] — ✅ FIXED 2026-10-11
-
-**Fixed 2026-10-11.** The real count was 357 (same rules as `TestDocLinksResolve`). About 320 now point at moved targets, 29 with deleted targets became plain text, 2 ambiguous ones were resolved from their neighbours (`deploy/docker/Dockerfile`, `deploy/k8s/standalone/ingress.yaml`). `TestDocLinksResolve` now covers `docs/archive/`, with five non-links (examples, code) listed in `ARCHIVE_LINK_EXEMPT`. Move to the closed archive at the next sweep.
-
-**Filed 2026-09-28** (owner decision: record as debt, fix later).
-
-The 2026-09-28 docs audit (wsl2-builder, 144 findings) and win32-ppxai's
-repo-wide scan of every git-tracked `*.md` counted 296 unresolved relative
-links, about 95% of them inside `docs/archive/` across ~60 files. They were
-correct when written: the documents moved into subdirectories of the
-archive, or their targets were deleted or renamed. Typical cases are old
-release notes pointing at `../CHANGELOG.md` or `docs/...` with the depth
-they had before archiving, and links to source files that no longer exist.
-The live docs were fixed in `27456f1a`/`6ece7e30`; what remains in live
-files is false positives (link syntax inside inline code, template
-placeholders in `.claude/commands/docs-consolidate.md`).
-
-**Fix sketch:** a script that, per archived file, re-resolves each link
-against the file's current location, rewrites the ones whose target still
-exists (at any depth), and turns the rest into plain text marked
-"(removed)". Then a `tests/test_docs_consistency.py` check that fails on a
-NEW unresolved link in `docs/archive/` (a baseline count, shrink-only),
-so the number cannot grow again.
-
-**Why not now:** the archive is historical by design; nobody navigates it
-link by link, and no live document depends on it.
 ## Closed (recent)
 
 One-liners only. Most have full bodies + evidence trails archived in
@@ -2715,6 +2606,8 @@ older per-version detail in the v1.18.2/v1.18.3 snapshots. **Exception:**
 Items 56-60 were never archived — their bodies were deleted on close and
 the one-liner below is all that remains of each.
 
+- **Item 46** — `/task` tools consent-free AND path-unconfined by default — closed 2026-10-11, both halves (owner decisions). Posture (`1bcd6180`): `execution.task.sandbox.enforcement` defaults to `"in_process"` and the seal confines a run TO its requested workdir (else the session folder, else a per-run scratch folder); `BUILTIN_DENY` (credentials) applies sealed or not, `read_paths.deny` applies with the seal off, `workdir_ignored` is always False. Upgrade regression (`d0b5b26e`): `config.initialize()` raises `RetiredSecurityKeyError` while `tools.agent.sandbox` is present, and every entry point exits with the message. Fenced by `tests/test_retired_security_key_refusal.py`, `tests/test_task_session_workdir.py`, `tests/test_filesystem_policy.py::TestBuiltinDenyAndSealOff`. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
+- **Item 85** — ~296 relative links inside `docs/archive/` didn't resolve — fixed 2026-10-11 (`60e60dda`): 357 links repaired, and `TestDocLinksResolve` now covers `docs/archive/` with a 5-entry `ARCHIVE_LINK_EXEMPT` set. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 80** — a non-repeating multi-tool cycle trips neither guard — closed 2026-09-26 by making its outcome better and its shape visible, not by detecting it (owner chose options B+C+logging). The iteration cap used to end every such turn on a canned "limit reached" line. Now one tools-withdrawn answer pass runs after the last tool iteration (`ToolGuardReason.ITERATION_CAP`, additive; `max_iterations_reached` still set), a single converge notice goes out at ~70% of the cap, and the cap, the notice, both guards and the zombie breaker log `ToolManager.describe_call_pattern()` (shape, repeating cycle, per-tool distinct-args counts, tail). A detector that refuses the alternating shape is still declined, because exploration looks the same. The logged pattern is the evidence for designing one if an incident recurs. Fenced by `tests/test_tool_loop_guard.py::TestIterationCap` / `TestCallPattern` and the reason-vocabulary fence. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 81** — test-order provider-class leak — closed 2026-09-26. `test_custom_endpoint_integration.py::custom_engine` purged `ppxai.engine.providers*` from `sys.modules` without restoring them, even on its skip path, so later modules compared classes from two imports. The purge was obsolete, because `tls_verify()` resolves at client build, so it is deleted. Fenced by `tests/test_no_sys_modules_purge.py` (AST check against computed-name `sys.modules` deletes in-process, mutation-verified). Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 82** — a `/task` run's `events.jsonl` now records a degraded turn — closed 2026-09-23, `59702221`. Narrow option, owner's call: persist only events carrying a `ToolGuardReason`, plus the terminal pair. `turn_degraded` (one per tool-guard degradation) and `turn_end` (one per turn, `degraded`/`degradation_reasons` copied verbatim from the engine, never defaulted) are new record types, additive; existing records and the run's own `agent_run_complete`/`agent_run_error` are unchanged. **Correction to how the item was filed:** the "four types persisted" list was built from the loop's branch CONDITIONS (`if event.type == …`) without reading the branch BODIES, and carried unchecked through two sessions. Four branches exist; only the `TOOL_CALL` body called `emit_event`. To audit what a loop persists, read what each branch DOES, not which branches exist. Fenced by 13 tests (`tests/test_task_run_degradation_audit.py`). The no-terminal hole it also recorded — three `chat_with_tools` exits that emit no terminal event, plus paths where `ERROR` arrives before `AGENT_RUN_ERROR` so the runner raises before reading it — was not closed by `59702221`; the owner chose to fix it rather than file it, and it was fixed the same day on this branch ("fix(engine): every tool-loop exit ends with a run terminal"): all three exits now emit `AGENT_RUN_ERROR`, and the runner holds an `ERROR`'s raise until the terminal has been persisted as `turn_end`. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).

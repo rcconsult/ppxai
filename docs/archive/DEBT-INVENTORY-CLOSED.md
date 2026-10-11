@@ -2575,3 +2575,114 @@ be named, so A,B,A,B,A (the notice point in the fixture) reads as
 `mixed`. The fall-through exit after the loop is now reached only when
 `max_iterations <= 0`; its test was split to keep that exit covered.
 
+---
+
+## Closed on `feature/v1.19.4` (archived 2026-10-11)
+
+### Item 46 — `/task` `read_file` (and non-`spawn_subagent` tools) are consent-free AND path-unconfined by default [agent platform / security posture]
+
+**2026-10-11 — the POSTURE half is DECIDED and BUILT (owner: confine to
+the project).** `enforcement` defaults to `"in_process"`; the seal confines a
+run TO its requested workdir (the session's folder when none is given),
+falling back to a per-run scratch folder; `BUILTIN_DENY` (credentials)
+applies to reads and writes sealed or not (`read_paths.builtin_deny: false`
+opts out), and `read_paths.deny` now applies with the seal off. Runs with no
+file tool get no policy. **Item 46 is closed** once this ships; move it to
+the closed archive at the next sweep.
+
+**2026-10-11 — the UPGRADE-REGRESSION half is CLOSED (owner: refuse to
+start).** `config.initialize()` raises `RetiredSecurityKeyError` while the
+config still has `tools.agent.sandbox`; every entry point exits with the
+message, and `EngineClient()` raises it to embedders
+(`ppxai/config/execution.py::RETIRED_SECURITY_KEYS`,
+`tests/test_retired_security_key_refusal.py`).
+
+**2026-09-10 — the UPGRADE-REGRESSION half is mitigated; the posture
+decision is untouched.** Releasing v1.19.1 turns this from a standing
+posture question into an active regression for one specific operator: ADR
+0010 moved `tools.agent.sandbox` with no dual-read, so someone who had
+configured `enforcement: "in_process"` — a working jail — gets it silently
+ignored on upgrade and reverted to `"off"`, which makes the whole
+`read_paths.deny` list inert (the seal is gated on
+`enforcement == "in_process"` as a unit, `task_runner.py:334`). The operator
+careful enough to build a jail is the one the upgrade removes it from.
+
+`/doctor` now reports that row with **what reverting costs** — naming
+`~/.ppxai/.env` explicitly — sorts security losses above behaviour changes,
+and the release notes carry it as its own upgrade step rather than one line
+in a six-key table. Fenced by `tests/test_doctor_stale_key_cost.py`,
+including a test pinning that `sandbox` is the only security-class move, so
+a second one cannot ride in as an ordinary row.
+
+**This does not answer the item.** The default posture — tool-capable runs
+being consent-free and path-unconfined when the tier is enabled — is still
+an owner decision, and the three fix directions below still stand. What
+changed is that an operator who already made the opposite decision no longer
+loses it silently.
+
+**2026-09-05 — this stopped being hypothetical.** An operator config audited
+today still had the six ADR 0010 keys at `tools.agent.*`, where they are
+silently ignored, so `task_tier_enabled: true` was reading as **disabled** —
+the tool-capable tier was unreachable and the posture question was moot in
+practice. After migrating those keys the tier is live with
+`sandbox.enforcement: "off"`, which is exactly the shape this item
+describes: tools that are consent-free and path-unconfined, on a host whose
+`~/.ppxai/.env` is readable. The decision is now load-bearing rather than
+theoretical. See [[Item 70]] for how the same config-resolution rule bites
+from the other side.
+
+**Planned:** `v1.19.x` (posture decision, not a spec violation). Surfaced by
+the 2026-07-13 trial observation that the nvidia/deepseek direct run read the
+file with **no consent prompt**. Confirmed by source + live config:
+
+- The `/task` interactive consent gate is wired **only** for `spawn_subagent`
+  (`agent_v1.py:923–952`, `consent_policy = spawn_consent or "deny"`,
+  deny-by-default → parks `waiting{consent}` + card). Proven live: subagent
+  run `run_f07d4f8c3209` fired `agent_waiting kind=consent` → `agent_resumed
+  approved:true`.
+- **`read_file` and every non-spawn tool have no consent tier** — they are
+  gated *solely* by the `--tools` allowlist. Granting the tool IS the consent.
+- The **T2 filesystem seal** (path jail) is the intended confinement, but it
+  is **off by default** (`execution.task.sandbox` — moved from
+  `tools.agent.sandbox` in v1.19.1, ADR 0010 — engages only when
+  `enforcement == "in_process"`; live config has `sandbox: null`). With it
+  off, a `/task … --tools read_file` can silently read **any file the process
+  can reach** (e.g. `~/.ppxai/.env`), unconfined and unprompted.
+
+**Why it matters (defense-in-depth).** Combined with Item 43's mis-grounding
+class, a `/task` run can silently read arbitrary local files and fold them
+into a result with no prompt and no jail. Not a spec violation — the
+confinement mechanism exists and ships intentionally-off — but the default
+posture is worth an explicit decision.
+
+**Fix direction (posture, not yet decided):** either default the T2 seal on
+for tool-capable runs, add a read-consent tier for filesystem tools outside
+the workdir, or document the posture prominently so operators opt into the
+seal. Owner decision required before code.
+
+### Item 85 — ~296 relative links inside `docs/archive/` don't resolve [docs] — ✅ FIXED 2026-10-11
+
+**Fixed 2026-10-11.** The real count was 357 (same rules as `TestDocLinksResolve`). About 320 now point at moved targets, 29 with deleted targets became plain text, 2 ambiguous ones were resolved from their neighbours (`deploy/docker/Dockerfile`, `deploy/k8s/standalone/ingress.yaml`). `TestDocLinksResolve` now covers `docs/archive/`, with five non-links (examples, code) listed in `ARCHIVE_LINK_EXEMPT`. Move to the closed archive at the next sweep.
+
+**Filed 2026-09-28** (owner decision: record as debt, fix later).
+
+The 2026-09-28 docs audit (wsl2-builder, 144 findings) and win32-ppxai's
+repo-wide scan of every git-tracked `*.md` counted 296 unresolved relative
+links, about 95% of them inside `docs/archive/` across ~60 files. They were
+correct when written: the documents moved into subdirectories of the
+archive, or their targets were deleted or renamed. Typical cases are old
+release notes pointing at `../CHANGELOG.md` or `docs/...` with the depth
+they had before archiving, and links to source files that no longer exist.
+The live docs were fixed in `27456f1a`/`6ece7e30`; what remains in live
+files is false positives (link syntax inside inline code, template
+placeholders in `.claude/commands/docs-consolidate.md`).
+
+**Fix sketch:** a script that, per archived file, re-resolves each link
+against the file's current location, rewrites the ones whose target still
+exists (at any depth), and turns the rest into plain text marked
+"(removed)". Then a `tests/test_docs_consistency.py` check that fails on a
+NEW unresolved link in `docs/archive/` (a baseline count, shrink-only),
+so the number cannot grow again.
+
+**Why not now:** the archive is historical by design; nobody navigates it
+link by link, and no live document depends on it.

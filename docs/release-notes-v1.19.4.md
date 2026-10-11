@@ -225,9 +225,10 @@ Also:
 - Full suite on the security patch alone: macOS 6,935 passed / 5 skipped;
   Linux (WSL2 Ubuntu 24.04) 6,933 passed / 7 skipped; Windows 6,890
   passed / 50 skipped (platform gates); 0 failed anywhere.
-- Full suite on `feature/v1.19.4`: macOS 7,338 passed / 7 skipped
-  (2026-10-11); Windows 7,197 passed / 80 skipped at `0eb4863a`
-  (2026-10-04, before the latest model and docs fixes).
+- Full suite on `feature/v1.19.4`: macOS 7,435 passed / 7 skipped
+  (2026-10-11, after the sandbox, startup-refusal and hub-token fixes);
+  Windows 7,197 passed / 80 skipped at `0eb4863a` (2026-10-04, before
+  those fixes and the latest model and docs fixes).
 - SSH hub: launch, attach, detach and stop against real sshd hosts from
   Windows (TCP local end) and Linux (unix-socket local end), and the
   owner's trial on real hosts and keys; see

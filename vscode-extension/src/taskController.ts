@@ -77,7 +77,7 @@ export interface AgentRunMeta {
 
 /** The httpClient slice this controller drives (see httpClient.ts). */
 export interface TaskBackend {
-    agentTask(body: Record<string, any>): Promise<{ run_id: string; status: string; workdir_ignored?: boolean }>;
+    agentTask(body: Record<string, any>): Promise<{ run_id: string; status: string }>;
     /** U3: one-off launch — POST /v1/agent/run (grant is server-config-decided). */
     agentRunCreate(body: Record<string, any>): Promise<{ run_id: string; status: string }>;
     agentRuns(kind?: string): Promise<{ runs: AgentRunMeta[] }>;
@@ -492,7 +492,7 @@ export class TaskController {
         const workdir = spec.workdir || defaults.workingDir || null;
         if (workdir) { body.workdir = workdir; }
 
-        let started: { run_id: string; status: string; workdir_ignored?: boolean };
+        let started: { run_id: string; status: string };
         try {
             started = await this.backend.agentTask(body);
         } catch (e: any) {
@@ -500,9 +500,6 @@ export class TaskController {
             // disabled, 400 shell grant / unknown spec / missing provider).
             this.ui.system(`❌ Task rejected: ${this.errText(e)}`);
             return;
-        }
-        if (started.workdir_ignored) {
-            this.ui.system('⚠️ sandbox seal active — --work-dir ignored; the run stays in its per-run jail.');
         }
         this.ui.system(`🛠️ ${started.run_id} — task ${started.status} (watching; ${this.cmd} get ${started.run_id})`);
         void this.watchDetached(started.run_id);

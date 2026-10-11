@@ -437,10 +437,11 @@ class TestTokenCommandParity:
             )
         assert "this.app.state.workingDir" in web
         assert "defaults.workingDir" in ts
-        # Sealed-host warning: same message, gated on the response flag.
+        # The sealed-host "--work-dir ignored" warning is gone: since debt
+        # Item 46 (2026-10-11) a sealed run is confined TO its workdir, and
+        # the server's `workdir_ignored` is always False.
         for src, name in ((web, "web"), (ts, "vscode")):
-            assert "workdir_ignored" in src, f"{name} ignores the seal flag"
-            assert "sandbox seal active" in src, f"{name} lacks the seal warning"
+            assert "workdir_ignored" not in src, f"{name} still reads a dead flag"
 
     def test_profile_and_enrichment_flag_parity(self):
         # ADR 0009 step ③: both clients parse --profile (named execution

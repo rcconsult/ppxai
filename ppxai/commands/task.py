@@ -369,12 +369,9 @@ def _dispatch(family: str, kind: str, context: Any, args: str) -> CommandResult:
 
     backend = get_task_backend()
     meta = backend.launch(auth, kind=kind)
-    # Warn-don't-fail notices the authorizer resolved. Silence here would make
-    # a sealed host look like it honored --work-dir, and an operator ceiling
-    # look like the run got the egress it asked for.
+    # Warn-don't-fail notice the authorizer resolved. Silence here would make
+    # an operator ceiling look like the run got the egress it asked for.
     notes = ""
-    if auth.workdir_ignored:
-        notes += "  ·  ⚠️ --work-dir ignored (filesystem seal is on)"
     if auth.stripped:
         dropped = ", ".join(sorted(str(s) for s in auth.stripped))
         notes += f"  ·  ⚠️ egress ceiling stripped: {dropped}"
