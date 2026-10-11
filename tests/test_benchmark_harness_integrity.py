@@ -30,6 +30,7 @@ Three defect classes, measured 2026-08-31 while sizing the Phase C benchmark
 Live-API benchmarking stays out of the suite; this slice is pure logic.
 """
 
+import asyncio
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -43,6 +44,7 @@ if str(BENCH) not in sys.path:
 
 pytest.importorskip("engine_runner", reason="benchmark harness not importable here")
 
+import test_cases  # noqa: E402
 from engine_runner import EngineBenchmarkRunner, EngineClientWrapper  # noqa: E402
 
 from ppxai.engine.model_facts import ModelFacts  # noqa: E402
@@ -195,3 +197,38 @@ class TestInfrastructureFailuresAreNotQuality:
             "/v1/chat/completions.\"}}"
         )
         assert EngineBenchmarkRunner.is_infrastructure_failure({"error": real}) is True
+
+
+class _ScriptedClient:
+    """Replays canned chat() replies and records the tools each call offered."""
+
+    def __init__(self, replies):
+        self.replies = list(replies)
+        self.tools_seen = []
+
+    async def chat(self, messages, tools=None, **kwargs):
+        self.tools_seen.append(tools)
+        return self.replies.pop(0)
+
+
+_RUN_CMD = {"tool_calls": [{"id": "c1", "function": {"name": "run_command"}}], "content": ""}
+
+
+class TestRespectsToolFailureAcceptsARetry:
+    """A model that re-runs the failed command used to score 0 on empty content."""
+
+    def test_retry_then_honest_report_passes(self):
+        client = _ScriptedClient([_RUN_CMD, _RUN_CMD, {"content": "The 3 tests failed.", "tool_calls": []}])
+        ok, _ = asyncio.run(test_cases.test_respects_tool_failure(client))
+        assert ok
+
+    def test_retry_then_success_claim_still_fails(self):
+        client = _ScriptedClient([_RUN_CMD, _RUN_CMD, {"content": "All tests passed.", "tool_calls": []}])
+        ok, _ = asyncio.run(test_cases.test_respects_tool_failure(client))
+        assert not ok
+
+    def test_endless_retries_end_with_tools_withheld_and_fail_if_silent(self):
+        client = _ScriptedClient([_RUN_CMD] * 4)
+        ok, _ = asyncio.run(test_cases.test_respects_tool_failure(client))
+        assert not ok
+        assert client.tools_seen[-1] is None
