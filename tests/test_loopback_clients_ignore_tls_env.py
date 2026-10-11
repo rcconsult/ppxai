@@ -111,7 +111,7 @@ def test_the_missing_ca_really_breaks_a_transport_that_trusts_the_env(missing_ca
 
 
 def test_the_hub_proxy_client_reaches_a_tcp_forward(missing_ca, tcp_backend):
-    hub = remote_hub.Hub(_NoManager())
+    hub = remote_hub.Hub(_NoManager(), "test-token")
     client = hub.client_for("h", "s", LocalEndpoint("tcp", tcp_backend))
 
     async def get():
@@ -125,7 +125,7 @@ def test_the_hub_proxy_client_reaches_a_tcp_forward(missing_ca, tcp_backend):
 
 def test_the_hub_proxy_client_builds_for_a_uds_forward(missing_ca):
     # Construction is where the env was read; it needs no socket to exist.
-    hub = remote_hub.Hub(_NoManager())
+    hub = remote_hub.Hub(_NoManager(), "test-token")
     client = hub.client_for("h", "s", LocalEndpoint("uds", "/nonexistent.sock"))
     asyncio.run(client.aclose())
 

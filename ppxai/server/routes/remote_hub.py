@@ -23,6 +23,17 @@ be same-origin: `Origin`, when present, must equal this server's own origin,
 and `Sec-Fetch-Site` must not say cross-site. A non-loopback or cross-site
 request sees the same 404/403 as if the hub were off.
 
+**Hub token (Jupyter model).** Loopback alone is not a credential: any local
+process, any OS user, is a loopback peer. So every `/hub/*` and `/h/*` request
+(all methods, and the websocket) must also carry the hub token, as the
+`ppxai_hub` cookie or the `X-Ppxai-Hub-Token` header. The token lives in
+`~/.ppxai/run/hub-token` (0600, directory 0700), is created on first use and
+kept across restarts, and is printed by `ppxai-server` as
+`/hub/auth?token=...`: opening that URL sets the cookie (HttpOnly,
+SameSite=Strict) and redirects. The token and the cookie are never forwarded
+to a remote, and a remote cannot set a cookie of that name. The check order
+is: hub off -> 404, non-loopback -> 404, then auth -> 401.
+
 **Proxy rules (S5):** streamed both ways, never buffered (SSE, chunked
 bodies, uploads); websockets bridged; the remote's bearer token injected from
 its registry entry and never sent to the browser; `Host: localhost`; the
@@ -41,8 +52,13 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hmac
 import logging
+import os
 import re
+import secrets
+import stat
+import sys
 from collections.abc import Callable, Sequence
 from urllib.parse import urlsplit
 
@@ -74,6 +90,7 @@ from ...remote import (
 )
 from ...remote.contract import SERVER_ID_RE
 from ...remote.inventory import HOST_ID_RE
+from .. import registry
 from ..auth import _is_loopback
 
 logger = logging.getLogger(__name__)
@@ -97,12 +114,18 @@ _DROP_UPSTREAM = frozenset({
     "authorization", "cookie", "origin", "referer", "forwarded",
     "x-forwarded-for", "x-forwarded-host", "x-forwarded-proto",
     "x-forwarded-port", "x-forwarded-prefix", "x-real-ip",
-    _NO_ATTACH_HEADER,
+    _NO_ATTACH_HEADER, "x-ppxai-hub-token",
 })
 _DROP_DOWNSTREAM = frozenset({
     "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
     "te", "trailer", "trailers", "transfer-encoding", "upgrade",
 })
+
+HUB_COOKIE = "ppxai_hub"
+HUB_TOKEN_HEADER = "x-ppxai-hub-token"
+_COOKIE_MAX_AGE_S = 30 * 24 * 3600
+_LOCKED_HINT = ("open the hub URL printed by ppxai-server (.../hub/auth?token=...), "
+                "or send X-Ppxai-Hub-Token from ~/.ppxai/run/hub-token")
 _COOKIE_PATH_RE = re.compile(r"(?i)(;\s*path=)(/[^;]*)")
 
 _UPSTREAM_TIMEOUT = httpx.Timeout(10.0, read=None, write=None, pool=None)
@@ -115,6 +138,66 @@ _UPSTREAM_TIMEOUT = httpx.Timeout(10.0, read=None, write=None, pool=None)
 _UPSTREAM_HEADERS_TIMEOUT_S = 660.0
 
 
+def token_path():
+    return registry.run_dir() / "hub-token"
+
+
+def _reusable(path) -> str | None:
+    """The token in `path`, if it is a regular file this user owns with no
+    group/other access (POSIX; on Windows the profile ACL decides)."""
+    try:
+        st = os.lstat(path)
+        if not stat.S_ISREG(st.st_mode):
+            return None
+        if sys.platform != "win32" and (st.st_uid != os.getuid() or st.st_mode & 0o077):
+            return None
+        text = path.read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeDecodeError):
+        return None
+    return text if len(text) >= 32 and text.isascii() and text.isprintable() \
+        and not any(c.isspace() for c in text) else None
+
+
+def load_hub_token() -> str:
+    """The hub token: reuse the file's, or create it atomically (0600 from
+    creation, temp + rename). Idempotent; never deleted on stop."""
+    path = token_path()
+    existing = _reusable(path)
+    if existing is not None:
+        return existing
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if sys.platform != "win32":
+        os.chmod(path.parent, 0o700)
+    token = secrets.token_urlsafe(32)
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    with contextlib.suppress(FileNotFoundError):
+        tmp.unlink()
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(token + "\n")
+    os.replace(tmp, path)
+    return token
+
+
+def hub_enabled(remote_config) -> bool:
+    """Would `start_hub` turn the hub on for this `remote` block?"""
+    try:
+        return bool(parse_hosts(remote_config))
+    except InventoryError:
+        return False
+
+
+def hub_auth_url(host: str, port: int, remote_config, *, next_path: str | None = None) -> str | None:
+    """`http://<host>:<port>/hub/auth?token=...` when the hub will be on, else None."""
+    if not hub_enabled(remote_config):
+        return None
+    shown = "127.0.0.1" if host in ("0.0.0.0", "::", "") else host
+    if ":" in shown:
+        shown = f"[{shown}]"
+    url = f"http://{shown}:{port}/hub/auth?token={load_hub_token()}"
+    return url + (f"&next={next_path}" if next_path else "")
+
+
 class Hub:
     """The manager plus one pooled HTTP client per attached server.
 
@@ -122,8 +205,9 @@ class Hub:
     reused one, so connections to a forward are kept alive and reused.
     """
 
-    def __init__(self, manager: RemoteSessionManager):
+    def __init__(self, manager: RemoteSessionManager, token: str):
         self.manager = manager
+        self.token = token
         self._clients: dict[tuple[str, str], tuple[LocalEndpoint, httpx.AsyncClient]] = {}
         self._unsubscribe = manager.subscribe(self._on_change)
 
@@ -180,7 +264,7 @@ def hub() -> Hub | None:
 
 
 async def start_hub(remote_config, *, manager_factory: ManagerFactory | None = None,
-                    monitor_interval_s: float = 5.0) -> Hub | None:
+                    monitor_interval_s: float = 5.0, token: str | None = None) -> Hub | None:
     """Turn the hub on if `remote.hosts` names any host. Never raises.
 
     A malformed `remote` block is logged and leaves the hub off: a config
@@ -198,9 +282,10 @@ async def start_hub(remote_config, *, manager_factory: ManagerFactory | None = N
     if not hosts:
         return None
     factory = manager_factory or (lambda hs: RemoteSessionManager(hs))
+    hub_token = token or load_hub_token()
     manager = factory(hosts)
     manager.start_monitor(monitor_interval_s)
-    _hub = Hub(manager)
+    _hub = Hub(manager, hub_token)
     names = ", ".join(h.id for h in hosts)
     logger.info(f"Remote hub enabled for {len(hosts)} host(s): {names}")
     print(f"Remote hub: {names} (under /h/<host>/<server>/)")
@@ -230,6 +315,37 @@ def _gate(conn: HTTPConnection) -> Hub | None:
     return _hub
 
 
+def _presented(conn: HTTPConnection) -> list[str]:
+    out = [conn.cookies.get(HUB_COOKIE, ""), conn.headers.get(HUB_TOKEN_HEADER, "")]
+    return [v for v in out if v]
+
+
+def _authorized(conn: HTTPConnection, hub_: Hub) -> bool:
+    expected = hub_.token.encode("utf-8")
+    ok = False
+    for value in _presented(conn):
+        # No short-circuit: every presented value is compared.
+        try:
+            ok |= hmac.compare_digest(value.encode("utf-8"), expected)
+        except UnicodeEncodeError:
+            pass
+    return ok
+
+
+def _locked() -> JSONResponse:
+    return JSONResponse({"detail": "hub_auth_required", "hint": _LOCKED_HINT}, status_code=401)
+
+
+def _guard(conn: HTTPConnection) -> Hub | JSONResponse:
+    """The hub for an authenticated loopback request, else the response to send."""
+    hub_ = _gate(conn)
+    if hub_ is None:
+        return _not_found()
+    if not _authorized(conn, hub_):
+        return _locked()
+    return hub_
+
+
 def _cross_site(conn: HTTPConnection) -> bool:
     if conn.headers.get("sec-fetch-site", "").lower() in ("cross-site", "same-site"):
         return True
@@ -253,19 +369,51 @@ def _error(exc: Exception) -> JSONResponse:
 
 # -- control API ------------------------------------------------------------
 
-@router.get("/hub/hosts")
-async def hub_hosts(request: Request):
+def _safe_next(value: str | None) -> str:
+    """`value` if it is a same-origin relative path, else "/"."""
+    if not value or not value.startswith("/") or value.startswith("//") or "\\" in value:
+        return "/"
+    if any(ord(c) < 0x20 or ord(c) == 0x7f for c in value):
+        return "/"
+    parts = urlsplit(value)
+    if parts.scheme or parts.netloc:
+        return "/"
+    return value
+
+
+@router.get("/hub/auth")
+async def hub_auth(request: Request, token: str = "", next: str = "/"):
+    """Exchange the hub token for the cookie (the only unauthenticated hub path)."""
     hub_ = _gate(request)
     if hub_ is None:
         return _not_found()
+    try:
+        good = hmac.compare_digest(token.encode("utf-8"), hub_.token.encode("utf-8"))
+    except UnicodeEncodeError:
+        good = False
+    if not good:
+        return _locked()
+    response = RedirectResponse(_safe_next(next), status_code=303)
+    response.set_cookie(HUB_COOKIE, hub_.token, max_age=_COOKIE_MAX_AGE_S, path="/",
+                        httponly=True, samesite="strict", secure=False)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
+@router.get("/hub/hosts")
+async def hub_hosts(request: Request):
+    hub_ = _guard(request)
+    if isinstance(hub_, Response):
+        return hub_
     return {"hosts": hub_.manager.hosts()}
 
 
 @router.get("/hub/hosts/{host}/servers")
 async def hub_servers(request: Request, host: str):
-    hub_ = _gate(request)
-    if hub_ is None:
-        return _not_found()
+    hub_ = _guard(request)
+    if isinstance(hub_, Response):
+        return hub_
     try:
         listing = await hub_.manager.servers(host)
     except (RemoteHubError, RemoteTransportError) as exc:
@@ -284,9 +432,9 @@ def _control_refusal(request: Request) -> JSONResponse | None:
 
 @router.post("/hub/hosts/{host}/servers")
 async def hub_launch(request: Request, host: str):
-    hub_ = _gate(request)
-    if hub_ is None:
-        return _not_found()
+    hub_ = _guard(request)
+    if isinstance(hub_, Response):
+        return hub_
     refusal = _control_refusal(request)
     if refusal is not None:
         return refusal
@@ -309,8 +457,10 @@ async def hub_launch(request: Request, host: str):
 
 @router.post("/hub/hosts/{host}/servers/{server_id}/{action}")
 async def hub_action(request: Request, host: str, server_id: str, action: str):
-    hub_ = _gate(request)
-    if hub_ is None or action not in ("attach", "detach", "stop"):
+    hub_ = _guard(request)
+    if isinstance(hub_, Response):
+        return hub_
+    if action not in ("attach", "detach", "stop"):
         return _not_found()
     refusal = _control_refusal(request)
     if refusal is not None:
@@ -373,6 +523,8 @@ def _downstream_headers(upstream: httpx.Response, prefix: str) -> list[tuple[str
         if lower == "location" and value.startswith("/") and not value.startswith("//"):
             value = prefix + value
         elif lower == "set-cookie":
+            if value.split("=", 1)[0].strip().lower() == HUB_COOKIE:
+                continue  # a remote cannot set, clear or shadow the hub cookie
             value = _COOKIE_PATH_RE.sub(lambda m: m.group(1) + prefix + m.group(2), value)
         out.append((key, value))
     return out
@@ -382,17 +534,18 @@ def _downstream_headers(upstream: httpx.Response, prefix: str) -> list[tuple[str
 async def proxy_root_redirect(request: Request, host: str, server_id: str):
     """`/h/<host>/<id>` -> `/h/<host>/<id>/`: the remote UI's relative URLs
     only resolve inside the prefix with the trailing slash."""
-    if _gate(request) is None:
-        return _not_found()
+    denied = _guard(request)
+    if isinstance(denied, Response):
+        return denied
     query = f"?{request.url.query}" if request.url.query else ""
     return RedirectResponse(f"{_prefix(host, server_id)}/{query}", status_code=307)
 
 
 @router.api_route("/h/{host}/{server_id}/{path:path}", methods=_PROXY_METHODS)
 async def proxy_http(request: Request, host: str, server_id: str, path: str):
-    hub_ = _gate(request)
-    if hub_ is None:
-        return _not_found()
+    hub_ = _guard(request)
+    if isinstance(hub_, Response):
+        return hub_
     if request.method not in _SAFE_METHODS and _cross_site(request):
         return JSONResponse({"detail": "cross-site request refused"}, status_code=403)
     may_attach = request.headers.get(_NO_ATTACH_HEADER, "").strip().lower() != "no"
@@ -434,7 +587,7 @@ async def proxy_http(request: Request, host: str, server_id: str, path: str):
 @router.websocket("/h/{host}/{server_id}/{path:path}")
 async def proxy_websocket(websocket: WebSocket, host: str, server_id: str, path: str):
     hub_ = _gate(websocket)
-    if hub_ is None or _cross_site(websocket):
+    if hub_ is None or not _authorized(websocket, hub_) or _cross_site(websocket):
         await websocket.close(code=1008)
         return
     route = await _route(hub_, host, server_id)

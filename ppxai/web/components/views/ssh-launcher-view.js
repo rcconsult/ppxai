@@ -51,6 +51,10 @@ function sshLauncherIconHtml(size) {
  */
 const SSH_LAUNCHER_NO_ATTACH = { 'X-Ppxai-Hub-Attach': 'no' };
 
+/** Shown when the hub answers 401 hub_auth_required: on, but no cookie yet. */
+const SSH_LAUNCHER_LOCKED_MESSAGE =
+    'The SSH hub is locked. Open the hub URL printed by ppxai-server (…/hub/auth?token=…).';
+
 /** Run statuses that no longer hold resources (ppxai/engine/agent_runs.py). */
 const SSH_LAUNCHER_TERMINAL_RUNS = new Set(
     ['completed', 'completed_pending_ack', 'finalized', 'failed', 'cancelled', 'interrupted']);
@@ -201,6 +205,12 @@ class SshLauncherView extends BaseView {
         const resp = await this._fetch(`${this._origin}${path}`, init);
         let data = null;
         try { data = await resp.json(); } catch (_) { /* empty body */ }
+        if (resp.status === 401 && data && data.detail === 'hub_auth_required') {
+            // The hub is on but locked: no cookie yet (not "hub off").
+            const locked = new Error(SSH_LAUNCHER_LOCKED_MESSAGE);
+            locked.locked = true;
+            throw locked;
+        }
         if (!resp.ok) {
             const detail = (data && (data.detail || data.error)) || `HTTP ${resp.status}`;
             throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
@@ -225,7 +235,7 @@ class SshLauncherView extends BaseView {
             this._model.hosts = hosts.map(h => ({ ...byId[h.id], ...h }));
             this._model.error = null;
         } catch (err) {
-            this._model.error = `The hub did not answer: ${err.message}`;
+            this._model.error = err.locked ? err.message : `The hub did not answer: ${err.message}`;
         }
         this._model.loading = false;
         this._render();
@@ -293,7 +303,7 @@ class SshLauncherView extends BaseView {
             await this._api('POST', `/hub/hosts/${encodeURIComponent(host)}/servers/${encodeURIComponent(serverId)}/${action}`, {});
             this._model.error = null;
         } catch (err) {
-            this._model.error = `${action} ${host}/${serverId.slice(0, 8)}: ${err.message}`;
+            this._model.error = err.locked ? err.message : `${action} ${host}/${serverId.slice(0, 8)}: ${err.message}`;
         }
         this.refresh();
     }
@@ -314,7 +324,7 @@ class SshLauncherView extends BaseView {
             delete this._model.forms[host];
             this._model.error = null;
         } catch (err) {
-            this._model.error = `Launch on ${host}: ${err.message}`;
+            this._model.error = err.locked ? err.message : `Launch on ${host}: ${err.message}`;
         }
         delete this._model.launching[host];
         this.refresh();

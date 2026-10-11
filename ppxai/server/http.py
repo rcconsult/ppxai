@@ -55,7 +55,7 @@ from . import registry
 from . import state as _state  # noqa: F401 — backing store for session_manager
 from .auth import check_request as _auth_check_request
 from .routes import all_routers
-from .routes.remote_hub import start_hub, stop_hub
+from .routes.remote_hub import hub_auth_url, start_hub, stop_hub
 from .secrets import EnvSecretProvider
 from .session_manager import SessionManager
 
@@ -871,6 +871,15 @@ def _exit_if_workers_hung() -> None:
         os._exit(0)
 
 
+def _print_hub_url(host: str, port: int) -> None:
+    """One startup line with the hub's cookie-bootstrap URL (Jupyter-style)."""
+    if not _HUB_ALLOWED:
+        return
+    url = hub_auth_url(host, port, get_remote_config())
+    if url is not None:
+        print(f"SSH hub: open {url}")
+
+
 def run_server():
     """Run the HTTP server (CLI entry point)."""
     parser = argparse.ArgumentParser(description="ppxai HTTP Server")
@@ -913,6 +922,7 @@ def run_server():
     _initialize_or_exit()
 
     print(f"Starting ppxai HTTP server on http://{args.host}:{args.port}")
+    _print_hub_url(args.host, args.port)
     print("Endpoints:")
     print("  POST /chat          - Chat with SSE streaming")
     print("  POST /coding_task   - Coding task with SSE streaming")
@@ -1214,13 +1224,16 @@ def run_desktop():
     _initialize_or_exit()
 
     url = f"http://{args.host}:{args.port}"
+    # A hub's pages need the hub cookie: open the token URL, which sets it
+    # and lands on "/". The token goes to the owner's own browser only.
+    open_url = hub_auth_url(args.host, args.port, get_remote_config(), next_path="/") or url
 
     # Open browser after short delay (let server start)
     if not args.no_browser:
         def open_browser():
             time.sleep(1.5)  # Wait for server to start
             print(f"Opening browser: {url}")
-            webbrowser.open(url)
+            webbrowser.open(open_url)
 
         threading.Thread(target=open_browser, daemon=True).start()
 

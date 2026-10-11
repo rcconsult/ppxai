@@ -23,6 +23,7 @@ import json
 import os
 import shutil
 import socket
+import stat
 import sys
 import tempfile
 import threading
@@ -42,10 +43,13 @@ from websockets.exceptions import InvalidStatus
 
 from ppxai.remote import LocalEndpoint, RemoteSessionManager, RunResult
 from ppxai.remote.manager import _DEFAULT_CANDIDATES, _DISCOVER_SCRIPT
+from ppxai.server import registry
 from ppxai.server.routes import remote_hub
 from tests.remote_fakes import FakeTransport
 
 TOKEN = "remote-token-7f3a"
+HUB_TOKEN = "hub-token-0123456789abcdef0123456789abcdef"
+HUB_HEADER = {"X-Ppxai-Hub-Token": HUB_TOKEN}
 SID = "9f2c0000aaaa1111"          # healthy
 SID_BAD_TOKEN = "9f2c0000bbbb2222"  # its entry carries a token the remote refuses
 BIN = "/home/u/.local/bin/ppxai-server"
@@ -95,6 +99,13 @@ def _fake_remote(log: RemoteLog) -> Starlette:
         response.raw_headers.append((b"set-cookie", b"b=2; Path=/sub; HttpOnly"))
         return response
 
+    async def hubcookie(request: Request):
+        response = PlainTextResponse("ok")
+        response.raw_headers.append((b"set-cookie", b"ppxai_hub=stolen; Path=/"))
+        response.raw_headers.append((b"set-cookie", b"PPXAI_HUB=; Path=/; Max-Age=0"))
+        response.raw_headers.append((b"set-cookie", b"ppxai_hub_other=1; Path=/"))
+        return response
+
     async def shutdown(request: Request):
         log.shutdowns += 1
         return JSONResponse({"shutdown": True})
@@ -117,6 +128,7 @@ def _fake_remote(log: RemoteLog) -> Starlette:
         Route("/sse", sse),
         Route("/redirect", redirect),
         Route("/cookies", cookies),
+        Route("/hubcookie", hubcookie),
         Route("/shutdown", shutdown, methods=["POST"]),
         WebSocketRoute("/ws/echo", ws_echo),
     ])
@@ -181,7 +193,8 @@ def _hub_app(rig: HubRig) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app):
         await remote_hub.start_hub({"hosts": [{"id": "gpu01", "ssh": "gpu01"}]},
-                                   manager_factory=rig.factory, monitor_interval_s=3600)
+                                   manager_factory=rig.factory, monitor_interval_s=3600,
+                                   token=HUB_TOKEN)
         yield
         await remote_hub.stop_hub()
 
@@ -205,9 +218,12 @@ def env(request):
     rig = HubRig(remote.endpoint())
     hub_server = Served(_hub_app(rig))
     base = f"http://127.0.0.1:{hub_server.port}"
-    client = httpx.Client(base_url=base, trust_env=False, timeout=15)
-    yield {"client": client, "base": base, "log": log, "rig": rig, "port": hub_server.port}
+    client = httpx.Client(base_url=base, trust_env=False, timeout=15, headers=HUB_HEADER)
+    anon = httpx.Client(base_url=base, trust_env=False, timeout=15)
+    yield {"client": client, "anon": anon, "base": base, "log": log, "rig": rig,
+           "port": hub_server.port}
     client.close()
+    anon.close()
     hub_server.stop()
     remote.stop()
     if sock_dir:
@@ -280,7 +296,8 @@ class TestProxy:
     def test_the_websocket_is_bridged(self, env):
         async def go():
             async with ws_connect(f"ws://127.0.0.1:{env['port']}{P}/ws/echo",
-                                  origin=env["base"], proxy=None) as ws:
+                                  origin=env["base"], proxy=None,
+                                  additional_headers=HUB_HEADER) as ws:
                 await ws.send("hi")
                 return await asyncio.wait_for(ws.recv(), 5)
         assert asyncio.run(go()) == "echo:hi"
@@ -336,7 +353,8 @@ class TestRefusals:
     def test_a_cross_site_websocket_is_refused(self, env):
         async def go():
             async with ws_connect(f"ws://127.0.0.1:{env['port']}{P}/ws/echo",
-                                  origin="http://evil.example", proxy=None):
+                                  origin="http://evil.example", proxy=None,
+                                  additional_headers=HUB_HEADER):
                 pass
         with pytest.raises(InvalidStatus) as exc:
             asyncio.run(go())
@@ -435,3 +453,206 @@ class TestControlApi:
 
     def test_an_unknown_action_is_404(self, env):
         assert env["client"].post(f"/hub/hosts/gpu01/servers/{SID}/reboot", json={}).status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# The hub token (Jupyter model): cookie or header, never forwarded
+# ---------------------------------------------------------------------------
+
+LOCKED = "hub_auth_required"
+
+
+def _ws_status(env, headers=None, origin=None):
+    async def go():
+        async with ws_connect(f"ws://127.0.0.1:{env['port']}{P}/ws/echo",
+                              origin=origin or env["base"], proxy=None,
+                              additional_headers=headers or {}) as ws:
+            await ws.send("hi")
+            return await asyncio.wait_for(ws.recv(), 5)
+    return asyncio.run(go())
+
+
+class TestHubToken:
+    def test_no_credential_is_401_everywhere(self, env):
+        anon = env["anon"]
+        for method, path, kwargs in [
+            ("GET", f"{P}/echo", {}),
+            ("POST", f"{P}/echo", {"content": b"x", "headers": {"origin": env["base"]}}),
+            ("PUT", f"{P}/echo", {"content": b"x"}),
+            ("DELETE", f"{P}/echo", {}),
+            ("GET", P, {"follow_redirects": False}),
+            ("GET", "/hub/hosts", {}),
+            ("GET", "/hub/hosts/gpu01/servers", {}),
+            ("POST", "/hub/hosts/gpu01/servers", {"json": {}}),
+            ("POST", f"/hub/hosts/gpu01/servers/{SID}/stop", {"json": {}}),
+        ]:
+            r = anon.request(method, path, **kwargs)
+            assert r.status_code == 401, (method, path, r.status_code)
+            body = r.json()
+            assert body["detail"] == LOCKED and "hub/auth?token=" in body["hint"]
+            assert HUB_TOKEN not in r.text
+
+    def test_nothing_reached_the_remote_or_ssh_without_a_credential(self, env):
+        seen, calls = len(env["log"].requests), len(env["rig"].run_calls())
+        env["anon"].get(f"{P}/echo")
+        env["anon"].post(f"/hub/hosts/gpu01/servers/{SID}/attach", json={})
+        assert len(env["log"].requests) == seen
+        assert len(env["rig"].run_calls()) == calls
+
+    def test_a_websocket_without_a_credential_is_refused(self, env):
+        with pytest.raises(InvalidStatus) as exc:
+            _ws_status(env)
+        assert exc.value.response.status_code == 403
+
+    def test_a_websocket_with_the_wrong_token_is_refused(self, env):
+        with pytest.raises(InvalidStatus):
+            _ws_status(env, {"X-Ppxai-Hub-Token": "wrong"})
+        with pytest.raises(InvalidStatus):
+            _ws_status(env, {"Cookie": "ppxai_hub=wrong"})
+
+    def test_a_websocket_with_the_cookie_works(self, env):
+        assert _ws_status(env, {"Cookie": f"ppxai_hub={HUB_TOKEN}"}) == "echo:hi"
+
+    @pytest.mark.parametrize("wrong", ["", "x", HUB_TOKEN[:-1], HUB_TOKEN + "x", HUB_TOKEN.upper()])
+    def test_a_wrong_token_is_401(self, env, wrong):
+        r = env["anon"].get("/hub/hosts", headers={"x-ppxai-hub-token": wrong})
+        assert r.status_code == 401
+        r = env["anon"].get(f"{P}/echo", headers={"cookie": f"ppxai_hub={wrong}"})
+        assert r.status_code == 401
+
+    def test_a_non_ascii_token_is_401_not_500(self, env):
+        r = env["anon"].get("/hub/hosts", headers={"cookie": "ppxai_hub=caf\u00e9".encode()})
+        assert r.status_code == 401
+
+    def test_the_header_works(self, env):
+        r = env["anon"].get("/hub/hosts", headers=HUB_HEADER)
+        assert r.status_code == 200
+        assert env["anon"].get(f"{P}/echo", headers=HUB_HEADER).status_code == 200
+
+    def test_the_cookie_works(self, env):
+        cookie = {"cookie": f"ppxai_hub={HUB_TOKEN}"}
+        assert env["anon"].get("/hub/hosts", headers=cookie).status_code == 200
+        assert env["anon"].get(f"{P}/echo", headers=cookie).status_code == 200
+        assert env["anon"].post(f"{P}/echo", content=b"x",
+                                headers={**cookie, "origin": env["base"]}).status_code == 200
+
+    def test_auth_does_not_replace_the_other_gates(self, env):
+        # Loopback and same-origin still apply with a valid credential.
+        r = env["client"].get("/hub/hosts", headers={"x-forwarded-for": "203.0.113.9"})
+        assert r.status_code == 404
+        r = env["client"].post(f"{P}/echo", content=b"x", headers={"origin": "http://evil.example"})
+        assert r.status_code == 403
+
+    def test_the_credentials_are_never_forwarded(self, env):
+        r = env["anon"].get(f"{P}/echo", headers={
+            "cookie": f"ppxai_hub={HUB_TOKEN}; session=browser", **HUB_HEADER})
+        assert r.status_code == 200
+        headers = r.json()["headers"]
+        assert "cookie" not in headers and "x-ppxai-hub-token" not in headers
+        assert HUB_TOKEN not in json.dumps(headers)
+        assert headers["authorization"] == f"Bearer {TOKEN}"
+
+    def test_a_remote_cannot_set_or_clear_the_hub_cookie(self, env):
+        r = env["client"].get(f"{P}/hubcookie")
+        assert r.status_code == 200
+        names = [c.split("=", 1)[0] for c in r.headers.get_list("set-cookie")]
+        assert names == ["ppxai_hub_other"], names
+
+
+class TestHubAuthEndpoint:
+    def test_a_good_token_sets_the_cookie_and_redirects(self, env):
+        r = env["anon"].get("/hub/auth", params={"token": HUB_TOKEN, "next": "/h/gpu01/x/"},
+                            follow_redirects=False)
+        assert r.status_code == 303 and r.headers["location"] == "/h/gpu01/x/"
+        cookie = r.headers["set-cookie"]
+        assert cookie.startswith(f"ppxai_hub={HUB_TOKEN};")
+        low = cookie.lower()
+        assert "httponly" in low and "samesite=strict" in low and "path=/" in low
+        assert "secure" not in low.replace("samesite", "") and "max-age=" in low
+
+    def test_the_cookie_it_sets_unlocks_the_hub(self, env):
+        with httpx.Client(base_url=env["base"], trust_env=False) as jar:
+            assert jar.get("/hub/hosts").status_code == 401
+            r = jar.get("/hub/auth", params={"token": HUB_TOKEN}, follow_redirects=False)
+            assert r.status_code == 303 and r.headers["location"] == "/"
+            assert jar.get("/hub/hosts").status_code == 200
+
+    def test_a_bad_token_is_401_and_sets_no_cookie(self, env):
+        for params in ({"token": "nope"}, {}, {"token": HUB_TOKEN[:-1]}):
+            r = env["anon"].get("/hub/auth", params=params, follow_redirects=False)
+            assert r.status_code == 401 and "set-cookie" not in r.headers
+            assert r.json()["detail"] == LOCKED
+
+    @pytest.mark.parametrize("target", [
+        "//evil.example", "https://evil.example/x", "/\\evil.example", "evil.example",
+        "javascript:alert(1)", "", "/\nX: y", "http:/evil", "//\\evil"])
+    def test_open_redirects_fall_back_to_the_root(self, env, target):
+        r = env["anon"].get("/hub/auth", params={"token": HUB_TOKEN, "next": target},
+                            follow_redirects=False)
+        assert r.status_code == 303 and r.headers["location"] == "/"
+
+    def test_a_relative_path_with_a_query_is_kept(self, env):
+        r = env["anon"].get("/hub/auth", params={"token": HUB_TOKEN, "next": "/?a=1#ssh"},
+                            follow_redirects=False)
+        assert r.headers["location"] == "/?a=1#ssh"
+
+    def test_a_forwarded_request_cannot_even_try(self, env):
+        r = env["anon"].get("/hub/auth", params={"token": HUB_TOKEN},
+                            headers={"x-forwarded-for": "203.0.113.9"}, follow_redirects=False)
+        assert r.status_code == 404 and "set-cookie" not in r.headers
+
+
+@pytest.fixture
+def home(tmp_path, monkeypatch):
+    monkeypatch.setattr(registry, "run_dir", lambda: tmp_path / "run")
+    return tmp_path / "run"
+
+
+class TestHubTokenFile:
+    def test_created_private_and_reused(self, home):
+        first = remote_hub.load_hub_token()
+        path = home / "hub-token"
+        assert len(first) >= 40 and path.read_text(encoding="utf-8").strip() == first
+        if sys.platform != "win32":
+            assert stat.S_IMODE(path.stat().st_mode) == 0o600
+            assert stat.S_IMODE(home.stat().st_mode) == 0o700
+        assert remote_hub.load_hub_token() == first, "a restart must keep the cookie valid"
+        assert [p.name for p in home.iterdir()] == ["hub-token"], "no temp file left behind"
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX mode bits")
+    def test_a_permissive_file_is_replaced(self, home):
+        home.mkdir(mode=0o700)
+        path = home / "hub-token"
+        path.write_text("open-to-everyone-" + "x" * 32, encoding="utf-8")
+        path.chmod(0o644)
+        token = remote_hub.load_hub_token()
+        assert not token.startswith("open-to-everyone")
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX symlinks")
+    def test_a_symlink_is_replaced_not_followed(self, home, tmp_path):
+        home.mkdir(mode=0o700)
+        target = tmp_path / "elsewhere"
+        target.write_text("y" * 40, encoding="utf-8")
+        target.chmod(0o600)
+        (home / "hub-token").symlink_to(target)
+        token = remote_hub.load_hub_token()
+        assert token != "y" * 40 and not (home / "hub-token").is_symlink()
+        assert target.read_text(encoding="utf-8") == "y" * 40
+
+    @pytest.mark.parametrize("junk", ["", "short", "has space " + "x" * 40])
+    def test_a_malformed_file_is_replaced(self, home, junk):
+        home.mkdir(mode=0o700)
+        (home / "hub-token").write_text(junk, encoding="utf-8")
+        (home / "hub-token").chmod(0o600)
+        assert remote_hub.load_hub_token() != junk.strip()
+
+    def test_the_auth_url_is_none_when_the_hub_is_off(self, home):
+        assert remote_hub.hub_auth_url("127.0.0.1", 1, {}) is None
+        assert not (home / "hub-token").exists(), "an off hub creates nothing"
+
+    def test_the_auth_url_names_a_loopback_host_for_a_wide_bind(self, home):
+        cfg = {"hosts": [{"id": "gpu01", "ssh": "gpu01"}]}
+        url = remote_hub.hub_auth_url("0.0.0.0", 54320, cfg)
+        assert url == f"http://127.0.0.1:54320/hub/auth?token={remote_hub.load_hub_token()}"
+        assert remote_hub.hub_auth_url("::", 1, cfg).startswith("http://127.0.0.1:1/")

@@ -113,15 +113,24 @@ test.describe('SSH Launcher (ADR 0013)', () => {
         }
     }
 
+    /** The hub's token, from the file the server wrote under its own HOME. */
+    function hubToken(): string {
+        return fs.readFileSync(path.join(hubHome, '.ppxai', 'run', 'hub-token'), 'utf8').trim();
+    }
+
     async function hubGet(port: number, urlPath: string): Promise<any> {
-        const r = await fetch(`http://127.0.0.1:${port}${urlPath}`);
+        const r = await fetch(`http://127.0.0.1:${port}${urlPath}`, {
+            headers: { 'X-Ppxai-Hub-Token': hubToken() },
+        });
         if (!r.ok) throw new Error(`GET ${urlPath}: ${r.status}`);
         return r.json();
     }
 
     async function hubPost(port: number, urlPath: string, body: unknown = {}): Promise<Response> {
         return fetch(`http://127.0.0.1:${port}${urlPath}`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Ppxai-Hub-Token': hubToken() },
+            body: JSON.stringify(body),
         });
     }
 
@@ -133,10 +142,15 @@ test.describe('SSH Launcher (ADR 0013)', () => {
     }
 
     /** Open the app at `port` and wait for it to finish booting. */
-    async function openApp(browser: Browser, port: number): Promise<Page> {
+    async function openApp(browser: Browser, port: number, authenticate = true): Promise<Page> {
         const page = await browser.newPage();
         page.on('dialog', (d) => d.accept().catch(() => {}));
-        await page.goto(`http://127.0.0.1:${port}/`);
+        // The hub is locked until the browser has its cookie: visit the token
+        // URL ppxai-server prints (it sets the cookie and redirects to "/").
+        const hub = port === hubPort && authenticate;
+        await page.goto(hub
+            ? `http://127.0.0.1:${port}/hub/auth?token=${hubToken()}&next=/`
+            : `http://127.0.0.1:${port}/`);
         await page.waitForFunction(() => {
             const a = (window as any).ppxai;
             return !!(a && a.state && a.commandDispatcher && a.apiClient);
@@ -221,6 +235,16 @@ test.describe('SSH Launcher (ADR 0013)', () => {
         const plainPage = await openApp(browser, plainPort);
         await expect(plainPage.locator('#sshBtn')).toBeHidden();
         await plainPage.close();
+    });
+
+    test('a browser without the hub cookie sees a locked hub, not a missing one', async ({ browser }) => {
+        const page = await openApp(browser, hubPort, false);
+        await expect(page.locator('#sshBtn')).toBeVisible({ timeout: 10_000 });
+        await openLauncher(page);
+        await expect(page.locator('.ssh-error')).toContainText('The SSH hub is locked');
+        await expect(page.locator('section.ssh-host')).toHaveCount(0);
+        expect(await page.content()).not.toContain(hubToken());
+        await page.close();
     });
 
     test('the launcher lists the configured host and launches a server', async ({ browser }) => {

@@ -29,6 +29,8 @@ import httpx
 import pytest
 from websockets.asyncio.client import connect as ws_connect
 
+from ppxai.server import registry
+
 pytestmark = [
     pytest.mark.slow,
     pytest.mark.skipif(sys.platform == "win32", reason="the remote side is POSIX-only"),
@@ -77,6 +79,9 @@ def hub_process(tmp_path):
                             env=env, cwd=str(tmp_path), stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True)
     client = httpx.Client(base_url=f"http://127.0.0.1:{port}", trust_env=False, timeout=90)
+    # The hub token: the child shares this process's (redirected) HOME, so the
+    # file it wrote is the one registry.run_dir() names here.
+    hub_token_file = registry.run_dir() / "hub-token"
     deadline = time.monotonic() + 60
     while time.monotonic() < deadline:
         try:
@@ -89,7 +94,10 @@ def hub_process(tmp_path):
         time.sleep(0.25)
     launched: list[dict] = []
     try:
-        yield {"client": client, "port": port, "workdir": workdir, "launched": launched}
+        token = hub_token_file.read_text(encoding="utf-8").strip()
+        client.headers["X-Ppxai-Hub-Token"] = token
+        yield {"client": client, "port": port, "workdir": workdir, "launched": launched,
+               "hub_token": token}
     finally:
         for server in launched:  # never leave a detached remote running
             try:
@@ -110,6 +118,8 @@ def test_launch_proxy_terminal_and_stop_through_a_real_hub(hub_process):
     c = hub_process["client"]
     base = f"http://127.0.0.1:{hub_process['port']}"
 
+    with httpx.Client(base_url=base, trust_env=False) as anon:
+        assert anon.get("/hub/hosts").status_code == 401, "the hub answered without its token"
     hosts = c.get("/hub/hosts").json()["hosts"]
     assert [h["id"] for h in hosts] == ["lab"], "remote.hosts did not reach the hub"
 
@@ -133,7 +143,8 @@ def test_launch_proxy_terminal_and_stop_through_a_real_hub(hub_process):
     # The remote's terminal, through the websocket bridge.
     async def terminal():
         async with ws_connect(f"ws://127.0.0.1:{hub_process['port']}{prefix}/ws/terminal",
-                              origin=base, proxy=None) as ws:
+                              origin=base, proxy=None,
+                              additional_headers={"Cookie": f"ppxai_hub={hub_process['hub_token']}"}) as ws:
             await ws.send(json.dumps({"type": "input", "data": "echo HUB-$((6*7))\n"}))
             out = ""
             deadline = time.monotonic() + 15

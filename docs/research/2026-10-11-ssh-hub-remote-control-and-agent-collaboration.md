@@ -75,6 +75,13 @@ servers and gains nothing from this tunnel.
 
 ## The hub is not browser-only (finding)
 
+**Resolved 2026-10-11** (owner chose A3, corrected): the hub now requires a
+token from `~/.ppxai/run/hub-token` on every request, as a cookie set by
+`/hub/auth?token=…` or as the `X-Ppxai-Hub-Token` header. A3 as first
+written below (token only for requests without `Origin`) would not have
+worked, since a non-browser can send any `Origin`. The analysis below is
+kept as the record.
+
 ADR 0013 frames the hub as a local-browser surface. The gate is looser
 than that framing:
 

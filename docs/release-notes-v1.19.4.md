@@ -158,12 +158,18 @@ stay on a remote host where ppxai is installed.
   because those failed every chat after a detached launch from a one-file
   build.
 
+- **The hub needs its own token.** Loopback alone is not enough: any local
+  program, and any other OS user, is a loopback peer. The hub keeps a token
+  in `~/.ppxai/run/hub-token` (readable only by you) and requires it on
+  every hub request. `ppxai-server` prints `SSH hub: open
+  http://127.0.0.1:<port>/hub/auth?token=…` at startup; opening it sets a
+  browser cookie (HttpOnly, SameSite=Strict). `ppxai-desktop` opens that
+  URL for you. A script sends the token as `X-Ppxai-Hub-Token`. Without
+  it, the launcher shows "The SSH hub is locked".
+
 **Limits:** web UI only (VSCode and TUI clients are future work); one
-user; the hub answers loopback requests only. The hub follows the same
-loopback trust model as the rest of the local server: a non-browser
-process on the same machine reaches it without a token. On a machine
-shared with other OS users, keep that in mind (see
-`docs/research/2026-10-11-ssh-hub-remote-control-and-agent-collaboration.md`).
+user; the hub answers loopback requests only. A remote server's pages are
+served under the hub's origin, so trust the remote hosts you add.
 
 ## Model and config changes
 
@@ -255,5 +261,6 @@ Also:
 5. **Gemini:** drop `gemini-3.5-flash` and any 2.5 model from your config,
    and drop a Gemini `generation_params` block that sets `temperature` or
    `top_p` (3.6+ ignores it; upcoming models reject it).
-6. **SSH hub (optional):** add `remote.hosts`, and install this release on
+6. **SSH hub (optional):** add `remote.hosts`, open the hub URL that
+   `ppxai-server` prints (or start `ppxai-desktop`), and install this release on
    each remote host.

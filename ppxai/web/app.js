@@ -3965,7 +3965,9 @@ class PpxaiApp {
         let isHub = false;
         try {
             const resp = await fetch(`${window.location.origin}/hub/hosts`);
-            isHub = resp.ok;
+            // 401 hub_auth_required: the hub is ON but locked (no cookie yet).
+            // Only a 404 means "no hub"; the launcher pane explains the lock.
+            isHub = resp.ok || resp.status === 401;
         } catch (_) { /* no hub */ }
         if (!isHub) return;
         this.elements.sshBtn.innerHTML = `${sshLauncherIconHtml(16)} SSH`;

@@ -87,6 +87,7 @@ class TestHubIsOffWithoutRemoteHosts:
         ("POST", "/h/gpu01/9f2c0000aaaa1111/chat"),
         ("GET", "/h/gpu01/9f2c0000aaaa1111"),
         ("GET", "/hub/hosts"),
+        ("GET", "/hub/auth?token=anything&next=/"),
         ("GET", "/hub/hosts/gpu01/servers"),
         ("POST", "/hub/hosts/gpu01/servers"),
         ("POST", "/hub/hosts/gpu01/servers/9f2c0000aaaa1111/attach"),
@@ -111,6 +112,7 @@ class TestHubIsOffWithoutRemoteHosts:
         with _pod_client() as c:
             c.get("/h/gpu01/9f2c0000aaaa1111/")
             c.get("/hub/hosts")
+            c.get("/hub/auth?token=x")
             c.get("/health")
         assert no_subprocesses == []
 

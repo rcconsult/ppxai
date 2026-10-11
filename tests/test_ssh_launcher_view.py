@@ -201,6 +201,39 @@ Promise.resolve().then(() => process.stdout.write(JSON.stringify({ calls, confir
         assert ["POST", "/hub/hosts/gpu01/servers/healthy0000000001/detach", "{}"] in [c[:3] for c in out["calls"]]
 
 
+    def test_a_locked_hub_is_explained_not_reported_as_unreachable(self):
+        out = _node("""
+const calls = [];
+function lockedFetch(url, init) {
+    calls.push(url.replace(window.location.origin, ''));
+    return Promise.resolve({ ok: false, status: 401,
+        json: () => Promise.resolve({ detail: 'hub_auth_required', hint: 'h' }) });
+}
+const container = { innerHTML: '', querySelectorAll: () => [],
+                    addEventListener() {}, removeEventListener() {}, contains: () => true };
+const view = new SshLauncherView({}, lockedFetch);
+view._container = container;
+view.refresh().then(() => process.stdout.write(JSON.stringify(
+    { calls, html: container.innerHTML, error: view._model.error })));
+""")
+        assert out["calls"] == ["/hub/hosts"]
+        assert out["error"].startswith("The SSH hub is locked. Open the hub URL printed by ppxai-server")
+        assert "/hub/auth?token=" in out["error"]
+        assert "The SSH hub is locked" in out["html"] and "did not answer" not in out["html"]
+
+    def test_a_401_without_the_hub_code_is_an_ordinary_error(self):
+        out = _node("""
+function f(url) {
+    return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'other' }) });
+}
+const view = new SshLauncherView({}, f);
+view._container = { innerHTML: '', querySelectorAll: () => [], addEventListener() {},
+                    removeEventListener() {}, contains: () => true };
+view.refresh().then(() => process.stdout.write(JSON.stringify(view._model.error)));
+""")
+        assert out == "The hub did not answer: other"
+
+
 class TestContracts:
     def test_the_icon_is_the_brand_bubble_with_a_prompt(self):
         # Same bubble geometry and gradient as the brand icon, so the two
@@ -251,6 +284,10 @@ class TestAppJsWiring:
         assert remote_at < prefix_at < fetch_at
         assert "return;" in body[remote_at:prefix_at]
         assert "#ssh" in body[fetch_at:] and "openSshLauncher()" in body[fetch_at:]
+
+    def test_a_locked_hub_still_shows_the_button(self):
+        body = _extract_braced_body(_read(APP_JS_PATH), r"async _initRemoteHub\(\)\s*")
+        assert "resp.ok || resp.status === 401" in body
 
     def test_the_button_opens_the_launcher(self):
         src = _read(APP_JS_PATH)

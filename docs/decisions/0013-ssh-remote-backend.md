@@ -318,6 +318,13 @@ future host-specific key must be namespaced by prefix.
 | Token disclosure to the browser | Hub injects the header; the token is never in a page, URL or `localStorage` |
 | Unknown or changed host key | `BatchMode=yes` + the user's `known_hosts`; fail, never auto-accept |
 | Path smuggling via host id | `id` pattern `[a-z0-9-]{1,32}`, looked up in the inventory, never interpolated into a command |
+| Another local OS user, or a non-browser program, drives the hub over loopback (added 2026-10-11) | Hub token in `~/.ppxai/run/hub-token` (0600, dir 0700). Every `/hub/*` and `/h/*` request, websocket included, needs it as the `ppxai_hub` cookie (HttpOnly, SameSite=Strict) or the `X-Ppxai-Hub-Token` header. `GET /hub/auth?token=` sets the cookie; `ppxai-server` prints that URL and `ppxai-desktop` opens it. Neither credential is forwarded to a remote, and a remote cannot set the cookie. An `Origin` check alone could not do this: a non-browser can send any `Origin` |
+
+**Residual (accepted):** a remote server's web UI is served under the hub's
+own origin, so a compromised remote's page could call `/hub/*` with the
+owner's cookie. That holds for any proxied remote page, and predates the hub
+token. The token also appears in the printed URL and so in browser history,
+as with Jupyter.
 
 Out of scope for v1: multi-user hubs, exposing the hub beyond loopback, and
 running the hub on a machine other than the browser's.
