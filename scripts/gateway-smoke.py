@@ -47,6 +47,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 # urllib honours HTTP_PROXY even for 127.0.0.1/localhost, so behind a
 # corporate proxy a loopback gateway would be probed THROUGH the proxy
@@ -61,7 +62,6 @@ def _urlopen(req, data=None, timeout=30):
     if (urllib.parse.urlsplit(url).hostname or "").lower() in _LOOPBACK_HOSTS:
         return _NO_PROXY_OPENER.open(req, data=data, timeout=timeout)
     return urllib.request.urlopen(req, data=data, timeout=timeout)
-from pathlib import Path
 
 
 def _force_utf8_console() -> None:
