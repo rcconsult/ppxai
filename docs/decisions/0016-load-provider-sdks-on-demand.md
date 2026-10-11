@@ -85,7 +85,13 @@ imports `openai` only in `engine/search/perplexity.py`.
 
 - **ppxai-sre** imports `ppxai.engine.*` and `ppxai.config.*` only (pinned
   in `tests/test_consumer_import_surface.py`); nothing in their tree uses
-  `from ppxai import …`. Checked 2026-10-11.
+  `from ppxai import …`. Checked 2026-10-11. **But their binaries are
+  affected:** ppxai-sre's three PyInstaller specs
+  (`agents/{cert-monitor,incident-responder,outlook-monitor}/*.spec`) name
+  `ppxai.engine.providers`, `.base`, `.openai_compat` and `.gemini` as
+  hiddenimports, and not `.openai_native` or `.anthropic` (reported by
+  ppxai-sre, 2026-10-11). Like ours, that only works because of the static
+  imports.
 - **PyInstaller.** The binaries find modules by following static imports.
   `ppxai.spec` and `ppxai-server.spec` already list
   `ppxai.engine.providers.perplexity`, deleted by ADR 0015, and omit
@@ -240,10 +246,15 @@ Each step lands green on its own:
 2. **OpenAI wire out of `base.py`** (§4). No behaviour change.
 3. **Registry as data plus `load_provider_class`** (§1, §2), the three
    direct imports removed, PyInstaller specs fixed, parity and
-   `importlib` fences added.
+   `importlib` fences added. **Notify ppxai-sre before this step lands:**
+   their binaries break at a switch to `openai` or `anthropic` unless their
+   specs list every registry module (or read `_PROVIDER_MODULES` and
+   `_FALLBACK` at build time). The §7 parity fence reads only this repo's
+   specs, so it cannot catch theirs.
 4. **Loading events** (§5) and their rendering in the four clients.
 5. **`ppxai/__init__.py` slimmed** (§6) plus the cheap-path fences.
-   Notify ppxai-sre before this step lands.
+   ppxai-sre doesn't use `from ppxai import`, so this step doesn't affect
+   them; tell them it landed.
 6. Re-measure: import table, remote probe time, SSH-launcher spec, the
    suite's wall time. Record the numbers here and in Item 83.
 
