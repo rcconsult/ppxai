@@ -38,7 +38,9 @@ class TestTheSecurityLossIsNamed:
             "not merely that a key moved"
         )
         assert "read_paths.deny" in out
-        assert 'enforcement:"off"' in out or "enforcement: \"off\"" in out
+        # Since 2026-10-11 the key refuses startup (debt Item 46), and the
+        # default is no longer "off", so the row says so instead.
+        assert "refuses to start" in out
 
     def test_it_is_marked_as_security_not_just_listed(self):
         out = _render(SANDBOX_STALE)

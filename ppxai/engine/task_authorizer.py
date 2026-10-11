@@ -1201,24 +1201,22 @@ def authorize(
         validate_provider_or_error(provider_name)
         _reject_tool_incapable_model(provider_name, model, tools)
 
-    # The per-run jail always wins over a caller-supplied workdir: under the
-    # seal the run's writable root IS its jail workdir. Warn-don't-fail — the
-    # flag rides out on the result so each client can surface it.
+    # A caller-supplied workdir is honoured sealed or not. Since 2026-10-11
+    # (debt Item 46) the seal confines a run TO its requested working folder:
+    # that folder is its writable and readable root. Before, the seal always
+    # replaced it with a scratch folder and set `workdir_ignored`, which is
+    # now always False (kept in the response shape for older clients).
     workdir: str | None = None
     workdir_ignored = False
     if req.workdir:
-        sealed = _task_cfg()["sandbox"].get("enforcement") == "in_process"
-        if sealed:
-            workdir_ignored = True
-        else:
-            wd = os.path.abspath(os.path.expanduser(req.workdir))
-            if not os.path.isdir(wd):
-                raise TaskAuthorizationError(
-                    400,
-                    f"workdir does not exist or is not a directory: "
-                    f"{req.workdir}",
-                )
-            workdir = wd
+        wd = os.path.abspath(os.path.expanduser(req.workdir))
+        if not os.path.isdir(wd):
+            raise TaskAuthorizationError(
+                400,
+                f"workdir does not exist or is not a directory: "
+                f"{req.workdir}",
+            )
+        workdir = wd
 
     if eff["enrichment"]:
         existing = {e for e in eff["network"] if isinstance(e, str)}

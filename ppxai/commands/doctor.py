@@ -850,10 +850,10 @@ ADR_0010_KEY_MOVES: list[tuple] = [
     (
         ("tools", "agent", "sandbox"),
         "execution.task.sandbox",
-        "the filesystem seal reverts to enforcement:\"off\" — the read_paths.deny "
-        "list (.env, .ssh, secrets, …) stops being applied entirely, so a "
-        "/task run granted read_file can read ANY file this process can "
-        "reach, including ~/.ppxai/.env",
+        "ppxai refuses to start until it moves: ignored, your filesystem "
+        "seal settings would silently revert to the defaults — enforcement, "
+        "read roots, and the read_paths.deny list you wrote to keep files "
+        "such as .env out of reach",
         "security",
     ),
     (

@@ -332,7 +332,11 @@ def _dispatch(family: str, kind: str, context: Any, args: str) -> CommandResult:
             # `--allow` absent means "not stated" (inherit from a spec/profile),
             # which is not the same as an explicit empty allowlist.
             network=parsed.network.get("allow_outbound") or None,
-            workdir=parsed.workdir,
+            # No --work-dir: the session's own folder (debt Item 46). The
+            # filesystem seal confines a run to its workdir, so this is what
+            # keeps "/task fix the tests" pointed at the project, not a
+            # scratch folder.
+            workdir=parsed.workdir or _ctx_working_dir(context),
         )
 
     if not _has_running_loop():
@@ -415,6 +419,17 @@ def _ctx_model(context: Any) -> str | None:
         if resolved:
             return resolved
     return None
+
+
+def _ctx_working_dir(context: Any) -> str | None:
+    """The session's working folder, tolerating any context shape."""
+    engine = getattr(context, "engine_client", None)
+    getter = getattr(engine, "get_working_dir", None)
+    try:
+        wd = getter() if callable(getter) else None
+    except Exception:  # noqa: BLE001
+        return None
+    return wd if isinstance(wd, str) and wd else None
 
 
 def handle_task(context: Any, args: str) -> CommandResult:

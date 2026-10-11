@@ -257,7 +257,8 @@ class TestBuildAndConfig:
 
     def test_normalize_defaults(self):
         sb = _normalize_sandbox({})
-        assert sb["enforcement"] == "off"          # non-breaking default
+        assert sb["enforcement"] == "in_process"   # sealed by default (Item 46)
+        assert sb["read_paths"]["builtin_deny"] is True
         assert sb["workdir"]["root"] == "~/.ppxai/runs"
         assert sb["read_paths"]["allow"] == []
         assert sb["read_paths"]["follow_symlinks"] is False
@@ -380,3 +381,51 @@ class TestAliasBypassClosed:
         out = await mgr.execute_tool("read_file", path="/etc/passwd")
         assert "denied" in out.lower()
         assert base.calls == []
+
+
+# ── Debt Item 46 (2026-10-11): built-in deny list, sealed by default ──────────
+
+class TestBuiltinDenyAndSealOff:
+    """Credentials stay out of reach of /task file tools whether the seal is on
+    or off, unless the operator opts out with `read_paths.builtin_deny: false`."""
+
+    @pytest.fixture
+    def project(self, tmp_path):
+        p = tmp_path / "project"
+        (p / ".ssh").mkdir(parents=True)
+        for name in (".env", ".env.local", "README.md", ".ssh/id_ed25519"):
+            (p / name).write_text("x", encoding="utf-8")
+        return p
+
+    def test_sealed_default_denies_credentials_in_the_workdir(self, project):
+        pol = build_filesystem_policy(_normalize_sandbox({}), str(project))
+        assert pol.authorize("read_file", {"filepath": str(project / "README.md")}).allowed
+        for name in (".env", ".env.local", ".ssh/id_ed25519"):
+            assert not pol.authorize("read_file", {"filepath": str(project / name)}).allowed, name
+        assert not pol.authorize("write_file", {"file_path": str(project / ".env")}).allowed
+
+    def test_sealed_default_still_confines_to_the_workdir(self, project, tmp_path):
+        outside = tmp_path / "elsewhere.txt"
+        outside.write_text("x", encoding="utf-8")
+        pol = build_filesystem_policy(_normalize_sandbox({}), str(project))
+        assert not pol.authorize("read_file", {"filepath": str(outside)}).allowed
+
+    def test_ppxai_server_tokens_are_denied(self, project):
+        run_dir = os.path.expanduser("~/.ppxai/run/servers")
+        pol = build_filesystem_policy(_normalize_sandbox({}), str(project), confine=False)
+        assert not pol.authorize("read_file", {"filepath": os.path.join(run_dir, "a.json")}).allowed
+
+    def test_seal_off_allows_everything_but_the_deny_list(self, project, tmp_path):
+        outside = tmp_path / "elsewhere.txt"
+        outside.write_text("x", encoding="utf-8")
+        sb = _normalize_sandbox({"enforcement": "off", "read_paths": {"deny": ["*.key"]}})
+        pol = build_filesystem_policy(sb, str(project), confine=False)
+        assert pol.authorize("read_file", {"filepath": str(outside)}).allowed
+        assert pol.authorize("write_file", {"file_path": str(outside)}).allowed
+        assert not pol.authorize("read_file", {"filepath": str(project / ".env")}).allowed
+        assert not pol.authorize("read_file", {"filepath": str(tmp_path / "x.key")}).allowed
+
+    def test_builtin_deny_can_be_switched_off(self, project):
+        sb = _normalize_sandbox({"read_paths": {"builtin_deny": False}})
+        pol = build_filesystem_policy(sb, str(project))
+        assert pol.authorize("read_file", {"filepath": str(project / ".env")}).allowed

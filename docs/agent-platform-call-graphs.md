@@ -19,7 +19,8 @@
 > now happens inside `authorize()` via `validate_provider_or_error`),
 > **Increment 5** (the `grant_has_shell` reject, now at
 > `task_authorizer.py:1139`), and **§N** (the workdir/seal decision, now
-> gate 7 of `authorize()`, read back as `auth.workdir_ignored`).
+> gate 7 of `authorize()`, read back as `auth.workdir_ignored` — always
+> false since 1.19.4, when a sealed run began honoring its requested workdir).
 > **Increment 6 is NOT affected** — the budget dict is still built in the
 > route and passed through unchanged.
 >
@@ -1043,8 +1044,8 @@ per-run intent, uniform across `/task`, resume, and spawned children:
 "/task run "…" [--work-dir <p>]"        [web task-controller.js / VSCode taskController.ts]
   -> body.workdir = --work-dir | session workingDir (appState)   # like provider/model
   -> POST /v1/agent/task {…, workdir}
-       -> seal ON  -> ignore + respond {workdir_ignored:true}    # jail always wins
-                       client renders "⚠️ sandbox seal active …" # warn-don't-fail
+       -> seal ON  -> workdir becomes the jail's write+read root # since 1.19.4 (was: ignored,
+                       respond {workdir_ignored:false}            #  workdir_ignored:true)
        -> seal OFF -> 400 unless isdir; meta.workdir = abspath   # fail at launch, not mid-run
   _runner (build_task_runner(workdir=…))
        -> sealed:   engine.set_working_dir(<jail>/work)          # unchanged (T2)
@@ -1130,8 +1131,14 @@ Added: `engine/tools/filesystem_policy.py` (`FilesystemPolicy`, mirror of
 `NetworkPolicy`). Changed: `config/tools.py` (parse `sandbox`),
 `agent_scoped_tools.py` (path chokepoint), `agent_v1.build_task_runner`
 (per-run workdir + policy wiring), `task-run-view.js` (`path_denied` in the log).
-**Off by default** — the jail engages only on `enforcement:"in_process"`, so an
-unconfigured tool-capable run reads/writes as before (non-breaking).
+**On by default since 1.19.4** (debt Item 46) — `enforcement` defaults to
+`"in_process"`; the jail is off only when `"off"` is written explicitly. A
+built-in deny list (`BUILTIN_DENY`) applies to file tools sealed or not, and
+`read_paths.deny` applies even when `"off"`. Runs with no file tool in the
+grant get no policy and no scratch folder. The block below is the original T2
+(pre-1.19.4) shape: today a requested workdir is the jail root, and the
+`<root>/<run_id>/work` scratch folder is only the fallback when none was
+requested.
 
 ```
 build_task_runner._runner(m):                   [engine/task_runner.py]

@@ -72,11 +72,24 @@ never against the server process launch dir:
    the same thing in chat and in a task run. Must exist (400 otherwise).
 2. Absent: the **server default** — `server.working_dir` config, else the
    user's home (the same default every new UI session gets).
-3. Filesystem seal ON (`execution.task.sandbox.enforcement: "in_process"`):
-   the per-run jail **always wins**; a requested `workdir` is ignored and
-   the launch response carries `workdir_ignored: true` (clients render a
-   warning). Warn-don't-fail keeps the same invocation portable across
-   sealed and unsealed hosts.
+3. Filesystem seal (`execution.task.sandbox.enforcement`, **`"in_process"`
+   by default since 1.19.4**; `"off"` only when written explicitly): a sealed
+   run is confined **to** its requested `workdir` — that folder is its
+   writable root and a read root, plus `read_paths.allow` and the
+   skills/specs dirs. With no `workdir` at all (a bare API call) it gets a
+   per-run scratch folder `<workdir.root>/<run_id>/work`. (Before 1.19.4 the
+   seal always used the scratch folder and ignored the requested `workdir`;
+   `workdir_ignored` stays in the launch response for compatibility but is
+   now always `false`.)
+4. A built-in deny list (`.env*`, `.ssh`, `.gnupg`, `.aws`, `.azure`,
+   `.kube`, `.docker`, `.netrc`, `.git-credentials`, `.npmrc`, `.pypirc`,
+   `id_rsa*`/`id_ed25519*`/`id_ecdsa*`/`id_dsa*`, `~/.ppxai/run`,
+   `~/.ppxai/tokens*`, `~/.config/gcloud`, `~/.config/gh`) always applies to
+   a run's file tools, reads and writes, sealed or not (since 1.19.4).
+   Opt out with `execution.task.sandbox.read_paths.builtin_deny: false`.
+   Runs whose grant has no file tool (every `/v1/oneshot`, an enriched
+   `/v1/agent/run` with only `web_search`) get no filesystem policy and no
+   scratch folder.
 
 The effective workdir is recorded on the run meta (`workdir`, `null` =
 default/jail), returned by `GET /v1/agent/runs/<id>`, reused verbatim by

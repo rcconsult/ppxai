@@ -47,7 +47,7 @@ from .agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 from .agent_scoped_tools import ScopedToolManager
 from .client import EngineClient
 from .tools.agent_spawn import SpawnSubagentTool
-from .tools.filesystem_policy import build_filesystem_policy
+from .tools.filesystem_policy import build_filesystem_policy, is_path_tool
 from .tools.network_policy import (
     NetworkPolicy,
     apply_egress_ceiling,
@@ -412,41 +412,54 @@ def build_task_runner(
                 data=payload,
             )
 
-        # T2: filesystem SEAL (execution.task.sandbox, enforcement="in_process").
-        # Off by default — engaged only when the operator opts in. When on, the
-        # run gets a per-run workdir (its ONLY writable root), relative paths
-        # resolve there, and reads/writes are confined by FilesystemPolicy.
-        fs_policy = None
-        _on_path = None
+        # T2: filesystem SEAL (execution.task.sandbox). ON by default since
+        # 2026-10-11 (debt Item 46): enforcement "in_process" unless the
+        # operator writes "off". Sealed, the run's requested workdir (or, with
+        # none, a per-run scratch folder) is its ONLY writable root, relative
+        # paths resolve there, and reads are confined to it plus the allowed
+        # roots. The deny list (BUILTIN_DENY + read_paths.deny) applies sealed
+        # or not. NOTE: a requested workdir is the user's own folder; nothing
+        # here may ever delete it (workdir.cleanup is not implemented).
         sandbox = _execution_config.get_execution_task_config()["sandbox"]
-        if sandbox.get("enforcement") == "in_process":
-            jail_workdir = os.path.join(
-                os.path.expanduser(sandbox["workdir"]["root"]), m.run_id, "work"
-            )
-            os.makedirs(jail_workdir, exist_ok=True)
+
+        def _on_path(allowed: bool, payload: dict) -> None:
+            # Allowed reads are silent (they'd fire on every read); only the
+            # denial is a security-relevant event.
+            if not allowed:
+                registry.emit_event(
+                    m.run_id, "path_denied", level="warning",
+                    category="filesystem", data={**payload, "run_id": m.run_id},
+                )
+
+        # A resume whose recorded workdir has since vanished falls back rather
+        # than aiming tools at a dead path.
+        effective_wd = workdir
+        if effective_wd and not os.path.isdir(effective_wd):
+            effective_wd = None
+        # A grant with no path tool (every /v1/oneshot and enriched /v1/agent/run,
+        # granted only web_search) has nothing to confine: no policy, and no
+        # scratch folder minted per call.
+        if not any(is_path_tool(t) for t in tools):
+            fs_policy = None
+            engine.set_working_dir(effective_wd or get_default_working_dir())
+        elif sandbox.get("enforcement") == "in_process":
+            jail_workdir = effective_wd
+            if jail_workdir is None:
+                jail_workdir = os.path.join(
+                    os.path.expanduser(sandbox["workdir"]["root"]), m.run_id, "work"
+                )
+                os.makedirs(jail_workdir, exist_ok=True)
             engine.set_working_dir(jail_workdir)  # relative tool paths resolve here
             fs_policy = build_filesystem_policy(
                 sandbox, jail_workdir, extra_read_paths=extra_read_paths
             )
-
-            def _on_path(allowed: bool, payload: dict) -> None:  # noqa: F811
-                # Allowed reads are silent (they'd fire on every read); only the
-                # denial is a security-relevant event.
-                if not allowed:
-                    registry.emit_event(
-                        m.run_id, "path_denied", level="warning",
-                        category="filesystem", data={**payload, "run_id": m.run_id},
-                    )
         else:
-            # Seal OFF: apply the per-run workdir intent, else the server
-            # default — never the process launch dir (v1.19.x
-            # workdir-alignment; a resume whose recorded workdir has since
-            # vanished falls back to the default rather than aiming tools at
-            # a dead path).
-            effective_wd = workdir
-            if effective_wd and not os.path.isdir(effective_wd):
-                effective_wd = None
-            engine.set_working_dir(effective_wd or get_default_working_dir())
+            # Seal OFF: the per-run workdir intent, else the server default —
+            # never the process launch dir (v1.19.x workdir-alignment). The
+            # deny list still applies.
+            off_wd = effective_wd or get_default_working_dir()
+            engine.set_working_dir(off_wd)
+            fs_policy = build_filesystem_policy(sandbox, off_wd, confine=False)
 
         engine.tool_manager = ScopedToolManager(
             engine.tool_manager, list(tools), on_deny=_on_deny,

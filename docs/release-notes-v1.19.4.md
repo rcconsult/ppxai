@@ -6,8 +6,9 @@
 > 1.19.4.
 >
 > - **Security:** a shell through the terminal websocket (fixed), and
->   ppxai now refuses to start rather than silently drop a configured
->   `/task` sandbox (see below).
+>   `/task` runs are now confined to their working folder with credentials
+>   always denied, and ppxai refuses to start rather than silently drop a
+>   configured sandbox (see below).
 > - **Who should upgrade first:** anyone who browses the web on a machine
 >   that runs `ppxai-server` or `ppxai-desktop`, and anyone running the k8s
 >   coder deployment.
@@ -89,13 +90,41 @@ users, the loopback trust model is unchanged by this release.
 | A gateway bound wide without either variable | its same-origin UI opens its terminal; other origins are refused |
 | A non-browser client with no `Origin` | same as before, subject to Host and token |
 
+### `/task` runs are confined to their working folder by default
+
+Until now the `/task` filesystem sandbox was off unless an operator turned
+it on. Once the task tier was enabled (`execution.task.enabled`), a run
+granted `read_file` could read any file the ppxai process could, including
+`~/.ppxai/.env` with every provider key, without a prompt.
+
+- **On by default:** `execution.task.sandbox.enforcement` now defaults to
+  `"in_process"`.
+- **Confined to the project, not to a scratch folder:** the run's working
+  folder (`--work-dir`, or the session's folder, which every client now
+  sends) is its only writable root and a read root, plus
+  `read_paths.allow` and the skills/specs folders. Before, the sandbox
+  always moved a run into an empty scratch folder and ignored `--work-dir`.
+  A run with no folder at all, such as a bare API call, still gets one.
+- **Credentials are always denied** to `/task` file tools, reads and writes,
+  sandbox on or off: `.env` and `.env.*`, `.ssh` and SSH key files,
+  `.gnupg`, `.aws`, `.azure`, `.kube`, `.docker`, `.netrc`,
+  `.git-credentials`, `.npmrc`, `.pypirc`, `~/.ppxai/run`,
+  `~/.ppxai/tokens*`, `~/.config/gcloud`, `~/.config/gh`. Opt out with
+  `read_paths.builtin_deny: false`. Your own `read_paths.deny` now applies
+  with the sandbox off too.
+- **Explicit `"off"` is respected:** a config that writes
+  `enforcement: "off"` stays unconfined, apart from the deny lists.
+- `/v1/oneshot` and other runs without file tools are unaffected.
+
 ### ppxai refuses to start while the config has `tools.agent.sandbox`
 
 ADR 0010 (v1.19.1) moved the `/task` filesystem sandbox from
 `tools.agent.sandbox` to `execution.task.sandbox`, with no fallback. An
 operator who had configured a jail (`enforcement: "in_process"`) lost it
 silently on upgrade: the seal reverted to `"off"`, and the `read_paths.deny`
-list (`.env`, `.ssh`, secrets) stopped applying to `/task` runs.
+list (`.env`, `.ssh`, secrets) stopped applying to `/task` runs. With the
+new default above, an ignored block would now silently fall back to the
+defaults instead, which still loses your own paths and deny rules.
 
 Now every entry point (`ppxai`, `ppxaide`, `ppxai-server`,
 `ppxai-desktop`) refuses to start while that key is present, and prints the
@@ -208,18 +237,23 @@ Also:
 
 ## Upgrade
 
-1. **If ppxai refuses to start** with "`tools.agent.sandbox` is no longer
+1. **`/task` sandbox:** runs are now confined to their working folder. A
+   task that must read elsewhere needs those paths in
+   `execution.task.sandbox.read_paths.allow`. To keep the old unconfined
+   behaviour, write `enforcement: "off"` (the credential deny list still
+   applies; `read_paths.builtin_deny: false` removes it).
+2. **If ppxai refuses to start** with "`tools.agent.sandbox` is no longer
    read": move that block under `execution.task.sandbox` (merge it if that
    key exists) and delete `tools.agent.sandbox`.
-2. **Websocket clients:** if a browser client of yours opens the terminal
+3. **Websocket clients:** if a browser client of yours opens the terminal
    from an origin other than the server's own, add that origin to
    `PPXAI_ALLOWED_ORIGINS`.
-3. **Model rows copied from an older example config** can override the new
+4. **Model rows copied from an older example config** can override the new
    facts. Run `/doctor`, and compare your `providers.*.models` rows for the
    models in the table above with `ppxai-config.example.json`; delete a
    row's `facts` block to fall back to the shipped seed.
-4. **Gemini:** drop `gemini-3.5-flash` and any 2.5 model from your config,
+5. **Gemini:** drop `gemini-3.5-flash` and any 2.5 model from your config,
    and drop a Gemini `generation_params` block that sets `temperature` or
    `top_p` (3.6+ ignores it; upcoming models reject it).
-5. **SSH hub (optional):** add `remote.hosts`, and install this release on
+6. **SSH hub (optional):** add `remote.hosts`, and install this release on
    each remote host.

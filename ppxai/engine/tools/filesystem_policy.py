@@ -52,6 +52,19 @@ _PATH_TOOLS: dict = {
 _DEFAULT_READ_PATH = "."
 
 
+#: Always denied to `/task` file tools, reads and writes, sealed or not, unless
+#: the operator sets `execution.task.sandbox.read_paths.builtin_deny: false`
+#: (debt Item 46, 2026-10-11). Bare names match any path component, so `.env`
+#: covers `~/.ppxai/.env` and every project's `.env`. Credentials only: a
+#: legitimate project file should never match.
+BUILTIN_DENY: tuple[str, ...] = (
+    ".env", ".env.*", ".ssh", ".gnupg", ".aws", ".azure", ".kube", ".docker",
+    ".netrc", ".git-credentials", ".npmrc", ".pypirc",
+    "id_rsa*", "id_ed25519*", "id_ecdsa*", "id_dsa*",
+    "~/.ppxai/run", "~/.ppxai/tokens*", "~/.config/gcloud", "~/.config/gh",
+)
+
+
 def is_path_tool(name: str) -> bool:
     """True if this tool takes a filesystem path the jail must confine."""
     return name in _PATH_TOOLS
@@ -96,6 +109,9 @@ def _within(target: str, root: str) -> bool:
 class FilesystemPolicy:
     """Per-run read/write path confinement. Deny-by-default, deny-wins.
 
+    With `confine=False` (the seal is off) only the deny list applies: every
+    other path is allowed, for reads and writes alike.
+
     Args:
         read_roots: dirs the run may READ from (read_file/list_directory/
             search_files). The workdir is added automatically (a run can read
@@ -117,7 +133,9 @@ class FilesystemPolicy:
         deny: tuple[str, ...] = (),
         follow_symlinks: bool = False,
         base: str | None = None,
+        confine: bool = True,
     ) -> None:
+        self._confine = bool(confine)
         self._workdir = _norm(workdir) if workdir else None
         roots = [r for r in (read_roots or []) if r]
         if workdir:
@@ -163,6 +181,8 @@ class FilesystemPolicy:
         hit = self._denied_by_glob(target)
         if hit is not None:
             return Deny(f"path matches deny rule {hit!r}")
+        if not self._confine:
+            return Allow("")
         if mode == "write":
             if self._workdir and _within(target, self._workdir):
                 return Allow(self._workdir)
@@ -201,6 +221,8 @@ def build_filesystem_policy(
     sandbox: dict,
     workdir: str,
     extra_read_paths: list[str] | None = None,
+    *,
+    confine: bool = True,
 ) -> FilesystemPolicy:
     """Construct a per-run FilesystemPolicy from the `execution.task.sandbox` block.
 
@@ -214,6 +236,10 @@ def build_filesystem_policy(
     launched with `--skill ci-triage` gets `skills/ci-triage/` mounted here even
     if the blanket `skills_dir` isn't configured, so the mount is explicit and
     scoped to the skills the run actually named.
+
+    The deny list is `read_paths.deny` plus `BUILTIN_DENY` (unless
+    `read_paths.builtin_deny` is false). `confine=False` builds the seal-off
+    policy: deny only, everything else allowed.
     """
     rp = sandbox.get("read_paths", {}) or {}
     read_roots = list(rp.get("allow", []) or [])
@@ -222,10 +248,14 @@ def build_filesystem_policy(
         if root:
             read_roots.append(root)
     read_roots.extend(r for r in (extra_read_paths or []) if r)
+    deny = tuple(rp.get("deny", []) or [])
+    if rp.get("builtin_deny", True):
+        deny = BUILTIN_DENY + deny
     return FilesystemPolicy(
         read_roots=read_roots,
         workdir=workdir,
-        deny=tuple(rp.get("deny", []) or []),
+        deny=deny,
         follow_symlinks=bool(rp.get("follow_symlinks", False)),
         base=workdir,
+        confine=confine,
     )

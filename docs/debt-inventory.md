@@ -936,13 +936,21 @@ hook-rewritten commands, OR `rtk gain` totals plateau across sessions
 
 ### Item 46 — `/task` `read_file` (and non-`spawn_subagent` tools) are consent-free AND path-unconfined by default [agent platform / security posture]
 
+**2026-10-11 — the POSTURE half is DECIDED and BUILT (owner: confine to
+the project).** `enforcement` defaults to `"in_process"`; the seal confines a
+run TO its requested workdir (the session's folder when none is given),
+falling back to a per-run scratch folder; `BUILTIN_DENY` (credentials)
+applies to reads and writes sealed or not (`read_paths.builtin_deny: false`
+opts out), and `read_paths.deny` now applies with the seal off. Runs with no
+file tool get no policy. **Item 46 is closed** once this ships; move it to
+the closed archive at the next sweep.
+
 **2026-10-11 — the UPGRADE-REGRESSION half is CLOSED (owner: refuse to
 start).** `config.initialize()` raises `RetiredSecurityKeyError` while the
 config still has `tools.agent.sandbox`; every entry point exits with the
 message, and `EngineClient()` raises it to embedders
 (`ppxai/config/execution.py::RETIRED_SECURITY_KEYS`,
-`tests/test_retired_security_key_refusal.py`). **The posture half below
-(tools consent-free and unconfined by default) is still open.**
+`tests/test_retired_security_key_refusal.py`).
 
 **2026-09-10 — the UPGRADE-REGRESSION half is mitigated; the posture
 decision is untouched.** Releasing v1.19.1 turns this from a standing

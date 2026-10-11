@@ -39,8 +39,9 @@ class RetiredSecurityKeyError(RuntimeError):
 #: Retired key path -> where its setting lives now. Only keys whose loss is a
 #: SECURITY loss belong here; `/doctor` warns about the rest
 #: (`commands/doctor.py::ADR_0010_KEY_MOVES`). `tools.agent.sandbox` held the
-#: filesystem seal: ignored, it reverts to `enforcement: "off"`, and the
-#: `read_paths.deny` list (.env, .ssh, secrets) stops applying.
+#: filesystem seal: ignored, its enforcement, read roots and deny list are
+#: silently replaced by the defaults (until 2026-10-11 that meant
+#: `enforcement: "off"`, no jail at all).
 RETIRED_SECURITY_KEYS: dict[tuple[str, ...], str] = {
     ("tools", "agent", "sandbox"): "execution.task.sandbox",
 }
@@ -59,8 +60,9 @@ def check_retired_security_keys(config_data: dict[str, Any], source: Any = None)
             old = ".".join(path)
             raise RetiredSecurityKeyError(
                 f"{where}: `{old}` is no longer read (ADR 0010); its setting "
-                f"moved to `{new}`. Running without it would turn the /task "
-                f"filesystem sandbox off, so ppxai refuses to start. Move the "
+                f"moved to `{new}`. Running without it would silently replace "
+                f"your /task filesystem sandbox settings with the defaults, so "
+                f"ppxai refuses to start. Move the "
                 f"block to `{new}` (merge it if that key exists) and delete "
                 f"`{old}`."
             )
@@ -176,17 +178,19 @@ def get_execution_run_grounding_mode() -> str:
 def _normalize_sandbox(sb: dict[str, Any]) -> dict[str, Any]:
     """Normalize the `execution.task.sandbox` block with defaults.
 
-    `enforcement` defaults to "off" — a run is NOT confined unless the operator
-    opts in. Keys ship WITH the enforcer (never before): parsing them does
-    nothing until `enforcement == "in_process"` wires the jail in
-    build_task_runner; the `container` sub-block is defined but inert until
-    tier-d.
+    `enforcement` defaults to "in_process" since 2026-10-11 (debt Item 46,
+    owner decision): a run is confined to its working folder unless the
+    operator writes `"off"`. It was "off" before, so `/task` file tools could
+    read any file the process could, `~/.ppxai/.env` included.
+    `read_paths.builtin_deny` (default true) adds
+    `filesystem_policy.BUILTIN_DENY` to the deny list, and deny applies even
+    with enforcement "off". The `container` sub-block is inert until tier-d.
     """
     sb = sb or {}
     wd = sb.get("workdir", {}) or {}
     rp = sb.get("read_paths", {}) or {}
     return {
-        "enforcement": sb.get("enforcement", "off"),  # "off" | "in_process" | "container"
+        "enforcement": sb.get("enforcement", "in_process"),  # "off" | "in_process" | "container"
         "workdir": {
             "root": wd.get("root", "~/.ppxai/runs"),
             "writable": bool(wd.get("writable", True)),
@@ -195,6 +199,7 @@ def _normalize_sandbox(sb: dict[str, Any]) -> dict[str, Any]:
         "read_paths": {
             "allow": list(rp.get("allow", []) or []),
             "deny": list(rp.get("deny", []) or []),
+            "builtin_deny": bool(rp.get("builtin_deny", True)),
             "follow_symlinks": bool(rp.get("follow_symlinks", False)),
         },
         "skills_dir": sb.get("skills_dir"),

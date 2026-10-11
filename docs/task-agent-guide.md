@@ -96,7 +96,7 @@ verbs `task run`, and `show`/`ack` as *canonical* names, are retired
 | `--provider p` / `--model m` | Per-run intent. Precedence: flag > spec > skill > `default_subagent`. |
 | `--budget iters=20,time=300,tokens=100k` | Resource caps (any subset). A capped run stops at a clean checkpoint as `interrupted` (resumable), not `failed`. |
 | `--system "…"` | Extra agent framing appended to the run's system prompt. |
-| `--work-dir <path>` | Working directory for relative tool paths. Default: **your session's working dir** rides along automatically. Must exist (400 otherwise). With the sandbox seal ON the per-run jail wins and you get a warning instead. |
+| `--work-dir <path>` | Working directory for relative tool paths. Default: **your session's working dir** rides along automatically. Must exist (400 otherwise). With the sandbox seal ON (the default since 1.19.4) the run is confined **to** this folder (writable + readable); with no `--work-dir` the session's folder is that root. |
 
 ## 4. Auth: the `/token` command
 
@@ -224,10 +224,13 @@ Deterministic, never "wherever the server happened to start":
 2. Otherwise your **session working dir** is threaded automatically — so
    `"summarize README.md"` means the same thing in chat and in a task run.
 3. Otherwise the server default: `server.working_dir` config, else home.
-4. **Seal ON** (`execution.task.sandbox.enforcement: "in_process"`): the
-   per-run jail always wins; a requested workdir is ignored with a "⚠️
-   sandbox seal active" warning (warn-don't-fail, so the same command works
-   across sealed and unsealed hosts).
+4. **Seal ON** (`execution.task.sandbox.enforcement: "in_process"`, the
+   default since 1.19.4): the run is confined **to** the workdir resolved
+   above — it is the run's writable root and a read root (plus
+   `read_paths.allow` and the skills/specs dirs). Only with no workdir at
+   all (a bare API call) does it get a per-run scratch folder
+   `<workdir.root>/<run_id>/work`. Before 1.19.4 the seal always used the
+   scratch folder and ignored `--work-dir`.
 
 `/task get <id>` prints the effective `wd:`; resume reuses it; spawned
 children inherit it.
@@ -240,9 +243,9 @@ flag (there is deliberately no "unseal this run"):
 ```jsonc
 "execution": { "task": {
   "sandbox": {
-    "enforcement": "in_process",          // "off" (default) | "in_process"
+    "enforcement": "in_process",          // "in_process" (default since 1.19.4) | "off"
     "workdir":   { "root": "~/.ppxai/runs", "writable": true, "cleanup": "keep" },
-    "read_paths": { "allow": ["~/projects"], "deny": [], "follow_symlinks": false },
+    "read_paths": { "allow": ["~/projects"], "deny": [], "builtin_deny": true, "follow_symlinks": false },
     "specs_dir": "/path/to/task-specs",
     "skills_dir": "/path/to/task-skills",
     "allow_skill_scripts": false
@@ -250,12 +253,24 @@ flag (there is deliberately no "unseal this run"):
 } }
 ```
 
-Sealed runs get an empty per-run `work/` dir as their only writable root;
-reads are confined to `read_paths.allow` + skill mounts; denials surface as
-`path_denied` events. Typical postures: **desktop = seal off** (you are the
-trust boundary; the assistant works your repo), **k8s coder pod = seal off**
-(the pod is the boundary), **embedded unattended agents = seal on**
-(least-privilege over untrusted input). Details + rationale:
+Sealed runs (the default since 1.19.4) are confined to their working folder
+— `--work-dir`, else your session's folder, else (no workdir at all, e.g. a
+bare API call) an empty per-run `work/` scratch dir — which is the only
+writable root; reads are confined to that folder + `read_paths.allow` + skill
+mounts; denials surface as `path_denied` events. Runs whose grant has no
+file tool get no policy and no scratch folder. Writing `"off"` explicitly
+restores the unconfined behaviour.
+
+A **built-in deny list** applies to file tools (reads and writes) sealed or
+not: `.env`, `.env.*`, `.ssh`, `.gnupg`, `.aws`, `.azure`, `.kube`, `.docker`,
+`.netrc`, `.git-credentials`, `.npmrc`, `.pypirc`, `id_rsa*`, `id_ed25519*`,
+`id_ecdsa*`, `id_dsa*`, `~/.ppxai/run`, `~/.ppxai/tokens*`,
+`~/.config/gcloud`, `~/.config/gh`. Opt out with
+`read_paths.builtin_deny: false`. The operator `read_paths.deny` list also
+applies when enforcement is `"off"`. Postures: **desktop** = default seal
+(confined to the project you launch from), **k8s coder pod** = `"off"` is
+reasonable (the pod is the boundary), **embedded unattended agents** = seal
+on with a tight `read_paths.allow`. Details + rationale:
 [api-gateway.md](api-gateway.md) §"Run working directory".
 
 ## 10. Troubleshooting
@@ -267,7 +282,7 @@ trust boundary; the assistant works your repo), **k8s coder pod = seal off**
 | `422 tools is required` / `400 Empty tool grant` | No grant and no spec/skill supplying one → pass `--tools`. |
 | `400 execute_shell_command is not permitted` | By design — shell escapes the egress allowlist; grant specific tools instead. |
 | `400 workdir does not exist` | `--work-dir` points at a missing directory. |
-| `⚠️ sandbox seal active — --work-dir ignored` | Expected on sealed hosts; the jail wins. |
+| `path_denied` for a file inside your project | The built-in deny list (`.env`, `.ssh`, keys, …) or `read_paths.deny` matched; opt out with `read_paths.builtin_deny: false`. |
 | Agent says a file "does not exist" | Check `wd:` in `/task get` — pass `--work-dir` or an absolute path. |
 | Perplexity was a chat provider for `/task` | **No longer possible (ADR 0015).** Perplexity was removed as a chat provider — `REMOVED_CHAT_PROVIDERS` (`ppxai/config/providers.py`) refuses `--provider perplexity` before a `/task` can even launch. It is kept only as a web-search/grounding backend (ADR 0014). Item 43's Sonar tool-calling fix (closed 2026-08-24, `0490ce87`) is now historical. |
 | Gemini 3.x `/task` fails with `400 … missing a thought_signature` | **Fixed — Item 45, closed 2026-07-22 (`edb74500`).** ppxai preserves and replays the Gemini 3.x `thought_signature` on the tool-response turn. Native-tool `/task` runs on Gemini 3.x are supported. |

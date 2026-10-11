@@ -1304,7 +1304,7 @@ BASELINE_TESTS_DIR = {
     "tests/test_agent_beat_zombie.py": 6,
     "tests/test_agent_logger_attribute.py": 7,
     "tests/test_agent_run_authz.py": 1,
-    "tests/test_agent_runs.py": 103,
+    "tests/test_agent_runs.py": 102,
     "tests/test_agent_scoped_tools.py": 11,
     "tests/test_agent_spawn.py": 9,
     "tests/test_agent_spec.py": 1,

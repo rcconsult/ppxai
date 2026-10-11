@@ -219,7 +219,7 @@
         <li><code>--allow host[/path],…</code> → <code>network.allow_outbound</code>. Empty = no egress (fail-closed).</li>
         <li><code>--provider</code> / <code>--model</code> — per-run intent; default from <code>execution.default_subagent</code>.</li>
         <li><code>--budget iters=,time=,tokens=</code> → <code>BudgetSpec</code> (cooperative caps at loop boundaries).</li>
-        <li><code>--work-dir &lt;path&gt;</code> — working directory for the run's relative tool paths (default: the session's working dir; sealed runs keep their jail and warn).</li>
+        <li><code>--work-dir &lt;path&gt;</code> — working directory for the run's relative tool paths (default: the session's working dir; a sealed run is confined to it — since 1.19.4).</li>
         <li><code>--persona &lt;name&gt;</code> / <code>--system "…"</code> — agent-spec / system framing layered on the bounded-agent default.</li>
       </ul>
     </div>
@@ -285,7 +285,7 @@
   <div class="codeblock"><pre><span class="k">"execution"</span>: { <span class="k">"task"</span>: {
   <span class="k">"enabled"</span>: <span class="b">false</span>,
   <span class="k">"sandbox"</span>: {
-    <span class="k">"enforcement"</span>: <span class="s">"in_process"</span>,          <span class="c">// "in_process" | "container"</span>
+    <span class="k">"enforcement"</span>: <span class="s">"in_process"</span>,          <span class="c">// "in_process" (default since 1.19.4) | "off" | "container"</span>
 
     <span class="k">"workdir"</span>: {                       <span class="c">// the ONLY writable location — a per-task chroot</span>
       <span class="k">"root"</span>: <span class="s">"~/.ppxai/runs"</span>,          <span class="c">// each run gets root/{run_id}/work</span>

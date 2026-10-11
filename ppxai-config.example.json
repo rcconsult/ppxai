@@ -1376,9 +1376,9 @@
       "__comment": "The tool-capable POST /v1/agent/task tier. BREAKING (v1.19.1, ADR 0010): these keys moved wholesale from tools.agent.* with NO dual-read — enabled was task_tier_enabled, and consent/budgets were flat tools.agent keys. Run /doctor for the full old->new mapping.",
       "enabled": false,
       "__comment_enabled": "v1.19.0 (was tools.agent.task_tier_enabled): opt-in for the tool-capable tier. Default false. This tier is sandboxed IN-PROCESS ONLY (no OS isolation) and is safe ONLY for trusted operators — enable deliberately. The tool-free POST /v1/agent/run tier is always available regardless.",
-      "__comment_sandbox": "v1.19.x build plan T2 (was tools.agent.sandbox): filesystem SEAL for the tool-capable tier. Off by default. Set enforcement='in_process' to confine a run's reads to read_paths.allow (+ skills_dir/specs_dir + its per-run workdir) and writes to the per-run workdir only. deny globs override allow (deny wins). A bare name in deny (e.g. '.env', 'secrets') blocks that file/dir anywhere in the tree; a '/'-containing pattern (e.g. '/abs/path', '**/x') matches the full path. Best-effort under trusted-operator (a path-prefix jail, not an OS boundary); enforcement='container' (tier-d, not yet built) realizes the SAME fields as read-only mounts + ConfigMaps. To activate, set enforcement and read_paths.allow below.",
+      "__comment_sandbox": "v1.19.x build plan T2 (was tools.agent.sandbox): filesystem SEAL for the tool-capable tier. ON by default since 1.19.4 (enforcement='in_process'): a run reads and writes its working folder (--work-dir, else the session's folder, else a per-run scratch folder under workdir.root), and may also read read_paths.allow (+ skills_dir/specs_dir). Set enforcement='off' to lift the confinement; the deny lists still apply. read_paths.builtin_deny (default true) always denies credentials (.env, .ssh, SSH keys, cloud CLI configs, ~/.ppxai/run, ~/.ppxai/tokens*); set it false to opt out. deny globs override allow (deny wins). A bare name in deny (e.g. '.env', 'secrets') blocks that file/dir anywhere in the tree; a '/'-containing pattern (e.g. '/abs/path', '**/x') matches the full path. Best-effort under trusted-operator (a path-prefix jail, not an OS boundary); enforcement='container' (tier-d, not yet built) realizes the SAME fields as read-only mounts + ConfigMaps. Add paths a task must read outside its folder to read_paths.allow below.",
       "sandbox": {
-        "enforcement": "off",
+        "enforcement": "in_process",
         "workdir": {
           "root": "~/.ppxai/runs",
           "writable": true,
@@ -1393,6 +1393,7 @@
             "secrets",
             "node_modules"
           ],
+          "builtin_deny": true,
           "follow_symlinks": false
         },
         "skills_dir": null,

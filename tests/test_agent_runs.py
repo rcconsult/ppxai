@@ -9,6 +9,7 @@ directly through the registry.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import subprocess
@@ -25,6 +26,9 @@ from ppxai.engine.agent_runs import (
     RunMeta,
 )
 from ppxai.engine import task_authorizer as _authz
+from ppxai.engine import task_runner as _task_runner_mod
+from ppxai.engine.types import Event, EventType
+from ppxai.server.routes import agent_v1 as _agent_v1_mod
 from ppxai.config import execution as _exec_cfg
 from ppxai.config import providers as _providers_cfg
 from ppxai.server import http as _server_http
@@ -729,7 +733,8 @@ class TestExecutionTaskConfig:
         task_cfg = exec_mod.get_execution_task_config()
         assert task_cfg["enabled"] is False
         assert task_cfg["consent"]["spawn_consent"] == "deny"
-        assert task_cfg["sandbox"]["enforcement"] == "off"
+        # The fail-safe default is the SEALED one since 2026-10-11 (Item 46).
+        assert task_cfg["sandbox"]["enforcement"] == "in_process"
 
 
 class TestAgentRunRoutes:
@@ -2836,11 +2841,13 @@ class TestWorkdirAlignment:
         assert captured["workdir"] is None
         assert reg.get_run(r.json()["run_id"]).workdir is None
 
-    def test_sealed_run_ignores_workdir_and_flags_it(
+    def test_sealed_run_keeps_its_workdir(
         self, client, monkeypatch, tmp_path
     ):
+        """Since 2026-10-11 (debt Item 46) the seal confines a run TO its
+        requested folder instead of replacing it with a scratch jail, so the
+        workdir is kept and never flagged as ignored."""
         c, reg = client
-        from ppxai.server.routes import agent_v1
         captured = self._capture_build(monkeypatch)
         real = _exec_cfg.get_execution_task_config  # already enabled=True
         monkeypatch.setattr(
@@ -2849,9 +2856,9 @@ class TestWorkdirAlignment:
         )
         r = c.post("/v1/agent/task", json=self._body(workdir=str(tmp_path)))
         assert r.status_code == 200
-        assert r.json()["workdir_ignored"] is True  # client renders the ⚠️
-        assert captured["workdir"] is None          # the jail wins
-        assert reg.get_run(r.json()["run_id"]).workdir is None
+        assert r.json()["workdir_ignored"] is False
+        assert captured["workdir"] == os.path.abspath(str(tmp_path))
+        assert reg.get_run(r.json()["run_id"]).workdir == captured["workdir"]
 
     def test_resume_threads_the_persisted_workdir(self, client, monkeypatch, tmp_path):
         c, reg = client
@@ -2894,6 +2901,13 @@ class TestWorkdirAlignment:
         monkeypatch.setattr(
             task_runner, "get_default_working_dir", lambda: str(tmp_path)
         )
+        # Unsealed is now an explicit choice (the default seals, Item 46).
+        real = _exec_cfg.get_execution_task_config
+        monkeypatch.setattr(
+            _exec_cfg, "get_execution_task_config",
+            lambda: {**real(), "sandbox": _exec_cfg._normalize_sandbox(
+                {"enforcement": "off"})},
+        )
 
         def _drive(**runner_kw):
             m = reg.start_run(task="t", tools=["read_file"],
@@ -2912,6 +2926,63 @@ class TestWorkdirAlignment:
         assert _drive(workdir=str(tmp_path / "x")) == str(tmp_path / "x")
         # a vanished recorded workdir (the resume case) falls back safely
         assert _drive(workdir=str(tmp_path / "gone")) == str(tmp_path)
+
+    def test_sealed_runner_confines_to_the_requested_workdir(
+        self, client, monkeypatch, tmp_path
+    ):
+        """Debt Item 46: sealed (the default), the run works IN its requested
+        folder; with none, or a vanished one, it gets a per-run scratch folder
+        under workdir.root, never the server default or the launch dir."""
+        _c, reg = client
+        task_runner = _task_runner_mod
+        agent_v1 = _agent_v1_mod
+
+        seen = {}
+
+        class _StubEngine:
+            def __init__(self):
+                self.tool_manager = type("TM", (), {"max_iterations": 3})()
+            def set_provider(self, p): pass
+            def set_model(self, m): pass
+            def set_working_dir(self, d): seen["wd"] = d
+            def enable_tools(self): pass
+            async def chat(self, task, stream=False):
+                yield Event(type=EventType.STREAM_END, data="ok")
+
+        monkeypatch.setattr(
+            task_runner, "EngineClient", lambda: _StubEngine(), raising=False
+        )
+        monkeypatch.setattr(
+            task_runner, "get_default_working_dir", lambda: str(tmp_path / "home")
+        )
+        runs_root = tmp_path / "jails"  # tmp_path/runs is the registry's own dir
+        real = _exec_cfg.get_execution_task_config
+        monkeypatch.setattr(
+            _exec_cfg, "get_execution_task_config",
+            lambda: {**real(), "sandbox": _exec_cfg._normalize_sandbox(
+                {"workdir": {"root": str(runs_root)}})},
+        )
+
+        def _drive(tools=("read_file",), **runner_kw):
+            m = reg.start_run(task="t", tools=list(tools), provider="p", model="m")
+            runner = agent_v1.build_task_runner(
+                reg, provider_name="p", model="m", task="t",
+                tools=list(tools), allow_outbound=[], **runner_kw,
+            )
+            asyncio.run(runner(m))
+            return m.run_id, seen["wd"]
+
+        project = tmp_path / "project"
+        project.mkdir()
+        assert _drive(workdir=str(project))[1] == str(project)
+        run_id, wd = _drive()
+        assert wd == str(runs_root / run_id / "work")
+        run_id, wd = _drive(workdir=str(tmp_path / "gone"))
+        assert wd == str(runs_root / run_id / "work")
+        # A grant with no file tool mints no scratch folder (every /v1/oneshot).
+        before = set(runs_root.iterdir())
+        assert _drive(tools=("web_search",))[1] == str(tmp_path / "home")
+        assert set(runs_root.iterdir()) == before
 
     def test_default_working_dir_prefers_config_then_home(
         self, monkeypatch, tmp_path
