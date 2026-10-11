@@ -236,8 +236,10 @@ class GeminiProvider(BaseProvider):
     #: Stands in when a caller builds a config with no target model. Every
     #: Gemini model this provider reaches is native + generate_content, so
     #: any row answers correctly; naming one keeps the resolution honest
-    #: rather than special-casing "no model" into a hardcoded True.
-    default_model_for_facts = "gemini-2.5-pro"
+    #: rather than special-casing "no model" into a hardcoded True. It is the
+    #: shipped default model, so its `restricted_params` also apply; it was
+    #: `gemini-2.5-pro` until the 2.5 line's 2026-10-16 sunset.
+    default_model_for_facts = "gemini-3.8-flash"
 
     #: An UNLISTED Gemini model still speaks `generate_content` — this
     #: provider has no other wire. The global floor says `chat_completions`,

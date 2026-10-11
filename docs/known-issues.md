@@ -71,10 +71,14 @@ a candidate version:
 2. Run the Gemini unit suites first (cheap gate):
    `pytest tests/test_gemini_tool_schema.py tests/test_gemini_null_parts.py tests/test_gemini_extras.py`.
 3. Run the benchmark suite (3 separate invocations — there is no `--runs`
-   flag) against gemini-2.5-flash (or gemini-3-flash-preview):
+   flag) against the current default, gemini-3.8-flash:
    ```bash
-   cd benchmarks/llm-eval && python benchmark.py --provider gemini --model gemini-2.5-flash
+   cd benchmarks/llm-eval && python benchmark.py --provider gemini --model gemini-3.8-flash
    ```
+   The gate runs recorded above used gemini-2.5-flash, which shuts down
+   2026-10-16 (the 2.5 line's earliest sunset). Its scores are no baseline
+   for gemini-3.8-flash: run the current pin 3x first to set one, then
+   compare the candidate against that.
    Beware free-tier rate-limit contamination — throttled runs read as fake
    quality regressions.
 4. Verify code editing score ≥50% and overall score ≥75%.

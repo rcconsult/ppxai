@@ -20,6 +20,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from ppxai.engine.model_deprecations import GEMINI_DEPRECATIONS
 from ppxai.engine.model_facts import shipped_facts_for_model
 from ppxai.engine.providers.gemini import GeminiProvider, is_available
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
@@ -126,3 +127,15 @@ def test_openai_compat_fallback_honours_the_facts():
             provider.oneshot(prompt="hi", model="gemini-3.8-flash")
     assert captured, "request was never built"
     assert not RESTRICTED & set(captured)
+
+
+def test_a_call_with_no_model_uses_a_live_default():
+    """The no-model stand-in was `gemini-2.5-pro` until the 2.5 line's
+    2026-10-16 sunset. It must name a model `/doctor` doesn't list as
+    deprecated, and its facts must apply: no sampling params sent."""
+    assert GeminiProvider.default_model_for_facts not in GEMINI_DEPRECATIONS
+    config = _make_provider()._build_config(
+        model=None, use_grounding=False, generation_params=dict(SAMPLING)
+    )
+    sent = config.model_dump(exclude_none=True) if config is not None else {}
+    assert not RESTRICTED & set(sent)
