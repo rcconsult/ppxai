@@ -132,7 +132,6 @@ class AnthropicProvider(BaseProvider):
 
         kwargs.pop("base_url", None)
 
-        # base_url=None skips the OpenAI client BaseProvider would build.
         super().__init__(
             api_key=api_key,
             base_url=None,

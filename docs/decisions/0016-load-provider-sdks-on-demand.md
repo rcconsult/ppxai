@@ -1,6 +1,6 @@
 # ADR 0016: Load provider SDKs on demand, through the provider factory
 
-- **Status:** Accepted (2026-10-11): owner answered all four open questions, below. Not implemented yet
+- **Status:** Accepted (2026-10-11): owner answered all four open questions, below. Steps 1–2 landed on `feature/v1.19.5` (2026-10-13); steps 3–6 open
 - **Deciders:** owner
 - **Target:** v1.19.5 (owner, 2026-10-11). Not part of v1.19.4.
 - **Amends:** the project's no-lazy-imports rule

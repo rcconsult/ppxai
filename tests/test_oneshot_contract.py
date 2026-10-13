@@ -68,7 +68,7 @@ def _openai_sdk_response(content="hi", pt=3, ct=5, tt=8, model="m"):
 
 class TestOpenAINativeOneshot:
     def _provider(self):
-        with patch("ppxai.engine.providers.base.OpenAI"):
+        with patch("ppxai.engine.providers.openai_wire.OpenAI"):
             return OpenAINativeProvider(api_key="k", provider_id="openai")
 
     def test_content_and_usage(self):

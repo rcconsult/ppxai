@@ -27,7 +27,7 @@ import openai
 import pytest
 
 from ppxai.config import paths as config_paths
-from ppxai.engine.providers import base as provider_base
+from ppxai.engine.providers import openai_wire as provider_wire
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
 POSIX = sys.platform != "win32"
@@ -63,16 +63,16 @@ class TestProviderClientTimeout:
     ])
     def test_values(self, monkeypatch, raw, expected):
         cfg = {} if raw is None else {"timeout_s": raw}
-        monkeypatch.setattr(provider_base, "get_provider_config", lambda _pid: cfg)
-        assert provider_base.client_timeout("p") == expected
+        monkeypatch.setattr(provider_wire, "get_provider_config", lambda _pid: cfg)
+        assert provider_wire.client_timeout("p") == expected
 
     def test_no_provider_id_keeps_the_sdk_default(self):
-        assert provider_base.client_timeout(None) is openai.NOT_GIVEN
+        assert provider_wire.client_timeout(None) is openai.NOT_GIVEN
 
     def test_the_client_is_built_with_it(self, monkeypatch):
-        """End to end through BaseProvider.__init__: the OpenAI client carries
+        """End to end through the provider's client builder: the OpenAI client carries
         the configured timeout, and the SDK default when unset."""
-        monkeypatch.setattr(provider_base, "get_provider_config",
+        monkeypatch.setattr(provider_wire, "get_provider_config",
                             lambda pid: {"timeout_s": 12} if pid == "slow" else {})
         slow = OpenAICompatibleProvider(api_key="k", base_url="http://127.0.0.1:9/v1",
                                         provider_id="slow")

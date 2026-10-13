@@ -31,8 +31,9 @@ from ... import usage as _usage
 from ...common.logger import get_logger
 from ...config.tls import tls_verify
 from ..types import Event, EventType, Message, ProviderCapabilities
-from .base import BaseProvider, client_timeout
+from .base import BaseProvider
 from .facts import openai_native as _facts
+from .openai_wire import OpenAIWireMixin, client_timeout
 from .wire import get_handler
 
 logger = get_logger("openai_native")
@@ -56,7 +57,7 @@ REASONING_MODEL_PREFIXES = ("o1", "o3", "o4")
 RESTRICTED_GENERATION_PARAMS = ("temperature", "top_p", "frequency_penalty", "presence_penalty")
 
 
-class OpenAINativeProvider(BaseProvider):
+class OpenAINativeProvider(OpenAIWireMixin, BaseProvider):
     """Native provider for OpenAI API.
 
     Uses the OpenAI Python SDK directly for OpenAI-specific features:
@@ -107,7 +108,6 @@ class OpenAINativeProvider(BaseProvider):
         # Remove base_url from kwargs if passed for compat (we don't use it)
         kwargs.pop("base_url", None)
 
-        # base_url=None skips OpenAI client creation in BaseProvider
         super().__init__(
             api_key=api_key,
             base_url=None,

@@ -1,4 +1,6 @@
-"""ADR 0016 step 1: provider facts are readable without a provider SDK.
+"""ADR 0016 steps 1 and 2: modules that must not load a provider SDK.
+
+Step 1: provider facts are readable without a provider SDK.
 
 `ppxai/engine/providers/facts/` holds each provider's class-level facts
 (`shipped_model_facts`, `default_capabilities`, `unmeasured_facts`,
@@ -21,11 +23,16 @@ Two things are held here:
 import ast
 from pathlib import Path
 
+import openai
 import pytest
 
 from ppxai.engine import providers as _providers
 from ppxai.engine.facts_resolver import provider_class_for
+from ppxai.engine.providers.base import BaseProvider
 from ppxai.engine.providers.facts import _FACTS, get_provider_facts
+from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+from ppxai.engine.providers.openai_native import OpenAINativeProvider
+from ppxai.engine.providers.openai_wire import OpenAIWireMixin
 
 REPO = Path(__file__).resolve().parents[1]
 PKG = REPO / "ppxai"
@@ -189,3 +196,51 @@ class TestParityWithTheClasses:
         record = get_provider_facts(name)
         assert cls.default_capabilities is record.default_capabilities
 
+
+BASE = PKG / "engine" / "providers" / "base.py"
+
+
+class TestBaseProviderIsWireNeutral:
+    """ADR 0016 step 2: `providers/base.py` imports no SDK.
+
+    The OpenAI client builder, `client_timeout` and the `openai.*Error`
+    mapping live in `providers/openai_wire.py`, used by the two providers
+    that call through the OpenAI SDK.
+    """
+
+    def test_no_sdk_is_reachable_from_base(self):
+        offenders = [
+            f"{module} imports {imported}"
+            for module, imported_names in _closure([BASE]).items()
+            for imported in imported_names
+            if any(imported == r or imported.startswith(r + ".") for r in SDK_ROOTS)
+        ]
+        assert not offenders, (
+            "providers/base.py reaches a provider SDK again, so every provider "
+            "pays for it. SDK code belongs in that wire's layer "
+            "(providers/openai_wire.py for the OpenAI SDK):\n  "
+            + "\n  ".join(sorted(offenders))
+        )
+
+    def test_the_openai_sdk_providers_use_the_wire_layer(self):
+        for cls in (OpenAICompatibleProvider, OpenAINativeProvider):
+            mro = cls.__mro__
+            assert OpenAIWireMixin in mro, f"{cls.__name__} lost the OpenAI wire layer"
+            assert mro.index(OpenAIWireMixin) < mro.index(BaseProvider), (
+                f"{cls.__name__}: OpenAIWireMixin must come before BaseProvider "
+                "so its error mapping runs first"
+            )
+
+    def test_the_base_knows_no_sdk_error(self):
+        class _Bare(BaseProvider):
+            async def chat(self, messages, model, stream=False, tools=None):
+                yield None
+
+            def oneshot(self, prompt, model, system=None, response_format=None,
+                        max_tokens=None, temperature=None):
+                return {}
+
+        bare = _Bare(api_key="k", base_url="http://127.0.0.1:9/v1")
+        assert not hasattr(bare, "client"), "BaseProvider built a client"
+        err = openai.RateLimitError.__new__(openai.RateLimitError)
+        assert bare._classify_throttle(err) is None

@@ -18,12 +18,13 @@ from ...config import (  # noqa: F401 — patched/read by tests
     get_extra_body,
     get_model_context_limit,
 )
-from ..types import Event, EventType, Message
+from ..types import Event, EventType, Message, ProviderCapabilities
 from .base import BaseProvider
 from .facts import openai_compat as _facts
+from .openai_wire import OpenAIWireMixin, build_openai_client
 
 
-class OpenAICompatibleProvider(BaseProvider):
+class OpenAICompatibleProvider(OpenAIWireMixin, BaseProvider):
     """Provider for OpenAI-compatible APIs.
 
     Works with:
@@ -63,6 +64,27 @@ class OpenAICompatibleProvider(BaseProvider):
     CHARS_PER_TOKEN = 4
     # Reserve tokens for response generation
     MIN_RESPONSE_TOKENS = 2048
+
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str | None = None,
+        models: dict[str, dict[str, str]] | None = None,
+        capabilities: ProviderCapabilities | None = None,
+        provider_id: str | None = None,
+        **kwargs
+    ):
+        super().__init__(
+            api_key=api_key,
+            base_url=base_url,
+            models=models,
+            capabilities=capabilities,
+            provider_id=provider_id,
+            **kwargs,
+        )
+        # No base_url, no client: a caller that builds one later sets it.
+        if base_url is not None:
+            self.client = build_openai_client(api_key, base_url, provider_id)
 
     def _get_response_reservation(self, model: str) -> int:
         """Tokens to subtract from context_limit when validating prompt size.

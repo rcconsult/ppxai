@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing beyond 1.19.4 yet.
+### Changed
+
+- **Provider facts no longer live next to the provider SDKs (ADR 0016 steps 1–2).** Each provider's ADR 0012 facts (`shipped_model_facts`, `default_capabilities`, `unmeasured_facts`, `default_model_for_facts`) moved to `ppxai/engine/providers/facts/`, which imports no SDK; the classes assign their attributes from it. The facts resolver, the `/task` authorizer's tool-capable-model hint and the `/provider` listing read them through `get_provider_facts()`. `providers/base.py` no longer imports the OpenAI SDK: the client builder, `client_timeout` and the `openai.*Error` mapping moved to `providers/openai_wire.py` (`OpenAIWireMixin`), used by `openai_compat` and `openai_native`. No behaviour change; fenced by `tests/test_provider_sdk_free_modules.py`. The start-up saving arrives with step 3 (the registry stops importing every provider).
 
 ## [1.19.4] - 2026-10-12
 

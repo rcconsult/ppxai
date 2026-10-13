@@ -60,7 +60,7 @@ class TestBaseProviderFlatten:
     def test_uploaded_file_block_becomes_text_marker(self):
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
-        with patch("ppxai.engine.providers.base.OpenAI"):
+        with patch("ppxai.engine.providers.openai_wire.OpenAI"):
             provider = OpenAICompatibleProvider(
                 api_key="test", base_url="http://localhost:8000/v1",
             )
@@ -83,7 +83,7 @@ class TestBaseProviderFlatten:
         """Plain string messages must not be forced into list shape."""
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
-        with patch("ppxai.engine.providers.base.OpenAI"):
+        with patch("ppxai.engine.providers.openai_wire.OpenAI"):
             provider = OpenAICompatibleProvider(
                 api_key="test", base_url="http://localhost:8000/v1",
             )
@@ -96,7 +96,7 @@ class TestBaseProviderFlatten:
         """Messages with no uploaded_file blocks must not be rewritten."""
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
-        with patch("ppxai.engine.providers.base.OpenAI"):
+        with patch("ppxai.engine.providers.openai_wire.OpenAI"):
             provider = OpenAICompatibleProvider(
                 api_key="test", base_url="http://localhost:8000/v1",
             )

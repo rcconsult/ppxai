@@ -277,7 +277,6 @@ class GeminiProvider(BaseProvider):
         # Remove base_url from kwargs if passed for compat (we don't use it)
         kwargs.pop("base_url", None)
 
-        # base_url=None skips OpenAI client creation in BaseProvider
         super().__init__(
             api_key=api_key,
             base_url=None,

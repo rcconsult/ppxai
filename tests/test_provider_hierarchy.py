@@ -124,7 +124,7 @@ class TestTheTwoAccessors:
     """
 
     def test_endpoint_accessor_returns_the_provider_record(self):
-        with patch("ppxai.engine.providers.base.OpenAI"):
+        with patch("ppxai.engine.providers.openai_wire.OpenAI"):
             provider = OpenAICompatibleProvider(
                 api_key="test",
                 base_url="http://localhost:8000/v1",
@@ -165,8 +165,9 @@ class TestBaseUrlOptional:
         assert hasattr(provider, "client")
 
     def test_base_url_provided_creates_client(self):
-        """When base_url is provided, BaseProvider creates OpenAI client."""
-        with patch("ppxai.engine.providers.base.OpenAI") as mock_openai:
+        """When base_url is provided, the compat provider builds an OpenAI
+        client through `openai_wire` (ADR 0016 §4: no longer BaseProvider)."""
+        with patch("ppxai.engine.providers.openai_wire.OpenAI") as mock_openai:
             provider = OpenAICompatibleProvider(
                 api_key="test",
                 base_url="http://localhost:8000/v1",
