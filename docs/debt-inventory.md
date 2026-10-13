@@ -73,6 +73,7 @@ quoting them** — this table is a map, not a source.
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
 | **83** | the SERIAL test suite is ~2x slower per test than in July, cause unfound | owner decision 2026-09-27: record, not fix; the parallel default (~3 min) hides it |
 | **84** | the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell | owner decision 2026-09-28: record as debt, don't build it now |
+| **86** | Gemini 4 Argon (`gemini-4-argon`) is out; ppxai has no row for it | reference only — pricing recorded 2026-10-13; promo ends 2026-11-30; API access not yet verified on our key |
 
 ---
 
@@ -2597,6 +2598,47 @@ syntax fails unless the model itself wraps the command in
 **Why not now:** Windows users have the chat shell tool; the interactive
 terminal has been Unix-only since v1.17.1 and nobody has asked for it
 until now.
+
+### Item 86 — Gemini 4 Argon (`gemini-4-argon`) is out; ppxai has no row for it [providers / gemini / reference]
+
+**Filed 2026-10-13 for reference** (owner). No seed row, no example-config
+entry, no HOME-config entry (grepped `ppxai/`, `ppxai-config.example.json`).
+
+**Pricing** (official [pricing page](https://ai.google.dev/gemini-api/docs/pricing),
+read 2026-10-13), USD per 1M tokens, paid tier only (no Free tier, not on
+the AI Pro plan):
+
+| tier | through 2026-11-30 (promo) | from 2026-12-01 |
+|---|---|---|
+| Standard input | $2.00 | $4.00 |
+| Standard output (incl. thinking) | $10.00 | $20.00 |
+| Cached input | $0.10 | $0.20 |
+| Batch / Flex input / output | $1.00 / $5.00 | $2.00 / $10.00 |
+| Priority input / output | $3.60 / $18.00 | $7.20 / $36.00 |
+
+Flat rate (no prompt-length tiers). Implicit caching only — explicit caching
+is not supported. Context: up to 1M input+output tokens (press, not checked
+against the model card). For comparison, the default `gemini-3.8-flash` is
+$0.75 / $3.75 until 2026-12-31, then $1.50 / $7.50.
+
+**Unverified:** API access on the owner's key. Press reported a 404 from the
+API on 2026-10-01 and an initially restricted launch; the 2026-10-11
+`scripts/probe-gemini-pro-tier.py` run did not list it.
+
+**Relation to Item 54:** Item 54 waits on a GA successor in the Pro tier for
+the two `gemini-3.1-pro-preview` deprecation targets. If Argon is GA and
+answers on the real path, it may be that successor — decide at the
+2026-11-14 re-probe.
+
+**If adopted:** a seed row (restricted sampling params like the 3.6+ rows,
+`thought_signature` handling as for Gemini 3), prices with BOTH the promo and
+the 2026-12-01 step recorded (a promo price in a facts block goes stale
+silently), an example-config entry, and a benchmark run per AGENTS.md before
+any hint or default moves.
+
+**Trigger to revisit:** a live `generateContent` succeeds on `gemini-4-argon`,
+or the Item 54 re-probe on 2026-11-14. Effort: probe ~15 min; seed + config +
+benchmark ~half day.
 
 ## Closed (recent)
 
