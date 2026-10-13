@@ -18,8 +18,9 @@ from ...config import (  # noqa: F401 — patched/read by tests
     get_extra_body,
     get_model_context_limit,
 )
-from ..types import Event, EventType, Message, ProviderCapabilities
+from ..types import Event, EventType, Message
 from .base import BaseProvider
+from .facts import openai_compat as _facts
 
 
 class OpenAICompatibleProvider(BaseProvider):
@@ -51,13 +52,8 @@ class OpenAICompatibleProvider(BaseProvider):
 
     # Generation params unsupported by GPT-5.x and o-series (only temperature=1.0 allowed)
     RESTRICTED_GENERATION_PARAMS = ("temperature", "top_p", "frequency_penalty", "presence_penalty")
-    default_capabilities = ProviderCapabilities(
-        web_search=False,
-        web_fetch=False,
-        weather=False,
-        citations=False,
-        streaming=True,
-    )
+    # Declared in `facts/openai_compat.py`, which imports no SDK (ADR 0016 §3).
+    default_capabilities = _facts.FACTS.default_capabilities
 
     # OpenAI native endpoint detection
     OPENAI_NATIVE_HOSTS = ("api.openai.com",)

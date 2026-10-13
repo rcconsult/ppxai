@@ -31,10 +31,8 @@ from pathlib import Path
 import pytest
 
 from ppxai.engine.providers.base import BaseProvider
-from ppxai.engine.providers.openai_native import (
-    PROMPT_BASED_MODEL_PREFIXES,
-    OpenAINativeProvider,
-)
+from ppxai.engine.providers.facts.openai_native import PROMPT_BASED_MODEL_PREFIXES
+from ppxai.engine.providers.openai_native import OpenAINativeProvider
 
 PROVIDERS_DIR = Path(__file__).resolve().parents[1] / "ppxai" / "engine" / "providers"
 

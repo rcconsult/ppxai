@@ -58,7 +58,6 @@ from typing import Any
 
 import ppxai.config.execution as _execution
 import ppxai.engine.facts_resolver as _facts_resolver
-import ppxai.engine.providers as _providers
 
 from ..config import execution as _execution_config
 from ..config import providers as _providers_config
@@ -71,6 +70,7 @@ from .agent_spec import (
     load_spec_file,
     spec_from_mapping,
 )
+from .providers.facts import get_provider_facts
 from .search.resolver import resolve_web_search_backend
 from .tools.network_policy import apply_egress_ceiling, grant_has_shell
 
@@ -1032,9 +1032,8 @@ def _tool_capable_models_hint(provider: str) -> str:
             # suffix, so a lone trailing `*` is dropped to give something
             # typeable; an interior wildcard is skipped, because naming a
             # pattern helps nobody.
-            cls = _providers.get_provider_class(provider)
             for pattern, facts in (
-                getattr(cls, "shipped_model_facts", {}) or {}
+                get_provider_facts(provider).shipped_model_facts
             ).items():
                 if facts.tool_mode == "prompt_based":
                     continue

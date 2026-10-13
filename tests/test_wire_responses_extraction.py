@@ -24,10 +24,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from ppxai.engine.model_facts import SHIPPED_MODEL_FACTS, shipped_facts_for_model
-from ppxai.engine.providers.openai_native import (
+from ppxai.engine.providers.facts.openai_native import (
     PROMPT_BASED_MODEL_PREFIXES,
-    RESPONSES_API_PREFIXES,
     RESPONSES_WIRE_GLOBS,
+)
+from ppxai.engine.providers.openai_native import (
+    RESPONSES_API_PREFIXES,
     OpenAINativeProvider,
 )
 from ppxai.engine.providers.wire import HANDLERS, get_handler

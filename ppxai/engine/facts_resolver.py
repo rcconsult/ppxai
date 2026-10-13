@@ -29,6 +29,7 @@ from ..config.execution import (
 from . import providers as _providers
 from .facts_config import apply_provider_overrides, resolve_model_facts
 from .model_facts import ModelFacts, can_drive_a_tool_loop, shipped_facts_for_model
+from .providers.facts import get_provider_facts
 from .providers.openai_compat import OpenAICompatibleProvider
 
 
@@ -126,20 +127,26 @@ class FactsResolver:
             return False
 
     def capabilities(self):
-        """The ENDPOINT record, with operator overrides applied."""
+        """The ENDPOINT record, with operator overrides applied.
+
+        Read from the SDK-free facts module (ADR 0016 §3), not the class:
+        the same record, without importing the provider's SDK.
+        """
 
         return apply_provider_overrides(
-            self.provider_class.default_capabilities, self.provider
+            get_provider_facts(self.provider).default_capabilities, self.provider
         )
 
     def facts(self, model: str) -> ModelFacts:
         """The MODEL record: shipped table, provider floor, operator config."""
 
-        cls = self.provider_class
-        table = getattr(cls, "shipped_model_facts", {}) or {}
-        floor = getattr(cls, "unmeasured_facts", None)
+        record = get_provider_facts(self.provider)
         return resolve_model_facts(
-            shipped_facts_for_model(model, table, floor), self.provider, model
+            shipped_facts_for_model(
+                model, record.shipped_model_facts, record.unmeasured_facts
+            ),
+            self.provider,
+            model,
         )
 
     def can_drive_a_tool_loop(self, model: str) -> bool:

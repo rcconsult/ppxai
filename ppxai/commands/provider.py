@@ -24,7 +24,7 @@ from ..engine.model_facts import (
     shipped_facts_for_model,
 )
 from ..engine.provider_ops import ModelSwitchInFlightError
-from ..engine.providers import get_provider_class
+from ..engine.providers.facts import get_provider_facts
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -326,9 +326,7 @@ def handle_model_info(context: CommandContext, provider: str, model_id: str) -> 
     # Item 61). It now reports what the send path will actually do.
 
     try:
-        provider_table = getattr(
-            get_provider_class(provider), "shipped_model_facts", {}
-        )
+        provider_table = get_provider_facts(provider).shipped_model_facts
     except Exception:  # noqa: BLE001 — an unknown provider still shows rows
         provider_table = {}
 
