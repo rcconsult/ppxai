@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **VSCode: Start Server no longer gets its server killed ~3 s after start in a workspace with a `.venv`.** The Start button typed the server command into a shell terminal; Python Environments (default `autoActivationType: command`) runs `source .venv/bin/activate` in every new shell terminal ~5 s after it opens, VS Code sends Ctrl+C to the busy terminal first, and the server stopped with `reason: ctrl_c`. The `ppxai-server` terminal is now a pseudoterminal: the extension spawns the server and shows its output, with no shell and input ignored (Stop Server stops it; closing the terminal still does too). A Start while one is in flight now joins it instead of killing the half-started server, and a server that exits during startup is reported at once instead of after ~37 s of retries.
+
 ### Changed
 
 - **Provider facts no longer live next to the provider SDKs (ADR 0016 steps 1–2).** Each provider's ADR 0012 facts (`shipped_model_facts`, `default_capabilities`, `unmeasured_facts`, `default_model_for_facts`) moved to `ppxai/engine/providers/facts/`, which imports no SDK; the classes assign their attributes from it. The facts resolver, the `/task` authorizer's tool-capable-model hint and the `/provider` listing read them through `get_provider_facts()`. `providers/base.py` no longer imports the OpenAI SDK: the client builder, `client_timeout` and the `openai.*Error` mapping moved to `providers/openai_wire.py` (`OpenAIWireMixin`), used by `openai_compat` and `openai_native`. No behaviour change; fenced by `tests/test_provider_sdk_free_modules.py`. The start-up saving arrives with step 3 (the registry stops importing every provider).
