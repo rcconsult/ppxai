@@ -245,3 +245,8 @@ discoverable later.
   repeats interleaved with other calls); catching it needs BOTH a per-turn
   occurrence count and an argument-independent per-tool budget, not either
   alone (2026-09-22 incident: 15 `web_search` calls, 0 loop-detector hits).
+- [vscode-shell-terminals-take-input-from-other-extensions.md](vscode-shell-terminals-take-input-from-other-extensions.md)
+  — any extension can type into a shell terminal you created, and VS Code
+  sends Ctrl+C to a busy one first: Python Environments' `.venv` activation
+  killed the `sendText`-started server ~3 s after Start (`reason: ctrl_c`).
+  Run long-lived processes in a `Pseudoterminal` (2026-10-14).
