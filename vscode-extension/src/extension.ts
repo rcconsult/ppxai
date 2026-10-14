@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as cp from 'child_process';
 import { HttpClient, getHttpClient, resetHttpClient } from './httpClient';
 import { ChatViewProvider } from './chatPanel';
 import { SessionsProvider } from './sessionsProvider';
@@ -10,6 +11,8 @@ import { getOutputChannel } from './outputChannel';
 let backend: HttpClient;
 let extensionVersion: string = 'unknown';
 let serverTerminal: vscode.Terminal | undefined;
+let serverProcess: cp.ChildProcess | undefined;
+let startInFlight: Promise<boolean> | undefined;
 const serverStatusCallbacks: Array<(running: boolean) => void> = [];
 
 export function getExtensionVersion(): string {
@@ -112,81 +115,166 @@ export async function isServerRunning(): Promise<boolean> {
 }
 
 /**
+ * Run ppxai-server as the terminal's own process (v1.19.5).
+ *
+ * The terminal is a Pseudoterminal: no shell, the extension spawns the
+ * server and writes its output in. Earlier versions typed the command into
+ * a shell terminal, and other extensions type into new shell terminals too:
+ * Python Environments (`python-envs.terminal.autoActivationType: command`)
+ * runs `source .venv/bin/activate` ~5 s after the terminal opens, VS Code
+ * sends Ctrl+C first because the shell is busy, and the server died with
+ * `reason: ctrl_c` 3 s after starting. Input here goes to handleInput and is
+ * ignored, so nothing can interrupt the server; Stop Server is the way out.
+ */
+function createServerTerminal(command: string, args: string[]): vscode.Terminal {
+    const write = new vscode.EventEmitter<string>();
+    const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.homedir();
+    let child: cp.ChildProcess | undefined;
+    let inputHintShown = false;
+
+    const pty: vscode.Pseudoterminal = {
+        onDidWrite: write.event,
+        open: () => {
+            write.fire(`${[command, ...args].join(' ')}\r\n`);
+            // PYTHONUNBUFFERED: stdout is a pipe now, not a tty; without it
+            // the server's startup banner sits in Python's block buffer.
+            child = cp.spawn(command, args, {
+                cwd,
+                env: { ...process.env, PYTHONUNBUFFERED: '1' },
+                windowsHide: true,
+            });
+            serverProcess = child;
+            const forward = (data: Buffer) => write.fire(data.toString().replace(/\r?\n/g, '\r\n'));
+            child.stdout?.on('data', forward);
+            child.stderr?.on('data', forward);
+            child.on('error', (err) => {
+                write.fire(`\r\n[ppxai] Could not start ${command}: ${err.message}\r\n`);
+            });
+            child.on('exit', (code, signal) => {
+                if (serverProcess === child) {
+                    serverProcess = undefined;
+                }
+                write.fire(`\r\n[ppxai] ppxai-server exited (${signal ?? `code ${code}`}).\r\n`);
+            });
+        },
+        close: () => {
+            // Terminal closed or disposed: take the server with it, as the
+            // shell terminal did (SIGHUP) before.
+            if (child && child.exitCode === null && child.signalCode === null) {
+                child.kill();
+            }
+        },
+        handleInput: () => {
+            if (!inputHintShown) {
+                inputHintShown = true;
+                write.fire('\r\n[ppxai] This terminal ignores input. Use Stop Server to stop the server.\r\n');
+            }
+        },
+    };
+
+    return vscode.window.createTerminal({
+        name: 'ppxai-server',
+        pty,
+        iconPath: new vscode.ThemeIcon('server-process'),
+    });
+}
+
+/** Resolve once `proc` has exited, or after `ms`, whichever comes first. */
+function waitForExit(proc: cp.ChildProcess | undefined, ms: number): Promise<void> {
+    if (!proc || proc.exitCode !== null || proc.signalCode !== null) {
+        return Promise.resolve();
+    }
+    return new Promise(resolve => {
+        const timer = setTimeout(resolve, ms);
+        proc.once('exit', () => {
+            clearTimeout(timer);
+            resolve();
+        });
+    });
+}
+
+/**
  * Start the ppxai-server in a terminal (v1.13.1, v1.13.2)
+ *
+ * v1.19.5: a second Start while one is in flight joins it instead of
+ * disposing the half-started terminal (which killed that server) and
+ * running another retry loop.
  */
 export async function startServer(): Promise<boolean> {
-    // Check if already running
-    if (await isServerRunning()) {
-        vscode.window.showInformationMessage('ppxai-server is already running');
-        notifyServerStatus(true);
-        return true;
+    if (startInFlight) {
+        return startInFlight;
     }
-
-    // Check if terminal exists but server not responding
-    if (serverTerminal) {
-        serverTerminal.dispose();
-        serverTerminal = undefined;
-    }
-
-    // Find the server binary
-    const serverBinary = findServerBinary();
-    const binaryExists = fs.existsSync(serverBinary);
-
-    // Log for debugging
-    console.log(`[ppxai] Server binary path: ${serverBinary}`);
-    console.log(`[ppxai] Binary exists: ${binaryExists}`);
-
-    // Create terminal with specific name
-    serverTerminal = vscode.window.createTerminal({
-        name: 'ppxai-server',
-        hideFromUser: false, // Show terminal so user can see output
-        iconPath: new vscode.ThemeIcon('server-process')
-    });
-
-    // v1.13.2: Build command based on platform and binary availability
-    let command: string;
-    if (binaryExists) {
-        // Quote path for Windows compatibility (handles spaces in path)
-        const quotedPath = serverBinary.includes(' ') ? `"${serverBinary}"` : serverBinary;
-        command = quotedPath;
-    } else {
-        // Fall back to uv run for dev environments
-        command = 'uv run ppxai-server';
-    }
-
-    console.log(`[ppxai] Starting server with command: ${command}`);
-    serverTerminal.sendText(command);
-    serverTerminal.show(true); // Show but don't take focus
-
-    // Wait for server to start with circuit breaker pattern (v1.13.2)
-    // Longer initial delays for Windows (antivirus scanning on first run)
-    // Delays: 2s, 3s, 4s, 5s, 8s, 12s then give up
-    const retryDelays = [2000, 3000, 4000, 5000, 8000, 12000];
-    let started = false;
-    for (const delay of retryDelays) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-        started = await backend.start();
-        if (started) {
-            break;
+    startInFlight = (async (): Promise<boolean> => {
+        // Check if already running
+        if (await isServerRunning()) {
+            vscode.window.showInformationMessage('ppxai-server is already running');
+            notifyServerStatus(true);
+            return true;
         }
-    }
-    if (started) {
-        vscode.window.showInformationMessage('ppxai-server started successfully');
-        notifyServerStatus(true);
-        return true;
-    }
 
-    // Give it more time and retry
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    const retryStarted = await backend.start();
-    if (retryStarted) {
-        vscode.window.showInformationMessage('ppxai-server started successfully');
-        notifyServerStatus(true);
-        return true;
-    }
+        // Check if terminal exists but server not responding
+        if (serverTerminal) {
+            serverTerminal.dispose();
+            serverTerminal = undefined;
+        }
 
-    vscode.window.showWarningMessage('ppxai-server may still be starting. Check the terminal for status.');
-    return false;
+        // Find the server binary
+        const serverBinary = findServerBinary();
+        const binaryExists = fs.existsSync(serverBinary);
+
+        // Log for debugging
+        console.log(`[ppxai] Server binary path: ${serverBinary}`);
+        console.log(`[ppxai] Binary exists: ${binaryExists}`);
+
+        // v1.13.2: the installed binary, else uv run for dev environments.
+        // An argv array needs no quoting for paths with spaces.
+        const [command, args]: [string, string[]] = binaryExists
+            ? [serverBinary, []]
+            : ['uv', ['run', 'ppxai-server']];
+
+        console.log(`[ppxai] Starting server with command: ${[command, ...args].join(' ')}`);
+        serverTerminal = createServerTerminal(command, args);
+        serverTerminal.show(true); // Show but don't take focus
+
+        // Wait for server to start with circuit breaker pattern (v1.13.2)
+        // Longer initial delays for Windows (antivirus scanning on first run)
+        // Delays: 2s, 3s, 4s, 5s, 8s, 12s then give up
+        const retryDelays = [2000, 3000, 4000, 5000, 8000, 12000];
+        let started = false;
+        for (const delay of retryDelays) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+            started = await backend.start();
+            if (started || !serverProcess) {
+                break;  // up, or the process already exited (its terminal says why)
+            }
+        }
+        if (started) {
+            vscode.window.showInformationMessage('ppxai-server started successfully');
+            notifyServerStatus(true);
+            return true;
+        }
+        if (!serverProcess) {
+            vscode.window.showErrorMessage('ppxai-server exited during startup. See the ppxai-server terminal.');
+            return false;
+        }
+
+        // Give it more time and retry
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const retryStarted = await backend.start();
+        if (retryStarted) {
+            vscode.window.showInformationMessage('ppxai-server started successfully');
+            notifyServerStatus(true);
+            return true;
+        }
+
+        vscode.window.showWarningMessage('ppxai-server may still be starting. Check the terminal for status.');
+        return false;
+    })();
+    try {
+        return await startInFlight;
+    } finally {
+        startInFlight = undefined;
+    }
 }
 
 /**
@@ -204,8 +292,9 @@ export async function stopServer(): Promise<void> {
         console.log('Server shutdown request completed (may have been already down)');
     }
 
-    // Wait for server to finish shutdown
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for the server we started to exit (it shuts down 0.5 s after
+    // answering /shutdown); closing the terminal below kills it otherwise.
+    await waitForExit(serverProcess, 5000);
 
     // Clean up terminal if we started one
     if (serverTerminal) {
