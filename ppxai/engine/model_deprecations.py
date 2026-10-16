@@ -21,7 +21,8 @@ Sources:
                 (NVIDIA does not publish a deprecation calendar; "retired"
                 here means absent from the live catalog on the verification date).
 
-OpenAI rows re-verified 2026-10-02 against the deprecations page.
+OpenAI rows re-verified 2026-10-02 against the deprecations page; the
+2026-10-14 GPT-4 series entry added 2026-10-15.
 Verification date: 2026-07-11 (live /models sweep across OpenAI, Gemini,
 NVIDIA NIM; Perplexity has no /models endpoint, verified via docs/changelog).
 2026-07-11 sweep result: every model in the shipped catalog is still live on
@@ -564,6 +565,53 @@ OPENAI_DEPRECATIONS: dict[str, Deprecation] = {
         shutdown_date="2027-01-06",
         replacement="gpt-realtime-2.1-mini",
         reason="Text-to-speech snapshot retired.",
+    ),
+
+    # ----- 2027-01-14 (announced 2026-10-14): GPT-4o, GPT-4o mini, GPT-4.1, GPT-4.1 mini. The page lists the snapshots; the aliases are named in OpenAI's notice -----
+    "gpt-4o": Deprecation(
+        shutdown_date="2027-01-14",
+        replacement="gpt-6-luna",
+        reason="Alias of gpt-4o-2024-11-20; the 2026-10-14 notice retires the GPT-4o family.",
+    ),
+    "gpt-4o-2024-08-06": Deprecation(
+        shutdown_date="2027-01-14",
+        replacement="gpt-6-luna",
+        reason="GPT-4o snapshot retired.",
+    ),
+    "gpt-4o-2024-11-20": Deprecation(
+        shutdown_date="2027-01-14",
+        replacement="gpt-6-luna",
+        reason="GPT-4o snapshot retired.",
+    ),
+    "gpt-4o-mini": Deprecation(
+        shutdown_date="2027-01-14",
+        replacement="gpt-6-luna",
+        reason="Alias of gpt-4o-mini-2024-07-18; the 2026-10-14 notice retires the GPT-4o mini family.",
+    ),
+    "gpt-4o-mini-2024-07-18": Deprecation(
+        shutdown_date="2027-01-14",
+        replacement="gpt-6-luna",
+        reason="GPT-4o mini snapshot retired.",
+    ),
+    "gpt-4.1": Deprecation(
+        shutdown_date="2027-01-14",
+        replacement="gpt-6-luna",
+        reason="Alias of gpt-4.1-2025-04-14; the 2026-10-14 notice retires the GPT-4.1 family.",
+    ),
+    "gpt-4.1-2025-04-14": Deprecation(
+        shutdown_date="2027-01-14",
+        replacement="gpt-6-luna",
+        reason="GPT-4.1 snapshot retired.",
+    ),
+    "gpt-4.1-mini": Deprecation(
+        shutdown_date="2027-01-14",
+        replacement="gpt-6-luna",
+        reason="Alias of gpt-4.1-mini-2025-04-14; the 2026-10-14 notice retires the GPT-4.1 mini family.",
+    ),
+    "gpt-4.1-mini-2025-04-14": Deprecation(
+        shutdown_date="2027-01-14",
+        replacement="gpt-6-luna",
+        reason="GPT-4.1 mini snapshot retired.",
     ),
 
     # ----- 2027-01-20 (announced 2026-07-20): legacy audio/realtime ids -----

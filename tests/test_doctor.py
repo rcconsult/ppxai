@@ -677,7 +677,10 @@ class TestDeprecationTableInvariants:
         # Current (verified 2026-10-02 against OpenAI's deprecations page):
         # every exact model id listed there, minus fine-tuned `ft-*` ids,
         # products/endpoints, non-callable family names, and Sora.
-        assert len(OPENAI_DEPRECATIONS) == 83
+        # 2026-10-15: + the 2026-10-14 GPT-4 series entry (5 snapshots) and
+        # the 4 aliases its notice names (gpt-4o, gpt-4o-mini, gpt-4.1,
+        # gpt-4.1-mini), which the page itself doesn't list.
+        assert len(OPENAI_DEPRECATIONS) == 92
 
     def test_all_deprecations_merged_correctly(self):
         # ALL_DEPRECATIONS must be the union of every provider-specific dict.

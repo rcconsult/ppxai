@@ -37,36 +37,26 @@ SSL_VERIFY=true
       "name": "OpenAI ChatGPT",
       "base_url": "https://api.openai.com/v1",
       "api_key_env": "OPENAI_API_KEY",
-      "default_model": "gpt-4o",
-      "coding_model": "gpt-4o",
+      "default_model": "gpt-5.6-terra",
+      "coding_model": "gpt-5.6-terra",
       "models": {
-        "gpt-4o": {
-          "name": "GPT-4o",
-          "description": "Latest flagship model - best for complex tasks"
+        "gpt-5.6-terra": {
+          "name": "GPT-5.6 Terra",
+          "description": "Default OpenAI model in the shipped example config"
         },
-        "gpt-4o-mini": {
-          "name": "GPT-4o Mini",
-          "description": "Fast and affordable for simple tasks"
+        "gpt-6-sol": {
+          "name": "GPT-6 Sol",
+          "description": "GPT-6 flagship"
         },
-        "gpt-4-turbo": {
-          "name": "GPT-4 Turbo",
-          "description": "Previous generation, 128k context"
-        },
-        "o1-preview": {
-          "name": "o1 Preview",
-          "description": "Reasoning model for complex problems"
-        },
-        "o1-mini": {
-          "name": "o1 Mini",
-          "description": "Faster reasoning model"
+        "gpt-6-luna": {
+          "name": "GPT-6 Luna",
+          "description": "Cheapest GPT-6 model"
         }
       },
       "pricing": {
-        "gpt-4o": {"input": 2.50, "output": 10.00},
-        "gpt-4o-mini": {"input": 0.15, "output": 0.60},
-        "gpt-4-turbo": {"input": 10.00, "output": 30.00},
-        "o1-preview": {"input": 15.00, "output": 60.00},
-        "o1-mini": {"input": 3.00, "output": 12.00}
+        "gpt-5.6-terra": {"input": 2.00, "output": 12.00},
+        "gpt-6-sol": {"input": 2.00, "output": 10.00},
+        "gpt-6-luna": {"input": 0.10, "output": 0.50}
       },
       "capabilities": {
         "web_search": false,
