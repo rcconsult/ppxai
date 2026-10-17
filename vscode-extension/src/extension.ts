@@ -13,6 +13,12 @@ let extensionVersion: string = 'unknown';
 let serverTerminal: vscode.Terminal | undefined;
 let serverProcess: cp.ChildProcess | undefined;
 let startInFlight: Promise<boolean> | undefined;
+// Set while stopServer() has already sent /shutdown, so closing the terminal
+// does not send it again; cleared when a new server terminal opens.
+let shutdownRequested = false;
+// The stop a closing server terminal started; deactivate() returns it so
+// VS Code waits for the server to go before the extension host exits.
+let pendingTerminalStop: Promise<void> | undefined;
 const serverStatusCallbacks: Array<(running: boolean) => void> = [];
 
 export function getExtensionVersion(): string {
@@ -144,6 +150,7 @@ function createServerTerminal(command: string, args: string[]): vscode.Terminal 
                 windowsHide: true,
             });
             serverProcess = child;
+            shutdownRequested = false;
             const forward = (data: Buffer) => write.fire(data.toString().replace(/\r?\n/g, '\r\n'));
             child.stdout?.on('data', forward);
             child.stderr?.on('data', forward);
@@ -159,9 +166,11 @@ function createServerTerminal(command: string, args: string[]): vscode.Terminal 
         },
         close: () => {
             // Terminal closed or disposed: take the server with it, as the
-            // shell terminal did (SIGHUP) before.
+            // shell terminal did (SIGHUP) before. Every path that ends this
+            // terminal lands here: the terminal's own close button, Start
+            // replacing a stale terminal, and deactivate().
             if (child && child.exitCode === null && child.signalCode === null) {
-                child.kill();
+                pendingTerminalStop = stopChild(child);
             }
         },
         handleInput: () => {
@@ -177,6 +186,40 @@ function createServerTerminal(command: string, args: string[]): vscode.Terminal 
         pty,
         iconPath: new vscode.ThemeIcon('server-process'),
     });
+}
+
+/**
+ * Stop a server process this extension spawned, the way Stop Server does.
+ *
+ * Not a bare `child.kill()`: on Windows the installed ppxai-server.exe is a
+ * PyInstaller one-file build, so `child` is the bootloader and the real
+ * server is ITS child. `kill()` is TerminateProcess on the bootloader alone;
+ * the server kept running, kept :54320, and the next Start's server died on
+ * the bind while the panel quietly reattached to the orphan. So: ask the
+ * server to shut down (its lifespan runs, `reason: api_request`), wait, and
+ * only then force it, taking the whole tree on win32.
+ */
+async function stopChild(proc: cp.ChildProcess): Promise<void> {
+    if (!shutdownRequested) {
+        shutdownRequested = true;
+        await backend?.shutdown();
+    }
+    await waitForExit(proc, 5000);
+    if (proc.exitCode !== null || proc.signalCode !== null) {
+        return;
+    }
+    if (process.platform === 'win32' && proc.pid !== undefined) {
+        await new Promise<void>(resolve => {
+            const killer = cp.spawn('taskkill', ['/PID', String(proc.pid), '/T', '/F'], {
+                windowsHide: true,
+                stdio: 'ignore',
+            });
+            killer.on('error', () => resolve());
+            killer.on('exit', () => resolve());
+        });
+    } else {
+        proc.kill();
+    }
 }
 
 /** Resolve once `proc` has exited, or after `ms`, whichever comes first. */
@@ -285,6 +328,7 @@ export async function startServer(): Promise<boolean> {
  */
 export async function stopServer(): Promise<void> {
     // v1.13.10: Use HTTP endpoint for graceful shutdown (like web app)
+    shutdownRequested = true;
     try {
         await backend.shutdown();
     } catch (error) {
@@ -764,11 +808,17 @@ export async function activate(context: vscode.ExtensionContext) {
     console.log('ppxai extension activated');
 }
 
-export function deactivate() {
+export async function deactivate(): Promise<void> {
     // Stop server terminal if running
+    const proc = serverProcess;
     if (serverTerminal) {
         serverTerminal.dispose();
         serverTerminal = undefined;
+    }
+    // Returned to VS Code, which waits for it: a fire-and-forget stop would
+    // die with the extension host and leave the server running.
+    if (proc && proc.exitCode === null && proc.signalCode === null) {
+        await (pendingTerminalStop ?? stopChild(proc));
     }
     // Reset HTTP client
     resetHttpClient();

@@ -643,3 +643,103 @@ class TestMutationVscodeCommandRegistrations:
         """
         body = _extract_braced_body(ok, r"export async function stopServer\(\)[^{]*")
         assert_stop_server_reaches_shutdown(body)  # must not raise
+
+
+# =============================================================================
+# Part 7 — VSCode: closing the server terminal stops the WHOLE server.
+#
+# Windows, 2026-10-17: the terminal's close() called `child.kill()`. The
+# installed ppxai-server.exe is a PyInstaller one-file build, so `child` is
+# the bootloader; TerminateProcess killed it alone and the real server (its
+# child) kept running on :54320. The next Start's server died on the bind
+# and the panel reattached to the orphan. Every path that ends the terminal
+# (its close button, Start replacing a stale terminal, deactivate) runs
+# close(), so close() must stop the server the way Stop Server does.
+# =============================================================================
+
+
+def _pty_close_body(src: str) -> str:
+    return _extract_braced_body(src, r"\bclose:\s*\(\)\s*=>")
+
+
+def assert_terminal_close_stops_the_tree(close_body: str, stop_child_body: str) -> None:
+    if re.search(r"\bchild\.kill\(\)", close_body):
+        raise AssertionError(
+            "the server terminal's close() must not call child.kill() directly: on "
+            "win32 that kills only the PyInstaller bootloader and orphans the server")
+    if "stopChild(" not in close_body:
+        raise AssertionError("the server terminal's close() must stop the server via stopChild()")
+    shutdown = stop_child_body.find("shutdown()")
+    wait = stop_child_body.find("waitForExit(")
+    if shutdown == -1 or wait == -1 or shutdown > wait:
+        raise AssertionError(
+            "stopChild() must request /shutdown (backend.shutdown()) before waiting for exit")
+    if not re.search(r"process\.platform\s*===\s*'win32'", stop_child_body):
+        raise AssertionError("stopChild() must special-case win32")
+    if not re.search(r"'taskkill'.*'/T'", stop_child_body, re.S):
+        raise AssertionError("stopChild() must force-kill the whole tree on win32 (taskkill /T)")
+    if stop_child_body.find("taskkill") < wait:
+        raise AssertionError("stopChild() may force-kill only after the graceful wait")
+
+
+def assert_deactivate_awaits_the_stop(deactivate_body: str) -> None:
+    if not re.search(r"await\s*\(?\s*(pendingTerminalStop|stopChild\()", deactivate_body):
+        raise AssertionError(
+            "deactivate() must await the server stop; a fire-and-forget stop dies "
+            "with the extension host")
+
+
+class TestVscodeTerminalCloseStopsServer:
+    def test_real_close_stops_the_whole_server(self):
+        src = _read(VSCODE_EXTENSION_TS_PATH)
+        assert_terminal_close_stops_the_tree(
+            _pty_close_body(src),
+            _extract_braced_body(src, r"async function stopChild\([^)]*\)[^{]*"))
+
+    def test_real_deactivate_awaits_the_stop(self):
+        src = _read(VSCODE_EXTENSION_TS_PATH)
+        body = _extract_braced_body(src, r"export async function deactivate\(\)[^{]*")
+        assert_deactivate_awaits_the_stop(body)
+
+
+class TestMutationVscodeTerminalCloseStopsServer:
+    GOOD_STOP_CHILD = """
+    async function stopChild(proc) {
+        await backend?.shutdown();
+        await waitForExit(proc, 5000);
+        if (process.platform === 'win32') {
+            cp.spawn('taskkill', ['/PID', String(proc.pid), '/T', '/F']);
+        } else { proc.kill(); }
+    }
+    """
+
+    def _stop_child(self, src=GOOD_STOP_CHILD):
+        return _extract_braced_body(src, r"async function stopChild\([^)]*\)[^{]*")
+
+    def test_rejects_the_bare_kill_that_orphaned_the_server(self):
+        close = _pty_close_body("const pty = { close: () => { if (child) { child.kill(); } } };")
+        with pytest.raises(AssertionError, match="bootloader"):
+            assert_terminal_close_stops_the_tree(close, self._stop_child())
+
+    def test_rejects_a_stop_without_the_tree_kill(self):
+        close = _pty_close_body("const pty = { close: () => { pending = stopChild(child); } };")
+        no_tree = self.GOOD_STOP_CHILD.replace("'/T', ", "")
+        with pytest.raises(AssertionError, match="whole tree"):
+            assert_terminal_close_stops_the_tree(close, self._stop_child(no_tree))
+
+    def test_rejects_a_stop_that_kills_before_asking(self):
+        close = _pty_close_body("const pty = { close: () => { pending = stopChild(child); } };")
+        no_shutdown = self.GOOD_STOP_CHILD.replace("await backend?.shutdown();", "")
+        with pytest.raises(AssertionError, match="shutdown"):
+            assert_terminal_close_stops_the_tree(close, self._stop_child(no_shutdown))
+
+    def test_rejects_a_fire_and_forget_deactivate(self):
+        body = _extract_braced_body(
+            "export async function deactivate() { serverTerminal.dispose(); resetHttpClient(); }",
+            r"export async function deactivate\(\)[^{]*")
+        with pytest.raises(AssertionError, match="await"):
+            assert_deactivate_awaits_the_stop(body)
+
+    def test_accepts_the_good_shape(self):
+        close = _pty_close_body("const pty = { close: () => { pending = stopChild(child); } };")
+        assert_terminal_close_stops_the_tree(close, self._stop_child())  # must not raise
