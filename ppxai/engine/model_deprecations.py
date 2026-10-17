@@ -79,6 +79,18 @@ GEMINI_DEPRECATIONS: dict[str, Deprecation] = {
             "verified live 2026-09-01."
         ),
     ),
+    "gemini-3.7-flash": Deprecation(
+        shutdown_date="2026-10-17",
+        replacement="gemini-3.8-flash",
+        reason=(
+            "Deprecated and AUTO-REDIRECTED: Google's notice (email received "
+            "2026-10-17, no date given) says gemini-3.7-flash is no longer an "
+            "independent model and every request is served by "
+            "gemini-3.8-flash, at the same promotional price ($0.75/$3.75 per "
+            "MTok). Requests still succeed. Call gemini-3.8-flash, the "
+            "default, directly."
+        ),
+    ),
     "gemini-3.5-flash": Deprecation(
         shutdown_date="2026-10-11",
         replacement="gemini-3.6-flash",

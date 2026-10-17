@@ -43,6 +43,7 @@ def _make_provider() -> GeminiProvider:
     "model",
     [
         "gemini-3.8-flash",
+        # Redirected to 3.8-flash by Google (notice received 2026-10-17).
         "gemini-3.7-flash",
         "gemini-3.6-flash",
         # Redirected to 3.6-flash by Google (notice received 2026-10-11).

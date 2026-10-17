@@ -1087,6 +1087,10 @@ SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {
         restricted_params=('temperature', 'top_p', 'top_k'),
         tier='S',
     ),
+    # gemini-3.7-flash is AUTO-REDIRECTED to gemini-3.8-flash (Google notice
+    # received 2026-10-17); the row already matches 3.8's. Kept so an
+    # operator's leftover id resolves correctly; /doctor reports it as
+    # deprecated.
     "gemini-3.7-flash*": ModelFacts(
         wire_protocol='generate_content',
         tool_mode='native',
