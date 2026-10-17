@@ -875,6 +875,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
      * stay stale until the next SSE push.
      */
     private async _reanchorFromServer(checkSchema = false): Promise<void> {
+        // Focus fires this whether or not a server is connected. With none
+        // (before Start, after Stop) there is nothing to re-anchor to, and
+        // the schema check only logged a "fetch failed" warning. The next
+        // connect runs check() itself (initializeBackend).
+        if (!this._backend.isRunning()) {
+            return;
+        }
         try {
             // Schema first, so fields adopted from a restarted server apply
             // to the snapshot below. check() never fails closed and does not

@@ -309,6 +309,35 @@ function make(served) {
       'state stopped working after an unverified check');
   }
 
+  // --- 6b: no server answered ("fetch failed", no status) --------------
+  // Not a 404: nothing was listening. The log must say so and must NOT
+  // blame an old server (2026-10-17: a stopped server read as "older than
+  // v1.17.4" in the ppxai channel).
+  {
+    const { host, guard } = make(new TypeError('fetch failed'));
+    let threw = null;
+    let diff = null;
+    try { diff = await guard.check(); } catch (e) { threw = e; }
+    assert(threw === null, 'check() THREW when no server answered: ' + threw);
+    assert(diff.verdict === 'unverified', 'verdict was ' + diff.verdict);
+    assert(host.warns.length === 0,
+      'an unreachable server produced a user-visible warning: ' + host.warns.join(' | '));
+    assert(host.logs.length === 1, 'expected exactly one log, got ' + host.logs.length);
+    assert(host.logs[0].includes('did not answer'),
+      'the log does not say the server did not answer: ' + host.logs[0]);
+    assert(!host.logs[0].includes('older than'),
+      'an unreachable server was blamed on its version: ' + host.logs[0]);
+  }
+  // ...and a real 404 keeps the version hint.
+  {
+    const err = new Error('GET /schema/app-state failed: 404 Not Found');
+    err.status = 404;
+    const { host, guard } = make(err);
+    await guard.check();
+    assert(host.logs[0].includes('older than v1.17.4'),
+      'a 404 lost its old-server hint: ' + host.logs[0]);
+  }
+
   // --- 7: reconnect to a server WITHOUT the extra field ----------------
   {
     const withExtra = serverSchema((s) => {

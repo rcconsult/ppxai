@@ -153,6 +153,24 @@ class TestVSCodeVisibilityReanchorWiring:
             "_reanchorFromServer must call _appState.updateFromPython()"
         )
 
+    def test_reanchor_is_skipped_with_no_server_connected(self):
+        """Focus fires the re-anchor whether or not a server is connected.
+        With none (before Start, after Stop) the schema check logged a
+        "fetch failed" warning that read as an old server (2026-10-17). The
+        not-connected return must come before the schema check."""
+        src = _read_chat_panel()
+        match = re.search(
+            r"private\s+async\s+_reanchorFromServer[\s\S]*?\n    \}",
+            src,
+        )
+        assert match, "could not extract _reanchorFromServer body"
+        body = match.group(0)
+        guard = re.search(r"if\s*\(\s*!this\._backend\.isRunning\(\)\s*\)\s*\{\s*return;", body)
+        assert guard, "_reanchorFromServer must return early when !this._backend.isRunning()"
+        assert guard.start() < body.index("_schemaGuard.check()"), (
+            "the not-connected return must precede the schema check"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Web/VSCode parity — drift fence across the two clients

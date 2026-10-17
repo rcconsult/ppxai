@@ -334,11 +334,18 @@ export class SchemaGuard {
                 error: message,
             };
             this.last = diff;
+            // An HTTP error carries `status` (getAppStateSchema sets it); a
+            // bare "fetch failed" means no server answered at all, and
+            // blaming an old server for that sent people looking in the
+            // wrong place.
+            const reason = (typeof e?.status === 'number')
+                ? `${message}. Expected against a server older than v1.17.4, ` +
+                  `which has no /schema/app-state endpoint`
+                : `the server did not answer (${message})`;
             this._announce(
                 `[ppxai SchemaGuard] could not verify the server's AppState ` +
-                `shape — ${message}. Continuing with the extension's bundled ` +
-                `schema; expected against a server older than v1.17.4, which ` +
-                `has no /schema/app-state endpoint.`
+                `shape — ${reason}. Continuing with the extension's bundled ` +
+                `schema.`
             );
             return diff;
         }
