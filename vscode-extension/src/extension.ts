@@ -16,9 +16,9 @@ let startInFlight: Promise<boolean> | undefined;
 // Set while stopServer() has already sent /shutdown, so closing the terminal
 // does not send it again; cleared when a new server terminal opens.
 let shutdownRequested = false;
-// The stop a closing server terminal started; deactivate() returns it so
-// VS Code waits for the server to go before the extension host exits.
-let pendingTerminalStop: Promise<void> | undefined;
+// Grace before the force-kill when VS Code shuts the extension down; it
+// allows deactivate() 5 s in total, and taskkill needs time inside that.
+const DEACTIVATE_GRACE_MS = 2500;
 const serverStatusCallbacks: Array<(running: boolean) => void> = [];
 
 export function getExtensionVersion(): string {
@@ -170,7 +170,7 @@ function createServerTerminal(command: string, args: string[]): vscode.Terminal 
             // terminal lands here: the terminal's own close button, Start
             // replacing a stale terminal, and deactivate().
             if (child && child.exitCode === null && child.signalCode === null) {
-                pendingTerminalStop = stopChild(child);
+                void stopChild(child);
             }
         },
         handleInput: () => {
@@ -198,13 +198,19 @@ function createServerTerminal(command: string, args: string[]): vscode.Terminal 
  * the bind while the panel quietly reattached to the orphan. So: ask the
  * server to shut down (its lifespan runs, `reason: api_request`), wait, and
  * only then force it, taking the whole tree on win32.
+ *
+ * The /shutdown request is not awaited: its own abort is 5 s, and the grace
+ * period runs from the moment it is sent. `graceMs` is shorter on the
+ * deactivate() path, because VS Code gives deactivate() 5 s in all
+ * (extHostExtensionService.terminate: `Promise.race([timeout(5000), ...])`)
+ * and the force-kill has to land inside that.
  */
-async function stopChild(proc: cp.ChildProcess): Promise<void> {
+async function stopChild(proc: cp.ChildProcess, graceMs = 5000): Promise<void> {
     if (!shutdownRequested) {
         shutdownRequested = true;
-        await backend?.shutdown();
+        void backend?.shutdown();
     }
-    await waitForExit(proc, 5000);
+    await waitForExit(proc, graceMs);
     if (proc.exitCode !== null || proc.signalCode !== null) {
         return;
     }
@@ -816,9 +822,12 @@ export async function deactivate(): Promise<void> {
         serverTerminal = undefined;
     }
     // Returned to VS Code, which waits for it: a fire-and-forget stop would
-    // die with the extension host and leave the server running.
+    // die with the extension host and leave the server running. VS Code waits
+    // 5 s at most, so this stop gets a 2.5 s grace before the force-kill
+    // instead of the 5 s the terminal's own close() allows (the /shutdown it
+    // sent is not repeated).
     if (proc && proc.exitCode === null && proc.signalCode === null) {
-        await (pendingTerminalStop ?? stopChild(proc));
+        await stopChild(proc, DEACTIVATE_GRACE_MS);
     }
     // Reset HTTP client
     resetHttpClient();

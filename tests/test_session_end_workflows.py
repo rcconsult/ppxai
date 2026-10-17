@@ -682,11 +682,36 @@ def assert_terminal_close_stops_the_tree(close_body: str, stop_child_body: str) 
         raise AssertionError("stopChild() may force-kill only after the graceful wait")
 
 
-def assert_deactivate_awaits_the_stop(deactivate_body: str) -> None:
-    if not re.search(r"await\s*\(?\s*(pendingTerminalStop|stopChild\()", deactivate_body):
+#: VS Code gives deactivate() 5 s in all (extHostExtensionService.terminate:
+#: `Promise.race([timeout(5000), extensionsDeactivated])`), then exits the
+#: extension host. The grace before the force-kill must leave taskkill room.
+VSCODE_DEACTIVATE_CAP_MS = 5000
+DEACTIVATE_KILL_HEADROOM_MS = 1500
+
+
+def assert_deactivate_awaits_the_stop(deactivate_body: str, src: str) -> None:
+    m = re.search(r"await\s+stopChild\(\s*\w+\s*,\s*(\w+)\s*\)", deactivate_body)
+    if not m:
         raise AssertionError(
-            "deactivate() must await the server stop; a fire-and-forget stop dies "
-            "with the extension host")
+            "deactivate() must await stopChild(proc, <grace>); a fire-and-forget stop dies "
+            "with the extension host, and the default 5 s grace outlasts VS Code's cap")
+    grace = m.group(1)
+    if not grace.isdigit():
+        const = re.search(rf"const\s+{grace}\s*=\s*(\d+)", src)
+        if not const:
+            raise AssertionError(f"deactivate()'s grace {grace} is not a numeric constant")
+        grace = const.group(1)
+    if int(grace) > VSCODE_DEACTIVATE_CAP_MS - DEACTIVATE_KILL_HEADROOM_MS:
+        raise AssertionError(
+            f"deactivate()'s grace ({grace} ms) leaves taskkill no room inside VS Code's "
+            f"{VSCODE_DEACTIVATE_CAP_MS} ms deactivate cap")
+
+
+def assert_shutdown_request_not_awaited(stop_child_body: str) -> None:
+    if re.search(r"await\s+backend\??\.shutdown\(", stop_child_body):
+        raise AssertionError(
+            "stopChild() must not await backend.shutdown(): its own abort is 5 s, which "
+            "would push the force-kill past VS Code's deactivate cap")
 
 
 class TestVscodeTerminalCloseStopsServer:
@@ -696,16 +721,21 @@ class TestVscodeTerminalCloseStopsServer:
             _pty_close_body(src),
             _extract_braced_body(src, r"async function stopChild\([^)]*\)[^{]*"))
 
-    def test_real_deactivate_awaits_the_stop(self):
+    def test_real_deactivate_awaits_the_stop_within_the_cap(self):
         src = _read(VSCODE_EXTENSION_TS_PATH)
         body = _extract_braced_body(src, r"export async function deactivate\(\)[^{]*")
-        assert_deactivate_awaits_the_stop(body)
+        assert_deactivate_awaits_the_stop(body, src)
+
+    def test_real_stop_child_does_not_wait_on_the_shutdown_request(self):
+        src = _read(VSCODE_EXTENSION_TS_PATH)
+        assert_shutdown_request_not_awaited(
+            _extract_braced_body(src, r"async function stopChild\([^)]*\)[^{]*"))
 
 
 class TestMutationVscodeTerminalCloseStopsServer:
     GOOD_STOP_CHILD = """
-    async function stopChild(proc) {
-        await backend?.shutdown();
+    async function stopChild(proc, graceMs = 5000) {
+        void backend?.shutdown();
         await waitForExit(proc, 5000);
         if (process.platform === 'win32') {
             cp.spawn('taskkill', ['/PID', String(proc.pid), '/T', '/F']);
@@ -729,16 +759,38 @@ class TestMutationVscodeTerminalCloseStopsServer:
 
     def test_rejects_a_stop_that_kills_before_asking(self):
         close = _pty_close_body("const pty = { close: () => { pending = stopChild(child); } };")
-        no_shutdown = self.GOOD_STOP_CHILD.replace("await backend?.shutdown();", "")
+        no_shutdown = self.GOOD_STOP_CHILD.replace("void backend?.shutdown();", "")
         with pytest.raises(AssertionError, match="shutdown"):
             assert_terminal_close_stops_the_tree(close, self._stop_child(no_shutdown))
 
+    def _deactivate(self, body_src: str) -> str:
+        return _extract_braced_body(body_src, r"export async function deactivate\(\)[^{]*")
+
     def test_rejects_a_fire_and_forget_deactivate(self):
-        body = _extract_braced_body(
-            "export async function deactivate() { serverTerminal.dispose(); resetHttpClient(); }",
-            r"export async function deactivate\(\)[^{]*")
+        src = "export async function deactivate() { serverTerminal.dispose(); resetHttpClient(); }"
         with pytest.raises(AssertionError, match="await"):
-            assert_deactivate_awaits_the_stop(body)
+            assert_deactivate_awaits_the_stop(self._deactivate(src), src)
+
+    def test_rejects_a_deactivate_on_the_default_five_second_grace(self):
+        src = "export async function deactivate() { await stopChild(proc); }"
+        with pytest.raises(AssertionError, match="await"):
+            assert_deactivate_awaits_the_stop(self._deactivate(src), src)
+
+    def test_rejects_a_grace_that_outlasts_the_cap(self):
+        src = ("const DEACTIVATE_GRACE_MS = 4000;\n"
+               "export async function deactivate() { await stopChild(proc, DEACTIVATE_GRACE_MS); }")
+        with pytest.raises(AssertionError, match="no room"):
+            assert_deactivate_awaits_the_stop(self._deactivate(src), src)
+
+    def test_rejects_awaiting_the_shutdown_request(self):
+        awaited = self.GOOD_STOP_CHILD.replace("void backend?.shutdown();", "await backend?.shutdown();")
+        with pytest.raises(AssertionError, match="must not await"):
+            assert_shutdown_request_not_awaited(self._stop_child(awaited))
+
+    def test_accepts_a_deactivate_within_the_cap(self):
+        src = ("const DEACTIVATE_GRACE_MS = 2500;\n"
+               "export async function deactivate() { await stopChild(proc, DEACTIVATE_GRACE_MS); }")
+        assert_deactivate_awaits_the_stop(self._deactivate(src), src)  # must not raise
 
     def test_accepts_the_good_shape(self):
         close = _pty_close_body("const pty = { close: () => { pending = stopChild(child); } };")
