@@ -29,6 +29,7 @@ import pytest
 from ppxai.config import paths as config_paths
 from ppxai.engine.providers import openai_wire as provider_wire
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+from ppxai.server import http as h
 
 POSIX = sys.platform != "win32"
 
@@ -334,3 +335,53 @@ class TestSigtermStopsItDespiteAHungCall:
         assert exited, f"a second SIGTERM did not force the exit:\n{out}"
         assert time.monotonic() - started < 15
         assert "forcing shutdown" in out
+
+
+# ---------------------------------------------------------------------------
+# A port already in use: the stop reason says so, not "unknown"
+# ---------------------------------------------------------------------------
+
+_BIND_FAIL_CHILD = textwrap.dedent("""
+    import asyncio, sys
+    from contextlib import asynccontextmanager
+    from fastapi import FastAPI
+    from ppxai.server import http as h
+
+    port = int(sys.argv[1])
+
+    @asynccontextmanager
+    async def lifespan(app):
+        yield
+        print("REASON=" + h._stop_reason(None), flush=True)
+
+    asyncio.run(h._run_server_with_graceful_shutdown(
+        FastAPI(lifespan=lifespan), host="127.0.0.1", port=port, log_level="warning"))
+""")
+
+
+class TestBindFailureReason:
+    def test_a_taken_port_stops_with_bind_failed(self):
+        with socket.socket() as taken:
+            taken.bind(("127.0.0.1", 0))
+            taken.listen(1)
+            port = taken.getsockname()[1]
+            proc = subprocess.run(
+                [sys.executable, "-c", _BIND_FAIL_CHILD, str(port)],
+                capture_output=True, text=True, timeout=60)
+        out = proc.stdout + proc.stderr
+        assert proc.returncode == 1, out
+        assert "REASON=bind_failed" in out, out
+
+    def test_a_recorded_reason_wins(self, monkeypatch):
+        class _Sm:
+            shutdown_reason = "ctrl_c"
+
+        class _NeverStarted:
+            started = False
+
+        monkeypatch.setattr(h, "_active_server", _NeverStarted())
+        assert h._stop_reason(_Sm()) == "ctrl_c"
+
+    def test_no_server_and_no_reason_stays_unknown(self, monkeypatch):
+        monkeypatch.setattr(h, "_active_server", None)
+        assert h._stop_reason(None) == "unknown"

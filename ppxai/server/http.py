@@ -217,7 +217,7 @@ async def lifespan(app: FastAPI):
     # Shutdown: Cleanup via SessionManager (v1.13.10)
     uptime = time.time() - get_server_start_time()
     uptime_str = _format_uptime(uptime)
-    shutdown_reason = sm.shutdown_reason if sm else "unknown"
+    shutdown_reason = _stop_reason(sm)
     stop_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     logger.info(f"Server stopped at {stop_timestamp} (uptime: {uptime_str}, reason: {shutdown_reason})")
@@ -227,6 +227,21 @@ async def lifespan(app: FastAPI):
     _stopped_line = f"ppxai HTTP server stopped (uptime: {uptime_str}, reason: {shutdown_reason})"
     if not _serving_via_entry_point:
         print(_stopped_line)  # TestClient etc.: nothing else will print it
+
+
+def _stop_reason(sm) -> str:
+    """Why the server stopped, for the "stopped" log line.
+
+    A signal, `/shutdown` or the idle monitor records a reason on the
+    SessionManager. When none did and uvicorn never started listening, the
+    bind failed (port taken, address not available): uvicorn logs the
+    OSError, runs the lifespan shutdown and exits, and the line used to say
+    `reason: unknown`.
+    """
+    reason = sm.shutdown_reason if sm else "unknown"
+    if reason == "unknown" and _active_server is not None and not _active_server.started:
+        return "bind_failed"
+    return reason
 
 
 # Create FastAPI app with lifespan
