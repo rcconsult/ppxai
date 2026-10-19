@@ -438,9 +438,10 @@ class TestTheUnmeasuredFloorIsProviderAware:
     def test_every_provider_floor_matches_a_wire_it_can_speak(self):
         """Scoped fence: a floor naming an unreachable wire is the bug this
         class exists to prevent, so check them all rather than just Gemini."""
-        from ppxai.engine.providers import _providers
+        from ppxai.engine.providers import get_provider_class, list_registered_providers
 
-        for name, cls in _providers.items():
+        for name in list_registered_providers():
+            cls = get_provider_class(name)
             floor = getattr(cls, "unmeasured_facts", None)
             if floor is None:
                 continue

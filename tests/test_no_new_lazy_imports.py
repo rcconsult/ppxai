@@ -1368,7 +1368,6 @@ BASELINE_TESTS_DIR = {
     "tests/test_network_policy.py": 9,
     "tests/test_oneshot_grounding.py": 19,
     "tests/test_oneshot_route.py": 20,
-    "tests/test_openai_native.py": 2,
     "tests/test_ops_modules.py": 1,
     "tests/test_pdf_tools.py": 1,
     "tests/test_per_model_capabilities.py": 2,

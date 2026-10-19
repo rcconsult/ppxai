@@ -61,3 +61,11 @@ class ReadFileTool(BaseTool):
 3. When a direct import would create a cycle, define a `Protocol` in a leaf module
 4. Protocols go in `engine/types.py` (for engine-layer types) or the appropriate leaf module
 5. Use `@runtime_checkable` so protocols can be used with `isinstance()` checks
+6. **One named exception: a declared registry loaded through one function**
+   (ADR 0016 §7). `importlib.import_module` is allowed only where a table is
+   the dependency list: `CommandFactory._ensure_loaded`
+   (`_BUILTIN_COMMAND_MODULES`), `CommandFactory.reload_user_commands` (user
+   command files) and `providers._import` (`_PROVIDER_MODULES`, `_FALLBACK`).
+   Fenced by `tests/test_provider_registry.py::TestOneLoadPoint`; a module
+   loaded this way must also be in every engine-bundling PyInstaller spec
+   (`TestPyInstallerParity`).

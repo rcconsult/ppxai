@@ -91,7 +91,6 @@ from ...engine import task_authorizer as _authz
 from ...engine import task_runner as _task_runner
 from ...engine.facts_resolver import get_effective_oneshot_path
 from ...engine.providers import create_provider
-from ...engine.providers.openai_compat import OpenAICompatibleProvider
 from ...engine.search.grounding import NUM_RESULTS, Retrieval, grounded_prompt, retrieve
 from ...engine.search.resolver import resolve_web_search_backend
 from ...engine.task_authorizer import TIERS as _TIERS
@@ -658,14 +657,6 @@ def _build_provider(provider_name: str, native_grounding: bool | None = None):
         capabilities=capabilities,
         **options,
     )
-    if provider is None:
-        provider = OpenAICompatibleProvider(
-            api_key=api_key,
-            base_url=base_url,
-            models=cfg.get("models", {}),
-            capabilities=capabilities,
-            provider_id=provider_name,
-        )
 
     # Option A: opt-in native web search for the tool-free oneshot tiers.
     # No-op unless tools.web_search.oneshot_grounding is on AND the provider is

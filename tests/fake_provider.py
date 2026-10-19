@@ -15,7 +15,7 @@ more -- enough for usage tests to assert real arithmetic.
 from dataclasses import dataclass, field
 
 from ppxai.config import PROVIDERS
-from ppxai.engine import provider_ops, providers
+from ppxai.engine import providers
 from ppxai.engine.providers.base import BaseProvider
 from ppxai.engine.types import Event, EventType, UsageStats
 
@@ -77,9 +77,10 @@ class FakeProviders:
 def install(monkeypatch) -> FakeProviders:
     """Route every provider construction to FakeChatProvider.
 
-    Covers both construction paths: `create_provider()` (every registered
-    name, via the registry it reads) and the OpenAI-compatible fallback
-    `set_provider` uses for a name the registry does not know. Every
+    Every construction goes through `create_provider()`, which asks
+    `load_provider_class()` for the class -- registered names and the
+    OpenAI-compatible fallback alike -- so patching that one function
+    covers them all. Every
     configured provider's key is replaced with a placeholder: `set_provider`
     refuses a provider without one, and a real key must not be in reach of
     anything that bypasses the fake -- it would fail auth, not bill.
@@ -91,9 +92,7 @@ def install(monkeypatch) -> FakeProviders:
             super().__init__(*args, **kwargs)
             record.created.append(self)
 
-    for name in list(providers._providers):
-        monkeypatch.setitem(providers._providers, name, _Recorded)
-    monkeypatch.setattr(provider_ops, "OpenAICompatibleProvider", _Recorded)
+    monkeypatch.setattr(providers, "load_provider_class", lambda name: _Recorded)
 
     for cfg in PROVIDERS.values():
         if cfg.get("api_key_env"):

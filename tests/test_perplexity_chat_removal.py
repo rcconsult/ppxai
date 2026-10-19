@@ -38,7 +38,7 @@ from ppxai.commands.doctor import (
 from ppxai.commands.provider import handle_provider
 from ppxai.config import FALLBACK_PROVIDER, REMOVED_CHAT_PROVIDERS
 from ppxai.engine import EngineClient, provider_ops, session_ops
-from ppxai.engine.providers import create_provider, get_provider_class
+from ppxai.engine.providers import _PROVIDER_MODULES, create_provider, get_provider_class
 from ppxai.engine.search import perplexity as search_backend
 from ppxai.engine.task_authorizer import TaskAuthorizationError, validate_provider_or_error
 from ppxai.engine.types import EventType
@@ -85,7 +85,12 @@ class TestTheRemovalTable:
 
     def test_no_provider_class_is_registered(self):
         assert get_provider_class("perplexity") is None
-        assert create_provider("perplexity", api_key="k") is None
+        assert "perplexity" not in _PROVIDER_MODULES
+        # Since ADR 0016 step 3 `create_provider` serves ANY unregistered name
+        # with the OpenAI-compatible class (the fallback its callers used to
+        # construct themselves), so the refusal is the callers' gate on
+        # REMOVED_CHAT_PROVIDERS, pinned by the set_provider/oneshot tests.
+        assert type(create_provider("perplexity", api_key="k")).__name__ == "OpenAICompatibleProvider"
 
     def test_the_module_is_gone(self):
         assert not (REPO / "ppxai/engine/providers/perplexity.py").exists()

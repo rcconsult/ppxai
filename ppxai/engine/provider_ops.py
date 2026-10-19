@@ -30,7 +30,6 @@ from ..config import REMOVED_CHAT_PROVIDERS
 from ..constants import Default
 from .model_facts import supports_vision as _supports_vision
 from .providers import create_provider
-from .providers.openai_compat import OpenAICompatibleProvider
 from .tools.builtin import register_all_builtin_tools
 from .types import ModelInfo, ProviderCapabilities, ProviderInfo
 
@@ -128,6 +127,8 @@ def set_provider(engine, provider_name: str) -> bool:
 
     # Create provider instance with optional provider-specific options
     provider_options = provider_config.get("options", {})
+    # An unregistered name (openrouter, a vLLM box, ...) gets the
+    # OpenAI-compatible class from the registry itself.
     engine.provider = create_provider(
         provider_name,
         api_key=api_key,
@@ -136,16 +137,6 @@ def set_provider(engine, provider_name: str) -> bool:
         capabilities=capabilities,
         **provider_options  # Pass provider-specific options (e.g., enable_grounding for Gemini)
     )
-
-    if engine.provider is None:
-        # Fallback to generic OpenAI-compatible provider
-        engine.provider = OpenAICompatibleProvider(
-            api_key=api_key,
-            base_url=base_url,
-            models=provider_config.get("models", {}),
-            capabilities=capabilities,
-            provider_id=provider_name  # For config lookup (generation_params, max_tokens)
-        )
 
     engine.provider_name = provider_name
     engine.state.set("provider", provider_name)

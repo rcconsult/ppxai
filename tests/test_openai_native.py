@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from ppxai.engine.providers import get_provider_class
+from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 from ppxai.engine.providers.openai_native import (
     OpenAINativeProvider,
 )
@@ -784,12 +786,10 @@ class TestProviderRegistry:
     """Test that OpenAINativeProvider is registered correctly."""
 
     def test_openai_registered_as_native(self):
-        from ppxai.engine.providers import get_provider_class
         cls = get_provider_class("openai")
         assert cls is OpenAINativeProvider
 
     def test_other_providers_unchanged(self):
-        from ppxai.engine.providers import OpenAICompatibleProvider, get_provider_class
         assert get_provider_class("local") is OpenAICompatibleProvider
         assert get_provider_class("custom") is OpenAICompatibleProvider
 

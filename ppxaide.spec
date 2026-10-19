@@ -65,6 +65,17 @@ a = Analysis(
         'ppxai.commands.doctor',
     'ppxai.commands.task',    # T8b: /task + /run
         'ppxai.commands.client_handled',  # ADR 0007 1b: /quit + /token
+        # Providers. CRITICAL: list every module in _PROVIDER_MODULES and
+        # _FALLBACK (ppxai/engine/providers/__init__.py). They load through
+        # importlib (ADR 0016), so a missing one fails at provider switch.
+        # Fenced by tests/test_provider_registry.py.
+        'ppxai.engine.providers',
+        'ppxai.engine.providers.base',
+        'ppxai.engine.providers.openai_compat',
+        'ppxai.engine.providers.openai_native',
+        'ppxai.engine.providers.openai_wire',
+        'ppxai.engine.providers.anthropic',
+        'ppxai.engine.providers.gemini',
         'tree_sitter',
         'tree_sitter_python',
         'tree_sitter_javascript',

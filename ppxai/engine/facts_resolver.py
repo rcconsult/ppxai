@@ -22,15 +22,13 @@ from ..config.execution import (
     get_execution_run_grounding_mode,
 )
 
-#: Imported as a MODULE, not by name: `_providers.get_provider_class` resolves
-#: at CALL time, so a test patching `providers.get_provider_class` on the
-#: source module still takes effect. That is the only reason this pair used to
-#: be a function-level (lazy) import -- there is no cycle here.
+#: Imported as a MODULE, not by name: `_providers.load_provider_class` and
+#: `get_provider_class` resolve at CALL time, so a test patching either on the
+#: source module still takes effect.
 from . import providers as _providers
 from .facts_config import apply_provider_overrides, resolve_model_facts
 from .model_facts import ModelFacts, can_drive_a_tool_loop, shipped_facts_for_model
 from .providers.facts import get_provider_facts
-from .providers.openai_compat import OpenAICompatibleProvider
 
 
 def provider_class_for(provider: str):
@@ -106,10 +104,9 @@ class FactsResolver:
         """
 
         try:
-            cls = _providers.get_provider_class(self.provider)
+            return _providers.load_provider_class(self.provider)
         except Exception:  # noqa: BLE001
-            cls = None
-        return cls if cls is not None else OpenAICompatibleProvider
+            return _providers.fallback_provider_class()
 
     @property
     def is_registered(self) -> bool:
