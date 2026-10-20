@@ -38,13 +38,11 @@ from .config import (
     validate_config,
 )
 
-# Export EngineClient as the primary client interface
-from .engine import EngineClient
+# No engine import here (ADR 0016 §6): `import ppxai.version` and the
+# server's `--version` / `--list` probes must not pay for the engine and its
+# providers. Use `from ppxai.engine import EngineClient`.
 from .prompts import CODING_PROMPTS, SPEC_GUIDELINES, SPEC_TEMPLATES
 from .version import __version__
-
-# TUI-specific imports are lazy-loaded via __getattr__ below
-# This allows the server to import ppxai.* without requiring prompt_toolkit
 
 __all__ = [
     # Config
@@ -68,8 +66,6 @@ __all__ = [
     "get_provider_capabilities",
     "reload_config",
     "validate_config",
-    # Engine (v1.12.0+)
-    "EngineClient",
     # Prompts
     "CODING_PROMPTS",
     "SPEC_GUIDELINES",

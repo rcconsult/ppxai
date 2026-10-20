@@ -1,6 +1,6 @@
 # ADR 0016: Load provider SDKs on demand, through the provider factory
 
-- **Status:** Accepted (2026-10-11): owner answered all four open questions, below. Steps 1–2 landed on `feature/v1.19.5` (2026-10-13), step 3 on 2026-10-19, step 4 on 2026-10-20; steps 5–6 open
+- **Status:** Accepted (2026-10-11): owner answered all four open questions, below. Steps 1–2 landed on `feature/v1.19.5` (2026-10-13), step 3 on 2026-10-19, step 4 on 2026-10-20, step 5 on 2026-10-20 except its server-probe fence (see §7 note); step 6 open
 - **Deciders:** owner
 - **Target:** v1.19.5 (owner, 2026-10-11). Not part of v1.19.4.
 - **Amends:** the project's no-lazy-imports rule
@@ -224,6 +224,20 @@ narrow:
   - `get_provider_facts(name)` for every registered name loads none of
     them;
   - creating a Gemini provider loads neither `openai` nor `anthropic`.
+  - **As built (step 5, 2026-10-20):** the first and third hold and are
+    fenced (`tests/test_cheap_import_paths.py`,
+    `tests/test_provider_sdk_free_modules.py`). The second and fourth hold
+    for `anthropic` and `google.genai` only, and are fenced that far
+    (`test_cheap_import_paths.py::TestServerProbes`,
+    `test_provider_registry.py::test_the_gemini_class_loads_no_anthropic`):
+    any import under `ppxai.engine` runs `ppxai/engine/__init__.py`, which
+    loads `EngineClient` and with it `engine/search/perplexity.py`, which
+    imports `openai` at module top (owner decision 3). The probes are also
+    parsed in `server/http.py::run_server`, after the whole server module
+    is imported.
+    Probes measured ~1.8 s on the macOS dev host (about 3.2 s before this
+    ADR). Making them cheap needs a probe-first entry point, i.e. one more
+    named exception to the import rule; open owner question.
 - **Every registry entry resolves:** each `(module, class)` imports
   (skipping a missing optional extra) and the class subclasses
   `BaseProvider`.
