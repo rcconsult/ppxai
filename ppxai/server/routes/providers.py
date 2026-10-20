@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from ...common.logger import get_logger
 from ...constants import Default
 from ...engine.provider_ops import ModelSwitchInFlightError
+from ...engine.types import EventType
 from ..models import SetModelRequest, SetProviderRequest, ToolsConfigRequest, ToolsRequest
 from ..state import Session, get_session, with_drained_events
 
@@ -48,7 +49,13 @@ async def set_provider(request: SetProviderRequest, s: Session = Depends(get_ses
     try:
         success = s.engine.set_provider(request.provider)
         if not success:
-            raise HTTPException(status_code=400, detail=f"Failed to set provider: {request.provider}")
+            # A provider module that failed to load queued an ERROR saying
+            # which module is missing (ADR 0016 §5); that is the reason.
+            reasons = [ev.data for ev in s.engine.drain_events()
+                       if ev.type is EventType.ERROR and isinstance(ev.data, str)]
+            raise HTTPException(
+                status_code=400,
+                detail=" ".join(reasons) or f"Failed to set provider: {request.provider}")
 
         if request.model:
             s.engine.set_model(request.model, reset_context=request.reset_context)

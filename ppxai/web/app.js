@@ -2037,6 +2037,9 @@ class PpxaiApp {
         const providerId = this.elements.providerSelect.value;
         try {
             const data = await this.apiClient.setProvider(providerId);
+            // "Loading the <provider> provider…" and friends (ADR 0016 §5)
+            // ride on the response's events, as on a /provider command.
+            this.commandDispatcher._drainEvents(data.events);
             this.state.currentProvider = providerId;
             await this.loadModels();
 
@@ -2051,14 +2054,12 @@ class PpxaiApp {
             }
             this.showSystemMessage(msg);
 
-            // Refresh badges directly. The server piggybacks `events:
-            // [...]` on the response with state_sync entries that
-            // would also fire handleStateSync, but those events are
-            // only drained when the next /chat SSE stream pulls them
-            // from the engine queue — so without this direct call the
-            // context badge stays on the old model's limit until the
-            // user sends a message. VSCode does the symmetric direct
-            // updateStatus() call (extension.ts:switchProvider/Model).
+            // Refresh badges directly. Until ADR 0016 step 4 the
+            // response's `events` were ignored here, so this call was the
+            // only refresh before the user's next message; they are now
+            // drained above, and this stays as the explicit refresh.
+            // VSCode does the symmetric direct updateStatus() call
+            // (extension.ts:switchProvider/Model).
             await this.updateContextInfo();
             await this.updateUsage();
             // v1.18.6 fix: re-anchor full AppState (including

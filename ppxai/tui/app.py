@@ -17,6 +17,7 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
+from rich.markup import escape
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.css.query import NoMatches
@@ -54,6 +55,7 @@ from ppxai.constants import ConsentResponse
 # Engine integration (Phase 6.1)
 from ppxai.engine import EngineClient
 from ppxai.engine.provider_ops import ModelSwitchInFlightError
+from ppxai.engine.types import EventType
 from ppxai.rendering.textual_renderer import TextualRenderer
 from ppxai.tui import (commands as local_commands, stream_handler)
 from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard
@@ -937,6 +939,17 @@ class PPXAIDEApp(App):
             except ModelSwitchInFlightError as exc:
                 self.notify(str(exc), title="Response in progress", severity="warning")
                 return
+            # A provider module loaded by this switch queued STATUS notices,
+            # a failed load an ERROR (ADR 0016 §5). Nothing else drains the
+            # engine's queue in this TUI, so show them here.
+            chat_view = self._chat_view
+            for event in self._engine_client.drain_events():
+                if chat_view is None:
+                    continue
+                if event.type is EventType.STATUS and event.data:
+                    chat_view.add_system_message(escape(str(event.data)))
+                elif event.type is EventType.ERROR and event.data:
+                    chat_view.add_system_message(f"[red]{escape(str(event.data))}[/red]")
             # AppState observer updates status bar automatically
 
     def get_provider(self) -> str:

@@ -10,6 +10,7 @@ here must also be in the PyInstaller specs' `hiddenimports` (fenced by
 """
 
 import importlib
+import sys
 
 from .base import BaseProvider
 
@@ -75,6 +76,13 @@ def load_provider_class(name: str) -> type[BaseProvider]:
     return cls if cls is not None else fallback_provider_class()
 
 
+def is_loaded(name: str) -> bool:
+    """Whether serving `name` needs no module import any more."""
+    if name in _loaded:
+        return True
+    return _PROVIDER_MODULES.get(name, _FALLBACK)[0] in sys.modules
+
+
 def get_provider_class(name: str) -> type[BaseProvider] | None:
     """The REGISTERED class for `name`, or None for a type-based name."""
     return _registered_class(name)
@@ -103,6 +111,7 @@ __all__ = [
     "BaseProvider",
     "load_provider_class",
     "fallback_provider_class",
+    "is_loaded",
     "get_provider_class",
     "create_provider",
     "list_registered_providers",

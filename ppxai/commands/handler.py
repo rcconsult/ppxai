@@ -14,6 +14,7 @@ from pathlib import Path
 
 from prompt_toolkit import prompt as pt_prompt
 from prompt_toolkit.validation import ValidationError, Validator
+from rich.text import Text
 
 from ..common.consent import normalize_consent_response
 from ..common.logger import get_logger
@@ -375,8 +376,19 @@ class CommandHandler:
         return self.engine_client.state.get("auto_route")
 
     def set_provider(self, provider: str) -> None:
-        """Set provider — delegates to engine (which syncs AppState)."""
+        """Set provider — delegates to engine (which syncs AppState).
+
+        A switch that loads a provider module queues STATUS notices
+        ("Loading the gemini provider…", ADR 0016 §5), and a failed load an
+        ERROR. Nothing else drains the engine's queue in this TUI, so print
+        them here; any other queued event was never consumed here either.
+        """
         self.engine_client.set_provider(provider)
+        for event in self.engine_client.drain_events():
+            if event.type is EventType.STATUS and event.data:
+                console.print(Text(str(event.data), style="cyan"))
+            elif event.type is EventType.ERROR and event.data:
+                console.print(Text(str(event.data), style="red"))
 
     def set_model(self, model: str) -> None:
         """Set model — delegates to engine (which syncs AppState)."""

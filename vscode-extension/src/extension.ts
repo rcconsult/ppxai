@@ -542,6 +542,9 @@ export async function activate(context: vscode.ExtensionContext) {
                 if (selected) {
                     const success = await backend.setProvider((selected as any).id);
                     if (success) {
+                        // "Loading the <provider> provider…" and friends
+                        // (ADR 0016 §5) ride on the response's events.
+                        chatViewProvider._drainEnvelopeEvents(success.events);
                         chatViewProvider.updateStatus();
                         // 2026-09-21 (owner decision 8): re-anchor the full
                         // AppState (including modelSupportsVision) so the

@@ -1345,9 +1345,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 if (typeof path === 'string') {
                     this._eventBus.emit('ui:working_dir_changed', path);
                 }
+            } else if (ev.type === 'status' || ev.type === 'error') {
+                // A notice queued outside a stream, e.g. "Loading the gemini
+                // provider…" on a switch (ADR 0016 §5). Same channels as the
+                // live stream's STATUS / ERROR.
+                const text = ev.data as unknown;
+                if (typeof text === 'string' && text) {
+                    this._eventBus.emit(ev.type === 'status' ? 'stream:status' : 'stream:error', text);
+                }
             }
-            // Other event types (currently none in the piggyback
-            // taxonomy) drop quietly — open-enum invariant.
+            // Other event types drop quietly — open-enum invariant.
         }
     }
 

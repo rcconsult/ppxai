@@ -528,7 +528,7 @@ export class HttpClient {
         return `${response.status} ${response.statusText}`;
     }
 
-    async setProvider(providerId: string, model?: string): Promise<{ ok: boolean; contextReset: number }> {
+    async setProvider(providerId: string, model?: string): Promise<{ ok: boolean; contextReset: number; events: SsePiggybackEvent[] }> {
         const response = await fetch(`${this.baseUrl}/providers`, {
             method: 'POST',
             headers: this.getHeaders(true),
@@ -540,8 +540,10 @@ export class HttpClient {
             // that the command handler read as success.
             throw new Error(await this.readErrorDetail(response));
         }
-        const data = await response.json() as { provider: string; model: string; context_reset?: number };
-        return { ok: true, contextReset: data.context_reset ?? 0 };
+        const data = await response.json() as {
+            provider: string; model: string; context_reset?: number; events?: SsePiggybackEvent[];
+        };
+        return { ok: true, contextReset: data.context_reset ?? 0, events: data.events ?? [] };
     }
 
     /**

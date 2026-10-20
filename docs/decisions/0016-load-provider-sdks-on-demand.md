@@ -1,6 +1,6 @@
 # ADR 0016: Load provider SDKs on demand, through the provider factory
 
-- **Status:** Accepted (2026-10-11): owner answered all four open questions, below. Steps 1–2 landed on `feature/v1.19.5` (2026-10-13), step 3 on 2026-10-19; steps 4–6 open
+- **Status:** Accepted (2026-10-11): owner answered all four open questions, below. Steps 1–2 landed on `feature/v1.19.5` (2026-10-13), step 3 on 2026-10-19, step 4 on 2026-10-20; steps 5–6 open
 - **Deciders:** owner
 - **Target:** v1.19.5 (owner, 2026-10-11). Not part of v1.19.4.
 - **Amends:** the project's no-lazy-imports rule
@@ -169,6 +169,28 @@ modules do today).
 
 Start-up loads only the configured default provider. A provider switch
 loads the new one, once per process.
+
+**As built (step 4, 2026-10-20).** Three refinements to the text above:
+
+- The notices are emitted by `provider_ops.set_provider` (through
+  `_load_provider_module`), not `create_provider()`: the registry has no
+  engine to queue events on. `data` is the human text, as for every other
+  STATUS, and the structured fields above are in `metadata` (`kind`,
+  `provider`, `seconds`; `provider_load_failed` with `module` on the ERROR).
+- Both STATUS notices are queued **after** the import. A switch is a
+  command, and its events reach every client with the command's response
+  (switches are refused while a response streams), so a "Loading" queued
+  first would still arrive next to the "Loaded".
+- A load under 0.1 s (`ANNOUNCE_LOAD_AFTER_S`) is not announced: its SDK
+  was already in memory, e.g. openrouter after openai.
+
+Where each client shows them: web from `/command/provider`'s envelope and,
+new, from `POST /providers` in the provider dropdown; VSCode from
+`_drainEnvelopeEvents` (which now handles `status` and `error`) for both
+the command and the provider quick pick; Rich and Textual drain the engine
+queue in their `set_provider` (nothing drained it in the TUIs before). A
+failed load is `POST /providers`' 400 detail. Tests:
+`tests/test_provider_loading_events.py`.
 
 ### 6. `ppxai/__init__.py` stops re-exporting the engine
 

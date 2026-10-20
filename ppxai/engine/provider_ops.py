@@ -25,13 +25,16 @@ functions because they're only called from `set_model` / `set_provider`.
 """
 
 
+import time
+
 from ..common.logger import get_logger
 from ..config import REMOVED_CHAT_PROVIDERS
-from ..constants import Default
+from ..constants import Default, install_extra_hint
+from . import providers as _providers
 from .model_facts import supports_vision as _supports_vision
 from .providers import create_provider
 from .tools.builtin import register_all_builtin_tools
-from .types import ModelInfo, ProviderCapabilities, ProviderInfo
+from .types import Event, EventType, ModelInfo, ProviderCapabilities, ProviderInfo
 
 logger = get_logger("engine")
 
@@ -76,6 +79,62 @@ def _refuse_if_run_in_flight(engine, what: str) -> None:
 # Provider switching
 # =============================================================================
 
+#: Provider -> the optional extra its SDK comes from, for a failed load.
+_PROVIDER_EXTRAS = {"gemini": "gemini", "anthropic": "anthropic"}
+
+#: A load quicker than this is not announced: its SDK was already in memory
+#: (openrouter after openai, say), and "Loaded (0.0 s)" is noise.
+ANNOUNCE_LOAD_AFTER_S = 0.1
+
+
+def _load_provider_module(engine, provider_name: str) -> bool:
+    """Import the module serving `provider_name`, telling the user (ADR 0016 §5).
+
+    A switch that imports a provider module queues two STATUS notices,
+    "Loading …" then "Loaded … (N s)". Both are queued AFTER the import: a
+    switch is a command, and its events reach every client together with
+    the command's response, so a "Loading" sent first would still arrive
+    with the "Loaded". A load under `ANNOUNCE_LOAD_AFTER_S` is not
+    announced. The first provider of a session (start-up, `engine.provider`
+    still None) loads silently: the owner chose to prewarm the default, not
+    announce it. A failed import queues an ERROR naming the missing module
+    and returns False, as for any other provider that cannot be used.
+    """
+    if _providers.is_loaded(provider_name):
+        return True
+    started = time.monotonic()
+    try:
+        _providers.load_provider_class(provider_name)
+    except ImportError as exc:
+        missing = exc.name or str(exc)
+        message = f"Could not load the {provider_name} provider: module {missing} is missing."
+        extra = _PROVIDER_EXTRAS.get(provider_name)
+        if extra:
+            message += f" Install the [{extra}] extra: {install_extra_hint(extra)}."
+        logger.error(message)
+        engine.enqueue_event(Event(
+            type=EventType.ERROR,
+            data=message,
+            metadata={"kind": "provider_load_failed", "provider": provider_name,
+                      "module": missing},
+        ))
+        return False
+    seconds = round(time.monotonic() - started, 2)
+    logger.info(f"Loaded provider {provider_name} in {seconds}s")
+    if engine.provider is not None and seconds >= ANNOUNCE_LOAD_AFTER_S:
+        engine.enqueue_event(Event(
+            type=EventType.STATUS,
+            data=f"Loading the {provider_name} provider…",
+            metadata={"kind": "provider_loading", "provider": provider_name},
+        ))
+        engine.enqueue_event(Event(
+            type=EventType.STATUS,
+            data=f"Loaded the {provider_name} provider ({seconds:.1f} s).",
+            metadata={"kind": "provider_loaded", "provider": provider_name,
+                      "seconds": seconds},
+        ))
+    return True
+
 
 def set_provider(engine, provider_name: str) -> bool:
     """Switch the active provider.
@@ -116,6 +175,9 @@ def set_provider(engine, provider_name: str) -> bool:
 
     api_key = engine._get_api_key(provider_name)
     if not api_key:
+        return False
+
+    if not _load_provider_module(engine, provider_name):
         return False
 
     base_url = engine._get_base_url(provider_name)
