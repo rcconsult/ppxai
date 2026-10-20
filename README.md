@@ -1,6 +1,6 @@
 # ppxai — one AI workbench, any model, on your machine
 
-![Version](https://img.shields.io/badge/version-1.19.4-blue) ![Tests](https://img.shields.io/badge/tests-7443%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.19.5-blue) ![Tests](https://img.shields.io/badge/tests-7532%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 Chat, edit code, and run background tasks against Gemini, OpenAI, OpenRouter, Anthropic, or a local model — from the same web app, VSCode extension, or terminal UI. Everything runs on your machine; only your chat traffic goes to the provider you pick.
 

@@ -2,7 +2,7 @@
 
 **One AI workbench, any model, on your machine.** Chat, edit code, and run background tasks against Gemini, OpenAI, OpenRouter, Anthropic, or a local model — from the web app, VSCode, or a terminal UI.
 
-[![Version](https://img.shields.io/badge/version-1.19.4-blue)](https://github.com/rcconsult/ppxai/releases)
+[![Version](https://img.shields.io/badge/version-1.19.5-blue)](https://github.com/rcconsult/ppxai/releases)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](https://github.com/rcconsult/ppxai/blob/master/LICENSE)
 
 ![The web app: Gemini reads a project with tools, then answers](screenshots/web-chat-tools.png)
