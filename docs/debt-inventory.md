@@ -2552,6 +2552,16 @@ provider SDKs that no configured provider uses, which the no-lazy-imports
 rule currently forbids; or accept the cost. Not done: a commit bisect, and
 a re-measure of the Windows serial baseline.
 
+**Re-measured 2026-10-20 after ADR 0016** (provider SDKs load on demand;
+macOS dev host, `-n auto` capped at 6): `import ppxai.server.http` 3.34 s →
+1.82 s wall (2.87 s → 1.61 s importtime), and every `ppxai-server` spawn
+pays the difference. The suite's wall time did not move measurably: v1.19.4
+7,450 tests in 159 s against 1.19.5's 7,539 in 170 s, back to back (earlier
+pairs 139/147 s and 147/153 s), ~21 ms vs ~23 ms per test, inside the host
+load spread. So the start-up cost was real but not what dominates the wall
+time; oversubscription (cause 1) is untouched by it. Full table: ADR 0016
+"Measured".
+
 ### Item 84 — the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell [server / tools / Windows]
 
 **Parked 2026-10-11 (owner): not for v1.19.4; revisit in a later version's iteration.**

@@ -1,6 +1,6 @@
 # ADR 0016: Load provider SDKs on demand, through the provider factory
 
-- **Status:** Accepted (2026-10-11): owner answered all four open questions, below. Steps 1–2 landed on `feature/v1.19.5` (2026-10-13), step 3 on 2026-10-19, step 4 on 2026-10-20, step 5 on 2026-10-20 with a narrowed server-probe fence (§7 note; owner accepted ~1.8 s probes 2026-10-20); step 6 open
+- **Status:** Implemented (2026-10-20, all six steps; measured under "Expected effect"). Accepted 2026-10-11: owner answered all four open questions, below. Steps 1–2 landed on `feature/v1.19.5` (2026-10-13), step 3 on 2026-10-19, step 4 on 2026-10-20, step 5 on 2026-10-20 with a narrowed server-probe fence (§7 note; owner accepted ~1.8 s probes 2026-10-20); step 6 (re-measure) on 2026-10-20
 - **Deciders:** owner
 - **Target:** v1.19.5 (owner, 2026-10-11). Not part of v1.19.4.
 - **Amends:** the project's no-lazy-imports rule
@@ -254,6 +254,51 @@ These are estimates from the table above, to be measured after the change:
 - A Gemini session skips `openai` and `anthropic`; an OpenRouter or OpenAI
   session skips `anthropic` and `google.genai`.
 - The 31 test sites that spawn a fresh interpreter (Item 83) get cheaper.
+
+### Measured (step 6, 2026-10-20)
+
+macOS dev host (Intel, 4 physical / 8 logical cores), one venv, v1.19.4
+(`0a02eb68`, before any step) against `feature/v1.19.5` @ `81dab79b`. Each
+figure is the median of 5 cold interpreters with an empty `HOME`
+(`PYTHONPATH` = the tree); "importtime" is `-X importtime`'s cumulative
+figure for the module.
+
+| | v1.19.4 wall | v1.19.4 importtime | 1.19.5 wall | 1.19.5 importtime |
+|---|---|---|---|---|
+| `import ppxai.version` | 2.43 s | 2.12 s | **0.14 s** | 0.08 s |
+| `import ppxai` | 2.42 s | 2.10 s | **0.14 s** | 0.09 s |
+| `import ppxai.config` | 2.45 s | 2.13 s | **0.14 s** | 0.08 s |
+| `import ppxai.engine` | 2.56 s | 2.22 s | **1.06 s** | 0.89 s |
+| `import ppxai.engine.providers` | 2.47 s | 2.20 s | **1.05 s** | 0.95 s |
+| `import ppxai.server.http` | 3.34 s | 2.87 s | **1.82 s** | 1.61 s |
+| `ppxai-server --version` / `--registry-contract` / `--list --json` (from source) | 3.31 / 3.29 / 3.33 s | | **1.81 / 1.80 / 1.81 s** | |
+
+SDKs loaded by `import ppxai.engine` or `ppxai.server.http`: all three
+before, `openai` only after (owner decision 3). The SDKs alone are
+unchanged (openai 0.86 s, anthropic 1.14 s, google.genai 0.94 s,
+fastapi 0.57 s wall).
+
+Against the estimates:
+
+- **Remote probes: 3.3 s → 1.8 s, not "well under 1 s".** They still
+  import the whole server (§7 note); the owner accepted ~1.8 s on
+  2026-10-20. The installed one-file binary's `--version` is ~3.7 s,
+  most of it PyInstaller unpacking itself, so a remote probe against an
+  installed binary gains less than the source figure.
+- **SSH-launcher Playwright spec: 66 s → 38.5 s** (7 tests, two runs each;
+  v1.19.4's code run by pointing the spec's server spawns at the old tree).
+  The two slowest tests, which had been close to their 30 s limit: launch
+  15.6 s → 9.8 s, Stop 22.7 s → 12.9 s.
+- **Sessions skip unused SDKs:** yes, measured above and fenced
+  (`tests/test_provider_registry.py`, `tests/test_cheap_import_paths.py`),
+  except that every session loads `openai` (decision 3).
+- **The suite: no measurable change.** With the same 7 skips, v1.19.4 ran
+  7,450 tests in 159 s and 1.19.5 ran 7,539 in 170 s, back to back; two
+  earlier back-to-back pairs gave 139–147 s and 147–153 s. Per test that
+  is ~21 ms against ~23 ms, inside the run-to-run spread from host load
+  (Item 83). The spawn sites save ~1.5 s each, a few seconds of wall at
+  6 workers. This branch also added about ten tests that start fresh
+  interpreters.
 
 ## Alternatives considered
 
