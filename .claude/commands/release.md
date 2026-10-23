@@ -94,11 +94,11 @@ git push origin master
 git push origin v{version}
 
 # If CI completed but release notes not published:
-unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN
-gh release edit v{version} --notes-file docs/release-notes-v{version}.md
+# (gh uses its own login; see CLAUDE.md "GitHub CLI Authentication")
+env -u GH_TOKEN -u GITHUB_TOKEN gh release edit v{version} --notes-file docs/release-notes-v{version}.md
 
 # To view release status:
-gh release view v{version}
+env -u GH_TOKEN -u GITHUB_TOKEN gh release view v{version}
 ```
 
 ## Troubleshooting

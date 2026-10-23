@@ -116,7 +116,7 @@ ppxai/
 │   ├── task_backend.py# In-process run lifecycle for the TUIs (no HTTP)
 │   ├── task_authorizer.py # authorize_task(): THE admission boundary for every tier
 │   ├── bootstrap.py   # Bootstrap context parsing (v1.14.0); imports config/ only
-│   ├── providers/     # Chat providers: Gemini, OpenAICompatible, OpenAINative, Anthropic
+│   ├── providers/     # Chat providers: Gemini, OpenAICompatible, OpenAINative, Anthropic; declared table + load_provider_class load each module (and its SDK) on first use (ADR 0016); facts/ (SDK-free), openai_wire.py, wire/
 │   ├── search/        # web_search layer (ADR 0014): backends (gemini, perplexity, duckduckgo), resolver, grounding
 │   ├── tools/         # Tool system
 │   │   ├── manager.py # Uses types only

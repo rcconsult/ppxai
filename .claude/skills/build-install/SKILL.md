@@ -558,7 +558,7 @@ python3 scripts/gateway-smoke.py --skip-llm
 # Auth-enforcing host: --token <bearer> (mint via /v1/tokens)
 ```
 
-Expect exit 0 with 5 PASS (or task-tier SKIP when
+Expect exit 0 and no FAIL: 6 checks, or 8 on an auth-enforcing host (it also mints and revokes a bootstrap token), or a task-tier SKIP when
 `execution.task.enabled` is false — that gate defaults off, so
 the SKIP is correct behavior, not a failure). Steps 3–5 each cost one
 trivial LLM call on the default provider; `--skip-llm` if that matters.

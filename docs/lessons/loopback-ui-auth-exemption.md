@@ -97,3 +97,12 @@ credential of its own; the hub holds the credential and hands it out to
 whoever is loopback. The per-session loopback token option above, if ever
 built, would now also have to cover `/hub` and `/h/`, not just the
 interactive UI surface.
+
+> **Superseded 2026-10-23 (fixed before v1.19.4 shipped, commit `19976698`):**
+> the hub no longer trusts loopback alone. Every `/hub/*`, `/h/<host>/<id>/`
+> and hub-websocket request must also present the hub token (the
+> `ppxai_hub` cookie or the `X-Ppxai-Hub-Token` header; `_guard()` /
+> `_authorized()` in `remote_hub.py`, `hub-token` file under `~/.ppxai/run/`),
+> so a bare local process gets 401 `hub_auth_required`. The line numbers above
+> predate it. The "any local process" caveat still holds for the interactive
+> UI surface.

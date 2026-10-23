@@ -313,8 +313,8 @@ so the suggestion cannot recommend a model the guard would reject.
 
 ```
 facts_resolver.provider_class_for(provider)       ← WHOSE class serves this?
-  ├─ providers.get_provider_class(provider)
-  └─ fallback: OpenAICompatibleProvider
+  ├─ providers.load_provider_class(provider)   (imports the module on first use, ADR 0016)
+  └─ fallback: providers.fallback_provider_class() = OpenAICompatibleProvider
        (get_provider_class() returns None for every openai_compat-TYPE
         provider — openrouter, nvidia, a vLLM box, an Ollama host — because
         those are configured by NAME, not registered. provider_ops falls

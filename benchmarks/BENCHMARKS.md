@@ -22,7 +22,7 @@ The ppxai benchmark suite evaluates AI models on capabilities critical for codin
 - **Hallucination resistance** - Does the model claim false success?
 
 **Key Features:**
-- ✅ Provider-agnostic (works with Perplexity, Gemini, OpenAI, vLLM, Ollama, etc.)
+- ✅ Provider-agnostic (works with Gemini, OpenAI, vLLM, Ollama, etc.)
 - ✅ Historical tracking (compare runs over time)
 - ✅ Category-level analysis (see where models excel/struggle)
 - ✅ Ranking system (compare models head-to-head)
@@ -90,7 +90,7 @@ python benchmark.py --history gemini/gemini-2.5-flash
 
 ---
 
-### 2. Code Editing (3 tests)
+### 2. Code Editing (4 tests)
 
 **What it measures:** Accuracy of `apply_patch` tool for code modifications
 
@@ -99,6 +99,7 @@ python benchmark.py --history gemini/gemini-2.5-flash
 | `patch_simple` | Simple apply_patch with exact content | 1.0 |
 | `patch_indentation` | apply_patch preserves indentation | 1.5 |
 | `patch_multiline` | apply_patch with multi-line changes | 1.0 |
+| `patch_apply_verify` | Generate patch, apply with `_replace_hunk`, verify fix | 2.0 |
 
 **Good score:** 90%+
 **Poor score:** <70%
@@ -191,6 +192,31 @@ python benchmark.py --history gemini/gemini-2.5-flash
 
 **Good score:** 80%+
 **Poor score:** <55%
+
+---
+
+### 8. Agentic Tool Loops (7 tests)
+
+**What it measures:** Multi-turn tool chains (read, search, patch, test, recover)
+
+| Test | Description | Weight | Tags |
+|------|-------------|--------|------|
+| `multi_file_review` | Reads multiple files before reporting | 2.0 | agentic |
+| `claim_without_action` | Doesn't fabricate reports without reading | 2.0 | agentic, gate |
+| `consecutive_tool_loop` | 5-step dependent tool chain | 2.0 | agentic |
+| `search_then_edit` | Search, read, patch multi-turn chain | 2.0 | agentic |
+| `fix_verify` | Write, test, fix, retest cycle | 2.0 | agentic |
+| `information_gathering` | Find and read 3 auth-related files | 2.0 | agentic |
+| `error_recovery_chain` | Recover from errors to complete task | 2.0 | agentic |
+
+### 9. Efficiency (2 tests)
+
+**What it measures:** Preamble and number of calls spent on a task
+
+| Test | Description | Weight | Tags |
+|------|-------------|--------|------|
+| `time_to_first_tool_call` | Minimal preamble before tool call | 1.0 | efficiency |
+| `tool_call_efficiency` | Minimum tool calls for 5-step chain | 1.5 | efficiency, agentic |
 
 ---
 
@@ -688,16 +714,9 @@ python benchmark.py --provider gemini --model gemini-3.8-flash --categories tool
 
 ### Adding New Categories
 
-Edit `test_cases.py`:
-```python
-def get_categories() -> list[str]:
-    return [
-        "tool_calling",
-        "code_editing",
-        # ... existing categories ...
-        "my_new_category",  # ADD
-    ]
-```
+`get_categories()` in `test_cases.py` derives the category list from `ALL_TESTS`,
+so a new category exists as soon as a test registers with `category="my_new_category"`.
+No list to edit; run it with `--categories my_new_category`.
 
 ---
 
@@ -707,7 +726,7 @@ def get_categories() -> list[str]:
 |------|---------|
 | `benchmark.py` | Main CLI entry point |
 | `engine_runner.py` | ppxai EngineClient integration |
-| `test_cases.py` | Test definitions (~1,283 lines) |
+| `test_cases.py` | Test definitions (~2,400 lines) |
 | `results.py` | Historical storage and ranking |
 | `response_quality.py` | Anti-pattern detection |
 | `results/` | Stored benchmark results (JSON) |

@@ -5,12 +5,12 @@ Uses **ppxai Engine** for consistent tool handling across all providers.
 
 ## Features
 
-- **6 Test Categories**: Tool calling, code editing, format compliance, instruction following, reasoning, error recovery
-- **26 Test Cases**: Targeting real-world agentic coding scenarios
+- **9 Test Categories**: Tool calling, code editing, hallucination resistance, format compliance, instruction following, reasoning, error recovery, agentic tool loops, efficiency
+- **36 Test Cases**: Targeting real-world agentic coding scenarios
 - **Engine-Based**: Uses ppxai's EngineClient for automatic tool registration
 - **Historical Tracking**: Results stored per provider/model pair
 - **Ranking System**: Compare across runs and models
-- **Multi-Provider**: Supports Perplexity, Gemini, OpenAI, OpenRouter, vLLM, Ollama, and custom providers
+- **Multi-Provider**: Supports Gemini, OpenAI, OpenRouter, vLLM, Ollama, and custom providers
 
 ## Quick Start
 
@@ -39,11 +39,12 @@ Tests reliability of native tool calling:
 - **GPT-OSS specific**: No "I'll use X tool" preamble
 - **GPT-OSS specific**: Tool calls not leaked as JSON in content
 
-### 2. Code Editing (3 tests)
+### 2. Code Editing (4 tests)
 Tests apply_patch and code modification accuracy:
 - Simple exact replacements
 - Indentation preservation (critical for Python)
 - Multi-line additions with imports
+- Patch, apply and verify the fix
 
 ### 3. Format Compliance (3 tests)
 Tests output format adherence:
@@ -68,6 +69,23 @@ Tests failure handling:
 - Tool error recovery
 - Self-correction when mistakes pointed out
 - Graceful degradation with limited capabilities
+
+### 7. Hallucination Resistance (5 tests)
+Tests honesty about tool results (gate tests):
+- Acknowledging tool failures, repeated failures and contradictions
+- No claims of actions that were never taken
+- Accuracy held over multiple turns
+
+### 8. Agentic Tool Loops (7 tests)
+Tests multi-turn tool chains:
+- Multi-file review, information gathering, search-then-edit
+- Write-test-fix-retest cycles and error-recovery chains
+- No fabricated reports without reading
+
+### 9. Efficiency (2 tests)
+Tests overhead:
+- Minimal preamble before the first tool call
+- Minimum tool calls for a 5-step chain
 
 ## Usage
 
@@ -210,7 +228,7 @@ ALL_TESTS.append(
 | Variable | Description |
 |----------|-------------|
 | `OPENAI_API_KEY` | OpenAI API key |
-| `PERPLEXITY_API_KEY` | Perplexity API key |
+| `GEMINI_API_KEY` | Gemini API key |
 | `OPENROUTER_API_KEY` | OpenRouter API key |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 

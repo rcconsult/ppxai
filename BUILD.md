@@ -231,6 +231,12 @@ If the build fails or the executable doesn't work:
    ],
    ```
 
+   Provider modules load on demand by name (ADR 0016), so PyInstaller cannot
+   see them. Every spec that bundles the engine (`ppxai.spec`, `ppxaide.spec`,
+   `ppxai-server.spec`) must list each module in
+   `ppxai/engine/providers/__init__.py::_PROVIDER_MODULES`;
+   `tests/test_provider_registry.py` fails if one is missing.
+
 4. **Test with PyInstaller directly:**
    ```bash
    pyinstaller --onefile --name ppxai ppxai.py

@@ -41,8 +41,9 @@ server (`ppxai-server`/`ppxai-desktop`, used by VSCode/Web/Desktop) that:
 protected with `PPXAI_API_TOKEN` (bearer auth), `PPXAI_ALLOWED_ORIGINS` (CORS/Origin
 allowlist), and `PPXAI_TRUSTED_HOSTS` (Host-header allowlist, extending the
 loopback-only default). Websocket connections (`/ws/terminal`) get the same
-Host/Origin/auth checks as HTTP requests (the fix is in v1.19.4, not yet released;
-releases up to v1.19.3 do not have it — see CHANGELOG.md `[1.19.4]`).
+Host/Origin/auth checks as HTTP requests (fixed in v1.19.4, released 2026-10-12;
+v1.19.3 and earlier do not have it — see CHANGELOG.md `[1.19.4]`). Since v1.19.4,
+`/task` runs are also confined to their working folder, with credentials always denied.
 
 **Security considerations:**
 - Keep your `.env` file and API keys secure

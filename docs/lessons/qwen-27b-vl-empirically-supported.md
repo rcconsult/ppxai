@@ -55,7 +55,7 @@ got reported.
 ## What's actually true (fix + evidence)
 
 The fix is the one-glob `ModelFacts` entry at
-`ppxai/engine/model_facts.py:706-719` — `"Qwen/Qwen3.[568]-27B-FP8*"` with
+the `"Qwen/Qwen3.[568]-27B-FP8*"` row of `ppxai/engine/model_facts.py` (line numbers drift; grep the glob) — `"Qwen/Qwen3.[568]-27B-FP8*"` with
 `supports_vision=True` — backed by the empirical evidence below.
 
 **The glob has moved twice, and both moves are the same hazard.** It was

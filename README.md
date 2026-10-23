@@ -51,7 +51,7 @@ ppxai-desktop      # Desktop web app
 ```
 
 **Useful install flags (Linux/macOS):** `--with-config` (config templates), `--with-extension` (VSCode extension), `--with-desktop` (Linux desktop integration: launchers, icons, Ghostty terminal), `--with-macos-app` (macOS `.app` bundle), `--uninstall`.
-**Windows:** `install.ps1 -Force` (reinstall), `-Version v1.19.3` (specific version), `-Uninstall`.
+**Windows:** `install.ps1 -Force` (reinstall), `-Version v1.19.4` (specific version), `-Uninstall`.
 
 See [docs/installation.md](docs/installation.md) for the full option list, including Windows.
 
@@ -90,7 +90,7 @@ Fallback in any terminal: use Ctrl+J instead of Ctrl+Enter. See [docs/linux-term
 
 ### Chat with any model
 
-- **Providers:** Google Gemini (default, `gemini-3.8-flash`), OpenAI (`gpt-5.6-terra` and the GPT-5.x line), OpenRouter (100+ models including Claude), Anthropic (opt-in via the `[anthropic]` extra), local models (Ollama, vLLM, llama.cpp). Perplexity is **not** a chat provider — it's a web-search/grounding backend only.
+- **Providers:** Google Gemini (default, `gemini-3.8-flash`), OpenAI (`gpt-5.6-terra`, `gpt-6-sol`/`gpt-6-luna` and the GPT-5.x line), OpenRouter (100+ models including Claude), Anthropic (opt-in via the `[anthropic]` extra), local models (Ollama, vLLM, llama.cpp). Perplexity is **not** a chat provider — it's a web-search/grounding backend only.
 - **Switch mid-session:** `/provider gemini` or `/model gpt-5.6-terra` — conversation history carries over, so you can start cheap and move to a stronger model when needed.
 - **Smart context injection:** `@file`, `@git`, `@tree`, `@clipboard`, `@url` pull content into the prompt; `/context` shows usage against the model's limit.
 - **Sessions:** saved automatically after every message (`session.auto_save_interval`); `/sessions` browses saved conversations, `/export` writes one to markdown, `/usage` shows token counts and cost.
@@ -140,6 +140,7 @@ In the web app and VSCode, `/terminal` opens a real shell pane beside the chat, 
 
 - **`POST /v1/oneshot`** — the stable, semver-versioned gateway for a single prompt-in/answer-out call, with optional search grounding. Byte-identical wire shape since v1.18.4. See [docs/api-gateway.md](docs/api-gateway.md).
 - **`/v1/agent/*`** — the background run-registry API behind `/task` and `/run`. Still evolving; not yet a stable contract.
+- **SSH remote hub** (opt-in, v1.19.4) — drive `ppxai-server` instances on other hosts from your local browser via the SSH Launcher; off unless `remote.hosts` is configured. See [ADR 0013](docs/decisions/0013-ssh-remote-backend.md).
 
 ## Four ways to use it
 
@@ -227,7 +228,7 @@ No telemetry, no tracking. Data only goes to the LLM provider you choose.
 | [Architecture](docs/architecture.md) | Layered design, module hierarchy, renderer dispatch |
 | [API Gateway](docs/api-gateway.md) | `POST /v1/oneshot` — the stable external surface |
 | [Tool Calling](docs/tool-calling.md) | Native vs. prompt-based tool calling |
-| [Latest Release Notes](docs/release-notes-v1.19.3.md) | v1.19.3 is the latest release — see `docs/release-notes-v1.19.*.md` for the series |
+| [Latest Release Notes](docs/release-notes-v1.19.4.md) | v1.19.4 is the latest release — see `docs/release-notes-v1.19.*.md` for the series |
 | [CHANGELOG](CHANGELOG.md) | Full version history |
 | [Archived Release Notes](docs/archive/release-notes) | Older release notes |
 

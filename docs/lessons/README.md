@@ -150,7 +150,7 @@ discoverable later.
 - [qwen-27b-vl-empirically-supported.md](qwen-27b-vl-empirically-supported.md) —
   the 27B-FP8 Qwen line empirically accepts `image_url` content via vLLM;
   the shipped facts table lacked `supports_vision=True` entries for them
-  (fixed 2026-06-08; now `model_facts.py:706-719`, glob widened to
+  (fixed 2026-06-08; now the `Qwen/Qwen3.[568]-27B-FP8*` row in `model_facts.py`, glob widened to
   `Qwen/Qwen3.[568]-27B-FP8*` when 3.8 replaced 3.6 in place)
 - [web-assets-served-from-ppxai-home.md](web-assets-served-from-ppxai-home.md) —
   clients serve the web UI from `~/.ppxai/web`, not the repo source tree;

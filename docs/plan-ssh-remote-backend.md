@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-26
 **Status:** ✅ **Complete.** Phases 0–6 implemented on `feature/v1.19.4`
-(unreleased); the owner trial passed 2026-09-29 and the owner accepted ADR 0013
+(shipped in v1.19.4, 2026-10-12); the owner trial passed 2026-09-29 and the owner accepted ADR 0013
 the same day, after the two items the trial left open were done (below). Implements [ADR 0013](decisions/0013-ssh-remote-backend.md).
 **Scope:** web client first. VSCode and the TUIs follow only after the web
 path is proven.

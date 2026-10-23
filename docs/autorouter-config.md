@@ -27,6 +27,8 @@ Each provider has a pre-configured coding model optimized for development tasks:
 |----------|---------------------|-----------------|
 | **Gemini** | `gemini-3.8-flash` | Fast model, current default in the shipped config |
 | **OpenAI** | `gpt-5.6-terra` | Current default in the shipped config |
+| **Anthropic** (opt-in) | `claude-opus-5` | Current default in the shipped config |
+| **OpenRouter** | `qwen/qwen3.8-27b` | Current default in the shipped config |
 | **Custom** | (user-configured) | Configure any OpenAI-compatible endpoint (OpenRouter, etc.) |
 | **Ollama** | `qwen2.5-coder:3b` | Specialized local coding model |
 
@@ -53,7 +55,7 @@ You can customize which model is used for coding tasks by editing your `ppxai-co
 }
 ```
 
-### Example: Use o1 for OpenAI Coding Tasks
+### Example: Use a Larger OpenAI Model for Coding Tasks
 
 ```json
 {
@@ -62,8 +64,8 @@ You can customize which model is used for coding tasks by editing your `ppxai-co
       "name": "OpenAI ChatGPT",
       "base_url": "https://api.openai.com/v1",
       "api_key_env": "OPENAI_API_KEY",
-      "default_model": "gpt-4o-mini",
-      "coding_model": "o1",  // Use advanced reasoning model for coding
+      "default_model": "gpt-5.6-terra",
+      "coding_model": "gpt-5.6-sol",  // Use the larger model for coding
       "models": {
         // ... model definitions ...
       }
@@ -135,8 +137,8 @@ When autorouting is disabled, all commands use your currently selected model.
 {
   "providers": {
     "openai": {
-      "default_model": "gpt-4o",
-      "coding_model": "gpt-4o"  // Same as default
+      "default_model": "gpt-5.6-terra",
+      "coding_model": "gpt-5.6-terra"  // Same as default
     }
   }
 }

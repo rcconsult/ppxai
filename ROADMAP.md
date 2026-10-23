@@ -1040,10 +1040,10 @@ needed; the full bundle is what makes v1.19.x "ready for ppxai-sre."
 
 ---
 
-### v1.19.1 – v1.19.3 - Shipped (summary), v1.19.4 prepared
+### v1.19.1 – v1.19.4 - Shipped (summary), v1.19.5 in flight
 
-**Status:** ✅ v1.19.1, v1.19.2, v1.19.3 released; v1.19.4 (a security
-patch) is prepared but not released. See [CHANGELOG.md](CHANGELOG.md) and the per-version
+**Status:** ✅ v1.19.1, v1.19.2, v1.19.3, v1.19.4 released; v1.19.5 is in
+flight on `feature/v1.19.5` (unreleased). See [CHANGELOG.md](CHANGELOG.md) and the per-version
 `docs/release-notes-v1.19.*.md` files for full detail — this is a pointer,
 not a restatement.
 
@@ -1057,17 +1057,23 @@ not a restatement.
   layer (`engine/search/`, `execution.run.grounding` modes), and ADR 0015
   (Perplexity removed as a chat provider, kept as a web_search/grounding
   backend; Gemini is now the default provider and model).
-- **v1.19.4** (not yet released) — security patch: websocket connections (`/ws/terminal`) now
-  get the same Host/Origin/auth checks as HTTP requests.
+- **v1.19.4** (2026-10-12) — websocket security patch (`/ws/terminal` gets the
+  same Host/Origin/auth checks as HTTP requests), `/task` runs confined to
+  their working folder, ADR 0013's SSH remote hub and SSH Launcher, model-fact
+  fixes. See [docs/release-notes-v1.19.4.md](docs/release-notes-v1.19.4.md).
+- **v1.19.5** (unreleased) — ADR 0016 (implemented): provider SDKs load on
+  demand, `import ppxai.version` 2.4 s → 0.14 s; **BREAKING:** `from ppxai
+  import EngineClient` is gone (use `from ppxai.engine import EngineClient`);
+  plus model deprecations and VSCode Start Server fixes. `CHANGELOG.md`
+  `[Unreleased]` is the list.
 
-### ADR 0013 - SSH remote backend (in progress)
+### ADR 0013 - SSH remote backend ✅ (shipped v1.19.4)
 
-Not yet released. SSH transport over the user's own `ssh`, a remote session
-manager, a `/h/<host>/<server>/` hub proxy, and an SSH Launcher panel in the
-web UI are landed on a feature branch but gated behind `remote.hosts` (off by
-default). See [docs/decisions/0013-ssh-remote-backend.md](docs/decisions/0013-ssh-remote-backend.md)
-and the `[Unreleased]` section of [CHANGELOG.md](CHANGELOG.md) for current
-detail.
+SSH transport over the user's own `ssh`, a remote session manager, a
+`/h/<host>/<server>/` hub proxy, and an SSH Launcher panel in the web UI,
+gated behind `remote.hosts` (off by default). See
+[docs/decisions/0013-ssh-remote-backend.md](docs/decisions/0013-ssh-remote-backend.md)
+and [docs/release-notes-v1.19.4.md](docs/release-notes-v1.19.4.md).
 
 ---
 
@@ -1431,4 +1437,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: September 28, 2026
+**Last Updated**: October 23, 2026

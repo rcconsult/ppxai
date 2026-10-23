@@ -76,10 +76,10 @@ CI (which has no user config) stayed green.
 
 Since then, `tests/conftest.py::pytest_configure` copies the **tracked**
 `ppxai-config.json` into the throwaway test home and pins
-`PPXAI_CONFIG_FILE` at that copy (Item 69, `conftest.py:264-296`), and the
+`PPXAI_CONFIG_FILE` at that copy (Item 69, in `conftest.py`), and the
 session-scoped `_the_developers_config_is_unreachable` fixture points the
 `USER_CONFIG_FILE` fallback constant at a path that does not exist
-(`conftest.py:336-360`). `_redirect_home_to_tmp()` also moves `HOME` itself
+(in `conftest.py`). `_redirect_home_to_tmp()` also moves `HOME` itself
 before the first `ppxai` import (Item 78), so the suite cannot resolve the
 real `~/.ppxai/ppxai-config.json` even from a cleared environment.
 

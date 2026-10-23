@@ -18,7 +18,7 @@
 | [Shell Consent Guide](shell-consent-guide.md) | Shell command security with consent system |
 | [Shell Wrappers (rtk)](shell-wrappers.md) | Token-saving wrappers for the AI's shell tool (rtk etc.). **Wraps the agent's `execute_shell_command` only — NOT the interactive terminal.** |
 | [Context Injection Guide](context-injection.md) | `@file`, `@git`, `@tree`, `@clipboard`, `@url` context providers |
-| [Provider Setup Guide](provider-setup.md) | Configure AI providers (OpenAI, Gemini, Perplexity) |
+| [Provider Setup Guide](provider-setup.md) | Configure AI providers (OpenAI, Gemini, OpenRouter, local; Perplexity as a search backend) |
 | [Autorouter Config](autorouter-config.md) | Automatic model routing for coding tasks |
 | [Custom Tool Development](custom-tool-development-guide.md) | Create your own tools for ppxai |
 | [Task Agent Guide](task-agent-guide.md) | Background `/task` agent platform: grants, specs, skills, lifecycle (v1.19.0) |
@@ -34,11 +34,14 @@
 | Document | Description |
 |----------|-------------|
 | [Architecture](architecture.md) | Module hierarchy, import patterns, transactional state |
+| [Architecture Decisions](decisions/) | ADRs 0001–0016; see [decisions/README.md](decisions/README.md) |
 | [Agent Platform Call Graphs](agent-platform-call-graphs.md) | Per-increment endpoint call graphs for `/v1/agent/*` (ADR 0003 Stage 2) — debugging/refactoring reference |
+| [Remote SSH Hub Call Graphs](remote-ssh-call-graphs.md) | What each path of the opt-in SSH remote hub and SSH Launcher calls, browser to remote shell (ADR 0013, v1.19.4); plan in [plan-ssh-remote-backend.md](plan-ssh-remote-backend.md) |
 | [DGX Spark Setup](dgx-spark-setup.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
-| [Release Notes v1.19.3](release-notes-v1.19.3.md) | **Latest release** (2026-09-28) — ADR 0007 one command registry; **Perplexity removed as a chat provider** (ADR 0015; kept as a web-search/grounding backend, ADR 0014), **Gemini the default provider and `gemini-3.8-flash` its default model**; Sonar Responses-wire fixes; turn-level tool strip in web/VSCode transcripts. |
+| [Release Notes v1.19.4](release-notes-v1.19.4.md) | **Latest release** (2026-10-12) — security patch (`/ws/terminal` gets the same Host, Origin and auth checks as HTTP; `/task` runs confined to their working folder); ADR 0013 opt-in SSH remote hub and SSH Launcher; model-fact and example-config fixes. |
+| [Release Notes v1.19.3](release-notes-v1.19.3.md) | (2026-09-28) — ADR 0007 one command registry; **Perplexity removed as a chat provider** (ADR 0015; kept as a web-search/grounding backend, ADR 0014), **Gemini the default provider and `gemini-3.8-flash` its default model**; Sonar Responses-wire fixes; turn-level tool strip in web/VSCode transcripts. |
 | [Release Notes v1.19.2](release-notes-v1.19.2.md) | (2026-09-14) — Gemini fleet refresh; Responses-wire tool loops fixed; mid-stream model/provider switch refused (409); Windows `/preview` and usage-log fixes; 15 `parallel_tool_calls` rows corrected. |
 | [Release Notes v1.19.1](release-notes-v1.19.1.md) | (2026-09-10) — tool-loop transcript integrity; **ADR 0011** command taxonomy (`/auto` · `/run` · `/task`, breaking renames, no aliases); **ADR 0010** config-shape clean break (`tools.agent.*` → `execution.*`); **ADR 0012** per-model facts; opt-in Anthropic provider (untested against the live API). |
 | [Release Notes v1.19.0](release-notes-v1.19.0.md) | (2026-07-12) — agent platform (ADR 0003 Stage 2) durable `/v1/agent/*` run registry with tool-capable sandboxed tier, `/task` command family T1–T8a. |

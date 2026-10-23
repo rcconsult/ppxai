@@ -504,6 +504,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
   - `gemini.py` - Native Gemini (google-genai SDK; native function_call/function_response tool threading)
   - `openai_compat.py` - OpenAI-compatible (local/vLLM, custom)
   - `anthropic.py` - Anthropic (`messages` wire; opt-in, needs the `[anthropic]` extra and a config block)
+  - `__init__.py` - declared table `_PROVIDER_MODULES` + `load_provider_class()`; provider modules (and their SDKs) load on first use, so import a class from its own module (ADR 0016). `facts/` holds the SDK-free per-provider facts; `openai_wire.py` the shared OpenAI client/error mapping
 - `ppxai/engine/model_facts.py` - per-model facts: wire protocol, tool mode, vision, tier (ADR 0012; replaced the deleted `model_profiles.py` in Item 65)
 - `ppxai/engine/tools/` - Tool system with builtins + brace-counting JSON parser
   - `network_policy.py` - AC-2 egress allowlist (fail-closed, https-only, SSRF guard)

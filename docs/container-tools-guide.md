@@ -549,23 +549,23 @@ wrong**, and it was wrong in a way that mattered: it described the
 *container-specific* key correctly and then generalised from it.
 
 The narrow part is true — `tools.container.require_consent` **is** inert,
-parsed by `get_container_config()` (`ppxai/config/tools.py:193`) and never
+parsed by `get_container_config()` (`ppxai/config/tools.py:205`) and never
 called by anything. But the six consent-gated tools have no gate of their
 own. `ConsentCLITool.execute()`
 (`ppxai/engine/tools/builtin/container.py:129-142`) calls
 `engine.request_shell_consent()`, and `request_shell_consent`
-(`ppxai/engine/consent_ops.py:100-142`) returns **True with no prompt** in
+(`ppxai/engine/consent_ops.py:110-147`) returns **True with no prompt** in
 three cases:
 
 | # | Bypass | Where |
 |---|---|---|
-| 1 | The command classifies **SAFE** | `classify_command()` → `classify_shell_command()` (`ppxai/common/consent.py:92-157`). SAFE means "matched a regex in `tools.shell.allowed_commands`". |
-| 2 | Session shell-consent mode is **ALWAYS** | `consent_ops.py:131-132` — this is what the **"Always Allow"** button in the prompt above sets. |
-| 3 | The exact command string is already in the session's allowed set | `consent_ops.py:137-138` — set by a prior per-command approval. |
+| 1 | The command classifies **SAFE** | `classify_command()` → `classify_shell_command()` (`ppxai/common/consent.py:108-173`). SAFE means "matched a regex in `tools.shell.allowed_commands`". |
+| 2 | Session shell-consent mode is **ALWAYS** | `consent_ops.py:141-142` — this is what the **"Always Allow"** button in the prompt above sets. |
+| 3 | The exact command string is already in the session's allowed set | `consent_ops.py:146-147` — set by a prior per-command approval. |
 
 **(1) is the one to know about**, because it is durable and silent.
 `tools.shell.allowed_commands` is a live, user-editable regex list
-(`ppxai/config/tools.py:86`; defaults at `ppxai/config/defaults.py:42-73`).
+(`ppxai/config/tools.py:87`; defaults at `ppxai/config/defaults.py:42-73`).
 The shipped defaults contain **no** docker, podman or kubectl pattern —
 verified 2026-09-20, so out of the box every destructive container
 operation does prompt. But adding, say, `^docker\s+(start|stop|restart)`
@@ -576,7 +576,7 @@ container consent too, whether or not you meant to.
 
 Fail-safe directions still hold: a `NEVER`-classified command is refused
 outright, and with no consent callback registered the default is **deny**
-(`consent_ops.py:143-144`).
+(`consent_ops.py:150-151`).
 
 See [Configuration](#configuration).
 

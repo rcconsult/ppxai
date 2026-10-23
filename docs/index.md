@@ -67,7 +67,7 @@ ppxai-desktop      # Desktop web app
 ### Chat with any model
 
 - **Google Gemini** — 1M token context, search grounding; `gemini-3.8-flash` by default
-- **OpenAI** — `gpt-5.6-terra` by default, plus the GPT-5.5/5.4 lines and GPT-5.3-codex
+- **OpenAI** — `gpt-5.6-terra` by default, plus `gpt-6-sol`, `gpt-6-luna` and the GPT-5.5/5.4 lines
 - **Anthropic (Claude)** — opt-in via the `[anthropic]` extra; ships untested against the live API
 - **OpenRouter** — 100+ models including Claude
 - **Local models** — Ollama, vLLM, LMStudio

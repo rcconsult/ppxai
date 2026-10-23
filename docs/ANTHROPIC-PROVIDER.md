@@ -23,9 +23,9 @@ uv sync --extra anthropic     # or: pip install "ppxai[anthropic] @ git+https://
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Without the extra the provider does not register, and `create_provider("anthropic")`
-returns `None` — the same "provider unavailable" path every caller already
-handles.
+Without the extra the provider stays unregistered (`list_registered_providers()`
+omits it, `get_provider_class("anthropic")` returns `None`) — it has no
+OpenAI-compatible fallback of its own, since it speaks the `messages` wire only.
 
 ## Why this is not an OpenAI-compatible endpoint
 

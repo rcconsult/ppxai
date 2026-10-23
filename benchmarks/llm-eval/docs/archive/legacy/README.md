@@ -28,7 +28,7 @@ This directory contains archived benchmark results from early experiments before
 
 The active benchmark system is now in `benchmarks/llm-eval/`:
 - **Location:** `benchmarks/llm-eval/`
-- **Suite:** 28 tests across 7 categories
+- **Suite:** 28 tests across 7 categories (as of 2026-02-14; 36 tests across 9 categories as of 2026-10-23)
 - **Results:** Stored in `benchmarks/llm-eval/results/`
 - **Documentation:** See `benchmarks/BENCHMARKS.md`
 

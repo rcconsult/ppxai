@@ -3,7 +3,7 @@
 **Date:** 2026-09-26 (revised 2026-09-26 — owner decided open questions 1, 2
 and 5; 3 and 4 measured against a WSL2 sshd the same day)
 **Status:** ✅ **Accepted** (owner, 2026-09-29), implemented on
-`feature/v1.19.4`, unreleased. History: phase 1 (S3, the remote-side contract) was
+`feature/v1.19.4`, shipped in v1.19.4 (2026-10-12; status line corrected 2026-10-23). History: phase 1 (S3, the remote-side contract) was
 implemented on 2026-09-27 (`78e34b8e`): `ppxai-server --uds/--announce/--detach/--list`,
 the contract-1 registry, verified on Windows, macOS and Ubuntu 24.04. Phase 2
 (S2, the transport) was implemented on 2026-09-28 on `feature/v1.19.4`:
