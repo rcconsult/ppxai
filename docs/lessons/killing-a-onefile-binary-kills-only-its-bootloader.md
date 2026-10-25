@@ -40,7 +40,7 @@ child on macOS and Linux as well.
 
 ## What's actually true
 
-The sites that stop a spawned server get it right in two different ways:
+Every site that stops a spawned server now takes the whole tree:
 
 1. **`vscode-extension/src/extension.ts::stopChild`** (`2e2b833b`): it sends
    `POST /shutdown`, waits up to the grace period (5 s, shorter on the
@@ -53,10 +53,12 @@ The sites that stop a spawned server get it right in two different ways:
 2. **`scripts/gateway-smoke.py::_signal_tree`** spawns with
    `start_new_session=True` and kills the process group (`os.killpg`) on
    POSIX, or uses `taskkill /F /T` on Windows after a `terminate()`.
-
-**One site does not, as of 2026-10-24:** `ppxai-desktop.py::main` calls
-`process.terminate()` on the server it spawned when the server fails to come
-up in time. On Windows that can leave a slow-starting server alive.
+3. **`ppxai-desktop.py::stop_server`** (2026-10-25): until then the
+   launcher's start-up timeout called `process.terminate()` and could leave
+   a slow-starting server alive on Windows. It now uses `taskkill /T /F` on
+   Windows and signals the process group on Unix. Guarded by
+   `tests/test_desktop_server_stop.py`, which includes a control showing that
+   a parent-only terminate orphans the child.
 
 When you add a site that spawns a ppxai binary and later stops it, use
 `/shutdown` first and a tree kill after it. On POSIX, spawn it in its own

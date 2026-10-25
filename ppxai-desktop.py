@@ -7,6 +7,8 @@ Provides a double-click desktop app experience.
 """
 
 import argparse
+import os
+import signal
 import socket
 import subprocess
 import sys
@@ -240,6 +242,31 @@ def start_server(server_path: Path) -> subprocess.Popen | None:
         return None
 
 
+def stop_server(process: subprocess.Popen) -> None:
+    """Stop the server started by start_server(), child included.
+
+    The installed ppxai-server is a PyInstaller one-file build: `process` is
+    the bootloader and the real server is its child. terminate() on Windows
+    ends the bootloader alone and leaves the server holding the port, so
+    take the whole tree with taskkill /T. On Unix the server runs in its own
+    session (start_new_session), so signal the group. See
+    docs/lessons/killing-a-onefile-binary-kills-only-its-bootloader.md.
+    """
+    if process.poll() is not None:
+        return
+    try:
+        if sys.platform == 'win32':
+            subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                capture_output=True, timeout=15, check=False,
+            )
+        else:
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+    except (OSError, subprocess.SubprocessError):
+        # taskkill missing or the group already gone: the bootloader at least.
+        process.terminate()
+
+
 def main():
     # Handle --version before anything else
     parser = argparse.ArgumentParser(
@@ -282,7 +309,7 @@ def main():
         print("Waiting for server...")
         if not wait_for_server(port):
             print("ERROR: Server failed to start (timeout)")
-            process.terminate()
+            stop_server(process)
             sys.exit(1)
 
         print("Server started successfully")
