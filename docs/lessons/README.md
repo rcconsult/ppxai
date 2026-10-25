@@ -136,6 +136,10 @@ discoverable later.
   ppxai-server binds a FIXED port (54320); a stale server makes a freshly
   spawned binary die silently, so acceptance tests the OLD process — free
   the port first (`gateway-smoke.py` now guards this)
+- [killing-a-onefile-binary-kills-only-its-bootloader.md](killing-a-onefile-binary-kills-only-its-bootloader.md) —
+  installed binaries are PyInstaller one-file builds: `kill()` on the spawned
+  PID ends the bootloader and orphans the real server on Windows; send
+  `/shutdown`, then `taskkill /T /F` (POSIX: own session + group signal)
 - [perplexity-alternation-retired-orphan-toolcalls-is-real.md](perplexity-alternation-retired-orphan-toolcalls-is-real.md) —
   the recurring tools-chat 400 is the provider-agnostic orphan
   `assistant.tool_calls` case, not a provider-specific alternation rule —
