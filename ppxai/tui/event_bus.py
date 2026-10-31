@@ -33,6 +33,7 @@ Usage:
 """
 
 import asyncio
+import inspect
 import logging
 from collections.abc import Callable
 from typing import Any
@@ -122,7 +123,7 @@ class EventBus:
         # Call each handler
         for receiver in receivers:
             try:
-                if asyncio.iscoroutinefunction(receiver):
+                if inspect.iscoroutinefunction(receiver):
                     # Schedule async handler as task (if event loop running)
                     try:
                         asyncio.get_running_loop()
