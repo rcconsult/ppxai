@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`ppxai-server --owned`: a server its parent process owns (ADR 0017).** For a client that starts the server as its own child, such as tai. The parent passes `PPXAI_API_TOKEN` in the child's environment; the server refuses to start without it, honours it even when the config's auth chain is a `file` store alone, and requires the bearer on every route, `/health` included. No loopback request is exempt, so another local process (or another user on the machine) cannot drive the server. It binds `127.0.0.1` on port 0 and prints one JSON line, `{"host", "port", "pid", "version"}`, as the first line on stdout, so the parent reads the real port with no race. On Linux and macOS it also stops when its stdin pipe closes, so a crashed parent leaves no orphan. Idle shutdown and the SSH hub are off. Without the flag nothing changes.
+
 ### Fixed
 
 - **ppxai-desktop: a server that fails to start in time is stopped completely.** On the start-up timeout the launcher called `terminate()` on the server it spawned. The installed `ppxai-server` is a PyInstaller one-file build, so that process is only the bootloader, and on Windows the real server kept running and holding port 54320. The launcher now stops the whole tree: `taskkill /T /F` on Windows, the process group on macOS/Linux.

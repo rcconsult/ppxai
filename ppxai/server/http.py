@@ -19,6 +19,7 @@ import os
 import re
 import select
 import signal
+import socket
 import subprocess
 import sys
 import threading
@@ -29,7 +30,7 @@ import time
 # the state module so route handlers (which import from state) see the same value.
 import types as _types  # noqa: E402
 import webbrowser
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, redirect_stdout
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -53,6 +54,7 @@ from ..config import (
 from ..version import __version__
 from . import registry
 from . import state as _state  # noqa: F401 — backing store for session_manager
+from .auth import ENV_TOKEN_VAR, require_bearer_everywhere
 from .auth import check_request as _auth_check_request
 from .routes import all_routers
 from .routes.remote_hub import hub_auth_url, start_hub, stop_hub
@@ -735,7 +737,8 @@ class _AbandonedRequestFilter(logging.Filter):
 
 
 async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_level: str = "info",
-                                             fd: int | None = None):
+                                             fd: int | None = None,
+                                             sockets: list[socket.socket] | None = None):
     """Run uvicorn server with graceful shutdown support (v1.13.10).
 
     This uses uvicorn.Server directly to enable graceful shutdown via
@@ -748,6 +751,10 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
         log_level: Logging level
         fd: An already-listening socket to serve on instead of host/port
             (the `--uds` path binds it itself, 0600 before the first accept).
+        sockets: Already-listening sockets to serve on instead of host/port
+            (`--owned` binds port 0 itself so the port it reports is the
+            port that serves; uvicorn's `fd=` path needs `socket.fromfd`,
+            which Windows lacks).
     """
     grace_s = get_shutdown_grace_s()
     config = uvicorn.Config(
@@ -799,7 +806,7 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
     _active_server = server
     shutdown_task = asyncio.create_task(shutdown_listener())
     try:
-        await server.serve()
+        await server.serve(sockets=sockets)
     finally:
         shutdown_task.cancel()
         try:
@@ -900,7 +907,8 @@ def run_server():
     parser = argparse.ArgumentParser(description="ppxai HTTP Server")
     parser.add_argument("--version", "-v", action="version", version=f"ppxai-server {__version__}")
     parser.add_argument("--host", default=DEFAULT_HOST, help="Host to bind to")
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port to bind to")
+    parser.add_argument("--port", type=int, default=None,
+                        help=f"Port to bind to (default {DEFAULT_PORT}; 0 with --owned)")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
     # ADR 0013 S3 -- the remote-side contract a hub drives over SSH.
     parser.add_argument("--uds", nargs="?", const="", metavar="PATH",
@@ -915,6 +923,11 @@ def run_server():
     parser.add_argument("--list", action="store_true", dest="list_servers",
                         help="List live announced servers (pruning dead entries) and exit")
     parser.add_argument("--json", action="store_true", help="With --list: print JSON")
+    # ADR 0017 -- a server whose lifetime and token belong to its parent process.
+    parser.add_argument("--owned", action="store_true",
+                        help="Parent-owned server: PPXAI_API_TOKEN required on every route, "
+                             "binds 127.0.0.1 port 0 and prints one JSON line "
+                             "{host, port, pid, version} first on stdout")
     parser.add_argument("--registry-contract", action="store_true",
                         help="Print the registry contract this server writes and exit "
                              "(a hub checks it before a launch)")
@@ -926,8 +939,12 @@ def run_server():
         sys.exit(0)
     if args.list_servers:
         sys.exit(_list_servers(as_json=args.json))
+    if args.owned:
+        sys.exit(_run_owned(args))
     if args.uds is not None or args.announce or args.detach:
         sys.exit(_run_announced(args))
+    if args.port is None:
+        args.port = DEFAULT_PORT
 
     # Tell the Host-validation middleware the real bind host (debt (u)): a
     # loopback bind stays strict; a wide bind relaxes per PPXAI_TRUSTED_HOSTS.
@@ -1069,10 +1086,7 @@ def _run_announced(args) -> int:
     _set_bind_host("127.0.0.1")
     _initialize_or_exit()
     if args.announce:
-        chain = get_secret_provider()
-        if not any(isinstance(p, EnvSecretProvider) and p.var == "PPXAI_API_TOKEN"
-                   for p in chain.providers):
-            chain.providers.insert(0, EnvSecretProvider())
+        _force_env_token_provider()
 
     entry = None
     if args.announce:
@@ -1094,6 +1108,85 @@ def _run_announced(args) -> int:
             pass
     _exit_if_workers_hung()
     return 0
+
+
+def _force_env_token_provider() -> None:
+    """Make the auth chain read PPXAI_API_TOKEN, first.
+
+    A server whose token comes from its launcher (`--announce`, `--owned`)
+    must honour it even when the user's config chain is a `file` store
+    alone, which never consults the environment.
+    """
+    chain = get_secret_provider()
+    if not any(isinstance(p, EnvSecretProvider) and p.var == ENV_TOKEN_VAR
+               for p in chain.providers):
+        chain.providers.insert(0, EnvSecretProvider())
+
+
+def _run_owned(args) -> int:
+    """`--owned` (ADR 0017): a server its parent process owns.
+
+    Order matters and is the contract:
+    1. refuse without the parent's PPXAI_API_TOKEN, or on a non-loopback host;
+    2. bind 127.0.0.1 (port 0 unless --port) before anything initializes;
+    3. initialize with stdout sent to stderr, so the JSON line comes first;
+    4. put the env provider in the auth chain and drop every loopback
+       exemption, then print {host, port, pid, version} as one line;
+    5. on POSIX, exit when stdin (the parent's pipe) reaches EOF; then serve
+       on the bound socket.
+    """
+    if args.uds is not None or args.announce or args.detach:
+        return _usage_error("--owned cannot be combined with --uds/--announce/--detach")
+    if args.reload:
+        return _usage_error("--reload cannot be combined with --owned")
+    if not os.environ.get(ENV_TOKEN_VAR, "").strip():
+        return _usage_error(f"--owned needs {ENV_TOKEN_VAR} set by the parent process")
+    if args.host not in ("127.0.0.1", "localhost"):
+        return _usage_error("--owned binds loopback only (--host 127.0.0.1)")
+    try:
+        sock = socket.create_server(("127.0.0.1", args.port or 0))
+    except OSError as exc:
+        print(f"ppxai-server: cannot bind 127.0.0.1:{args.port or 0}: {exc}", file=sys.stderr)
+        return 1
+
+    global _IDLE_TIMEOUT_OVERRIDE, _HUB_ALLOWED
+    _HUB_ALLOWED = False
+    _IDLE_TIMEOUT_OVERRIDE = 0
+    _set_bind_host("127.0.0.1")
+    with redirect_stdout(sys.stderr):
+        _initialize_or_exit()
+    _force_env_token_provider()
+    require_bearer_everywhere()
+
+    host, port = sock.getsockname()[:2]
+    print(json.dumps({"host": host, "port": port, "pid": os.getpid(),
+                      "version": __version__}), flush=True)
+    if sys.platform != "win32" and not sys.stdin.isatty():
+        _exit_on_stdin_eof()
+
+    app_ref = app if getattr(sys, "frozen", False) else "ppxai.server.http:app"
+    asyncio.run(_run_server_with_graceful_shutdown(
+        app_ref, host=host, port=port, log_level="info", sockets=[sock]))
+    _exit_if_workers_hung()
+    return 0
+
+
+def _exit_on_stdin_eof() -> None:
+    """Stop the server gracefully when the parent's stdin pipe closes.
+
+    POSIX only (ADR 0017): on Windows the parent's job object kills the
+    child with it. SIGTERM goes through the same graceful path as `kill`.
+    """
+    def watch() -> None:
+        try:
+            while sys.stdin.buffer.read(65536):
+                pass
+        except (OSError, ValueError):
+            return
+        logger.info("Parent closed stdin; stopping (--owned)")
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    threading.Thread(target=watch, name="ppxai-owned-stdin", daemon=True).start()
 
 
 def _announced_workdir() -> str:

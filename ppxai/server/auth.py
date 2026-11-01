@@ -39,6 +39,17 @@ from .state import get_agent_run_registry, get_secret_provider
 
 ENV_TOKEN_VAR = "PPXAI_API_TOKEN"
 
+#: Set by `ppxai-server --owned` (ADR 0017): the parent holds the token, so
+#: no loopback request is exempt — every route but CORS preflight needs it.
+_bearer_required_everywhere = False
+
+
+def require_bearer_everywhere() -> None:
+    """Turn off the loopback exemptions for the rest of the process."""
+    global _bearer_required_everywhere
+    _bearer_required_everywhere = True
+
+
 # Headers we attach to 401 responses so well-behaved clients can
 # discover that auth is required and prompt for a token.
 _WWW_AUTHENTICATE = 'Bearer realm="ppxai"'
@@ -310,8 +321,8 @@ def check_request(request: Request) -> JSONResponse | None:
     # token silently ignored, the run stamped owner=None instead of the token's
     # owner, losing per-run isolation + traceability (Gemini review #4). An
     # invalid/malformed bearer also falls through (→ 401), never silently
-    # accepted via the exemption.
-    if not has_bearer:
+    # accepted via the exemption. An owned server (ADR 0017) has none.
+    if not has_bearer and not _bearer_required_everywhere:
         # Loopback mint into a configured mutable store (first-token
         # bootstrap is the motivating case; NOT gated on the store being
         # empty — repeat local mints are deliberate).
