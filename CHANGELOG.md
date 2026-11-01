@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **ppxaide shows images inside tai.** `detect_image_protocol` now maps `TERM_PROGRAM=tai` to the Kitty graphics protocol, which tai implements (with Unicode-placeholder placements); before, tai fell through to "Terminal does not support image display" unless `PPXAI_IMAGE_PROTOCOL=kitty` was set. The tai rule is checked before the Sixel and `WT_SESSION` rules, so a Windows Terminal session variable leaking into tai doesn't switch it to Sixel. `PPXAI_IMAGE_PROTOCOL` still overrides.
+- **Startup is faster with debug logging on.** Every logger wrote the version banner, and each banner ran `git rev-parse`, so startup spawned git 16 times. A spawn costs about 1 s on some Windows hosts. The commit is now looked up once per process. On Windows, `ppxai-server --owned` run from source reaches its first line in 6.9 s instead of 14 s.
 
 - **ppxai-desktop: a server that fails to start in time is stopped completely.** On the start-up timeout the launcher called `terminate()` on the server it spawned. The installed `ppxai-server` is a PyInstaller one-file build, so that process is only the bootloader, and on Windows the real server kept running and holding port 54320. The launcher now stops the whole tree: `taskkill /T /F` on Windows, the process group on macOS/Linux.
 

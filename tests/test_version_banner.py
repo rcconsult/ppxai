@@ -13,11 +13,22 @@ from __future__ import annotations
 import re
 from unittest.mock import patch
 
+import pytest
+
 from ppxai.version import (
     __version__,
+    _git_commit_hash,
     format_version_banner,
     get_runtime_version_info,
 )
+
+
+@pytest.fixture(autouse=True)
+def _fresh_git_probe():
+    """`_git_commit_hash` is cached per process; each test probes anew."""
+    _git_commit_hash.cache_clear()
+    yield
+    _git_commit_hash.cache_clear()
 
 
 class TestRuntimeVersionInfo:
@@ -126,6 +137,22 @@ class TestGitCommitFallback:
                    side_effect=sp.TimeoutExpired(cmd="git", timeout=2)):
             info = ver_mod.get_runtime_version_info()
         assert info["commit"] == "n/a"
+
+    def test_git_runs_once_however_many_banners(self):
+        """Debug logging writes the banner once per logger (16 at startup);
+        one git spawn costs ~1 s on some Windows hosts, so 16 banners must
+        still spawn git only once."""
+        import sys
+
+        class FakeResult:
+            returncode = 0
+            stdout = "abc1234\n"
+
+        sys.modules.pop("ppxai._build_info", None)
+        with patch("ppxai.version.subprocess.run", return_value=FakeResult()) as run:
+            banners = {format_version_banner() for _ in range(16)}
+        assert run.call_count == 1
+        assert len(banners) == 1 and "commit abc1234" in banners.pop()
 
 
 class TestBuildInfoInjection:

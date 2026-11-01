@@ -7,6 +7,7 @@ TUI dependencies like prompt_toolkit.
 
 from __future__ import annotations
 
+import functools
 import platform
 import subprocess
 import sys
@@ -42,6 +43,7 @@ def _build_info() -> dict[str, str] | None:
     return None
 
 
+@functools.cache
 def _git_commit_hash() -> str | None:
     """Return the short git commit hash if running from a git checkout.
 
@@ -49,6 +51,11 @@ def _git_commit_hash() -> str | None:
     failure. Used by the startup banner to make it obvious which code
     state is actually running — particularly important after editable
     installs where a stale Python process can outlive its source.
+
+    Cached for the process: with debug logging on, every logger writes
+    the banner (16 at startup), and one git spawn costs ~1 s on some
+    Windows hosts. The commit the process started from is the one the
+    banner should name anyway.
     """
     try:
         repo_root = Path(__file__).resolve().parent.parent
