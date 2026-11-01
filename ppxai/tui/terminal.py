@@ -9,9 +9,9 @@ Detects terminal features like:
 """
 
 import os
+import sys  # noqa: F401 — patched by tests
 from dataclasses import dataclass
 from enum import Enum, auto
-import sys  # noqa: F401 — patched by tests
 
 
 class ImageProtocol(Enum):
@@ -163,8 +163,11 @@ def detect_image_protocol() -> ImageProtocol:
     if term_program in ("iTerm.app", "WezTerm", "mintty"):
         return ImageProtocol.ITERM2
 
-    # Kitty terminal
-    if os.environ.get("KITTY_WINDOW_ID") or term_program == "kitty":
+    # Kitty terminal, and tai (libghostty-vt implements the Kitty graphics
+    # protocol incl. Unicode placeholders; it has no iTerm2 protocol, and it
+    # advertises Sixel only on request). Checked before the Sixel and
+    # WT_SESSION rules, which a parent Windows Terminal can leak into tai.
+    if os.environ.get("KITTY_WINDOW_ID") or term_program in ("kitty", "tai"):
         return ImageProtocol.KITTY
 
     # Check for Sixel support (many terminals)
