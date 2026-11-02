@@ -97,6 +97,34 @@ default/jail), returned by `GET /v1/agent/runs/<id>`, reused verbatim by
 tool-free `/v1/agent/run` tier has no `workdir` — it executes no tools,
 so there is nothing to resolve paths against.
 
+#### Runs know their conversation (ADR 0018, v1.19.5)
+
+Inside the unsealed `/v1/agent/*` surface, a few shapes are pinned for
+clients such as tai by `tests/test_run_session_contract.py`. A change to
+them is a deliberate contract break:
+
+- **`session_id` and `merged_at` on every run.** `session_id` is the name
+  of the conversation that launched the run. The server stamps it from
+  the engine slot named by the `X-Session-Id` header on
+  `POST /v1/agent/run` / `POST /v1/agent/task`. There is no request field
+  for it, so a caller cannot claim another conversation. A call without
+  that header, and every `/v1/oneshot` run, gets `null`. Sub-agents
+  inherit their parent's value. `merged_at` (epoch seconds) is set on the
+  first successful merge.
+- **Filters on `GET /v1/agent/runs`:** `?session=<conversation name>` and
+  `?status=<status>`, combinable with `?kind=`. An unknown status is a 400.
+- **A result merges once, into its own conversation.**
+  `POST /sessions/merge-run-result` (and `/task collect`) refuses with a
+  409 whose `detail` is an object:
+  - `{"code": "session_mismatch", "message": "...", "run_session_id": "..."}`,
+    when the run belongs to a conversation that is not the active one;
+  - `{"code": "already_merged", "message": "...", "merged_at": <epoch>}`,
+    when it was merged before.
+
+  Runs created before v1.19.5 have `session_id: null` and merge into the
+  active conversation, once. Other 409s and the 403s keep plain-string
+  `detail`s.
+
 **Sandbox posture profiles.** The seal is *operator posture per
 deployment*, never a wire flag — there is deliberately no per-run
 "unseal" (any bearer holder could otherwise escape the operator's
@@ -265,6 +293,40 @@ When auth is enforced:
   depends on your deployment mechanism). A `file` provider's store is
   likewise re-read per request (no server restart needed to mint,
   revoke, or pick up a manually edited `tokens.json`).
+
+### Parent-owned server: `ppxai-server --owned` (ADR 0017, v1.19.5)
+
+For a program that starts `ppxai-server` as its own child process (tai,
+for example), and wants a server only it can drive:
+
+```bash
+PPXAI_API_TOKEN=<random secret> ppxai-server --owned
+# first stdout line:
+# {"host": "127.0.0.1", "port": 53817, "pid": 4242, "version": "1.19.5"}
+```
+
+- **The parent's token is required.** Without a non-empty
+  `PPXAI_API_TOKEN` the server exits with status 2 before binding. The
+  token is put first in the auth chain even when the config names only a
+  `file` store. The server never generates or prints a token.
+- **Every route needs the bearer, `/health` and `/status` included.**
+  Both loopback exemptions above are off, so no other local process can
+  drive the server. Only CORS preflight stays exempt. The web UI cannot
+  load from such a server, because a browser sends no bearer.
+- **Port 0, reported once.** The server binds `127.0.0.1` on a free port
+  and prints one JSON line `{host, port, pid, version}` as the first
+  stdout line. That line means "bound"; a bearer `GET /health` returning
+  200 means "ready". `--host` must be loopback.
+- **It exits with its parent on Linux and macOS:** EOF on a piped stdin
+  shuts it down gracefully. On Windows, use a job object with
+  kill-on-close.
+- Idle shutdown and the SSH hub are off, and no registry entry is
+  written. `--owned` cannot be combined with `--uds`, `--announce`,
+  `--detach` or `--reload`.
+
+A server older than 1.19.5 exits with status 2 and
+`unrecognized arguments: --owned` on stderr, which a parent can use to
+detect it. Without the flag, nothing changes.
 
 ### Transport perimeter: CORS + Host validation (v1.19.x)
 

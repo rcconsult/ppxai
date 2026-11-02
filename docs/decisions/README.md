@@ -26,7 +26,7 @@ Status is summarised; the record itself is authoritative.
 | [0018](0018-runs-know-their-conversation.md) | Runs know their conversation; a result merges once | ✅ Implemented 2026-11-02 (accepted the same day), target v1.19.5 — `RunMeta.session_id` (the conversation name, stamped by the server from the launching client, inherited by sub-agents) and `merged_at`; one registry guard (`claim_merge`) for the HTTP route and the TUI path refuses a wrong-conversation or repeat merge with a structured 409 (`session_mismatch` / `already_merged`); `GET /v1/agent/runs` gains `?session=` and `?status=`; fenced for tai by `tests/test_run_session_contract.py`, `/v1/agent/*` otherwise stays unsealed |
 
 Records 0001–0018 are accepted and implemented (0013 shipped in v1.19.4; 0016, 0017 and 0018 are implemented on `feature/v1.19.5`, unreleased).
-Numbering is sequential — the next record is `0018`.
+Numbering is sequential — the next record is `0019`.
 
 ## About these records
 

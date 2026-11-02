@@ -139,7 +139,8 @@ In the web app and VSCode, `/terminal` opens a real shell pane beside the chat, 
 ### Integrate
 
 - **`POST /v1/oneshot`** — the stable, semver-versioned gateway for a single prompt-in/answer-out call, with optional search grounding. Byte-identical wire shape since v1.18.4. See [docs/api-gateway.md](docs/api-gateway.md).
-- **`/v1/agent/*`** — the background run-registry API behind `/task` and `/run`. Still evolving; not yet a stable contract.
+- **`/v1/agent/*`** — the background run-registry API behind `/task` and `/run`. Still evolving; not yet a stable contract. On the unreleased `feature/v1.19.5` branch, each run records the conversation that launched it and a result merges only once ([ADR 0018](docs/decisions/0018-runs-know-their-conversation.md)).
+- **`ppxai-server --owned`** (unreleased, `feature/v1.19.5`) — for a program that starts the server as its own child: only the parent's token gets in, on every route, and the server reports its port as a JSON line on stdout. See [docs/api-gateway.md](docs/api-gateway.md) and [ADR 0017](docs/decisions/0017-parent-owned-server-mode.md).
 - **SSH remote hub** (opt-in, v1.19.4) — drive `ppxai-server` instances on other hosts from your local browser via the SSH Launcher; off unless `remote.hosts` is configured. See [ADR 0013](docs/decisions/0013-ssh-remote-backend.md).
 
 ## Four ways to use it

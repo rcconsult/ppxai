@@ -140,7 +140,15 @@ default `execution.collect: "yes"`, a successful top-level run lands in
 down) but the result is held until `/task collect <id>` (or the Collect
 button) collects it → `finalized` **and plain-merges the result text into
 your active session** — the model sees it on your next turn. A
-disconnected UI never loses a result. Uncollected holds are finalized by a
+disconnected UI never loses a result.
+**A result merges once, into the conversation that launched it (ADR 0018,
+v1.19.5).** Each run records the conversation it was started from. If a
+different conversation is active, collect refuses and names the run's
+conversation: switch back to it and collect there. Nothing is ever
+appended to a conversation that isn't loaded. A second collect of the same
+run reports that it was already merged, and the client treats that as
+done. Runs started before v1.19.5 have no recorded conversation and merge
+into the active one, once. Uncollected holds are finalized by a
 lazy reaper after `execution.task.budgets.result_retention_s` (default
 3600 s; `0` = hold until explicit ack; data is never deleted, only marked
 collected).
