@@ -102,6 +102,9 @@ class ApiClient {
         const messageParts = [];
         if (typeof detail?.detail === 'string') messageParts.push(detail.detail);
         else if (typeof body.detail === 'string') messageParts.push(body.detail);
+        // ADR 0018: structured 409 details ({code, message, ...}) — show the
+        // human text, never "[object Object]".
+        else if (body.detail && typeof body.detail.message === 'string') messageParts.push(body.detail.message);
         else messageParts.push(`HTTP ${response.status}`);
         const err = new Error(messageParts.join(' '));
         err.status = response.status;
@@ -112,6 +115,7 @@ class ApiClient {
             err.expected = detail.expected;
             err.actual = detail.actual;
             err.events = detail.events;
+            if (typeof detail.code === 'string') err.code = detail.code;
         }
         throw err;
     }

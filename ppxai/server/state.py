@@ -293,6 +293,13 @@ async def get_or_create_session(session_id: str | None) -> tuple[str, EngineClie
         raise HTTPException(status_code=503, detail=str(e))
 
 
+async def find_session_engine(session_id: str) -> EngineClient | None:
+    """The engine of an existing X-Session-Id slot, or None (never creates one)."""
+    if session_manager is None or not session_manager.is_initialized:
+        return None
+    return await session_manager.find_session_engine(session_id)
+
+
 async def cleanup_expired_sessions():
     """Remove sessions that haven't been used recently (v1.13.10).
 

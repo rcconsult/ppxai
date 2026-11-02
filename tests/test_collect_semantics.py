@@ -185,6 +185,8 @@ def merge_client(tmp_path, monkeypatch):
     added = []
 
     class _FakeConvo:
+        session_name = "session_20261102_000000"
+
         def add_message(self, message):
             added.append(message)
 

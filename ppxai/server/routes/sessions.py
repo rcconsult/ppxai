@@ -73,8 +73,18 @@ async def merge_run_result(
         raise HTTPException(
             status_code=409, detail=f"Run {run_id} has no result to merge."
         )
-    s.engine.session.add_message(Message(role="user", content=meta.task))
-    s.engine.session.add_message(Message(role="assistant", content=result))
+    # ADR 0018: the ONE merge guard (shared with the in-process TUI path) —
+    # right conversation, and only once.
+    registry = get_agent_run_registry()
+    refusal = registry.claim_merge(run_id, s.engine.session.session_name)
+    if refusal is not None:
+        raise HTTPException(status_code=409, detail=refusal.detail())
+    try:
+        s.engine.session.add_message(Message(role="user", content=meta.task))
+        s.engine.session.add_message(Message(role="assistant", content=result))
+    except Exception:
+        registry.release_merge(run_id)
+        raise
     return with_drained_events(
         {"merged": True, "run_id": run_id, "chars": len(result)}, s.engine
     )

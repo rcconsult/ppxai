@@ -59,6 +59,14 @@ logger = get_logger("tui")
 # ---------------------------------------------------------------------------
 
 
+# Every value `RunMeta.status` takes (the comment on the field is the prose
+# version). `GET /v1/agent/runs?status=` validates against this tuple.
+RUN_STATUSES = (
+    "pending", "running", "waiting", "cancelling", "completed",
+    "completed_pending_ack", "finalized", "failed", "cancelled", "interrupted",
+)
+
+
 @dataclass
 class RunMeta:
     """Persisted metadata for one agent run (`meta.json`).
@@ -126,6 +134,16 @@ class RunMeta:
     # interrupts another's live runs. None on metas written before
     # 2026-09-28: those are swept as before.
     server_pid: int | None = None
+    # ADR 0018: the CONVERSATION this run was launched from
+    # (`engine.session.session_name`, e.g. session_20261102_...) — NOT the
+    # per-client `X-Session-Id` engine slot. Stamped by the server/engine from
+    # the launching client's active conversation; None for a raw /v1 call with
+    # no conversation context, and for metas written before the field existed.
+    # Sub-agents inherit their parent's value.
+    session_id: str | None = None
+    # ADR 0018: epoch seconds of the one successful merge of this run's result
+    # into a conversation; None = never merged. Set by `claim_merge`.
+    merged_at: float | None = None
     created_at: float = 0.0
     started_at: float | None = None  # set when execution begins (Inc 2 background)
     finished_at: float | None = None
@@ -435,6 +453,23 @@ class RunControl:
 ORPHANABLE_STATUSES = frozenset({"pending", "running", "waiting", "cancelling"})
 
 
+class MergeRefusal:
+    """Why `AgentRunRegistry.claim_merge` said no (ADR 0018).
+
+    `code` is `already_merged` | `session_mismatch` | `unknown_run`; `extra`
+    carries the code's promised key (`merged_at` / `run_session_id`).
+    """
+
+    def __init__(self, code: str, message: str, extra: dict | None = None) -> None:
+        self.code = code
+        self.message = message
+        self.extra = dict(extra or {})
+
+    def detail(self) -> dict[str, Any]:
+        """The structured HTTP 409 `detail`."""
+        return {"code": self.code, "message": self.message, **self.extra}
+
+
 def resume_refusal(meta: RunMeta, *, in_flight: bool) -> str | None:
     """Why this run may NOT be resumed — or None if a resume is allowed.
 
@@ -606,8 +641,13 @@ class AgentRunRegistry:
         system: str | None = None,
         read_roots: list | None = None,
         workdir: str | None = None,
+        session_id: str | None = None,
     ) -> RunMeta:
         """Mint a run, persist it in `pending` state, return its meta.
+
+        `session_id` is the launching CONVERSATION's name (ADR 0018). A
+        sub-agent (`parent_run_id` set, no explicit value) inherits its
+        parent's.
 
         Named per the ADR 0003 contract verb (`start_run`). In Inc 1
         execution is still the caller's responsibility (the route runs the
@@ -615,6 +655,10 @@ class AgentRunRegistry:
         into a background task driven by the registry, at which point this
         method genuinely *starts* the run end-to-end.
         """
+        if session_id is None and parent_run_id is not None:
+            parent = self._store.load_meta(parent_run_id)
+            if parent is not None:
+                session_id = parent.session_id
         meta = RunMeta(
             run_id=self._new_run_id(),
             task=task,
@@ -632,6 +676,7 @@ class AgentRunRegistry:
             read_roots=list(read_roots or []),
             workdir=workdir,
             server_pid=os.getpid(),
+            session_id=session_id,
             created_at=time.time(),
         )
         self._store.persist_meta(meta)
@@ -659,6 +704,46 @@ class AgentRunRegistry:
         logger.info(f"Agent run {meta.run_id} -> {status}")
         self._notify_change()  # Inc 9: run left the active set
         return meta
+
+    def claim_merge(
+        self, run_id: str, active_session: str | None
+    ) -> MergeRefusal | None:
+        """The ONE guard for merging a run's result into a conversation
+        (ADR 0018). The HTTP route and the in-process TUI path both call it.
+
+        Returns None and records `merged_at` when the merge may proceed (the
+        caller then appends and, if the append fails, calls `release_merge`);
+        otherwise a `MergeRefusal` (`already_merged` | `session_mismatch`).
+        Synchronous and loop-confined, so claim-then-append cannot interleave.
+        A run with no `session_id` merges into whatever conversation is
+        active, but still only once.
+        """
+        meta = self._store.load_meta(run_id)
+        if meta is None:
+            return MergeRefusal("unknown_run", f"Unknown run: {run_id}")
+        if meta.merged_at is not None:
+            return MergeRefusal(
+                "already_merged",
+                f"Run {run_id} has already been merged into a conversation.",
+                {"merged_at": meta.merged_at},
+            )
+        if meta.session_id is not None and meta.session_id != active_session:
+            return MergeRefusal(
+                "session_mismatch",
+                f"Run {run_id} belongs to conversation '{meta.session_id}', "
+                f"not the active one; load that conversation to merge it.",
+                {"run_session_id": meta.session_id},
+            )
+        meta.merged_at = time.time()
+        self._store.persist_meta(meta)
+        return None
+
+    def release_merge(self, run_id: str) -> None:
+        """Undo a `claim_merge` whose append failed."""
+        meta = self._store.load_meta(run_id)
+        if meta is not None and meta.merged_at is not None:
+            meta.merged_at = None
+            self._store.persist_meta(meta)
 
     def get_control(self, run_id: str) -> "RunControl | None":
         """The in-flight run's cooperative control, or None if not running.

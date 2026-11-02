@@ -634,6 +634,12 @@ export class TaskController {
         try {
             res = await this.backend.mergeRunResult(runId);
         } catch (e: any) {
+            if (e?.code === 'already_merged') {
+                // ADR 0018: the server merges a run once; a repeat is done.
+                this.merged.add(runId);
+                this.ui.system(`ℹ️ ${runId} — already merged into a conversation.`);
+                return true;
+            }
             this.ui.system(`❌ Could not merge ${runId}: ${this.errText(e)}`);
             return false;
         }

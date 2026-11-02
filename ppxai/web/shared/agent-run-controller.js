@@ -85,6 +85,12 @@ class AgentRunController {
         try {
             res = await this.app.apiClient.post('/sessions/merge-run-result', { run_id: runId });
         } catch (e) {
+            if (e && e.code === 'already_merged') {
+                // ADR 0018: the server merges a run once; a repeat is done.
+                this._merged.add(runId);
+                this.app.showSystemMessage(`ℹ️ ${runId} — already merged into a conversation.`);
+                return true;
+            }
             this.app.showSystemMessage(`❌ Could not merge ${runId}: ${this._errText(e)}`);
             return false;
         }

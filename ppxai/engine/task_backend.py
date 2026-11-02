@@ -179,6 +179,15 @@ class InProcessTaskBackend:
         self.registry = registry if registry is not None else default_run_registry()
         self._session_provider = session_provider
 
+    def _active_conversation(self) -> str | None:
+        """The active conversation's name (`session_name`), or None."""
+        if self._session_provider is None:
+            return None
+        session = self._session_provider()
+        if session is None:
+            return None
+        return getattr(session, "session_name", None) or None
+
     # ── launch ──────────────────────────────────────────────────────────────
 
     def launch(
@@ -227,6 +236,8 @@ class InProcessTaskBackend:
             system=auth.system,
             read_roots=auth.read_roots,
             workdir=auth.workdir,
+            # ADR 0018: the launching client's active conversation, if any.
+            session_id=self._active_conversation(),
         )
         runner = build_task_runner(
             self.registry,
@@ -336,8 +347,19 @@ class InProcessTaskBackend:
         if not result:
             return False, f"run {run_id} has no result to merge"
 
-        session.add_message(Message(role="user", content=meta.task))
-        session.add_message(Message(role="assistant", content=result))
+        # ADR 0018: the same guard the HTTP route uses — right conversation,
+        # and only once. Never appends to a conversation that is not loaded.
+        refusal = self.registry.claim_merge(
+            run_id, getattr(session, "session_name", None)
+        )
+        if refusal is not None:
+            return False, refusal.message
+        try:
+            session.add_message(Message(role="user", content=meta.task))
+            session.add_message(Message(role="assistant", content=result))
+        except Exception:
+            self.registry.release_merge(run_id)
+            raise
         return True, f"merged {len(result)} chars"
 
     def collect(self, run_id: str) -> tuple[bool, str]:

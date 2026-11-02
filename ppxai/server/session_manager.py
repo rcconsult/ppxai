@@ -287,6 +287,17 @@ class SessionManager:
 
             return (session_id, session.engine, session.lock)
 
+    async def find_session_engine(self, session_id: str) -> Optional['EngineClient']:
+        """The engine of an EXISTING session, or None — never creates one.
+
+        For callers that only need to read a slot's state (ADR 0018 stamps
+        a run with the launching slot's conversation): an unknown
+        X-Session-Id must not build an engine as a side effect.
+        """
+        async with self._sessions_lock:
+            session = self._sessions.get(session_id)
+            return session.engine if session is not None else None
+
     async def _create_session(self, session_id: str) -> Session:
         """Create a new session with its own engine."""
         # Create engine with session-specific consent handlers

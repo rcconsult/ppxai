@@ -87,7 +87,7 @@ import asyncio
 import json
 from pathlib import Path  # noqa: F401 — patched by tests
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
@@ -104,7 +104,7 @@ from ...common.logger import get_logger
 from ...config import execution as _execution_config
 from ...engine import task_authorizer as _authz
 from ...engine import task_runner as _task_runner
-from ...engine.agent_runs import RunMeta, resume_refusal
+from ...engine.agent_runs import RUN_STATUSES, RunMeta, resume_refusal
 from ...engine.task_authorizer import (
     TaskAuthorizationError,
     TaskRequest,
@@ -122,7 +122,7 @@ from ...engine.task_runner import (  # noqa: F401  (compat re-exports)
     build_task_runner,  # noqa: F401
     compose_agent_system_prompt,
 )
-from ..state import get_agent_run_registry
+from ..state import find_session_engine, get_agent_run_registry
 
 # Reuse oneshot's provider construction so Inc 1 has zero provider-wiring
 # duplication; the synchronous run IS a oneshot call under the hood.
@@ -293,6 +293,11 @@ class RunMetaResponse(BaseModel):
     # v1.19.x workdir-alignment: the run's effective working dir (per-run
     # intent; None = server default or a sealed run's jail).
     workdir: str | None = None
+    # ADR 0018 (fenced by tests/test_run_session_contract.py): the CONVERSATION
+    # the run was launched from (not the X-Session-Id slot), and when its
+    # result was merged into a conversation (None = not yet).
+    session_id: str | None = None
+    merged_at: float | None = None
 
     @classmethod
     def from_meta(cls, m: RunMeta) -> RunMetaResponse:
@@ -317,6 +322,8 @@ class RunMetaResponse(BaseModel):
             result=m.result,
             error=m.error,
             workdir=getattr(m, "workdir", None),
+            session_id=getattr(m, "session_id", None),
+            merged_at=getattr(m, "merged_at", None),
         )
 
 
@@ -340,8 +347,30 @@ class RunListResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+async def _launching_conversation(x_session_id: str | None) -> str | None:
+    """The launching client's active CONVERSATION name (ADR 0018), or None.
+
+    Only a call that names an engine slot (`X-Session-Id`) has conversation
+    context; a raw /v1 call without one gets None rather than being attributed
+    to the server's default engine. There is no body field for this on purpose:
+    the server decides, the caller cannot claim another conversation. An
+    UNKNOWN slot id is None too: looking it up must not create an engine
+    (and stamp that new engine's fresh, meaningless conversation name).
+    """
+    if not x_session_id:
+        return None
+    engine = await find_session_engine(x_session_id)
+    if engine is None:
+        return None
+    return engine.session.session_name or None
+
+
 @router.post("/run", response_model=AgentRunResponse)
-async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunResponse:
+async def create_agent_run(
+    req: AgentRunRequest,
+    request: Request,
+    x_session_id: str | None = Header(None),
+) -> AgentRunResponse:
     """Create a `kind=oneshot` run and execute it in the background.
 
     U3 (ADR 0011): this is the `/run` UX launch. Grant rule — one brain
@@ -358,6 +387,7 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
     contract as /task; U4 maps `execution.collect` onto this.
     """
     registry = get_agent_run_registry()
+    conversation = await _launching_conversation(x_session_id)
 
     # ADMISSION. Same boundary /task uses; the `kind="oneshot"` row supplies
     # the differences (no tier gate, config-decided grant, no client fallback
@@ -402,6 +432,7 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
             owner=_caller_owner(request),
             hold_result=hold,
             system=auth.system,
+            session_id=conversation,
         )
         runner = _task_runner.build_task_runner(
             registry,
@@ -421,6 +452,7 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
         provider=auth.provider, model=auth.model,
         owner=_caller_owner(request),
         hold_result=hold,  # same execution.collect contract as the grant path
+        session_id=conversation,
     )
 
     # ADR 0014: under "retrieve" grounding the tool-free run searches once
@@ -705,7 +737,11 @@ def _enriched_oneshot_egress_or_400(provider_name: str | None = None) -> list:
 
 
 @router.post("/task", response_model=AgentRunResponse)
-async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRunResponse:
+async def create_agent_task(
+    req: AgentTaskRequest,
+    request: Request,
+    x_session_id: str | None = Header(None),
+) -> AgentRunResponse:
     """Tool-capable, sandboxed agent run (ADR 0003 §4 / AC-1).
 
     The tool-calling tier, separate from the safe tool-free /v1/agent/run.
@@ -780,6 +816,7 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
         system=eff["system"],
         read_roots=eff["read_roots"],
         workdir=workdir,
+        session_id=await _launching_conversation(x_session_id),
     )
 
     runner = _task_runner.build_task_runner(
@@ -804,7 +841,10 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
 
 @router.get("/runs", response_model=RunListResponse)
 async def list_agent_runs(
-    request: Request, kind: str | None = None
+    request: Request,
+    kind: str | None = None,
+    session: str | None = None,
+    status: str | None = None,
 ) -> RunListResponse:
     """List agent runs, newest first.
 
@@ -814,7 +854,17 @@ async def list_agent_runs(
     (loopback UX).
 
     ADR 0011 (F1): optional `?kind=task|oneshot` filter — each command
-    family lists only its own runs (legacy metas count as "task")."""
+    family lists only its own runs (legacy metas count as "task").
+
+    ADR 0018: `?session=<conversation name>` keeps runs launched from that
+    conversation; `?status=<status>` keeps runs in that status (unknown → 400).
+    Both combine with `?kind=`."""
+    if status is not None and status not in RUN_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown status {status!r} — expected one of "
+                   f"{', '.join(RUN_STATUSES)}.",
+        )
     if kind is not None and kind not in ("task", "oneshot"):
         raise HTTPException(
             status_code=400,
@@ -832,6 +882,10 @@ async def list_agent_runs(
         runs = [m for m in runs if m.owner is None or m.owner == caller]
     if kind is not None:
         runs = [m for m in runs if (getattr(m, "kind", "task") or "task") == kind]
+    if session is not None:
+        runs = [m for m in runs if m.session_id == session]
+    if status is not None:
+        runs = [m for m in runs if m.status == status]
     return RunListResponse(
         runs=[RunMetaResponse.from_meta(m) for m in runs]
     )

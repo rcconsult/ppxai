@@ -433,11 +433,19 @@ export class HttpClient {
         });
         if (!response.ok) {
             let detail = response.statusText;
+            let code: string | undefined;
             try {
                 const body = await response.json() as any;
-                if (body?.detail) { detail = body.detail; }
+                if (typeof body?.detail === 'string') { detail = body.detail; }
+                else if (body?.detail && typeof body.detail === 'object') {
+                    // ADR 0018: structured 409 ({code, message, ...}).
+                    code = body.detail.code;
+                    detail = body.detail.message ?? detail;
+                }
             } catch { /* keep statusText */ }
-            throw new Error(detail);
+            const err = new Error(detail) as Error & { code?: string };
+            err.code = code;
+            throw err;
         }
         return response.json() as Promise<{ merged: boolean; chars: number }>;
     }
