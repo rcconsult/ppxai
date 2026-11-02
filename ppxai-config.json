@@ -442,6 +442,191 @@
         "__comment_native_tool_calling": "OpenAI supports native function calling via tools parameter"
       }
     },
+    "openrouter": {
+      "name": "OpenRouter",
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "default_model": "qwen/qwen3.8-27b",
+      "coding_model": "qwen/qwen3.8-27b",
+      "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
+      "__comment_extra_body": "OpenRouter provider routing: data_collection deny = never route to an endpoint that may train on or retain prompts; require_parameters = only endpoints that honour every parameter sent (tools included). A 404 'No endpoints found' under these rules means no endpoint qualified - a policy result, not an outage. frequency_penalty was dropped from generation_params because under require_parameters it excluded every qwen/qwen3.7-flash endpoint (measured 2026-10-08).",
+      "extra_body": {
+        "provider": {
+          "data_collection": "deny",
+          "require_parameters": true
+        }
+      },
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9
+      },
+      "models": {
+        "qwen/qwen3.8-27b": {
+          "name": "Qwen3.8 27B",
+          "description": "262K context, native tool calling; 96.9 median on ppxai's benchmark with reasoning effort low (2026-10-11), against 83.8 with no effort set. Without it the model sometimes ends a turn after a tool result with an empty reply. The free :free variant this row used to name was withdrawn by OpenRouter ('unavailable for free', checked 2026-10-08).",
+          "context_limit": 1000000,
+          "extra_body": {
+            "reasoning": {
+              "effort": "low"
+            }
+          },
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 65536,
+            "max_tool_iterations": 0,
+            "supports_reasoning": true,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          }
+        },
+        "anthropic/claude-sonnet-5.5": {
+          "name": "Claude Sonnet 5.5",
+          "description": "Anthropic's balanced model for most tasks",
+          "context_limit": 1000000,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": true,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p",
+              "top_k"
+            ],
+            "tier": "A"
+          }
+        },
+        "anthropic/claude-opus-5.5": {
+          "name": "Claude Opus 5.5",
+          "description": "Anthropic's most capable model",
+          "context_limit": 1000000,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": true,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p",
+              "top_k"
+            ],
+            "tier": "A"
+          }
+        },
+        "anthropic/claude-haiku-5.5": {
+          "name": "Claude Haiku 5.5",
+          "description": "Fast and affordable Claude model",
+          "context_limit": 1000000,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": true,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p",
+              "top_k"
+            ],
+            "tier": "A"
+          }
+        },
+        "deepseek/deepseek-v4.1-flash": {
+          "name": "DeepSeek V4.1 Flash",
+          "description": "DeepSeek's low-cost reasoning model; facts follow the measured */deepseek-v4* seed row",
+          "context_limit": 1048576,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 8192,
+            "max_tool_iterations": 20,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "B"
+          }
+        },
+        "meta-llama/llama-4-maverick": {
+          "name": "Llama 4 Maverick",
+          "description": "Meta's open-weight MoE model",
+          "context_limit": 1048576,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          }
+        }
+      },
+      "pricing": {
+        "qwen/qwen3.8-27b": {
+          "input": 0.425,
+          "output": 2.55
+        },
+        "anthropic/claude-sonnet-5.5": {
+          "input": 2,
+          "output": 10
+        },
+        "anthropic/claude-opus-5.5": {
+          "input": 4,
+          "output": 20
+        },
+        "anthropic/claude-haiku-5.5": {
+          "input": 0.1,
+          "output": 0.5
+        },
+        "deepseek/deepseek-v4.1-flash": {
+          "input": 0.028,
+          "output": 1.0
+        },
+        "meta-llama/llama-4-maverick": {
+          "input": 0.188,
+          "output": 0.652
+        }
+      },
+      "facts": {
+        "web_search": false,
+        "web_fetch": false,
+        "weather": false,
+        "citations": false,
+        "streaming": true
+      }
+    },
     "ollama": {
       "name": "Ollama Local",
       "base_url": "http://localhost:11434/v1",
