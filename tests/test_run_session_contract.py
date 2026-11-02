@@ -22,6 +22,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import ppxai.server.http as http_module
 import ppxai.server.state as state
 from ppxai.config import execution as exec_cfg
 from ppxai.engine import task_authorizer as authz
@@ -285,3 +286,37 @@ def test_tui_collect_reports_the_refusal_without_losing_the_collect(reg, tui_bac
     ok, msg = b.collect(m.run_id)
     assert ok is True and "not merged" in msg and CONVO_B in msg
     assert convo.messages == []
+
+
+# ---------------------------------------------------------------------------
+# The conversation a slot reports. tai reads it from GET /status
+# `session_name` (fenced here at its request, 2026-11-02) and it is the value
+# runs get stamped with -- so two slots must never share one.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def live_client():
+    with TestClient(http_module.app, raise_server_exceptions=False) as client:
+        yield client
+
+
+def test_status_reports_the_slots_conversation_name(live_client):
+    r = live_client.get("/status", headers={"X-Session-Id": "fence-slot-a"})
+    assert r.status_code == 200, r.text
+    name = r.json()["session_name"]
+    assert isinstance(name, str) and name.startswith("session_")
+    engine = state.get_session_manager()._sessions["fence-slot-a"].engine
+    assert name == engine.session.session_name  # the value runs are stamped with
+
+
+def test_two_slots_created_in_the_same_second_get_distinct_conversations(live_client):
+    # tai, 2026-11-02: the name was the timestamp alone, so slots made within
+    # one second shared a conversation -- ?session= mixed their runs and the
+    # session_mismatch guard passed between them.
+    names = [
+        live_client.get(
+            "/status", headers={"X-Session-Id": f"fence-burst-{i}"}
+        ).json()["session_name"]
+        for i in range(5)
+    ]
+    assert len(set(names)) == len(names), names

@@ -10,6 +10,7 @@ v1.13.11: Migrated to centralized constants (ConsentMode)
 import base64
 import json
 import os
+import secrets
 import shutil
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -325,7 +326,14 @@ class SessionManager:
         self.exports_dir.mkdir(parents=True, exist_ok=True)
 
         # Current session state
-        self.session_name = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        # The timestamp alone collides: two engines created in the same second
+        # (two X-Session-Id slots, found by tai 2026-11-02) got one name, so
+        # ADR 0018's run session_id could not tell their runs apart and both
+        # conversations would save to one file. The suffix keeps the prefix
+        # and the sortable timestamp.
+        self.session_name = (
+            f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(3)}"
+        )
         self.messages: list[Message] = []
         self.metadata: dict[str, Any] = {
             "created_at": datetime.now().isoformat(),

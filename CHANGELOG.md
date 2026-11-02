@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Two conversations started in the same second no longer share a name.** A new conversation was named `session_<YYYYmmdd_HHMMSS>` alone, so two engine slots created within one second (two `X-Session-Id` clients, found by tai) got the same name: ADR 0018's `?session=` mixed their runs, its `session_mismatch` guard passed between them, and saving both wrote to one session file. New names gain a short random suffix (`session_20261102_224332_3fa9c1`); the prefix and the sortable timestamp stay, and existing sessions keep their names. `GET /status`'s `session_name` (the value runs are stamped with) is now in the ADR 0018 fence.
 - **ppxaide shows images inside tai.** `detect_image_protocol` now maps `TERM_PROGRAM=tai` to the Kitty graphics protocol, which tai implements (with Unicode-placeholder placements); before, tai fell through to "Terminal does not support image display" unless `PPXAI_IMAGE_PROTOCOL=kitty` was set. The tai rule is checked before the Sixel and `WT_SESSION` rules, so a Windows Terminal session variable leaking into tai doesn't switch it to Sixel. `PPXAI_IMAGE_PROTOCOL` still overrides.
 - **Startup is faster with debug logging on.** Every logger wrote the version banner, and each banner ran `git rev-parse`, so startup spawned git 16 times. A spawn costs about 1 s on some Windows hosts. The commit is now looked up once per process. On Windows, `ppxai-server --owned` run from source reaches its first line in 6.9 s instead of 14 s.
 
