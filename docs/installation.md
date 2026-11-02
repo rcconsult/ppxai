@@ -357,6 +357,52 @@ The server runs on `http://127.0.0.1:54320` by default.
 - **Session Management** - Save, load, and restore conversations
 - **Real-time Streaming** - SSE-based streaming with instant responses
 
+## Optional: SSH Remote Hub and SSH Launcher (v1.19.4+)
+
+Use ppxai on another machine from your local browser: the engine, tools and
+files stay on the remote host, and your own `ssh` is the transport. There is
+nothing extra to install on the local side; the hub is part of `ppxai-server`
+and is **off by default**.
+
+1. **Install ppxai on each remote host** with the normal steps above, using
+   release v1.19.4 or newer (the hub refuses older remote `ppxai-server`
+   binaries). If the binary is not on the remote's default `PATH`, set
+   `ppxai_server` on that host (below).
+2. **Make sure `ssh your-host` works without a prompt.** The hub runs `ssh`
+   with `BatchMode=yes`, so use a key or agent and a `~/.ssh/config` alias;
+   ppxai stores no keys, users, ports or jump hosts.
+3. **Enable it** by adding `remote.hosts` to `~/.ppxai/ppxai-config.json`:
+
+   ```json
+   {
+     "remote": {
+       "hosts": [
+         {"id": "your-host", "ssh": "your-host"},
+         {"id": "lab-mac", "ssh": "lab-mac", "ppxai_server": "~/.local/bin/ppxai-server"}
+       ]
+     }
+   }
+   ```
+
+   `id` is lowercase letters, digits and `-` (up to 32 characters; `local` is
+   reserved), `ssh` is the destination as `ssh` understands it, and
+   `ppxai_server` is optional.
+4. **Start the local server** (`ppxai-server`, or `ppxai-desktop`). The server
+   prints `SSH hub: open http://127.0.0.1:<port>/hub/auth?token=...`; open
+   that URL once to unlock the hub in your browser (`ppxai-desktop` does this
+   for you). Then use the header **SSH** button to open the SSH Launcher:
+   pick a host, launch a server in a directory, and open its web UI under
+   `/h/<host>/<id>/`.
+
+Without `remote.hosts`, every hub path answers 404 and no `ssh` process
+starts. The hub is web-UI only and answers loopback requests only.
+
+Details: [release notes v1.19.4](release-notes-v1.19.4.md#new-ssh-remote-hub-and-ssh-launcher-adr-0013),
+[architecture](architecture.md#remote-ssh-hub-adr-0013),
+[ADR 0013](decisions/0013-ssh-remote-backend.md),
+[plan](plan-ssh-remote-backend.md) and
+[call graphs](remote-ssh-call-graphs.md).
+
 ## Alternative: Install with pip/uv
 
 For Python developers who prefer package managers. ppxai is **not on PyPI**

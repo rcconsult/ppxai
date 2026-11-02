@@ -13,11 +13,11 @@ Uses ppxai Engine for consistent tool handling across all providers.
 Results are stored per provider/model pair with historical comparison.
 
 Usage:
-    python benchmark.py --provider perplexity --model sonar-pro
-    python benchmark.py --provider gemini --model gemini-2.5-flash
+    python benchmark.py --provider gemini --model gemini-3.8-flash
+    python benchmark.py --provider openai --model gpt-6-luna
     python benchmark.py --provider custom --model openai/gpt-oss-120b
     python benchmark.py --list-results
-    python benchmark.py --compare perplexity/sonar-pro gemini/gemini-2.5-flash
+    python benchmark.py --compare gemini/gemini-3.8-flash openai/gpt-6-luna
 """
 
 import argparse
@@ -60,9 +60,8 @@ def create_parser() -> argparse.ArgumentParser:
         epilog="""
 Examples:
   # Run benchmark against any provider (uses ppxai Engine)
-  python benchmark.py --provider perplexity --model sonar-pro
-  python benchmark.py --provider gemini --model gemini-2.5-flash
-  python benchmark.py --provider openai --model gpt-4o
+  python benchmark.py --provider gemini --model gemini-3.8-flash
+  python benchmark.py --provider openai --model gpt-6-luna
 
   # Run against custom providers (vLLM, Ollama, etc.)
   python benchmark.py --provider custom --model openai/gpt-oss-120b
@@ -83,7 +82,7 @@ Examples:
 
     # Run mode
     run_group = parser.add_argument_group("Run Benchmark")
-    run_group.add_argument("--provider", type=str, help="Provider name (e.g., perplexity, gemini, openai, custom)")
+    run_group.add_argument("--provider", type=str, help="Provider name (e.g., gemini, openai, openrouter, custom)")
     run_group.add_argument("--model", type=str, help="Model name/ID")
     run_group.add_argument("--categories", type=str, help="Comma-separated test categories to run")
     run_group.add_argument("--timeout", type=int, default=120, help="Timeout per test in seconds (default: 120)")

@@ -185,6 +185,19 @@ model_hints:
     - "Use ONLY tools from the available tools list - do NOT hallucinate tool names."
     - "apply_patch parameter names are EXACTLY 'file_path' and 'unified_diff' - do NOT substitute 'path' (it maps to a directory param, not the file)."
     - "Do NOT output tool call JSON in markdown code blocks - use native tool calling."
+  # gpt-6-sol* / gpt-6-luna* — facts only (no hand-tuned imperatives yet).
+  # Grounded in ppxai/engine/model_facts.py and providers/openai_native.py:
+  # Responses wire with native function calling, reasoning model, serial
+  # tool calls, no restricted params. Benchmarks: docs/model-selection-guide.md
+  # (luna median 90.1, sol 78.2 on 2026-10-11; sol is under-ranked because it
+  # checks before writing and single-turn tests score only the first call).
+  # gpt-6 does NOT match the "gpt-5*" fallback, so nothing stacks here.
+  "gpt-6-sol*":
+    - "Use native function calling through the tools API; do NOT output tool call JSON in your response text."
+    - "Make tool calls one at a time; parallel tool calls are not enabled for this model."
+  "gpt-6-luna*":
+    - "Use native function calling through the tools API; do NOT output tool call JSON in your response text."
+    - "Make tool calls one at a time; parallel tool calls are not enabled for this model."
   # gpt-5.5* family — flagship (released 2026-04-23, benchmarked 2026-04-26).
   # Score: WITH hints 86.1% / WITHOUT 91.7% (-5.6% — hints HURT).
   # Cloned-from-gpt-5.4 hints over-constrained the model: "MUST"/"NEVER"
@@ -314,6 +327,8 @@ model_hints:
     - "Do NOT ask permission before using tools. Call tools immediately without explaining."
     - "For code modifications, use apply_patch with unified diff format including 3+ context lines."
     - "Chain multiple DIFFERENT tool calls without stopping to narrate between them."
+  # gpt-4o* — RETIRES 2027-01-14 (OpenAI notice 2026-10-14; ppxai/engine/model_deprecations.py).
+  # Replacement: gpt-6-luna (see the "gpt-6-luna*" block). Works until then.
   "gpt-4o*":
     - "For code modifications, use apply_patch with unified diff format including 3+ context lines."
     - "CRITICAL: Do NOT output tool call JSON in your response text. Use the tools API."
@@ -336,6 +351,8 @@ model_hints:
     - "When a tool returns an error, acknowledge it to the user."
     - "Call tools directly - don't explain what you'll do first."
     - "For large file writes: generate the COMPLETE file content - never truncate or abbreviate."
+  # gpt-4.1* — RETIRES 2027-01-14 (OpenAI notice 2026-10-14; ppxai/engine/model_deprecations.py).
+  # Replacement: gpt-6-luna (see the "gpt-6-luna*" block). Works until then.
   "gpt-4.1*":
     - "You have 1M token context - leverage it for large codebase analysis."
     - "For code modifications, ALWAYS use apply_patch with unified diff format - do NOT use read_file for edits."
