@@ -30,11 +30,17 @@ carry a command catalog any more.
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 import ppxai.commands.handler  # noqa: F401  (populates CommandFactory)
 from ppxai.commands.factory import CommandFactory
+
+NODE = shutil.which("node")
+needs_node = pytest.mark.skipif(NODE is None, reason="node not on PATH")
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SHARED_DIR = REPO_ROOT / "ppxai" / "web" / "shared"
@@ -94,6 +100,7 @@ class TestCommandRosterModule:
     def test_module_exists(self):
         assert COMMAND_ROSTER_JS.exists()
 
+    @needs_node
     def test_valid_javascript_syntax(self):
         result = subprocess.run(
             ["node", "--check", str(COMMAND_ROSTER_JS)],
@@ -143,6 +150,7 @@ class TestFormatterFunctions:
     def test_formatters_js_exists(self):
         assert FORMATTERS_JS.exists(), f"formatters.js not found at {FORMATTERS_JS}"
 
+    @needs_node
     def test_formatters_js_syntax(self):
         result = subprocess.run(
             ["node", "--check", str(FORMATTERS_JS)],

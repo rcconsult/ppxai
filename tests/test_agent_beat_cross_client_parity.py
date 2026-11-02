@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -422,6 +423,8 @@ def _assert_invariants(
 # ──────────────────────────────────────────────────────────────────
 # Parametrised test — every (renderer, fixture) combination.
 # ──────────────────────────────────────────────────────────────────
+NODE = shutil.which("node")
+
 RENDERERS = {
     "rich": _rich_render,
     "textual": _textual_render,
@@ -437,10 +440,8 @@ def test_agent_beat_parity(client: str, fixture_name: str) -> None:
     if client in ("web", "vscode"):
         # JS renderers need node — skip if unavailable (CI should
         # always have it, local dev might not).
-        if subprocess.run(
-            ["node", "--version"], capture_output=True
-        ).returncode != 0:
-            pytest.skip("node not available")
+        if NODE is None:
+            pytest.skip("node not on PATH")
 
     beat = FIXTURES[fixture_name]
     result = RENDERERS[client](beat)
