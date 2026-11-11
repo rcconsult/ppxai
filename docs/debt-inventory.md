@@ -74,6 +74,7 @@ quoting them** — this table is a map, not a source.
 | **83** | the SERIAL test suite is ~2x slower per test than in July, cause unfound | owner decision 2026-09-27: record, not fix; the parallel default (~3 min) hides it |
 | **84** | the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell | owner decision 2026-09-28: record as debt, don't build it now |
 | **86** | Gemini 4 Argon (`gemini-4-argon`) is out; ppxai has no row for it | reference only — pricing recorded 2026-10-13; promo ends 2026-11-30; API access not yet verified on our key |
+| **87** | OpenAI email: gpt-5.5, gpt-5.5-pro, gpt-5.4-mini, gpt-5.4-nano, o3, o3-pro shut off 2026-12-11 | **deadline 2026-12-11** — only o3/o3-pro confirmed by the deprecations page; the other four conflict with it or are missing; owner decision pending |
 
 ---
 
@@ -2649,6 +2650,49 @@ any hint or default moves.
 **Trigger to revisit:** a live `generateContent` succeeds on `gemini-4-argon`,
 or the Item 54 re-probe on 2026-11-14. Effort: probe ~15 min; seed + config +
 benchmark ~half day.
+
+### Item 87 — OpenAI says six models shut off 2026-12-11; the deprecations page confirms only two [providers / openai / deprecations]
+
+**Filed 2026-11-11** (owner: "record open item"). Source: an OpenAI reminder
+email to the owner naming **gpt-5.5, gpt-5.4-mini, gpt-5.4-nano, gpt-5.5-pro,
+o3, o3-pro**, access shut off **2026-12-11**. It names no replacements (its
+"replacement models here" link was not in the pasted text).
+
+**Checked against [OpenAI's deprecations page](https://developers.openai.com/api/docs/deprecations)
+on 2026-11-11:**
+
+| model | email | deprecations page | `engine/model_deprecations.py` today |
+|---|---|---|---|
+| `o3`, `o3-pro` | 2026-12-11 | 2026-12-11 (announced 2026-06-11) → `gpt-5.6-sol` (o3-pro: `reasoning.mode: pro`) | only the snapshots `o3-2025-04-16` / `o3-pro-2025-06-10`; the bare aliases have no row, so `/doctor` misses them |
+| `gpt-5.4-nano` | 2026-12-11 | **2027-04-01** → `gpt-6-luna` | 2027-04-01 |
+| `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.4-mini` | 2026-12-11 | **not listed** | no row |
+
+The same 2026-06-11 notice also lists bare `gpt-5`, `gpt-5-mini`, `gpt-5-nano`,
+`gpt-5-pro`; the table has only their snapshots.
+
+**Where the four unconfirmed models are used:** the owner's HOME config
+(`providers.openai` `default_model` + `coding_model` and
+`execution.default_subagent.model` are `gpt-5.4-mini`; `gpt-5.5`/`gpt-5.5-pro`
+listed); the repo `ppxai-config.json` and `ppxai-config.example.json`
+(gpt-5.5, gpt-5.5-pro, gpt-5.4-mini, gpt-5.4-nano); AGENTS.md hint blocks
+`gpt-5.5*`, `gpt-5.4-mini*`, `gpt-5.4-nano*`, `o3*`; and the "vision-capable
+model (e.g. gpt-5.5 …)" example in `server/routes/chat.py` (×3),
+`commands/attach.py`, `engine/file_preprocessing.py`, `web/app.js`.
+
+**Proposed, awaiting the owner:**
+1. Page-confirmed now: add bare `o3`, `o3-pro`, `gpt-5`, `gpt-5-mini`,
+   `gpt-5-nano`, `gpt-5-pro` rows (2026-12-11, the page's replacements).
+2. On the email's word: rows for gpt-5.5 / gpt-5.5-pro (→ `gpt-6-sol`) and
+   gpt-5.4-mini (→ `gpt-6-luna`), gpt-5.4-nano moved to 2026-12-11; mark the
+   shipped configs `__comment_RETIRES`; swap the vision-error example.
+   Replacements are a guess following the 2026-10-01 pattern unless the
+   email's link says otherwise.
+3. HOME config: `gpt-5.4-mini` → `gpt-6-luna` (backup first).
+
+**Trigger to revisit:** owner decision, the deprecations page listing the four,
+or **2026-12-11** at the latest (after that a HOME default of `gpt-5.4-mini`
+fails every OpenAI call and every default sub-agent). Effort: 1 ~20 min;
+2 + 3 ~1 h.
 
 ## Closed (recent)
 
