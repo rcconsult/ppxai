@@ -526,6 +526,39 @@ OPENAI_DEPRECATIONS: dict[str, Deprecation] = {
     ),
 
     # ----- 2026-12-11 (announced 2026-06-11) -----
+    # Bare aliases added 2026-11-11: OpenAI's 2026-11-11 corrected notice
+    # names the families, and a config written by hand names the alias,
+    # not the snapshot.
+    "gpt-5": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-sol",
+        reason="Alias of gpt-5-2025-08-07.",
+    ),
+    "gpt-5-mini": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-terra",
+        reason="Alias of gpt-5-mini-2025-08-07.",
+    ),
+    "gpt-5-nano": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-luna",
+        reason="Alias of gpt-5-nano-2025-08-07.",
+    ),
+    "gpt-5-pro": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-sol",
+        reason="Alias of gpt-5-pro-2025-10-06. Use gpt-5.6-sol with reasoning.mode: pro.",
+    ),
+    "o3": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-sol",
+        reason="Alias of o3-2025-04-16.",
+    ),
+    "o3-pro": Deprecation(
+        shutdown_date="2026-12-11",
+        replacement="gpt-5.6-sol",
+        reason="Alias of o3-pro-2025-06-10. Use gpt-5.6-sol with reasoning.mode: pro.",
+    ),
     "gpt-5-2025-08-07": Deprecation(
         shutdown_date="2026-12-11",
         replacement="gpt-5.6-sol",

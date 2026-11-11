@@ -74,7 +74,6 @@ quoting them** — this table is a map, not a source.
 | **83** | the SERIAL test suite is ~2x slower per test than in July, cause unfound | owner decision 2026-09-27: record, not fix; the parallel default (~3 min) hides it |
 | **84** | the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell | owner decision 2026-09-28: record as debt, don't build it now |
 | **86** | Gemini 4 Argon (`gemini-4-argon`) is out; ppxai has no row for it | reference only — pricing recorded 2026-10-13; promo ends 2026-11-30; API access not yet verified on our key |
-| **87** | OpenAI email: gpt-5.5, gpt-5.5-pro, gpt-5.4-mini, gpt-5.4-nano, o3, o3-pro shut off 2026-12-11 | **deadline 2026-12-11** — only o3/o3-pro confirmed by the deprecations page; the other four conflict with it or are missing; owner decision pending |
 
 ---
 
@@ -2651,49 +2650,6 @@ any hint or default moves.
 or the Item 54 re-probe on 2026-11-14. Effort: probe ~15 min; seed + config +
 benchmark ~half day.
 
-### Item 87 — OpenAI says six models shut off 2026-12-11; the deprecations page confirms only two [providers / openai / deprecations]
-
-**Filed 2026-11-11** (owner: "record open item"). Source: an OpenAI reminder
-email to the owner naming **gpt-5.5, gpt-5.4-mini, gpt-5.4-nano, gpt-5.5-pro,
-o3, o3-pro**, access shut off **2026-12-11**. It names no replacements (its
-"replacement models here" link was not in the pasted text).
-
-**Checked against [OpenAI's deprecations page](https://developers.openai.com/api/docs/deprecations)
-on 2026-11-11:**
-
-| model | email | deprecations page | `engine/model_deprecations.py` today |
-|---|---|---|---|
-| `o3`, `o3-pro` | 2026-12-11 | 2026-12-11 (announced 2026-06-11) → `gpt-5.6-sol` (o3-pro: `reasoning.mode: pro`) | only the snapshots `o3-2025-04-16` / `o3-pro-2025-06-10`; the bare aliases have no row, so `/doctor` misses them |
-| `gpt-5.4-nano` | 2026-12-11 | **2027-04-01** → `gpt-6-luna` | 2027-04-01 |
-| `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.4-mini` | 2026-12-11 | **not listed** | no row |
-
-The same 2026-06-11 notice also lists bare `gpt-5`, `gpt-5-mini`, `gpt-5-nano`,
-`gpt-5-pro`; the table has only their snapshots.
-
-**Where the four unconfirmed models are used:** the owner's HOME config
-(`providers.openai` `default_model` + `coding_model` and
-`execution.default_subagent.model` are `gpt-5.4-mini`; `gpt-5.5`/`gpt-5.5-pro`
-listed); the repo `ppxai-config.json` and `ppxai-config.example.json`
-(gpt-5.5, gpt-5.5-pro, gpt-5.4-mini, gpt-5.4-nano); AGENTS.md hint blocks
-`gpt-5.5*`, `gpt-5.4-mini*`, `gpt-5.4-nano*`, `o3*`; and the "vision-capable
-model (e.g. gpt-5.5 …)" example in `server/routes/chat.py` (×3),
-`commands/attach.py`, `engine/file_preprocessing.py`, `web/app.js`.
-
-**Proposed, awaiting the owner:**
-1. Page-confirmed now: add bare `o3`, `o3-pro`, `gpt-5`, `gpt-5-mini`,
-   `gpt-5-nano`, `gpt-5-pro` rows (2026-12-11, the page's replacements).
-2. On the email's word: rows for gpt-5.5 / gpt-5.5-pro (→ `gpt-6-sol`) and
-   gpt-5.4-mini (→ `gpt-6-luna`), gpt-5.4-nano moved to 2026-12-11; mark the
-   shipped configs `__comment_RETIRES`; swap the vision-error example.
-   Replacements are a guess following the 2026-10-01 pattern unless the
-   email's link says otherwise.
-3. HOME config: `gpt-5.4-mini` → `gpt-6-luna` (backup first).
-
-**Trigger to revisit:** owner decision, the deprecations page listing the four,
-or **2026-12-11** at the latest (after that a HOME default of `gpt-5.4-mini`
-fails every OpenAI call and every default sub-agent). Effort: 1 ~20 min;
-2 + 3 ~1 h.
-
 ## Closed (recent)
 
 One-liners only. Most have full bodies + evidence trails archived in
@@ -2703,6 +2659,7 @@ Items 56-60 were never archived — their bodies were deleted on close and
 the one-liner below is all that remains of each.
 
 - **Item 46** — `/task` tools consent-free AND path-unconfined by default — closed 2026-10-11, both halves (owner decisions). Posture (`1bcd6180`): `execution.task.sandbox.enforcement` defaults to `"in_process"` and the seal confines a run TO its requested workdir (else the session folder, else a per-run scratch folder); `BUILTIN_DENY` (credentials) applies sealed or not, `read_paths.deny` applies with the seal off, `workdir_ignored` is always False. Upgrade regression (`d0b5b26e`): `config.initialize()` raises `RetiredSecurityKeyError` while `tools.agent.sandbox` is present, and every entry point exits with the message. Fenced by `tests/test_retired_security_key_refusal.py`, `tests/test_task_session_workdir.py`, `tests/test_filesystem_policy.py::TestBuiltinDenyAndSealOff`. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
+- **Item 87** — OpenAI's 2026-12-11 shutdown email — closed 2026-11-11. OpenAI's corrected notice (2026-11-11) names gpt-5, gpt-5-mini, gpt-5-nano, gpt-5-pro, o3, o3-pro, matching the deprecations page; the first email's gpt-5.5 / gpt-5.5-pro / gpt-5.4-mini / gpt-5.4-nano were its error (gpt-5.4-nano stays 2027-04-01). The six bare aliases now have rows in `engine/model_deprecations.py`. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 85** — ~296 relative links inside `docs/archive/` didn't resolve — fixed 2026-10-11 (`60e60dda`): 357 links repaired, and `TestDocLinksResolve` now covers `docs/archive/` with a 5-entry `ARCHIVE_LINK_EXEMPT` set. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 80** — a non-repeating multi-tool cycle trips neither guard — closed 2026-09-26 by making its outcome better and its shape visible, not by detecting it (owner chose options B+C+logging). The iteration cap used to end every such turn on a canned "limit reached" line. Now one tools-withdrawn answer pass runs after the last tool iteration (`ToolGuardReason.ITERATION_CAP`, additive; `max_iterations_reached` still set), a single converge notice goes out at ~70% of the cap, and the cap, the notice, both guards and the zombie breaker log `ToolManager.describe_call_pattern()` (shape, repeating cycle, per-tool distinct-args counts, tail). A detector that refuses the alternating shape is still declined, because exploration looks the same. The logged pattern is the evidence for designing one if an incident recurs. Fenced by `tests/test_tool_loop_guard.py::TestIterationCap` / `TestCallPattern` and the reason-vocabulary fence. Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).
 - **Item 81** — test-order provider-class leak — closed 2026-09-26. `test_custom_endpoint_integration.py::custom_engine` purged `ppxai.engine.providers*` from `sys.modules` without restoring them, even on its skip path, so later modules compared classes from two imports. The purge was obsolete, because `tls_verify()` resolves at client build, so it is deleted. Fenced by `tests/test_no_sys_modules_purge.py` (AST check against computed-name `sys.modules` deletes in-process, mutation-verified). Full body archived in [docs/archive/DEBT-INVENTORY-CLOSED.md](archive/DEBT-INVENTORY-CLOSED.md).

@@ -681,7 +681,10 @@ class TestDeprecationTableInvariants:
         # 2026-10-15: + the 2026-10-14 GPT-4 series entry (5 snapshots) and
         # the 4 aliases its notice names (gpt-4o, gpt-4o-mini, gpt-4.1,
         # gpt-4.1-mini), which the page itself doesn't list.
-        assert len(OPENAI_DEPRECATIONS) == 92
+        # 2026-11-11: + the 6 bare aliases of the 2026-12-11 entry (gpt-5,
+        # gpt-5-mini, gpt-5-nano, gpt-5-pro, o3, o3-pro), named in OpenAI's
+        # corrected 2026-11-11 notice; only their snapshots had rows.
+        assert len(OPENAI_DEPRECATIONS) == 98
 
     def test_all_deprecations_merged_correctly(self):
         # ALL_DEPRECATIONS must be the union of every provider-specific dict.
