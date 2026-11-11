@@ -58,7 +58,7 @@ quoting them** — this table is a map, not a source.
 | **22** | `PpxaiApp` (web/app.js) decomposition (4,406 LoC, re-measure — drifts) | trigger-deferred |
 | **29** | `engine.completion` imports `commands.factory` (layer inversion) | **the import is GONE (ADR 0007 step 4, 2026-09-21)** — see the note; what is left is optional and cosmetic |
 | **35** | pluggable persistence channel abstraction | ~2–3 d, wants its own ADR |
-| **38** | model-catalog watch list | recurring sweep; last one found 4 dead NVIDIA ids shipping |
+| **38** | model-catalog watch list | **2026-11-11 sweep: Gemini deprecation table stale** — 4 wrong rows (one calls live `gemini-2.5-flash-lite` dead), `gemini-3.1-flash-lite` (shuts 2027-05-07) missing; recorded, not fixed |
 | **55** | OpenAI fleet refresh (gpt-5.6 GA + price cuts) | cost-driven, no deadline |
 | **63** | benchmark conclusions hand-typed into code, unlinked | sequenced after ADR 0012 W3 |
 | **66** | the deprecation table only knows the models WE ship | **went live 2026-09-10** — shipping the Anthropic provider made a stale `RECOMMENDED_DEFAULTS` row reachable; fixed + fenced, but the class stands |
@@ -693,7 +693,38 @@ missing abstraction visible).
 
 ---
 
-### Item 38 — model-catalog watch list (verified live 2026-08-31)
+### Item 38 — model-catalog watch list (verified live 2026-08-31; Gemini deprecation table stale as of 2026-11-11)
+
+**Sweep 2026-11-11 — THE GEMINI DEPRECATION TABLE IS STALE (open, owner
+decision: record, don't fix yet).** Compared `GEMINI_DEPRECATIONS`
+(`engine/model_deprecations.py`, header still "verified 2026-04-12") with
+Google's deprecations page, now at <https://aistudio.google.com/docs/deprecations>
+(the `ai.google.dev/gemini-api/docs/deprecations` URL in the module docstring
+301-redirects there). Read through WebFetch's summarizer — **spot-check the
+2.5 rows before editing**: their dates moved LATER, which is unusual.
+
+| model | our row | Google's page 2026-11-11 | effect |
+|---|---|---|---|
+| `gemini-2.5-flash-lite` | shutdown 2026-10-16 | **no shutdown announced** | `/doctor` calls a live model dead |
+| `gemini-2.5-pro` | 2026-10-16 → `gemini-3.1-pro-preview` | **2026-12-01**, auto-routed after → `gemini-3.8-flash` | wrong date + replacement |
+| `gemini-2.5-flash` | 2026-10-16 → `gemini-3.6-flash` | **2026-12-01**, auto-routed after → `gemini-3.5-flash-lite` | wrong date + replacement |
+| `gemini-2.5-flash-image` | 2026-10-02 → `gemini-3.1-flash-image` | **2027-03-15** → `gemini-3.1-flash-lite-image` | wrong date + replacement |
+| `gemini-3.5-flash`, `gemini-3.7-flash` | 2026-10-11 / 2026-10-17 | "N/A — no longer in AI Studio; API requests route automatically" → 3.6-flash / 3.8-flash | fine, reason text should say auto-routed, not dead |
+
+**Missing rows:** `gemini-3.1-flash-lite` → **2027-05-07**, replacement
+`gemini-3.5-flash-lite` (shipped 6× across the repo and HOME configs);
+dead snapshots a hand-written config may still name — `gemini-2.0-flash-001`,
+`gemini-2.0-flash-lite-001`, `gemini-2.0-flash-lite-preview(-02-05)`,
+`gemini-2.5-pro-preview-03-25/-05-06/-06-05`, `gemini-2.5-flash-preview-05-20/-09-2025`,
+`gemini-2.5-flash-lite-preview-09-2025`.
+
+**Related:** the repo `ppxai-config.json` still ships `gemini-3.5-flash`
+(auto-routed, still answers); the HOME config has
+`gemini-3.1-pro-preview-customtools`, which the page does not list;
+`gemini-4-carbon` released 2026-11-10 (next to Argon, Item 86).
+
+**To fix:** correct the four rows, add the missing ones, re-date the header and
+source URL, bump `test_gemini_deprecation_count` (pins 10). ~30 min.
 
 **Sweep 2026-08-31 — FOUR CONFIGURED NVIDIA MODELS WERE DEAD.** The first
 sweep in this item's history to find real breakage, and it had been shipping
