@@ -34,7 +34,9 @@ def shell_tool(mock_engine):
 class TestCompoundCommands:
     """Shell operators (&&, ||, ;, |) should bypass cd/interactive handlers."""
 
-    @pytest.mark.skipif(shutil.which("pwd") is None, reason="needs a pwd executable on PATH (Windows cmd.exe has none; Git's usr/bin provides one)")
+    # Windows: the tool runs cmd.exe, which has no /tmp, so `cd /tmp` fails even
+    # when Git Bash has put a `pwd` on PATH; checking for `pwd` alone is not enough.
+    @pytest.mark.skipif(sys.platform == "win32", reason="cmd.exe has no /tmp to cd into")
     @pytest.mark.asyncio
     async def test_cd_with_and_operator_runs_as_shell(self, shell_tool):
         """cd /path && command should NOT trigger cd handler (was bug: 'Directory not found')."""
