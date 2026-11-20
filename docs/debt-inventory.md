@@ -50,7 +50,7 @@ quoting them** — this table is a map, not a source.
 | **72** | the additive-CA TLS guarantee is pinned only on cafile hosts | coverage ceiling; Linux CI cannot decide it offline |
 | **73** | `rendering.textual_renderer` ↔ `tui.app` import cycle, hidden by import order | **fenced 2026-09-20** — a module-wide standalone-import sweep now catches any NEW cycle; the cycle itself is still open |
 | **74** | `/preview --serve` cannot start ANY Node project on Windows | auto-detect returns `npm start`, which CreateProcess cannot launch because `npm` is a `.cmd`/`.ps1`, not an `.exe` |
-| **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; waits on Google shipping a GA Pro |
+| **54** | Gemini fleet migration | **not a deadline item any more** — all four facts closed 2026-08-31/09-01; re-probed 2026-11-20: still no GA 3.x Pro, but `gemini-4-argon` answers live; target switches to it once Item 86 adopts it; obligation due 2027-01-15 |
 | **3** | k8s session-manager security tests | trigger-deferred; quick pass done, full suite postponed |
 | **36** | per-session sub-agent config + `/subagent` command, persisted in checkpoint | deferred — natural fit alongside session/spawn machinery |
 | **37** | agent-platform (v1.19.0) watchlist | low-severity, correctness-neutral items from Inc 5-7 reviews; none block the MVP |
@@ -73,7 +73,7 @@ quoting them** — this table is a map, not a source.
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
 | **83** | the SERIAL test suite is ~2x slower per test than in July, cause unfound | owner decision 2026-09-27: record, not fix; the parallel default (~3 min) hides it |
 | **84** | the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell | owner decision 2026-09-28: record as debt, don't build it now |
-| **86** | Gemini 4 Argon (`gemini-4-argon`) is out; ppxai has no row for it | reference only — pricing recorded 2026-10-13; promo ends 2026-11-30; API access not yet verified on our key |
+| **86** | Gemini 4 Argon (`gemini-4-argon`) is out; ppxai has no row for it | **trigger met 2026-11-20** — all four Gemini 4 models (Carbon, Argon, Neon, Hydrogen) answer and call tools on our key; `thought_signature` mandatory; adopt (seed rows, prices, config, benchmark), then Item 54 points at it — Carbon vs Argon as the target is open; promo ends 2026-11-30 |
 
 ---
 
@@ -1103,8 +1103,18 @@ successor in the Pro tier**, re-confirmed live rather than inherited from
 the August note. `gemini-3.1-flash-lite` carries its own 2027-05-07 sunset.
 Revisit when Google ships a GA Pro.
 Re-probed 2026-10-11 (`scripts/probe-gemini-pro-tier.py`, 62 models): still
-no GA 3.x Pro, only the two `gemini-3.1-pro-preview` ids. Next check is the
-2026-11-14 dated obligation.
+no GA 3.x Pro, only the two `gemini-3.1-pro-preview` ids.
+**Re-probed 2026-11-20** (66 models, the 2026-11-14 dated obligation): still
+no GA 3.x Pro, same two previews (`3.1-pro-preview-01-2026`). New since
+10-11: **Gemini 4 is listed** — `gemini-4-argon`, `gemini-4-carbon`,
+`gemini-4-hydrogen`, `gemini-4-neon`, all with `generateContent`, all with
+`version` `3.0` (a placeholder, not a pinned version).
+`scripts/probe-gemini-pro-tier.py` only looks at 3.x, so it does not report
+them. `gemini-4-argon` answered a live `generateContent` on the owner's key
+(HTTP 200, 3.1 s, 41 tokens). **Owner decision 2026-11-20:** keep
+`gemini-3.1-pro-preview` as the target for now; adopt Argon through Item 86
+first (seed row, prices, benchmark), then switch the two rows to it and
+delete the dated obligation. Next check: the obligation, now due 2027-01-15.
 
 **Facts (verified on ai.google.dev 2026-08-01):**
 1. **2.5-line shutdown, earliest 2026-10-16:** `gemini-2.5-flash` →
@@ -2677,9 +2687,61 @@ the 2026-12-01 step recorded (a promo price in a facts block goes stale
 silently), an example-config entry, and a benchmark run per AGENTS.md before
 any hint or default moves.
 
-**Trigger to revisit:** a live `generateContent` succeeds on `gemini-4-argon`,
-or the Item 54 re-probe on 2026-11-14. Effort: probe ~15 min; seed + config +
+**Trigger MET 2026-11-20:** the Item 54 re-probe found `gemini-4-argon` in
+ListModels (66 models; also `gemini-4-carbon`, `-hydrogen`, `-neon`), and a
+live `generateContent` succeeded on the owner's key: HTTP 200 in 3.1 s,
+`modelVersion` `gemini-4-argon`, reply `ok`, 36 prompt + 5 output tokens,
+`serviceTier` standard. ListModels gives `inputTokenLimit` 1,048,576 (the
+1M press figure holds for input), `outputTokenLimit` 32,768, `thinking`
+true, `version` `3.0` (placeholder). Owner decision: adopt it here first,
+then Item 54 switches its two deprecation rows to it. Was: a live
+`generateContent` succeeds on `gemini-4-argon`, or the Item 54 re-probe on
+2026-11-14. Effort: probe ~15 min; seed + config +
 benchmark ~half day.
+
+**Gemini 4 fleet check, 2026-11-20** (the same session, all four models, raw
+REST on the owner's key):
+
+| id | plain reply | tool call → round 2 | thinking tokens on "ok" | ListModels in / out | price, USD / 1M in / out / cached |
+|---|---|---|---|---|---|
+| `gemini-4-carbon` | 200, 5.3 s | ✅ (first call 33.5 s) | 66 | 1,048,576 / 32,768 | $2 / $10 / $0.10 to 2026-11-30, then $4 / $20 / $0.20 |
+| `gemini-4-argon` | 200, 5.0 s | ✅ | none reported | 1,048,576 / 32,768 | same as Carbon |
+| `gemini-4-neon` | 200, 2.4 s | ✅ | 32 | 1,048,576 / 65,536 | $3 / $15 / $0.15, no promo |
+| `gemini-4-hydrogen` | 200, 3.0 s | ✅ | 52 | 1,048,576 / 65,536 | $1.50 / $7.50 / $0.075, **free tier** |
+
+- **`thought_signature` is mandatory on all four**, as on Gemini 3: round 2
+  with the `functionCall` part's signature dropped is HTTP 400 "Function call
+  is missing a thought_signature in functionCall parts". Kept, all four
+  answer correctly.
+- **New: every `functionCall` carries an `id`** (`call_<digits>`).
+  `providers/gemini.py:837` says Gemini "only populates FunctionCall.id in
+  some API configurations"; whether ppxai echoes it back on the
+  `functionResponse` is unchecked (the raw probe sent no id back and Gemini
+  accepted it).
+- **Positioning** (AI Studio models page, read 2026-11-20; read through a
+  summariser, so re-check before quoting): Carbon "our strongest reasoning
+  model"; Neon "frontier-level intelligence"; Argon "our efficient Gemini 4
+  frontier reasoning model … lower token use per turn than Carbon";
+  Hydrogen speed and efficiency for everyday coding and agentic work. **None
+  is labelled Pro/Flash/Flash-Lite, nor Preview or GA.** The page gives up
+  to 64K output for all four, while ListModels says 32,768 for Carbon and
+  Argon.
+- **This reopens the Item 54 choice:** if "the Pro successor" means the
+  strongest reasoner, that is Carbon, not Argon. The owner picked Argon
+  before these facts were known; the decision stands until the owner
+  revisits it.
+- **Also seen on the models page, unverified:** Google now routes the 2.5
+  shutdown traffic (`gemini-2.5-pro` → `gemini-3.8-flash`, `gemini-2.5-flash`
+  → `gemini-3.5-flash-lite`), and the 2.5 Flash-Lite note says new projects
+  should use "Gemini 4 Hydrogen or 3.5 Flash-Lite". Both disagree with rows
+  in `GEMINI_DEPRECATIONS`, which is the Item 38 2026-11-11 staleness finding.
+- **Rest of the fleet (51 `gemini-*` ids listed):** besides Gemini 4,
+  chat-capable ids ppxai has no row for: `gemini-3.5-flash-lite`, the
+  `gemini-omni-*-flash` family, and the `gemini-flash-latest` /
+  `gemini-flash-lite-latest` / `gemini-pro-latest` aliases. All seven
+  deprecated ids that are still listed still answer ListModels: the 2.5
+  line, `gemini-3.1-flash-lite-preview`, `gemini-3.5-flash`,
+  `gemini-3.7-flash`.
 
 ## Closed (recent)
 

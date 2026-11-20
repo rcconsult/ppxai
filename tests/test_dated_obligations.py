@@ -25,9 +25,20 @@ import pytest
 #: ship a fix.
 OBLIGATIONS = [
     (
-        date(2026, 11, 14),
+        date(2027, 1, 15),
         "debt Item 54 — re-probe Gemini's Pro tier for a GA successor",
         (
+            "RE-PROBED 2026-11-20 (66 models): STILL NO GA 3.x Pro; same two "
+            "previews. NEW: Gemini 4 is listed (`gemini-4-argon`, `-carbon`, "
+            "`-hydrogen`, `-neon`; `version` 3.0 on all four, a placeholder), "
+            "and `gemini-4-argon` answered a live generateContent on the "
+            "owner's key. The probe script only looks at 3.x. Owner decision: "
+            "keep `gemini-3.1-pro-preview` as the target until Argon is "
+            "adopted through debt Item 86 (seed row, prices, benchmark); then "
+            "switching the two rows to it is the fix, and this entry goes. "
+            "Item 86's fleet check reopens the choice: Google calls "
+            "`gemini-4-carbon` its strongest reasoning model. "
+            "Due date moved 11-14 -> 2027-01-15.\n"
             "RE-PROBED 2026-10-11 (62 models): STILL NO GA 3.x Pro; same two "
             "previews (version 3.1-pro-preview-01-2026), due date kept.\n"
             "RE-PROBED 2026-09-20 (58 models, was 52 on 09-01): STILL NO GA "
