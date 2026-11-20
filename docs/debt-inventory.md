@@ -73,7 +73,7 @@ quoting them** — this table is a map, not a source.
 | **79** | `EngineClient`'s file-backend notification reads a `checkpoint_dir` attribute `CheckpointManager` doesn't have | harmless today (the getattr fallback is correct), silently wrong if it and the real backend path ever diverge |
 | **83** | the SERIAL test suite is ~2x slower per test than in July, cause unfound | owner decision 2026-09-27: record, not fix; the parallel default (~3 min) hides it |
 | **84** | the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell | owner decision 2026-09-28: record as debt, don't build it now |
-| **86** | Gemini 4 Argon (`gemini-4-argon`) is out; ppxai has no row for it | **trigger met 2026-11-20** — all four Gemini 4 models (Carbon, Argon, Neon, Hydrogen) answer and call tools on our key; `thought_signature` mandatory; adopt (seed rows, prices, config, benchmark), then Item 54 points at it — Carbon vs Argon as the target is open; promo ends 2026-11-30 |
+| **86** | Gemini 4 Argon (`gemini-4-argon`) is out; ppxai has no row for it | **trigger met 2026-11-20** — all four Gemini 4 models (Carbon, Argon, Neon, Hydrogen) answer and call tools on our key; `thought_signature` mandatory; adopt (seed rows, prices, config, benchmark), then Item 54 points at it — Carbon vs Argon as the target is open; **owner 2026-11-20: record only, no Gemini work yet**; promo ends 2026-11-30 |
 
 ---
 
@@ -1114,7 +1114,9 @@ them. `gemini-4-argon` answered a live `generateContent` on the owner's key
 (HTTP 200, 3.1 s, 41 tokens). **Owner decision 2026-11-20:** keep
 `gemini-3.1-pro-preview` as the target for now; adopt Argon through Item 86
 first (seed row, prices, benchmark), then switch the two rows to it and
-delete the dated obligation. Next check: the obligation, now due 2027-01-15.
+delete the dated obligation. The same day the owner deferred all Gemini
+work (record only; see Item 86). Next check: the obligation, now due
+2027-01-15.
 
 **Facts (verified on ai.google.dev 2026-08-01):**
 1. **2.5-line shutdown, earliest 2026-10-16:** `gemini-2.5-flash` →
@@ -2730,6 +2732,10 @@ REST on the owner's key):
   strongest reasoner, that is Carbon, not Argon. The owner picked Argon
   before these facts were known; the decision stands until the owner
   revisits it.
+- **Owner decision 2026-11-20: record only, no Gemini work yet.** No seed
+  rows, no config entries, no benchmark, no deprecation-table change (that
+  includes Item 38's stale rows). The promo price step on 2026-12-01 is
+  noted, not acted on.
 - **Also seen on the models page, unverified:** Google now routes the 2.5
   shutdown traffic (`gemini-2.5-pro` → `gemini-3.8-flash`, `gemini-2.5-flash`
   → `gemini-3.5-flash-lite`), and the 2.5 Flash-Lite note says new projects
