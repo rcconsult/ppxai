@@ -2347,6 +2347,12 @@ class PpxaiApp {
                     // v1.13.2: Handle empty responses from AI (common with GPT-OSS 120B after tool iterations)
                     contentEl.innerHTML = '<em class="empty-response">Task completed. (No additional response from AI)</em>';
                 }
+                // ADR 0019: the turn's numbered sources, under the answer. A
+                // sibling of the content element, so the final re-render of
+                // the content (after the stream loop) leaves it in place.
+                if (window.PpxaiSources) {
+                    window.PpxaiSources.attachSources(contentEl, event.metadata && event.metadata.sources);
+                }
                 break;
 
             case 'tool_group_start':

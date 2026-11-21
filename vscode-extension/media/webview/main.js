@@ -1091,6 +1091,13 @@ window.addEventListener('message', (event) => {
             }
             currentResponseContent = message.content;
             scheduleRender();
+            // ADR 0019: the turn's (or the run's) numbered sources, as a
+            // sibling of the content element, so later re-renders of the
+            // content leave it in place. Absent → nothing changes.
+            if (message.sources && window.PpxaiSources) {
+                window.PpxaiSources.attachSources(
+                    currentResponseEl.querySelector('.message-content'), message.sources);
+            }
             break;
 
         case 'emptyResponse':
@@ -1394,7 +1401,11 @@ window.addEventListener('message', (event) => {
 
             message.messages.forEach(msg => {
                 if (msg.role !== 'system') {
-                    addMessage(msg.role, msg.content, msg.role === 'assistant');
+                    const el = addMessage(msg.role, msg.content, msg.role === 'assistant');
+                    // ADR 0019: a stored answer keeps its sources.
+                    if (msg.sources && el && window.PpxaiSources) {
+                        window.PpxaiSources.attachSources(el.querySelector('.message-content'), msg.sources);
+                    }
                 }
             });
             break;

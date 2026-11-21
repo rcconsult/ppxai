@@ -8,6 +8,11 @@ in an expandable tree format.
 import json
 from typing import Any
 
+try:  # stdlib from Python 3.11; before that, the declared `tomli` backport
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
+
 from textual.app import ComposeResult
 from textual.widgets import Static, Tree
 from textual.widgets.tree import TreeNode
@@ -164,7 +169,6 @@ class TreeViewer(Static):
             title: Root node label
         """
         try:
-            import tomllib
             data = tomllib.loads(text)
             self.set_data(data, title)
         except Exception as e:

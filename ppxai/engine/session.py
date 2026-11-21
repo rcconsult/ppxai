@@ -25,7 +25,7 @@ from ..usage import save_session_usage
 from ..usage_events import TIER_CHAT, record_usage
 from .artifact_registry import ArtifactRegistry
 from .session_store import SessionFileStore
-from .sources import Source, sources_from_rows
+from .sources import Source, format_sources_markdown, sources_from_rows
 from .types import (
     ImageAttachmentRef,
     Message,
@@ -2177,11 +2177,7 @@ class SessionManager:
             content += f"### {role}\n\n{msg.text_content()}\n\n"
             # ADR 0019: an answer's `[n]` stays resolvable in the export.
             if msg.sources:
-                content += "**Sources:**\n\n"
-                for src in msg.sources:
-                    label = src.title or src.url
-                    content += f"{src.n}. [{label}]({src.url})\n"
-                content += "\n"
+                content += format_sources_markdown(msg.sources) + "\n\n"
 
         # Write to file
         with open(filepath, 'w', encoding='utf-8') as f:

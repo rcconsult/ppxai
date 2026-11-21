@@ -38,10 +38,26 @@ export type ConsentResponse = 'y' | 'n' | 'always' | 'never' | 'terminal';
 
 // === Stream Event Types ===
 
+/** ADR 0019: one numbered source an answer cites as `[n]`. */
+export interface SourceRow {
+    n: number;
+    url: string;
+    title?: string | null;
+    backend?: string | null;
+    query?: string | null;
+}
+
+/** ADR 0019: the rows from a stream_end's metadata, or undefined. */
+export function sourcesOf(metadata: EventMetadata | undefined): SourceRow[] | undefined {
+    const raw = metadata?.sources;
+    return Array.isArray(raw) && raw.length ? (raw as SourceRow[]) : undefined;
+}
+
 export interface EventMetadata {
     file_path?: string;
     operation?: string;
     tool_name?: string;
+    sources?: SourceRow[];
     [key: string]: unknown;
 }
 
@@ -183,6 +199,8 @@ export type MessageContent = string | ContentBlock[];
 export interface Message {
     role: 'user' | 'assistant' | 'system';
     content: MessageContent;
+    /** ADR 0019: the turn's numbered sources, on an assistant message. */
+    sources?: SourceRow[];
 }
 
 /**
@@ -1045,6 +1063,7 @@ export class HttpClient {
             streamCallback?.({ type: 'started', content: '' });
 
             let fullResponse = '';
+            let turnSources: SourceRow[] | undefined;  // ADR 0019
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -1070,6 +1089,8 @@ export class HttpClient {
                                     streamCallback?.(mappedEvent);
                                     if (mappedEvent.type === 'chunk') {
                                         fullResponse += mappedEvent.content;
+                                    } else if (mappedEvent.type === 'done') {
+                                        turnSources = sourcesOf(mappedEvent.metadata) ?? turnSources;
                                     }
                                 }
 
@@ -1094,7 +1115,11 @@ export class HttpClient {
             streamCallback?.({ type: 'done', content: fullResponse });
 
             // Track response in local history
-            this.conversationHistory.push({ role: 'assistant', content: fullResponse });
+            this.conversationHistory.push(
+                turnSources
+                    ? { role: 'assistant', content: fullResponse, sources: turnSources }
+                    : { role: 'assistant', content: fullResponse }
+            );
 
             return fullResponse;
         } catch (error: any) {

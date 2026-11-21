@@ -24,6 +24,7 @@ from datetime import date
 
 from ..sources import SourceLedger, number_sources
 from . import get_backend
+from .redirects import resolve_result
 from .resolver import resolve_web_search_backend
 from .types import SearchResult
 
@@ -83,7 +84,9 @@ async def retrieve(
     resolution = resolve_web_search_backend(provider_name, egress_allows=egress_allows)
     for backend_id in resolution.candidates:
         try:
-            retrieval.result = await get_backend(backend_id).search(query, NUM_RESULTS)
+            result = await get_backend(backend_id).search(query, NUM_RESULTS)
+            # ADR 0019: Gemini's redirect links expire; keep the real pages.
+            retrieval.result = await resolve_result(result, egress_allows)
             retrieval.searched = True
             return retrieval
         except Exception as exc:  # noqa: BLE001 — one backend's failure is not fatal

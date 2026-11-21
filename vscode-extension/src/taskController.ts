@@ -50,6 +50,18 @@
 // Wire types (the /v1/agent/* projections this controller consumes)
 // ============================================================================
 
+/** ADR 0019: one numbered source a run's result cites as `[n]`. Declared
+ *  here, not imported from httpClient: this module stays import-free
+ *  (it is driven under plain Node by the tests). Same shape as
+ *  httpClient's `SourceRow`. */
+export interface RunSourceRow {
+    n: number;
+    url: string;
+    title?: string | null;
+    backend?: string | null;
+    query?: string | null;
+}
+
 /** RunMetaResponse projection (routes/agent_v1.py). */
 export interface AgentRunMeta {
     run_id: string;
@@ -73,6 +85,8 @@ export interface AgentRunMeta {
     acked_at?: number | null;
     result?: string | null;
     error?: string | null;
+    /** ADR 0019: the run's numbered sources; the result cites them as `[n]`. */
+    sources?: RunSourceRow[];
 }
 
 /** The httpClient slice this controller drives (see httpClient.ts). */
@@ -103,8 +117,9 @@ export interface ConsentAnswer {
 export interface TaskUi {
     /** One-line status/info into the chat transcript. */
     system(text: string): void;
-    /** A run's result body (markdown) into the chat transcript. */
-    result(text: string): void;
+    /** A run's result body (markdown) into the chat transcript, with the
+     *  run's numbered sources (ADR 0019) when it has any. */
+    result(text: string, sources?: RunSourceRow[]): void;
     /** T5 consent park → native QuickPick (Approve/Deny). */
     askConsent(runId: string, kind: string, prompt: string): Promise<ConsentAnswer | undefined>;
 }
@@ -723,7 +738,7 @@ export class TaskController {
         if (run.workdir) { bits.push(`wd: ${run.workdir}`); }
         this.ui.system(bits.join('  |  '));
         if (SUCCESS_STATUSES.has(run.status) && run.result) {
-            this.ui.result(run.result);
+            this.ui.result(run.result, run.sources);
             if (run.status === 'completed_pending_ack') {
                 this.ui.system(`📬 result held — collect with ${this.cmd} collect ${run.run_id}`);
             }

@@ -500,8 +500,15 @@ class AgentRunController {
             // auto-merges into the active session (announce=true = the
             // watcher observed the completion; focus() refreshes pass false
             // so reopening an old run never re-merges).
-            if (view) view.setResult(run.result || '');
-            else this.app.addMessage('assistant', run.result || '(empty result)');
+            // ADR 0019: the run's sources render under its result either way.
+            if (view) view.setResult(run.result || '', run.sources);
+            else {
+                const msgEl = this.app.addMessage('assistant', run.result || '(empty result)');
+                const contentEl = msgEl && msgEl.querySelector && msgEl.querySelector('.message-content');
+                if (contentEl && typeof window !== 'undefined' && window.PpxaiSources) {
+                    window.PpxaiSources.attachSources(contentEl, run.sources);
+                }
+            }
             if (announce && run.result) void this._autoMergeIfConfigured(runId);
         } else {
             // failed / cancelled / interrupted

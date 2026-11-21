@@ -2308,3 +2308,29 @@ body {
 .fallback-editor:focus {
     outline: none;
 }
+
+
+/* ADR 0019: a turn's or a run's numbered sources, under the answer. */
+.message-sources {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(127, 127, 127, 0.25);
+    font-size: 0.85em;
+}
+.message-sources-title {
+    font-weight: 600;
+    opacity: 0.75;
+    margin-bottom: 2px;
+}
+.message-sources ol {
+    margin: 0;
+    padding-left: 2em;
+}
+.message-sources li {
+    margin: 1px 0;
+    overflow-wrap: anywhere;
+}
+.message-sources .source-host {
+    opacity: 0.6;
+    margin-left: 4px;
+}

@@ -100,7 +100,7 @@ class AgentRunView extends BaseView {
      * view is unmounted, so a caller can decide on a fallback. Note: a stored
      * result still appears on the next mount as long as the view is on the stack.
      */
-    setResult(markdown) {
+    setResult(markdown, sources) {
         const text = markdown || '(empty result)';
         let html;
         try {
@@ -114,7 +114,9 @@ class AgentRunView extends BaseView {
         } catch (e) {
             html = (typeof escapeHtml === 'function') ? escapeHtml(text) : text;
         }
-        this._bodyHtml = `<div class="agent-run-result message-content">${html}</div>`;
+        // ADR 0019: the run's numbered sources, under the result.
+        const sourcesHtml = window.PpxaiSources ? window.PpxaiSources.sourcesHtml(sources) : '';
+        this._bodyHtml = `<div class="agent-run-result message-content">${html}</div>${sourcesHtml}`;
         if (this._bodyEl) { this._bodyEl.innerHTML = this._bodyHtml; return true; }
         return false;
     }

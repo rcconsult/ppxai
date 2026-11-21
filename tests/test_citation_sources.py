@@ -565,7 +565,7 @@ class TestTheTranscriptStoresSources:
         s.add_message(Message("assistant", "A [1].",
                               sources=[Source(n=1, url="https://a", title="a.com")]))
         text = s.export("e.md").read_text(encoding="utf-8")
-        assert "**Sources:**\n\n1. [a.com](https://a)" in text
+        assert "**Sources:**\n\n1. [a.com](<https://a>)" in text
 
 
 class TestAMergedRunBringsItsSources:
@@ -585,3 +585,112 @@ class TestAMergedRunBringsItsSources:
         ok, detail = backend.merge_result(meta.run_id)
         assert ok, detail
         assert session.messages[-1].sources == [Source.from_dict(rows[0])]
+
+
+# ===========================================================================
+# Gemini's grounding redirects resolve to the real pages (owner decision
+# 2026-11-21): the stored link must still open after the redirect expires.
+# ===========================================================================
+
+import httpx  # noqa: E402
+
+from ppxai.engine.search import redirects as redirects_mod  # noqa: E402
+from ppxai.engine.search.resolver import BACKEND_HOSTS, BackendResolution  # noqa: E402
+from ppxai.engine.tools.builtin import web_premium  # noqa: E402
+
+_R = "https://vertexaisearch.cloud.google.com/grounding-api-redirect/"
+
+
+@pytest.fixture
+def redirect_server(monkeypatch):
+    """A mock transport for the redirect host; records every request."""
+    seen: list[str] = []
+    answers: dict[str, httpx.Response] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return answers.get(str(request.url), httpx.Response(404))
+
+    monkeypatch.setattr(redirects_mod, "_make_client",
+                        lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    monkeypatch.setattr(redirects_mod, "_CACHE", type(redirects_mod._CACHE)())
+    return seen, answers
+
+
+def _resolve(urls, egress_allows=None):
+    return asyncio.run(redirects_mod.resolve_redirects(urls, egress_allows))
+
+
+class TestGroundingRedirectsResolve:
+
+    def test_a_redirect_becomes_its_target(self, redirect_server):
+        seen, answers = redirect_server
+        answers[_R + "a"] = httpx.Response(302, headers={"location": "https://python.org/x"})
+        assert _resolve([_R + "a", "https://plain.example/"]) == [
+            "https://python.org/x", "https://plain.example/"]
+        assert seen == [_R + "a"]  # the plain link is never looked up
+
+    def test_the_target_is_never_fetched(self, redirect_server):
+        seen, answers = redirect_server
+        answers[_R + "a"] = httpx.Response(302, headers={"location": "https://python.org/x"})
+        _resolve([_R + "a"])
+        assert all(u.startswith(_R) for u in seen)
+
+    def test_a_failed_lookup_keeps_the_redirect(self, redirect_server):
+        _, answers = redirect_server
+        answers[_R + "ok"] = httpx.Response(200)  # no redirect
+        answers[_R + "bad"] = httpx.Response(302, headers={"location": "javascript:alert(1)"})
+        assert _resolve([_R + "ok", _R + "bad", _R + "404"]) == [
+            _R + "ok", _R + "bad", _R + "404"]
+
+    def test_a_network_error_keeps_the_redirect(self, monkeypatch):
+        def boom(request):
+            raise httpx.ConnectError("down")
+        monkeypatch.setattr(redirects_mod, "_make_client",
+                            lambda: httpx.AsyncClient(transport=httpx.MockTransport(boom)))
+        monkeypatch.setattr(redirects_mod, "_CACHE", type(redirects_mod._CACHE)())
+        assert _resolve([_R + "a"]) == [_R + "a"]
+
+    def test_outside_the_egress_predicate_nothing_is_contacted(self, redirect_server):
+        seen, answers = redirect_server
+        answers[_R + "a"] = httpx.Response(302, headers={"location": "https://python.org/x"})
+        assert _resolve([_R + "a"], egress_allows=lambda host: False) == [_R + "a"]
+        assert seen == []
+
+    def test_a_resolved_link_is_looked_up_once(self, redirect_server):
+        seen, answers = redirect_server
+        answers[_R + "a"] = httpx.Response(302, headers={"location": "https://python.org/x"})
+        _resolve([_R + "a", _R + "a"])
+        _resolve([_R + "a"])
+        assert seen == [_R + "a"]
+
+    def test_only_the_real_redirect_host_matches(self):
+        assert redirects_mod.is_grounding_redirect(_R + "x")
+        assert not redirects_mod.is_grounding_redirect("https://vertexaisearch.example/r1")
+        assert not redirects_mod.is_grounding_redirect(
+            "http://vertexaisearch.cloud.google.com/grounding-api-redirect/x")
+        assert not redirects_mod.is_grounding_redirect(
+            "https://vertexaisearch.cloud.google.com/other/x")
+
+    def test_the_redirect_host_is_not_a_backend_host(self):
+        # Adding it would drop Gemini from every run allowing only the API host.
+        assert not any(redirects_mod.REDIRECT_HOST in h for h in BACKEND_HOSTS["gemini"])
+
+    def test_the_web_search_tool_lists_the_real_pages(self, redirect_server, monkeypatch):
+        _, answers = redirect_server
+        answers[_R + "a"] = httpx.Response(302, headers={"location": "https://python.org/x"})
+
+        class _Gemini:
+            async def search(self, query, n):
+                return SearchResult(backend="gemini", answer="A.", citations=[_R + "a"],
+                                    usage=None, titles=["python.org"])
+
+        monkeypatch.setattr(web_premium, "resolve_web_search_backend",
+                            lambda *a, **k: BackendResolution(
+                                scope="global", preferred="gemini", strict=False,
+                                candidates=("gemini",), egress_hosts=()))
+        monkeypatch.setattr(web_premium, "get_backend", lambda _id: _Gemini())
+        monkeypatch.setattr(web_premium, "_record_usage", lambda usage: None)
+        text = asyncio.run(web_premium.web_search_premium("q"))
+        assert "[1] python.org https://python.org/x" in text
+        assert _R not in text

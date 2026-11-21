@@ -27,6 +27,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from ..engine.sources import format_sources_text
 from ..engine.task_authorizer import (
     TIERS,
     TaskAuthorizationError,
@@ -172,6 +173,8 @@ def _lifecycle(family: str, kind: str, verb: str, run_id: str,
                            message=f"Unknown run: {run_id}")
 
     if verb in ("get", "show", "open", "watch"):
+        # ADR 0019: the run's numbered sources, which its result cites as [n].
+        sources_text = format_sources_text(getattr(meta, "sources", None))
         return NotificationResult(
             status=ResultStatus.SUCCESS,
             message=(
@@ -179,6 +182,7 @@ def _lifecycle(family: str, kind: str, verb: str, run_id: str,
                 f"task: {meta.task}\n"
                 f"grant: {', '.join(meta.tools or []) or '—'}\n"
                 f"result: {meta.result if meta.result is not None else '—'}"
+                + (f"\nsources:\n{sources_text}" if sources_text else "")
                 + (f"\nerror: {meta.error}" if meta.error else "")
             ),
         )

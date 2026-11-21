@@ -7,7 +7,7 @@
  * v1.14.x - Decouples stream parsing from UI rendering
  */
 
-import { StreamEvent } from '../httpClient';
+import { StreamEvent, sourcesOf } from '../httpClient';
 import { ChatEventBus, ToolCallData, ToolResultData, ContextData, UsageData } from './eventBus';
 
 /**
@@ -131,7 +131,8 @@ export function processStreamEvent(event: StreamEvent, eventBus: ChatEventBus): 
             if (typeof ctxPct === 'number') {
                 eventBus.emit('state:sync', { context_percentage: ctxPct });
             }
-            eventBus.emit('stream:done', event.content);
+            // ADR 0019: the turn's numbered sources travel with the answer.
+            eventBus.emit('stream:done', event.content, sourcesOf(event.metadata));
             break;
     }
 }

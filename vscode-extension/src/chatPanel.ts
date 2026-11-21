@@ -10,7 +10,7 @@
 
 import { AutoIterationText, taskCompleteSummary } from './autoLoop';
 import * as vscode from 'vscode';
-import { HttpClient, StreamEvent, SsePiggybackEvent } from './httpClient';
+import { HttpClient, StreamEvent, SsePiggybackEvent, SourceRow } from './httpClient';
 import { startServer, stopServer, onServerStatusChange } from './extension';
 import { openHtmlPreview, closeHtmlPreview } from './previewPanel';
 
@@ -274,8 +274,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             system: (text: string) => {
                 this._view?.webview.postMessage({ type: 'systemMessage', content: text });
             },
-            result: (text: string) => {
-                this._view?.webview.postMessage({ type: 'fullResponse', content: text });
+            result: (text: string, sources?: SourceRow[]) => {
+                this._view?.webview.postMessage({ type: 'fullResponse', content: text, sources });
             },
             askConsent: async (runId: string, kind: string, prompt: string): Promise<ConsentAnswer | undefined> => {
                 const selected = await vscode.window.showQuickPick(
@@ -598,9 +598,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             }
         });
 
-        this._eventBus.on('stream:done', (content) => {
+        this._eventBus.on('stream:done', (content, sources) => {
             if (content && content.trim()) {
-                postMessage({ type: 'fullResponse', content });
+                postMessage({ type: 'fullResponse', content, sources });
             } else {
                 postMessage({ type: 'emptyResponse' });
             }
@@ -2735,6 +2735,9 @@ Review your previous actions and continue. If the task is complete, respond with
         // Loaded before main.js so `shouldBlockImageAttach` is a global by
         // the time `stageFile()` calls it.
         const visionGateJsUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewPath, 'visionGate.js'));
+        // ADR 0019: numbered sources under an answer (byte-identical copy of
+        // ppxai/web/shared/sources-render.js). Loaded before main.js.
+        const sourcesJsUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewPath, 'sources-render.js'));
         const webviewJsUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewPath, 'main.js'));
 
         // Generate nonce for CSP
@@ -2834,6 +2837,7 @@ Review your previous actions and continue. If the task is complete, respond with
 
     <!-- Webview JavaScript -->
     <script nonce="${nonce}" src="${visionGateJsUri}"></script>
+    <script nonce="${nonce}" src="${sourcesJsUri}"></script>
     <script nonce="${nonce}" src="${webviewJsUri}"></script>
 </body>
 </html>`;

@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import Any
 
 from ppxai.commands.factory import CommandFactory
+from ppxai.engine.sources import format_sources_markdown
 from ppxai.engine.types import Event, EventType
 from ppxai.rendering.rich_renderer import RichRenderer
 from ppxai.rich.themes import DEFAULT_THEME, get_theme
@@ -155,6 +156,12 @@ class EventHandler:
 
     def _handle_stream_end(self, event: Event) -> None:
         final_response = event.data if event.data else self._full_response
+        # ADR 0019: the turn's numbered sources, shown under the answer.
+        # Appended to what is DISPLAYED; the engine keeps the answer text
+        # and its sources apart.
+        sources_md = format_sources_markdown((event.metadata or {}).get("sources"))
+        if sources_md and isinstance(final_response, str) and final_response.strip():
+            final_response = f"{final_response}\n\n{sources_md}"
         self.on_stream_end(final_response)
 
     def _handle_error(self, event: Event) -> None:

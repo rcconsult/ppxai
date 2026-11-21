@@ -11,7 +11,8 @@ import {
     FileConsentRequest,
     ShellConsentRequest,
     EventMetadata,
-    ConsentResponse
+    ConsentResponse,
+    SourceRow
 } from '../httpClient';
 
 // Re-export types from httpClient for convenience
@@ -95,7 +96,8 @@ export interface StreamEvents {
     'stream:tool_group_start': (data: ToolGroupStartData) => void;
     'stream:tool_group_end': (data: ToolGroupEndData) => void;
     'stream:status': (content: string) => void;
-    'stream:done': (content: string) => void;
+    /** ADR 0019: `sources` = the turn's numbered sources, when it cited any. */
+    'stream:done': (content: string, sources?: SourceRow[]) => void;
     'stream:usage': (data: UsageData) => void;
     'stream:error': (content: string) => void;
     'stream:warning': (data: WarningEventData) => void;

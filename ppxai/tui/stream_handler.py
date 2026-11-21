@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from ppxai.config import get_auto_save_interval, get_tui_config
+from ppxai.engine.sources import format_sources_markdown
 from ppxai.engine.types import Event, EventType
 from ppxai.tui.event_bus import Events
 from ppxai.tui.widgets.file_tree import FileTree
@@ -133,13 +134,18 @@ NOOP_EVENTS = {
 }
 
 
-def handle_stream_event(app, event_type: str, event_data: Any) -> None:
-    """Handle stream event in main thread (called via call_from_thread)."""
-    event = Event(type=EventType[event_type], data=event_data)
+def handle_stream_event(app, event_type: str, event_data: Any, metadata: dict | None = None) -> None:
+    """Handle stream event in main thread (called via call_from_thread).
+
+    `metadata` is the engine event's metadata, passed on to the bus
+    handler (ADR 0019: the terminal STREAM_END's `sources`)."""
+    event = Event(type=EventType[event_type], data=event_data, metadata=metadata)
 
     if event.type in EVENT_MAP:
         bus_event = EVENT_MAP[event.type]
-        app._event_bus.emit(bus_event, data=event.data, event_type=event.type)
+        app._event_bus.emit(
+            bus_event, data=event.data, event_type=event.type, metadata=event.metadata
+        )
     elif event.type in NOOP_EVENTS:
         if app._trace_logging:
             app._log.debug(f"Intentionally ignored event: {event.type}")
@@ -180,7 +186,9 @@ async def _stream_response(app, user_input, engine_client, attachment_refs=None)
             if app._debug_logging:
                 app._log.debug(f"Thread: Event #{event_count}: {event.type.name}")
 
-            app.call_from_thread(handle_stream_event, app, event.type.name, event.data)
+            app.call_from_thread(
+                handle_stream_event, app, event.type.name, event.data, event.metadata
+            )
 
         app._log.info(f"Thread: Stream finished, {event_count} events")
 
@@ -286,6 +294,10 @@ async def on_stream_end(app, sender, data, **kwargs) -> None:
             chat_view.add_system_message("[dim]───[/dim]")
 
         response_time = time.time() - app._response_start_time
+        # ADR 0019: the turn's numbered sources, under the answer.
+        sources_md = format_sources_markdown((kwargs.get("metadata") or {}).get("sources"))
+        if sources_md:
+            final_response = f"{final_response}\n\n{sources_md}"
         chat_view.add_assistant_message(final_response, response_time=response_time)
     else:
         app._log.warning("STREAM_END with no content to display")

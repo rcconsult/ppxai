@@ -129,6 +129,51 @@ def sources_from_rows(rows: Iterable[dict[str, Any]] | None) -> list[Source]:
     ]
 
 
+def _rows(sources: Iterable[Source | dict[str, Any]] | None) -> list[Source]:
+    out: list[Source] = []
+    for s in sources or ():
+        if isinstance(s, Source):
+            out.append(s)
+        elif isinstance(s, dict) and s.get("url") and isinstance(s.get("n"), int):
+            out.append(Source.from_dict(s))
+    return sorted(out, key=lambda s: s.n)
+
+
+def _md_label(text: str) -> str:
+    """Link text safe inside `[...]`."""
+    return text.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
+
+
+def format_sources_markdown(sources: Iterable[Source | dict[str, Any]] | None) -> str:
+    """ADR 0019: the Sources list shown under an answer, as markdown, for
+    the clients that render markdown (both TUIs) and for `/export`.
+    Numbered by each source's `n`, so `[n]` in the answer matches. Empty
+    string when there is nothing to show. Only http(s) URLs become links.
+
+    The web UI and the VSCode webview render the same list from
+    `ppxai/web/shared/sources-render.js`."""
+    rows = _rows(sources)
+    if not rows:
+        return ""
+    lines = ["**Sources:**", ""]
+    for s in rows:
+        label = _md_label(s.title or s.url)
+        if s.url.startswith(("https://", "http://")):
+            lines.append(f"{s.n}. [{label}](<{s.url}>)")
+        else:
+            lines.append(f"{s.n}. {label}")
+    return "\n".join(lines)
+
+
+def format_sources_text(sources: Iterable[Source | dict[str, Any]] | None) -> str:
+    """ADR 0019: the same list as plain text (`[n] title url` per line),
+    for plain-text surfaces such as `/task get`. Empty when there is none."""
+    rows = _rows(sources)
+    return "\n".join(
+        f"[{s.n}] {s.title} {s.url}" if s.title else f"[{s.n}] {s.url}" for s in rows
+    )
+
+
 _ledger_holder: contextvars.ContextVar[SourceLedger | None] = contextvars.ContextVar(
     "turn_source_ledger", default=None
 )

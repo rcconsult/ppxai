@@ -19,6 +19,7 @@ import os
 from typing import Any
 
 from ...search import get_backend, resolve_web_search_backend
+from ...search.redirects import resolve_result
 from ...sources import current_ledger, number_sources
 from ...types import ToolUsage
 from . import web
@@ -177,6 +178,9 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: s
                 # an adapter.
                 return result.answer
             _record_usage(result.usage)
+            # ADR 0019: Gemini's redirect links expire; keep the real pages
+            # (inside the run's egress predicate, when there is one).
+            result = await resolve_result(result, _egress_allows_holder.get())
             return _format_search_result(
                 result.backend,
                 result.answer,

@@ -28,6 +28,7 @@ dependencies = [
     "prompt-toolkit>=3.0.0",
     "python-dotenv>=1.0.0",
     "tzdata>=2024.1",
+    "tomli>=2.0; python_version < '3.11'",  # tomllib backport: TOML validation + viewer on 3.10
     "pyperclip>=1.8.0",
     "filetype>=1.2.0", # Pure Python file type detection (replaces python-magic)
     "tree-sitter>=0.23",

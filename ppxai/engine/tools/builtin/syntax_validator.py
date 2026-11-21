@@ -46,7 +46,7 @@ quality drifts. Language-level validation is a cheap defense.
 | `.py`     | `ast.parse` | stdlib |
 | `.json`   | `json.loads` | stdlib |
 | `.yaml`, `.yml` | `yaml.safe_load` | pyyaml is a core dep |
-| `.toml`   | `tomllib.loads` | stdlib in 3.11+ |
+| `.toml`   | `tomllib.loads` | stdlib in 3.11+; `tomli` on 3.10 |
 | `.js`, `.ts`, `.jsx`, `.tsx`, `.mjs`, `.cjs` | `node --check` via subprocess | best-effort, skipped if node not on PATH |
 | anything else | — | skipped |
 """
@@ -60,6 +60,11 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+
+try:  # stdlib from Python 3.11; before that, the declared `tomli` backport
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +129,6 @@ def _check_yaml(content: str) -> str | None:
 
 def _check_toml(content: str) -> str | None:
     try:
-        import tomllib  # stdlib in 3.11+
         tomllib.loads(content)
         return None
     except Exception as e:

@@ -30,6 +30,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from ppxai.config import get_auto_restore_mode, get_tui_config
 from ppxai.engine.session import SessionManager
+from ppxai.engine.sources import format_sources_markdown
 from ppxai.tui.widgets.dialog import ConsentDialog
 
 
@@ -285,7 +286,11 @@ async def restore_session(
         if role == "user":
             chat_view.add_user_message(content)
         elif role == "assistant":
-            chat_view.add_assistant_message(content)
+            # ADR 0019: a stored answer keeps its sources.
+            sources_md = format_sources_markdown(getattr(msg, "sources", None))
+            chat_view.add_assistant_message(
+                f"{content}\n\n{sources_md}" if sources_md else content
+            )
         elif role == "system":
             chat_view.add_system_message(content)
         elif role == "tool":

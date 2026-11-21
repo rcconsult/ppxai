@@ -1,7 +1,9 @@
 # ADR 0019: One citation contract for chat, `/run` and `/task`
 
 - **Status:** Accepted (2026-11-21, owner). Implementation in progress:
-  steps 1–3 done 2026-11-21. The owner chose option B (below), with
+  steps 1–4 done 2026-11-21, plus Gemini redirect links resolved when a
+  search returns (owner decision, § "Gemini's built-in search grounding").
+  The owner chose option B (below), with
   sources numbered **per turn** and stored **with the message in the
   transcript**. For Gemini's built-in search grounding the owner chose
   **G2** (2026-11-21, after a live probe): sources into the ledger, the
@@ -222,6 +224,25 @@ one German prompt with umlauts, sent once without streaming and once with):
   `eurosport.de`), and every URI is a `vertexaisearch` redirect. The
   `domain` that `_parse_grounding` reads is always `''`.
 - Two chunks per answer, against the five `_inject_citations` allows for.
+
+**Redirect links are resolved when the search returns** (owner decision
+2026-11-21, "resolve", after the Linux test showed stored sources holding
+`vertexaisearch` links, which expire). `engine/search/redirects.py` makes
+one GET per redirect to `vertexaisearch.cloud.google.com` without
+following it, and takes the `Location` header as the source's URL; the
+target page itself is never fetched. It runs in
+`engine/search/grounding.py::retrieve` and in the `web_search` tool, on
+the backend's `SearchResult`, before anything is numbered, so the ledger,
+the stored message, the run and `/export` all hold the real address. Best
+effort: a lookup that fails, times out (4 s) or returns no http(s)
+`Location` keeps the redirect link. It obeys the caller's egress predicate
+(a run's network policy or the deployment's ceiling): a run whose
+allowlist lacks `vertexaisearch.cloud.google.com` keeps the redirect
+links. The host is deliberately not in `BACKEND_HOSTS["gemini"]`, because
+the resolver requires all of a backend's hosts to pass a run's predicate,
+and adding it would turn off Gemini search for every run that allows only
+the API host. Resolved links are cached per process (512 entries). Step 6
+reuses it for the built-in grounding path.
 - `web_search_queries` lists the searches Gemini ran (one or two here).
   They can fill `Source.query`.
 
@@ -267,7 +288,25 @@ Each step can ship on its own.
    sources onto the merged answer. No wire handler sends it (tested for
    all four). Chat's inline-URL prompt stays until step 5, and no client
    renders `sources` until step 4.
-4. All four clients render `sources`, with the parity fence.
+4. All four clients render `sources`, with the parity fence. **Done
+   2026-11-21:** web and VSCode share one renderer,
+   `sources-render.js`, kept as two byte-identical copies
+   (`ppxai/web/shared/` and `vscode-extension/media/webview/`; the two
+   clients share no code otherwise). It escapes every value and links only
+   http(s) URLs, and the list is a sibling of the message content, so a
+   re-render of the content keeps it. Web shows it on a chat `stream_end`
+   and under a run's result; VSCode carries it from the `done` metadata
+   through `stream:done` to the webview, into its history mirror, and
+   under a run's result. Both TUIs and `/export` share
+   `engine/sources.py::format_sources_markdown`: Textual on `STREAM_END`
+   (the worker thread now passes the event's metadata on) and on session
+   restore, Rich on `STREAM_END`; `/task get` lists them as text
+   (`format_sources_text`). Not covered, because no such path exists
+   today: the web UI and Rich do not re-render a loaded conversation, and
+   VSCode's history is its own mirror of the current session. Fence:
+   `tests/test_citation_sources_clients.py` (copies identical, the
+   renderer under Node, each client's wiring by source,
+   mutation-checked).
 5. Remove chat's inline-URL system prompt and the unused
    `ChatResponse.citations`.
 
