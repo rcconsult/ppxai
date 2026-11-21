@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import pathlib
 import re
 import time
+from types import SimpleNamespace
 
 import pytest
 
@@ -34,11 +36,19 @@ from ppxai.config.prompts import DEFAULT_SYSTEM_PROMPTS
 from ppxai.engine import EngineClient, task_runner
 from ppxai.engine import chat as chat_mod
 from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore, RunMeta
+from ppxai.engine.providers.gemini import GeminiProvider
 from ppxai.engine.providers.wire import get_handler
 from ppxai.engine.search.grounding import Retrieval, grounded_prompt
 from ppxai.engine.search.types import SearchResult
 from ppxai.engine.session import SessionManager
-from ppxai.engine.sources import Source, SourceLedger, current_ledger, install_ledger
+from ppxai.engine.sources import (
+    Source,
+    SourceLedger,
+    apply_grounding,
+    current_ledger,
+    install_ledger,
+    place_markers,
+)
 from ppxai.engine.task_backend import InProcessTaskBackend
 from ppxai.engine.tools.base import FunctionTool
 from ppxai.engine.tools.builtin import web as web_mod
@@ -202,7 +212,10 @@ def grounded_run(tmp_path, monkeypatch):
 
     app = FastAPI()
     app.include_router(agent_v1.router)
+    # Entered, so one event loop lives across requests: a background run
+    # keeps running between the POST and the status polls.
     client = TestClient(app)
+    client.__enter__()
 
     def run(mode="retrieve"):
         monkeypatch.setattr(exec_mod, "get_execution_run_grounding_mode", lambda: mode)
@@ -214,11 +227,12 @@ def grounded_run(tmp_path, monkeypatch):
         while time.monotonic() < deadline:
             body = client.get(f"/v1/agent/runs/{run_id}").json()
             if body["status"] == "completed":
-                return run_id, body, prompts[-1], reg
+                return run_id, body, (prompts[-1] if prompts else None), reg
             time.sleep(0.02)
         raise AssertionError(f"run did not complete: {body}")
 
-    return run
+    yield run
+    client.__exit__(None, None, None)
 
 
 class TestAGroundedRunKeepsItsSources:
@@ -781,3 +795,171 @@ class TestChatAsksForNumbersNotLinks:
 
     def test_shipped_prompts_ask_for_numbers(self):
         assert not any(p in t for t in DEFAULT_SYSTEM_PROMPTS.values() for p in _OLD_CITATION_PROMPTS)
+
+
+# ===========================================================================
+# Step 6: Gemini's built-in search (G2) — the chunks join the turn's ledger
+# and `[n]` markers go in after each supported segment.
+# ===========================================================================
+
+# The live probe's shape (2026-11-21): German text, so byte and character
+# offsets differ; one support covers the first sentence, citing both chunks.
+_PROBE_TEXT = "Ousmane Dembélé gewann 2025 den Ballon d'Or. Messi gewann ihn 2022."
+_PROBE_END = len("Ousmane Dembélé gewann 2025 den Ballon d'Or".encode())
+_REDIRECT = "https://vertexaisearch.cloud.google.com/grounding-api-redirect/"
+
+
+def _probe_grounding(urls=("https://uefa.com/a", "https://eurosport.de/b")):
+    return {
+        "chunks": [{"url": urls[0], "title": "uefa.com"}, {"url": urls[1], "title": "eurosport.de"}],
+        "supports": [{"end": _PROBE_END, "chunks": [0, 1]}],
+        "queries": ["ballon d'or 2025"],
+    }
+
+
+class TestMarkersFromGroundingSupports:
+
+    def test_byte_offsets_are_converted_to_characters(self):
+        assert _PROBE_END != len("Ousmane Dembélé gewann 2025 den Ballon d'Or")
+        out = place_markers(_PROBE_TEXT, [{"end": _PROBE_END, "chunks": [0, 1]}], [1, 2])
+        assert out == "Ousmane Dembélé gewann 2025 den Ballon d'Or [1][2]. Messi gewann ihn 2022."
+
+    def test_unsupported_text_stays_unmarked_and_bad_rows_are_skipped(self):
+        supports = [{"end": None, "chunks": [0]}, {"end": 5, "chunks": [9]}, {"end": 5, "chunks": []}]
+        assert place_markers("Hello world.", supports, [1]) == "Hello world."
+
+    def test_supports_ending_together_merge(self):
+        supports = [{"end": 5, "chunks": [1]}, {"end": 5, "chunks": [0, 1]}]
+        assert place_markers("Hello world.", supports, [3, 4]) == "Hello [3][4] world."
+
+    def test_an_offset_inside_a_character_rounds_down(self):
+        # 'é' is two bytes; an end between them lands before it.
+        end = len(b"Demb") + 1
+        assert place_markers("Dembélé.", [{"end": end, "chunks": [0]}], [1]) == "Demb [1]élé."
+
+    def test_numbers_continue_from_the_turn_ledger(self):
+        ledger = SourceLedger()
+        ledger.add("https://earlier", "earlier")
+        ledger.add("https://eurosport.de/b", "eurosport.de")
+        out = apply_grounding(_PROBE_TEXT, _probe_grounding(), ledger, backend="gemini")
+        assert "Ballon d'Or [2][3]." in out  # eurosport.de keeps its number 2
+        rows = {r["url"]: r for r in ledger.to_dicts()}
+        assert rows["https://uefa.com/a"]["n"] == 3
+        assert rows["https://uefa.com/a"]["query"] == "ballon d'or 2025"
+        assert rows["https://uefa.com/a"]["backend"] == "gemini"
+
+    def test_a_malformed_chunk_keeps_the_other_indices(self):
+        g = _probe_grounding()
+        g["chunks"].insert(0, {"url": ""})
+        g["supports"] = [{"end": _PROBE_END, "chunks": [0, 2]}]
+        out = apply_grounding(_PROBE_TEXT, g, SourceLedger())
+        assert "Ballon d'Or [2]." in out  # chunk 0 has no URL, chunk 2 = eurosport.de
+
+    def test_no_grounding_is_a_no_op(self):
+        assert apply_grounding("x", None, SourceLedger()) == "x"
+        assert apply_grounding("x", {"chunks": [{"url": ""}]}, SourceLedger()) == "x"
+
+
+def _gemini_metadata():
+    web = lambda uri, title: SimpleNamespace(web=SimpleNamespace(uri=uri, title=title, domain=""))  # noqa: E731
+    return SimpleNamespace(
+        grounding_chunks=[web(_REDIRECT + "a", "uefa.com"), web(_REDIRECT + "b", "eurosport.de")],
+        grounding_supports=[SimpleNamespace(
+            segment=SimpleNamespace(start_index=0, end_index=_PROBE_END, text="..."),
+            grounding_chunk_indices=[0, 1])],
+        web_search_queries=["ballon d'or 2025"],
+    )
+
+
+class TestGeminiReturnsItsGrounding:
+
+    def test_parse_grounding_gives_the_neutral_shape(self):
+        parsed = GeminiProvider._parse_grounding(None, _gemini_metadata())
+        assert parsed == {
+            "chunks": [{"url": _REDIRECT + "a", "title": "uefa.com"},
+                       {"url": _REDIRECT + "b", "title": "eurosport.de"}],
+            "supports": [{"end": _PROBE_END, "chunks": [0, 1]}],
+            "queries": ["ballon d'or 2025"],
+        }
+
+    def test_the_appended_sources_block_is_gone(self):
+        assert not hasattr(GeminiProvider, "_inject_citations")
+        src = (pathlib.Path(__file__).resolve().parent.parent
+               / "ppxai" / "engine" / "providers" / "gemini.py").read_text(encoding="utf-8")
+        assert "**Sources:**" not in src
+        assert 'metadata["citations"]' not in src
+
+
+@pytest.fixture
+def grounded_turn(fake_providers, redirect_server):
+    """A tool-free chat turn whose provider answers with Gemini-style
+    grounding (redirect URLs); the redirect host resolves both."""
+    seen, answers = redirect_server
+    answers[_REDIRECT + "a"] = httpx.Response(302, headers={"location": "https://uefa.com/a"})
+    answers[_REDIRECT + "b"] = httpx.Response(302, headers={"location": "https://eurosport.de/b"})
+    engine = EngineClient()
+    assert engine.set_provider("openai")
+    engine.set_model(PROVIDERS["openai"].get("default_model")
+                     or next(iter(PROVIDERS["openai"]["models"])))
+    engine.disable_tools()
+    grounding = _probe_grounding((_REDIRECT + "a", _REDIRECT + "b"))
+
+    async def chat(messages, model, stream=False, tools=None):
+        yield Event(EventType.STREAM_START, None)
+        yield Event(EventType.STREAM_CHUNK, _PROBE_TEXT)
+        yield Event(EventType.STREAM_END, _PROBE_TEXT, {"grounding": grounding})
+
+    engine.provider.chat = chat
+    return engine, seen
+
+
+class TestAChatTurnCitesNativeGrounding:
+
+    def test_the_answer_is_marked_and_the_sources_resolved(self, grounded_turn):
+        engine, _ = grounded_turn
+        end = [e for e in _turn(engine, "who won?") if e.type == EventType.STREAM_END][-1]
+        assert "Ballon d'Or [1][2]." in end.data
+        assert [s["url"] for s in end.metadata["sources"]] == ["https://uefa.com/a", "https://eurosport.de/b"]
+        assert "grounding" not in end.metadata  # the raw shape stays internal
+
+    def test_the_stored_answer_matches_what_was_shown(self, grounded_turn):
+        engine, _ = grounded_turn
+        end = [e for e in _turn(engine, "who won?") if e.type == EventType.STREAM_END][-1]
+        last = engine.session.messages[-1]
+        assert last.role == "assistant" and last.text_content() == end.data
+        assert [s.n for s in last.sources] == [1, 2]
+
+
+    def test_the_tool_loop_cites_it_too(self):
+        # Gemini grounds in prompt-based tool mode (no function declarations
+        # sent). Every provider STREAM_END in chat_with_tools keeps the
+        # grounding, and the final answer is cited before it is stored.
+        src = (pathlib.Path(__file__).resolve().parent.parent
+               / "ppxai" / "engine" / "chat.py").read_text(encoding="utf-8")
+        assert src.count('provider_grounding = (event.metadata or {}).get("grounding")') == 3
+        final = src.index("full_response = await _cite_native_grounding(ctx, full_response, provider_grounding)")
+        assert final < src.index('ctx.session.add_message(Message("assistant", full_response))', final)
+
+
+class TestARunCitesNativeGrounding:
+
+    def test_a_native_run_keeps_markers_and_sources(self, grounded_run, monkeypatch, redirect_server):
+        _, answers = redirect_server
+        answers[_REDIRECT + "a"] = httpx.Response(302, headers={"location": "https://uefa.com/a"})
+
+        class _Native:
+            def oneshot(self, *, prompt, model, system=None, **kw):
+                return {"content": _PROBE_TEXT, "finish_reason": "stop",
+                        "grounding": _probe_grounding((_REDIRECT + "a", "https://eurosport.de/b"))}
+
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _Native())
+        run_id, body, _, reg = grounded_run(mode="native")
+        assert "Ballon d'Or [1][2]." in body["result"]
+        assert [(s["n"], s["url"]) for s in body["sources"]] == [
+            (1, "https://uefa.com/a"), (2, "https://eurosport.de/b")]
+        assert "agent_run_sources" in [e.type for e in reg.read_events(run_id)]
+
+    def test_a_native_run_without_grounding_is_unchanged(self, grounded_run):
+        _, body, _, _ = grounded_run(mode="native")
+        assert body["result"] == "It changed [1], see also [2]."
+        assert body["sources"] == []

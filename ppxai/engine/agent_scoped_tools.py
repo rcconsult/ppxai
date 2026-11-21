@@ -171,6 +171,12 @@ class ScopedToolManager:
         finally:
             _set_egress_predicate(prior)
 
+    @property
+    def egress_allows(self) -> Callable[[str], bool] | None:
+        """The run's host predicate, or None with no egress policy. ADR 0019:
+        the chat loop resolves Gemini grounding redirects inside it."""
+        return self._network_policy.allows_host if self._network_policy is not None else None
+
     def _check_path(self, name: str, kwargs: dict) -> str | None:
         """Run the filesystem confinement check for a path tool. Returns a
         model-readable denial string if the path is off-scope (and the tool must

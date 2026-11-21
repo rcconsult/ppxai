@@ -360,7 +360,7 @@ class GeminiProvider(BaseProvider):
                 reasoning_response = []
                 tool_calls = []
                 usage = None
-                citations = []
+                grounding: dict[str, Any] = {}
 
                 response_stream = self.client.models.generate_content_stream(
                     model=model,
@@ -401,9 +401,10 @@ class GeminiProvider(BaseProvider):
                     if chunk.usage_metadata:
                         usage = self._parse_usage(chunk.usage_metadata)
 
-                    # Check for grounding metadata (citations)
+                    # Search grounding arrives once, on the last chunk
+                    # (live probe, 2026-11-21); keep the last non-empty.
                     if chunk.candidates and chunk.candidates[0].grounding_metadata:
-                        citations = self._parse_grounding(chunk.candidates[0].grounding_metadata)
+                        grounding = self._parse_grounding(chunk.candidates[0].grounding_metadata) or grounding
 
                 # Emit TOOL_CALL events for any function calls (v1.15.2)
                 for tc in tool_calls:
@@ -422,15 +423,14 @@ class GeminiProvider(BaseProvider):
                 final_content = "".join(full_response)
                 final_reasoning = "".join(reasoning_response)
 
-                # Inject citation URLs if we have grounding
-                if citations:
-                    final_content = self._inject_citations(final_content, citations)
-
+                # ADR 0019: the engine numbers the grounding and places
+                # the [n] markers in the final text (the live stream stays
+                # unmarked: the supports arrive after the last text).
                 metadata = {}
                 if usage:
                     metadata["usage"] = usage
-                if citations:
-                    metadata["citations"] = [c["url"] for c in citations]
+                if grounding:
+                    metadata["grounding"] = grounding
                 if final_reasoning:
                     metadata["reasoning"] = final_reasoning
                 if tool_calls:
@@ -472,10 +472,9 @@ class GeminiProvider(BaseProvider):
 
                 usage = self._parse_usage(response.usage_metadata)
 
-                # Extract grounding citations
-                citations = []
+                grounding = {}
                 if response.candidates and response.candidates[0].grounding_metadata:
-                    citations = self._parse_grounding(response.candidates[0].grounding_metadata)
+                    grounding = self._parse_grounding(response.candidates[0].grounding_metadata)
 
                 # Emit TOOL_CALL events for any function calls (v1.15.2)
                 for tc in tool_calls:
@@ -490,13 +489,9 @@ class GeminiProvider(BaseProvider):
                         payload["thought_signature"] = tc["thought_signature"]
                     yield Event(EventType.TOOL_CALL, payload)
 
-                # Inject citation URLs
-                if citations:
-                    content = self._inject_citations(content, citations)
-
                 metadata = {"usage": usage}
-                if citations:
-                    metadata["citations"] = citations
+                if grounding:
+                    metadata["grounding"] = grounding  # ADR 0019, see above
                 if reasoning:
                     metadata["reasoning"] = reasoning
                 if tool_calls:
@@ -626,6 +621,13 @@ class GeminiProvider(BaseProvider):
         # only read `content` are unaffected (Item 51).
         if reasoning:
             result["reasoning"] = reasoning
+        # ADR 0019: native search grounding, for `/run` to number and cite.
+        # Additive like `reasoning`; `/v1/oneshot` builds its response from
+        # named keys, so its wire is unchanged.
+        candidate = response.candidates[0] if response.candidates else None
+        grounding = self._parse_grounding(getattr(candidate, "grounding_metadata", None))
+        if grounding:
+            result["grounding"] = grounding
         return result
 
 
@@ -908,62 +910,38 @@ class GeminiProvider(BaseProvider):
         return None
 
 
-    def _parse_grounding(self, grounding_metadata) -> list[dict[str, str]]:
-        """Parse grounding metadata to extract citations.
+    def _parse_grounding(self, grounding_metadata) -> dict[str, Any]:
+        """Google Search grounding as ADR 0019's provider-neutral shape:
+        `{"chunks": [{"url", "title"}], "supports": [{"end", "chunks"}],
+        "queries": [...]}`, or `{}` when there is none.
 
-        Args:
-            grounding_metadata: Grounding metadata from response
-
-        Returns:
-            List of citation dicts with 'title', 'url', 'domain'
-        """
-        citations = []
+        The engine numbers the chunks from the turn's source list and puts
+        `[n]` after each supported segment (`engine/sources.py`). `end` is
+        a UTF-8 BYTE offset into the answer, as Google gives it; supports
+        cover only the searched sentences. `web.title` holds the domain and
+        `web.domain` is empty (live probe, 2026-11-21); the URIs are
+        `vertexaisearch` redirects, resolved by the engine."""
         if not grounding_metadata:
-            return citations
-
-        grounding_chunks = getattr(grounding_metadata, 'grounding_chunks', None)
-        if not grounding_chunks:
-            return citations
-
-        for chunk in grounding_chunks:
-            web = getattr(chunk, 'web', None)
-            if web:
-                citations.append({
-                    "title": getattr(web, 'title', '') or '',
-                    "url": getattr(web, 'uri', '') or '',
-                    "domain": getattr(web, 'domain', '') or ''
-                })
-
-        return citations
-
-    def _inject_citations(self, content: str, citations: list[dict[str, str]]) -> str:
-        """Inject citation URLs into response text.
-
-        Unlike Perplexity which uses [1], [2] markers, Gemini doesn't
-        automatically number citations. We append them at the end.
-
-        Args:
-            content: Response text
-            citations: List of citation dicts
-
-        Returns:
-            Content with citations appended
-        """
-        if not citations:
-            return content
-
-        # Append citations at the end as a reference section
-        citation_lines = []
-        for i, citation in enumerate(citations[:5], 1):  # Limit to 5 citations
-            title = citation.get("title", "Source")
-            url = citation.get("url", "")
-            if url:
-                citation_lines.append(f"[{i}]({url}) - {title}")
-
-        if citation_lines:
-            content += "\n\n**Sources:**\n" + "\n".join(citation_lines)
-
-        return content
+            return {}
+        chunks = []
+        for chunk in getattr(grounding_metadata, "grounding_chunks", None) or ():
+            web = getattr(chunk, "web", None)
+            chunks.append({
+                "url": (getattr(web, "uri", "") or "") if web else "",
+                "title": (getattr(web, "title", "") or "") if web else "",
+            })
+        if not any(c["url"] for c in chunks):
+            return {}
+        supports = []
+        for sup in getattr(grounding_metadata, "grounding_supports", None) or ():
+            seg = getattr(sup, "segment", None)
+            end = getattr(seg, "end_index", None) if seg else None
+            idx = list(getattr(sup, "grounding_chunk_indices", None) or ())
+            if isinstance(end, int) and idx:
+                supports.append({"end": end, "chunks": [i for i in idx if isinstance(i, int)]})
+        queries = [q for q in getattr(grounding_metadata, "web_search_queries", None) or ()
+                   if isinstance(q, str) and q]
+        return {"chunks": chunks, "supports": supports, "queries": queries}
 
     def _classify_throttle(self, e: Exception) -> dict[str, Any] | None:
         """Detect Gemini-side rate-limit / quota errors.

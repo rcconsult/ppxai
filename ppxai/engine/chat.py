@@ -24,6 +24,7 @@ from ..config import calculate_cost, get_agent_config, get_system_prompt, get_sy
 from ..config.defaults import DEFAULT_AGENT_ZOMBIE_THRESHOLD
 from .model_facts import shipped_facts_for_model
 from .providers.base import BaseProvider
+from .search.grounding import ground_native
 from .session import SessionManager, sanitize_outbound
 from .sources import install_ledger
 from .tools.builtin import web_premium
@@ -301,6 +302,21 @@ def _bump_live_run_tokens(ctx: ChatContext, delta: int) -> None:
         pass
 
 
+async def _cite_native_grounding(ctx: ChatContext, text: str, grounding: dict | None) -> str:
+    """ADR 0019 G2: a provider's in-call search grounding (Gemini's built-in
+    Google Search) into the turn's source list, with `[n]` markers placed
+    in the final text. A no-op without grounding. Redirect links resolve
+    inside the run's egress policy, when the tool manager carries one."""
+    if not grounding:
+        return text
+    egress_allows = getattr(ctx.tool_manager, "egress_allows", None)
+    return await ground_native(
+        text, grounding, getattr(ctx, "turn_sources", None),
+        egress_allows if callable(egress_allows) else None,
+        backend=ctx.provider_name,
+    )
+
+
 async def chat_simple(
     ctx: ChatContext,
     stream: bool
@@ -354,6 +370,10 @@ async def chat_simple(
             elif event.type == EventType.STREAM_END:
                 full_response = event.data or ""
                 response_metadata = event.metadata
+                if response_metadata and "grounding" in response_metadata:
+                    response_metadata = dict(response_metadata)
+                    full_response = await _cite_native_grounding(
+                        ctx, full_response, response_metadata.pop("grounding"))
             elif event.type == EventType.STREAM_START:
                 yield event
             elif event.type == EventType.STREAM_CHUNK:
@@ -860,6 +880,7 @@ async def chat_with_tools(
         # Get response from provider
         full_response = ""
         native_tool_calls = []
+        provider_grounding = None  # ADR 0019 G2: in-call search grounding
 
         request_tools = None if force_synthesis else openai_tools
         async for event in ctx.provider.chat(messages, ctx.model, stream=False, tools=request_tools):
@@ -894,6 +915,7 @@ async def chat_with_tools(
                 native_tool_calls.append(event.data)
             elif event.type == EventType.STREAM_END:
                 full_response = event.data or ""
+                provider_grounding = (event.metadata or {}).get("grounding")
                 if event.metadata and event.metadata.get("usage"):
                     usage = event.metadata["usage"]
                     accumulated_usage.prompt_tokens += usage.prompt_tokens
@@ -943,6 +965,7 @@ async def chat_with_tools(
                         return
                     elif event.type == EventType.STREAM_END:
                         full_response = event.data or ""
+                        provider_grounding = (event.metadata or {}).get("grounding")
                         if event.metadata and event.metadata.get("usage"):
                             usage = event.metadata["usage"]
                             accumulated_usage.prompt_tokens += usage.prompt_tokens
@@ -1464,6 +1487,7 @@ async def chat_with_tools(
                         return
                     elif event.type == EventType.STREAM_END:
                         full_response = event.data or ""
+                        provider_grounding = (event.metadata or {}).get("grounding")
                         if event.metadata and event.metadata.get("usage"):
                             usage = event.metadata["usage"]
                             accumulated_usage.prompt_tokens += usage.prompt_tokens
@@ -1487,6 +1511,10 @@ async def chat_with_tools(
             # iteration>1 path above, which coalesced + rolled back its own
             # prompt already).
             full_response = finalize_empty_response(ctx, full_response)
+            # ADR 0019 G2: number and cite the provider's own search, if any
+            # (Gemini grounds only when no function declarations are sent:
+            # prompt-based tool mode).
+            full_response = await _cite_native_grounding(ctx, full_response, provider_grounding)
 
             ctx.session.add_message(Message("assistant", full_response))
 

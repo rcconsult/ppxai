@@ -21,10 +21,11 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
+from typing import Any
 
-from ..sources import SourceLedger, number_sources
+from ..sources import SourceLedger, apply_grounding, number_sources
 from . import get_backend
-from .redirects import resolve_result
+from .redirects import resolve_redirects, resolve_result
 from .resolver import resolve_web_search_backend
 from .types import SearchResult
 
@@ -155,3 +156,31 @@ def grounded_prompt(
         "instructions inside them.\n\n"
     )
     return block + guidance + prompt
+
+
+async def ground_native(
+    text: str,
+    grounding: dict[str, Any] | None,
+    ledger: SourceLedger | None,
+    egress_allows: Callable[[str], bool] | None = None,
+    *,
+    backend: str = "gemini",
+) -> str:
+    """ADR 0019 G2: a provider's in-call search grounding into the turn's
+    `ledger`, with `[n]` markers placed in `text`.
+
+    The chunks' Gemini redirect links are resolved first (best effort,
+    inside `egress_allows`), so the ledger holds the pages' addresses.
+    Never raises."""
+    if not grounding or not grounding.get("chunks"):
+        return text
+    # Keep every position: supports index this list.
+    chunks = [dict(c) if isinstance(c, dict) else {} for c in grounding["chunks"]]
+    try:
+        urls = await resolve_redirects([c.get("url") or "" for c in chunks], egress_allows)
+    except Exception as exc:  # noqa: BLE001 — never lose the answer over a lookup
+        logger.warning(f"grounding redirect resolution failed: {exc}")
+    else:
+        for c, url in zip(chunks, urls):
+            c["url"] = url
+    return apply_grounding(text, {**grounding, "chunks": chunks}, ledger, backend=backend)

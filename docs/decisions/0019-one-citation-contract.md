@@ -1,7 +1,8 @@
 # ADR 0019: One citation contract for chat, `/run` and `/task`
 
 - **Status:** Accepted (2026-11-21, owner). Implementation in progress:
-  steps 1–5 done 2026-11-21, plus Gemini redirect links resolved when a
+  steps 1–6 done 2026-11-21/22 (step 6 except `/v1/oneshot`, which waits
+  on an owner decision), plus Gemini redirect links resolved when a
   search returns (owner decision, § "Gemini's built-in search grounding").
   The owner chose option B (below), with
   sources numbered **per turn** and stored **with the message in the
@@ -183,8 +184,12 @@ and probed live first; the record of both follows.
    not. Neither is capped at the five shown in the text. No client reads
    either.
 6. **`/v1/oneshot` under `native` returns no `grounding` record**: the
-   route passes it on the retrieve path only. Gemini's sources reach a
-   `/v1/oneshot` caller only as the appended text.
+   route passes it on the retrieve path only. *Corrected 2026-11-22:* this
+   item said the sources reached a `/v1/oneshot` caller "only as the
+   appended text". They did not reach it at all: Gemini's `oneshot()` never
+   read `grounding_metadata`, so under `native` both `/v1/oneshot` and
+   `/run` (which also calls `oneshot()`) dropped the sources entirely;
+   only chat appended the block.
 7. The URLs are opaque `vertexaisearch.cloud.google.com` redirects and the
    titles are domains. That is the backend's data and none of the options
    change it.
@@ -327,6 +332,38 @@ Each step can ship on its own.
    `metadata` carries the one ledger shape; `/v1/oneshot` under `native`
    gets `grounding.sources`, after checking that against the
    byte-identity promise. It can run in parallel with steps 2 to 4.
+   **Done 2026-11-22, except `/v1/oneshot`:**
+   - `GeminiProvider._parse_grounding` returns `{"chunks": [{url, title}],
+     "supports": [{end, chunks}], "queries": [...]}` (`{}` when none), and
+     `chat()` puts it in `STREAM_END` metadata as `grounding` (streaming:
+     the last non-empty one, which arrives on the final chunk). The
+     appended `**Sources:**` block, `_inject_citations` and both
+     `metadata["citations"]` shapes are deleted.
+   - `engine/sources.py::place_markers` / `apply_grounding` are pure:
+     byte offsets to string positions (an offset inside a character rounds
+     down), supports ending together merge, `[a][b]` after each supported
+     segment, numbers from the turn's ledger (a URL already cited keeps
+     its number). `engine/search/grounding.py::ground_native` resolves the
+     redirect links first and never raises.
+   - Chat: `chat_simple` and the tool loop's final answer (Gemini grounds
+     in prompt-based tool mode) cite before the answer is stored, so the
+     stored text, the `STREAM_END` text and `metadata.sources` agree; the
+     raw `grounding` is removed from the metadata clients see. The live
+     stream stays unmarked; a client that re-renders from `STREAM_END`
+     (all four do) shows the marked text. Redirects resolve inside the
+     run's egress policy (`ScopedToolManager.egress_allows`) when there is
+     one.
+   - `/run` under `native`: `oneshot()` returns `grounding` as an extra
+     result key (like `reasoning`); the tool-free runner cites it, records
+     the sources on the run, and resolves redirects inside the egress
+     ceiling.
+   - **Not done — owner decision:** `/v1/oneshot` under `native` still
+     returns the unmarked text and no `grounding` record, byte-identical
+     to before. `docs/api-gateway.md` promises `grounding` is absent
+     except on the search-loop and retrieval paths, so adding it (and
+     `[n]` markers in `content`) changes a documented contract.
+   - Tests: `tests/test_citation_sources.py` (step 6 classes),
+     mutation-checked.
 
 **Fences to add:** `/v1/oneshot`'s `grounding` stays byte-identical; no
 code outside the ledger formats a source list as text (`Sources:`); every

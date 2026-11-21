@@ -158,7 +158,7 @@ class TestGeminiNoneIterableGuards:
         assert provider._parse_function_call(None) is None
 
     def test_parse_grounding_handles_none(self, provider):
-        assert provider._parse_grounding(None) == []
+        assert provider._parse_grounding(None) == {}  # ADR 0019: a dict shape now
 
     def test_parse_usage_handles_none(self, provider):
         assert provider._parse_usage(None) is None

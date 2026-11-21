@@ -174,6 +174,76 @@ def format_sources_text(sources: Iterable[Source | dict[str, Any]] | None) -> st
     )
 
 
+def _char_index(text: str, byte_offset: int) -> int:
+    """The string position of a UTF-8 byte offset into `text`. An offset
+    that lands inside a character rounds down to its start."""
+    if byte_offset <= 0:
+        return 0
+    data = text.encode("utf-8")
+    if byte_offset >= len(data):
+        return len(text)
+    return len(data[:byte_offset].decode("utf-8", errors="ignore"))
+
+
+def place_markers(text: str, supports: Iterable[dict[str, Any]], numbers: list[int]) -> str:
+    """`text` with `[n]` markers after each supported segment (ADR 0019 G2).
+
+    `supports` are `{"end": <UTF-8 byte offset>, "chunks": [<index>, ...]}`,
+    as Gemini's `grounding_supports` give them: offsets count BYTES, not
+    characters (live probe, 2026-11-21). `numbers[i]` is the ledger number
+    of chunk `i`. Supports ending at the same place are merged; a marker
+    already in the text is not repeated; unsupported text stays unmarked."""
+    at: dict[int, list[int]] = {}
+    for sup in supports or ():
+        end = sup.get("end")
+        if not isinstance(end, int):
+            continue
+        nums = at.setdefault(_char_index(text, end), [])
+        for i in sup.get("chunks") or ():
+            if isinstance(i, int) and 0 <= i < len(numbers) and numbers[i] and numbers[i] not in nums:
+                nums.append(numbers[i])
+    out = text
+    for pos in sorted(at, reverse=True):
+        nums = sorted(at[pos])
+        marker = "".join(f"[{n}]" for n in nums)
+        if not nums or out[:pos].endswith(marker):
+            continue
+        out = f"{out[:pos]} {marker}{out[pos:]}"
+    return out
+
+
+def apply_grounding(
+    text: str,
+    grounding: dict[str, Any] | None,
+    ledger: SourceLedger | None,
+    *,
+    backend: str | None = None,
+) -> str:
+    """A provider's in-call search grounding (Gemini's built-in Google
+    Search), numbered from the turn's `ledger` and cited in `text`.
+
+    `grounding` is `{"chunks": [{"url", "title"}], "supports": [...],
+    "queries": [...]}`; see `place_markers` for the supports. Every chunk
+    goes into the ledger, cited or not, so the source list is complete.
+    Without a ledger the chunks are numbered from 1."""
+    if not grounding:
+        return text
+    chunks = list(grounding.get("chunks") or ())
+    valid = [isinstance(c, dict) and bool(c.get("url")) for c in chunks]
+    if not any(valid):
+        return text
+    queries = [q for q in grounding.get("queries") or () if isinstance(q, str) and q]
+    numbered = iter(number_sources(
+        ((c["url"], c.get("title")) for c, ok in zip(chunks, valid) if ok), ledger,
+        backend=backend, query="; ".join(queries) or None,
+    ))
+    # Supports index the provider's chunk list; a malformed chunk gets no
+    # number and `place_markers` skips it.
+    by_index = [next(numbered) if ok else 0 for ok in valid]
+    supports = [s for s in grounding.get("supports") or () if isinstance(s, dict)]
+    return place_markers(text, supports, by_index)
+
+
 _ledger_holder: contextvars.ContextVar[SourceLedger | None] = contextvars.ContextVar(
     "turn_source_ledger", default=None
 )

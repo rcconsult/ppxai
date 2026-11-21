@@ -105,6 +105,7 @@ from ...config import execution as _execution_config
 from ...engine import task_authorizer as _authz
 from ...engine import task_runner as _task_runner
 from ...engine.agent_runs import RUN_STATUSES, RunMeta, resume_refusal
+from ...engine.search.grounding import ground_native
 from ...engine.sources import SourceLedger
 from ...engine.task_authorizer import (
     TaskAuthorizationError,
@@ -464,18 +465,22 @@ async def create_agent_run(
     # ADR 0014: under "retrieve" grounding the tool-free run searches once
     # with its task, then answers from the result (no request override on
     # this surface; the server setting decides).
-    retrieve_first = _execution_config.get_execution_run_grounding_mode() == "retrieve"
-    egress_allows = _grounding_egress_allows_or_400() if retrieve_first else None
+    grounding_mode = _execution_config.get_execution_run_grounding_mode()
+    retrieve_first = grounding_mode == "retrieve"
+    # The ceiling also bounds the native path's redirect lookups (ADR 0019).
+    egress_allows = (
+        _grounding_egress_allows_or_400() if grounding_mode in ("retrieve", "native") else None
+    )
     owner = _caller_owner(request)
 
     async def _runner(m) -> str:
         prompt = auth.task
+        # ADR 0019: one ledger per run; its sources stay on the run, so the
+        # result's [n] can be resolved.
+        ledger = SourceLedger()
         if retrieve_first:
             found = await _retrieve_for_grounding(auth.task, auth.provider, egress_allows)
             _record_grounding_usage(found, owner, m.run_id)
-            # ADR 0019: number the sources from the run's ledger and keep
-            # them on the run, so the result's [n] can be resolved.
-            ledger = SourceLedger()
             prompt = _grounded(auth.task, found, ledger)
             registry.record_sources(m, ledger.to_dicts())
         # provider.oneshot is blocking I/O — run it off the event loop so
@@ -485,7 +490,14 @@ async def create_agent_run(
             system=auth.system,
         )
         _record_oneshot_usage(auth.provider, auth.model, result, owner, m.run_id)
-        return result.get("content", "")
+        content = result.get("content", "")
+        # ADR 0019 G2: the provider's own search (Gemini, `native`), numbered
+        # and cited in the result.
+        if result.get("grounding"):
+            content = await ground_native(
+                content, result["grounding"], ledger, egress_allows, backend=auth.provider)
+            registry.record_sources(m, ledger.to_dicts())
+        return content
 
     registry.run_in_background(meta, _runner)
     return AgentRunResponse(run_id=meta.run_id, status=meta.status)
