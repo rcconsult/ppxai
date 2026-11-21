@@ -350,7 +350,10 @@ Each step can ship on its own.
      stored text, the `STREAM_END` text and `metadata.sources` agree; the
      raw `grounding` is removed from the metadata clients see. The live
      stream stays unmarked; a client that re-renders from `STREAM_END`
-     (all four do) shows the marked text. Redirects resolve inside the
+     shows the marked text. Web, VSCode and Rich already did; Textual
+     preferred its streamed text and showed the answer unmarked (found by
+     the Linux live check), fixed 2026-11-22: it now prefers the
+     `STREAM_END` text. Redirects resolve inside the
      run's egress policy (`ScopedToolManager.egress_allows`) when there is
      one.
    - `/run` under `native`: `oneshot()` returns `grounding` as an extra

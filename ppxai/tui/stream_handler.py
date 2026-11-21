@@ -276,7 +276,11 @@ async def on_stream_end(app, sender, data, **kwargs) -> None:
     app._log.debug(f"STREAM_END: data type={type(data).__name__}")
     app._log.debug(f"STREAM_END: accumulated={len(app._current_message_content)} chars")
 
-    final_response = app._current_message_content
+    # The engine's STREAM_END text is the answer as stored, and it can differ
+    # from the streamed chunks: ADR 0019 places Gemini's [n] markers in the
+    # final text only. Prefer it, as web, VSCode and Rich do; fall back to
+    # the streamed text when STREAM_END carries none.
+    final_response = data if isinstance(data, str) and data.strip() else app._current_message_content
 
     if not final_response:
         if isinstance(data, str):

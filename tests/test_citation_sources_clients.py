@@ -189,6 +189,23 @@ class TestRichStreamEnd:
 # --- Textual: metadata reaches the bus, and on_stream_end shows the list ------
 
 class TestTextualStreamEnd:
+    @pytest.mark.asyncio
+    async def test_the_final_text_wins_over_the_streamed_text(self, monkeypatch):
+        # Gemini's [n] markers exist only in STREAM_END (ADR 0019 step 6).
+        monkeypatch.setattr(stream_handler, "clear_thinking_indicator", lambda app: None)
+        monkeypatch.setattr(stream_handler, "update_usage_display", lambda app: None)
+        added = []
+        app = SimpleNamespace(
+            _chat_view=SimpleNamespace(add_assistant_message=lambda c, response_time=0.0: added.append(c)),
+            _log=SimpleNamespace(debug=lambda *a, **k: None, warning=lambda *a, **k: None),
+            _current_message_content="Python 3.15.2 is out.",
+            _reasoning_message=None, _reasoning_content="", _reasoning_started=False,
+            _response_start_time=time.time(),
+            _engine_client=SimpleNamespace(session=SimpleNamespace(messages=[])),
+        )
+        await stream_handler.on_stream_end(app, None, data="Python 3.15.2 is out [1].")
+        assert added == ["Python 3.15.2 is out [1]."]
+
     def test_handle_stream_event_passes_metadata_to_the_bus(self):
         seen = []
         app = SimpleNamespace(
