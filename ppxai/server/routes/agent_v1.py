@@ -105,6 +105,7 @@ from ...config import execution as _execution_config
 from ...engine import task_authorizer as _authz
 from ...engine import task_runner as _task_runner
 from ...engine.agent_runs import RUN_STATUSES, RunMeta, resume_refusal
+from ...engine.sources import SourceLedger
 from ...engine.task_authorizer import (
     TaskAuthorizationError,
     TaskRequest,
@@ -298,6 +299,10 @@ class RunMetaResponse(BaseModel):
     # result was merged into a conversation (None = not yet).
     session_id: str | None = None
     merged_at: float | None = None
+    # ADR 0019: the run's numbered sources, `[{n, url, title, backend,
+    # query}]`; the result's `[n]` is the row whose `n` matches. Empty when
+    # the run cited nothing.
+    sources: list[dict] = Field(default_factory=list)
 
     @classmethod
     def from_meta(cls, m: RunMeta) -> RunMetaResponse:
@@ -324,6 +329,7 @@ class RunMetaResponse(BaseModel):
             workdir=getattr(m, "workdir", None),
             session_id=getattr(m, "session_id", None),
             merged_at=getattr(m, "merged_at", None),
+            sources=list(getattr(m, "sources", []) or []),
         )
 
 
@@ -467,7 +473,11 @@ async def create_agent_run(
         if retrieve_first:
             found = await _retrieve_for_grounding(auth.task, auth.provider, egress_allows)
             _record_grounding_usage(found, owner, m.run_id)
-            prompt = _grounded(auth.task, found)
+            # ADR 0019: number the sources from the run's ledger and keep
+            # them on the run, so the result's [n] can be resolved.
+            ledger = SourceLedger()
+            prompt = _grounded(auth.task, found, ledger)
+            registry.record_sources(m, ledger.to_dicts())
         # provider.oneshot is blocking I/O — run it off the event loop so
         # other requests (e.g. GET status polls) aren't starved.
         result = await asyncio.to_thread(

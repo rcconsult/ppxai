@@ -1,6 +1,7 @@
 # ADR 0019: One citation contract for chat, `/run` and `/task`
 
-- **Status:** Proposed (2026-11-21). The owner chose option B (below), with
+- **Status:** Accepted (2026-11-21, owner). Implementation in progress:
+  steps 1–3 done 2026-11-21. The owner chose option B (below), with
   sources numbered **per turn** and stored **with the message in the
   transcript**. For Gemini's built-in search grounding the owner chose
   **G2** (2026-11-21, after a live probe): sources into the ledger, the
@@ -43,9 +44,12 @@ record, and the engine's own paths (chat, the task runner) never had one.
 
 ## Decision
 
-1. **One `Source` type, owned by the engine.** It lives in a new module
-   `ppxai/engine/search/sources.py`, so it stays free of providers, which
-   `tests/test_search_layer_imports_no_providers.py` already fences.
+1. **One `Source` type, owned by the engine.** It lives in a new module,
+   `ppxai/engine/sources.py`, that imports nothing from ppxai: the search
+   backends, the tools and `engine/types.py` all use it. (Step 1 first put
+   it in `engine/search/`; step 2 moved it, because importing anything
+   under `engine/search/` loads every search backend, and the DuckDuckGo
+   backend imports `tools/builtin/web.py`, which now needs the ledger.)
 
    ```python
    @dataclass(frozen=True)
@@ -79,10 +83,11 @@ record, and the engine's own paths (chat, the task runner) never had one.
      (`[{url, title}]`, `[n]` = `sources[n-1]`). That surface's shape has
      been byte-identical since v1.18.4, and this ADR keeps it that way.
    - **`/run` and `/task`:** an additive `sources: list[Source]` field on
-     `RunMeta` / `RunMetaResponse`, absent when the run found none, plus
-     a `sources` entry in the run's event log each time the list grows, so
-     a live view can show sources before the result lands. This settles
-     tai's report.
+     `RunMeta` / `RunMetaResponse` (an empty list when the run cited
+     nothing, and on metas written before the field existed), plus an
+     `agent_run_sources` event (category `result`, carrying the full list
+     so far) each time the list grows, so a live view can show sources
+     before the result lands. This settles tai's report.
    - **Chat:** `sources` in the `STREAM_END` metadata.
 
 5. **Sources are stored with the message in the transcript.** The final
@@ -231,12 +236,37 @@ Each step can ship on its own.
 
 1. `Source`, `SourceLedger`, and `RunMeta.sources` plus the run event, with
    `create_agent_run` filling them from retrieval grounding. This settles
-   tai's report.
+   tai's report. **Done 2026-11-21:** `engine/sources.py` (moved there
+   in step 2);
+   `grounded_prompt(..., ledger=)` numbers from the ledger (without one,
+   from 1 as before, so `/v1/oneshot` is unchanged);
+   `AgentRunRegistry.record_sources(meta, rows)` persists the meta at once
+   and emits `agent_run_sources` (it takes plain rows so `agent_runs.py`
+   keeps its logger-only imports, which ppxai-sre relies on);
+   `tests/test_citation_sources.py`.
 2. Number the `web_search` tool output from the ledger, and expose sources
-   for `/task` and for `/run` with `web_search`.
+   for `/task` and for `/run` with `web_search`. **Done 2026-11-21:** the
+   turn's ledger reaches a tool through a ContextVar
+   (`install_ledger`/`current_ledger`), installed by
+   `chat.py::_execute_single_tool` before each tool task, the same way
+   search usage is captured. The premium output is `Sources (cite as
+   [n]):` then `[n] title url`; DuckDuckGo's is `[n] title / URL: ... /
+   snippet`. Both number from the ledger (from 1 outside a turn). The task
+   runner passes `EngineClient.chat(..., sources=)` a ledger seeded from
+   the run's stored sources, so a resumed run keeps its numbers, and
+   records them on each `TOOL_RESULT` and `STREAM_END`.
 3. Chat: the ledger per turn, `sources` in the `STREAM_END` metadata,
    `Message.sources` stored in the session JSON, exports, and the merge of
-   a collected run.
+   a collected run. **Done 2026-11-21:** `EngineClient.chat` starts a
+   ledger per call; on the terminal `STREAM_END` it adds
+   `metadata["sources"]` and sets `Message.sources` on the turn's final
+   assistant message. The session file stores it as an additive
+   per-message `sources` key (absent when empty; malformed rows are
+   skipped on load); the history endpoint returns it; `/export` lists it
+   under the answer; both merge paths (HTTP and the TUI) carry a run's
+   sources onto the merged answer. No wire handler sends it (tested for
+   all four). Chat's inline-URL prompt stays until step 5, and no client
+   renders `sources` until step 4.
 4. All four clients render `sources`, with the parity fence.
 5. Remove chat's inline-URL system prompt and the unused
    `ChatResponse.citations`.

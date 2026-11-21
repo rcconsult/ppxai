@@ -19,6 +19,7 @@ import os
 from typing import Any
 
 from ...search import get_backend, resolve_web_search_backend
+from ...sources import current_ledger, number_sources
 from ...types import ToolUsage
 from . import web
 
@@ -109,17 +110,28 @@ def _format_search_result(
     citations: list[str],
     fallback: bool = False,
     titles: list[str] | None = None,
+    query: str | None = None,
 ) -> str:
     """Provider tag at the beginning for visibility (v1.15.3 — not truncated).
 
     A source with a title (Gemini's domain, beside its opaque redirect URL)
-    is listed as `title url`."""
+    is listed as `[n] title url`. ADR 0019: `n` comes from the turn's
+    source ledger when one is installed, so a second search in the same
+    turn numbers on instead of restarting, and every `[n]` the model cites
+    resolves against the turn's one source list."""
     tag = f"[via {backend} (fallback)]" if fallback else f"[via {backend}]"
-    result = f"{tag}\n\n{content.lstrip()}\n\nSources:\n"
+    result = f"{tag}\n\n{content.lstrip()}\n"
     titles = titles or []
-    for i, url in enumerate(citations):
-        title = titles[i] if i < len(titles) else ""
-        result += f"- {title} {url}\n" if title else f"- {url}\n"
+    pairs = [
+        (url, titles[i] if i < len(titles) and titles[i] else None)
+        for i, url in enumerate(citations)
+    ]
+    if not pairs:
+        return result
+    numbers = number_sources(pairs, current_ledger(), backend=backend, query=query)
+    result += "\nSources (cite as [n]):\n"
+    for n, (url, title) in zip(numbers, pairs):
+        result += f"[{n}] {title} {url}\n" if title else f"[{n}] {url}\n"
     return result
 
 
@@ -171,6 +183,7 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: s
                 result.citations,
                 fallback=i > 0,
                 titles=result.titles,
+                query=query,
             )
         except Exception as e:
             last_error = e

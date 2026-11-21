@@ -46,6 +46,7 @@ from ..usage_events import TIER_TASK, record_usage
 from .agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 from .agent_scoped_tools import ScopedToolManager
 from .client import EngineClient
+from .sources import SourceLedger
 from .tools.agent_spawn import SpawnSubagentTool
 from .tools.filesystem_policy import build_filesystem_policy, is_path_tool
 from .tools.network_policy import (
@@ -501,7 +502,15 @@ def build_task_runner(
         # consumption immediately (fail-fast: no tool may execute once an
         # ERROR was seen, same guarantee the old immediate `raise` gave).
         pending_error: str | None = None
-        async for event in engine.chat(task, stream=False):
+        # ADR 0019: the run is one turn, numbered from one ledger. Seeded
+        # from the run's stored sources so a resumed run keeps its numbers;
+        # every growth lands on the run's meta and as an
+        # `agent_run_sources` event (registry.record_sources no-ops when
+        # nothing changed).
+        ledger = SourceLedger.from_dicts(getattr(m, "sources", None))
+        async for event in engine.chat(task, stream=False, sources=ledger):
+            if event.type in (EventType.TOOL_RESULT, EventType.STREAM_END):
+                registry.record_sources(m, ledger.to_dicts())
             if pending_error is not None and event.type not in (
                 EventType.AGENT_RUN_ERROR,
                 EventType.AGENT_RUN_COMPLETE,

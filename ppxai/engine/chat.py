@@ -25,6 +25,7 @@ from ..config.defaults import DEFAULT_AGENT_ZOMBIE_THRESHOLD
 from .model_facts import shipped_facts_for_model
 from .providers.base import BaseProvider
 from .session import SessionManager, sanitize_outbound
+from .sources import install_ledger
 from .tools.builtin import web_premium
 from .tools.manager import ToolManager
 from .tools.parser import detect_truncated_tool_call, parse_tool_call, strip_tool_json_from_text
@@ -496,6 +497,11 @@ async def _execute_single_tool(
         usage_holder = (
             web_premium.begin_usage_capture() if tool_name == "web_search" else None
         )
+        # ADR 0019: the turn's source ledger, installed the same way and for
+        # the same reason, so a search tool numbers its sources on from the
+        # turn's earlier ones. Every tool, not only web_search: get_weather
+        # falls back to a premium search. None for a context without one.
+        install_ledger(getattr(ctx, "turn_sources", None))
         tool_task = asyncio.create_task(
             ctx.tool_manager.execute_tool(tool_name, **tool_args)
         )

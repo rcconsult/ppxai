@@ -44,6 +44,7 @@ from .context import ContextInjector, ScopedBootstrapSource
 from .file_ref import resolve_file_reference as _resolve
 from .providers.base import BaseProvider
 from .session import SessionManager
+from .sources import SourceLedger
 from .session_store import SessionFileStore
 from .tools.builtin import register_all_builtin_tools
 from .tools.builtin.shell import terminate_subprocess_tree
@@ -174,6 +175,11 @@ class EngineClient:
 
         # Interrupt handling for graceful stream cancellation
         self._interrupted: bool = False
+        # ADR 0019: the numbered sources of the turn in progress. A fresh
+        # ledger per chat() call (or the caller's, for a resumed /task run);
+        # chat.py installs it for each tool call.
+        self.turn_sources: SourceLedger = SourceLedger()
+        self._turn_start: int = 0  # index of the turn's first message
 
         # Active asyncio subprocesses spawned by tools (v1.18.3 P3).
         # interrupt_stream() terminates these so a hung shell command
@@ -1030,6 +1036,7 @@ class EngineClient:
         message: MessageContent,
         stream: bool = True,
         attachment_refs: list[Any] | None = None,
+        sources: SourceLedger | None = None,
     ) -> AsyncIterator[Event]:
         """Send a chat message, yielding events.
 
@@ -1065,6 +1072,10 @@ class EngineClient:
                 transitional path, dropped in Step 7). The kwarg
                 avoids the producer-pipeline tuple-return rippling
                 through every chat() caller — opt-in.
+            sources: ADR 0019 — the ledger this turn numbers its sources
+                from. None (every interactive turn) starts a fresh one;
+                the task runner passes one seeded from the run's stored
+                sources, so a resumed run keeps its numbers.
 
         Yields:
             Event objects
@@ -1148,6 +1159,8 @@ class EngineClient:
             attachments=effective_attachments,
         ))
 
+        self.turn_sources = sources if sources is not None else SourceLedger()
+        self._turn_start = len(self.session.messages)
         try:
             if self.tools_enabled:
                 async for event in self._chat_with_tools(stream):
@@ -1176,7 +1189,27 @@ class EngineClient:
                 **(event.metadata or {}),
                 "context_percentage": self.state.get("context_percentage"),
             }
+            self._stamp_turn_sources(event)
         return event
+
+    def _stamp_turn_sources(self, event: Event) -> None:
+        """ADR 0019: on the terminal STREAM_END, hand the turn's sources to
+        the client and keep them with the answer.
+
+        `metadata["sources"]` carries the `[{n, url, title, backend,
+        query}]` rows; the turn's final assistant message (added before
+        STREAM_END, by every chat path's contract) gets them as
+        `Message.sources`, so a saved, reloaded or exported conversation
+        can still resolve its `[n]`. A turn that cited nothing changes
+        nothing. Called from `_stamp_context_percentage`, which sees only
+        the terminal STREAM_END."""
+        if not len(self.turn_sources):
+            return
+        event.metadata = {**(event.metadata or {}), "sources": self.turn_sources.to_dicts()}
+        for msg in reversed(self.session.messages[self._turn_start:]):
+            if msg.role == "assistant":
+                msg.sources = self.turn_sources.sources
+                break
 
     async def _chat_simple(self, stream: bool) -> AsyncIterator[Event]:
         """Simple chat without tools.

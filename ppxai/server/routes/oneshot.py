@@ -93,6 +93,7 @@ from ...engine.facts_resolver import get_effective_oneshot_path
 from ...engine.providers import create_provider
 from ...engine.search.grounding import NUM_RESULTS, Retrieval, grounded_prompt, retrieve
 from ...engine.search.resolver import resolve_web_search_backend
+from ...engine.sources import SourceLedger
 from ...engine.task_authorizer import TIERS as _TIERS
 from ...engine.task_authorizer import TaskAuthorizationError, authorize_oneshot
 from ...engine.tools.network_policy import NetworkPolicy
@@ -485,9 +486,14 @@ async def _retrieve_for_grounding(
     return await retrieve(prompt, provider_name, egress_allows=egress_allows)
 
 
-def _grounded(prompt: str, retrieval: Retrieval) -> str:
-    """The prompt the model sees: the search result framed ahead of it."""
-    return grounded_prompt(prompt, retrieval, max_chars=get_max_injection_size())
+def _grounded(
+    prompt: str, retrieval: Retrieval, ledger: SourceLedger | None = None
+) -> str:
+    """The prompt the model sees: the search result framed ahead of it.
+    With a `ledger` (ADR 0019) the sources are numbered from it."""
+    return grounded_prompt(
+        prompt, retrieval, max_chars=get_max_injection_size(), ledger=ledger
+    )
 
 
 def _record_grounding_usage(retrieval: Retrieval, owner, run_id: str) -> None:

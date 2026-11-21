@@ -144,6 +144,11 @@ class RunMeta:
     # ADR 0018: epoch seconds of the one successful merge of this run's result
     # into a conversation; None = never merged. Set by `claim_merge`.
     merged_at: float | None = None
+    # ADR 0019: the run's numbered sources (`Source.to_dict()` rows, `n`
+    # first-come per run), so a client can resolve the result's `[n]`.
+    # Empty when the run cited nothing, and on metas written before the
+    # field existed. Set through `AgentRunRegistry.record_sources`.
+    sources: list = field(default_factory=list)
     created_at: float = 0.0
     started_at: float | None = None  # set when execution begins (Inc 2 background)
     finished_at: float | None = None
@@ -704,6 +709,28 @@ class AgentRunRegistry:
         logger.info(f"Agent run {meta.run_id} -> {status}")
         self._notify_change()  # Inc 9: run left the active set
         return meta
+
+    def record_sources(self, meta: RunMeta, rows: list[dict[str, Any]]) -> None:
+        """ADR 0019: store the run's sources on its meta and announce them.
+
+        `rows` is `SourceLedger.to_dicts()`: plain dicts, so this module
+        keeps its logger-only import footprint (see the note at the top).
+        Called each time the run's ledger grows. Persists the meta at once,
+        so `GET /v1/agent/runs/{id}` shows the sources while the run is
+        still going, and appends an `agent_run_sources` event (category
+        `result`) carrying the full list so far, so a live view can render
+        them before the result lands. A ledger that has not grown since the
+        last call records nothing."""
+        rows = [dict(r) for r in rows]
+        if rows == list(getattr(meta, "sources", None) or []):
+            return
+        meta.sources = rows
+        if isinstance(meta, RunMeta):
+            self._store.persist_meta(meta)
+        self.emit_event(
+            meta.run_id, "agent_run_sources", level="info", category="result",
+            data={"sources": rows}, agent_n=getattr(meta, "agent_n", 0),
+        )
 
     def claim_merge(
         self, run_id: str, active_session: str | None

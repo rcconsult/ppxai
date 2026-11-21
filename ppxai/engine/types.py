@@ -17,6 +17,7 @@ from typing import (
 )
 
 from .artifact_projector import TextMarkerProjector
+from .sources import Source
 
 # Type alias for multimodal message content.
 #
@@ -719,6 +720,12 @@ class Message:
     # which narrows via isinstance check; future kind-specific helpers
     # follow the same pattern.
     attachments: list["ArtifactRef"] = field(default_factory=list)
+    # ADR 0019: the numbered sources the turn's answer cites as `[n]`, set
+    # on the turn's final assistant message. Like `attachments`, this is
+    # engine-internal bookkeeping: provider adapters serialize `content`
+    # only, so it is never sent to the model. Saved in the session file
+    # and returned in the history; empty for every other message.
+    sources: list[Source] = field(default_factory=list)
 
     def attachment_for_block(self, block_index: int) -> Optional["ImageAttachmentRef"]:
         """Return the ImageAttachmentRef whose block_index == `block_index`, or None.

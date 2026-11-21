@@ -12,6 +12,7 @@ import ppxai.config.execution as _execution
 import ppxai.server.auth as _auth
 
 from ...engine.session import SessionManager as EngineSessionManager
+from ...engine.sources import sources_from_rows
 from ...engine.types import Message
 from ..state import Session, get_agent_run_registry, get_session, with_drained_events
 from .agent_v1 import _caller_owner
@@ -81,7 +82,12 @@ async def merge_run_result(
         raise HTTPException(status_code=409, detail=refusal.detail())
     try:
         s.engine.session.add_message(Message(role="user", content=meta.task))
-        s.engine.session.add_message(Message(role="assistant", content=result))
+        # ADR 0019: the run's sources come along, so the merged answer's
+        # [n] stays resolvable in the conversation.
+        s.engine.session.add_message(Message(
+            role="assistant", content=result,
+            sources=sources_from_rows(getattr(meta, "sources", None)),
+        ))
     except Exception:
         registry.release_merge(run_id)
         raise

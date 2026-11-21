@@ -34,6 +34,7 @@ import ppxai.config.execution as _execution
 
 from ..common.logger import get_logger
 from .agent_runs import RunMeta, resume_refusal
+from .sources import sources_from_rows
 from .task_authorizer import (
     AuthorizedTask,
     TaskAuthorizationError,
@@ -356,7 +357,11 @@ class InProcessTaskBackend:
             return False, refusal.message
         try:
             session.add_message(Message(role="user", content=meta.task))
-            session.add_message(Message(role="assistant", content=result))
+            # ADR 0019: same as the HTTP merge — the sources come along.
+            session.add_message(Message(
+                role="assistant", content=result,
+                sources=sources_from_rows(getattr(meta, "sources", None)),
+            ))
         except Exception:
             self.registry.release_merge(run_id)
             raise

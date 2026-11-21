@@ -22,6 +22,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 
+from ..sources import SourceLedger, number_sources
 from . import get_backend
 from .resolver import resolve_web_search_backend
 from .types import SearchResult
@@ -99,7 +100,11 @@ async def retrieve(
 
 
 def grounded_prompt(
-    prompt: str, retrieval: Retrieval, max_chars: int, today: date | None = None
+    prompt: str,
+    retrieval: Retrieval,
+    max_chars: int,
+    today: date | None = None,
+    ledger: SourceLedger | None = None,
 ) -> str:
     """`prompt` preceded by the search result, or `prompt` unchanged.
 
@@ -115,6 +120,10 @@ def grounded_prompt(
       and may be adversarial.
 
     `max_chars` caps the injected text (`context.max_injection_size`).
+
+    With a `ledger` (ADR 0019), the sources are added to it and numbered
+    from it, so `[n]` resolves against the turn's one source list. Without
+    one they are numbered from 1, as before.
     """
     if not retrieval.searched or retrieval.result is None:
         return prompt
@@ -122,9 +131,11 @@ def grounded_prompt(
     answer = (result.answer or "").strip()
     if len(answer) > max_chars:
         answer = answer[:max_chars] + "\n... (search results truncated)"
+    pairs = result.sources(NUM_RESULTS)
+    numbers = number_sources(pairs, ledger, backend=result.backend, query=retrieval.query)
     sources = "\n".join(
-        f"[{i}] {title} {url}" if title else f"[{i}] {url}"
-        for i, (url, title) in enumerate(result.sources(NUM_RESULTS), 1)
+        f"[{n}] {title} {url}" if title else f"[{n}] {url}"
+        for n, (url, title) in zip(numbers, pairs)
     )
     block = f'<web_search_results backend="{result.backend}">\n{answer}\n'
     if sources:

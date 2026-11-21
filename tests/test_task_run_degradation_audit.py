@@ -132,7 +132,7 @@ class CraftedEngine(ScriptedEngine):
         super().__init__(ScriptedProvider([[Event(EventType.STREAM_END, "unused")]]))
         self._crafted = events
 
-    async def chat(self, message, stream=True, attachment_refs=None):
+    async def chat(self, message, stream=True, attachment_refs=None, **_kw):
         for ev in self._crafted:
             yield ev
 

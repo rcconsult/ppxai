@@ -14,6 +14,7 @@ import urllib.request
 
 from ....config import get_tool_config
 from ....config.tls import tls_ssl_context
+from ...sources import current_ledger, number_sources
 from ...types import ToolManagerProtocol
 
 
@@ -259,27 +260,42 @@ except ImportError:
         pass
 
 
+def _format_ddg_results(query: str, rows: list[tuple[str, str, str]]) -> str:
+    """The tool-visible text for DuckDuckGo `(title, url, snippet)` rows.
+
+    ADR 0019: each result is numbered `[n]` from the turn's source ledger
+    when one is installed (else 1, 2, ...), the same numbers every other
+    search path in the turn uses."""
+    if not rows:
+        return f"[via duckduckgo]\n\nNo results found for '{query}'"
+    numbers = number_sources(
+        [(url, title) for title, url, _ in rows], current_ledger(),
+        backend="duckduckgo", query=query,
+    )
+    formatted = [
+        f"[{n}] {title}\n   URL: {url}\n   {snippet}\n"
+        for n, (title, url, snippet) in zip(numbers, rows)
+    ]
+    return (
+        f"[via duckduckgo]\n\nSearch results for '{query}' (cite as [n]):\n\n"
+        + "\n".join(formatted)
+    )
+
+
 def _web_search_ddg_package(query: str, num_results: int = 5) -> str:
     """Search using duckduckgo-search package (more reliable)."""
     try:
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=min(num_results, 10)))
-
-        if not results:
-            return f"[via duckduckgo]\n\nNo results found for '{query}'"
-
-        formatted = []
-        for i, r in enumerate(results, 1):
-            title = r.get('title', 'No title')
-            url = r.get('href', r.get('link', ''))
-            snippet = r.get('body', '')[:200]
-            formatted.append(f"{i}. {title}\n   URL: {url}\n   {snippet}\n")
-
-        return f"[via duckduckgo]\n\nSearch results for '{query}':\n\n" + "\n".join(formatted)
-
+        rows = [
+            (r.get('title', 'No title'), r.get('href', r.get('link', '')),
+             r.get('body', '')[:200])
+            for r in results
+        ]
     except Exception:
         # Fall back to HTML scraping on any error
         return _web_search_html_fallback(query, num_results)
+    return _format_ddg_results(query, rows)
 
 
 def _web_search_html_fallback(query: str, num_results: int = 5) -> str:
@@ -319,12 +335,9 @@ def _web_search_html_fallback(query: str, num_results: int = 5) -> str:
                 snippet = re.sub(r'<[^>]*>', '', snippets[i])
                 snippet = snippet.strip()[:200]
 
-            results.append(f"{i+1}. {title}\n   URL: {link}\n   {snippet}\n")
+            results.append((title, link, snippet))
 
-        if not results:
-            return f"[via duckduckgo]\n\nNo results found for '{query}'"
-
-        return f"[via duckduckgo]\n\nSearch results for '{query}':\n\n" + "\n".join(results)
+        return _format_ddg_results(query, results)
 
     except urllib.error.URLError as e:
         return f"Error: Could not connect to search service. {str(e.reason)}"

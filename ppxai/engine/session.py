@@ -25,6 +25,7 @@ from ..usage import save_session_usage
 from ..usage_events import TIER_CHAT, record_usage
 from .artifact_registry import ArtifactRegistry
 from .session_store import SessionFileStore
+from .sources import Source, sources_from_rows
 from .types import (
     ImageAttachmentRef,
     Message,
@@ -190,6 +191,14 @@ _MEDIA_TYPE_TO_EXT = {
 def _ext_from_media_type(media_type: str) -> str:
     """Best-effort extension for an unknown-named attachment."""
     return _MEDIA_TYPE_TO_EXT.get(media_type, "bin")
+
+
+def _sources_from_serialized(raw: Any) -> list[Source]:
+    """ADR 0019: a message's stored `sources` rows, back as `Source`s.
+    Absent (every session written before the field, and every message
+    that cited nothing) or malformed rows load as nothing — a session
+    must never fail to load over its citations."""
+    return sources_from_rows(raw) if isinstance(raw, list) else []
 
 
 def _attachments_from_serialized_content(
@@ -499,6 +508,11 @@ class SessionManager:
             msg["tool_call_id"] = m.tool_call_id
         if effective_attachments:
             msg["attachments"] = [ref.to_dict() for ref in effective_attachments]
+        # ADR 0019: the turn's numbered sources travel with its answer.
+        # Dropped when empty, like `attachments`, so older readers and
+        # every other message see the shape they always did.
+        if m.sources:
+            msg["sources"] = [s.to_dict() for s in m.sources]
         return msg
 
     def _deserialize_message(
@@ -570,6 +584,7 @@ class SessionManager:
             tool_calls=m.get("tool_calls"),
             tool_call_id=m.get("tool_call_id"),
             attachments=attachments,
+            sources=_sources_from_serialized(m.get("sources")),
         )
 
     # ------------------------------------------------------------------
@@ -2160,6 +2175,13 @@ class SessionManager:
         for msg in self.messages:
             role = msg.role.capitalize()
             content += f"### {role}\n\n{msg.text_content()}\n\n"
+            # ADR 0019: an answer's `[n]` stays resolvable in the export.
+            if msg.sources:
+                content += "**Sources:**\n\n"
+                for src in msg.sources:
+                    label = src.title or src.url
+                    content += f"{src.n}. [{label}]({src.url})\n"
+                content += "\n"
 
         # Write to file
         with open(filepath, 'w', encoding='utf-8') as f:
