@@ -34,8 +34,9 @@
 | Document | Description |
 |----------|-------------|
 | [Architecture](architecture.md) | Module hierarchy, import patterns, transactional state |
-| [Architecture Decisions](decisions/) | ADRs 0001–0016; see [decisions/README.md](decisions/README.md) |
+| [Architecture Decisions](decisions/) | ADRs 0001–0019; see [decisions/README.md](decisions/README.md) |
 | [Agent Platform Call Graphs](agent-platform-call-graphs.md) | Per-increment endpoint call graphs for `/v1/agent/*` (ADR 0003 Stage 2) — debugging/refactoring reference |
+| [Analysis: streaming and interrupts in `/chat`](analysis-chat-streaming-and-interrupts.md) | Why nothing streams with tools on, and why an early interrupt doesn't stop a run (lock, disconnect, shared flag); options, not decided (2026-11-22, asked by tai) |
 | [Remote SSH Hub Call Graphs](remote-ssh-call-graphs.md) | What each path of the opt-in SSH remote hub and SSH Launcher calls, browser to remote shell (ADR 0013, v1.19.4); plan in [plan-ssh-remote-backend.md](plan-ssh-remote-backend.md) |
 | [DGX Spark Setup](dgx-spark-setup.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
