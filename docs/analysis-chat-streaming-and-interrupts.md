@@ -121,7 +121,7 @@ No client relies on there being no `stream_chunk` in tool mode. With (b), the we
   - Cancelling the asyncio task running the engine step works at once for the `asyncio.to_thread` paths. The background thread finishes on its own and its result is discarded.
   - For the synchronous streaming iterators it doesn't work until they run in a thread, because nothing in them awaits.
   - A run-scoped cancel (a token per run, with `/interrupt` cancelling that run's task) would end the run at once with "Interrupted by user" and `[DONE]`. Inferred.
-- **`ModelSwitchInFlightError` from `/chat` is a 500.** **Verified, reproduced.** `/chat` calls `set_provider` at `server/routes/chat.py:383` without handling the error. `/providers` and `/models` map it to 409 (`server/routes/providers.py:62`, `:102`). The guard (`engine/provider_ops.py:161`) also refuses when the named provider is the current one. So `/chat` should map the error to 409, and the guard could skip an unchanged provider.
+- **`ModelSwitchInFlightError` from `/chat` is a 500.** **Verified, reproduced.** `/chat` calls `set_provider` at `server/routes/chat.py:383` without handling the error. `/providers` and `/models` map it to 409 (`server/routes/providers.py:62`, `:102`). The guard (`engine/provider_ops.py:161`) also refuses when the named provider is the current one. So `/chat` should map the error to 409, and the guard could skip an unchanged provider. **The 409 is fixed** (2026-11-22, for `/chat` and `/coding_task`). The guard still refuses an unchanged provider.
 
 ### 7. The lock and history after an interrupt
 

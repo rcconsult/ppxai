@@ -36,6 +36,7 @@ from ppxai.engine import provider_ops
 from ppxai.engine.app_state import AppState
 from ppxai.engine.client import EngineClient
 from ppxai.engine.provider_ops import RUN_IN_FLIGHT_MESSAGE, ModelSwitchInFlightError
+from ppxai.server.routes.chat import router as chat_router
 from ppxai.server.routes.providers import router as providers_router
 from ppxai.server.state import Session, get_session
 
@@ -226,6 +227,7 @@ class TestRoutesAnswer409:
     def client(self, session):
         app = FastAPI()
         app.include_router(providers_router)
+        app.include_router(chat_router)
         app.dependency_overrides[get_session] = lambda: session
         return TestClient(app)
 
@@ -245,6 +247,29 @@ class TestRoutesAnswer409:
         assert resp.status_code == 409
         assert resp.json()["detail"] == PROVIDER_REFUSAL
         session.engine.set_model.assert_not_called()
+
+    # /chat and /coding_task switch the provider/model a request names before
+    # streaming. Mid-run that was an unhandled 500 (reported by tai, and
+    # reproduced: docs/analysis-chat-streaming-and-interrupts.md, B6).
+    @pytest.mark.parametrize("path", ["/chat", "/coding_task"])
+    def test_a_streaming_route_naming_a_provider_is_409(self, client, session, path):
+        session.engine.set_provider.side_effect = ModelSwitchInFlightError(PROVIDER_REFUSAL)
+
+        resp = client.post(path, json={"message": "summarise the readme please", "provider": "gemini"})
+
+        assert resp.status_code == 409
+        assert resp.json()["detail"] == PROVIDER_REFUSAL
+        session.engine.set_model.assert_not_called()
+        session.engine.chat.assert_not_called()
+
+    @pytest.mark.parametrize("path", ["/chat", "/coding_task"])
+    def test_a_streaming_route_naming_a_model_is_409(self, client, session, path):
+        session.engine.set_model.side_effect = ModelSwitchInFlightError(MODEL_REFUSAL)
+
+        resp = client.post(path, json={"message": "summarise the readme please", "model": "other"})
+
+        assert resp.status_code == 409
+        assert resp.json()["detail"] == MODEL_REFUSAL
 
     def test_post_models_still_succeeds_when_idle(self, client, session):
         """The 409 mapping must not swallow the normal path."""

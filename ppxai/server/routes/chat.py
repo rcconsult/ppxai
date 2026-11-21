@@ -19,7 +19,7 @@ import json
 import re
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from ...commands.agent import validate_agent_task
@@ -27,12 +27,31 @@ from ...common.logger import get_logger
 from ...config.defaults import DEFAULT_AGENT_MIN_TASK_WORDS
 from ...engine.file_preprocessing import preprocess_file
 from ...engine.model_facts import supports_vision as _supports_vision
+from ...engine.provider_ops import ModelSwitchInFlightError
 from ...engine.types import Event, EventType
 from ..models import ChatRequest, CodingTaskRequest
 from ..state import Session, get_session
 from ..streaming import sse_coding_task_generator, sse_event_generator
 
 logger = get_logger("server")
+
+
+def _apply_requested_model(s: Session, request) -> None:
+    """Switch to the request's provider/model, if it names any.
+
+    A switch refused because a response is still in flight is a 409, as on
+    `/providers` and `/models`, not an unhandled 500 (seen by tai: a
+    `/chat` naming its provider during a run). Raised before the stream
+    starts, so the client gets a plain JSON error."""
+    try:
+        if request.provider:
+            logger.info(f"Switching provider to: {request.provider}")
+            s.engine.set_provider(request.provider)
+        if request.model:
+            logger.info(f"Switching model to: {request.model}")
+            s.engine.set_model(request.model, reset_context=False)
+    except ModelSwitchInFlightError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 router = APIRouter()
 
@@ -377,13 +396,8 @@ async def chat(
     async with s.lock:
         logger.info(f"Chat lock acquired for session {s.id} - processing request")
 
-        # Set provider/model if specified
-        if request.provider:
-            logger.info(f"Switching provider to: {request.provider}")
-            s.engine.set_provider(request.provider)
-        if request.model:
-            logger.info(f"Switching model to: {request.model}")
-            s.engine.set_model(request.model, reset_context=False)
+        # Set provider/model if specified (409 while a response is in flight)
+        _apply_requested_model(s, request)
 
         # Build the chat payload — plain string when no files, multimodal
         # content list when files are attached (Phase 3.2). Returns a
@@ -482,11 +496,8 @@ async def coding_task(
     async with s.lock:
         logger.info(f"Coding task lock acquired for session {s.id} - processing request")
 
-        # Set provider/model if specified
-        if request.provider:
-            s.engine.set_provider(request.provider)
-        if request.model:
-            s.engine.set_model(request.model, reset_context=False)
+        # Set provider/model if specified (409 while a response is in flight)
+        _apply_requested_model(s, request)
 
         # Wrap generator to ensure lock is held during streaming
         async def locked_generator():
