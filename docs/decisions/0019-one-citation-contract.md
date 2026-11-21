@@ -1,7 +1,7 @@
 # ADR 0019: One citation contract for chat, `/run` and `/task`
 
 - **Status:** Accepted (2026-11-21, owner). Implementation in progress:
-  steps 1–4 done 2026-11-21, plus Gemini redirect links resolved when a
+  steps 1–5 done 2026-11-21, plus Gemini redirect links resolved when a
   search returns (owner decision, § "Gemini's built-in search grounding").
   The owner chose option B (below), with
   sources numbered **per turn** and stored **with the message in the
@@ -308,7 +308,16 @@ Each step can ship on its own.
    renderer under Node, each client's wiring by source,
    mutation-checked).
 5. Remove chat's inline-URL system prompt and the unused
-   `ChatResponse.citations`.
+   `ChatResponse.citations`. **Done 2026-11-21:** the prompt that
+   `chat_simple` prepended whenever the provider had native search or
+   citations is gone, and so is `ChatResponse` (never constructed; also
+   dropped from `ppxai.engine`'s exports; ppxai-sre does not use it). The
+   tool prompt's "format them as markdown links" line is now "cite them by
+   their number, like [1]", added only when a `web_search` tool is granted;
+   native search alone gets no instruction, because step 6 places its
+   markers. The shipped Gemini prompt (`config/prompts.py`) and the
+   `gemini` block in both shipped config files ask for `[n]` instead of
+   markdown links. A user's own config prompt is left as written.
 
 6. Gemini (G2): `_parse_grounding` returns chunks, supports and queries;
    the chunks go into the ledger; `[n]` markers go in at each support's

@@ -953,14 +953,6 @@ class UsageStats:
 
 
 @dataclass
-class ChatResponse:
-    """Response from a chat request."""
-    content: str
-    citations: list[str] = field(default_factory=list)
-    usage: UsageStats | None = None
-
-
-@dataclass
 class ProviderCapabilities:
     """What an ENDPOINT can do natively, without a tool (ADR 0012 §2 Q0e).
 

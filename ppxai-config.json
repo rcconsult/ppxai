@@ -58,7 +58,7 @@
       "default_model": "gemini-3.8-flash",
       "coding_model": "gemini-3.8-flash",
       "__comment_benchmark": "Benchmark results (v1.16.0): gemini-3-flash-preview 100% Tier S (#1), gemini-2.5-pro 85.1% Tier S. Flash preview is RECOMMENDED default. Power users: /model gemini-3.1-pro-preview.",
-      "system_prompt": "You are an expert AI coding assistant with web search capabilities. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices. Cite sources as markdown links when using web search.",
+      "system_prompt": "You are an expert AI coding assistant with web search capabilities. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices. Cite sources by their number, like [1], when using web search.",
       "options": {
         "enable_grounding": true,
         "native_tool_calling": true

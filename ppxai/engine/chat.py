@@ -328,17 +328,10 @@ async def chat_simple(
     retry_count = 0
 
     while True:
+        # ADR 0019 step 5: no inline-URL citation prompt. A turn's sources
+        # are numbered by the engine (`engine/sources.py`), the answer cites
+        # `[n]`, and every client lists the sources under it.
         messages = ctx.session.get_messages()
-
-        # Add system prompt for inline citation URLs if provider has web search/citations
-        if ctx.provider and (ctx.provider.capabilities.citations or ctx.provider.capabilities.web_search):
-            citation_prompt = Message(
-                "system",
-                "When citing sources, always include the full URL in parentheses after "
-                "the citation number, like [1](https://example.com). This helps users "
-                "click through to the sources directly."
-            )
-            messages = [citation_prompt] + messages
 
         full_response = ""
         response_metadata = None
@@ -434,10 +427,13 @@ def _build_prompt_based_messages(ctx: ChatContext) -> list[Message]:
             "using your native search - you do NOT need a tool for this."
         )
 
-    if has_native_search or has_search_tool:
+    if has_search_tool:
+        # ADR 0019: `web_search` numbers its results from the turn's one
+        # source list; the client shows that list under the answer.
         tool_prompt += (
-            "\n\nWhen citing sources or URLs from search results, format them as markdown links "
-            "like [Source Name](https://example.com) so they are clickable."
+            "\n\nWhen you use search results, cite them by their number, like [1]. "
+            "The numbered sources are listed under your answer for you, so do not "
+            "write your own list of sources or links."
         )
 
     # Apply custom system prompt. A per-engine override (v1.19.x agent tier)

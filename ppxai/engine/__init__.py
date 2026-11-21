@@ -13,7 +13,6 @@ It has no UI dependencies and communicates via events and data structures.
 from . import artifact_projections  # noqa: F401
 from .client import EngineClient
 from .types import (
-    ChatResponse,
     Event,
     EventType,
     Message,
@@ -27,7 +26,6 @@ __all__ = [
     "Event",
     "Message",
     "UsageStats",
-    "ChatResponse",
     "ProviderCapabilities",
     "ToolDefinition",
     "EngineClient",

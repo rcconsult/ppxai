@@ -14,6 +14,7 @@ No test here reaches the network: backends and providers are fakes.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import re
 import time
 
@@ -25,10 +26,13 @@ pytest.importorskip("httpx")
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import ppxai.engine as engine_pkg
 import ppxai.server.state as state
 from ppxai.config import PROVIDERS
 from ppxai.config import execution as exec_mod
+from ppxai.config.prompts import DEFAULT_SYSTEM_PROMPTS
 from ppxai.engine import EngineClient, task_runner
+from ppxai.engine import chat as chat_mod
 from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore, RunMeta
 from ppxai.engine.providers.wire import get_handler
 from ppxai.engine.search.grounding import Retrieval, grounded_prompt
@@ -694,3 +698,86 @@ class TestGroundingRedirectsResolve:
         text = asyncio.run(web_premium.web_search_premium("q"))
         assert "[1] python.org https://python.org/x" in text
         assert _R not in text
+
+
+# ===========================================================================
+# Step 5: no inline-URL prompt; the model cites [n] and the client lists them.
+# ===========================================================================
+
+_OLD_CITATION_PROMPTS = ("full URL in parentheses", "markdown links", "so they are clickable")
+
+
+class TestChatAsksForNumbersNotLinks:
+
+    def test_a_tool_free_turn_sends_no_citation_prompt(self, fake_providers):
+        # The old prompt was prepended whenever the provider had native
+        # search or citations; give it both and look at what the wire gets.
+        engine = EngineClient()
+        assert engine.set_provider("openai")
+        engine.set_model(PROVIDERS["openai"].get("default_model")
+                         or next(iter(PROVIDERS["openai"]["models"])))
+        engine.disable_tools()
+        engine.provider.capabilities = dataclasses.replace(
+            engine.provider.capabilities, citations=True, web_search=True)
+        sent: list[list[Message]] = []
+
+        async def chat(messages, model, stream=False, tools=None):
+            sent.append(list(messages))
+            yield Event(EventType.STREAM_START, None)
+            yield Event(EventType.STREAM_END, "An answer.")
+
+        engine.provider.chat = chat
+        _turn(engine, "hello")
+        assert sent, "the provider was never called"
+        texts = [m.text_content() for m in sent[0]]
+        assert not any(p in t for t in texts for p in _OLD_CITATION_PROMPTS), texts
+        assert [m.role for m in sent[0]] == ["user"]
+
+    def _ctx(self, *, search_tool: bool, native: bool):
+        caps = type("Caps", (), {"citations": native, "web_search": native})()
+
+        class _ToolMgr:
+            def get_tools_prompt(self, working_dir=None):
+                return "TOOLS"
+
+            def get_tool(self, name):
+                return object() if (search_tool and name == "web_search") else None
+
+        class _Ctx:
+            provider_name = "openai"
+            provider = type("P", (), {"capabilities": caps})()
+            model = "m"
+            tool_manager = _ToolMgr()
+            session = type("S", (), {"get_messages": lambda self: []})()
+            system_prompt_override = None
+
+            def get_working_dir(self):
+                return None
+
+            def get_bootstrap_prompt(self):
+                return ""
+
+        return _Ctx()
+
+    @pytest.fixture(autouse=True)
+    def _fixed_system_prompt(self, monkeypatch):
+        monkeypatch.setattr(chat_mod, "get_system_prompt", lambda p=None: "CFG")
+        monkeypatch.setattr(chat_mod, "get_system_prompt_mode", lambda p=None: "prepend")
+
+    def test_with_web_search_the_tool_prompt_asks_for_numbers(self):
+        prompt = chat_mod._build_prompt_based_messages(self._ctx(search_tool=True, native=False))[0].content
+        assert "cite them by their number, like [1]" in prompt
+        assert not any(p in prompt for p in _OLD_CITATION_PROMPTS)
+
+    def test_native_search_alone_gets_no_citation_instruction(self):
+        # Native grounding places its own [n] markers (ADR 0019 step 6).
+        prompt = chat_mod._build_prompt_based_messages(self._ctx(search_tool=False, native=True))[0].content
+        assert "cite them by their number" not in prompt
+        assert not any(p in prompt for p in _OLD_CITATION_PROMPTS)
+
+    def test_chat_response_is_gone(self):
+        assert not hasattr(engine_pkg, "ChatResponse")
+        assert "ChatResponse" not in engine_pkg.__all__
+
+    def test_shipped_prompts_ask_for_numbers(self):
+        assert not any(p in t for t in DEFAULT_SYSTEM_PROMPTS.values() for p in _OLD_CITATION_PROMPTS)

@@ -19,7 +19,7 @@ DEFAULT_SYSTEM_PROMPTS = {
     "gemini": (
         "You are a helpful AI assistant. Be concise and direct. "
         "When using tools, report results briefly. "
-        "For web searches, cite sources as markdown links."
+        "For web searches, cite sources by their number, like [1]."
     ),
     "openai": (
         "You are a helpful AI assistant. Be concise and direct. "

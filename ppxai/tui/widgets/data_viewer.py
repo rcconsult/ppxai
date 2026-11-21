@@ -9,6 +9,11 @@ import json
 from pathlib import Path
 from typing import Any, Literal
 
+try:  # stdlib from Python 3.11; before that, the declared `tomli` backport
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
+
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.css.query import NoMatches
@@ -294,7 +299,6 @@ class DataViewer(Widget):
             True if successful
         """
         try:
-            import tomllib
             data = tomllib.loads(text)
             self._format = "toml"
             self.set_data(data, source=text, filename=filename)
