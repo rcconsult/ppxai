@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/rcconsult/ppxai/master/ppxai-config.schema.json",
   "version": "1.3",
-  "default_provider": "gemini",
+  "default_provider": "openrouter",
   "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
   "system_prompt_mode": "prepend",
   "server": {
@@ -446,8 +446,8 @@
       "name": "OpenRouter",
       "base_url": "https://openrouter.ai/api/v1",
       "api_key_env": "OPENROUTER_API_KEY",
-      "default_model": "qwen/qwen3.8-27b",
-      "coding_model": "qwen/qwen3.8-27b",
+      "default_model": "openai/gpt-5.6-luna",
+      "coding_model": "openai/gpt-5.6-luna",
       "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "__comment_extra_body": "OpenRouter provider routing: data_collection deny = never route to an endpoint that may train on or retain prompts; require_parameters = only endpoints that honour every parameter sent (tools included). A 404 'No endpoints found' under these rules means no endpoint qualified - a policy result, not an outage. frequency_penalty was dropped from generation_params because under require_parameters it excluded every qwen/qwen3.7-flash endpoint (measured 2026-10-08).",
       "extra_body": {
@@ -461,6 +461,26 @@
         "top_p": 0.9
       },
       "models": {
+        "openai/gpt-5.6-luna": {
+          "name": "GPT-5.6 Luna",
+          "description": "Default chat model since 2026-11-21 (owner decision; also Pi's default). OpenAI's cheapest GPT-5.6, reached through OpenRouter: $0.20/$1.20 per MTok, 1.05M context, 128K output (OpenRouter catalog, read 2026-11-21); above 272K input tokens the request costs $0.40/$1.80. Long-context recall is weak (OpenAI MRCR 41.3%, Sol/Terra ~90). NOT YET BENCHMARKED in ppxai.",
+          "context_limit": 1050000,
+          "__comment_facts": "OpenRouter lists tools for this model but not temperature or top_p; under require_parameters either one leaves no endpoint, so both are restricted.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 128000,
+            "max_tool_iterations": 20,
+            "supports_reasoning": true,
+            "supports_vision": false,
+            "restricted_params": ["temperature", "top_p"],
+            "tier": "A"
+          }
+        },
         "qwen/qwen3.8-27b": {
           "name": "Qwen3.8 27B",
           "description": "262K context, native tool calling; 96.9 median on ppxai's benchmark with reasoning effort low (2026-10-11), against 83.8 with no effort set. Without it the model sometimes ends a turn after a tool result with an empty reply. The free :free variant this row used to name was withdrawn by OpenRouter ('unavailable for free', checked 2026-10-08).",
@@ -594,6 +614,11 @@
         }
       },
       "pricing": {
+        "openai/gpt-5.6-luna": {
+          "input": 0.2,
+          "output": 1.2,
+          "__comment": "OpenRouter catalog, read 2026-11-21. Above 272K input tokens: $0.40 in / $1.80 out. Cache reads/writes $0.02/$0.25 = the 0.1x/1.25x default ratios."
+        },
         "qwen/qwen3.8-27b": {
           "input": 0.425,
           "output": 2.55

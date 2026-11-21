@@ -403,7 +403,7 @@ model_hints:
   #   - consecutive_tool_loop: 0/5 steps (deep agentic chain limit)
   #   - error_recovery_chain: 1/4 steps
   #   - tool_call_efficiency: 0 calls in efficiency test scenario
-  # Widened 2026-09-27 to gemini-3.5..3.9-flash (the default is now
+  # Widened 2026-09-27 to gemini-3.5..3.9-flash (the Gemini default is now
   # gemini-3.8-flash). NOT re-benchmarked on those. 3.1-flash-lite keeps
   # its own block below and is not matched here.
   "gemini-3(.[5-9])?-flash*":

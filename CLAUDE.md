@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ppxai is a terminal-based UI application for interacting with multiple AI providers (Gemini — the default — OpenAI, OpenRouter, Anthropic opt-in, local models; Perplexity is a web-search backend only, ADR 0015). Interactive chat with model selection, conversation history, streaming, and AI-powered tools.
+ppxai is a terminal-based UI application for interacting with multiple AI providers (OpenRouter — the default, with `openai/gpt-5.6-luna` — Gemini, OpenAI, Anthropic opt-in, local models; Perplexity is a web-search backend only, ADR 0015). Interactive chat with model selection, conversation history, streaming, and AI-powered tools.
 
 **Current version:** see [pyproject.toml](pyproject.toml) (single source of truth) or [the latest release](https://github.com/rcconsult/ppxai/releases/latest).
 
@@ -239,7 +239,7 @@ scripts read it themselves (`source`).
 3. **Event-based communication** — Engine emits events; clients render them
 4. **OpenAI-compatible wire by default** — every provider but two speaks the OpenAI format through the OpenAI SDK; Gemini uses `google-genai` and the opt-in Anthropic provider its own SDK. Each provider module (and SDK) is imported on first use (ADR 0016)
 5. **Hybrid config** — Secrets (`.env`) separate from settings (`ppxai-config.json`)
-6. **Default chat provider is Gemini** (since 2026-09-27). **Perplexity is not a chat provider** (ADR 0015): a `providers.perplexity` block is filtered out in `config/providers.py::_get_providers()`, `set_provider("perplexity")` returns False (never raises, never the generic fallback), `/doctor` reports the leftover. It stays a web_search and grounding backend under `engine/search/` (ADR 0014; default order gemini → perplexity → duckduckgo). The old "built-in providers" rule was already stale (`BUILTIN_PROVIDERS` removed in v1.13.10).
+6. **Default chat provider is OpenRouter with `openai/gpt-5.6-luna`** (since 2026-11-21, owner decision; Gemini with `gemini-3.8-flash` from 2026-09-27; `FALLBACK_PROVIDER` in `config/providers.py`). **Perplexity is not a chat provider** (ADR 0015): a `providers.perplexity` block is filtered out in `config/providers.py::_get_providers()`, `set_provider("perplexity")` returns False (never raises, never the generic fallback), `/doctor` reports the leftover. It stays a web_search and grounding backend under `engine/search/` (ADR 0014; default order gemini → perplexity → duckduckgo). The old "built-in providers" rule was already stale (`BUILTIN_PROVIDERS` removed in v1.13.10).
 7. **Transactional state management** — checkpoint/commit/rollback for atomic multi-step operations
 
 ## ppxaide / Terminal Images

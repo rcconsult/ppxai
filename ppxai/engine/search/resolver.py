@@ -59,7 +59,7 @@ BACKEND_ENV: dict[str, str | None] = {
 
 # Auto-detect order (Gemini > Perplexity > DuckDuckGo) — the DEFAULT for
 # `tools.web_search.order` (see `_read_order`). Gemini first since 2026-09-27
-# (owner decision; Gemini is the default chat provider, and Perplexity is
+# (owner decision; Gemini was then the default chat provider, and Perplexity is
 # deprecated as one); before that it was Perplexity > Gemini > DuckDuckGo.
 # It is the fallback when no order is configured, not a hardcoded chain: an
 # operator who writes `"order": ["perplexity", "duckduckgo", "gemini"]` gets

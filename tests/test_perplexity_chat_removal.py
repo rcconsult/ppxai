@@ -80,7 +80,7 @@ class TestTheRemovalTable:
         assert "gemini" in message
 
     def test_the_fallback_is_not_itself_removed(self):
-        assert FALLBACK_PROVIDER == "gemini"
+        assert FALLBACK_PROVIDER == "openrouter"
         assert FALLBACK_PROVIDER not in REMOVED_CHAT_PROVIDERS
 
     def test_no_provider_class_is_registered(self):
@@ -316,25 +316,25 @@ class TestShippedConfigs:
     @pytest.mark.parametrize("name", ["ppxai-config.json", "ppxai-config.example.json"])
     def test_shipped_configs(self, name):
         data = json.loads((REPO / name).read_text(encoding="utf-8"))
-        assert data["default_provider"] == "gemini"
+        assert data["default_provider"] == "openrouter"
         assert "perplexity" not in data["providers"]
         assert data["tools"]["web_search"]["perplexity_model"] == "perplexity/sonar"
 
     @pytest.mark.parametrize("name", ["install.sh", "scripts/install.ps1"])
     def test_installers(self, name):
         text = (REPO / name).read_text(encoding="utf-8")
-        assert re.findall(r'"default_provider":\s*"(\w+)"', text) == ["gemini"]
+        assert re.findall(r'"default_provider":\s*"(\w+)"', text) == ["openrouter"]
         assert '"perplexity": {' not in text
 
     def test_vscode_built_in_config(self):
         text = (REPO / "vscode-extension/src/config.ts").read_text(encoding="utf-8")
-        assert re.findall(r'default_provider:\s*"(\w+)"', text) == ["gemini"]
+        assert re.findall(r'default_provider:\s*"(\w+)"', text) == ["openrouter"]
         assert '"perplexity": {' not in text
 
     def test_vscode_setting_default(self):
         pkg = json.loads((REPO / "vscode-extension/package.json").read_text(encoding="utf-8"))
         props = pkg["contributes"]["configuration"]["properties"]
-        assert props["ppxai.defaultProvider"]["default"] == "gemini"
+        assert props["ppxai.defaultProvider"]["default"] == "openrouter"
 
 
 class TestTheServerStartsOnTheConfiguredDefault:

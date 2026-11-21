@@ -90,7 +90,7 @@ Fallback in any terminal: use Ctrl+J instead of Ctrl+Enter. See [docs/linux-term
 
 ### Chat with any model
 
-- **Providers:** Google Gemini (default, `gemini-3.8-flash`), OpenAI (`gpt-5.6-terra`, `gpt-6-sol`/`gpt-6-luna` and the GPT-5.x line), OpenRouter (100+ models including Claude), Anthropic (opt-in via the `[anthropic]` extra), local models (Ollama, vLLM, llama.cpp). Perplexity is **not** a chat provider — it's a web-search/grounding backend only.
+- **Providers:** OpenRouter (default, `openai/gpt-5.6-luna`; 100+ models including Claude and Qwen), Google Gemini (`gemini-3.8-flash`), OpenAI (`gpt-5.6-terra`, `gpt-6-sol`/`gpt-6-luna` and the GPT-5.x line), Anthropic (opt-in via the `[anthropic]` extra), local models (Ollama, vLLM, llama.cpp). Perplexity is **not** a chat provider — it's a web-search/grounding backend only.
 - **Switch mid-session:** `/provider gemini` or `/model gpt-5.6-terra` — conversation history carries over, so you can start cheap and move to a stronger model when needed.
 - **Smart context injection:** `@file`, `@git`, `@tree`, `@clipboard`, `@url` pull content into the prompt; `/context` shows usage against the model's limit.
 - **Sessions:** saved automatically after every message (`session.auto_save_interval`); `/sessions` browses saved conversations, `/export` writes one to markdown, `/usage` shows token counts and cost.
@@ -176,7 +176,7 @@ OPENROUTER_API_KEY=sk-or-xxxxx
 ```json
 // ~/.ppxai/ppxai-config.json - provider definitions (optional, has defaults)
 {
-  "default_provider": "gemini",
+  "default_provider": "openrouter",
   "providers": {
     "my-local": {
       "name": "Local Ollama",

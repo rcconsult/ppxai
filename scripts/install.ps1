@@ -349,7 +349,7 @@ function Get-ConfigTemplate {
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "version": "1.3",
-  "default_provider": "gemini",
+  "default_provider": "openrouter",
   "session": {
     "auto_restore": "prompt",
     "auto_save_interval": 1
@@ -443,26 +443,27 @@ function Get-ConfigTemplate {
       "name": "OpenRouter",
       "base_url": "https://openrouter.ai/api/v1",
       "api_key_env": "OPENROUTER_API_KEY",
-      "default_model": "anthropic/claude-sonnet-4",
-      "coding_model": "anthropic/claude-sonnet-4",
+      "default_model": "openai/gpt-5.6-luna",
+      "coding_model": "openai/gpt-5.6-luna",
       "models": {
-        "anthropic/claude-sonnet-4": {
-          "name": "Claude Sonnet 4",
+        "openai/gpt-5.6-luna": {
+          "name": "GPT-5.6 Luna",
+          "description": "Default chat model - OpenAI's cheapest GPT-5.6, 1.05M context",
+          "context_limit": 1050000
+        },
+        "qwen/qwen3.8-27b": {
+          "name": "Qwen3.8 27B",
+          "description": "262K context, native tool calling"
+        },
+        "anthropic/claude-sonnet-5.5": {
+          "name": "Claude Sonnet 5.5",
           "description": "Anthropic's balanced model for most tasks"
-        },
-        "anthropic/claude-opus-4": {
-          "name": "Claude Opus 4",
-          "description": "Anthropic's most capable model"
-        },
-        "google/gemini-2.0-flash-001": {
-          "name": "Gemini 2.0 Flash",
-          "description": "Google's fast multimodal model"
         }
       },
       "pricing": {
-        "anthropic/claude-sonnet-4": {"input": 3.00, "output": 15.00},
-        "anthropic/claude-opus-4": {"input": 15.00, "output": 75.00},
-        "google/gemini-2.0-flash-001": {"input": 0.10, "output": 0.40}
+        "openai/gpt-5.6-luna": {"input": 0.20, "output": 1.20},
+        "qwen/qwen3.8-27b": {"input": 0.425, "output": 2.55},
+        "anthropic/claude-sonnet-5.5": {"input": 2.00, "output": 10.00}
       },
       "capabilities": {
         "web_search": false,
@@ -522,13 +523,13 @@ function Get-EnvTemplate {
 # PERPLEXITY AI (web_search backend - deprecated as a chat provider 2026-09-27)
 # =============================================================================
 # Perplexity backs the web_search tool. As a chat provider it is deprecated
-# and will be removed in a later release; chat defaults to Gemini.
+# and will be removed in a later release; chat defaults to OpenRouter.
 # Models: perplexity/sonar (the only Sonar id on the Responses wire)
 #
 # PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # =============================================================================
-# GOOGLE GEMINI (Recommended default chat provider - free tier available)
+# GOOGLE GEMINI (free tier available)
 # =============================================================================
 # Google's multimodal AI with web search grounding.
 # Models: gemini-3.8-flash (default), gemini-3.5-flash, gemini-3.1-pro-preview, gemini-3.1-flash-lite
@@ -544,9 +545,10 @@ function Get-EnvTemplate {
 # OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # =============================================================================
-# OPENROUTER (Access to multiple providers)
+# OPENROUTER (Recommended default chat provider - access to multiple providers)
 # =============================================================================
-# Access Claude, Gemini, Llama, and other models through one API.
+# Access GPT, Claude, Gemini, Qwen and other models through one API.
+# Default model: openai/gpt-5.6-luna
 # See available models: https://openrouter.ai/models
 #
 # OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

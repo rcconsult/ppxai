@@ -705,7 +705,7 @@ class TestDeprecationTableInvariants:
         for k in NVIDIA_DEPRECATIONS:
             assert k in ALL_DEPRECATIONS
 
-    @pytest.mark.parametrize("provider", ["openai", "gemini", "nvidia"])
+    @pytest.mark.parametrize("provider", ["openai", "gemini", "nvidia", "openrouter"])
     def test_recommended_default_matches_the_example_config(self, provider):
         """The INTENT, asserted instead of a hardcoded literal.
 

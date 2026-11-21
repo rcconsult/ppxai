@@ -981,6 +981,7 @@ RECOMMENDED_NEW_MODELS: list[dict[str, str]] = [
 # warnings and as the suggested default for a fresh config.
 RECOMMENDED_DEFAULTS: dict[str, str] = {
     "gemini": "gemini-3.8-flash",     # 2026-09-27 (owner decision): newest GA flash, half 3.5-flash's price
+    "openrouter": "openai/gpt-5.6-luna",  # 2026-11-21 (owner decision): the default chat provider and model
     "openai": "gpt-5.6-terra",        # 2026-08-31: parity with gpt-5.5 at 40% price
     "nvidia": "moonshotai/kimi-k3",  # 2026-08-31: the qwen line hit EOL (410)
     # 2026-09-10: was claude-sonnet-4-6, a previous-generation id this repo

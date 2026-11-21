@@ -838,6 +838,34 @@ SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {
         restricted_params=(),
         tier='B',
     ),
+    # GPT-5.6 reached through OpenRouter (`openai/gpt-5.6-*`), the default
+    # chat model since 2026-11-21 (owner decision). OpenRouter speaks Chat
+    # Completions and translates; its catalog (read 2026-11-21) lists
+    # `tools` for the line but not `temperature` or `top_p`, so under the
+    # shipped `require_parameters` routing either one leaves no endpoint
+    # (404 "No endpoints found"). Without this row the id fell to the
+    # UNMEASURED floor: prompt-based tools and sampling params sent.
+    # Measured 2026-11-21 on OpenRouter (served by OpenAI) with this row and
+    # the shipped routing: a plain reply, then a native tool call answered
+    # over a second round. Unlike OpenAI's own Chat Completions endpoint,
+    # which 400s on any tools array for the 5.6 line (hence `responses` on
+    # the native rows), OpenRouter accepts tools here.
+    # `tier` 'A' copies the native `gpt-5.6*` row; for luna it is an
+    # ASSUMPTION, not a benchmark result.
+    "openai/gpt-5.6*": ModelFacts(
+        wire_protocol='chat_completions',
+        tool_mode='native',
+        fallback_on_empty=False,
+        fallback_on_failure=False,
+        strip_json_from_text=False,
+        parallel_tool_calls=False,
+        max_tokens=128000,
+        max_tool_iterations=20,
+        supports_reasoning=True,
+        supports_vision=False,
+        restricted_params=('temperature', 'top_p'),
+        tier='A',
+    ),
     # Claude 4.7+ reached through an OpenAI-compatible aggregator
     # (OpenRouter's `anthropic/...` ids). Measured 2026-10-08 on OpenRouter
     # with `require_parameters`: sonnet/opus/haiku-5.5 each made a native

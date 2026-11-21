@@ -516,7 +516,11 @@ class TestStatedTestCountTracksSuite:
 # 7. Model ids named in the README must exist in the shipped catalog
 # ---------------------------------------------------------------------------
 
-MODEL_ID = re.compile(r"\b(gpt-[0-9][\w.-]*|gemini-[0-9][\w.-]*|gemma-[0-9][\w.-]*)")
+#: The optional `vendor/` prefix keeps an aggregator id whole: without it `\b`
+#: matched after the slash and `openai/gpt-5.6-luna` read as `gpt-5.6-luna`.
+MODEL_ID = re.compile(
+    r"\b((?:[\w.-]+/)?(?:gpt-[0-9][\w.-]*|gemini-[0-9][\w.-]*|gemma-[0-9][\w.-]*))"
+)
 
 
 class TestReadmeModelsExistInConfig:

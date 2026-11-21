@@ -160,9 +160,10 @@ from .tools import (
 # Note: MODEL_PRICING is deprecated - use get_model_pricing() instead
 MODEL_PRICING = {}
 # A legacy public constant with no reader in the package. It named
-# `perplexity/sonar` until ADR 0015 removed Perplexity as a chat provider;
-# it now names the shipped default chat model.
-CODING_MODEL = "gemini-3.8-flash"
+# `perplexity/sonar` until ADR 0015 removed Perplexity as a chat provider,
+# then `gemini-3.8-flash` until 2026-11-21; it names the shipped default
+# chat model.
+CODING_MODEL = "openai/gpt-5.6-luna"
 
 
 # =============================================================================

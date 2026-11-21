@@ -43,12 +43,13 @@ export interface PpxaiConfig {
     providers: Record<string, ProviderConfig>;
 }
 
-// Built-in default configuration. Gemini is the default chat provider.
+// Built-in default configuration. OpenRouter with openai/gpt-5.6-luna is
+// the default chat provider since 2026-11-21 (Gemini before that).
 // Perplexity was removed as a chat provider (ADR 0015); it remains a
 // web_search and grounding backend server-side. Mirrors
 // ppxai-config.example.json.
 const DEFAULT_CONFIG: PpxaiConfig = {
-    default_provider: "gemini",
+    default_provider: "openrouter",
     providers: {
         "gemini": {
             name: "Google Gemini",
@@ -115,13 +116,19 @@ const DEFAULT_CONFIG: PpxaiConfig = {
             name: "OpenRouter",
             base_url: "https://openrouter.ai/api/v1",
             api_key_env: "OPENROUTER_API_KEY",
-            default_model: "anthropic/claude-3.5-sonnet",
-            coding_model: "anthropic/claude-3.5-sonnet",
+            default_model: "openai/gpt-5.6-luna",
+            coding_model: "openai/gpt-5.6-luna",
             models: {
-                "anthropic/claude-3.5-sonnet": { name: "Claude 3.5 Sonnet", description: "Anthropic's most capable model" },
-                "anthropic/claude-3-opus": { name: "Claude 3 Opus", description: "Most powerful Claude model" },
-                "google/gemini-pro-1.5": { name: "Gemini Pro 1.5", description: "Google's latest model" },
-                "meta-llama/llama-3.1-405b-instruct": { name: "Llama 3.1 405B", description: "Meta's largest open model" }
+                // The engine's shipped `openai/gpt-5.6*` row supplies the
+                // facts (native tools, no temperature/top_p).
+                "openai/gpt-5.6-luna": { name: "GPT-5.6 Luna", description: "Default chat model — OpenAI's cheapest GPT-5.6 via OpenRouter, 1.05M context" },
+                "qwen/qwen3.8-27b": { name: "Qwen3.8 27B", description: "262K context, native tool calling" },
+                "anthropic/claude-sonnet-5.5": { name: "Claude Sonnet 5.5", description: "Anthropic's balanced model for most tasks" }
+            },
+            pricing: {
+                "openai/gpt-5.6-luna": { input: 0.2, output: 1.2 },  // 2x in, 1.5x out above 272K input
+                "qwen/qwen3.8-27b": { input: 0.425, output: 2.55 },
+                "anthropic/claude-sonnet-5.5": { input: 2, output: 10 }
             }
         }
     }

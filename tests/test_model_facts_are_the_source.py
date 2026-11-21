@@ -42,7 +42,9 @@ GLOBS = sorted(SHIPPED_MODEL_FACTS)
 #: -4.7*, -4.8*), sampling params restricted after a live OpenRouter probe.
 #: 74 (2026-10-09): +3 native Responses rows (gpt-5.6*, gpt-6-sol*,
 #: gpt-6-luna*) that previously lived only in the example config.
-EXPECTED_ROWS = 74
+#: 75 (2026-11-21): +1 aggregator row (openai/gpt-5.6*) for the new default
+#: chat model on OpenRouter; sampling params restricted per its catalog.
+EXPECTED_ROWS = 75
 
 #: The rows whose wire is NOT the default. Before Item 65 these came from
 #: `_API_PATH_TO_WIRE` and `_WIRE_BY_GLOB`, outside the rows entirely; the

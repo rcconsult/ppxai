@@ -112,11 +112,11 @@ class TestConfig:
     def test_coding_model_constant(self):
         """CODING_MODEL points at the default chat provider's model.
 
-        Perplexity is deprecated as a chat provider (ADR 0015); Gemini is
-        the default provider and `gemini-3.8-flash` its default model
-        since 2026-09-27.
+        Perplexity is deprecated as a chat provider (ADR 0015). Gemini was
+        the default from 2026-09-27; OpenRouter with `openai/gpt-5.6-luna`
+        is since 2026-11-21.
         """
-        assert CODING_MODEL == "gemini-3.8-flash"
+        assert CODING_MODEL == "openai/gpt-5.6-luna"
 
     def test_default_capabilities(self):
         """Test default capabilities are all False."""

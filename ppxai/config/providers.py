@@ -45,8 +45,9 @@ def _get_models() -> dict[str, Any]:
 #: The chat provider used when neither `MODEL_PROVIDER` nor the config's
 #: `default_provider` names one that is configured. Was "perplexity" until
 #: 2026-09-27, when Perplexity was deprecated as a chat provider (it stays
-#: a web_search backend).
-FALLBACK_PROVIDER = "gemini"
+#: a web_search backend), then "gemini" until 2026-11-21, when the owner
+#: made OpenRouter the default.
+FALLBACK_PROVIDER = "openrouter"
 
 #: Chat providers that have been removed (ADR 0015), with the message that
 #: names the fix. A config block for one is ignored, `set_provider` refuses
@@ -72,7 +73,7 @@ def get_default_provider() -> str:
     Checks in order:
     1. MODEL_PROVIDER environment variable
     2. default_provider from config file
-    3. Falls back to FALLBACK_PROVIDER ("gemini") if configured, else the
+    3. Falls back to FALLBACK_PROVIDER ("openrouter") if configured, else the
        first configured provider
 
     Returns:
