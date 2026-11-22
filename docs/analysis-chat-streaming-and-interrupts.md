@@ -237,6 +237,13 @@ On `experiment/run-cancel-option-b` (not merged, not pushed), 2026-11-22. Verifi
 | The same call run to the end | `stream_start` / `stream_chunk` / `stream_end`, content `pong` |
 | `POST /v1/agent/run` run to the end, then cancelled 3 s into the essay | `pong`; then `cancelled`, not resumable, result dropped, 0.01 s after the cancel |
 
+**Retest by tai on Linux (popos-tai, 2026-11-22)** at `4e68a065`, run from a `git archive` export with `uvx` and Python 3.12, tai-gui `gui-citations` `b4d3eed`. Gemini `gemini-3.8-flash`, tools off, "Write a 2000-word essay on the history of glass.", Cancel pressed about 8.5 s in, during the model call:
+
+- `events.jsonl`: `agent_run_start`, `agent_run_cancelling`, `agent_run_cancelled`, 3 ms apart.
+- `meta.json` and `state.json`: `cancelled`, resumable false, result null, `sources: []`, the "stopped during the model call" error.
+- tai showed the error with no Collect button; closing the window left no `ppxai-server` running.
+- Not covered there: `/task` (resumable), a cancel during a tool call, `/v1/oneshot` byte-identity, no usage on abort.
+
 Not checked: whether Anthropic stops billing for the rest of an aborted answer (the API reports no usage for it), and tool calls (a multi-step `/task` with tools).
 
 **Decisions taken, for the owner to confirm or overturn:**
@@ -246,7 +253,7 @@ Not checked: whether Anthropic stops billing for the rest of an aborted answer (
 - **6:** accepted as is: every provider now aborts its call, so no worker thread is left blocked on a cancel.
 - **10:** separately. `/chat`'s interrupt (B's fix 3) is not changed; the helper is ready for it.
 - **11:** an aborted call records no usage. `/cost` under-counts it.
-- **13:** a search still in progress is stopped too, so its sources are never recorded. Sources from a search that finished before the cancel stay on the run.
+- **13:** a search still in progress is stopped too, so its sources are never recorded. Sources from a search that finished before the cancel stay on the run. That covers `retrieve` grounding (the search runs, and its sources are recorded, before the model call). With `native` grounding (Gemini) the search is part of the model call and its sources arrive with the answer, so a cancel during the call leaves the run with no sources. popos-tai saw exactly that: no `agent_run_sources` event, `sources: []`. Under option A, at 253fdbde, the same run still recorded 5, because the call ran to the end first.
 
 **Found on the way:**
 
