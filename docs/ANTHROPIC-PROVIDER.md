@@ -12,8 +12,10 @@
 >
 > **Still unproven: tool calls**, so `/task` and `/auto` with tools, along
 > with thinking with tools, prompt caching and the pricing rows. The likely
-> bugs are named under [Limits of Phase 1](#limits-of-phase-1); one is
-> already known, the tool-call shape (see the analysis doc, section B).
+> bugs are named under [Limits of Phase 1](#limits-of-phase-1). One is
+> **confirmed live (2026-11-22): a `/task` with tools fails** with the error
+> `'tool'` (a `KeyError`), the tool-call shape mismatch in section B of the
+> analysis doc.
 >
 > It is inert unless you install the `[anthropic]` extra and configure the
 > provider, so it cannot affect an existing install. Remove this banner once

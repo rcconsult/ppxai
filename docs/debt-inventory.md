@@ -1808,8 +1808,8 @@ stops a model call or search at once (option B, `RunControl.interruptible`)
 and a running tool, sub-agent waits included (`RunControl.stop_tool`: the
 tool is cancelled, gets `TOOL_STOP_GRACE_S` = 5 s to clean up, then the run
 ends `cancelled`, resumable). The "never mid-tool-call" guarantee is given
-up on purpose: a cancelled shell command is killed, so a partial artifact
-can be left in the workdir. See section C of
+up on purpose: a tool cut off mid-way can leave a partial artifact in the
+workdir. See section C of
 docs/analysis-chat-streaming-and-interrupts.md.
 
 **f. Egress is application-layer; no DNS-rebinding / private-IP defense

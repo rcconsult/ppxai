@@ -458,8 +458,7 @@ class RunControl:
     cancel does not wait for one (owner, 2026-11-22: when the user asks to
     stop, the run stops): `cancel_event` wakes `interruptible` (a model call
     or search) and `stop_tool` (a running tool, which gets a grace period to
-    clean up, so a cancelled command is killed and may leave a partial
-    artifact)."""
+    clean up and may leave a partial artifact)."""
 
     run_id: str
     budget: dict = field(default_factory=dict)
@@ -523,8 +522,9 @@ class RunControl:
         resumable).
 
         The tool is cancelled, then given `grace_s` to unwind, so it can
-        clean up: the shell tool kills its process group, a sub-agent tool
-        sees its child cancelled by the cascade. A tool still running after
+        clean up: a sub-agent wait is cancelled (and the cascade in
+        `cancel_run` cancels the child); the shell tool, where a run may use
+        it, kills its process group. A tool still running after
         that is left to finish on its own (its result is never read) and the
         run ends anyway: the owner asked to stop."""
         task.cancel()
