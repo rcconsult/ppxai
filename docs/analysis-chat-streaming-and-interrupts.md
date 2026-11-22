@@ -244,6 +244,8 @@ On `experiment/run-cancel-option-b` (not merged, not pushed), 2026-11-22. Verifi
 - tai showed the error with no Collect button; closing the window left no `ppxai-server` running.
 - Not covered by that first retest: `/task` (resumable), a cancel during a tool call, `/v1/oneshot` byte-identity, no usage on abort.
 
+**macOS retest (macos-tai, 2026-11-22)**: tai-gui `652d04b` against the installed `ppxai-server` 1.19.5 built from `4e68a065`, OpenRouter `openai/gpt-5.6-luna`. A `/run` essay cancelled about 10 s in was `cancelled` within 3 s, with no Collect button and the "stopped during the model call" error. Under option A the same run took about a minute and ended `completed_pending_ack`. A short `/run` ("pong") still completes with a Collect button. No change was needed on tai's side. This was the OpenAI-compatible path, against the live API.
+
 **Second popos-tai retest, `/task`** (same export, `ppxai-server --owned` with a per-launch bearer token, driven with curl; Gemini `gemini-3.8-flash`, tools `["web_search"]`):
 
 - **Cancelled during the model call** (essay prompt with "Do not use any tools", cancelled 6 s in): `cancelled` 32 ms after the cancel POST, resumable **true**, result null, `sources: []`, the "stopped during the model call" error. `agent_run_cancelled` carried `{resumable: true}`, 3 ms after `agent_run_cancelling`.
