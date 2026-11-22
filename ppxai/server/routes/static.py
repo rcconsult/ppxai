@@ -50,6 +50,15 @@ _APP_STATE_SCHEMA_SCRIPT = (
 
 router = APIRouter()
 
+# The web UI loads images only from this server, `data:` and `blob:`. An
+# answer's markdown image is fetched with no click, so an image URL a prompt
+# injection wrote could carry conversation data to any host, or reach a
+# loopback or intranet address from the user's browser. The renderer already
+# turns such images into links (`web/shared/image-policy.js`); this header
+# also covers images it never sees. Only `img-src` is set: scripts, styles
+# and connections are not restricted by it.
+INDEX_CSP = "img-src 'self' data: blob:"
+
 
 @router.get("/")
 async def serve_index():
@@ -85,7 +94,10 @@ async def serve_index():
 
     return HTMLResponse(
         content=html,
-        headers={"Cache-Control": "no-cache, must-revalidate"},
+        headers={
+            "Cache-Control": "no-cache, must-revalidate",
+            "Content-Security-Policy": INDEX_CSP,
+        },
     )
 
 

@@ -957,6 +957,18 @@ class PpxaiApp {
                 renderer: {
                     html(html) {
                         return escapeHtml(String(html));
+                    },
+                    // An image loads with no click, so a URL a prompt
+                    // injection wrote could carry conversation data away.
+                    // Only the server's own images load; others become
+                    // links (shared/image-policy.js). Fails closed if the
+                    // policy script is missing.
+                    image(href, title, text) {
+                        const policy = window.PpxaiImagePolicy;
+                        if (!policy) {
+                            return `<span class="external-image">[image: ${text || 'image'}]</span>`;
+                        }
+                        return policy.imageHtml(href, title, text, window.location.origin);
                     }
                 }
             });
