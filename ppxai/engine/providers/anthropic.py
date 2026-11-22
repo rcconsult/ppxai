@@ -46,6 +46,7 @@ from ppxai.constants import install_extra_hint
 
 from ...common.logger import get_logger
 from ...config.tls import tls_verify
+from ..call_stop import CallAbortedError, CallStop, close_http_stream
 from ..types import Event, EventType, Message, ProviderCapabilities, UsageStats
 from .base import BaseProvider
 from .facts import anthropic as _facts
@@ -344,6 +345,48 @@ class AnthropicProvider(BaseProvider):
         this wire, and the alternative — forwarding it and 400-ing — would
         make `/v1/oneshot` fail for any caller that sets it out of habit.
         """
+        request = self._oneshot_request(prompt, model, system, response_format, max_tokens)
+        response = self.sync_client.messages.create(**request)
+        return self._oneshot_result(response, model)
+
+    def oneshot_stoppable(self, *, stop: CallStop, **kwargs: Any) -> dict[str, Any]:
+        """`oneshot`, abortable through `stop` (a run's cancel): the same
+        request sent with `messages.stream`, closed when stopped (raises
+        `CallAbortedError`). `get_final_message()` is the same `Message`
+        `create()` returns, so the result is built the same way. Used by
+        `/run`; `POST /v1/oneshot` keeps `oneshot`."""
+        stop.raise_if_stopped()
+        model = kwargs["model"]
+        request = self._oneshot_request(
+            kwargs["prompt"], model, kwargs.get("system"),
+            kwargs.get("response_format"), kwargs.get("max_tokens"),
+        )
+        try:
+            with self.sync_client.messages.stream(**request) as stream:
+                closer = lambda: close_http_stream(stream)  # noqa: E731 — removed by identity
+                stop.on_stop(closer)
+                try:
+                    for _event in stream:
+                        stop.raise_if_stopped()
+                    response = stream.get_final_message()
+                finally:
+                    stop.remove(closer)
+        except Exception as exc:
+            if stop.stopped:
+                raise CallAbortedError("the call was stopped") from exc
+            raise
+        stop.raise_if_stopped()
+        return self._oneshot_result(response, model)
+
+    def _oneshot_request(
+        self,
+        prompt: str,
+        model: str,
+        system: str | None,
+        response_format: dict[str, Any] | None,
+        max_tokens: int | None,
+    ) -> dict[str, Any]:
+        """The `messages.create` arguments `oneshot` sends."""
         wire_messages_src: list[Message] = []
         if system:
             wire_messages_src.append(Message(role="system", content=system))
@@ -364,9 +407,10 @@ class AnthropicProvider(BaseProvider):
             oc = dict(request.get("output_config") or {})
             oc["format"] = response_format
             request["output_config"] = oc
+        return request
 
-        response = self.sync_client.messages.create(**request)
-
+    def _oneshot_result(self, response: Any, model: str) -> dict[str, Any]:
+        """`oneshot`'s result from a final `Message`."""
         refusal = self._refusal_message(response)
         content = "".join(
             b.text for b in response.content if getattr(b, "type", "") == "text"

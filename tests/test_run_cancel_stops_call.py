@@ -30,6 +30,7 @@ from ppxai.engine.agent_runs import (
     RunControl,
 )
 from ppxai.engine.call_stop import CallAbortedError, CallStop
+from ppxai.engine.providers.anthropic import AnthropicProvider
 from ppxai.engine.providers.gemini import GeminiProvider
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 from ppxai.engine.providers.openai_native import OpenAINativeProvider
@@ -65,9 +66,20 @@ class _Server:
                 self.end_headers()
                 responses_api = self.path.endswith("/responses")
                 gemini = ":streamGenerateContent" in self.path
+                claude = self.path.endswith("/messages")
+                if claude:
+                    self._typed({"type": "message_start", "message": {
+                        "id": "msg", "type": "message", "role": "assistant",
+                        "model": "served-model", "content": [], "stop_reason": None,
+                        "stop_sequence": None, "usage": {"input_tokens": 3, "output_tokens": 0}}})
+                    self._typed({"type": "content_block_start", "index": 0,
+                                 "content_block": {"type": "text", "text": ""}})
                 try:
                     for i in range(server.chunks):
-                        if gemini:
+                        if claude:
+                            self._typed({"type": "content_block_delta", "index": 0,
+                                         "delta": {"type": "text_delta", "text": f"w{i} "}})
+                        elif gemini:
                             self._gemini({"candidates": [{"index": 0, "content": {
                                 "role": "model", "parts": [{"text": f"w{i} "}]}}]})
                         elif responses_api:
@@ -82,7 +94,13 @@ class _Server:
                         if self._pause(server.delay):
                             server.client_hung_up.set()
                             return
-                    if gemini:
+                    if claude:
+                        self._typed({"type": "content_block_stop", "index": 0})
+                        self._typed({"type": "message_delta", "delta": {"stop_reason": "end_turn",
+                                                                       "stop_sequence": None},
+                                     "usage": {"output_tokens": 40}})
+                        self._typed({"type": "message_stop"})
+                    elif gemini:
                         self._gemini({"candidates": [{"index": 0, "finishReason": "STOP",
                                                       "content": {"role": "model", "parts": []}}],
                                       "usageMetadata": {"promptTokenCount": 3,
@@ -100,7 +118,7 @@ class _Server:
                         self._event({"choices": [], "usage": {"prompt_tokens": 3,
                                                               "completion_tokens": 40,
                                                               "total_tokens": 43}})
-                    if not gemini:
+                    if not (gemini or claude):
                         self._raw(b"data: [DONE]\n\n")
                     self.wfile.write(b"0\r\n\r\n")
                     self.wfile.flush()
@@ -265,6 +283,49 @@ class TestGeminiOneshotStoppable:
         server.requests.clear()
         gemini.oneshot_stoppable(stop=CallStop(), prompt="again", model="gemini-3.8-flash")
         assert len(server.requests) == 1
+
+
+@pytest.fixture
+def claude(server):
+    anthropic = pytest.importorskip("anthropic")  # the optional [anthropic] extra
+    p = AnthropicProvider(api_key="test-key")
+    p.sync_client = anthropic.Anthropic(api_key="test-key", base_url=server.root, max_retries=0)
+    return p
+
+
+class TestAnthropicOneshotStoppable:
+    def test_without_a_stop_it_returns_the_whole_answer(self, server, claude):
+        server.chunks, server.delay = 3, 0.0
+        out = claude.oneshot_stoppable(stop=CallStop(), prompt="hi", model="claude-sonnet-5-5")
+        assert out["content"] == "w0 w1 w2 "
+        assert out["finish_reason"] == "end_turn"
+        assert out["model"] == "served-model"
+        assert out["usage"]["completion_tokens"] == 40
+        assert server.requests[0]["stream"] is True
+
+    def test_a_stop_closes_the_connection_mid_answer(self, server, claude):
+        # A long gap after the first chunk: only aborting the connection can
+        # end the call in time; the per-chunk stop check never gets a chance.
+        server.delay = 5.0
+        stop = CallStop()
+        threading.Thread(
+            target=lambda: (server.first_chunk_sent.wait(5), stop.stop()), daemon=True
+        ).start()
+        raised: list[BaseException] = []
+
+        def call():
+            try:
+                claude.oneshot_stoppable(stop=stop, prompt="hi", model="claude-sonnet-5-5")
+            except BaseException as exc:  # noqa: BLE001 — recorded for the asserts
+                raised.append(exc)
+
+        worker = threading.Thread(target=call, daemon=True)
+        worker.start()
+        worker.join(2.0)
+        assert not worker.is_alive(), "the stop didn't unblock the read"
+        assert len(raised) == 1 and isinstance(raised[0], CallAbortedError)
+        assert server.client_hung_up.wait(3)
+        assert not server.finished.is_set()
 
 
 # --- openai_compat: the request is really aborted ---------------------------
