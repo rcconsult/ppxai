@@ -260,6 +260,8 @@ def _help(family: str) -> NotificationResult:
             '  /task "<desc>" --tools a,b [--allow host] [--budget iters=,time=,'
             "tokens=] [--provider p] [--model m] [--work-dir path]\n"
             f"  /task {shared} · respond <id> approve|deny · resume <id>\n"
+            "  Sub-agents: add spawn_subagent to --tools (it is never added "
+            "for you).\n"
             "  A first token counts as a verb only when followed by a run id "
             "(or nothing) — anything else launches.\n"
             "  Runs open in the side panel; F6 switches pane, Enter on a row "

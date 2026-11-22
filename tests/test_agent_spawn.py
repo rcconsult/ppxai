@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
-from ppxai.engine.tools.agent_spawn import SpawnSubagentTool
+from ppxai.engine.tools.agent_spawn import SpawnSubagentTool, format_spawn_consent_summary
 
 
 @pytest.fixture
@@ -538,3 +538,36 @@ class TestDenialClassification:
         assert _compute_tool_success(
             "spawn_subagent", "Error: failed to start sub-agent: boom"
         ) is False
+
+
+class TestConsentSummaryFormat:
+    """The consent card text is readable lines, not a Python repr."""
+
+    def test_summary_is_plain_lines(self):
+        text = format_spawn_consent_summary("read the 'docs'", ["read_file", "web_search"])
+        assert text == (
+            "Start a sub-agent?\n"
+            "  task: read the 'docs'\n"
+            "  tools: read_file, web_search"
+        )
+        assert "[" not in text and '"' not in text
+
+    def test_long_task_truncates_and_newlines_collapse(self):
+        text = format_spawn_consent_summary("a\nb " + "x" * 200, [])
+        assert "\n  task: a b " in text and text.splitlines()[1].endswith("…")
+        assert text.endswith("tools: (none)")
+
+    async def test_consent_channel_receives_the_plain_summary(self, registry):
+        seen = []
+
+        async def consent(summary):
+            seen.append(summary)
+            return False
+
+        t = _tool(registry, parent_tools=["read_file"], parent_allow=[],
+                  consent=consent, consent_policy="deny")
+        out = await t.execute(task="summarize", tools=["read_file"])
+        assert out.startswith("Denied")
+        assert seen == [
+            "Start a sub-agent?\n  task: summarize\n  tools: read_file"
+        ]

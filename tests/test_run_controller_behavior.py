@@ -140,6 +140,23 @@ function makeApp(opts) {{
     assert(!watched, "must NOT watch a rejected run");
   }}
 
+  // --- Scenario: /run respond|resume are refused (a oneshot never parks) ---
+  {{
+    const app = makeApp();
+    const c = new RunController(app);
+    let launched = false;
+    c.run = async () => {{ launched = true; }};
+    c.respond = async () => {{ launched = true; }};
+    c.resume = async () => {{ launched = true; }};
+    for (const verb of ["respond", "resume"]) {{
+      app._msgs.length = 0;
+      await c.handle(verb + " run_0123456789ab approve");
+      assert(app._msgs.length === 1 && /has no/.test(app._msgs[0]), verb + " not refused: " + app._msgs);
+      assert(!launched, verb + " must neither launch nor reach the API");
+      assert(app._posts.length === 0, verb + " must not POST");
+    }}
+  }}
+
   console.log("ALL OK");
 }})().catch((e) => {{ console.error(e.message || e); process.exit(1); }});
 """

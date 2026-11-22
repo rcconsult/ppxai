@@ -88,6 +88,7 @@ verbs `task run`, and `show`/`ack` as *canonical* names, are retired
 | Flag | Meaning |
 |---|---|
 | `--tools a,b,c` | **Capability grant** — the ONLY tools the run may call. Required unless a `--spec`/`--skill` supplies it. `execute_shell_command` is always rejected (it would bypass the egress allowlist). |
+| `--tools a,spawn_subagent,...` | **Sub-agents must be granted.** A `/task` can delegate to a child run only if `spawn_subagent` is in its grant; nothing adds it for you. Without it the tool does not exist for that run, and a model that tries it is told it is not permitted. The child's tools must be a subset of the parent's grant. Each spawn asks for consent (§5) unless `execution.task.consent.spawn_consent` is `"auto"`. |
 | `--spec <name>` | Load a spec file from `execution.task.sandbox.specs_dir` (name only, no paths). Spec fields fill anything you didn't pass; explicit flags win. |
 | `--skill <name>` | Mount a skill from `execution.task.sandbox.skills_dir`: its `SKILL.md` acts as a spec and its directory (incl. `references/`) is mounted into the run's read scope. Repeatable / comma-separated; skills compose. |
 | `--profile <name>` | Use a named execution profile from `execution.profiles` in `ppxai-config.json` — a standing, reusable grant with the same fields as a spec file (ADR 0009). Precedence: request > spec > skills > profile > `default_subagent`; `tools`/`--allow` lists **replace** the profile's (narrowing works). |

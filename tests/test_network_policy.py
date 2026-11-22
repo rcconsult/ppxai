@@ -396,6 +396,15 @@ class TestEgressChokepoint:
         assert netcalls == []  # egress check never reached
 
     @pytest.mark.asyncio
+    async def test_ungranted_spawn_subagent_says_how_to_grant_it(self):
+        s = ScopedToolManager(_NetBase(), ["read_file"])
+        out = await s.execute_tool("spawn_subagent", task="x", tools=["read_file"])
+        assert "not permitted for this run" in out
+        assert "spawn_subagent" in out and "--tools" in out
+        other = await s.execute_tool("fetch_url", url="https://a.com/")
+        assert "--tools" not in other
+
+    @pytest.mark.asyncio
     async def test_shell_denied_under_egress_policy_backstop(self):
         # AC-2 (security review High): a granted shell tool must NEVER execute
         # when an egress policy is active — its arbitrary commands (curl, pip,

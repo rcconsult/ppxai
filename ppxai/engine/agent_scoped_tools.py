@@ -106,9 +106,14 @@ class ScopedToolManager:
             # Return a model-readable denial rather than raising, so the
             # tool loop can continue and the model can adapt. The denial is
             # the authoritative outcome — the tool did NOT run.
+            hint = (
+                " Sub-agents need `spawn_subagent` in the run's grant "
+                "(`/task ... --tools a,spawn_subagent`)."
+                if name == "spawn_subagent" else ""
+            )
             return (
                 f"Error: tool {name!r} is not permitted for this run. "
-                f"Permitted tools: {', '.join(sorted(self._grant)) or '(none)'}."
+                f"Permitted tools: {', '.join(sorted(self._grant)) or '(none)'}.{hint}"
             )
         # Normalize argument ALIASES to the tool's canonical kwarg names BEFORE
         # the egress/filesystem checks below. The base ToolManager normalizes in

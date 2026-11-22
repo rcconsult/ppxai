@@ -75,6 +75,21 @@ def _strip_provider_tool_prefix(names: list[str]) -> list[str]:
     return out
 
 
+def format_spawn_consent_summary(task: str, tools: list[str]) -> str:
+    """The consent-card text for a spawn: plain lines, never a Python repr.
+
+    Clients show this verbatim, so it must read as prose (no `['a', 'b']`,
+    no quoted-with-escapes task string).
+    """
+    shown = task if len(task) <= 80 else task[:80] + "…"
+    shown = " ".join(shown.split())
+    return (
+        "Start a sub-agent?\n"
+        f"  task: {shown}\n"
+        f"  tools: {', '.join(tools) if tools else '(none)'}"
+    )
+
+
 class SpawnSubagentTool(BaseTool):
     """Spawn one child agent run, scoped to a subset of this run's caps."""
 
@@ -308,7 +323,7 @@ class SpawnSubagentTool(BaseTool):
         #    - "deny" (default): if an interactive consent channel exists, ask
         #      it; otherwise refuse with a visible event — never silently.
         if self._consent_policy != "auto":
-            summary = f"spawn_subagent: {task[:80]!r} tools={child_tools}"
+            summary = format_spawn_consent_summary(task, child_tools)
             if self._request_consent is None:
                 return self._deny(
                     "spawn consent required but no interactive consent channel "

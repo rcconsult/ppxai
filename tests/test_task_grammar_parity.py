@@ -45,6 +45,24 @@ def test_verb_set_matches_web_client():
     )
 
 
+def test_run_only_excluded_verbs_match_web_and_vscode():
+    """`/run` refuses the same verbs in Python, the web client and VSCode."""
+    root = Path(__file__).resolve().parents[1]
+    sources = {
+        "web": _js_source(),
+        "vscode": (root / "vscode-extension" / "src" / "taskController.ts").read_text(
+            encoding="utf-8"
+        ),
+    }
+    for name, src in sources.items():
+        block = re.search(r"const RUN_ONLY_EXCLUDED_VERBS = new Set\(\[(.*?)\]\)", src, re.S)
+        assert block, f"RUN_ONLY_EXCLUDED_VERBS not found in the {name} controller"
+        verbs = set(re.findall(r"'([a-z]+)'", block.group(1)))
+        assert verbs, f"{name}: parsed an empty set — the sentinel would pass vacuously"
+        assert verbs == set(tg.RUN_ONLY_EXCLUDED_VERBS), f"{name} drift: {sorted(verbs)}"
+        assert "RUN_ONLY_EXCLUDED_VERBS.has(verb)" in src, f"{name}: the set is declared but unused"
+
+
 def test_run_id_shape_matches_web_client():
     """`run_` + 12 hex, pinned on both sides (agent_runs.py token_hex(6))."""
     src = _js_source()

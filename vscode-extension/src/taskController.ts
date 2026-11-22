@@ -281,6 +281,10 @@ const TASK_VERBS = new Set([
     'help', 'ls', 'list', 'get', 'show', 'open', 'watch',
     'cancel', 'respond', 'collect', 'ack', 'resume',
 ]);
+// Verbs a `kind=oneshot` run cannot honour: a oneshot never parks, so it
+// can neither be responded to nor resumed (ADR 0011 U3). Pinned against
+// task_grammar.RUN_ONLY_EXCLUDED_VERBS by tests/test_task_grammar_parity.py.
+const RUN_ONLY_EXCLUDED_VERBS = new Set(['respond', 'resume']);
 
 /** Statuses that end the poll watcher (parity with the web _TERMINAL set). */
 export const TERMINAL_STATUSES = new Set([
@@ -426,6 +430,12 @@ export class TaskController {
                 return;
             }
             return this.run(trimmed);
+        }
+        if (this.cmd === '/run' && RUN_ONLY_EXCLUDED_VERBS.has(verb)) {
+            this.ui.system(
+                `❌ \`${this.cmd}\` has no \`${verb}\` — a one-off run never parks. \`/task\` runs can park for consent.`
+            );
+            return;
         }
         switch (verb) {
             case 'help':    return this.help();
