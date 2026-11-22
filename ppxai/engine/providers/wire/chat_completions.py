@@ -73,8 +73,23 @@ class ChatCompletionsHandler:
             assert_wire_blocks_clean(content, role=m.role)
             msg: dict[str, Any] = {"role": m.role, "content": content}
             if m.tool_calls:
-                msg["tool_calls"] = m.tool_calls
+                msg["tool_calls"] = [_outbound_tool_call(tc) for tc in m.tool_calls]
             if m.tool_call_id:
                 msg["tool_call_id"] = m.tool_call_id
             result.append(msg)
         return result
+
+
+def _outbound_tool_call(tc: Any) -> Any:
+    """A transcript tool call as the chat-completions wire sends it.
+
+    The transcript keeps a Gemini `thought_signature` as a plain key on the
+    tool call (Item 45). Google's OpenAI-compatible endpoint wants it back as
+    `extra_content.google.thought_signature`, or it 400s the turn after a
+    tool call; other endpoints never set one, so they never see the field.
+    """
+    if not isinstance(tc, dict) or not tc.get("thought_signature"):
+        return tc
+    out = {k: v for k, v in tc.items() if k != "thought_signature"}
+    out["extra_content"] = {"google": {"thought_signature": tc["thought_signature"]}}
+    return out

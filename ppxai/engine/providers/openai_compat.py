@@ -25,6 +25,25 @@ from .facts import openai_compat as _facts
 from .openai_wire import OpenAIWireMixin, build_openai_client
 
 
+def _google_thought_signature(tool_call: Any) -> str | None:
+    """The Gemini thought signature on an OpenAI-shaped tool call, if any.
+
+    Google's OpenAI-compatible endpoint returns it as
+    `extra_content: {"google": {"thought_signature": "..."}}` on each tool
+    call (a stream chunk or a message), and rejects the next turn unless it
+    comes back ("Function call is missing a thought_signature", 400). The
+    openai SDK keeps unknown fields, as an attribute or in `model_extra`.
+    """
+    extra = getattr(tool_call, "extra_content", None)
+    if extra is None:
+        extra = (getattr(tool_call, "model_extra", None) or {}).get("extra_content")
+    if not isinstance(extra, dict):
+        return None
+    google = extra.get("google")
+    sig = google.get("thought_signature") if isinstance(google, dict) else None
+    return sig if isinstance(sig, str) and sig else None
+
+
 class OpenAICompatibleProvider(OpenAIWireMixin, BaseProvider):
     """Provider for OpenAI-compatible APIs.
 
@@ -348,6 +367,9 @@ class OpenAICompatibleProvider(OpenAIWireMixin, BaseProvider):
                             if current_tool_call:
                                 if tc_chunk.id:
                                     current_tool_call["id"] = tc_chunk.id
+                                sig = _google_thought_signature(tc_chunk)
+                                if sig:
+                                    current_tool_call["thought_signature"] = sig
                                 if tc_chunk.function:
                                     if tc_chunk.function.name:
                                         current_tool_call["function"]["name"] = tc_chunk.function.name
@@ -404,12 +426,15 @@ class OpenAICompatibleProvider(OpenAIWireMixin, BaseProvider):
                                 args = json.loads(tc["function"]["arguments"]) if tc["function"]["arguments"] else {}
                             except json.JSONDecodeError:
                                 args = {}
-                            yield Event(EventType.TOOL_CALL, {
+                            call = {
                                 "tool": tc["function"]["name"],
                                 "arguments": args,
                                 "native": True,  # Mark as native tool call
                                 "tool_call_id": tc["id"]
-                            })
+                            }
+                            if tc.get("thought_signature"):
+                                call["thought_signature"] = tc["thought_signature"]
+                            yield Event(EventType.TOOL_CALL, call)
 
                 final_content = "".join(full_response)
                 final_reasoning = "".join(reasoning_response)
@@ -461,12 +486,16 @@ class OpenAICompatibleProvider(OpenAIWireMixin, BaseProvider):
                             args = json.loads(tc.function.arguments) if tc.function.arguments else {}
                         except json.JSONDecodeError:
                             args = {}
-                        yield Event(EventType.TOOL_CALL, {
+                        call = {
                             "tool": tc.function.name,
                             "arguments": args,
                             "native": True,
                             "tool_call_id": tc.id
-                        })
+                        }
+                        sig = _google_thought_signature(tc)
+                        if sig:
+                            call["thought_signature"] = sig
+                        yield Event(EventType.TOOL_CALL, call)
 
                 metadata: dict[str, Any] = {"usage": usage}
                 if hasattr(message, 'tool_calls') and message.tool_calls:
