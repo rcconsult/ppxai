@@ -459,18 +459,23 @@ class RunControl:
     # interruptible() ends at once instead of at the next check().
     cancel_event: asyncio.Event = field(default_factory=asyncio.Event)
 
-    async def interruptible(self, call: Awaitable[Any], *, stop: CallStop | None = None) -> Any:
+    async def interruptible(
+        self, call: Awaitable[Any], *, stop: CallStop | None = None, resumable: bool = False,
+    ) -> Any:
         """Await `call` (a model call or a search), but stop waiting the
         moment the run is cancelled: abort the call through `stop` (if the
         provider registered a closer, its connection is closed), cancel the
         awaiting task, and raise `RunCancelledDuringCall`.
 
         Use it only around calls that are safe to abandon. Never around a
-        tool call: a cancel must not tear a run down mid-tool."""
+        tool call: a cancel must not tear a run down mid-tool.
+
+        `resumable`: a `/task`'s model call (the transcript up to the
+        previous step is intact, as at a check()); a `/run`'s is not."""
         task = asyncio.ensure_future(call)
         if self.cancel_requested:
             self._abandon(task, stop)
-            raise RunCancelledDuringCall("cancelled by owner before the call started")
+            raise _cancelled("cancelled by owner before the call started", resumable)
         waiter = asyncio.ensure_future(self.cancel_event.wait())
         try:
             done, _ = await asyncio.wait({task, waiter}, return_when=asyncio.FIRST_COMPLETED)
@@ -484,10 +489,10 @@ class RunControl:
                 return task.result()
             except CallAbortedError:
                 if self.cancel_requested:
-                    raise RunCancelledDuringCall(_STOPPED_MID_CALL) from None
+                    raise _cancelled(_STOPPED_MID_CALL, resumable) from None
                 raise
         self._abandon(task, stop)
-        raise RunCancelledDuringCall(_STOPPED_MID_CALL)
+        raise _cancelled(_STOPPED_MID_CALL, resumable)
 
     @staticmethod
     def _abandon(task: asyncio.Future, stop: CallStop | None) -> None:
@@ -511,6 +516,12 @@ class RunControl:
         max_tok = self.budget.get("tokens")
         if max_tok is not None and self.tokens_used >= max_tok:
             raise RunBudgetExceeded(f"token budget {max_tok} reached")
+
+
+def _cancelled(reason: str, resumable: bool) -> RunCancelledDuringCall:
+    exc = RunCancelledDuringCall(reason)
+    exc.resumable = resumable  # _drive records the instance's value
+    return exc
 
 
 _STOPPED_MID_CALL = (

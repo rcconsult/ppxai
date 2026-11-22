@@ -20,7 +20,13 @@ from ...common.logger import get_logger
 from ...config import get_provider_config
 from ...config.network import is_loopback_url
 from ...config.tls import tls_verify
-from ..call_stop import CallAbortedError, CallStop, close_http_stream
+from ..call_stop import (
+    CallAbortedError,
+    CallStop,
+    close_http_stream,
+    refuse_new_requests,
+    shutdown_client_connections,
+)
 
 logger = get_logger(__name__)
 
@@ -75,6 +81,20 @@ class OpenAIWireMixin:
     not an `openai` exception.
     """
 
+    def abort_in_flight(self) -> None:
+        """Abort this provider's in-flight requests (a `/task` run's cancel;
+        see `BaseProvider.abort_in_flight`). First makes the client refuse
+        new requests (the SDK retries a request whose connection failed, and
+        a retry would send it again), then shuts the pool's sockets down so
+        the blocked worker thread fails now. Nothing is closed from this
+        thread (see `call_stop.close_http_response`). The provider is the
+        run's own, so nobody else loses it."""
+        http = getattr(getattr(self, "client", None), "_client", None)
+        if http is None:
+            return
+        refuse_new_requests(http)
+        shutdown_client_connections(http)
+
     def _stream_oneshot_chat(
         self, request_kwargs: dict[str, Any], stop: CallStop, model: str,
     ) -> dict[str, Any]:
@@ -124,6 +144,13 @@ class OpenAIWireMixin:
             raise
         finally:
             stop.remove(closer)
+            if stop.stopped:
+                # The stop only shut the socket down (see close_http_response);
+                # release the connection here, on the thread that owns it.
+                try:
+                    stream.close()
+                except Exception:  # noqa: BLE001 — closing an aborted stream may raise
+                    pass
         stop.raise_if_stopped()
         return {
             "content": "".join(parts),

@@ -3,7 +3,7 @@
 - **Date:** 2026-11-22
 - **Measured at:** `feature/v1.19.5` @ `0dc5d91c`. Line numbers are from that commit.
 - **Asked by:** tai (tai-gui, a native ppxai client that uses `POST /chat` (SSE) with `{message}` only, and `POST /interrupt` to stop).
-- **Status:** mostly analysis; the owner decides what to fix. Fixed so far: B6's 409 (`f2428e20`) and C's run status (option A, 2026-11-22). Everything else is open.
+- **Status:** mostly analysis; the owner decides what to fix. Fixed so far: B6's 409 (`f2428e20`) and C's run status (option A, 2026-11-22). C's option B is built on the branch `experiment/run-cancel-option-b`, awaiting the owner's test. Everything else is open.
 - **Evidence key:** **verified** means read in the source, found in git history, or reproduced locally (see [How B was reproduced](#how-b-was-reproduced)). **Inferred** means it follows from the code but was not run.
 
 tai reported three behaviours:
@@ -168,7 +168,10 @@ tai proposed three fixes: **A** honour the flag when the runner returns; **B** a
 
 **Retested by tai** (2026-11-22, installed 1.19.5 at `253fdbde`): `agent_run_start`, `agent_run_cancelling`, `agent_run_sources`, `agent_run_cancelled`; final status `cancelled`, no result, no Collect. `agent_run_sources` still arrives after the cancel, because retrieval sources are recorded before the model call.
 
-### Option B: stopping the call (plan, not built)
+### Option B: stopping the call
+
+Plan below; it is built on the branch `experiment/run-cancel-option-b` (2026-11-22), see [What was built](#what-was-built-for-option-b).
+
 
 B makes a cancel stop the model call itself, so the tokens are saved and the run ends at once. Today a `/run` calls the provider's synchronous `oneshot()` through `asyncio.to_thread` (`server/routes/agent_v1.py:476`). A `/task` does the same inside the tool loop (`providers/openai_compat.py:433`, `providers/openai_native.py:458`, `providers/gemini.py:444`). A cancel can't interrupt either.
 
@@ -208,6 +211,36 @@ B makes a cancel stop the model call itself, so the tokens are saved and the run
 **Rough size:** 3, 4, 7 and 9 are small. 5 is the bulk: four providers' worth of streaming code plus tests. 8 is moderate.
 
 **Owner decisions:** 1 (probe spend), 5 (a or b), 6, 10, 11, 13.
+
+#### What was built for option B
+
+On `experiment/run-cancel-option-b` (not merged, not pushed), 2026-11-22. Verified against local test servers only: no real provider was called.
+
+| Step | What |
+|---|---|
+| 3, 4 | `RunControl.cancel_event` (set by `cancel_run`) and `RunControl.interruptible(call, stop=, resumable=)`, which raises `RunCancelledDuringCall` (`engine/agent_runs.py`). `engine/call_stop.py` (stdlib-only leaf): `CallStop`, `close_http_stream` / `close_http_response`, the response hook, `shutdown_client_connections`, and the run-control ContextVar |
+| 5 (a) | `BaseProvider.oneshot_stoppable` (default: the plain call). Overridden to stream the same request and close it on stop by `openai_compat`, `openai_native` (Chat Completions through `OpenAIWireMixin._stream_oneshot_chat`; the Responses API through `ResponsesHandler.oneshot_stoppable`), `gemini` (through an httpx response hook, since its SDK keeps its response) and `anthropic` (`messages.stream`). `POST /v1/oneshot` still calls `oneshot`, so its wire is unchanged |
+| 7 | The `/run` runner waits on retrieval, the model call and native grounding through `interruptible`. Not resumable |
+| 8 | The task runner installs its control around `engine.chat`; the tool loop's three provider calls go through `engine/chat.py::_provider_events`, which awaits them through `interruptible` (resumable) and aborts with `provider.abort_in_flight()`: the client is marked closed (`call_stop.refuse_new_requests`), then its pool's sockets are shut down. `/chat` has no control installed and is unchanged |
+| 9 | Grounded `/v1/oneshot` runs through the task runner, so its 504 timeout now stops the call. No change in `oneshot.py` |
+| 14 | `tests/test_run_cancel_stops_call.py`: a local HTTP server that streams slowly (or answers late) in each provider's wire format and records the client hanging up. Mutation-checked: without the socket shutdown, the Gemini hook, the pool abort or the retry guard, the matching test fails. Stress-checked: 16 copies of the file at once beside 6 CPU-burning processes, all green |
+| 15 | The cancel route's docstring, `docs/api-gateway.md` (504 row), `docs/task-agent-guide.md`, `docs/agent-platform-call-graphs.md`, this section, CHANGELOG |
+
+**Decisions taken, for the owner to confirm or overturn:**
+
+- **1:** no paid probe. Whether a closed connection stops billing is still unverified per provider; the connection is closed either way.
+- **5:** (a), streaming internally, for `/run`. For `/task`'s non-streamed calls, the abort shuts down the sockets of the run's own provider's connection pool, then closes its client.
+- **6:** accepted as is: every provider now aborts its call, so no worker thread is left blocked on a cancel.
+- **10:** separately. `/chat`'s interrupt (B's fix 3) is not changed; the helper is ready for it.
+- **11:** an aborted call records no usage. `/cost` under-counts it.
+- **13:** a search still in progress is stopped too, so its sources are never recorded. Sources from a search that finished before the cancel stay on the run.
+
+**Found on the way:**
+
+- **The OpenAI SDK resends an aborted request.** A connection that fails mid-request is retried; the test shows the second request arriving. `abort_in_flight` marks the client closed before shutting the sockets down, so the retry fails at once.
+- **Closing a socket doesn't wake a read blocked in another thread on macOS.** Shutting it down (`SHUT_RDWR`) does, and it is also what sends the hang-up to the provider.
+- **Closing it from the stopping thread is worse than useless: it can hang the read for its whole timeout.** A closed Python socket's descriptor becomes -1, and `poll()` silently ignores a negative descriptor, so a worker that was just entering its read sleeps out the full read timeout (600 s in the OpenAI SDK). Seen under load on macOS, about 1 stop in 20; traced to the stopper's `stream.close()`. So the stopping thread only ever shuts sockets down; the worker closes its own stream when its read fails.
+- **Three route-test fixtures used an un-entered `TestClient`**, so each request ran on its own event loop and a background run survived only if it finished before the request returned. They now enter it (`tests/test_agent_runs.py`, `tests/test_collect_semantics.py`, `tests/test_oneshot_usage_events.py`).
 
 ## How B was reproduced
 

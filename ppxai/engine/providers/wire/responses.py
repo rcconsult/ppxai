@@ -525,6 +525,13 @@ class ResponsesHandler:
             raise
         finally:
             stop.remove(closer)
+            if stop.stopped:
+                # The stop only shut the socket down (see
+                # call_stop.close_http_response); release it on this thread.
+                try:
+                    stream.close()
+                except Exception:  # noqa: BLE001 — closing an aborted stream may raise
+                    pass
         stop.raise_if_stopped()
         usage_dict = None
         if usage_stats is not None:

@@ -14,6 +14,8 @@ import json
 import os
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -28,6 +30,8 @@ from ppxai.engine.agent_runs import (
 from ppxai.engine import task_authorizer as _authz
 from ppxai.engine import task_runner as _task_runner_mod
 from ppxai.engine.types import Event, EventType
+from ppxai.engine.call_stop import CallAbortedError
+from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 from ppxai.server.routes import agent_v1 as _agent_v1_mod
 from ppxai.config import execution as _exec_cfg
 from ppxai.config import providers as _providers_cfg
@@ -874,6 +878,37 @@ class TestAgentRunRoutes:
         assert resp.status_code == 400
         assert "provider" in resp.json()["detail"].lower()
         assert reg.list_runs() == []
+
+    def test_cancelling_a_run_over_http_stops_its_model_call(self, client, monkeypatch):
+        """Option B: POST .../cancel on a /run waiting on its model call ends
+        the run `cancelled` at once and aborts the call (its stop fires)."""
+        c, reg = client
+        in_call, aborted = threading.Event(), threading.Event()
+
+        class _Slow(OpenAICompatibleProvider):
+            def __init__(self):  # bypass real provider construction
+                pass
+
+            def oneshot_stoppable(self, *, stop, **kw):
+                stop.on_stop(aborted.set)
+                in_call.set()
+                aborted.wait(30)          # "the model is writing an essay"
+                raise CallAbortedError("stopped")
+
+        monkeypatch.setattr(_agent_v1_mod, "_build_provider", lambda name: _Slow())
+        run_id = c.post("/v1/agent/run", json={
+            "task": "essay", "provider": "fakeprov", "model": "fakemodel",
+        }).json()["run_id"]
+        assert in_call.wait(5)
+        t0 = time.monotonic()
+        assert c.post(f"/v1/agent/runs/{run_id}/cancel").json()["status"] == "cancelling"
+        one = self._poll_terminal(c, run_id, timeout_s=2.0)
+        assert time.monotonic() - t0 < 1.0
+        assert aborted.is_set()
+        assert one["status"] == "cancelled"
+        assert one["result"] is None and one["resumable"] is False
+        events = [e["type"] for e in c.get(f"/v1/agent/runs/{run_id}/events").json()["events"]]
+        assert "agent_run_cancelled" in events and "agent_result_ready" not in events
 
     def test_explicit_provider_model_in_request(self, client, monkeypatch):
         # The contract path: provider/model passed explicitly per run (what

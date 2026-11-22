@@ -34,7 +34,13 @@ from ppxai.constants import install_extra_hint
 from ... import usage as _usage
 from ...common.logger import get_logger
 from ...config.tls import tls_verify
-from ..call_stop import CallAbortedError, CallStop, register_response
+from ..call_stop import (
+    CallAbortedError,
+    CallStop,
+    refuse_new_requests,
+    register_response,
+    shutdown_client_connections,
+)
 from ..call_stop import active as call_active
 from ..types import Event, EventType, Message, ProviderCapabilities, UsageStats
 from .base import BaseProvider
@@ -302,13 +308,15 @@ class GeminiProvider(BaseProvider):
         # a 2.76s server startup -- and it left async/websocket calls on
         # certifi instead of the resolved TLS policy.
         verify = tls_verify()
+        # The hook lets a run's cancel abort a streamed one-shot call
+        # (oneshot_stoppable): this SDK never hands back its response. Kept
+        # on the provider so abort_in_flight can reach its connections.
+        self._http_client = httpx.Client(
+            verify=verify, event_hooks={"response": [register_response]})
         self.client = genai.Client(
             api_key=api_key,
             http_options=genai_types.HttpOptions(
-                # The hook lets a run's cancel abort a streamed one-shot call
-                # (oneshot_stoppable): this SDK never hands back its response.
-                httpx_client=httpx.Client(
-                    verify=verify, event_hooks={"response": [register_response]}),
+                httpx_client=self._http_client,
                 client_args={"verify": verify},
                 async_client_args={"verify": verify, "ssl": verify},
             ),
@@ -581,6 +589,16 @@ class GeminiProvider(BaseProvider):
             getattr(response, "usage_metadata", None),
             getattr(candidate, "grounding_metadata", None),
         )
+
+    def abort_in_flight(self) -> None:
+        """Abort this provider's in-flight requests (a `/task` run's cancel;
+        see `BaseProvider.abort_in_flight`): make the client refuse a retry,
+        then shut the pool's sockets down (as `OpenAIWireMixin`)."""
+        http = getattr(self, "_http_client", None)
+        if http is None:
+            return
+        refuse_new_requests(http)
+        shutdown_client_connections(http)
 
     def oneshot_stoppable(self, *, stop: CallStop, **kwargs: Any) -> dict[str, Any]:
         """`oneshot`, abortable through `stop` (a run's cancel): the same

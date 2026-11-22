@@ -542,6 +542,54 @@ cancel_run(run_id):  → _cancel_run_cascade(run_id, seen=set())
      sub-agent (recursion-safe via `seen`, cycle-guarded). [post-Inc-9 §E]
 ```
 
+### Stopping a call on cancel (option B, 2026-11-22)
+
+A cancel used to wait for the run's next `check()`. A `/run` never reaches
+one, and a `/task` waits out its current model call. Now every model call
+and search a run waits on goes through `RunControl.interruptible`, and
+`cancel_run` also sets `RunControl.cancel_event`:
+
+```
+cancel_run(run_id):
+  control.cancel_requested = True
+  control.cancel_event.set()               ← wakes interruptible()
+
+RunControl.interruptible(call, stop=CallStop(), resumable=…):
+  wait(call, cancel_event.wait())          ← first one wins
+  call won       → its result (CallAbortedError + cancel → cancelled)
+  cancel won     → stop.stop()             ← runs the provider's closer
+                   call.cancel()
+                   raise RunCancelledDuringCall(resumable)
+                                           → _drive: finish_run(cancelled)
+
+/run   [routes/agent_v1.py::_runner]
+  interruptible(_retrieve_for_grounding(…))
+  interruptible(to_thread(provider.oneshot_stoppable, stop=…), stop=…)
+  interruptible(ground_native(…))
+    oneshot_stoppable: the oneshot request, sent streamed;
+      stop shuts the stream's socket down (call_stop.close_http_stream;
+      never closed from the stopping thread) → the blocked read fails →
+      CallAbortedError; the worker closes the stream itself
+      Gemini: no response handle → httpx response hook
+      (call_stop.register_response) inside call_stop.active(stop)
+    POST /v1/oneshot keeps provider.oneshot (wire unchanged)
+
+/task  [engine/task_runner.py::_runner]
+  with install_interrupter(control):       ← ContextVar, call_stop.py
+    async for ev in engine.chat(task):
+      chat_with_tools → _provider_events(ctx, …)   [engine/chat.py]
+        interrupter installed → interruptible(collect(provider.chat(
+          stream=False)), stop=…, resumable=True)
+        stop → provider.abort_in_flight()
+           mark the run's own client closed (call_stop.refuse_new_requests:
+           the OpenAI SDK would retry, resending the request), then shut
+           down its pool sockets
+        none installed (/chat) → plain pass-through
+```
+
+A tool call is never interrupted: `interruptible` wraps only provider calls
+and searches.
+
 ### POST /v1/agent/task — budget/cancel polling (delta over Inc 5)
 
 ```

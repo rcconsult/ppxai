@@ -45,6 +45,7 @@ from ..config.paths import get_default_working_dir
 from ..usage_events import TIER_TASK, record_usage
 from .agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 from .agent_scoped_tools import ScopedToolManager
+from .call_stop import install_interrupter
 from .client import EngineClient
 from .sources import SourceLedger
 from .tools.agent_spawn import SpawnSubagentTool
@@ -508,98 +509,104 @@ def build_task_runner(
         # `agent_run_sources` event (registry.record_sources no-ops when
         # nothing changed).
         ledger = SourceLedger.from_dicts(getattr(m, "sources", None))
-        async for event in engine.chat(task, stream=False, sources=ledger):
-            if event.type in (EventType.TOOL_RESULT, EventType.STREAM_END):
-                registry.record_sources(m, ledger.to_dicts())
-            if pending_error is not None and event.type not in (
-                EventType.AGENT_RUN_ERROR,
-                EventType.AGENT_RUN_COMPLETE,
-                EventType.INFO,
-                EventType.STREAM_END,
-            ):
-                break
-            # Item 82: a tool-guard degradation reaches the audit file. Checked
-            # BEFORE the type dispatch below, and independently of it, so the
-            # record lands even for an event type that is also handled there
-            # (including one that raises). See `degradation_reason`.
-            reason = degradation_reason(event)
-            if reason is not None:
-                registry.emit_event(
-                    m.run_id, TURN_DEGRADED_EVENT, level="warning", category="tool",
-                    data={**_clamp_audit_data(event.metadata), "reason": reason.value},
-                )
-            # Surface tool activity on the run's event stream. The engine's
-            # TOOL_CALL carries the name in event.data["tool"] (a dict), not
-            # in metadata; STREAM_END carries the final text as event.data,
-            # which is a plain string (sometimes a dict with "content").
-            if event.type == EventType.TOOL_CALL:
-                if control is not None:
-                    # Refresh the run's cumulative token total from the engine
-                    # before checking, so the token budget is actually enforced
-                    # (not just iterations/time). Read session.live_run_tokens —
-                    # the LIVE in-flight total chat_with_tools bumps per tool
-                    # iteration. (session.usage.total_tokens is only committed at
-                    # terminal STREAM_END, so it's stale/0 mid-run — reading it
-                    # left the token axis silently unenforced; v1.19.0 fix.) This
-                    # EngineClient is run-local (D1: one per run), so the live
-                    # total IS this run's total. check() runs BEFORE counting this
-                    # iteration: a budget of N lets N iterations run, stops at the
-                    # (N+1)th.
-                    try:
-                        control.tokens_used = engine.session.live_run_tokens
-                    except AttributeError:
-                        pass  # usage not available — leave token axis unenforced
-                    control.check(now=time.monotonic())
-                    control.iterations += 1
-                d = event.data or {}
-                name = d.get("tool", "") if isinstance(d, dict) else ""
-                # F4: carry a truncated args snapshot on the audit event —
-                # what the model actually asked the tool to do (e.g. the
-                # web_search query). Values clamped so a large file-write
-                # arg can't bloat events.jsonl.
-                raw_args = d.get("arguments") if isinstance(d, dict) else None
-                args_snapshot = {
-                    str(k): str(v)[:200] for k, v in raw_args.items()
-                } if isinstance(raw_args, dict) else None
-                registry.emit_event(
-                    m.run_id, "tool_call", level="debug", category="tool",
-                    data={"tool": name, "arguments": args_snapshot},
-                )
-            elif event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
-                # The engine reports provider/config failures as EVENTS, not
-                # exceptions — chat() yields ERROR ("No provider", auth, network)
-                # or PROVIDER_THROTTLED (429/403) and returns normally. If we
-                # only watched STREAM_END, run_in_background would see a clean
-                # return and mark the run COMPLETED with an empty result. Used
-                # to raise right here; now remembered instead, so the engine's
-                # AGENT_RUN_ERROR that follows still gets persisted as
-                # turn_end below — the raise moved to after the loop, with the
-                # identical message, so run status/message are unchanged.
-                d = event.data
-                msg = d.get("message") if isinstance(d, dict) else str(d)
-                pending_error = f"{event.type.value}: {msg or 'provider call failed'}"
-            elif event.type in TURN_TERMINAL_TYPES:
-                # Item 82: the engine's own end-of-turn statement, copied
-                # verbatim (clamped) — `degraded` / `degradation_reasons` are
-                # whatever the ENGINE said, never defaulted here. A turn with
-                # no TURN_END_EVENT record never reported: UNKNOWN, not clean.
-                # (v1.19.3: the ERROR branch above no longer raises before
-                # this can run — it only remembers the message — so the
-                # interrupt/provider-error paths' AGENT_RUN_ERROR now DOES
-                # reach here and get a TURN_END_EVENT record, same as any
-                # other terminal.)
-                turn_data = _clamp_audit_data(event.data)
-                registry.emit_event(
-                    m.run_id, TURN_END_EVENT,
-                    level=turn_end_level(turn_data, event.type),
-                    category="lifecycle",
-                    data={**turn_data, "engine_event": event.type.value},
-                )
-            elif event.type == EventType.STREAM_END and event.data is not None:
-                d = event.data
-                text = d.get("content", "") if isinstance(d, dict) else str(d)
-                if text:
-                    final_text.append(text)
+        # Option B: the tool loop awaits each model call through this run's
+        # control, so a cancel stops the call instead of waiting for it.
+        # Option B: the engine's tool loop awaits each model call through
+        # this run's control, so a cancel stops the call instead of waiting
+        # for it (engine/chat.py::_provider_events).
+        with install_interrupter(control):
+            async for event in engine.chat(task, stream=False, sources=ledger):
+                if event.type in (EventType.TOOL_RESULT, EventType.STREAM_END):
+                    registry.record_sources(m, ledger.to_dicts())
+                if pending_error is not None and event.type not in (
+                    EventType.AGENT_RUN_ERROR,
+                    EventType.AGENT_RUN_COMPLETE,
+                    EventType.INFO,
+                    EventType.STREAM_END,
+                ):
+                    break
+                # Item 82: a tool-guard degradation reaches the audit file. Checked
+                # BEFORE the type dispatch below, and independently of it, so the
+                # record lands even for an event type that is also handled there
+                # (including one that raises). See `degradation_reason`.
+                reason = degradation_reason(event)
+                if reason is not None:
+                    registry.emit_event(
+                        m.run_id, TURN_DEGRADED_EVENT, level="warning", category="tool",
+                        data={**_clamp_audit_data(event.metadata), "reason": reason.value},
+                    )
+                # Surface tool activity on the run's event stream. The engine's
+                # TOOL_CALL carries the name in event.data["tool"] (a dict), not
+                # in metadata; STREAM_END carries the final text as event.data,
+                # which is a plain string (sometimes a dict with "content").
+                if event.type == EventType.TOOL_CALL:
+                    if control is not None:
+                        # Refresh the run's cumulative token total from the engine
+                        # before checking, so the token budget is actually enforced
+                        # (not just iterations/time). Read session.live_run_tokens —
+                        # the LIVE in-flight total chat_with_tools bumps per tool
+                        # iteration. (session.usage.total_tokens is only committed at
+                        # terminal STREAM_END, so it's stale/0 mid-run — reading it
+                        # left the token axis silently unenforced; v1.19.0 fix.) This
+                        # EngineClient is run-local (D1: one per run), so the live
+                        # total IS this run's total. check() runs BEFORE counting this
+                        # iteration: a budget of N lets N iterations run, stops at the
+                        # (N+1)th.
+                        try:
+                            control.tokens_used = engine.session.live_run_tokens
+                        except AttributeError:
+                            pass  # usage not available — leave token axis unenforced
+                        control.check(now=time.monotonic())
+                        control.iterations += 1
+                    d = event.data or {}
+                    name = d.get("tool", "") if isinstance(d, dict) else ""
+                    # F4: carry a truncated args snapshot on the audit event —
+                    # what the model actually asked the tool to do (e.g. the
+                    # web_search query). Values clamped so a large file-write
+                    # arg can't bloat events.jsonl.
+                    raw_args = d.get("arguments") if isinstance(d, dict) else None
+                    args_snapshot = {
+                        str(k): str(v)[:200] for k, v in raw_args.items()
+                    } if isinstance(raw_args, dict) else None
+                    registry.emit_event(
+                        m.run_id, "tool_call", level="debug", category="tool",
+                        data={"tool": name, "arguments": args_snapshot},
+                    )
+                elif event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
+                    # The engine reports provider/config failures as EVENTS, not
+                    # exceptions — chat() yields ERROR ("No provider", auth, network)
+                    # or PROVIDER_THROTTLED (429/403) and returns normally. If we
+                    # only watched STREAM_END, run_in_background would see a clean
+                    # return and mark the run COMPLETED with an empty result. Used
+                    # to raise right here; now remembered instead, so the engine's
+                    # AGENT_RUN_ERROR that follows still gets persisted as
+                    # turn_end below — the raise moved to after the loop, with the
+                    # identical message, so run status/message are unchanged.
+                    d = event.data
+                    msg = d.get("message") if isinstance(d, dict) else str(d)
+                    pending_error = f"{event.type.value}: {msg or 'provider call failed'}"
+                elif event.type in TURN_TERMINAL_TYPES:
+                    # Item 82: the engine's own end-of-turn statement, copied
+                    # verbatim (clamped) — `degraded` / `degradation_reasons` are
+                    # whatever the ENGINE said, never defaulted here. A turn with
+                    # no TURN_END_EVENT record never reported: UNKNOWN, not clean.
+                    # (v1.19.3: the ERROR branch above no longer raises before
+                    # this can run — it only remembers the message — so the
+                    # interrupt/provider-error paths' AGENT_RUN_ERROR now DOES
+                    # reach here and get a TURN_END_EVENT record, same as any
+                    # other terminal.)
+                    turn_data = _clamp_audit_data(event.data)
+                    registry.emit_event(
+                        m.run_id, TURN_END_EVENT,
+                        level=turn_end_level(turn_data, event.type),
+                        category="lifecycle",
+                        data={**turn_data, "engine_event": event.type.value},
+                    )
+                elif event.type == EventType.STREAM_END and event.data is not None:
+                    d = event.data
+                    text = d.get("content", "") if isinstance(d, dict) else str(d)
+                    if text:
+                        final_text.append(text)
 
         # v1.19.3: raise here, not inline in the loop above, so the engine's
         # AGENT_RUN_ERROR (and any AGENT_RUN_COMPLETE/INFO/STREAM_END the

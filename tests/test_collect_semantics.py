@@ -81,7 +81,9 @@ def v1_client(tmp_path, monkeypatch):
     )
     app = FastAPI()
     app.include_router(agent_v1.router)
-    return TestClient(app), reg
+    # Entered, so a background run keeps its event loop between requests.
+    with TestClient(app) as c:
+        yield c, reg
 
 
 def _pin_collect(monkeypatch, value):

@@ -134,6 +134,13 @@ class BaseProvider(ABC):
         """
         ...
 
+    def abort_in_flight(self) -> None:
+        """Abort every request this provider has in flight, from another
+        thread: a `/task` run's cancel, while its tool loop waits on a
+        non-streamed call. Only called on a run's own provider instance.
+        The default can't abort (the call runs to the end in its thread); a
+        provider whose SDK blocks a worker thread overrides it."""
+
     def oneshot_stoppable(self, *, stop: CallStop, **kwargs: Any) -> dict[str, Any]:
         """`oneshot` that a run's cancel can abort through `stop`.
 

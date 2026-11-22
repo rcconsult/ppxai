@@ -952,13 +952,22 @@ async def get_agent_run(run_id: str, request: Request) -> RunMetaResponse:
 
 @router.post("/runs/{run_id}/cancel")
 async def cancel_agent_run(run_id: str, request: Request) -> dict:
-    """Request cooperative cancellation of an in-flight run (Inc 6).
+    """Cancel an in-flight run (Inc 6; option B, 2026-11-22).
 
-    Flips the run's control flag and moves it to `cancelling`; the runner
-    observes it at its next tool-loop boundary and stops at a clean
-    checkpoint (status → `cancelled`, resumable). Returns 404 if the run is
-    unknown, 403 if the caller doesn't own it (Inc 8b), 409 if it's already
-    terminal (nothing to cancel)."""
+    Flips the run's control flag and moves it to `cancelling`. Where the run
+    stops:
+
+    - waiting on a model call or a search: at once. The call is aborted
+      (the connection to the provider is closed, so generation and, where
+      the provider honours a closed connection, billing stop) and its
+      partial output is discarded. A `/task` ends `cancelled` and resumable;
+      a `/run` ends `cancelled`, not resumable.
+    - between tool-loop steps: at the next step, as before (resumable).
+    - during a tool call: never mid-tool. The tool finishes, then the run
+      stops at the next step.
+
+    Returns 404 if the run is unknown, 403 if the caller doesn't own it
+    (Inc 8b), 409 if it's already terminal (nothing to cancel)."""
     registry = get_agent_run_registry()
     meta = registry.get_run(run_id)
     if meta is None:

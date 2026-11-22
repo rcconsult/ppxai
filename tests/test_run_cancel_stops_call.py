@@ -20,6 +20,7 @@ import socket
 import threading
 import time
 
+import httpx
 import pytest
 from openai import OpenAI
 
@@ -29,11 +30,20 @@ from ppxai.engine.agent_runs import (
     RunCancelledDuringCall,
     RunControl,
 )
-from ppxai.engine.call_stop import CallAbortedError, CallStop
+from ppxai.engine.call_stop import (
+    CallAbortedError,
+    CallStop,
+    close_http_response,
+    close_http_stream,
+    install_interrupter,
+    refuse_new_requests,
+)
+from ppxai.engine.chat import _provider_events
 from ppxai.engine.providers.anthropic import AnthropicProvider
 from ppxai.engine.providers.gemini import GeminiProvider
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 from ppxai.engine.providers.openai_native import OpenAINativeProvider
+from ppxai.engine.types import Event, EventType, Message
 
 # --- a slow OpenAI-compatible streaming server ------------------------------
 
@@ -60,6 +70,25 @@ class _Server:
             def do_POST(self):  # noqa: N802 — http.server's name
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
                 server.requests.append(body)
+                if body.get("stream") is False or self.path.endswith(":generateContent"):
+                    # A tool-loop call: nothing comes back until the model is done.
+                    server.first_chunk_sent.set()   # "the request is in flight"
+                    if self._pause(server.delay):
+                        server.client_hung_up.set()
+                        return
+                    reply = json.dumps({
+                        "id": "c", "object": "chat.completion", "created": 0, "model": "served-model",
+                        "choices": [{"index": 0, "finish_reason": "stop",
+                                     "message": {"role": "assistant", "content": "done"}}],
+                        "usage": {"prompt_tokens": 3, "completion_tokens": 1, "total_tokens": 4},
+                    }).encode()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(reply)))
+                    self.end_headers()
+                    self.wfile.write(reply)
+                    server.finished.set()
+                    return
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")
                 self.send_header("Transfer-Encoding", "chunked")
@@ -212,10 +241,13 @@ class TestOpenAINativeOneshotStoppable:
     def test_a_stop_closes_the_connection_mid_answer(self, server, native, model):
         # A long gap after the first chunk: only aborting the connection can
         # end the call in time; the per-chunk stop check never gets a chance.
-        server.delay = 5.0
+        # 30 s stall vs a 10 s deadline: a stuck read stays stuck for the
+        # whole stall, while a thread starved of CPU on a busy host still
+        # has room to finish.
+        server.delay = 30.0
         stop = CallStop()
         threading.Thread(
-            target=lambda: (server.first_chunk_sent.wait(5), stop.stop()), daemon=True
+            target=lambda: _stop_once_blocked(server, stop), daemon=True
         ).start()
         raised: list[BaseException] = []
 
@@ -227,10 +259,10 @@ class TestOpenAINativeOneshotStoppable:
 
         worker = threading.Thread(target=call, daemon=True)
         worker.start()
-        worker.join(2.0)
+        worker.join(10.0)
         assert not worker.is_alive(), "the stop didn't unblock the read"
         assert len(raised) == 1 and isinstance(raised[0], CallAbortedError)
-        assert server.client_hung_up.wait(3)
+        assert server.client_hung_up.wait(10)
         assert not server.finished.is_set()
 
 
@@ -252,10 +284,13 @@ class TestGeminiOneshotStoppable:
     def test_a_stop_closes_the_connection_mid_answer(self, server, gemini):
         # A long gap after the first chunk: only aborting the connection can
         # end the call in time; the per-chunk stop check never gets a chance.
-        server.delay = 5.0
+        # 30 s stall vs a 10 s deadline: a stuck read stays stuck for the
+        # whole stall, while a thread starved of CPU on a busy host still
+        # has room to finish.
+        server.delay = 30.0
         stop = CallStop()
         threading.Thread(
-            target=lambda: (server.first_chunk_sent.wait(5), stop.stop()), daemon=True
+            target=lambda: _stop_once_blocked(server, stop), daemon=True
         ).start()
         raised: list[BaseException] = []
 
@@ -267,10 +302,10 @@ class TestGeminiOneshotStoppable:
 
         worker = threading.Thread(target=call, daemon=True)
         worker.start()
-        worker.join(2.0)
+        worker.join(10.0)
         assert not worker.is_alive(), "the stop didn't unblock the read"
         assert len(raised) == 1 and isinstance(raised[0], CallAbortedError)
-        assert server.client_hung_up.wait(3)
+        assert server.client_hung_up.wait(10)
         assert not server.finished.is_set()
 
     def test_a_late_stop_cannot_reach_a_finished_calls_connection(self, server, gemini):
@@ -306,10 +341,13 @@ class TestAnthropicOneshotStoppable:
     def test_a_stop_closes_the_connection_mid_answer(self, server, claude):
         # A long gap after the first chunk: only aborting the connection can
         # end the call in time; the per-chunk stop check never gets a chance.
-        server.delay = 5.0
+        # 30 s stall vs a 10 s deadline: a stuck read stays stuck for the
+        # whole stall, while a thread starved of CPU on a busy host still
+        # has room to finish.
+        server.delay = 30.0
         stop = CallStop()
         threading.Thread(
-            target=lambda: (server.first_chunk_sent.wait(5), stop.stop()), daemon=True
+            target=lambda: _stop_once_blocked(server, stop), daemon=True
         ).start()
         raised: list[BaseException] = []
 
@@ -321,14 +359,23 @@ class TestAnthropicOneshotStoppable:
 
         worker = threading.Thread(target=call, daemon=True)
         worker.start()
-        worker.join(2.0)
+        worker.join(10.0)
         assert not worker.is_alive(), "the stop didn't unblock the read"
         assert len(raised) == 1 and isinstance(raised[0], CallAbortedError)
-        assert server.client_hung_up.wait(3)
+        assert server.client_hung_up.wait(10)
         assert not server.finished.is_set()
 
 
 # --- openai_compat: the request is really aborted ---------------------------
+
+
+def _stop_once_blocked(server, stop):
+    """Stop after the worker has read the first chunk and is blocked waiting
+    for the next: a stop before that is caught by the per-chunk check, and
+    the test would pass without the connection ever being aborted."""
+    server.first_chunk_sent.wait(5)
+    time.sleep(0.3)
+    stop.stop()
 
 
 class TestOpenAICompatOneshotStoppable:
@@ -346,10 +393,13 @@ class TestOpenAICompatOneshotStoppable:
     def test_a_stop_closes_the_connection_mid_answer(self, server, provider):
         # A long gap after the first chunk: only aborting the connection can
         # end the call in time; the per-chunk stop check never gets a chance.
-        server.delay = 5.0
+        # 30 s stall vs a 10 s deadline: a stuck read stays stuck for the
+        # whole stall, while a thread starved of CPU on a busy host still
+        # has room to finish.
+        server.delay = 30.0
         stop = CallStop()
         threading.Thread(
-            target=lambda: (server.first_chunk_sent.wait(5), stop.stop()), daemon=True
+            target=lambda: _stop_once_blocked(server, stop), daemon=True
         ).start()
         raised: list[BaseException] = []
 
@@ -361,10 +411,10 @@ class TestOpenAICompatOneshotStoppable:
 
         worker = threading.Thread(target=call, daemon=True)
         worker.start()
-        worker.join(2.0)                              # 40 chunks x 0.1 s would be 4 s
+        worker.join(10.0)
         assert not worker.is_alive(), "the stop didn't unblock the read"
         assert len(raised) == 1 and isinstance(raised[0], CallAbortedError)
-        assert server.client_hung_up.wait(3), "the server never saw the client hang up"
+        assert server.client_hung_up.wait(10), "the server never saw the client hang up"
         assert not server.finished.is_set()
         assert server.written < server.chunks
 
@@ -420,7 +470,7 @@ class TestInterruptible:
         t0 = time.monotonic()
         with pytest.raises(RunCancelledDuringCall) as err:
             await ctl.interruptible(slow, stop=stop)
-        assert time.monotonic() - t0 < 1.0
+        assert time.monotonic() - t0 < 5.0
         assert stop.stopped
         await asyncio.sleep(0)
         assert slow.cancelled()
@@ -478,7 +528,7 @@ def registry(tmp_path):
 @pytest.mark.asyncio
 async def test_cancelling_a_run_closes_the_providers_connection(registry, server, provider):
     m = registry.start_run("essay", provider="local", model="m")
-    server.delay = 5.0  # only aborting the connection ends the call in time
+    server.delay = 30.0  # only aborting the connection ends the call in time
 
     # Its own pool, not to_thread's default one: if the stop were broken the
     # worker would stay blocked, and closing the loop would wait for it.
@@ -504,8 +554,8 @@ async def _cancel_and_check(registry, server, m, runner):
     await asyncio.to_thread(server.first_chunk_sent.wait, 5)
     t0 = time.monotonic()
     assert registry.cancel_run(m.run_id) is True
-    await asyncio.wait_for(asyncio.shield(registry.get_run_task(m.run_id)), 2.0)
-    assert time.monotonic() - t0 < 1.0
+    await asyncio.wait_for(asyncio.shield(registry.get_run_task(m.run_id)), 10.0)
+    assert time.monotonic() - t0 < 5.0
 
     got = registry.get_run(m.run_id)
     assert got.status == "cancelled"
@@ -513,3 +563,172 @@ async def _cancel_and_check(registry, server, m, runner):
     assert "stopped" in (got.error or "")
     assert await asyncio.to_thread(server.client_hung_up.wait, 3)
     assert not server.finished.is_set()
+
+
+# --- /task: the tool loop's non-streamed calls -------------------------------
+
+
+class _Ctx:
+    def __init__(self, provider):
+        self.provider, self.model = provider, "m"
+
+
+async def _drain(gen):
+    return [event async for event in gen]
+
+
+class TestToolLoopCalls:
+    @pytest.mark.asyncio
+    async def test_outside_a_run_the_call_passes_straight_through(self, server, provider):
+        server.delay = 0.0
+        events = await _drain(_provider_events(_Ctx(provider), [Message("user", "hi")], None))
+        assert any(e.type == EventType.STREAM_END and e.data == "done" for e in events)
+
+    @pytest.mark.asyncio
+    async def test_a_cancel_aborts_the_call_and_the_sdk_does_not_retry(self, server, provider):
+        server.delay = 30.0   # the model "thinks" for 30 s before answering
+        ctl = RunControl(run_id="r")
+
+        async def run():
+            with install_interrupter(ctl):
+                return await _drain(_provider_events(_Ctx(provider), [Message("user", "hi")], None))
+
+        task = asyncio.ensure_future(run())
+        await asyncio.to_thread(server.first_chunk_sent.wait, 5)
+        t0 = time.monotonic()
+        ctl.cancel_requested = True
+        ctl.cancel_event.set()
+        with pytest.raises(RunCancelledDuringCall) as err:
+            await asyncio.wait_for(task, 10.0)
+        assert time.monotonic() - t0 < 5.0
+        assert err.value.resumable is True          # /task: as at a check()
+        assert await asyncio.to_thread(server.client_hung_up.wait, 3)
+        await asyncio.sleep(1.5)                    # time for an SDK retry to land
+        assert len(server.requests) == 1, "the SDK retried the aborted request"
+        assert not server.finished.is_set()
+
+    @pytest.mark.asyncio
+    async def test_a_provider_without_abort_still_ends_the_run(self):
+        class Slow:
+            async def chat(self, messages, model, stream=False, tools=None):
+                await asyncio.sleep(30)
+                yield Event(EventType.STREAM_END, "never")
+
+        ctl = RunControl(run_id="r")
+
+        async def run():
+            with install_interrupter(ctl):
+                return await _drain(_provider_events(_Ctx(Slow()), [], None))
+
+        task = asyncio.ensure_future(run())
+        await asyncio.sleep(0.05)
+        ctl.cancel_requested = True
+        ctl.cancel_event.set()
+        with pytest.raises(RunCancelledDuringCall):
+            await asyncio.wait_for(task, 5.0)
+
+    @pytest.mark.asyncio
+    async def test_gemini_abort_in_flight_closes_its_connections(self, server, gemini):
+        """Gemini's tool-loop call blocks a worker thread like OpenAI's."""
+        server.delay = 30.0
+        ctl = RunControl(run_id="r")
+
+        async def run():
+            with install_interrupter(ctl):
+                return await _drain(_provider_events(_GeminiCtx(gemini), [Message("user", "hi")], None))
+
+        task = asyncio.ensure_future(run())
+        await asyncio.to_thread(server.first_chunk_sent.wait, 5)
+        ctl.cancel_requested = True
+        ctl.cancel_event.set()
+        with pytest.raises(RunCancelledDuringCall):
+            await asyncio.wait_for(task, 10.0)
+        assert await asyncio.to_thread(server.client_hung_up.wait, 3)
+        await asyncio.sleep(1.5)
+        assert len(server.requests) == 1
+
+
+class _GeminiCtx(_Ctx):
+    def __init__(self, provider):
+        super().__init__(provider)
+        self.model = "gemini-3.8-flash"
+
+
+# --- the stopping thread never closes a live socket --------------------------
+
+
+class TestStopperNeverCloses:
+    """Closing a socket from the stopping thread races the worker's read:
+    a closed Python socket's fd becomes -1, `poll()` ignores a negative fd,
+    and the read then sleeps out its whole timeout (seen under load on
+    macOS, about 1 in 20 stops). Only shut down from there."""
+
+    class _Sock:
+        def __init__(self, fail=False):
+            self.calls, self.fail = [], fail
+
+        def shutdown(self, how):
+            self.calls.append("shutdown")
+            if self.fail:
+                raise OSError("not connected")
+
+        def close(self):
+            self.calls.append("close")
+
+    def _response(self, sock):
+        class _Net:
+            def get_extra_info(self, name):
+                return sock if name == "socket" else None
+
+        class _Resp:
+            extensions = {"network_stream": _Net()}
+            closed = False
+
+            def close(self):
+                self.closed = True
+
+        return _Resp()
+
+    def test_a_socket_is_shut_down_not_closed(self):
+        sock = self._Sock()
+        resp = self._response(sock)
+        assert close_http_response(resp) is True
+        assert sock.calls == ["shutdown"] and not resp.closed
+
+    def test_a_failed_shutdown_still_closes_nothing(self):
+        sock = self._Sock(fail=True)
+        resp = self._response(sock)
+        assert close_http_response(resp) is True
+        assert sock.calls == ["shutdown"] and not resp.closed
+
+    def test_without_a_socket_the_response_is_closed(self):
+        class _Resp:
+            extensions: dict = {}
+            closed = False
+
+            def close(self):
+                self.closed = True
+
+        resp = _Resp()
+        assert close_http_response(resp) is False
+        assert resp.closed
+
+    def test_the_stream_is_left_open_when_its_socket_was_shut_down(self):
+        sock = self._Sock()
+
+        class _Stream:
+            response = self._response(sock)
+            closed = False
+
+            def close(self):
+                self.closed = True
+
+        stream = _Stream()
+        close_http_stream(stream)
+        assert not stream.closed and sock.calls == ["shutdown"]
+
+    def test_a_refused_client_cannot_send_again(self):
+        client = httpx.Client()
+        refuse_new_requests(client)
+        with pytest.raises(RuntimeError, match="closed"):
+            client.get("http://127.0.0.1:9/")

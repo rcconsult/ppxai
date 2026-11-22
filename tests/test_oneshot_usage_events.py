@@ -126,13 +126,15 @@ class TestToolFreeAgentRun:
 
         app = FastAPI()
         app.include_router(agent_v1.router)
-        resp = TestClient(app).post(
-            "/v1/agent/run", json={"task": "t", "provider": "p", "model": "m"},
-        )
-        assert resp.status_code == 200, resp.text
-        deadline = time.monotonic() + 5
-        while time.monotonic() < deadline and not calls:
-            time.sleep(0.02)
+        # Entered, so the background run keeps its event loop after the POST.
+        with TestClient(app) as client:
+            resp = client.post(
+                "/v1/agent/run", json={"task": "t", "provider": "p", "model": "m"},
+            )
+            assert resp.status_code == 200, resp.text
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline and not calls:
+                time.sleep(0.02)
         [ev] = calls
         assert ev["tier"] == TIER_ONESHOT and (ev["provider"], ev["model"]) == ("p", "m")
         assert ev["estimated_cost"] == 0.5

@@ -22,6 +22,7 @@ from typing import Any, Protocol
 from ..common.logger import get_logger
 from ..config import calculate_cost, get_agent_config, get_system_prompt, get_system_prompt_mode
 from ..config.defaults import DEFAULT_AGENT_ZOMBIE_THRESHOLD
+from .call_stop import CallStop, current_interrupter
 from .model_facts import shipped_facts_for_model
 from .providers.base import BaseProvider
 from .search.grounding import ground_native
@@ -614,6 +615,37 @@ async def _execute_single_tool(
         return f"Error: {error_msg}", False, events
 
 
+async def _provider_events(ctx, messages, tools) -> AsyncIterator[Event]:
+    """The tool loop's provider call: `provider.chat(stream=False)`.
+
+    Inside a `/task` run (the runner installed its control, see
+    `call_stop.install_interrupter`), the call is awaited through
+    `interruptible`: a cancel ends the run at once (resumable, as at a
+    check()) and `abort_in_flight` aborts the request on the run's own
+    provider. The events are collected first, then yielded: with
+    stream=False the provider emits them all when the call returns anyway.
+    Outside a run, a plain pass-through.
+    """
+    interrupter = current_interrupter()
+    if interrupter is None:
+        async for event in ctx.provider.chat(messages, ctx.model, stream=False, tools=tools):
+            yield event
+        return
+
+    async def collect() -> list[Event]:
+        return [
+            event async for event in ctx.provider.chat(
+                messages, ctx.model, stream=False, tools=tools)
+        ]
+
+    stop = CallStop()
+    abort = getattr(ctx.provider, "abort_in_flight", None)
+    if abort is not None:
+        stop.on_stop(abort)
+    for event in await interrupter.interruptible(collect(), stop=stop, resumable=True):
+        yield event
+
+
 async def chat_with_tools(
     ctx: ChatContext,
     stream: bool
@@ -883,7 +915,7 @@ async def chat_with_tools(
         provider_grounding = None  # ADR 0019 G2: in-call search grounding
 
         request_tools = None if force_synthesis else openai_tools
-        async for event in ctx.provider.chat(messages, ctx.model, stream=False, tools=request_tools):
+        async for event in _provider_events(ctx, messages, request_tools):
             if event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                 # Only remove user message on first iteration (before any tool results added)
                 # This prevents session corruption from orphan user messages (v1.14.1)
@@ -941,7 +973,7 @@ async def chat_with_tools(
                 logger.info(f"Native empty response, falling back to prompt-based (model={ctx.model})")
                 yield Event(EventType.INFO, "Native tool calling returned empty, retrying with prompt-based...")
                 fallback_messages = _build_prompt_based_messages(ctx)
-                async for event in ctx.provider.chat(fallback_messages, ctx.model, stream=False, tools=None):
+                async for event in _provider_events(ctx, fallback_messages, None):
                     if event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                         yield event
                         # v1.19.3 (Agent Heartbeat contract): this fallback
@@ -1464,9 +1496,7 @@ async def chat_with_tools(
 
                 # Bug B (v1.19.1): outbound sanitize guard (see primary send).
                 _retry_messages, _ = sanitize_outbound(ctx.session.get_messages())
-                async for event in ctx.provider.chat(
-                    _retry_messages, ctx.model, stream=False, tools=None
-                ):
+                async for event in _provider_events(ctx, _retry_messages, None):
                     if event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                         yield event
                         # v1.19.3: same fix as the fallback-on-empty ERROR
