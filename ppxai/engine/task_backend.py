@@ -180,6 +180,10 @@ class InProcessTaskBackend:
         self.registry = registry if registry is not None else default_run_registry()
         self._session_provider = session_provider
 
+    def active_conversation(self) -> str | None:
+        """Public name for the active conversation (`/task ls` scope)."""
+        return self._active_conversation()
+
     def _active_conversation(self) -> str | None:
         """The active conversation's name (`session_name`), or None."""
         if self._session_provider is None:

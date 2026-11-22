@@ -27,6 +27,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from ..engine.agent_runs import RUN_STATUSES
+from ..engine.run_scope import scope_and_nest
 from ..engine.sources import format_sources_text
 from ..engine.task_authorizer import (
     TIERS,
@@ -39,6 +41,7 @@ from ..engine.task_grammar import (
     RUN_ONLY_EXCLUDED_VERBS,
     Action,
     classify,
+    parse_ls_flags,
     parse_task_args,
 )
 from .factory import CommandFactory, CommandSpec
@@ -102,34 +105,53 @@ def _fmt_status(meta) -> str:
 # A run registry is append-only and nothing prunes it — a dev host reaches
 # hundreds of runs quickly (348 oneshots in the 2026-08-09 trial). Rendering
 # all of them into a side panel is unusable, so the view is capped and says
-# so; `ls all` is the escape hatch.
+# so. `ls` is already scoped to the active conversation; `--status` narrows it.
 _LIST_CAP = 20
 
-
-def _rows(runs) -> list:
-    return [
-        [r.run_id, _fmt_status(r), (r.task or "")[:60],
-         ",".join(r.tools or []) or "—"]
-        for r in runs
-    ]
+_NO_CONVERSATION = "(none)"
 
 
-def _run_table(family: str, kind: str, runs: list, message: str) -> TableResult:
+def _rows(rows, with_conversation: bool) -> list:
+    out = []
+    for r, depth in rows:
+        task = ("└ " if depth else "") + (r.task or "")[:60]
+        row = [r.run_id, _fmt_status(r), task, ",".join(r.tools or []) or "—"]
+        if with_conversation:
+            row.append(getattr(r, "session_id", None) or _NO_CONVERSATION)
+        out.append(row)
+    return out
+
+
+def _run_table(family: str, kind: str, rows: list, message: str,
+               with_conversation: bool = False) -> TableResult:
     """The panel view, shared by `ls` and by launch.
 
-    Launch returns this rather than a bare notification so a spawned run is
-    VISIBLE without knowing any command — the web client opens a pane per run
-    at launch and the TUI did not, which is why a spawned run appeared to go
-    nowhere.
+    `rows` are `(meta, depth)` pairs from `scope_and_nest`; a sub-agent
+    (depth 1) is drawn under its parent. Launch returns this rather than a
+    bare notification so a spawned run is VISIBLE without knowing any command
+    — the web client opens a pane per run at launch and the TUI did not,
+    which is why a spawned run appeared to go nowhere.
     """
-    shown = runs[:_LIST_CAP]
-    if len(runs) > _LIST_CAP:
-        message = f"{message}  ·  showing {len(shown)} of {len(runs)} — `{family} ls all` for every run"
+    # Cap on top-level runs; a parent's children always travel with it.
+    shown: list = []
+    tops = 0
+    for pair in rows:
+        if pair[1] == 0:
+            tops += 1
+            if tops > _LIST_CAP:
+                break
+        shown.append(pair)
+    total_tops = sum(1 for _, d in rows if d == 0)
+    if total_tops > _LIST_CAP:
+        message = f"{message}  ·  showing newest {_LIST_CAP} of {total_tops}"
+    columns = ["Run", "Status", "Task", "Grant"]
+    if with_conversation:
+        columns.append("Conversation")
     return TableResult(
         status=ResultStatus.SUCCESS,
         message=message,
-        columns=["Run", "Status", "Task", "Grant"],
-        rows=_rows(shown),
+        columns=columns,
+        rows=_rows(shown, with_conversation),
         metadata={
             # Do not take focus: these runs are asynchronous by design and the
             # command's promise is that chat stays usable.
@@ -137,6 +159,16 @@ def _run_table(family: str, kind: str, runs: list, message: str) -> TableResult:
             # Enter on a row opens that run.
             "row_command": f"{family} get {{0}}",
         },
+    )
+
+
+def _scoped_rows(backend, kind: str, *, all_sessions: bool,
+                 status: str | None = None) -> list:
+    return scope_and_nest(
+        backend.list_runs(kind=kind),
+        session_id=backend.active_conversation(),
+        all_sessions=all_sessions,
+        status=status,
     )
 
 
@@ -149,16 +181,31 @@ def _lifecycle(family: str, kind: str, verb: str, run_id: str,
         return _help(family)
 
     if verb in ("ls", "list"):
-        runs = backend.list_runs(kind=kind)
-        if not runs:
+        parts = args.strip().split(None, 1)
+        # `ls <run id>` has always been the plain listing; the id is ignored.
+        flags = parse_ls_flags(
+            "" if run_id or len(parts) < 2 else parts[1])
+        if flags.errors:
+            return ErrorResult(
+                status=ResultStatus.ERROR,
+                message=f"`{family} ls`: " + "; ".join(flags.errors),
+                suggestions=[f"`{family} help` lists the ls flags"],
+            )
+        rows = _scoped_rows(backend, kind, all_sessions=flags.all,
+                            status=flags.status)
+        scope = "all conversations" if flags.all else "this conversation"
+        if flags.status:
+            scope += f", status {flags.status}"
+        if not rows:
+            hint = ("" if flags.all else f" — `{family} ls --all` shows every "
+                    "conversation")
             return NotificationResult(
                 status=ResultStatus.SUCCESS,
-                message=f"No {kind} runs yet.",
+                message=f"No {kind} runs ({scope}){hint}.",
             )
-        if "all" in args.split():
-            return _run_table(family, kind, runs,
-                              f"{len(runs)} {kind} run(s) — all")
-        return _run_table(family, kind, runs, f"{len(runs)} {kind} run(s)")
+        return _run_table(family, kind, rows,
+                          f"{len(rows)} {kind} run(s) — {scope}",
+                          with_conversation=flags.all)
 
     if not run_id:
         return ErrorResult(
@@ -242,13 +289,21 @@ def _lifecycle(family: str, kind: str, verb: str, run_id: str,
 
 
 def _help(family: str) -> NotificationResult:
-    shared = ("ls · get <id> · watch <id> · cancel <id> · collect <id> · help")
+    shared = ("ls [--all] [--status <s>] · get <id> · watch <id> · cancel <id> · "
+              "collect <id> · help")
+    ls_note = (
+        "  `ls` lists only THIS conversation's runs (sub-agents indented under "
+        "their parent); `--all` lists every conversation (runs with no "
+        "recorded conversation show as (none)); `--status <s>` filters by "
+        "status (" + ", ".join(RUN_STATUSES) + ").\n"
+    )
     if family == "/run":
         body = (
             "/run — one-off background runs (async, non-blocking)\n"
             "  /run <prompt>          launch; NO flags — the grant is decided "
             "by server config (execution.run.web_search)\n"
             f"  /run {shared}\n"
+            + ls_note +
             "  A first token counts as a verb only when followed by a run id "
             "(or nothing) — anything else launches.\n"
             "  Runs open in the side panel; F6 switches pane, Enter on a row "
@@ -260,6 +315,7 @@ def _help(family: str) -> NotificationResult:
             '  /task "<desc>" --tools a,b [--allow host] [--budget iters=,time=,'
             "tokens=] [--provider p] [--model m] [--work-dir path]\n"
             f"  /task {shared} · respond <id> approve|deny · resume <id>\n"
+            + ls_note +
             "  Sub-agents: add spawn_subagent to --tools (it is never added "
             "for you).\n"
             "  A first token counts as a verb only when followed by a run id "
@@ -386,7 +442,11 @@ def _dispatch(family: str, kind: str, context: Any, args: str) -> CommandResult:
     # the result had no way to learn `collect` at the moment they needed it —
     # reported 2026-08-09: "no idea and could not find in help how to collect".
     return _run_table(
-        family, kind, backend.list_runs(kind=kind),
+        family, kind,
+        # No active conversation (a bare backend) → nothing could match the
+        # scope, and the run just launched must still show up.
+        _scoped_rows(backend, kind,
+                     all_sessions=backend.active_conversation() is None),
         (f"🤖 {meta.run_id} running — chat stays usable  ·  "
          f"`{family} get {meta.run_id}` to view  ·  "
          f"`{family} collect {meta.run_id}` when done  ·  F6 switches pane"

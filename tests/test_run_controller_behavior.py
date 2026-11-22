@@ -123,7 +123,7 @@ function makeApp(opts) {{
   {{
     const app = makeApp({{}});
     const c = new RunController(app);
-    await c.list();
+    await c.list();   // no opts = unscoped legacy listing
     assert(app._getUrls[0] === "/v1/agent/runs?kind=oneshot",
       "kind filter missing: " + app._getUrls[0]);
     assert(app._msgs.some((m) => /No runs yet/.test(m)), "empty hint shown");

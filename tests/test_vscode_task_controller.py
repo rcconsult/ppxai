@@ -131,8 +131,8 @@ class TestRunFamilyParity:
     def test_kind_filter_drives_ls_in_both_clients(self):
         # /run ls shows only oneshots, /task ls only tasks — both clients
         # must pass the kind through to GET /v1/agent/runs.
-        assert "kind=${this._kind}" in _read(WEB_BASE)
-        assert "this.backend.agentRuns(this.kind)" in _read(TS_CONTROLLER)
+        assert "kind=${this._kind}" in _read(WEB_BASE)  # + &session=/&status= (ADR 0018)
+        assert "this.backend.agentRuns(this.kind, {" in _read(TS_CONTROLLER)
         assert "_kind = 'oneshot'" in _read(WEB_RUN)
         assert "_kind = 'task'" in _read(WEB_TASK)
         assert "kind: string | undefined = 'oneshot'" in _read(TS_CONTROLLER)

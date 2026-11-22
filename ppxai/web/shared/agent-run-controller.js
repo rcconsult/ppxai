@@ -16,6 +16,34 @@
  * @version 1.19.0
  */
 
+/**
+ * Order a run list for display: roots in input order, each followed by its
+ * sub-agents (`parent_run_id`) at depth 1. A child whose parent is not in the
+ * list stays at top level rather than vanishing. Twin of
+ * `engine/run_scope.py::scope_and_nest` (scoping itself is server-side here,
+ * via `?session=` / `?status=`).
+ */
+function scopeAndNest(runs) {
+    const ids = new Set(runs.map((r) => r.run_id));
+    const kids = new Map();
+    const roots = [];
+    runs.forEach((r) => {
+        const p = r.parent_run_id;
+        if (p && ids.has(p) && p !== r.run_id) {
+            if (!kids.has(p)) kids.set(p, []);
+            kids.get(p).push(r);
+        } else {
+            roots.push(r);
+        }
+    });
+    const rows = [];
+    roots.forEach((r) => {
+        rows.push([r, 0]);
+        (kids.get(r.run_id) || []).forEach((c) => rows.push([c, 1]));
+    });
+    return rows;
+}
+
 class AgentRunController {
     /** @param {PpxaiApp} app */
     constructor(app) {
@@ -159,37 +187,72 @@ class AgentRunController {
 
     // ── Commands ──────────────────────────────────────────────────────────────
 
-    /** ls — list recent runs (kind-filtered per family) as clickable rows. */
-    async list() {
+    /**
+     * ls — list recent runs (kind-filtered per family) as clickable rows.
+     * `opts.all` lifts the active-conversation scope; `opts.status` filters.
+     * Called without opts it lists everything the family owns (unscoped).
+     */
+    async list(opts) {
+        const scoped = !!opts;
+        const o = opts || { all: true, status: null };
+        let conversation = null;
+        if (scoped && !o.all) {
+            try {
+                const st = await this.app.apiClient.get('/status');
+                conversation = (st && st.session_name) || null;
+            } catch (e) {
+                this.app.showSystemMessage(`❌ Could not read the active conversation: ${this._errText(e)}`);
+                return;
+            }
+            if (!conversation) {
+                this.app.showSystemMessage(
+                    `No active conversation yet — \`${this._cmd} ls --all\` lists every conversation's runs.`);
+                return;
+            }
+        }
         let data;
         try {
-            const url = this._kind
-                ? `/v1/agent/runs?kind=${this._kind}` : '/v1/agent/runs';
-            data = await this.app.apiClient.get(url);
+            const q = [];
+            if (this._kind) q.push(`kind=${this._kind}`);
+            if (conversation) q.push(`session=${encodeURIComponent(conversation)}`);
+            if (o.status) q.push(`status=${encodeURIComponent(o.status)}`);
+            data = await this.app.apiClient.get(
+                '/v1/agent/runs' + (q.length ? `?${q.join('&')}` : ''));
         } catch (e) {
             this.app.showSystemMessage(`❌ Could not list runs: ${this._errText(e)}`);
             return;
         }
-        const runs = (data && data.runs) || [];
-        if (runs.length === 0) {
-            this.app.showSystemMessage(this._emptyHint);
+        const rows = scopeAndNest((data && data.runs) || []);
+        if (rows.length === 0) {
+            this.app.showSystemMessage(
+                scoped && !o.all
+                    ? `No runs in this conversation — \`${this._cmd} ls --all\` lists every conversation's runs.`
+                    : this._emptyHint);
             return;
         }
-        const content = this._messageBody('Agent runs (newest first):');
+        const content = this._messageBody(
+            scoped && !o.all ? 'Runs in this conversation (newest first):'
+                : 'Agent runs (newest first):');
         if (!content) return;
         const list = document.createElement('div');
         list.className = 'agent-runs-list';
-        runs.slice(0, 20).forEach((r) => {
+        // Cap on top-level runs; a parent's children always travel with it.
+        let tops = 0;
+        for (const [r, depth] of rows) {
+            if (depth === 0) { tops += 1; if (tops > 20) break; }
             const row = document.createElement('button');
             row.className = 'agent-run-row';
+            if (depth) row.style.marginLeft = '1.5em';
             const icon = {
                 completed: '✅', completed_pending_ack: '📬', finalized: '✅',
                 failed: '❌', running: '🤖', waiting: '✋',
             }[r.status] || 'ℹ️';
-            row.textContent = `${icon} ${r.run_id}  ${r.status}  ${(r.task || '').slice(0, 50)}`;
+            const conv = (scoped && o.all)
+                ? `  [${r.session_id || '(none)'}]` : '';
+            row.textContent = `${depth ? '└ ' : ''}${icon} ${r.run_id}  ${r.status}  ${(r.task || '').slice(0, 50)}${conv}`;
             row.addEventListener('click', () => this.focus(r.run_id, r.task));
             list.appendChild(row);
-        });
+        }
         content.appendChild(list);
     }
 
@@ -616,7 +679,8 @@ AgentRunController._TERMINAL_EVENTS = new Set([
 
 // CommonJS export for tests; window-global for browser.
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AgentRunController };
+    module.exports = { AgentRunController, scopeAndNest };
 } else if (typeof window !== 'undefined') {
     window.AgentRunController = AgentRunController;
+    window.scopeAndNest = scopeAndNest;
 }

@@ -21,6 +21,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from .agent_runs import RUN_STATUSES
+
 # A registry run id is exactly `run_` + token_hex(6) — see
 # `ppxai/engine/agent_runs.py`. Kept as a literal (not imported) so the
 # grammar stays dependency-free; the parity test pins it against the JS.
@@ -39,6 +41,12 @@ TASK_VERBS = frozenset({
 # Verbs a `kind=oneshot` run cannot honour: a oneshot never parks, so it can
 # neither be responded to nor resumed (ADR 0011 U3).
 RUN_ONLY_EXCLUDED_VERBS = frozenset({"respond", "resume"})
+
+# `ls`/`list` accept exactly these flags (owner decision 2026-11-22): `--all`
+# lifts the current-conversation scope, `--status <s>` filters by run status.
+# Any other flag or word after `ls` keeps the old behaviour (launch / near-miss).
+LS_VERBS = frozenset({"ls", "list"})
+LS_FLAGS = frozenset({"--all", "--status"})
 
 _TOKEN_RE = re.compile(r'"([^"]*)"|\'([^\']*)\'|(\S+)')
 _NUM_RE = re.compile(r"^(\d+(?:\.\d+)?)([km]?)$", re.IGNORECASE)
@@ -61,6 +69,61 @@ class Dispatch:
     verb: str = ""
     run_id: str = ""
     rest: str = ""
+
+
+@dataclass
+class ListFlags:
+    """Parsed `ls` flags: `all` lifts the conversation scope; `status` filters."""
+
+    all: bool = False
+    status: str | None = None
+    errors: list[str] = field(default_factory=list)
+
+
+def _is_listing_flags(rest: str) -> bool:
+    """True when `rest` is made only of `--all` / `--status [value]`."""
+    toks = rest.split()
+    i = 0
+    while i < len(toks):
+        t = toks[i]
+        if t == "--all":
+            i += 1
+        elif t == "--status":
+            i += 1
+            if i < len(toks) and not toks[i].startswith("--"):
+                i += 1
+        else:
+            return False
+    return True
+
+
+def parse_ls_flags(rest: str) -> ListFlags:
+    """Parse the flags after `ls`. `errors` non-empty means don't list."""
+    out = ListFlags()
+    toks = (rest or "").split()
+    i = 0
+    while i < len(toks):
+        t = toks[i]
+        if t == "--all":
+            out.all = True
+        elif t == "--status":
+            if i + 1 >= len(toks) or toks[i + 1].startswith("--"):
+                out.errors.append(
+                    "--status needs a value: one of " + ", ".join(RUN_STATUSES)
+                )
+            else:
+                i += 1
+                if toks[i] in RUN_STATUSES:
+                    out.status = toks[i]
+                else:
+                    out.errors.append(
+                        f"unknown status {toks[i]!r} — expected one of "
+                        + ", ".join(RUN_STATUSES)
+                    )
+        else:
+            out.errors.append(f"unknown flag: {t}")
+        i += 1
+    return out
 
 
 @dataclass
@@ -232,7 +295,8 @@ def classify(argline: str) -> Dispatch:
     """Decide whether a line is a lifecycle op or a launch (U2 grammar).
 
     Lifecycle iff the first token is a verb AND the remainder is empty or
-    starts with a run id. ANYTHING else launches with the whole line as the
+    starts with a run id (or, for `ls`/`list`, consists only of the listing
+    flags `--all` / `--status <s>`). ANYTHING else launches with the whole line as the
     prompt, so `/task get run_ab12…` is a get while `/task get the weather in
     Geneva --tools web_search` launches.
 
@@ -251,6 +315,9 @@ def classify(argline: str) -> Dispatch:
 
     is_verb = verb in TASK_VERBS
     lifecycle = is_verb and (rest == "" or bool(RUN_ID_RE.match(first_tok)))
+    if is_verb and verb in LS_VERBS and rest and _is_listing_flags(rest):
+        # `ls --all`, `ls --status running`: the listing verb with its flags.
+        return Dispatch(action=Action.LIFECYCLE, verb=verb, run_id="", rest=rest)
 
     if not lifecycle:
         if is_verb and RUN_ID_ISH_RE.match(first_tok):

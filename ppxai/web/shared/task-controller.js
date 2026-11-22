@@ -109,6 +109,50 @@ const TASK_VERBS = new Set([
     'help', 'ls', 'list', 'get', 'show', 'open', 'watch',
     'cancel', 'respond', 'collect', 'ack', 'resume',
 ]);
+// `ls`/`list` accept exactly these flags: `--all` lifts the current-conversation
+// scope, `--status <s>` filters by run status. Anything else after `ls` keeps
+// the old behaviour (launch / near-miss). Mirrors task_grammar.py.
+const LS_VERBS = new Set(['ls', 'list']);
+// Pinned against agent_runs.RUN_STATUSES by tests/test_task_grammar_parity.py.
+const RUN_STATUSES = [
+    'pending', 'running', 'waiting', 'cancelling', 'completed',
+    'completed_pending_ack', 'finalized', 'failed', 'cancelled', 'interrupted',
+];
+
+/** True when `rest` is made only of `--all` / `--status [value]`. */
+function isListingFlags(rest) {
+    const toks = (rest || '').split(/\s+/).filter(Boolean);
+    let i = 0;
+    while (i < toks.length) {
+        if (toks[i] === '--all') { i += 1; }
+        else if (toks[i] === '--status') {
+            i += 1;
+            if (i < toks.length && !toks[i].startsWith('--')) i += 1;
+        } else { return false; }
+    }
+    return true;
+}
+
+/** Parse the flags after `ls` → `{all, status, errors}` (errors → don't list). */
+function parseLsFlags(rest) {
+    const out = { all: false, status: null, errors: [] };
+    const toks = (rest || '').split(/\s+/).filter(Boolean);
+    for (let i = 0; i < toks.length; i += 1) {
+        const t = toks[i];
+        if (t === '--all') { out.all = true; }
+        else if (t === '--status') {
+            if (i + 1 >= toks.length || toks[i + 1].startsWith('--')) {
+                out.errors.push(`--status needs a value: one of ${RUN_STATUSES.join(', ')}`);
+            } else {
+                i += 1;
+                if (RUN_STATUSES.includes(toks[i])) out.status = toks[i];
+                else out.errors.push(`unknown status '${toks[i]}' — expected one of ${RUN_STATUSES.join(', ')}`);
+            }
+        } else { out.errors.push(`unknown flag: ${t}`); }
+    }
+    return out;
+}
+
 // Verbs a `kind=oneshot` run cannot honour: a oneshot never parks, so it
 // can neither be responded to nor resumed (ADR 0011 U3). Pinned against
 // task_grammar.RUN_ONLY_EXCLUDED_VERBS by tests/test_task_grammar_parity.py.
@@ -222,8 +266,9 @@ class TaskController extends _AgentRunControllerBase {
         // stumble, 2026-07-11).
         const firstTok = ((rest.split(/\s/, 1)[0]) || '');
         if (trimmed === '') return this.help();
+        const lsFlags = LS_VERBS.has(verb) && rest !== '' && isListingFlags(rest);
         const lifecycle = TASK_VERBS.has(verb)
-            && (rest === '' || RUN_ID_RE.test(firstTok));
+            && (rest === '' || RUN_ID_RE.test(firstTok) || lsFlags);
         if (!lifecycle) {
             if (TASK_VERBS.has(verb) && RUN_ID_ISH_RE.test(firstTok)) {
                 // Near-miss id after a verb: fail loud, never launch.
@@ -243,7 +288,7 @@ class TaskController extends _AgentRunControllerBase {
         switch (verb) {
             case 'help':   return this.help();
             case 'ls':
-            case 'list':   return this.list();
+            case 'list':   return this._listCmd(RUN_ID_RE.test(firstTok) ? '' : rest);
             case 'get':
             case 'show':
             case 'open':   return this.get(firstTok);
@@ -255,6 +300,20 @@ class TaskController extends _AgentRunControllerBase {
             case 'resume': return this.resume(firstTok);
         }
         return undefined;
+    }
+
+    /**
+     * `ls [--all] [--status <s>]` — default scope is the ACTIVE conversation
+     * (ADR 0018 `session_id`), read fresh from /status because
+     * `/session new|load` changes it.
+     */
+    async _listCmd(rest) {
+        const flags = parseLsFlags(rest);
+        if (flags.errors.length) {
+            this.app.showSystemMessage(`❌ \`${this._cmd} ls\`: ${flags.errors.join('; ')}`);
+            return undefined;
+        }
+        return this.list({ all: flags.all, status: flags.status });
     }
 
     /** Launch a tool-capable sandboxed run (U2: direct — no `run` verb). */
@@ -421,14 +480,14 @@ class TaskController extends _AgentRunControllerBase {
             '  `/task "<desc>" --enrichment on|off` — context enrichment: on derives web_search + its egress baseline (ADR 0009)',
             '  `/task "<desc>" --skill <name>` — mount a skill (skills_dir): SKILL.md grant + references/ into read-scope; repeatable',
             '  Sub-agents: add `spawn_subagent` to `--tools` (it is never added for you).',
-            '  `/task ls` — list runs',
+            '  `/task ls [--all] [--status <s>]` — list THIS conversation\'s runs (sub-agents indented under their parent); `--all` = every conversation (runs with no recorded conversation show as (none)); `--status` filters (' + RUN_STATUSES.join(', ') + ')',
             '  `/task get <id>` — open a run pane',
             '  `/task watch <id>` — open + live-tail a run',
             '  `/task respond <id> approve|deny|"<text>"` — answer a run parked in waiting (consent card)',
             '  `/task collect <id>` — collect a held result (📬 completed_pending_ack → finalized)',
             '  `/task resume <id>` — continue an interrupted/cancelled run from its checkpoint',
             '  `/task cancel <id>` — cancel a run',
-            '  A first token that is a verb only counts as one when followed by a run id (or nothing) — anything else launches.',
+            '  A first token that is a verb only counts as one when followed by a run id (or nothing; `ls` also takes `--all` / `--status <s>`) — anything else launches.',
         ].join('\n'));
     }
 }
@@ -438,7 +497,7 @@ TaskController.parseArgs = parseTaskArgs;
 
 // CommonJS export for tests; window-global for browser.
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { TaskController, parseTaskArgs };
+    module.exports = { TaskController, parseTaskArgs, parseLsFlags, isListingFlags, RUN_STATUSES };
 } else if (typeof window !== 'undefined') {
     window.TaskController = TaskController;
     window.parseTaskArgs = parseTaskArgs;

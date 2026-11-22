@@ -67,7 +67,7 @@ enable hint.
 
 ```
 /task "<desc>" --tools a,b,c [flags]       launch a run (direct — no verb)
-/task ls | list                            list runs, newest first
+/task ls | list [--all] [--status <s>]     list THIS conversation's runs, newest first
 /task get <id> | watch                     print meta/result + (re)watch
 /task respond <id> approve|deny|"<text>"   answer a waiting (consent) park
 /task collect <id>                         collect a held result → finalized
@@ -78,10 +78,29 @@ enable hint.
 
 Disambiguation: a first token that is a lifecycle verb counts as one only
 when followed by a run id (`run_` + 12 hex) or nothing — anything else
-launches (`/task get the weather --tools web_search` launches). `show`,
+launches. The one exception is `ls`/`list`, which also accepts the listing
+flags below (any other flag or word after `ls` still launches or is refused
+as a near-miss id) (`/task get the weather --tools web_search` launches). `show`,
 `open` and `ack` still work as aliases of `get`/`collect`; the v1.19.0
 verbs `task run`, and `show`/`ack` as *canonical* names, are retired
 (v1.19.1 breaking change).
+
+### Listing runs (`/task ls`, `/run ls`)
+
+`ls` shows only **the current conversation's** runs: those whose recorded
+conversation (`session_id`, ADR 0018) is the one you are in. It works the
+same in all four clients (Rich, Textual, web, VSCode).
+
+| Flag | Meaning |
+|---|---|
+| *(none)* | Runs launched from the active conversation. Runs from before v1.19.5, which recorded no conversation, are hidden. |
+| `--all` | Every conversation. Runs with no recorded conversation appear only here, marked `(none)`; each row names its conversation. |
+| `--status <s>` | Only runs in that status (`pending`, `running`, `waiting`, `cancelling`, `completed`, `completed_pending_ack`, `finalized`, `failed`, `cancelled`, `interrupted`); an unknown status is refused with this list. Combines with `--all`. |
+
+Sub-agents (runs with a parent) are listed **indented under their parent**,
+also with `--all`. A sub-agent whose parent is not in the listing (for example
+because `--status` filtered the parent out) is shown at top level instead of
+being dropped. `/run ls` takes the same flags over the one-off runs.
 
 ### Launch flags
 

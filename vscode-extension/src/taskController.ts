@@ -68,6 +68,8 @@ export interface AgentRunMeta {
     task: string;
     status: string;
     parent_run_id?: string | null;
+    /** ADR 0018: the conversation the run was launched from (null = none recorded). */
+    session_id?: string | null;
     owner?: string | null;
     provider?: string | null;
     model?: string | null;
@@ -94,7 +96,9 @@ export interface TaskBackend {
     agentTask(body: Record<string, any>): Promise<{ run_id: string; status: string }>;
     /** U3: one-off launch — POST /v1/agent/run (grant is server-config-decided). */
     agentRunCreate(body: Record<string, any>): Promise<{ run_id: string; status: string }>;
-    agentRuns(kind?: string): Promise<{ runs: AgentRunMeta[] }>;
+    agentRuns(kind?: string, filter?: { session?: string; status?: string }): Promise<{ runs: AgentRunMeta[] }>;
+    /** The active conversation's name (`/status` → session_name), the `ls` scope. */
+    getStatus(): Promise<{ session_name?: string }>;
     agentRun(runId: string): Promise<AgentRunMeta>;
     agentRunEvents(runId: string): AsyncIterable<any>;
     agentRunCancel(runId: string): Promise<any>;
@@ -281,6 +285,77 @@ const TASK_VERBS = new Set([
     'help', 'ls', 'list', 'get', 'show', 'open', 'watch',
     'cancel', 'respond', 'collect', 'ack', 'resume',
 ]);
+// `ls`/`list` accept exactly these flags: `--all` lifts the current-conversation
+// scope, `--status <s>` filters by run status. Anything else after `ls` keeps
+// the old behaviour (launch / near-miss). Mirrors task_grammar.py.
+const LS_VERBS = new Set(['ls', 'list']);
+// Pinned against agent_runs.RUN_STATUSES by tests/test_task_grammar_parity.py.
+export const RUN_STATUSES = [
+    'pending', 'running', 'waiting', 'cancelling', 'completed',
+    'completed_pending_ack', 'finalized', 'failed', 'cancelled', 'interrupted',
+];
+
+/** True when `rest` is made only of `--all` / `--status [value]`. */
+export function isListingFlags(rest: string): boolean {
+    const toks = (rest || '').split(/\s+/).filter(Boolean);
+    let i = 0;
+    while (i < toks.length) {
+        if (toks[i] === '--all') { i += 1; }
+        else if (toks[i] === '--status') {
+            i += 1;
+            if (i < toks.length && !toks[i].startsWith('--')) { i += 1; }
+        } else { return false; }
+    }
+    return true;
+}
+
+/** Parse the flags after `ls` (errors non-empty → don't list). */
+export function parseLsFlags(rest: string): { all: boolean; status: string | null; errors: string[] } {
+    const out = { all: false, status: null as string | null, errors: [] as string[] };
+    const toks = (rest || '').split(/\s+/).filter(Boolean);
+    for (let i = 0; i < toks.length; i += 1) {
+        const t = toks[i];
+        if (t === '--all') { out.all = true; }
+        else if (t === '--status') {
+            if (i + 1 >= toks.length || toks[i + 1].startsWith('--')) {
+                out.errors.push(`--status needs a value: one of ${RUN_STATUSES.join(', ')}`);
+            } else {
+                i += 1;
+                if (RUN_STATUSES.includes(toks[i])) { out.status = toks[i]; }
+                else { out.errors.push(`unknown status '${toks[i]}' — expected one of ${RUN_STATUSES.join(', ')}`); }
+            }
+        } else { out.errors.push(`unknown flag: ${t}`); }
+    }
+    return out;
+}
+
+/**
+ * Order a run list for display: roots in input order, each followed by its
+ * sub-agents at depth 1; a child whose parent is not in the list stays at top
+ * level. Twin of `engine/run_scope.py::scope_and_nest` (scoping itself is
+ * server-side, via `?session=` / `?status=`).
+ */
+export function scopeAndNest(runs: AgentRunMeta[]): Array<[AgentRunMeta, number]> {
+    const ids = new Set(runs.map((r) => r.run_id));
+    const kids = new Map<string, AgentRunMeta[]>();
+    const roots: AgentRunMeta[] = [];
+    for (const r of runs) {
+        const p = r.parent_run_id;
+        if (p && ids.has(p) && p !== r.run_id) {
+            if (!kids.has(p)) { kids.set(p, []); }
+            kids.get(p)!.push(r);
+        } else {
+            roots.push(r);
+        }
+    }
+    const rows: Array<[AgentRunMeta, number]> = [];
+    for (const r of roots) {
+        rows.push([r, 0]);
+        for (const c of kids.get(r.run_id) || []) { rows.push([c, 1]); }
+    }
+    return rows;
+}
+
 // Verbs a `kind=oneshot` run cannot honour: a oneshot never parks, so it
 // can neither be responded to nor resumed (ADR 0011 U3). Pinned against
 // task_grammar.RUN_ONLY_EXCLUDED_VERBS by tests/test_task_grammar_parity.py.
@@ -419,8 +494,9 @@ export class TaskController {
         // id instead of sending the whole blob as one bogus id (web parity).
         const firstTok = (rest.split(/\s/, 1)[0]) || '';
         if (trimmed === '') { return this.help(); }
+        const lsFlags = LS_VERBS.has(verb) && rest !== '' && isListingFlags(rest);
         const lifecycle = TASK_VERBS.has(verb)
-            && (rest === '' || RUN_ID_RE.test(firstTok));
+            && (rest === '' || RUN_ID_RE.test(firstTok) || lsFlags);
         if (!lifecycle) {
             if (TASK_VERBS.has(verb) && RUN_ID_ISH_RE.test(firstTok)) {
                 // Near-miss id after a verb: fail loud, never launch.
@@ -440,7 +516,7 @@ export class TaskController {
         switch (verb) {
             case 'help':    return this.help();
             case 'ls':
-            case 'list':    return this.list();
+            case 'list':    return this.listCmd(RUN_ID_RE.test(firstTok) ? '' : rest);
             case 'get':
             case 'show':
             case 'open':
@@ -532,25 +608,64 @@ export class TaskController {
         void this.watchDetached(started.run_id);
     }
 
-    /** ls — list this family's runs (kind-filtered, U3), newest first. */
-    async list(): Promise<void> {
+    /** `ls [--all] [--status <s>]` — validate the flags, then list. */
+    async listCmd(rest: string): Promise<void> {
+        const flags = parseLsFlags(rest);
+        if (flags.errors.length) {
+            this.ui.system(`❌ \`${this.cmd} ls\`: ${flags.errors.join('; ')}`);
+            return;
+        }
+        return this.list({ all: flags.all, status: flags.status });
+    }
+
+    /**
+     * ls — list this family's runs (kind-filtered, U3), newest first. The
+     * default scope is the ACTIVE conversation (ADR 0018 `session_id`, read
+     * fresh from /status because `/session new|load` changes it); `all`
+     * lifts it and `status` filters. Sub-agents are nested under their parent.
+     */
+    async list(opts: { all?: boolean; status?: string | null } = {}): Promise<void> {
+        let conversation: string | undefined;
+        if (!opts.all) {
+            try {
+                conversation = (await this.backend.getStatus()).session_name || undefined;
+            } catch (e: any) {
+                this.ui.system(`❌ Could not read the active conversation: ${this.errText(e)}`);
+                return;
+            }
+            if (!conversation) {
+                this.ui.system(`No active conversation yet — \`${this.cmd} ls --all\` lists every conversation's runs.`);
+                return;
+            }
+        }
         let data: { runs: AgentRunMeta[] };
         try {
-            data = await this.backend.agentRuns(this.kind);
+            data = await this.backend.agentRuns(this.kind, {
+                session: conversation, status: opts.status || undefined,
+            });
         } catch (e: any) {
             this.ui.system(`❌ Could not list runs: ${this.errText(e)}`);
             return;
         }
-        const runs = data.runs || [];
-        if (!runs.length) {
-            this.ui.system(this.emptyHint());
+        const rows = scopeAndNest(data.runs || []);
+        if (!rows.length) {
+            this.ui.system(opts.all
+                ? this.emptyHint()
+                : `No runs in this conversation — \`${this.cmd} ls --all\` lists every conversation's runs.`);
             return;
         }
-        const lines = runs.slice(0, 20).map((r) => {
+        const lines: string[] = [];
+        let tops = 0;
+        for (const [r, depth] of rows) {
+            if (depth === 0) { tops += 1; if (tops > 20) { break; } }
             const icon = STATUS_ICONS[r.status] || 'ℹ️';
-            return `${icon} ${r.run_id}  ${r.status}  ${(r.task || '').slice(0, 50)}`;
-        });
-        this.ui.system(['Agent runs (newest first):', ...lines].join('\n'));
+            const conv = opts.all ? `  [${r.session_id || '(none)'}]` : '';
+            lines.push(`${depth ? '  └ ' : ''}${icon} ${r.run_id}  ${r.status}  ${(r.task || '').slice(0, 50)}${conv}`);
+        }
+        this.ui.system([
+            opts.all ? 'Agent runs (newest first):' : 'Runs in this conversation (newest first):',
+            ...lines,
+        ].join('\n'));
     }
 
     /** Empty-list hint — overridden by RunController for its own launch shape. */
@@ -723,14 +838,14 @@ export class TaskController {
             '  /task "<desc>" --profile <name>  use a named execution profile (execution.profiles in config)',
             '  /task "<desc>" --enrichment on|off  context enrichment: on derives web_search + its egress baseline',
             '  /task "<desc>" --skill <name>  mount a skill (skills_dir); repeatable',
-            '  /task ls                list runs',
+            '  /task ls [--all] [--status <s>]  list THIS conversation\'s runs (sub-agents indented under their parent); --all = every conversation (no recorded conversation shows as (none)); --status filters (' + RUN_STATUSES.join(', ') + ')',
             '  /task get <id>          print a run (re-watches if still live)',
             '  /task watch <id>        alias of get',
             '  /task respond <id> approve|deny|"<text>"  answer a run parked in waiting (a QuickPick also pops automatically)',
             '  /task collect <id>      collect a held result (📬 completed_pending_ack → finalized)',
             '  /task resume <id>       continue an interrupted/cancelled run from its checkpoint',
             '  /task cancel <id>       cancel a run',
-            '  A first token that is a verb only counts as one when followed by a run id (or nothing) — anything else launches.',
+            '  A first token that is a verb only counts as one when followed by a run id (or nothing; ls also takes --all / --status <s>) — anything else launches.',
         ].join('\n'));
     }
 
@@ -950,12 +1065,12 @@ export class RunController extends TaskController {
         this.ui.system([
             '/run — one-off background runs (async, non-blocking). Launches directly:',
             '  /run <prompt>           no flags; grant is server-config-decided (execution.run.web_search on → web_search only, off → closed-book)',
-            '  /run ls                 list one-off runs',
+            '  /run ls [--all] [--status <s>]  list THIS conversation\'s one-off runs (sub-agents indented); --all = every conversation (no recorded conversation shows as (none)); --status filters',
             '  /run get <id>           print a run (re-watches if still live)',
             '  /run watch <id>         alias of get',
             '  /run collect <id>       collect a held result (📬 → finalized)',
             '  /run cancel <id>        cancel a run',
-            '  A first token that is a verb only counts as one when followed by a run id (or nothing) — anything else launches.',
+            '  A first token that is a verb only counts as one when followed by a run id (or nothing; ls also takes --all / --status <s>) — anything else launches.',
         ].join('\n'));
     }
 }

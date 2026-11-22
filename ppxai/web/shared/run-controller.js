@@ -93,12 +93,12 @@ class RunController extends _TaskControllerBase {
         this.app.showSystemMessage([
             '/run — one-off background runs (async, non-blocking). Launches directly:',
             '  `/run <prompt>` — no flags; the grant is server-config-decided (`execution.run.web_search` on → web_search only, off → closed-book)',
-            '  `/run ls` — list one-off runs',
+            '  `/run ls [--all] [--status <s>]` — list THIS conversation\'s one-off runs (sub-agents indented); `--all` = every conversation (no recorded conversation shows as (none)); `--status` filters',
             '  `/run get <id>` — open a run pane',
             '  `/run watch <id>` — open + live-tail a run',
             '  `/run collect <id>` — collect a held result (📬 → finalized)',
             '  `/run cancel <id>` — cancel a run',
-            '  A first token that is a verb only counts as one when followed by a run id (or nothing) — anything else launches.',
+            '  A first token that is a verb only counts as one when followed by a run id (or nothing; `ls` also takes `--all` / `--status <s>`) — anything else launches.',
         ].join('\n'));
     }
 }

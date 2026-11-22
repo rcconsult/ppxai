@@ -21,10 +21,17 @@ from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 from ppxai.engine.task_backend import InProcessTaskBackend
 
 
+class _Conversation:
+    def __init__(self, name):
+        self.session_name = name
+
+
 @pytest.fixture
 def backend(tmp_path, monkeypatch):
     b = InProcessTaskBackend(
-        AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
+        AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs")),
+        # `ls` lists only the active conversation's runs (2026-11-22).
+        session_provider=lambda: _Conversation("conv-a"),
     )
     monkeypatch.setattr(task_cmd, "get_task_backend", lambda: b)
 
@@ -184,7 +191,8 @@ def test_ls_empty_then_populated(backend):
     empty = task_cmd.handle_task(_Ctx(), "ls")
     assert isinstance(empty, NotificationResult)
 
-    backend.registry.start_run(task="t", tools=[], provider="p", model="m")
+    backend.registry.start_run(task="t", tools=[], provider="p", model="m",
+                               session_id="conv-a")
     listed = task_cmd.handle_task(_Ctx(), "ls")
     assert isinstance(listed, TableResult)
     assert listed.columns[0] == "Run" and len(listed.rows) == 1
@@ -192,9 +200,9 @@ def test_ls_empty_then_populated(backend):
 
 def test_ls_is_kind_filtered(backend):
     backend.registry.start_run(task="t", kind="task", tools=[],
-                               provider="p", model="m")
+                               provider="p", model="m", session_id="conv-a")
     backend.registry.start_run(task="o", kind="oneshot", tools=[],
-                               provider="p", model="m")
+                               provider="p", model="m", session_id="conv-a")
     assert len(task_cmd.handle_task(_Ctx(), "ls").rows) == 1
     assert len(task_cmd.handle_run(_Ctx(), "ls").rows) == 1
 
@@ -276,7 +284,8 @@ def test_ls_declares_a_row_command(backend):
     The command declares what activation means — same pattern as
     `focus_panel` — and `{0}` is the Run column.
     """
-    backend.registry.start_run(task="t", tools=[], provider="p", model="m")
+    backend.registry.start_run(task="t", tools=[], provider="p", model="m",
+                               session_id="conv-a")
     result = task_cmd.handle_task(_Ctx(), "ls")
     assert result.metadata["row_command"] == "/task get {0}"
     assert result.columns[0] == "Run", (
@@ -286,14 +295,15 @@ def test_ls_declares_a_row_command(backend):
 
 def test_run_ls_declares_its_own_family(backend):
     backend.registry.start_run(task="t", kind="oneshot", tools=[],
-                               provider="p", model="m")
+                               provider="p", model="m", session_id="conv-a")
     assert task_cmd.handle_run(_Ctx(), "ls").metadata["row_command"] == "/run get {0}"
 
 
 def test_row_command_formats_to_a_working_command(backend):
     """The template must produce a command the handler actually accepts."""
     meta = backend.registry.start_run(task="inspect me", tools=[],
-                                      provider="p", model="m")
+                                      provider="p", model="m",
+                                      session_id="conv-a")
     listed = task_cmd.handle_task(_Ctx(), "ls")
     run_id = listed.rows[0][0]
     command = listed.metadata["row_command"].format(run_id)

@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 
 from ppxai.engine import task_grammar as tg
+from ppxai.engine.agent_runs import RUN_STATUSES
 from ppxai.engine.task_grammar import Action, classify, parse_task_args, tokenize
 
 JS = Path(__file__).resolve().parents[1] / "ppxai" / "web" / "shared" / "task-controller.js"
@@ -220,3 +221,38 @@ def test_flag_missing_value_is_an_error():
 
 def test_tokenizer_handles_both_quote_styles():
     assert tokenize("""a "b c" 'd e' f""") == ["a", "b c", "d e", "f"]
+
+
+# ── `ls` listing flags (2026-11-22) ─────────────────────────────────────────
+
+def test_listing_flags_and_status_set_match_web_and_vscode():
+    """`ls`/`list` take exactly `--all` and `--status <s>`, validated against
+    the registry's real status set — pinned in Python, web and VSCode.
+    Behavioural routing parity lives in tests/test_run_ls_scope.py."""
+    root = Path(__file__).resolve().parents[1]
+    sources = {
+        "web": _js_source(),
+        "vscode": (root / "vscode-extension" / "src" / "taskController.ts").read_text(
+            encoding="utf-8"
+        ),
+    }
+    assert tg.LS_VERBS == {"ls", "list"}
+    assert tg.LS_FLAGS == {"--all", "--status"}
+    for name, src in sources.items():
+        verbs = re.search(r"const LS_VERBS = new Set\(\[(.*?)\]\)", src, re.S)
+        assert verbs, f"{name}: LS_VERBS missing"
+        assert set(re.findall(r"'([a-z]+)'", verbs.group(1))) == set(tg.LS_VERBS)
+        statuses = re.search(r"RUN_STATUSES = \[(.*?)\]", src, re.S)
+        assert statuses, f"{name}: RUN_STATUSES missing"
+        assert tuple(re.findall(r"'([a-z_]+)'", statuses.group(1))) == RUN_STATUSES, name
+        for flag in tg.LS_FLAGS:
+            assert f"'{flag}'" in src, f"{name}: {flag} not handled"
+
+
+def test_ls_flags_classify_as_the_listing_verb():
+    for line in ("ls --all", "list --status running", "ls --all --status failed"):
+        d = classify(line)
+        assert d.action is Action.LIFECYCLE and d.verb in tg.LS_VERBS, line
+    for line in ("ls --tools x", "ls foo", "ls --all foo"):
+        assert classify(line).action is Action.LAUNCH, line
+    assert classify("ls run_abc").action is Action.NEAR_MISS
