@@ -49,3 +49,41 @@ def test_the_log_has_no_carriage_returns(tmp_path):
     record_usage(provider="p", model="m", tier=TIER_TASK, prompt_tokens=1,
                  completion_tokens=1, estimated_cost=0.0, usage_dir=tmp_path)
     assert b"\r" not in usage_events.events_file(tmp_path).read_bytes()
+
+
+class _FakeMsvcrt:
+    """`msvcrt.locking` that refuses `busy` times, then grants."""
+
+    LK_NBLCK, LK_UNLCK, LK_LOCK = 2, 0, 1
+
+    def __init__(self, busy: int):
+        self.busy = busy
+        self.calls: list[int] = []
+
+    def locking(self, fd, mode, nbytes):
+        self.calls.append(mode)
+        if mode == self.LK_LOCK:
+            raise AssertionError("LK_LOCK polls once a second and starves; use LK_NBLCK")
+        if mode == self.LK_NBLCK and self.busy:
+            self.busy -= 1
+            raise OSError(36, "Resource deadlock avoided")
+
+
+class TestTheWindowsLockRetries:
+    """The retry loop, driven off-Windows with a stand-in `msvcrt`."""
+
+    def test_a_busy_lock_is_retried_until_granted(self, tmp_path, monkeypatch):
+        fake = _FakeMsvcrt(busy=5)
+        monkeypatch.setattr(usage_events, "msvcrt", fake)
+        with usage_events._ProcessLock(tmp_path / "usage-events.jsonl") as lock:
+            assert lock._locked
+        assert fake.calls == [fake.LK_NBLCK] * 6 + [fake.LK_UNLCK]
+
+    def test_past_the_deadline_it_appends_unlocked(self, tmp_path, monkeypatch):
+        fake = _FakeMsvcrt(busy=10**9)
+        monkeypatch.setattr(usage_events, "msvcrt", fake)
+        monkeypatch.setattr(usage_events, "_LOCK_DEADLINE_S", 0.05)
+        assert record_usage(provider="p", model="m", tier=TIER_TASK, prompt_tokens=1,
+                            completion_tokens=1, estimated_cost=0.0, usage_dir=tmp_path)
+        assert fake.LK_UNLCK not in fake.calls
+        assert len(read_usage_events(usage_dir=tmp_path)[0]) == 1

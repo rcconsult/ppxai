@@ -55,6 +55,7 @@ import json
 import os
 import sys
 import threading
+import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -94,6 +95,11 @@ logger = get_logger("usage")
 #: Measured 2026-11-22 on Windows, 6 processes x 400 events with only the
 #: thread lock: 2,112 of 2,401 lines survived, 0 reported skipped.
 _WRITE_LOCK = threading.Lock()
+
+#: How long an append waits for another process's lock before writing
+#: unlocked. Appends hold it for well under 1 ms, so this is only reached if
+#: a holder is stuck.
+_LOCK_DEADLINE_S = 30.0
 
 #: Text mode on Windows turns every "\n" into "\r\n"; the log is bytes.
 _O_BINARY = getattr(os, "O_BINARY", 0)
@@ -256,10 +262,17 @@ class _ProcessLock:
 
     The lock is byte 0 of a sibling `<log>.lock` file, not of the log itself:
     Windows byte-range locks are mandatory, so locking the log would make a
-    concurrent `/cost` read fail. `LK_LOCK` retries for about 10 s and then
-    raises; the append then goes ahead unlocked, since this sink is
-    best-effort and one append that might collide beats one that is surely
-    dropped.
+    concurrent `/cost` read fail.
+
+    `LK_LOCK` is not used: it does not queue, it polls once a second and
+    raises after ~9 s, and an append holds the lock for well under 1 ms, so
+    with many writers a waiter can miss it every time (measured 2026-11-22,
+    16 processes x 400: the fallback fired up to 4 times a run and a run
+    lost an event). Instead a non-blocking `LK_NBLCK` is retried with a
+    short backoff (1 ms doubling to 10 ms) up to `_LOCK_DEADLINE_S`. Past
+    that the append goes ahead unlocked, logged at debug, since this sink
+    is best-effort and one append that might collide beats one that is
+    surely dropped.
     """
 
     def __init__(self, path: Path):
@@ -272,11 +285,23 @@ class _ProcessLock:
             return self
         try:
             self._fd = os.open(self._path, os.O_RDWR | os.O_CREAT | _O_BINARY, 0o600)
-            msvcrt.locking(self._fd, msvcrt.LK_LOCK, 1)
-            self._locked = True
         except OSError as e:
-            logger.debug(f"usage-events lock not taken, appending unlocked: {e}")
-        return self
+            logger.debug(f"usage-events lock file not opened, appending unlocked: {e}")
+            return self
+        deadline = time.monotonic() + _LOCK_DEADLINE_S
+        delay = 0.001
+        while True:
+            try:
+                msvcrt.locking(self._fd, msvcrt.LK_NBLCK, 1)
+                self._locked = True
+                return self
+            except OSError as e:
+                if time.monotonic() >= deadline:
+                    logger.debug(f"usage-events lock not taken in {_LOCK_DEADLINE_S:.0f} s, "
+                                 f"appending unlocked: {e}")
+                    return self
+            time.sleep(delay)
+            delay = min(delay * 2, 0.01)
 
     def __exit__(self, *exc):
         if self._fd is not None:
