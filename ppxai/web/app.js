@@ -241,6 +241,7 @@ class PpxaiApp {
         this.setupEventListeners();
         this.applyTheme();
         this.setupMarkdown();
+        this.setupImageConsent();
 
         // v1.18.1 (state-sync Phase C): subscribe DOM-side effects
         // for AppState changes once, here. Previously the same
@@ -960,19 +961,118 @@ class PpxaiApp {
                     },
                     // An image loads with no click, so a URL a prompt
                     // injection wrote could carry conversation data away.
-                    // Only the server's own images load; others become
-                    // links (shared/image-policy.js). Fails closed if the
-                    // policy script is missing.
-                    image(href, title, text) {
+                    // Only the server's own images load; a web image is a
+                    // link until the user allows web images for this
+                    // conversation (shared/image-policy.js,
+                    // setupImageConsent). Fails closed if the policy
+                    // script is missing.
+                    image: (href, title, text) => {
                         const policy = window.PpxaiImagePolicy;
                         if (!policy) {
                             return `<span class="external-image">[image: ${text || 'image'}]</span>`;
                         }
-                        return policy.imageHtml(href, title, text, window.location.origin);
+                        return policy.imageHtml(href, title, text, window.location.origin, {
+                            allowRemote: this._remoteImagesAllowed(),
+                            proxyUrl: (u) => this._remoteImageUrl(u),
+                        });
                     }
                 }
             });
         }
+    }
+
+    // === Web images in answers: ask first ===
+
+    /** The conversation the user's answer about web images belongs to. */
+    _imageConversationKey() {
+        return this.state?.sessionName || '';
+    }
+
+    _remoteImagesAllowed() {
+        return Boolean(window.PPXAI_REMOTE_IMAGE_KEY)
+            && Boolean(this._imagesAllowedFor?.has(this._imageConversationKey()));
+    }
+
+    /** The server route that fetches an allowed web image (public addresses only). */
+    _remoteImageUrl(url) {
+        const params = new URLSearchParams({ url, key: window.PPXAI_REMOTE_IMAGE_KEY || '' });
+        return `${this.serverUrl}/files/remote-image?${params.toString()}`;
+    }
+
+    /**
+     * Every message holding web images that were not loaded gets a bar
+     * naming their hosts, with one button that allows web images for the
+     * conversation. Messages render from many paths (stream, history,
+     * re-render), so an observer on the container finds them all.
+     */
+    setupImageConsent() {
+        this._imagesAllowedFor = new Set();
+        const container = this.elements.messagesContainer;
+        if (!container || typeof MutationObserver === 'undefined') { return; }
+        let pending = false;
+        const schedule = () => {
+            if (pending) { return; }
+            pending = true;
+            requestAnimationFrame(() => { pending = false; this._gateRemoteImages(); });
+        };
+        new MutationObserver(schedule).observe(container, { childList: true, subtree: true });
+        // A web image the server could not fetch goes back to a link.
+        container.addEventListener('error', (e) => {
+            const img = e.target;
+            if (!(img instanceof HTMLImageElement) || !img.classList.contains('remote-image')) { return; }
+            const holder = document.createElement('span');
+            holder.innerHTML = window.PpxaiImagePolicy.linkHtml(
+                img.dataset.src, img.getAttribute('alt') || '', 'Could not load image');
+            // Marked failed, so loading the allowed images skips it.
+            holder.querySelectorAll('[data-src]').forEach((el) => { el.dataset.failed = '1'; });
+            img.replaceWith(...holder.childNodes);
+        }, true);
+    }
+
+    _gateRemoteImages() {
+        const policy = window.PpxaiImagePolicy;
+        const container = this.elements.messagesContainer;
+        if (!policy || !container) { return; }
+        if (this._remoteImagesAllowed()) {
+            this._loadRemoteImages();
+            return;
+        }
+        container.querySelectorAll('.message').forEach((msg) => {
+            const content = msg.querySelector('.message-content');
+            const links = content ? [...content.querySelectorAll('a.external-image[data-src]:not([data-failed])')] : [];
+            let bar = msg.querySelector(':scope > .image-consent-bar');
+            if (!links.length || !window.PPXAI_REMOTE_IMAGE_KEY) {
+                if (bar) { bar.remove(); }
+                return;
+            }
+            const text = policy.consentText(policy.summarize(links.map((a) => a.dataset.src)));
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.className = 'image-consent-bar';
+                bar.innerHTML = '<span class="image-consent-text"></span>'
+                    + '<button type="button" class="image-consent-allow">Load images in this conversation</button>';
+                bar.querySelector('.image-consent-allow').addEventListener('click', () => {
+                    this._imagesAllowedFor.add(this._imageConversationKey());
+                    this._loadRemoteImages();
+                });
+                content.before(bar);
+            }
+            const span = bar.querySelector('.image-consent-text');
+            if (span.innerHTML !== text) { span.innerHTML = text; }
+        });
+    }
+
+    /** After the user allowed it: every web-image link becomes the image. */
+    _loadRemoteImages() {
+        const policy = window.PpxaiImagePolicy;
+        const container = this.elements.messagesContainer;
+        container.querySelectorAll('.image-consent-bar').forEach((bar) => bar.remove());
+        container.querySelectorAll('.message-content a.external-image[data-src]:not([data-failed])').forEach((a) => {
+            const holder = document.createElement('span');
+            holder.innerHTML = policy.proxiedImgHtml(
+                a.dataset.src, a.dataset.alt || '', '', (u) => this._remoteImageUrl(u));
+            a.replaceWith(...holder.childNodes);
+        });
     }
 
     // === Server Connection ===

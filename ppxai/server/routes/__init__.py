@@ -22,6 +22,7 @@ from . import (
     preview,
     providers,
     remote_hub,
+    remote_image,
     schema,
     sessions,
     state,
@@ -41,6 +42,7 @@ all_routers: list[APIRouter] = [
     context.router,
     sessions.router,
     files.router,
+    remote_image.router,  # GET /files/remote-image — a web image the user allowed
     file_serve.router,  # v1.17.4: GET /files/serve/<file_id> for raw binary serving
     preview.router,
     consent.router,

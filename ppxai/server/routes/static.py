@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
 from ...engine.app_state import SCHEMA as _APP_STATE_SCHEMA
+from .remote_image import REMOTE_IMAGE_KEY
 
 
 def _resolve_web_ui_dir() -> Path:
@@ -85,12 +86,18 @@ async def serve_index():
     # Inject the schema script just before </head>. Use replace with
     # count=1 so a web UI that already contains <head> for some reason
     # doesn't get multiple injections.
-    injected = f'    {_APP_STATE_SCHEMA_SCRIPT}\n</head>'
+    # The key `/files/remote-image` wants: only this page knows it, so an
+    # image a model writes cannot use that route without the user's say.
+    key_script = (
+        '<script id="remote-image-key">'
+        f'window.PPXAI_REMOTE_IMAGE_KEY = {json.dumps(REMOTE_IMAGE_KEY)};</script>'
+    )
+    injected = f'    {_APP_STATE_SCHEMA_SCRIPT}\n    {key_script}\n</head>'
     if '</head>' in html:
         html = html.replace('</head>', injected, 1)
     else:
         # Fallback: prepend to body if the HTML doesn't have a proper head.
-        html = _APP_STATE_SCHEMA_SCRIPT + html
+        html = _APP_STATE_SCHEMA_SCRIPT + key_script + html
 
     return HTMLResponse(
         content=html,

@@ -2334,3 +2334,40 @@ body {
     opacity: 0.6;
     margin-left: 4px;
 }
+
+/* A web image in an answer: a link until the user allows web images for the
+   conversation (shared/image-policy.js, app.js setupImageConsent). */
+.image-consent-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--warning-color);
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+}
+.image-consent-text {
+    flex: 1 1 240px;
+}
+.image-consent-allow {
+    padding: 3px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    background: var(--accent-color);
+    color: #ffffff;
+    cursor: pointer;
+}
+.image-consent-allow:hover {
+    background: var(--accent-hover);
+}
+.external-image {
+    color: var(--link-color);
+    font-style: italic;
+}
+img.remote-image {
+    max-width: 100%;
+}
