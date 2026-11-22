@@ -814,6 +814,20 @@ shape.
    is the mechanism; artifact-sufficiency is judged against the run's
    declared result contract. Semantics pinned: **never lose mid-run work,
    never blindly resume into garbage or redundant compute.**
+
+   **AMENDED (2026-11-22, owner decision): an owner's cancel during a model
+   call or a tool call leaves the run resumable.** Since `5cf8d795` a cancel
+   stops a running tool (5 s grace, then its output is discarded) and since
+   option B it stops a model call; both end the run `cancelled` with
+   `resumable: true`. That is deliberately looser than "inconclusive →
+   do not resume" above, because resume here is never automatic: it is
+   the owner's explicit `/task resume`, and it restarts the task from its
+   persisted inputs in the same workdir, so nothing is replayed from a
+   half-finished tool. The cost the owner accepted: a tool cut off mid-way
+   can leave a partial artifact in the workdir that the restarted task
+   sees. A budget cap still stops only between steps, so it never cuts a
+   tool off. Detail: section C of
+   [analysis-chat-streaming-and-interrupts.md](../analysis-chat-streaming-and-interrupts.md).
 6. **C4 — Tools first-class on `POST /v1/agent/run`** [LOAD-BEARING].
    Without a `tools` field on the run-spawn request, ppxai-sre's
    manager-executor pattern would have to reimplement the runtime

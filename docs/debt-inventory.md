@@ -74,6 +74,7 @@ quoting them** — this table is a map, not a source.
 | **83** | the SERIAL test suite is ~2x slower per test than in July, cause unfound | owner decision 2026-09-27: record, not fix; the parallel default (~3 min) hides it |
 | **84** | the web terminal has no Windows backend, and the shell tool runs cmd.exe while the prompts ask for PowerShell | owner decision 2026-09-28: record as debt, don't build it now |
 | **86** | Gemini 4 Argon (`gemini-4-argon`) is out; ppxai has no row for it | **trigger met 2026-11-20** — all four Gemini 4 models (Carbon, Argon, Neon, Hydrogen) answer and call tools on our key; `thought_signature` mandatory; adopt (seed rows, prices, config, benchmark), then Item 54 points at it — Carbon vs Argon as the target is open; **owner 2026-11-20: record only, no Gemini work yet**; promo ends 2026-11-30 |
+| **88** | google-genai uses `typing._UnionGenericAlias`, deprecated on Python 3.15 and removed in 3.17 | watch; nothing breaks before 3.17; reported by vm-win32-ppxai 2026-11-22 |
 
 ---
 
@@ -146,6 +147,23 @@ a tool call, one repeat request to confirm cache reads appear.
 release that would put it in front of users.
 
 ---
+
+### Item 88 — google-genai relies on a typing internal Python 3.17 removes [watch]
+
+Filed 2026-11-22 (owner: "all go"), from vm-win32-ppxai's report on Python
+3.15.2: importing `google.genai` emits a `DeprecationWarning` for
+`typing._UnionGenericAlias`, which Python 3.15 deprecates and 3.17 removes.
+On 3.17, unless google-genai changes first, the import fails, and ppxai's
+Gemini provider falls back to the OpenAI-compatible endpoint (ADR 0016's
+`_registered_class`), which carries tool-call thought signatures only since
+2026-11-22.
+
+**What to do:** nothing until 3.17 betas. Then check the installed
+google-genai on 3.17 (`python -W error::DeprecationWarning -c "import
+google.genai"`), and bump the ceiling-pinned range (KI-001 benchmark gate,
+`docs/known-issues.md`) to a release that no longer uses it. **Check
+before quoting:** re-run the warning check on the current lock first; the
+warning text is from one host.
 
 ### Item 72 — the additive-CA TLS guarantee is pinned only on cafile hosts [testing / tls]
 
