@@ -10,9 +10,12 @@ import argparse
 import os
 import signal
 import socket
+import stat
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 import webbrowser
 from pathlib import Path
 
@@ -190,6 +193,55 @@ def install_web_ui():
     return web_dir
 
 
+#: Where ppxai-server keeps the SSH hub token (`server/registry.py::run_dir`
+#: + `routes/remote_hub.py::token_path`). Restated here because this launcher
+#: imports nothing from ppxai; tests/test_desktop_hub_unlock.py pins the two
+#: against each other.
+HUB_TOKEN_RELPATH = (".ppxai", "run", "hub-token")
+
+
+def _hub_token() -> str | None:
+    """The hub token, read the way the server would reuse it: a regular file
+    with no group/other access (POSIX), one printable line of 32+ chars."""
+    path = Path.home().joinpath(*HUB_TOKEN_RELPATH)
+    try:
+        st = os.lstat(path)
+        if not stat.S_ISREG(st.st_mode):
+            return None
+        if sys.platform != 'win32' and st.st_mode & 0o077:
+            return None
+        text = path.read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeDecodeError):
+        return None
+    if len(text) < 32 or not text.isascii() or not text.isprintable() \
+            or any(c.isspace() for c in text):
+        return None
+    return text
+
+
+def hub_unlock_url(port: int) -> str | None:
+    """`.../hub/auth?token=...&next=/` when the server's SSH hub is on, else None.
+
+    The hub's pages need a cookie that only that URL sets; opening the plain
+    URL showed the SSH Launcher as "locked" (seen 2026-11-22). The hub is on
+    when `GET /hub/hosts` answers 401 (locked) or 200; a 404 means no hub.
+    Works for a server this launcher started and for one already running.
+    """
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(f'http://127.0.0.1:{port}/hub/hosts', timeout=2):
+            pass  # 200: the hub answered; open the unlock URL all the same
+    except urllib.error.HTTPError as e:
+        if e.code != 401:
+            return None
+    except (urllib.error.URLError, OSError):
+        return None
+    token = _hub_token()
+    if token is None:
+        return None
+    return f'http://127.0.0.1:{port}/hub/auth?token={token}&next=/'
+
+
 def wait_for_server(port: int, timeout: float = 30.0) -> bool:
     """Wait for server to become available."""
     import urllib.error
@@ -321,9 +373,12 @@ def main():
         print(f"Warning: Could not install web UI: {e}")
         # Continue anyway - server might serve built-in UI
 
-    # Open browser
-    print(f"\nOpening {url}")
-    webbrowser.open(url)
+    # Open browser. With the SSH hub on, open its unlock URL, which sets the
+    # hub cookie and lands on "/" (the token goes to the owner's own browser
+    # only, and is not printed).
+    unlock = hub_unlock_url(port)
+    print(f"\nOpening {url}" + (" (unlocking the SSH hub)" if unlock else ""))
+    webbrowser.open(unlock or url)
 
     print("\nppxai is running in your browser.")
     print("The server will continue running in the background.")
