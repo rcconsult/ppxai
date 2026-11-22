@@ -105,6 +105,7 @@ from ...config import execution as _execution_config
 from ...engine import task_authorizer as _authz
 from ...engine import task_runner as _task_runner
 from ...engine.agent_runs import RUN_STATUSES, RunMeta, resume_refusal
+from ...engine.call_stop import CallStop
 from ...engine.search.grounding import ground_native
 from ...engine.sources import SourceLedger
 from ...engine.task_authorizer import (
@@ -478,24 +479,43 @@ async def create_agent_run(
         # ADR 0019: one ledger per run; its sources stay on the run, so the
         # result's [n] can be resolved.
         ledger = SourceLedger()
+        # Option B (analysis doc, section C): a cancel stops the run at once.
+        # Each wait below goes through control.interruptible, which raises
+        # RunCancelledDuringCall on a cancel; the model call is also aborted
+        # through `stop` when the provider can close its request.
+        control = registry.get_control(m.run_id)
+        stop = CallStop()
+
+        async def interruptible(call, **kw):
+            if control is None:
+                return await call
+            return await control.interruptible(call, **kw)
+
         if retrieve_first:
-            found = await _retrieve_for_grounding(auth.task, auth.provider, egress_allows)
+            found = await interruptible(
+                _retrieve_for_grounding(auth.task, auth.provider, egress_allows))
             _record_grounding_usage(found, owner, m.run_id)
             prompt = _grounded(auth.task, found, ledger)
             registry.record_sources(m, ledger.to_dicts())
-        # provider.oneshot is blocking I/O — run it off the event loop so
+        # The provider call is blocking I/O — run it off the event loop so
         # other requests (e.g. GET status polls) aren't starved.
-        result = await asyncio.to_thread(
-            provider.oneshot, prompt=prompt, model=auth.model,
-            system=auth.system,
-        )
+        call = getattr(provider, "oneshot_stoppable", None)
+        if call is not None:
+            pending = asyncio.to_thread(
+                call, stop=stop, prompt=prompt, model=auth.model, system=auth.system,
+            )
+        else:  # a provider object outside the BaseProvider hierarchy
+            pending = asyncio.to_thread(
+                provider.oneshot, prompt=prompt, model=auth.model, system=auth.system,
+            )
+        result = await interruptible(pending, stop=stop)
         _record_oneshot_usage(auth.provider, auth.model, result, owner, m.run_id)
         content = result.get("content", "")
         # ADR 0019 G2: the provider's own search (Gemini, `native`), numbered
         # and cited in the result.
         if result.get("grounding"):
-            content = await ground_native(
-                content, result["grounding"], ledger, egress_allows, backend=auth.provider)
+            content = await interruptible(ground_native(
+                content, result["grounding"], ledger, egress_allows, backend=auth.provider))
             registry.record_sources(m, ledger.to_dicts())
         return content
 

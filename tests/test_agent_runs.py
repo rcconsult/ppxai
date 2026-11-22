@@ -584,7 +584,11 @@ def client(tmp_path, monkeypatch):
 
     app = FastAPI()
     app.include_router(agent_v1.router)
-    return TestClient(app), reg
+    # Entered, so every request shares one event loop and a background run
+    # keeps running between requests. Un-entered, each request gets its own
+    # loop and a run survives only if it finishes before that request ends.
+    with TestClient(app) as c:
+        yield c, reg
 
 
 @pytest.fixture(autouse=True)

@@ -18,6 +18,7 @@ from ...config import (  # noqa: F401 — patched/read by tests
     get_extra_body,
     get_model_context_limit,
 )
+from ..call_stop import CallAbortedError, CallStop, close_http_stream
 from ..types import Event, EventType, Message, ProviderCapabilities
 from .base import BaseProvider
 from .facts import openai_compat as _facts
@@ -545,6 +546,94 @@ class OpenAICompatibleProvider(OpenAIWireMixin, BaseProvider):
               "model": str, "usage": {prompt_tokens, completion_tokens,
               total_tokens} | None}``
         """
+        request_kwargs = self._oneshot_request(
+            prompt, model, system, response_format, max_tokens, temperature,
+        )
+        response = self.client.chat.completions.create(**request_kwargs)
+        return self._oneshot_result(response, model)
+
+    def oneshot_stoppable(self, *, stop: CallStop, **kwargs: Any) -> dict[str, Any]:
+        """`oneshot`, but abortable through `stop` (a run's cancel).
+
+        Same request and the same result shape, but sent with `stream=True`,
+        so the connection can be closed mid-answer: `stop` closes the stream,
+        the blocked read fails, and this raises `CallAbortedError`. Closing a
+        streamed request is the only way to stop a provider generating (and,
+        where the provider honours it, billing) once it has started.
+
+        Used by `/run` (`POST /v1/agent/run`) only. `POST /v1/oneshot` keeps
+        `oneshot`, so its documented behaviour is unchanged.
+
+        A subclass that overrides `oneshot` keeps its own request: it gets the
+        base class's non-abortable default instead of this streaming copy of
+        a request it no longer makes."""
+        if type(self).oneshot is not OpenAICompatibleProvider.oneshot:
+            return BaseProvider.oneshot_stoppable(self, stop=stop, **kwargs)
+        stop.raise_if_stopped()
+        request_kwargs = self._oneshot_request(
+            kwargs["prompt"], kwargs["model"], kwargs.get("system"),
+            kwargs.get("response_format"), kwargs.get("max_tokens"),
+            kwargs.get("temperature"),
+        )
+        request_kwargs["stream"] = True
+        request_kwargs["stream_options"] = {"include_usage": True}
+        try:
+            stream = self.client.chat.completions.create(**request_kwargs)
+        except Exception as exc:  # noqa: BLE001 — some servers reject stream_options
+            if stop.stopped:
+                raise CallAbortedError("the call was stopped") from exc
+            if "stream_options" not in str(exc):
+                raise
+            request_kwargs.pop("stream_options")
+            stream = self.client.chat.completions.create(**request_kwargs)
+        closer = lambda: close_http_stream(stream)  # noqa: E731 — registered and removed by identity
+        stop.on_stop(closer)
+        parts: list[str] = []
+        finish_reason = None
+        usage_dict = None
+        served_model = None
+        try:
+            for chunk in stream:
+                stop.raise_if_stopped()
+                served_model = getattr(chunk, "model", None) or served_model
+                usage_obj = getattr(chunk, "usage", None)
+                if usage_obj is not None:
+                    usage_dict = {
+                        "prompt_tokens": getattr(usage_obj, "prompt_tokens", 0) or 0,
+                        "completion_tokens": getattr(usage_obj, "completion_tokens", 0) or 0,
+                        "total_tokens": getattr(usage_obj, "total_tokens", 0) or 0,
+                    }
+                for choice in getattr(chunk, "choices", None) or []:
+                    delta = getattr(choice, "delta", None)
+                    text = getattr(delta, "content", None) if delta is not None else None
+                    if text:
+                        parts.append(text)
+                    if getattr(choice, "finish_reason", None):
+                        finish_reason = choice.finish_reason
+        except Exception as exc:
+            if stop.stopped:
+                raise CallAbortedError("the call was stopped") from exc
+            raise
+        finally:
+            stop.remove(closer)
+        stop.raise_if_stopped()
+        return {
+            "content": "".join(parts),
+            "finish_reason": finish_reason,
+            "model": served_model or kwargs["model"],
+            "usage": usage_dict,
+        }
+
+    def _oneshot_request(
+        self,
+        prompt: str,
+        model: str,
+        system: str | None,
+        response_format: dict[str, Any] | None,
+        max_tokens: int | None,
+        temperature: float | None,
+    ) -> dict[str, Any]:
+        """The request `oneshot` sends (non-streaming)."""
         messages: list[Message] = []
         if system:
             messages.append(Message(role="system", content=system))
@@ -596,9 +685,11 @@ class OpenAICompatibleProvider(OpenAIWireMixin, BaseProvider):
         extra_body = self._get_extra_body(model)
         if extra_body:
             request_kwargs["extra_body"] = extra_body
+        return request_kwargs
 
-        response = self.client.chat.completions.create(**request_kwargs)
-
+    @staticmethod
+    def _oneshot_result(response: Any, model: str) -> dict[str, Any]:
+        """`oneshot`'s result from a non-streamed response."""
         msg = response.choices[0].message
         finish_reason = response.choices[0].finish_reason
         usage_obj = getattr(response, "usage", None)

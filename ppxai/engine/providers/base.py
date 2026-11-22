@@ -20,6 +20,7 @@ from ...config import (
     get_reasoning_trigger,
 )
 from .. import facts_config as _facts_config
+from ..call_stop import CallStop
 from ..model_facts import ModelFacts, shipped_facts_for_model
 from ..types import Event, Message, ModelInfo, ProviderCapabilities, UsageStats
 from .wire import get_handler
@@ -132,6 +133,18 @@ class BaseProvider(ABC):
               total_tokens} | None}``
         """
         ...
+
+    def oneshot_stoppable(self, *, stop: CallStop, **kwargs: Any) -> dict[str, Any]:
+        """`oneshot` that a run's cancel can abort through `stop`.
+
+        A provider that can close its request mid-answer overrides this (it
+        streams the request and registers the stream's close on `stop`), and
+        raises `CallAbortedError` once stopped. This default can't abort: it
+        makes the ordinary call. A cancelled run still ends at once (the
+        registry stops waiting), but this call runs to the end in its thread
+        and its tokens are spent."""
+        stop.raise_if_stopped()
+        return self.oneshot(**kwargs)
 
     def chat_sync(
         self,

@@ -50,6 +50,7 @@ from typing import Any, Protocol
 # do not "tidy" them back in here.
 from ..common.logger import get_logger
 from ..common.process import pid_alive  # stdlib-only: keeps the footprint above
+from .call_stop import CallAbortedError, CallStop  # stdlib-only leaf, same reason
 
 logger = get_logger("tui")
 
@@ -420,6 +421,16 @@ class RunCancelledAfterCall(RunCancelled):
     resumable = False
 
 
+class RunCancelledDuringCall(RunCancelled):
+    """A cancel stopped the run while it was waiting on a model call or a
+    search (`RunControl.interruptible`). The run ends at once; the call was
+    asked to abort (a provider that streams closes its connection), and
+    whatever it produced is discarded. Not resumable: there is no checkpoint
+    between the call's start and its end."""
+
+    resumable = False
+
+
 class RunBudgetExceeded(RunStopped):
     """A budget cap (iterations/time/tokens) was hit. Terminal, resumable —
     the work so far is intact; a resume with a larger budget could continue."""
@@ -444,6 +455,48 @@ class RunControl:
     cancel_requested: bool = False
     iterations: int = 0
     tokens_used: int = 0
+    # Set by cancel_run with cancel_requested, so a call awaited through
+    # interruptible() ends at once instead of at the next check().
+    cancel_event: asyncio.Event = field(default_factory=asyncio.Event)
+
+    async def interruptible(self, call: Awaitable[Any], *, stop: CallStop | None = None) -> Any:
+        """Await `call` (a model call or a search), but stop waiting the
+        moment the run is cancelled: abort the call through `stop` (if the
+        provider registered a closer, its connection is closed), cancel the
+        awaiting task, and raise `RunCancelledDuringCall`.
+
+        Use it only around calls that are safe to abandon. Never around a
+        tool call: a cancel must not tear a run down mid-tool."""
+        task = asyncio.ensure_future(call)
+        if self.cancel_requested:
+            self._abandon(task, stop)
+            raise RunCancelledDuringCall("cancelled by owner before the call started")
+        waiter = asyncio.ensure_future(self.cancel_event.wait())
+        try:
+            done, _ = await asyncio.wait({task, waiter}, return_when=asyncio.FIRST_COMPLETED)
+        except asyncio.CancelledError:
+            self._abandon(task, stop)
+            raise
+        finally:
+            waiter.cancel()
+        if task in done:
+            try:
+                return task.result()
+            except CallAbortedError:
+                if self.cancel_requested:
+                    raise RunCancelledDuringCall(_STOPPED_MID_CALL) from None
+                raise
+        self._abandon(task, stop)
+        raise RunCancelledDuringCall(_STOPPED_MID_CALL)
+
+    @staticmethod
+    def _abandon(task: asyncio.Future, stop: CallStop | None) -> None:
+        if stop is not None:
+            stop.stop()
+        task.cancel()
+        # The worker thread may still finish or raise CallAbortedError later;
+        # nobody waits for it, so don't log "exception never retrieved".
+        task.add_done_callback(lambda t: t.cancelled() or t.exception())
 
     def check(self, *, now: float) -> None:
         """Raise if the run should stop. Called at each iteration boundary."""
@@ -458,6 +511,12 @@ class RunControl:
         max_tok = self.budget.get("tokens")
         if max_tok is not None and self.tokens_used >= max_tok:
             raise RunBudgetExceeded(f"token budget {max_tok} reached")
+
+
+_STOPPED_MID_CALL = (
+    "cancelled by owner during the model call; the call was stopped and "
+    "its partial output discarded"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -821,6 +880,7 @@ class AgentRunRegistry:
         cancelled_self = False
         if control is not None:
             control.cancel_requested = True
+            control.cancel_event.set()  # wakes a run waiting in interruptible()
             # T5: a PARKED run is blocked awaiting its consent future, not
             # polling check() — resolve the waiter with a denial so the runner
             # unblocks promptly (and then observes cancel_requested at its next
