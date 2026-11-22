@@ -166,6 +166,49 @@ tai proposed three fixes: **A** honour the flag when the runner returns; **B** a
 
 **Still open:** the model's tokens are spent, and the run stays `cancelling` until the call returns. Stopping the call (tai's B) needs the run's task to be cancelled; `asyncio.to_thread` would then abandon the worker thread, which finishes on its own. That belongs with B's fixes 3 and 5.
 
+**Retested by tai** (2026-11-22, installed 1.19.5 at `253fdbde`): `agent_run_start`, `agent_run_cancelling`, `agent_run_sources`, `agent_run_cancelled`; final status `cancelled`, no result, no Collect. `agent_run_sources` still arrives after the cancel, because retrieval sources are recorded before the model call.
+
+### Option B: stopping the call (plan, not built)
+
+B makes a cancel stop the model call itself, so the tokens are saved and the run ends at once. Today a `/run` calls the provider's synchronous `oneshot()` through `asyncio.to_thread` (`server/routes/agent_v1.py:476`). A `/task` does the same inside the tool loop (`providers/openai_compat.py:433`, `providers/openai_native.py:458`, `providers/gemini.py:444`). A cancel can't interrupt either.
+
+**Settle first:**
+
+1. **Does closing the connection stop billing?** This decides whether B saves tokens or only ends the run sooner. A non-streaming request generally can't be cancelled once sent; a stream can be closed between chunks. OpenRouter is believed to document that closing a stream stops billing for some upstream providers. Not verified: read the OpenRouter, OpenAI and Gemini docs, and possibly run a short paid probe (needs owner approval).
+2. **Where a cancel may cut in.** Only during a model call or a search, never during a tool call. The current design avoids tearing a run down mid-tool on purpose (`server/routes/oneshot.py:426`, "cancel COOPERATIVELY"). So B interrupts the model call, not the whole run task.
+
+**Engine:**
+
+3. **Cancel signal.** `RunControl` (`engine/agent_runs.py:432`) gets an `asyncio.Event`, set by `cancel_run` alongside the flag, including the cascade to child runs.
+4. **Helper.** `await control.interruptible(awaitable)` races the call against that event. On a cancel it stops the call and raises a `RunCancelled` subclass, so `_drive` ends the run `cancelled` through its existing path.
+5. **Stopping the call.** Cancelling a `to_thread` await leaves the thread, and its HTTP request, running. The request itself must be aborted:
+   - **(a) Stream internally:** `oneshot()` and the tool loop's call stream, and the stream is closed on cancel. The result shape is unchanged and the call is abortable between chunks. Per provider: `openai_compat`, `openai_native` (both APIs), `gemini`, `anthropic`.
+   - **(b) Async SDK clients** (`AsyncOpenAI`, google-genai's async client), where cancelling the task closes the connection. A bigger rewrite.
+   - **Recommendation: (a).** It also covers B's fix 5 (the synchronous stream readers on the event loop).
+6. **Thread exhaustion.** Until 5 is done, each cancel abandons a worker in the default thread pool (32 at most), so many cancels could starve other calls. Cap it, or accept it until 5 lands.
+
+**Call sites:**
+
+7. **`/run`.** Wrap the model call and the search step in `interruptible`. Not resumable.
+8. **`/task`.** Wrap the provider calls in `chat_with_tools` (`engine/chat.py:886`, `:944`, `:1468`). The engine gets the run's control the way it gets the sources ledger, through a ContextVar set by `task_runner`. Resumable: the transcript up to the previous step is intact.
+9. **`/v1/oneshot` with grounding.** Its 504 timeout cancel (`server/routes/oneshot.py:432`) then actually stops the call. No change in that file.
+10. **Shared with `/chat`.** The same helper is B's fix 3 (per-run interrupts in place of the shared `_interrupted` flag). Do them together, or separately.
+
+**Accounting and results:**
+
+11. **Usage.** An aborted call reports no usage, so `/cost` would under-count. Options: record nothing; record an estimate from the prompt plus the text streamed so far; or record the event flagged "aborted, usage unknown".
+12. **Partial text** stays discarded, as with option A.
+13. **Sources** recorded before the cancel: keep them, or stop recording once a cancel is in.
+
+**Tests and docs:**
+
+14. A slow fake provider: a cancel ends the run within about a second as `cancelled`, and the provider sees the stream closed. A cancel during a tool call still waits for the tool to finish. A `/task` is resumable after a mid-call cancel and a `/run` is not. The worker thread goes away.
+15. Cancel semantics in `docs/api-gateway.md` and the cancel route's docstring; this section; CHANGELOG.
+
+**Rough size:** 3, 4, 7 and 9 are small. 5 is the bulk: four providers' worth of streaming code plus tests. 8 is moderate.
+
+**Owner decisions:** 1 (probe spend), 5 (a or b), 6, 10, 11, 13.
+
 ## How B was reproduced
 
 A throwaway script ran the real server app (`ppxai.server.http.app`) under uvicorn on `127.0.0.1` in the same process:
