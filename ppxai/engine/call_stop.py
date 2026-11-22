@@ -15,7 +15,8 @@ from __future__ import annotations
 
 import socket
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 
 
 class CallAbortedError(Exception):
@@ -70,17 +71,26 @@ def _quietly(closer: Callable[[], object]) -> None:
 
 
 def close_http_stream(stream: object) -> None:
-    """Close a streamed HTTP response from another thread, so a read blocked
-    on it fails now.
+    """Close an OpenAI SDK `Stream` from another thread (see
+    `close_http_response`); `.response` is its httpx `Response`."""
+    close_http_response(getattr(stream, "response", None))
+    close = getattr(stream, "close", None)
+    if close is not None:
+        _quietly(close)
+
+
+def close_http_response(response: object) -> None:
+    """Close a streamed httpx response from another thread, so a read
+    blocked on it fails now.
 
     Closing the socket alone isn't enough: on macOS (and often Linux) a
     `recv` blocked in another thread doesn't wake when its socket is closed.
     Shutting the socket down does, and it is what tells the provider the
-    client has gone. Duck-typed over the OpenAI SDK's `Stream` (`.response`
-    is an httpx `Response`, whose `network_stream` extension is httpcore's,
-    which exposes the socket) so this module stays free of SDK imports.
+    client has gone. Duck-typed (httpx's `network_stream` extension is
+    httpcore's, which exposes the socket) so this module imports no SDK.
     """
-    response = getattr(stream, "response", None)
+    if response is None:
+        return
     extensions = getattr(response, "extensions", None) or {}
     network = extensions.get("network_stream") if isinstance(extensions, dict) else None
     sock = None
@@ -94,6 +104,44 @@ def close_http_stream(stream: object) -> None:
             sock.shutdown(socket.SHUT_RDWR)
         except OSError:
             pass  # already closed
-    close = getattr(stream, "close", None)
+    close = getattr(response, "close", None)
     if close is not None:
         _quietly(close)
+
+
+# --- for SDKs that don't hand back their response ----------------------------
+#
+# google-genai's streaming call is a generator that keeps its httpx response
+# to itself. The provider passes its own httpx client with
+# `event_hooks={"response": [register_response]}`; inside `active(stop)`,
+# every response that client receives on this thread can be aborted by
+# `stop`. The hook runs on the thread making the call, before the body is
+# read, so a thread-local is the right scope.
+
+_active = threading.local()
+
+
+@contextmanager
+def active(stop: CallStop) -> Iterator[None]:
+    """Make `stop` able to abort the HTTP responses this thread receives
+    through a client hooked with `register_response`."""
+    previous = getattr(_active, "frame", None)
+    frame: tuple[CallStop, list[Callable[[], object]]] = (stop, [])
+    _active.frame = frame
+    try:
+        yield
+    finally:
+        _active.frame = previous
+        for closer in frame[1]:
+            stop.remove(closer)
+
+
+def register_response(response: object) -> None:
+    """httpx `response` event hook: see `active`. A no-op outside it."""
+    frame = getattr(_active, "frame", None)
+    if frame is None:
+        return
+    stop, closers = frame
+    closer = lambda: close_http_response(response)  # noqa: E731 — removed by identity
+    closers.append(closer)
+    stop.on_stop(closer)

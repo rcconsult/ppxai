@@ -34,6 +34,8 @@ from ppxai.constants import install_extra_hint
 from ... import usage as _usage
 from ...common.logger import get_logger
 from ...config.tls import tls_verify
+from ..call_stop import CallAbortedError, CallStop, register_response
+from ..call_stop import active as call_active
 from ..types import Event, EventType, Message, ProviderCapabilities, UsageStats
 from .base import BaseProvider
 from .facts import gemini as _facts
@@ -303,7 +305,10 @@ class GeminiProvider(BaseProvider):
         self.client = genai.Client(
             api_key=api_key,
             http_options=genai_types.HttpOptions(
-                httpx_client=httpx.Client(verify=verify),
+                # The hook lets a run's cancel abort a streamed one-shot call
+                # (oneshot_stoppable): this SDK never hands back its response.
+                httpx_client=httpx.Client(
+                    verify=verify, event_hooks={"response": [register_response]}),
                 client_args={"verify": verify},
                 async_client_args={"verify": verify, "ssl": verify},
             ),
@@ -547,29 +552,9 @@ class GeminiProvider(BaseProvider):
         Structured output and Google Search grounding COEXIST — verified live
         2026-08-09. Only function declarations conflict with grounding.
         """
-        messages: list[Message] = []
-        if system:
-            messages.append(Message(role="system", content=system))
-        messages.append(Message(role="user", content=prompt))
-
-        contents, system_instruction = get_handler("generate_content").convert_messages(messages)
-        generation_params = dict(self._get_generation_params(model) or {})
-        if temperature is not None:
-            generation_params["temperature"] = temperature
-        if max_tokens is not None:
-            # Gemini SDK uses max_output_tokens.
-            generation_params["max_output_tokens"] = max_tokens
-        config = self._build_config(
-            model=model,
-            use_grounding=self.enable_grounding,
-            system_instruction=system_instruction,
-            generation_params=generation_params,
-            response_format=response_format,
-        )
-
-        response = self.client.models.generate_content(
-            model=model, contents=contents, config=config
-        )
+        request = self._oneshot_request(
+            prompt, model, system, response_format, max_tokens, temperature)
+        response = self.client.models.generate_content(**request)
 
         content = ""
         reasoning = ""
@@ -590,11 +575,102 @@ class GeminiProvider(BaseProvider):
                     else:
                         content += part.text
             finish_reason = getattr(response.candidates[0], "finish_reason", None)
-            if finish_reason is not None:
-                finish_reason = str(finish_reason)
+        candidate = response.candidates[0] if response.candidates else None
+        return self._oneshot_result(
+            model, content, reasoning, finish_reason,
+            getattr(response, "usage_metadata", None),
+            getattr(candidate, "grounding_metadata", None),
+        )
+
+    def oneshot_stoppable(self, *, stop: CallStop, **kwargs: Any) -> dict[str, Any]:
+        """`oneshot`, abortable through `stop` (a run's cancel): the same
+        request sent with `generate_content_stream`, so the connection can be
+        closed mid-answer, and the same result. Raises `CallAbortedError`
+        once stopped. Used by `/run`; `POST /v1/oneshot` keeps `oneshot`.
+
+        The SDK keeps its response to itself, so the abort goes through the
+        client's response hook (`call_stop.register_response`)."""
+        stop.raise_if_stopped()
+        model = kwargs["model"]
+        request = self._oneshot_request(
+            kwargs["prompt"], model, kwargs.get("system"),
+            kwargs.get("response_format"), kwargs.get("max_tokens"),
+            kwargs.get("temperature"),
+        )
+        content, reasoning = [], []
+        finish_reason = usage_metadata = grounding_metadata = None
+        with call_active(stop):
+            try:
+                for chunk in self.client.models.generate_content_stream(**request) or []:
+                    stop.raise_if_stopped()
+                    if getattr(chunk, "usage_metadata", None) is not None:
+                        usage_metadata = chunk.usage_metadata
+                    candidate = chunk.candidates[0] if chunk.candidates else None
+                    if candidate is None:
+                        continue
+                    if getattr(candidate, "grounding_metadata", None):
+                        grounding_metadata = candidate.grounding_metadata  # last chunk only
+                    if getattr(candidate, "finish_reason", None) is not None:
+                        finish_reason = candidate.finish_reason
+                    for part in (candidate.content.parts if candidate.content else None) or []:
+                        if getattr(part, "text", None):
+                            (reasoning if getattr(part, "thought", False) else content).append(part.text)
+            except Exception as exc:
+                if stop.stopped:
+                    raise CallAbortedError("the call was stopped") from exc
+                raise
+        stop.raise_if_stopped()
+        return self._oneshot_result(
+            model, "".join(content), "".join(reasoning), finish_reason,
+            usage_metadata, grounding_metadata,
+        )
+
+    def _oneshot_request(
+        self,
+        prompt: str,
+        model: str,
+        system: str | None,
+        response_format: dict[str, Any] | None,
+        max_tokens: int | None,
+        temperature: float | None,
+    ) -> dict[str, Any]:
+        """The `generate_content` arguments `oneshot` sends."""
+        messages: list[Message] = []
+        if system:
+            messages.append(Message(role="system", content=system))
+        messages.append(Message(role="user", content=prompt))
+
+        contents, system_instruction = get_handler("generate_content").convert_messages(messages)
+        generation_params = dict(self._get_generation_params(model) or {})
+        if temperature is not None:
+            generation_params["temperature"] = temperature
+        if max_tokens is not None:
+            # Gemini SDK uses max_output_tokens.
+            generation_params["max_output_tokens"] = max_tokens
+        config = self._build_config(
+            model=model,
+            use_grounding=self.enable_grounding,
+            system_instruction=system_instruction,
+            generation_params=generation_params,
+            response_format=response_format,
+        )
+        return {"model": model, "contents": contents, "config": config}
+
+    def _oneshot_result(
+        self,
+        model: str,
+        content: str,
+        reasoning: str,
+        finish_reason: Any,
+        usage_metadata: Any,
+        grounding_metadata: Any,
+    ) -> dict[str, Any]:
+        """`oneshot`'s result, from a response or from a stream's chunks."""
+        if finish_reason is not None:
+            finish_reason = str(finish_reason)
 
         usage_dict = None
-        usage_stats = self._parse_usage(getattr(response, "usage_metadata", None))
+        usage_stats = self._parse_usage(usage_metadata)
         if usage_stats is not None:
             usage_dict = {
                 "prompt_tokens": usage_stats.prompt_tokens,
@@ -624,8 +700,7 @@ class GeminiProvider(BaseProvider):
         # ADR 0019: native search grounding, for `/run` to number and cite.
         # Additive like `reasoning`; `/v1/oneshot` builds its response from
         # named keys, so its wire is unchanged.
-        candidate = response.candidates[0] if response.candidates else None
-        grounding = self._parse_grounding(getattr(candidate, "grounding_metadata", None))
+        grounding = self._parse_grounding(grounding_metadata)
         if grounding:
             result["grounding"] = grounding
         return result

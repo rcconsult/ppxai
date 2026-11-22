@@ -15,10 +15,13 @@ import concurrent.futures
 import functools
 import http.server
 import json
+import select
+import socket
 import threading
 import time
 
 import pytest
+from openai import OpenAI
 
 from ppxai.engine.agent_runs import (
     AgentRunRegistry,
@@ -27,7 +30,9 @@ from ppxai.engine.agent_runs import (
     RunControl,
 )
 from ppxai.engine.call_stop import CallAbortedError, CallStop
+from ppxai.engine.providers.gemini import GeminiProvider
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+from ppxai.engine.providers.openai_native import OpenAINativeProvider
 
 # --- a slow OpenAI-compatible streaming server ------------------------------
 
@@ -58,17 +63,45 @@ class _Server:
                 self.send_header("Content-Type", "text/event-stream")
                 self.send_header("Transfer-Encoding", "chunked")
                 self.end_headers()
+                responses_api = self.path.endswith("/responses")
+                gemini = ":streamGenerateContent" in self.path
                 try:
                     for i in range(server.chunks):
-                        self._event({"choices": [{"index": 0, "delta": {"content": f"w{i} "},
-                                                  "finish_reason": None}]})
+                        if gemini:
+                            self._gemini({"candidates": [{"index": 0, "content": {
+                                "role": "model", "parts": [{"text": f"w{i} "}]}}]})
+                        elif responses_api:
+                            self._typed({"type": "response.output_text.delta", "delta": f"w{i} ",
+                                         "item_id": "i", "output_index": 0, "content_index": 0,
+                                         "sequence_number": i})
+                        else:
+                            self._event({"choices": [{"index": 0, "delta": {"content": f"w{i} "},
+                                                      "finish_reason": None}]})
                         server.written += 1
                         server.first_chunk_sent.set()
-                        time.sleep(server.delay)
-                    self._event({"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]})
-                    self._event({"choices": [], "usage": {"prompt_tokens": 3, "completion_tokens": 40,
-                                                          "total_tokens": 43}})
-                    self._raw(b"data: [DONE]\n\n")
+                        if self._pause(server.delay):
+                            server.client_hung_up.set()
+                            return
+                    if gemini:
+                        self._gemini({"candidates": [{"index": 0, "finishReason": "STOP",
+                                                      "content": {"role": "model", "parts": []}}],
+                                      "usageMetadata": {"promptTokenCount": 3,
+                                                        "candidatesTokenCount": 40,
+                                                        "totalTokenCount": 43}})
+                    elif responses_api:
+                        self._typed({"type": "response.completed", "sequence_number": server.chunks,
+                                     "response": {"id": "r", "object": "response", "created_at": 0,
+                                                  "model": "served-model", "output": [],
+                                                  "status": "completed",
+                                                  "usage": {"input_tokens": 3, "output_tokens": 40,
+                                                            "total_tokens": 43}}})
+                    else:
+                        self._event({"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]})
+                        self._event({"choices": [], "usage": {"prompt_tokens": 3,
+                                                              "completion_tokens": 40,
+                                                              "total_tokens": 43}})
+                    if not gemini:
+                        self._raw(b"data: [DONE]\n\n")
                     self.wfile.write(b"0\r\n\r\n")
                     self.wfile.flush()
                     server.finished.set()
@@ -80,6 +113,28 @@ class _Server:
                            "model": "served-model", **payload}
                 self._raw(f"data: {json.dumps(payload)}\n\n".encode())
 
+            def _pause(self, seconds):
+                """Wait between chunks, watching for the client hanging up
+                (readable with nothing to read = the peer closed)."""
+                deadline = time.monotonic() + seconds
+                while True:
+                    left = deadline - time.monotonic()
+                    if left <= 0:
+                        return False
+                    readable, _, _ = select.select([self.connection], [], [], min(left, 0.05))
+                    if readable:
+                        try:
+                            if self.connection.recv(1, socket.MSG_PEEK) == b"":
+                                return True
+                        except OSError:
+                            return True
+
+            def _gemini(self, payload):
+                self._raw(f"data: {json.dumps(payload)}\r\n\r\n".encode())
+
+            def _typed(self, payload):
+                self._raw(f"event: {payload['type']}\ndata: {json.dumps(payload)}\n\n".encode())
+
             def _raw(self, data: bytes):
                 self.wfile.write(f"{len(data):x}\r\n".encode() + data + b"\r\n")
                 self.wfile.flush()
@@ -88,7 +143,8 @@ class _Server:
         # A broken stop leaves a connection open; teardown must not wait on it.
         self.httpd.daemon_threads = True
         self.httpd.block_on_close = False
-        self.url = f"http://127.0.0.1:{self.httpd.server_address[1]}/v1"
+        self.root = f"http://127.0.0.1:{self.httpd.server_address[1]}"
+        self.url = f"{self.root}/v1"
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
 
     def close(self):
@@ -111,6 +167,106 @@ def provider(server):
     )
 
 
+@pytest.fixture
+def native(server):
+    p = OpenAINativeProvider(api_key="test-key")
+    p.client = OpenAI(api_key="test-key", base_url=server.url, max_retries=0)
+    return p
+
+
+# Chat Completions model, and a Responses-API model (RESPONSES_API_PREFIXES).
+NATIVE_MODELS = ["gpt-5.4", "gpt-5.1-codex"]
+
+
+class TestOpenAINativeOneshotStoppable:
+    @pytest.mark.parametrize("model", NATIVE_MODELS)
+    def test_without_a_stop_it_returns_the_whole_answer(self, server, native, model):
+        server.chunks, server.delay = 3, 0.0
+        out = native.oneshot_stoppable(stop=CallStop(), prompt="hi", model=model)
+        assert out["content"] == "w0 w1 w2 "
+        assert out["model"] == "served-model"
+        assert out["usage"]["total_tokens"] == 43
+        assert server.requests[0]["stream"] is True
+        # the Responses API sends `input`, Chat Completions sends `messages`
+        assert ("input" in server.requests[0]) is (model == "gpt-5.1-codex")
+
+    @pytest.mark.parametrize("model", NATIVE_MODELS)
+    def test_a_stop_closes_the_connection_mid_answer(self, server, native, model):
+        # A long gap after the first chunk: only aborting the connection can
+        # end the call in time; the per-chunk stop check never gets a chance.
+        server.delay = 5.0
+        stop = CallStop()
+        threading.Thread(
+            target=lambda: (server.first_chunk_sent.wait(5), stop.stop()), daemon=True
+        ).start()
+        raised: list[BaseException] = []
+
+        def call():
+            try:
+                native.oneshot_stoppable(stop=stop, prompt="hi", model=model)
+            except BaseException as exc:  # noqa: BLE001 — recorded for the asserts
+                raised.append(exc)
+
+        worker = threading.Thread(target=call, daemon=True)
+        worker.start()
+        worker.join(2.0)
+        assert not worker.is_alive(), "the stop didn't unblock the read"
+        assert len(raised) == 1 and isinstance(raised[0], CallAbortedError)
+        assert server.client_hung_up.wait(3)
+        assert not server.finished.is_set()
+
+
+@pytest.fixture
+def gemini(server, monkeypatch):
+    # The provider's own client (and its response hook), aimed at the server.
+    monkeypatch.setenv("GOOGLE_GEMINI_BASE_URL", server.root)
+    return GeminiProvider(api_key="test-key")
+
+
+class TestGeminiOneshotStoppable:
+    def test_without_a_stop_it_returns_the_whole_answer(self, server, gemini):
+        server.chunks, server.delay = 3, 0.0
+        out = gemini.oneshot_stoppable(stop=CallStop(), prompt="hi", model="gemini-3.8-flash")
+        assert out["content"] == "w0 w1 w2 "
+        assert out["finish_reason"] is not None and "STOP" in out["finish_reason"]
+        assert out["usage"]["total_tokens"] == 43
+
+    def test_a_stop_closes_the_connection_mid_answer(self, server, gemini):
+        # A long gap after the first chunk: only aborting the connection can
+        # end the call in time; the per-chunk stop check never gets a chance.
+        server.delay = 5.0
+        stop = CallStop()
+        threading.Thread(
+            target=lambda: (server.first_chunk_sent.wait(5), stop.stop()), daemon=True
+        ).start()
+        raised: list[BaseException] = []
+
+        def call():
+            try:
+                gemini.oneshot_stoppable(stop=stop, prompt="hi", model="gemini-3.8-flash")
+            except BaseException as exc:  # noqa: BLE001 — recorded for the asserts
+                raised.append(exc)
+
+        worker = threading.Thread(target=call, daemon=True)
+        worker.start()
+        worker.join(2.0)
+        assert not worker.is_alive(), "the stop didn't unblock the read"
+        assert len(raised) == 1 and isinstance(raised[0], CallAbortedError)
+        assert server.client_hung_up.wait(3)
+        assert not server.finished.is_set()
+
+    def test_a_late_stop_cannot_reach_a_finished_calls_connection(self, server, gemini):
+        """After the call returns its connection goes back to the pool; a
+        cancel landing just then must not shut that socket down."""
+        server.chunks, server.delay = 2, 0.0
+        stop = CallStop()
+        gemini.oneshot_stoppable(stop=stop, prompt="hi", model="gemini-3.8-flash")
+        assert stop._closers == []
+        server.requests.clear()
+        gemini.oneshot_stoppable(stop=CallStop(), prompt="again", model="gemini-3.8-flash")
+        assert len(server.requests) == 1
+
+
 # --- openai_compat: the request is really aborted ---------------------------
 
 
@@ -127,6 +283,9 @@ class TestOpenAICompatOneshotStoppable:
         assert sent["messages"][-1] == {"role": "user", "content": "hi"}
 
     def test_a_stop_closes_the_connection_mid_answer(self, server, provider):
+        # A long gap after the first chunk: only aborting the connection can
+        # end the call in time; the per-chunk stop check never gets a chance.
+        server.delay = 5.0
         stop = CallStop()
         threading.Thread(
             target=lambda: (server.first_chunk_sent.wait(5), stop.stop()), daemon=True
@@ -258,6 +417,7 @@ def registry(tmp_path):
 @pytest.mark.asyncio
 async def test_cancelling_a_run_closes_the_providers_connection(registry, server, provider):
     m = registry.start_run("essay", provider="local", model="m")
+    server.delay = 5.0  # only aborting the connection ends the call in time
 
     # Its own pool, not to_thread's default one: if the stop were broken the
     # worker would stay blocked, and closing the loop would wait for it.

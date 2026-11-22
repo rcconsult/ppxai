@@ -20,6 +20,7 @@ from typing import Any
 
 from .... import usage as _usage
 from ....common.logger import get_logger
+from ...call_stop import CallAbortedError, CallStop, close_http_stream
 from ...types import Event, EventType, Message, UsageStats
 from ...uploaded_file import assert_wire_blocks_clean, flatten_uploaded_file_blocks
 
@@ -482,6 +483,60 @@ class ResponsesHandler:
             "content": content,
             "finish_reason": "stop",
             "model": getattr(response, "model", None) or model,
+            "usage": usage_dict,
+        }
+
+    def oneshot_stoppable(
+        self,
+        ctx: Any,
+        messages: list[Message],
+        model: str,
+        max_tokens: int | None,
+        stop: CallStop,
+    ) -> dict[str, Any]:
+        """`oneshot`, but streamed so `stop` (a run's cancel) can close it
+        mid-answer; raises `CallAbortedError` once stopped. Same result."""
+        stop.raise_if_stopped()
+        request_kwargs = self.build_request(
+            ctx, messages, model, max_tokens=max_tokens, for_oneshot=True
+        )
+        stream = ctx.client.responses.create(**request_kwargs, stream=True)
+        closer = lambda: close_http_stream(stream)  # noqa: E731 — registered and removed by identity
+        stop.on_stop(closer)
+        parts: list[str] = []
+        usage_stats = None
+        served_model = None
+        try:
+            for event in stream:
+                stop.raise_if_stopped()
+                event_type = getattr(event, "type", None)
+                if event_type == "response.output_text.delta":
+                    delta = getattr(event, "delta", "")
+                    if delta:
+                        parts.append(delta)
+                elif event_type == "response.completed":
+                    resp = getattr(event, "response", None)
+                    if resp is not None:
+                        usage_stats = self.parse_usage(getattr(resp, "usage", None))
+                        served_model = getattr(resp, "model", None)
+        except Exception as exc:
+            if stop.stopped:
+                raise CallAbortedError("the call was stopped") from exc
+            raise
+        finally:
+            stop.remove(closer)
+        stop.raise_if_stopped()
+        usage_dict = None
+        if usage_stats is not None:
+            usage_dict = {
+                "prompt_tokens": usage_stats.prompt_tokens,
+                "completion_tokens": usage_stats.completion_tokens,
+                "total_tokens": usage_stats.total_tokens,
+            }
+        return {
+            "content": "".join(parts),
+            "finish_reason": "stop",
+            "model": served_model or model,
             "usage": usage_dict,
         }
 

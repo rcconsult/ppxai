@@ -20,6 +20,7 @@ from ...common.logger import get_logger
 from ...config import get_provider_config
 from ...config.network import is_loopback_url
 from ...config.tls import tls_verify
+from ..call_stop import CallAbortedError, CallStop, close_http_stream
 
 logger = get_logger(__name__)
 
@@ -73,6 +74,63 @@ class OpenAIWireMixin:
     back to the wire-neutral `BaseProvider` versions for anything that is
     not an `openai` exception.
     """
+
+    def _stream_oneshot_chat(
+        self, request_kwargs: dict[str, Any], stop: CallStop, model: str,
+    ) -> dict[str, Any]:
+        """Send a one-shot Chat Completions request streamed, so `stop` can
+        close it mid-answer, and return the same result `oneshot` returns:
+        ``{content, finish_reason, model, usage}``. Raises
+        `CallAbortedError` once stopped. Used by `oneshot_stoppable`."""
+        stop.raise_if_stopped()
+        request_kwargs = {**request_kwargs, "stream": True,
+                          "stream_options": {"include_usage": True}}
+        try:
+            stream = self.client.chat.completions.create(**request_kwargs)
+        except Exception as exc:  # noqa: BLE001 — some servers reject stream_options
+            if stop.stopped:
+                raise CallAbortedError("the call was stopped") from exc
+            if "stream_options" not in str(exc):
+                raise
+            request_kwargs.pop("stream_options")
+            stream = self.client.chat.completions.create(**request_kwargs)
+        closer = lambda: close_http_stream(stream)  # noqa: E731 — registered and removed by identity
+        stop.on_stop(closer)
+        parts: list[str] = []
+        finish_reason = None
+        usage_dict = None
+        served_model = None
+        try:
+            for chunk in stream:
+                stop.raise_if_stopped()
+                served_model = getattr(chunk, "model", None) or served_model
+                usage_obj = getattr(chunk, "usage", None)
+                if usage_obj is not None:
+                    usage_dict = {
+                        "prompt_tokens": getattr(usage_obj, "prompt_tokens", 0) or 0,
+                        "completion_tokens": getattr(usage_obj, "completion_tokens", 0) or 0,
+                        "total_tokens": getattr(usage_obj, "total_tokens", 0) or 0,
+                    }
+                for choice in getattr(chunk, "choices", None) or []:
+                    delta = getattr(choice, "delta", None)
+                    text = getattr(delta, "content", None) if delta is not None else None
+                    if text:
+                        parts.append(text)
+                    if getattr(choice, "finish_reason", None):
+                        finish_reason = choice.finish_reason
+        except Exception as exc:
+            if stop.stopped:
+                raise CallAbortedError("the call was stopped") from exc
+            raise
+        finally:
+            stop.remove(closer)
+        stop.raise_if_stopped()
+        return {
+            "content": "".join(parts),
+            "finish_reason": finish_reason,
+            "model": served_model or model,
+            "usage": usage_dict,
+        }
 
     def _format_error(self, e: Exception) -> str:
         """Format exception into user-friendly error message.

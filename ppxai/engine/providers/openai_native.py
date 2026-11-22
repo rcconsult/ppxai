@@ -30,6 +30,7 @@ from openai import OpenAI
 from ... import usage as _usage
 from ...common.logger import get_logger
 from ...config.tls import tls_verify
+from ..call_stop import CallStop
 from ..types import Event, EventType, Message, ProviderCapabilities
 from .base import BaseProvider
 from .facts import openai_native as _facts
@@ -229,14 +230,46 @@ class OpenAINativeProvider(OpenAIWireMixin, BaseProvider):
         forwarded on the Responses path — structured output there uses a
         different knob; out of scope for this stateless call.)
         """
+        messages = self._oneshot_messages(prompt, system)
+        if self._wire_for(model) == "responses":
+            return get_handler("responses").oneshot(self, messages, model, max_tokens)
+
+        request_kwargs = self._oneshot_request(
+            messages, model, response_format, max_tokens, temperature)
+        response = self.client.chat.completions.create(**request_kwargs)
+        return self._oneshot_result(response, model)
+
+    def oneshot_stoppable(self, *, stop: CallStop, **kwargs: Any) -> dict[str, Any]:
+        """`oneshot`, abortable through `stop` (a run's cancel): the same
+        request sent streamed, on whichever API `oneshot` would use, and
+        closed when stopped (raises `CallAbortedError`). Used by `/run`."""
+        model = kwargs["model"]
+        messages = self._oneshot_messages(kwargs["prompt"], kwargs.get("system"))
+        if self._wire_for(model) == "responses":
+            return get_handler("responses").oneshot_stoppable(
+                self, messages, model, kwargs.get("max_tokens"), stop)
+        request_kwargs = self._oneshot_request(
+            messages, model, kwargs.get("response_format"),
+            kwargs.get("max_tokens"), kwargs.get("temperature"))
+        return self._stream_oneshot_chat(request_kwargs, stop, model)
+
+    @staticmethod
+    def _oneshot_messages(prompt: str, system: str | None) -> list[Message]:
         messages: list[Message] = []
         if system:
             messages.append(Message(role="system", content=system))
         messages.append(Message(role="user", content=prompt))
+        return messages
 
-        if self._wire_for(model) == "responses":
-            return get_handler("responses").oneshot(self, messages, model, max_tokens)
-
+    def _oneshot_request(
+        self,
+        messages: list[Message],
+        model: str,
+        response_format: dict[str, Any] | None,
+        max_tokens: int | None,
+        temperature: float | None,
+    ) -> dict[str, Any]:
+        """The Chat Completions request `oneshot` sends (non-streaming)."""
         request_kwargs: dict[str, Any] = {
             "model": model,
             "messages": self._convert_messages(messages),
@@ -257,8 +290,11 @@ class OpenAINativeProvider(OpenAIWireMixin, BaseProvider):
             request_kwargs["temperature"] = temperature
         if response_format is not None:
             request_kwargs["response_format"] = response_format
+        return request_kwargs
 
-        response = self.client.chat.completions.create(**request_kwargs)
+    @staticmethod
+    def _oneshot_result(response: Any, model: str) -> dict[str, Any]:
+        """`oneshot`'s result from a non-streamed Chat Completions response."""
         msg = response.choices[0].message
         usage_obj = getattr(response, "usage", None)
         usage_dict = None
