@@ -989,7 +989,7 @@ RECOMMENDED_DEFAULTS: dict[str, str] = {
     # the moment one shipped, /doctor began recommending an unpriced model,
     # which reports $0.00 in /cost rather than erroring. Item 66's shape,
     # live rather than theoretical.
-    "anthropic": "claude-opus-5",
+    "anthropic": "claude-opus-5-5",  # 2026-11-22: the current Opus
 }
 
 

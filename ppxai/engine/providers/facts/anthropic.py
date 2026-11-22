@@ -11,7 +11,7 @@ DEFAULT_MAX_TOKENS = 64000
 
 FACTS = ProviderFacts(
     #: Stands in when a caller builds a config with no target model.
-    default_model_for_facts="claude-opus-5",
+    default_model_for_facts="claude-opus-5-5",
     #: An UNLISTED Claude model still speaks `messages` — this provider has
     #: no other wire. The global floor says `chat_completions`, which is safe
     #: everywhere else and simply wrong here, so this supplies its own
