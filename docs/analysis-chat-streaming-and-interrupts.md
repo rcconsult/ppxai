@@ -242,7 +242,17 @@ On `experiment/run-cancel-option-b` (not merged, not pushed), 2026-11-22. Verifi
 - `events.jsonl`: `agent_run_start`, `agent_run_cancelling`, `agent_run_cancelled`, 3 ms apart.
 - `meta.json` and `state.json`: `cancelled`, resumable false, result null, `sources: []`, the "stopped during the model call" error.
 - tai showed the error with no Collect button; closing the window left no `ppxai-server` running.
-- Not covered there: `/task` (resumable), a cancel during a tool call, `/v1/oneshot` byte-identity, no usage on abort.
+- Not covered by that first retest: `/task` (resumable), a cancel during a tool call, `/v1/oneshot` byte-identity, no usage on abort.
+
+**Second popos-tai retest, `/task`** (same export, `ppxai-server --owned` with a per-launch bearer token, driven with curl; Gemini `gemini-3.8-flash`, tools `["web_search"]`):
+
+- **Cancelled during the model call** (essay prompt with "Do not use any tools", cancelled 6 s in): `cancelled` 32 ms after the cancel POST, resumable **true**, result null, `sources: []`, the "stopped during the model call" error. `agent_run_cancelled` carried `{resumable: true}`, 3 ms after `agent_run_cancelling`.
+- **Cancelled during a tool call** (a `web_search` prompt, `network.allow_outbound` `["generativelanguage.googleapis.com"]`, cancelled 52 ms after the `tool_call` event): the run stayed `cancelling` until the tool finished about 30 s later. It then ended `cancelled` with "cancelled by owner before the call started", resumable true, and made no second model call. That is the designed behaviour, since a tool call is never interrupted.
+
+Two things it surfaced, neither caused by option B; the owner decides:
+
+- **A cancel waits out the whole tool**, and here that was 30 s of `web_search`. Why the search took 30 s isn't known: nothing reached the server's stderr. One guess, not checked: with only the Gemini host allowed, the other backends wait out their timeouts. Making a search inside a tool call interruptible is a separate change.
+- **No tool-result event in `events.jsonl`**, so the log can't show when a tool ended.
 
 Not checked: whether Anthropic stops billing for the rest of an aborted answer (the API reports no usage for it), and tool calls (a multi-step `/task` with tools).
 
