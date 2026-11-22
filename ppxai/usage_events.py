@@ -51,6 +51,7 @@ audit trail — see `docs/decisions/0008-cross-tier-cost-and-resource-accounting
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import sys
@@ -99,9 +100,9 @@ _WRITE_LOCK = threading.Lock()
 #: How long an append waits for another process's lock before writing
 #: unlocked. Appends hold it for well under 1 ms (16 processes x 400 events
 #: never fell back), so this is only reached when a holder is stuck: a
-#: process suspended or paused in a debugger mid-append. Kept short because
-#: `record_usage` is synchronous and some callers run on the event loop
-#: (task_runner's `_runner`), which this wait blocks.
+#: process suspended or paused in a debugger mid-append. Only a thread
+#: off the event loop ever waits for it: on a loop, `record_usage` tries the
+#: locks once and hands a busy append to a background thread.
 _LOCK_DEADLINE_S = 2.0
 
 #: Text mode on Windows turns every "\n" into "\r\n"; the log is bytes.
@@ -248,16 +249,70 @@ def record_usage(
 
         path = events_file(usage_dir)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with _WRITE_LOCK, _ProcessLock(path):
-            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | _O_BINARY, 0o600)
-            try:
-                os.write(fd, raw)
-            finally:
-                os.close(fd)
+        if _on_event_loop():
+            # Never wait on the loop: a busy lock (a writer mid-append in
+            # another thread, or a Windows process stuck holding the .lock
+            # file) would freeze every client of this server. Try once, and
+            # if either lock is taken, hand the append to a thread that may
+            # wait. True then means "queued", not "on disk".
+            if not _append_without_waiting(path, raw):
+                threading.Thread(target=_append_in_background, args=(path, raw),
+                                 name=_BACKGROUND_THREAD_NAME).start()
+            return True
+        _append_waiting(path, raw)
         return True
     except Exception as e:  # noqa: BLE001 — accounting must never break a turn
         logger.debug(f"record_usage noop: {e}")
         return False
+
+
+#: Name of the threads that finish an append the event loop couldn't do at
+#: once. Not daemon threads, so an interpreter exit waits for them (at most
+#: `_LOCK_DEADLINE_S`) instead of dropping the event.
+_BACKGROUND_THREAD_NAME = "usage-events-append"
+
+
+def _on_event_loop() -> bool:
+    """True when called from a thread running an asyncio event loop."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True
+
+
+def _write_line(path: Path, raw: bytes) -> None:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | _O_BINARY, 0o600)
+    try:
+        os.write(fd, raw)
+    finally:
+        os.close(fd)
+
+
+def _append_waiting(path: Path, raw: bytes) -> None:
+    with _WRITE_LOCK, _ProcessLock(path):
+        _write_line(path, raw)
+
+
+def _append_without_waiting(path: Path, raw: bytes) -> bool:
+    """Append if both locks are free right now; False (nothing written) if not."""
+    if not _WRITE_LOCK.acquire(blocking=False):
+        return False
+    try:
+        with _ProcessLock(path, wait=False) as lock:
+            if msvcrt is not None and not lock.locked:
+                return False
+            _write_line(path, raw)
+            return True
+    finally:
+        _WRITE_LOCK.release()
+
+
+def _append_in_background(path: Path, raw: bytes) -> None:
+    try:
+        _append_waiting(path, raw)
+    except Exception as e:  # noqa: BLE001 — accounting must never break a turn
+        logger.debug(f"record_usage background append failed: {e}")
 
 
 class _ProcessLock:
@@ -278,10 +333,15 @@ class _ProcessLock:
     surely dropped.
     """
 
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, wait: bool = True):
         self._path = path.with_name(path.name + ".lock")
+        self._wait = wait
         self._fd: int | None = None
         self._locked = False
+
+    @property
+    def locked(self) -> bool:
+        return self._locked
 
     def __enter__(self):
         if msvcrt is None:
@@ -289,6 +349,8 @@ class _ProcessLock:
         try:
             self._fd = os.open(self._path, os.O_RDWR | os.O_CREAT | _O_BINARY, 0o600)
         except OSError as e:
+            if not self._wait:
+                return self
             logger.debug(f"usage-events lock file not opened, appending unlocked: {e}")
             return self
         deadline = time.monotonic() + _LOCK_DEADLINE_S
@@ -299,6 +361,8 @@ class _ProcessLock:
                 self._locked = True
                 return self
             except OSError as e:
+                if not self._wait:
+                    return self
                 if time.monotonic() >= deadline:
                     logger.debug(f"usage-events lock not taken in {_LOCK_DEADLINE_S:.0f} s, "
                                  f"appending unlocked: {e}")

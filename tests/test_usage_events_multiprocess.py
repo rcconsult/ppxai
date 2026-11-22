@@ -12,7 +12,10 @@ Windows host is the one that proves the fix.
 
 from __future__ import annotations
 
+import asyncio
 import multiprocessing
+import threading
+import time
 from pathlib import Path
 
 from ppxai import usage_events
@@ -87,3 +90,64 @@ class TestTheWindowsLockRetries:
                             completion_tokens=1, estimated_cost=0.0, usage_dir=tmp_path)
         assert fake.LK_UNLCK not in fake.calls
         assert len(read_usage_events(usage_dir=tmp_path)[0]) == 1
+
+
+def _record(usage_dir: Path) -> bool:
+    return record_usage(provider="p", model="m", tier=TIER_TASK, prompt_tokens=1,
+                        completion_tokens=1, estimated_cost=0.0, usage_dir=usage_dir)
+
+
+def _join_background_appends(timeout: float = 5.0) -> None:
+    for t in threading.enumerate():
+        if t.name == usage_events._BACKGROUND_THREAD_NAME:
+            t.join(timeout)
+
+
+def _lines(usage_dir: Path) -> int:
+    return len(read_usage_events(usage_dir=usage_dir)[0])
+
+
+class TestTheEventLoopNeverWaits:
+    """Every chat turn records usage from the event loop (the server's SSE
+    generators, both TUIs, /task's runner). A busy lock must not freeze it:
+    on a loop, `record_usage` tries once and hands a busy append to a
+    thread."""
+
+    def test_a_free_lock_writes_at_once_on_the_loop(self, tmp_path):
+        async def go():
+            return _record(tmp_path)
+
+        assert asyncio.run(go())
+        assert _lines(tmp_path) == 1
+
+    def test_a_stuck_windows_lock_does_not_block_the_loop(self, tmp_path, monkeypatch):
+        fake = _FakeMsvcrt(busy=10**9)
+        monkeypatch.setattr(usage_events, "msvcrt", fake)
+        monkeypatch.setattr(usage_events, "_LOCK_DEADLINE_S", 1.0)
+
+        async def go():
+            start = time.monotonic()
+            assert _record(tmp_path)
+            return time.monotonic() - start
+
+        assert asyncio.run(go()) < 0.5
+        _join_background_appends()
+        assert _lines(tmp_path) == 1  # written unlocked past the deadline, off the loop
+
+    def test_a_busy_thread_lock_does_not_block_the_loop(self, tmp_path):
+        async def go():
+            start = time.monotonic()
+            assert _record(tmp_path)
+            return time.monotonic() - start
+
+        with usage_events._WRITE_LOCK:
+            assert asyncio.run(go()) < 0.5
+            assert _lines(tmp_path) == 0
+        _join_background_appends()
+        assert _lines(tmp_path) == 1
+
+    def test_off_the_loop_it_still_writes_before_returning(self, tmp_path, monkeypatch):
+        fake = _FakeMsvcrt(busy=3)
+        monkeypatch.setattr(usage_events, "msvcrt", fake)
+        assert _record(tmp_path)
+        assert _lines(tmp_path) == 1
