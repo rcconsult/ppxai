@@ -22,6 +22,7 @@ from typing import Any, Protocol
 from ..common.logger import get_logger
 from ..config import calculate_cost, get_agent_config, get_system_prompt, get_system_prompt_mode
 from ..config.defaults import DEFAULT_AGENT_ZOMBIE_THRESHOLD
+from .agent_runs import RunStopped
 from .call_stop import CallStop, current_interrupter
 from .model_facts import shipped_facts_for_model
 from .providers.base import BaseProvider
@@ -523,13 +524,19 @@ async def _execute_single_tool(
             ctx.tool_manager.execute_tool(tool_name, **tool_args)
         )
 
-        # Wait for tool completion, checking for interrupt.
+        # Wait for tool completion, checking for interrupt. Inside a `/task`
+        # run (the runner installed its control, see
+        # call_stop.install_interrupter) a cancel stops the tool too:
+        # `stop_tool` cancels it, gives it time to clean up, and ends the run.
         # NOTE: Consent events are NOT drained here — they stay in
         # ctx._event_queue for the SSE generator to poll via drain_events()
         # and deliver to the client. Draining them into a local list caused
         # a deadlock: the events were trapped here while the SSE generator
         # never saw them (v1.16.0 fix).
+        interrupter = current_interrupter()
         while not tool_task.done():
+            if interrupter is not None and interrupter.cancel_requested:
+                await interrupter.stop_tool(tool_task, tool=tool_name)
             if ctx.is_interrupted:
                 tool_task.cancel()
                 try:
@@ -590,11 +597,14 @@ async def _execute_single_tool(
 
         events.append(Event(EventType.TOOL_RESULT, {
             "tool": tool_name,
-            "result": truncated_result
+            "result": truncated_result,
+            "success": tool_success,
         }))
 
         return result, tool_success, events
 
+    except RunStopped:
+        raise  # the run was cancelled during the tool: not a tool error
     except Exception as e:
         error_msg = str(e)
 

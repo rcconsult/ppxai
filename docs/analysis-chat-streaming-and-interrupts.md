@@ -256,7 +256,20 @@ Two things it surfaced, neither caused by option B; the owner decides:
 - **A cancel waits out the whole tool**, and here that was 30 s of `web_search`. Why the search took 30 s isn't known: nothing reached the server's stderr. One guess, not checked: with only the Gemini host allowed, the other backends wait out their timeouts. Making a search inside a tool call interruptible is a separate change.
 - **No tool-result event in `events.jsonl`**, so the log can't show when a tool ended.
 
+Both fixed on 2026-11-22 (owner: "user asking stop we stop … also add tool-result event"), in [Stopping a running tool](#stopping-a-running-tool).
+
 Not checked: whether Anthropic stops billing for the rest of an aborted answer (the API reports no usage for it), and tool calls (a multi-step `/task` with tools).
+
+#### Stopping a running tool
+
+Step 2 above kept tool calls out of option B on purpose: a cancel waited for the tool. tai's retest showed what that costs, a 30 s wait on `web_search`, and the owner decided against it: when the user asks to stop, the run stops.
+
+- **How.** The engine's tool step (`engine/chat.py::_execute_single_tool`) already polls a running tool every 50 ms for a `/chat` interrupt. Inside a run it also checks the run's cancel and calls `RunControl.stop_tool`. That cancels the tool, waits up to `TOOL_STOP_GRACE_S` (5 s) for it to clean up, and ends the run `cancelled`, resumable, with the error "cancelled by owner during the tool call '<name>'; the tool was stopped and its output discarded". A tool still running after the grace period is left to finish on its own, and its result is never read.
+- **Cleanup.** The shell tool kills its process group when cancelled (tested: the process is gone at once). A `spawn_subagent` wait is cancelled, and the cascade in `cancel_run` cancels the child. An async search is cancelled; a search running in a worker thread finishes there, unread.
+- **What it gives up.** ADR 0003 §5's "never mid-tool-call": a killed command can leave a partial artifact in the workdir. The run stays resumable anyway. A resume is an explicit owner action, and it starts the task over in the same workdir, which a cancel during a model call after earlier tool steps already did.
+- **A budget cap is unchanged.** It still stops the run only between steps, so a long tool can overrun the time budget by its own length.
+- **The `tool_result` event.** Each tool now ends with one in `events.jsonl` (category `tool`): `{tool, status, duration_s, result | error}`. `status` is `ok`, `error` (the tool raised, or the engine judged its output a failure: the engine's `TOOL_RESULT` now carries `success`), or `cancelled`. `result` and `error` are clamped to 200 characters, like the `tool_call` arguments. A tool stopped before it started (the cancel landed at the `check()` on `tool_call`) gets no `tool_result`. Both run views already had a `tool_result` row, written for the first `/task` UI and never fed: they now show ✓, ✗ or ■ by status.
+- **Tests.** `tests/test_run_cancel_stops_tool.py`: `stop_tool` (cleanup runs; a tool that ignores the cancel doesn't hold the run), the engine step (the stop isn't turned into a tool error; a real shell command's process is killed), and the runner's events over HTTP. Without the engine's check, the cancel and shell tests fail.
 
 **Decisions taken, for the owner to confirm or overturn:**
 

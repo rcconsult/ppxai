@@ -587,8 +587,25 @@ RunControl.interruptible(call, stop=CallStop(), resumable=…):
         none installed (/chat) → plain pass-through
 ```
 
-A tool call is never interrupted: `interruptible` wraps only provider calls
-and searches.
+A running tool is stopped too (2026-11-22), but more gently:
+
+```
+_execute_single_tool  [engine/chat.py]
+  tool_task = create_task(tool_manager.execute_tool(...))
+  while not tool_task.done():               ← polls every 50 ms
+    interrupter.cancel_requested → interrupter.stop_tool(tool_task, tool=…)
+      tool_task.cancel()                    ← shell: kills its process group
+      wait up to TOOL_STOP_GRACE_S (5 s) for it to unwind
+      raise RunCancelledDuringCall(resumable=True)
+  except RunStopped: raise                  ← not turned into a TOOL_ERROR
+
+task_runner._runner
+  TOOL_CALL (after check())   → open_tool = (name, t0)
+  TOOL_RESULT / TOOL_ERROR    → emit tool_result {tool, status ok|error,
+                                 result|error, duration_s}
+  RunStopped with open_tool   → emit tool_result {tool, status: cancelled,
+                                 duration_s}; re-raise
+```
 
 ### POST /v1/agent/task — budget/cancel polling (delta over Inc 5)
 

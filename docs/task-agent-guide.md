@@ -72,7 +72,7 @@ enable hint.
 /task respond <id> approve|deny|"<text>"   answer a waiting (consent) park
 /task collect <id>                         collect a held result → finalized
 /task resume <id>                          continue an interrupted run
-/task cancel <id>                          cancel (stops a model call; a tool call finishes first)
+/task cancel <id>                          cancel at once (stops a model call or a running tool)
 /task help                                 this summary
 ```
 

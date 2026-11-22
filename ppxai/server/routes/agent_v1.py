@@ -963,8 +963,10 @@ async def cancel_agent_run(run_id: str, request: Request) -> dict:
       partial output is discarded. A `/task` ends `cancelled` and resumable;
       a `/run` ends `cancelled`, not resumable.
     - between tool-loop steps: at the next step, as before (resumable).
-    - during a tool call: never mid-tool. The tool finishes, then the run
-      stops at the next step.
+    - during a tool call: at once. The tool is cancelled and gets a few
+      seconds to clean up (a shell command is killed), then the run ends
+      `cancelled`, resumable. Its output is discarded, and a partial
+      artifact may be left in the workdir.
 
     Returns 404 if the run is unknown, 403 if the caller doesn't own it
     (Inc 8b), 409 if it's already terminal (nothing to cancel)."""

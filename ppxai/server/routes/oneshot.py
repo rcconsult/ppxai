@@ -423,8 +423,9 @@ async def _oneshot_via_search_loop(
     run_task = registry.get_run_task(meta.run_id)
     try:
         if run_task is not None:
-            # shield: on timeout we cancel COOPERATIVELY (clean checkpoint)
-            # instead of ripping the task out mid-tool-call.
+            # shield: on timeout we cancel the RUN (cancel_run), which stops
+            # it gracefully (a model call or tool in progress is stopped, the
+            # run ends cancelled), instead of cancelling the asyncio task.
             await asyncio.wait_for(
                 asyncio.shield(run_task), timeout=ONESHOT_SEARCH_TIMEOUT_S
             )

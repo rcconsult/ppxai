@@ -319,7 +319,9 @@ export function eventText(ev: any): string | null {
     };
     switch (ev.type) {
         case 'tool_call':    return `→ ${d.tool || d.name || 'tool'}`;
-        case 'tool_result':  return `✓ ${d.tool || 'tool'}  ${short(d.result)}`;
+        case 'tool_result':  return d.status === 'cancelled' ? `■ ${d.tool || 'tool'}  cancelled`
+            : d.status === 'error' ? `✗ ${d.tool || 'tool'}  ${short(d.error || d.result)}`
+            : `✓ ${d.tool || 'tool'}  ${short(d.result)}`;
         case 'tool_denied':  return `⛔ tool denied: ${d.tool || ''} (off-grant)`;
         case 'network_policy_allowed': return `↗ allow ${short((d.target_host || '') + (d.target_path || ''), 80)}`;
         case 'network_policy_denied':  return `⛔ egress denied ${short((d.target_host || '') + (d.target_path || ''), 80)}`;

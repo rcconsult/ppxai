@@ -1803,6 +1803,14 @@ but *not immediate*. `cancelling → cancelled` can lag by the in-flight call's
 duration. Acceptable for MVP; a future increment could race `check()` against
 the blocking await (e.g. `asyncio.wait` with a cancel event) for snappier
 cancellation. Document the latency in the API guide; no code change for MVP.
+**RESOLVED 2026-11-22** (owner: "user asking stop we stop"): a cancel now
+stops a model call or search at once (option B, `RunControl.interruptible`)
+and a running tool, sub-agent waits included (`RunControl.stop_tool`: the
+tool is cancelled, gets `TOOL_STOP_GRACE_S` = 5 s to clean up, then the run
+ends `cancelled`, resumable). The "never mid-tool-call" guarantee is given
+up on purpose: a cancelled shell command is killed, so a partial artifact
+can be left in the workdir. See section C of
+docs/analysis-chat-streaming-and-interrupts.md.
 
 **f. Egress is application-layer; no DNS-rebinding / private-IP defense
 (secondary review 2026-06-16).** `NetworkPolicy.check()`

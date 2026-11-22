@@ -404,7 +404,8 @@ class RunStopped(Exception):
 
 class RunCancelled(RunStopped):
     """The owner asked to cancel via POST .../cancel. Terminal, resumable —
-    the run stopped cooperatively at a checkpoint, not mid-tool-call."""
+    raised by `check()` at a tool-loop boundary. A cancel during a model
+    call, a search or a tool raises `RunCancelledDuringCall` instead."""
 
     status = "cancelled"
     resumable = True
@@ -422,11 +423,13 @@ class RunCancelledAfterCall(RunCancelled):
 
 
 class RunCancelledDuringCall(RunCancelled):
-    """A cancel stopped the run while it was waiting on a model call or a
-    search (`RunControl.interruptible`). The run ends at once; the call was
-    asked to abort (a provider that streams closes its connection), and
-    whatever it produced is discarded. Not resumable: there is no checkpoint
-    between the call's start and its end."""
+    """A cancel stopped the run while it was waiting on a model call, a
+    search (`RunControl.interruptible`) or a tool call
+    (`RunControl.stop_tool`). The run ends at once; the call was asked to
+    abort (a provider that streams closes its connection, a tool is
+    cancelled), and whatever it produced is discarded. Resumable when the
+    caller says so (a `/task`: a resume starts over in the same workdir);
+    a `/run`'s single model call is not."""
 
     resumable = False
 
@@ -439,6 +442,11 @@ class RunBudgetExceeded(RunStopped):
     resumable = True
 
 
+#: How long a cancelled tool gets to clean up (kill its processes) before the
+#: run ends without it.
+TOOL_STOP_GRACE_S = 5.0
+
+
 @dataclass
 class RunControl:
     """Per-run cooperative control the runner polls between iterations.
@@ -446,8 +454,12 @@ class RunControl:
     The registry owns one of these per in-flight run. `cancel_run` flips
     `cancel_requested`; the runner calls `check()` at each loop boundary,
     which raises `RunCancelled` / `RunBudgetExceeded` when it should stop.
-    Cooperative (not task.cancel()) so a stop lands at a clean checkpoint —
-    never mid-tool-call, which could leave a half-written artifact."""
+    A budget stop is cooperative: it lands at a boundary, never mid-tool. A
+    cancel does not wait for one (owner, 2026-11-22: when the user asks to
+    stop, the run stops): `cancel_event` wakes `interruptible` (a model call
+    or search) and `stop_tool` (a running tool, which gets a grace period to
+    clean up, so a cancelled command is killed and may leave a partial
+    artifact)."""
 
     run_id: str
     budget: dict = field(default_factory=dict)
@@ -467,8 +479,9 @@ class RunControl:
         provider registered a closer, its connection is closed), cancel the
         awaiting task, and raise `RunCancelledDuringCall`.
 
-        Use it only around calls that are safe to abandon. Never around a
-        tool call: a cancel must not tear a run down mid-tool.
+        Use it only around calls that are safe to abandon (it does not wait
+        for the call to unwind). A tool call goes through `stop_tool`, which
+        gives the tool time to clean up.
 
         `resumable`: a `/task`'s model call (the transcript up to the
         previous step is intact, as at a check()); a `/run`'s is not."""
@@ -503,6 +516,27 @@ class RunControl:
         # nobody waits for it, so don't log "exception never retrieved".
         task.add_done_callback(lambda t: t.cancelled() or t.exception())
 
+    async def stop_tool(self, task: asyncio.Future, *, tool: str,
+                        grace_s: float = TOOL_STOP_GRACE_S) -> None:
+        """The run was cancelled while `task`, a tool call, is running: stop
+        the tool, then end the run (raises `RunCancelledDuringCall`,
+        resumable).
+
+        The tool is cancelled, then given `grace_s` to unwind, so it can
+        clean up: the shell tool kills its process group, a sub-agent tool
+        sees its child cancelled by the cascade. A tool still running after
+        that is left to finish on its own (its result is never read) and the
+        run ends anyway: the owner asked to stop."""
+        task.cancel()
+        done, _ = await asyncio.wait({task}, timeout=grace_s)
+        if not done:
+            logger.warning(
+                f"run {self.run_id}: tool {tool!r} did not stop within {grace_s:.0f}s "
+                f"of the cancel; ending the run without it")
+        # Nobody reads the tool's outcome; don't log "exception never retrieved".
+        task.add_done_callback(lambda t: t.cancelled() or t.exception())
+        raise _cancelled(_STOPPED_IN_TOOL.format(tool=tool), True)
+
     def check(self, *, now: float) -> None:
         """Raise if the run should stop. Called at each iteration boundary."""
         if self.cancel_requested:
@@ -527,6 +561,10 @@ def _cancelled(reason: str, resumable: bool) -> RunCancelledDuringCall:
 _STOPPED_MID_CALL = (
     "cancelled by owner during the model call; the call was stopped and "
     "its partial output discarded"
+)
+_STOPPED_IN_TOOL = (
+    "cancelled by owner during the tool call {tool!r}; the tool was stopped "
+    "and its output discarded"
 )
 
 
@@ -867,10 +905,11 @@ class AgentRunRegistry:
     def cancel_run(self, run_id: str) -> bool:
         """Request cooperative cancellation of an in-flight run (Inc 6).
 
-        Flips the run's control flag and moves it to `cancelling`; the runner
-        observes it at the next `check()` and raises `RunCancelled`, so the
-        stop lands at a clean checkpoint (never mid-tool-call). Returns False
-        if the run isn't in flight (already terminal / unknown).
+        Flips the run's control flag, sets its `cancel_event`, and moves it
+        to `cancelling`. The run stops at once: a model call, search or
+        tool in progress is stopped (`interruptible` / `stop_tool`);
+        between them, the next `check()` raises `RunCancelled`. Returns
+        False if the run isn't in flight (already terminal / unknown).
 
         CASCADE (Item 37e/secondary review): also cancels any in-flight runs
         whose `parent_run_id == run_id`, so cancelling a parent never orphans
