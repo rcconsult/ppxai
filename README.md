@@ -10,7 +10,7 @@ Chat, edit code, and run background tasks against Gemini, OpenAI, OpenRouter, An
 
 | Problem | ppxai solution |
 |---------|----------------|
-| Locked to one AI vendor | Switch between Gemini, OpenAI, OpenRouter, local models anytime (Anthropic too — opt-in, [tool calls untested against the live API](docs/ANTHROPIC-PROVIDER.md)) |
+| Locked to one AI vendor | Switch between Gemini, OpenAI, OpenRouter, local models anytime (Anthropic too — opt-in, [tested live 2026-11-22](docs/ANTHROPIC-PROVIDER.md)) |
 | Expensive API costs | Use local models, free tiers, or whichever provider is cheapest for the task |
 | Closed-source tools | Fully open source — inspect, modify, self-host |
 | Terminal OR IDE | Same commands and history in a TUI, the desktop app, or VSCode |

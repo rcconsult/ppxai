@@ -282,3 +282,94 @@ class TestErrorsAreClassifiedNotSwallowed:
         assert provider._classify_throttle(
             SimpleNamespace(status_code=400, response=None)
         ) is None
+
+
+# ---------------------------------------------------------------------------
+# chat() events follow the engine's contract (seen live 2026-11-22: the tool
+# loop failed with KeyError 'tool', then "'dict' object has no attribute
+# 'strip'", because this provider named its fields differently and wrapped
+# its text in dicts)
+# ---------------------------------------------------------------------------
+
+
+class _FakeStream:
+    """`client.messages.stream(...)`: an async context manager over the
+    streamed events, with `get_final_message()`."""
+
+    def __init__(self, events, final):
+        self._events, self._final = events, final
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    def __aiter__(self):
+        async def gen():
+            for event in self._events:
+                yield event
+        return gen()
+
+    async def get_final_message(self):
+        return self._final
+
+
+def _delta(kind, **fields):
+    return SimpleNamespace(type="content_block_delta", delta=SimpleNamespace(type=kind, **fields))
+
+
+async def _chat_events(provider, events, final, tools=None):
+    provider.client = SimpleNamespace(messages=SimpleNamespace(
+        stream=lambda **request: _FakeStream(events, final)))
+    return [e async for e in provider.chat([Message("user", "hi")], "claude-haiku-5-5",
+                                           stream=False, tools=tools)]
+
+
+class TestChatEventsFollowTheEngineContract:
+    @pytest.mark.asyncio
+    async def test_a_tool_call_carries_tool_arguments_and_tool_call_id(self, provider):
+        final = SimpleNamespace(
+            content=[SimpleNamespace(type="tool_use", id="toolu_1", name="read_file",
+                                     input={"filepath": "notes.txt"})],
+            usage=SimpleNamespace(input_tokens=10, output_tokens=5),
+            stop_reason="tool_use",
+        )
+        events = await _chat_events(provider, [], final)
+        [call] = [e for e in events if e.type.value == "tool_call"]
+        assert call.data == {"tool": "read_file", "arguments": {"filepath": "notes.txt"},
+                             "native": True, "tool_call_id": "toolu_1"}
+
+    @pytest.mark.asyncio
+    async def test_text_reasoning_and_the_end_are_plain_strings(self, provider):
+        final = SimpleNamespace(
+            content=[SimpleNamespace(type="text", text="pong")],
+            usage=SimpleNamespace(input_tokens=3, output_tokens=1),
+            stop_reason="end_turn",
+        )
+        events = await _chat_events(
+            provider, [_delta("thinking_delta", thinking="hmm"), _delta("text_delta", text="pong")],
+            final)
+        by_type = {e.type.value: e for e in events}
+        assert by_type["reasoning_chunk"].data == "hmm"
+        assert by_type["stream_chunk"].data == "pong"
+        assert by_type["stream_end"].data == "pong"
+        assert by_type["stream_end"].metadata["usage"].prompt_tokens == 3
+
+    @pytest.mark.asyncio
+    async def test_no_usage_means_no_usage_key(self, provider):
+        final = SimpleNamespace(content=[SimpleNamespace(type="text", text="x")],
+                                usage=None, stop_reason="end_turn")
+        [end] = [e for e in await _chat_events(provider, [], final)
+                 if e.type.value == "stream_end"]
+        assert end.metadata is None or "usage" not in end.metadata
+
+    @pytest.mark.asyncio
+    async def test_an_error_is_a_plain_string(self, provider):
+        def boom(**request):
+            raise RuntimeError("bad request")
+
+        provider.client = SimpleNamespace(messages=SimpleNamespace(stream=boom))
+        events = [e async for e in provider.chat([Message("user", "hi")], "claude-haiku-5-5")]
+        [err] = [e for e in events if e.type.value == "error"]
+        assert isinstance(err.data, str) and err.data

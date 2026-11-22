@@ -1,25 +1,20 @@
 # Anthropic provider (Claude)
 
-> ## ⚠️ Status: PARTLY tested against the live API
->
-> **First live run: 2026-11-22**, `claude-haiku-5-5`, anthropic SDK 1.4.0
-> (branch `experiment/run-cancel-option-b`). These worked: a plain one-shot
-> (content, `end_turn`, usage), the streamed one-shot run to the end and
-> stopped mid-answer, a tool-loop `chat` call with no tools offered (run to
-> the end and cancelled mid-call), and `POST /v1/agent/run` completed and
-> cancelled. Detail: section C of
+> **Status: tested against the live API on 2026-11-22**
+> (`claude-haiku-5-5` and `claude-sonnet-5-5`, anthropic SDK 1.4.0). Passed:
+> a plain one-shot, the streamed one-shot run to the end and stopped
+> mid-answer, `POST /v1/agent/run` completed and cancelled, and `/task` with
+> tools: a one-step and a two-step `read_file` task (with adaptive thinking
+> on) completed with the right answer. Detail: section C of
 > [analysis-chat-streaming-and-interrupts.md](analysis-chat-streaming-and-interrupts.md).
 >
-> **Still unproven: tool calls**, so `/task` and `/auto` with tools, along
-> with thinking with tools, prompt caching and the pricing rows. The likely
-> bugs are named under [Limits of Phase 1](#limits-of-phase-1). One is
-> **confirmed live (2026-11-22): a `/task` with tools fails** with the error
-> `'tool'` (a `KeyError`), the tool-call shape mismatch in section B of the
-> analysis doc.
+> The first tool-calling run failed, and that fix is in: the provider named
+> its tool-call fields differently from the engine's contract and wrapped
+> its text events in dicts.
 >
-> It is inert unless you install the `[anthropic]` extra and configure the
-> provider, so it cannot affect an existing install. Remove this banner once
-> a live tool-calling run passes.
+> **Still unverified live:** the pricing rows (so `/cost`), how much prompt
+> caching saves, image input, and `/auto` in a TUI. The provider is inert
+> unless you install the `[anthropic]` extra and configure it.
 
 Native support for Claude over Anthropic's Messages API. Optional — install
 the extra to enable it:

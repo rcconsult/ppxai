@@ -33,7 +33,7 @@ This document explains which providers use which method and the implications for
 | Provider | Method | Native API Support | ppxai Implementation |
 |----------|--------|-------------------|---------------------|
 | **Gemini** | Native | ✅ Yes | `generate_content` wire, `function_declarations` |
-| **Anthropic** | Native | ✅ Yes | `messages` wire (ADR 0012 §6). **Opt-in; tool calls untested against the live API** (plain chat and one-shot passed live 2026-11-22) — debt Item 71 |
+| **Anthropic** | Native | ✅ Yes | `messages` wire (ADR 0012 §6). **Opt-in.** Tool calls passed live 2026-11-22 (`/task` with `read_file`, one and two steps) — debt Item 71 |
 | **OpenAI** | Per-model | ✅ Yes | `OpenAINativeProvider`; `chat_completions` or `responses` per `ModelFacts.wire_protocol` |
 | **Custom** | Native | ✅ Yes | Standard `tools` parameter (OpenRouter, other OpenAI-compat) |
 | **vLLM** | Per-model | ✅ Yes (with `--enable-auto-tool-choice`) | Standard `tools` parameter — but `openai/gpt-oss*` is pinned `prompt_based` in the facts table regardless of your vLLM version |
@@ -73,7 +73,7 @@ not a tool-calling endpoint.
 **Providers:**
 - Gemini (2.5+)
 - OpenAI (all models with function calling)
-- Anthropic (opt-in; tool calls untested against the live API — Item 71)
+- Anthropic (opt-in; tool calls tested live 2026-11-22 — Item 71)
 - OpenRouter (varies by model)
 - vLLM (requires `--enable-auto-tool-choice`; `gpt-oss` is pinned prompt-based anyway)
 - Ollama (Qwen2.5 models only)

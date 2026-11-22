@@ -274,6 +274,12 @@ class AnthropicProvider(BaseProvider):
 
         yield Event(type=EventType.STREAM_START, data={"model": model})
 
+        # Event payloads follow the engine's contract, as the OpenAI-wire and
+        # Gemini providers send them: STREAM_CHUNK / REASONING_CHUNK /
+        # STREAM_END / ERROR carry a plain string, and STREAM_END's metadata
+        # has `usage` only when there is one. This used to wrap each in a dict
+        # ({"content": ...} / {"error": ...}), which the tool loop can't read
+        # ("'dict' object has no attribute 'strip'", seen live 2026-11-22).
         try:
             async with self.client.messages.stream(**request) as stream_ctx:
                 async for event in stream_ctx:
@@ -282,44 +288,48 @@ class AnthropicProvider(BaseProvider):
                         delta = getattr(event, "delta", None)
                         dtype = getattr(delta, "type", "")
                         if dtype == "text_delta":
-                            yield Event(
-                                type=EventType.STREAM_CHUNK,
-                                data={"content": delta.text},
-                            )
+                            yield Event(type=EventType.STREAM_CHUNK, data=delta.text)
                         elif dtype == "thinking_delta":
                             yield Event(
                                 type=EventType.REASONING_CHUNK,
-                                data={"content": getattr(delta, "thinking", "")},
+                                data=getattr(delta, "thinking", "") or "",
                             )
 
                 final = await stream_ctx.get_final_message()
 
             refusal = self._refusal_message(final)
             if refusal:
-                yield Event(type=EventType.ERROR, data={"error": refusal})
+                yield Event(type=EventType.ERROR, data=refusal)
                 return
 
             for block in final.content:
                 if getattr(block, "type", "") == "tool_use":
                     yield Event(
                         type=EventType.TOOL_CALL,
+                        # The engine's tool-call contract, as the OpenAI-wire
+                        # and Gemini providers send it (engine/chat.py reads
+                        # `tool` and `tool_call_id`). This used to send
+                        # `name` / `id`, and the tool loop failed with
+                        # KeyError 'tool' (seen live 2026-11-22).
                         data={
-                            "id": getattr(block, "id", "") or f"call_{uuid.uuid4().hex[:8]}",
-                            "name": block.name,
+                            "tool": block.name,
                             # Already a decoded object on this wire — no
                             # json.loads of a string, and never string
                             # matching on the serialized form.
                             "arguments": block.input if isinstance(block.input, dict) else {},
+                            "native": True,
+                            "tool_call_id": getattr(block, "id", "") or f"call_{uuid.uuid4().hex[:8]}",
                         },
                     )
 
             text = "".join(
                 b.text for b in final.content if getattr(b, "type", "") == "text"
             )
+            usage = self._usage(getattr(final, "usage", None))
             yield Event(
                 type=EventType.STREAM_END,
-                data={"content": text},
-                metadata={"usage": self._usage(getattr(final, "usage", None))},
+                data=text,
+                metadata={"usage": usage} if usage is not None else None,
             )
 
         except Exception as e:  # noqa: BLE001 — classified below
@@ -328,7 +338,7 @@ class AnthropicProvider(BaseProvider):
                 yield Event(type=EventType.PROVIDER_THROTTLED, data=throttle)
                 return
             logger.error(f"anthropic chat failed: {self._format_error(e)}")
-            yield Event(type=EventType.ERROR, data={"error": self._format_error(e)})
+            yield Event(type=EventType.ERROR, data=self._format_error(e))
 
     def oneshot(
         self,
