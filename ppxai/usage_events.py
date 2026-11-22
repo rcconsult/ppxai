@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import threading
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
@@ -60,6 +61,11 @@ from pathlib import Path
 from typing import Any
 
 from .common.logger import get_logger
+
+if sys.platform == "win32":
+    import msvcrt
+else:
+    msvcrt = None
 
 logger = get_logger("usage")
 
@@ -80,11 +86,17 @@ logger = get_logger("usage")
 #: which is why the lock is here rather than left to the caller.
 #:
 #: Scope: this is a THREAD lock, so it covers concurrent writers inside one
-#: process -- the server, the TUIs, any async path. It does NOT serialise two
-#: separate ppxai processes writing the same log on Windows; that needs an OS
-#: file lock and is not attempted here. On POSIX the kernel already covers
-#: that case.
+#: process -- the server, the TUIs, any async path. Two separate ppxai
+#: processes on Windows (a server and a TUI, say) are serialised by
+#: `_ProcessLock` below, an OS lock on a sibling `.lock` file. On POSIX the
+#: kernel already covers that case.
+#:
+#: Measured 2026-11-22 on Windows, 6 processes x 400 events with only the
+#: thread lock: 2,112 of 2,401 lines survived, 0 reported skipped.
 _WRITE_LOCK = threading.Lock()
+
+#: Text mode on Windows turns every "\n" into "\r\n"; the log is bytes.
+_O_BINARY = getattr(os, "O_BINARY", 0)
 
 #: Tier discriminators. `chat` is the interactive session; `oneshot` and
 #: `task` are the two background run kinds, which map 1:1 onto `RunMeta.kind`.
@@ -227,8 +239,8 @@ def record_usage(
 
         path = events_file(usage_dir)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with _WRITE_LOCK:
-            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        with _WRITE_LOCK, _ProcessLock(path):
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | _O_BINARY, 0o600)
             try:
                 os.write(fd, raw)
             finally:
@@ -236,6 +248,44 @@ def record_usage(
         return True
     except Exception as e:  # noqa: BLE001 — accounting must never break a turn
         logger.debug(f"record_usage noop: {e}")
+        return False
+
+
+class _ProcessLock:
+    """Serialise appends across PROCESSES on Windows; a no-op elsewhere.
+
+    The lock is byte 0 of a sibling `<log>.lock` file, not of the log itself:
+    Windows byte-range locks are mandatory, so locking the log would make a
+    concurrent `/cost` read fail. `LK_LOCK` retries for about 10 s and then
+    raises; the append then goes ahead unlocked, since this sink is
+    best-effort and one append that might collide beats one that is surely
+    dropped.
+    """
+
+    def __init__(self, path: Path):
+        self._path = path.with_name(path.name + ".lock")
+        self._fd: int | None = None
+        self._locked = False
+
+    def __enter__(self):
+        if msvcrt is None:
+            return self
+        try:
+            self._fd = os.open(self._path, os.O_RDWR | os.O_CREAT | _O_BINARY, 0o600)
+            msvcrt.locking(self._fd, msvcrt.LK_LOCK, 1)
+            self._locked = True
+        except OSError as e:
+            logger.debug(f"usage-events lock not taken, appending unlocked: {e}")
+        return self
+
+    def __exit__(self, *exc):
+        if self._fd is not None:
+            try:
+                if self._locked:
+                    os.lseek(self._fd, 0, os.SEEK_SET)
+                    msvcrt.locking(self._fd, msvcrt.LK_UNLCK, 1)
+            finally:
+                os.close(self._fd)
         return False
 
 

@@ -143,7 +143,12 @@ def _redirect_home_to_tmp() -> Path:
     # EVERY pytest invocation on such a host. Fall back to a copy: slower,
     # but the copy lives inside the throwaway home `pytest_unconfigure`
     # removes, so nothing can reach back to the real one.
+    # A host with no installed web UI (a fresh checkout, a CI runner) links
+    # the checkout's own `ppxai/web` instead, so those three tests run on
+    # every host rather than skipping where nothing was ever installed.
     real_web = REAL_PPXAI_HOME / "web"
+    if not real_web.is_dir():
+        real_web = REPO_CONFIG_FILE.parent / "ppxai" / "web"
     if real_web.is_dir():
         try:
             (ppxai_home / "web").symlink_to(real_web, target_is_directory=True)
