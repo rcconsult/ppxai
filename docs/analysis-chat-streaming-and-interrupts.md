@@ -3,15 +3,16 @@
 - **Date:** 2026-11-22
 - **Measured at:** `feature/v1.19.5` @ `0dc5d91c`. Line numbers are from that commit.
 - **Asked by:** tai (tai-gui, a native ppxai client that uses `POST /chat` (SSE) with `{message}` only, and `POST /interrupt` to stop).
-- **Status:** analysis only. Nothing here has been fixed or filed. The owner decides what to do.
+- **Status:** mostly analysis; the owner decides what to fix. Fixed so far: B6's 409 (`f2428e20`) and C's run status (option A, 2026-11-22). Everything else is open.
 - **Evidence key:** **verified** means read in the source, found in git history, or reproduced locally (see [How B was reproduced](#how-b-was-reproduced)). **Inferred** means it follows from the code but was not run.
 
-tai reported two behaviours:
+tai reported three behaviours:
 
 - **A.** With tools on, no `stream_chunk` arrives. The whole answer comes at once in `stream_end`. A 1,500-word answer showed nothing for about 18 s.
 - **B.** A `POST /interrupt` sent before the first chunk doesn't stop the run.
+- **C.** (added 2026-11-22, measured at `f2428e20`) Cancelling a `/run` doesn't stop it, and it ends `completed_pending_ack` with the full result.
 
-Both reports are correct. B turned out to be several separate faults.
+All three reports are correct. B turned out to be several separate faults. C has the same root cause as B, on the runs path.
 
 ## A. With tools on, nothing streams
 
@@ -147,6 +148,23 @@ No client relies on there being no `stream_chunk` in tool mode. With (b), the we
 3. **Make interrupts per run:** a token per run, with `/interrupt` cancelling that run's task. Then a new `chat()` can't wipe an interrupt, and a stale run's `finally` can't clear another run's `is_streaming`.
 4. **Map `ModelSwitchInFlightError` to 409** in `/chat` and `/coding_task`, and skip the guard when the provider or model is unchanged.
 5. **Move the synchronous stream iterators to a thread** (`openai_compat`, `gemini`), so `/interrupt` and every other request stay responsive while a provider streams. This is also prerequisite 1 for option A(b).
+
+## C. Cancelling a run during its model call
+
+**Reported by tai** (tai-gui's run pane, `openrouter` / `openai/gpt-5.6-luna`): `POST /v1/agent/run` with a long essay task, then `POST /v1/agent/runs/{id}/cancel` about 5 s in. The cancel answered 200 `{"status": "cancelling"}`. The run stayed `cancelling` for about a minute, until the model finished, then ended `completed_pending_ack` with `agent_result_ready {"chars": 19368}`. It was never `cancelled`, and Collect offered the essay.
+
+**Why, verified in the source at `f2428e20`:**
+
+- **Cancel only sets a flag.** `AgentRunRegistry.cancel_run` (`engine/agent_runs.py:812`, `:823–831`) sets `RunControl.cancel_requested` and moves the run to `cancelling`. The runner is expected to see it at its next `check()`. The run's asyncio task (`_run_tasks`) is not cancelled.
+- **A `/run` never calls `check()`.** Its runner (`server/routes/agent_v1.py:476`) awaits retrieval grounding, then `asyncio.to_thread(provider.oneshot, ...)`, then the citation step, and returns the content.
+- **A runner that returns normally was a success.** `run_in_background`'s `_drive` (`engine/agent_runs.py:1189–1215`) recorded it as `completed_pending_ack` or `completed`. Only a raised `RunStopped` led to `cancelled`, and `finish_run` didn't refuse `cancelling` → `completed`.
+- **The same gap elsewhere** (inferred, not run): a `/task` cancelled during its final model call, since `/task` checks only between tool-loop iterations (`engine/task_runner.py:489`); and `/v1/oneshot` with grounding on, whose 504 timeout calls `cancel_run` (`server/routes/oneshot.py:432`) while the run record could still end `completed`.
+
+tai proposed three fixes: **A** honour the flag when the runner returns; **B** abandon the call itself, which saves the tokens and overlaps B's fixes above; **C** document cancel as best-effort for one-shot runs.
+
+**Fixed: option A** (2026-11-22). `_drive` now checks `cancel_requested` when the runner returns. If it is set, the run ends `cancelled` with the reason "cancelled by owner; the model call finished after the cancel and its result was discarded", emits `agent_run_cancelled`, and records no result, so Collect has nothing to merge. It is not resumable, since the work ran to the end and there is no checkpoint to continue from. The new `RunCancelledAfterCall` (a `RunCancelled`) carries this. It covers `/run`, `/task` and grounded `/v1/oneshot`, since they all finish through `_drive`. Tests: `tests/test_agent_runs.py::TestRunInBackground::test_a_cancel_during_an_uninterruptible_call_still_ends_cancelled` (both the held `/task` shape and the plain one), which fails without the fix.
+
+**Still open:** the model's tokens are spent, and the run stays `cancelling` until the call returns. Stopping the call (tai's B) needs the run's task to be cancelled; `asyncio.to_thread` would then abandon the worker thread, which finishes on its own. That belongs with B's fixes 3 and 5.
 
 ## How B was reproduced
 

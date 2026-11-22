@@ -334,6 +334,50 @@ class TestRunInBackground:
         # control is cleaned up after the run finishes
         assert registry.get_control(m.run_id) is None
 
+    # A /run makes one provider call and never reaches a check(); a /task's
+    # final model call is the same. A cancel during that call used to end the
+    # run `completed`/`completed_pending_ack` with the full result (reported
+    # by tai; docs/analysis-chat-streaming-and-interrupts.md, C).
+    @pytest.mark.parametrize("hold", [False, True])
+    @pytest.mark.asyncio
+    async def test_a_cancel_during_an_uninterruptible_call_still_ends_cancelled(self, registry, hold):
+        m = registry.start_run(task="t", tools=["read_file"] if hold else [],
+                               provider="p", model="m", hold_result=hold)
+        in_call = asyncio.Event()
+
+        async def runner(meta):
+            in_call.set()
+            await asyncio.sleep(0.05)   # the provider call; no check() inside
+            return "the whole essay"
+
+        registry.run_in_background(m, runner)
+        await in_call.wait()
+        assert registry.cancel_run(m.run_id) is True
+        assert registry.get_run(m.run_id).status == "cancelling"
+        await registry.get_run_task(m.run_id)
+
+        got = registry.get_run(m.run_id)
+        assert got.status == "cancelled"
+        assert got.result is None          # nothing for Collect to merge
+        assert got.resumable is False      # the work ran to the end
+        assert "discarded" in (got.error or "")
+        types = [e.type for e in registry.read_events(m.run_id)]
+        assert "agent_run_cancelled" in types
+        assert "agent_result_ready" not in types and "agent_run_complete" not in types
+        assert registry.get_control(m.run_id) is None
+
+    @pytest.mark.asyncio
+    async def test_a_run_nobody_cancelled_still_completes(self, registry):
+        m = registry.start_run("t")
+
+        async def runner(meta):
+            await asyncio.sleep(0.01)
+            return "ok"
+
+        registry.run_in_background(m, runner)
+        await registry.get_run_task(m.run_id)
+        assert registry.get_run(m.run_id).status == "completed"
+
     def test_cancel_unknown_run_returns_false(self, registry):
         assert registry.cancel_run("run_does_not_exist") is False
 

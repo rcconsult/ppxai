@@ -409,6 +409,17 @@ class RunCancelled(RunStopped):
     resumable = True
 
 
+class RunCancelledAfterCall(RunCancelled):
+    """A cancel arrived while the runner was inside a call it can't leave (a
+    `/run`'s single provider call, a `/task`'s final model call) and the
+    runner then returned normally. The run still ends `cancelled`, never as a
+    success, and its result is dropped so Collect can't merge it. Not
+    resumable: the work ran to the end, there is no checkpoint to continue
+    from. The model's tokens were spent regardless."""
+
+    resumable = False
+
+
 class RunBudgetExceeded(RunStopped):
     """A budget cap (iterations/time/tokens) was hit. Terminal, resumable —
     the work so far is intact; a resume with a larger budget could continue."""
@@ -1187,6 +1198,15 @@ class AgentRunRegistry:
         async def _drive() -> None:
             try:
                 body = await runner(meta)
+                # A runner that returns normally after a cancel was requested
+                # (it never reached a check()) is still a cancelled run, not a
+                # success: the cancel route promised `cancelled`.
+                control = self._controls.get(meta.run_id)
+                if control is not None and control.cancel_requested:
+                    raise RunCancelledAfterCall(
+                        "cancelled by owner; the model call finished after the "
+                        "cancel and its result was discarded"
+                    )
                 if getattr(meta, "hold_result", False):
                     # T6 two-phase termination: the run EXITS (this task ends;
                     # controls/sandbox are torn down in finally) but the result
