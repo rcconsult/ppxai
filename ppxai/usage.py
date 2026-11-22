@@ -228,6 +228,8 @@ class UsageStorage:
         total_tokens = 0
         total_prompt_tokens = 0
         total_completion_tokens = 0
+        total_cache_creation = 0
+        total_cache_read = 0
         total_cost = 0.0
         by_provider: dict[str, dict[str, Any]] = {}
         by_model: dict[str, dict[str, Any]] = {}
@@ -243,19 +245,28 @@ class UsageStorage:
                     by_model[model_key] = {
                         "prompt_tokens": 0,
                         "completion_tokens": 0,
+                        "cache_creation_input_tokens": 0,
+                        "cache_read_input_tokens": 0,
                         "total_tokens": 0,
                         "estimated_cost": 0.0,
                         "session_count": 0
                     }
                 prompt = usage.get("prompt_tokens", 0)
                 completion = usage.get("completion_tokens", 0)
+                # Cached input (v1.19.5, additive; old records read as 0).
+                cache_write = usage.get("cache_creation_input_tokens", 0) or 0
+                cache_read = usage.get("cache_read_input_tokens", 0) or 0
                 by_model[model_key]["prompt_tokens"] += prompt
                 by_model[model_key]["completion_tokens"] += completion
-                by_model[model_key]["total_tokens"] += prompt + completion
+                by_model[model_key]["cache_creation_input_tokens"] += cache_write
+                by_model[model_key]["cache_read_input_tokens"] += cache_read
+                by_model[model_key]["total_tokens"] += prompt + completion + cache_write + cache_read
                 by_model[model_key]["estimated_cost"] += usage.get("estimated_cost", 0.0)
                 by_model[model_key]["session_count"] += 1
                 total_prompt_tokens += prompt
                 total_completion_tokens += completion
+                total_cache_creation += cache_write
+                total_cache_read += cache_read
 
                 # Aggregate by provider
                 provider = model_key.split("/")[0] if "/" in model_key else model_key
@@ -263,13 +274,17 @@ class UsageStorage:
                     by_provider[provider] = {
                         "prompt_tokens": 0,
                         "completion_tokens": 0,
+                        "cache_creation_input_tokens": 0,
+                        "cache_read_input_tokens": 0,
                         "total_tokens": 0,
                         "estimated_cost": 0.0,
                         "session_count": 0
                     }
                 by_provider[provider]["prompt_tokens"] += usage.get("prompt_tokens", 0)
                 by_provider[provider]["completion_tokens"] += usage.get("completion_tokens", 0)
-                by_provider[provider]["total_tokens"] += usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
+                by_provider[provider]["cache_creation_input_tokens"] += cache_write
+                by_provider[provider]["cache_read_input_tokens"] += cache_read
+                by_provider[provider]["total_tokens"] += prompt + completion + cache_write + cache_read
                 by_provider[provider]["estimated_cost"] += usage.get("estimated_cost", 0.0)
                 by_provider[provider]["session_count"] += 1
 
@@ -308,6 +323,8 @@ class UsageStorage:
             "total_tokens": total_tokens,
             "prompt_tokens": total_prompt_tokens,
             "completion_tokens": total_completion_tokens,
+            "cache_creation_input_tokens": total_cache_creation,
+            "cache_read_input_tokens": total_cache_read,
             "total_cost": total_cost,
             "estimated_cost": total_cost,  # Alias for web app compatibility
             "session_count": len(filtered_sessions),

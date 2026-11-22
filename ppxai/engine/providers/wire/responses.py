@@ -23,6 +23,11 @@ from ....common.logger import get_logger
 from ...call_stop import CallAbortedError, CallStop, close_http_stream
 from ...types import Event, EventType, Message, UsageStats
 from ...uploaded_file import assert_wire_blocks_clean, flatten_uploaded_file_blocks
+from ..usage_parse import (
+    build_usage,
+    cached_from_details,
+    oneshot_usage_dict_from_stats,
+)
 
 logger = get_logger("wire.responses")
 
@@ -265,10 +270,12 @@ class ResponsesHandler:
             return None
         input_tokens = getattr(usage, "input_tokens", 0) or 0
         output_tokens = getattr(usage, "output_tokens", 0) or 0
-        return UsageStats(
-            prompt_tokens=input_tokens,
-            completion_tokens=output_tokens,
-            total_tokens=input_tokens + output_tokens,
+        # Responses `input_tokens` INCLUDES cached input; see UsageStats.
+        return build_usage(
+            input_tokens,
+            output_tokens,
+            input_tokens + output_tokens,
+            cached_from_details(usage, "input_tokens_details"),
         )
 
     # ------------------------------------------------------------------
@@ -474,11 +481,7 @@ class ResponsesHandler:
         usage_stats = self.parse_usage(getattr(response, "usage", None))
         usage_dict = None
         if usage_stats is not None:
-            usage_dict = {
-                "prompt_tokens": usage_stats.prompt_tokens,
-                "completion_tokens": usage_stats.completion_tokens,
-                "total_tokens": usage_stats.total_tokens,
-            }
+            usage_dict = oneshot_usage_dict_from_stats(usage_stats)
         return {
             "content": content,
             "finish_reason": "stop",
@@ -535,11 +538,7 @@ class ResponsesHandler:
         stop.raise_if_stopped()
         usage_dict = None
         if usage_stats is not None:
-            usage_dict = {
-                "prompt_tokens": usage_stats.prompt_tokens,
-                "completion_tokens": usage_stats.completion_tokens,
-                "total_tokens": usage_stats.total_tokens,
-            }
+            usage_dict = oneshot_usage_dict_from_stats(usage_stats)
         return {
             "content": "".join(parts),
             "finish_reason": "stop",

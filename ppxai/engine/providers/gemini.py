@@ -45,6 +45,12 @@ from ..call_stop import active as call_active
 from ..types import Event, EventType, Message, ProviderCapabilities, UsageStats
 from .base import BaseProvider
 from .facts import gemini as _facts
+from .usage_parse import (
+    as_count,
+    build_usage,
+    get_field,
+    oneshot_usage_dict_from_stats,
+)
 from .wire import get_handler
 
 # Try to import google-genai package (optional dependency, v1.12.5+)
@@ -690,11 +696,7 @@ class GeminiProvider(BaseProvider):
         usage_dict = None
         usage_stats = self._parse_usage(usage_metadata)
         if usage_stats is not None:
-            usage_dict = {
-                "prompt_tokens": usage_stats.prompt_tokens,
-                "completion_tokens": usage_stats.completion_tokens,
-                "total_tokens": usage_stats.total_tokens,
-            }
+            usage_dict = oneshot_usage_dict_from_stats(usage_stats)
         # Degenerate case: the model emitted ONLY thought parts (no answer).
         # Returning "" would look like an empty completion and hide the cause,
         # so fall back to the reasoning text rather than losing the response.
@@ -874,10 +876,13 @@ class GeminiProvider(BaseProvider):
         if not total_tokens:
             total_tokens = prompt_tokens + completion_tokens
 
-        return UsageStats(
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            total_tokens=total_tokens,
+        # `prompt_token_count` INCLUDES the cached part; UsageStats means
+        # uncached only, so cached input moves to its own field.
+        return build_usage(
+            prompt_tokens,
+            completion_tokens,
+            total_tokens,
+            as_count(get_field(usage_metadata, 'cached_content_token_count')),
         )
 
     def _convert_tools_to_gemini(self, openai_tools: list[dict[str, Any]]) -> list[dict[str, Any]]:

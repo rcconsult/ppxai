@@ -86,8 +86,16 @@ def get_status_line(handler, use_themed: bool = True):
         completion_tokens = usage_display.get("completion_tokens", 0)
         cost = usage_display.get("estimated_cost", 0.0)
         label = usage_display.get("label")
-        if prompt_tokens > 0 or completion_tokens > 0:
-            usage_str = format_usage_string(prompt_tokens, completion_tokens, cost)
+        cached_tokens = (
+            usage_display.get("cache_read_input_tokens", 0)
+            + usage_display.get("cache_creation_input_tokens", 0)
+        )
+        if prompt_tokens > 0 or completion_tokens > 0 or cached_tokens > 0:
+            usage_str = format_usage_string(
+                prompt_tokens, completion_tokens, cost,
+                usage_display.get("cache_read_input_tokens", 0),
+                usage_display.get("cache_creation_input_tokens", 0),
+            )
             if label:
                 usage_str = f"[{label}] {usage_str}"
 

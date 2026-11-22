@@ -73,7 +73,6 @@ import ppxai.server.routes.agent_v1 as _agent_v1
 from ...common.logger import get_logger
 from ...config import (
     REMOVED_CHAT_PROVIDERS,
-    calculate_cost,
     get_api_key,
     get_available_providers,
     get_base_url,
@@ -97,7 +96,8 @@ from ...engine.sources import SourceLedger
 from ...engine.task_authorizer import TIERS as _TIERS
 from ...engine.task_authorizer import TaskAuthorizationError, authorize_oneshot
 from ...engine.tools.network_policy import NetworkPolicy
-from ...engine.types import ProviderCapabilities
+from ...engine.types import ProviderCapabilities, UsageStats
+from ...engine.usage_pricing import price_usage
 from ...usage_events import TIER_ONESHOT, record_usage
 from ..state import get_agent_run_registry
 
@@ -318,8 +318,16 @@ def _grounding_from_events(
                 if q:
                     queries.append(str(q))
             elif etype == "run_usage":
+                # The wire's `prompt_tokens` keeps its historical meaning, ALL
+                # input: run_usage now splits cached input out (uncached
+                # prompt_tokens + the two cache classes), so add them back.
+                # Every provider that worked on this path before (OpenAI-wire,
+                # Gemini) reported cached input inside its prompt count;
+                # Anthropic tool calls never worked here before 2026-11-22.
                 usage = OneshotUsage(
-                    prompt_tokens=int(data.get("prompt_tokens") or 0),
+                    prompt_tokens=int(data.get("prompt_tokens") or 0)
+                    + int(data.get("cache_read_input_tokens") or 0)
+                    + int(data.get("cache_creation_input_tokens") or 0),
                     completion_tokens=int(data.get("completion_tokens") or 0),
                     total_tokens=int(data.get("total_tokens") or 0),
                 )
@@ -529,17 +537,26 @@ def _record_oneshot_usage(
     fails the request."""
     usage = (result or {}).get("usage") or {}
     try:
-        prompt_tokens = int(usage.get("prompt_tokens") or 0)
-        completion_tokens = int(usage.get("completion_tokens") or 0)
+        # The response's `prompt_tokens` keeps its historical (wire) meaning;
+        # billing uses the normalized split the provider also reports:
+        # uncached input plus the cached classes (UsageStats).
+        stats = UsageStats(
+            prompt_tokens=int(
+                usage.get("uncached_prompt_tokens", usage.get("prompt_tokens")) or 0
+            ),
+            completion_tokens=int(usage.get("completion_tokens") or 0),
+            cache_creation_input_tokens=int(usage.get("cache_creation_input_tokens") or 0),
+            cache_read_input_tokens=int(usage.get("cache_read_input_tokens") or 0),
+        )
         record_usage(
             provider=provider_name,
             model=model,
             tier=TIER_ONESHOT,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            estimated_cost=calculate_cost(
-                prompt_tokens, completion_tokens, model, provider_name
-            ),
+            prompt_tokens=stats.prompt_tokens,
+            completion_tokens=stats.completion_tokens,
+            cache_creation_input_tokens=stats.cache_creation_input_tokens,
+            cache_read_input_tokens=stats.cache_read_input_tokens,
+            estimated_cost=price_usage(stats, model, provider_name),
             owner=owner,
             run_id=run_id,
         )

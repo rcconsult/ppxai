@@ -510,6 +510,8 @@ def format_usage_string(
     prompt_tokens: int,
     completion_tokens: int,
     estimated_cost: float,
+    cache_read_tokens: int = 0,
+    cache_write_tokens: int = 0,
 ) -> str:
     """Format usage statistics into a compact string.
 
@@ -520,4 +522,7 @@ def format_usage_string(
     Returns:
         Formatted string like "1.2K↓/0.5K↑ $0.0045"
     """
-    return format_usage_badge(prompt_tokens, completion_tokens, estimated_cost)
+    return format_usage_badge(
+        prompt_tokens, completion_tokens, estimated_cost,
+        cache_read_tokens, cache_write_tokens,
+    )

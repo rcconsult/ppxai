@@ -187,6 +187,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     // v1.17.3: Canonical application state
     private _appState: AppState = new AppState();
+    /** Cached-input token counts of the session total (v1.19.5); not an AppState field, re-sent with status refreshes. */
+    private _cacheTokens = { cacheReadTokens: 0, cacheWriteTokens: 0 };
 
     // Phase 4a: Agent state machine (initialized lazily after backend available)
     private _agentStateMachine?: AgentStateMachine;
@@ -618,15 +620,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 const completionTokens = usage.completion_tokens || 0;
                 const totalTokens = usage.total_tokens || (promptTokens + completionTokens);
                 const estimatedCost = usage.estimated_cost || 0;
+                this._cacheTokens = {
+                    cacheReadTokens: usage.cache_read_input_tokens || 0,
+                    cacheWriteTokens: usage.cache_creation_input_tokens || 0,
+                };
                 this._appState.update({
                     promptTokens,
                     completionTokens,
-                    totalTokens,
+                    totalTokens: usage.total_tokens || (promptTokens + this._cacheTokens.cacheReadTokens + this._cacheTokens.cacheWriteTokens + completionTokens),
                     estimatedCost,
                 });
                 postMessage({
                     type: 'usage',
-                    usage: { promptTokens, completionTokens, totalTokens, estimatedCost },
+                    usage: { promptTokens, completionTokens, totalTokens, estimatedCost, ...this._cacheTokens },
                 });
             } catch {
                 // Backend not ready — leave the badge at its current value.
@@ -2592,10 +2598,14 @@ Review your previous actions and continue. If the task is complete, respond with
             const completionTokens = usage.completion_tokens || 0;
             const totalTokens = usage.total_tokens || (promptTokens + completionTokens);
             const estimatedCost = usage.estimated_cost || 0;
+            this._cacheTokens = {
+                cacheReadTokens: usage.cache_read_input_tokens || 0,
+                cacheWriteTokens: usage.cache_creation_input_tokens || 0,
+            };
             this._appState.update({ promptTokens, completionTokens, totalTokens, estimatedCost });
             this._view.webview.postMessage({
                 type: 'usage',
-                usage: { promptTokens, completionTokens, totalTokens, estimatedCost },
+                usage: { promptTokens, completionTokens, totalTokens, estimatedCost, ...this._cacheTokens },
             });
         } catch {
             // Backend not ready — leave usage at its zero default.
@@ -2641,7 +2651,8 @@ Review your previous actions and continue. If the task is complete, respond with
                     promptTokens: this._appState.get('promptTokens') || 0,
                     completionTokens: this._appState.get('completionTokens') || 0,
                     totalTokens: this._appState.get('totalTokens') || 0,
-                    estimatedCost: this._appState.get('estimatedCost') || 0
+                    estimatedCost: this._appState.get('estimatedCost') || 0,
+                    ...this._cacheTokens
                 }
             });
         } catch (error) {

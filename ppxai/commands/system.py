@@ -353,7 +353,15 @@ def handle_status(context: CommandContext, args: str) -> CommandResult:
         # Usage stats
         total_usage = session.get_usage()
         if total_usage:
-            pairs["Tokens"] = f"{total_usage.get('prompt_tokens', 0)}↓ / {total_usage.get('completion_tokens', 0)}↑"
+            cached = (
+                total_usage.get('cache_read_input_tokens', 0)
+                + total_usage.get('cache_creation_input_tokens', 0)
+            )
+            input_tokens = total_usage.get('prompt_tokens', 0) + cached
+            tokens = f"{input_tokens}↓ / {total_usage.get('completion_tokens', 0)}↑"
+            if cached:
+                tokens += f" ({cached} cached input; {total_usage.get('cache_read_input_tokens', 0)} read, {total_usage.get('cache_creation_input_tokens', 0)} written)"
+            pairs["Tokens"] = tokens
             cost = total_usage.get('estimated_cost', 0.0)
             if cost > 0:
                 pairs["Cost"] = f"${cost:.4f}"

@@ -23,6 +23,7 @@ from .. import facts_config as _facts_config
 from ..call_stop import CallStop
 from ..model_facts import ModelFacts, shipped_facts_for_model
 from ..types import Event, Message, ModelInfo, ProviderCapabilities, UsageStats
+from .usage_parse import build_usage, cached_from_details
 from .wire import get_handler
 
 logger = get_logger(__name__)
@@ -384,10 +385,13 @@ class BaseProvider(ABC):
         """
         if not usage:
             return None
-        return UsageStats(
-            prompt_tokens=getattr(usage, 'prompt_tokens', 0) or 0,
-            completion_tokens=getattr(usage, 'completion_tokens', 0) or 0,
-            total_tokens=getattr(usage, 'total_tokens', 0) or 0,
+        # OpenAI-wire `prompt_tokens` INCLUDES cached input; UsageStats
+        # means uncached only, so the cached part moves to its own field.
+        return build_usage(
+            getattr(usage, 'prompt_tokens', 0) or 0,
+            getattr(usage, 'completion_tokens', 0) or 0,
+            getattr(usage, 'total_tokens', 0) or 0,
+            cached_from_details(usage, 'prompt_tokens_details'),
         )
 
     def _format_error(self, e: Exception) -> str:

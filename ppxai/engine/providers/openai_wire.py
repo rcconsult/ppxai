@@ -27,6 +27,7 @@ from ..call_stop import (
     refuse_new_requests,
     shutdown_client_connections,
 )
+from .usage_parse import oneshot_usage_dict_from_sdk
 
 logger = get_logger(__name__)
 
@@ -126,11 +127,7 @@ class OpenAIWireMixin:
                 served_model = getattr(chunk, "model", None) or served_model
                 usage_obj = getattr(chunk, "usage", None)
                 if usage_obj is not None:
-                    usage_dict = {
-                        "prompt_tokens": getattr(usage_obj, "prompt_tokens", 0) or 0,
-                        "completion_tokens": getattr(usage_obj, "completion_tokens", 0) or 0,
-                        "total_tokens": getattr(usage_obj, "total_tokens", 0) or 0,
-                    }
+                    usage_dict = oneshot_usage_dict_from_sdk(usage_obj)
                 for choice in getattr(chunk, "choices", None) or []:
                     delta = getattr(choice, "delta", None)
                     text = getattr(delta, "content", None) if delta is not None else None

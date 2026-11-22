@@ -1509,11 +1509,15 @@ export class HttpClient {
         total_tokens: number;
         prompt_tokens: number;
         completion_tokens: number;
+        cache_creation_input_tokens?: number;
+        cache_read_input_tokens?: number;
         estimated_cost: number;
         by_model?: Record<string, {
             total_tokens: number;
             prompt_tokens: number;
             completion_tokens: number;
+            cache_creation_input_tokens?: number;
+            cache_read_input_tokens?: number;
             estimated_cost: number;
         }>;
         display_mode?: string;
@@ -1857,10 +1861,15 @@ export class HttpClient {
      * GET /v1/agent/runs[?kind=task|oneshot] — list runs (newest first,
      * owner-scoped). U3: `kind` partitions the listing per command family.
      */
-    async agentRuns(kind?: string): Promise<{ runs: any[] }> {
-        const url = kind
-            ? `${this.baseUrl}/v1/agent/runs?kind=${encodeURIComponent(kind)}`
-            : `${this.baseUrl}/v1/agent/runs`;
+    async agentRuns(
+        kind?: string, filter?: { session?: string; status?: string }
+    ): Promise<{ runs: any[] }> {
+        // ADR 0018: ?session=<conversation name> and ?status=<status> combine with ?kind=.
+        const q: string[] = [];
+        if (kind) { q.push(`kind=${encodeURIComponent(kind)}`); }
+        if (filter?.session) { q.push(`session=${encodeURIComponent(filter.session)}`); }
+        if (filter?.status) { q.push(`status=${encodeURIComponent(filter.status)}`); }
+        const url = `${this.baseUrl}/v1/agent/runs${q.length ? `?${q.join('&')}` : ''}`;
         const response = await fetch(url, {
             headers: this.v1Headers(),
             signal: AbortSignal.timeout(this.agentTimeoutMs)

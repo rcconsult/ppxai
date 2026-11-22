@@ -671,6 +671,8 @@ def build_task_runner(
                     "prompt_tokens": u.prompt_tokens,
                     "completion_tokens": u.completion_tokens,
                     "total_tokens": u.total_tokens,
+                    "cache_creation_input_tokens": u.cache_creation_input_tokens,
+                    "cache_read_input_tokens": u.cache_read_input_tokens,
                     "estimated_cost": u.estimated_cost,
                     "web_search": {
                         "call_count": ws.call_count,
@@ -700,6 +702,8 @@ def build_task_runner(
                 prompt_tokens=u.prompt_tokens,
                 completion_tokens=u.completion_tokens,
                 estimated_cost=u.estimated_cost,
+                cache_creation_input_tokens=u.cache_creation_input_tokens,
+                cache_read_input_tokens=u.cache_read_input_tokens,
                 owner=getattr(m, "owner", None),
                 run_id=m.run_id,
             )

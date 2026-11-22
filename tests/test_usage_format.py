@@ -356,3 +356,45 @@ for (const [p, c, cost] of fixturesIn) {
 """ + _JS_HARNESS_TAIL
     js_output = _run_node(script, [[prompt, completion, cost]])
     assert js_output == [format_usage_badge(prompt, completion, cost)]
+
+
+# ── Cached input (v1.19.5): prompt_tokens is UNCACHED, the badge shows all
+#    input with the cached part broken out ─────────────────────────────
+
+CACHE_BADGE_FIXTURES = [
+    # prompt, completion, cost, cache_read, cache_write, expected
+    (477, 900, 0.0277, 48100, 4000, "52.6K↓ (52.1K cached)/900↑ $0.0277"),
+    (6, 100, 0.0, 14000, 0, "14.0K↓ (14.0K cached)/100↑"),
+    (1200, 450, 0.0, 0, 0, "1.2K↓/450↑"),
+]
+
+
+@pytest.mark.parametrize("p,c,cost,cr,cw,expected", CACHE_BADGE_FIXTURES)
+def test_python_badge_shows_all_input_with_cached_broken_out(p, c, cost, cr, cw, expected) -> None:
+    assert format_usage_badge(p, c, cost, cr, cw) == expected
+
+
+def _cache_badge_js(src_fns: str) -> str:
+    return _JS_HARNESS_HEAD + src_fns + r"""
+for (const [p, c, cost, cr, cw] of fixturesIn) {
+    outputs.push(formatUsageBadge(p, c, cost, cr, cw));
+}
+""" + _JS_HARNESS_TAIL
+
+
+def test_web_badge_cached_input_matches_python() -> None:
+    if not _node_available():
+        pytest.skip("node not available")
+    path = REPO_ROOT / "ppxai" / "web" / "shared" / "formatters.js"
+    src = _extract_function(path, "formatTokens") + "\n" + _extract_function(path, "formatUsageBadge")
+    rows = [list(f[:5]) for f in CACHE_BADGE_FIXTURES]
+    assert _run_node(_cache_badge_js(src), rows) == [f[5] for f in CACHE_BADGE_FIXTURES]
+
+
+def test_vscode_ts_badge_cached_input_matches_python() -> None:
+    if not _node_available():
+        pytest.skip("node not available")
+    path = REPO_ROOT / "vscode-extension" / "src" / "shared" / "formatters.ts"
+    src = _extract_ts_function(path, "formatTokens") + "\n" + _extract_ts_function(path, "formatUsageBadge")
+    rows = [list(f[:5]) for f in CACHE_BADGE_FIXTURES]
+    assert _run_node(_cache_badge_js(src), rows) == [f[5] for f in CACHE_BADGE_FIXTURES]

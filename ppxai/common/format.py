@@ -48,6 +48,8 @@ def format_usage_badge(
     prompt_tokens: int,
     completion_tokens: int,
     estimated_cost: float,
+    cache_read_tokens: int = 0,
+    cache_write_tokens: int = 0,
 ) -> str:
     """Short usage-badge string: "1.2K↓/0.5K↑ $0.0045".
 
@@ -71,10 +73,21 @@ def format_usage_badge(
         '1.2K↓/450↑'
         >>> format_usage_badge(1200, 450, 0.0045)
         '1.2K↓/450↑ $0.0045'
+        >>> format_usage_badge(477, 900, 0.0277, 48100, 4000)
+        '52.6K↓ (52.1K cached)/900↑ $0.0277'
+
+    `prompt_tokens` is UNCACHED input (see `UsageStats`). When any cached
+    input is reported the badge shows ALL input on the arrow and breaks
+    the cached part out in parentheses; with none, the string is exactly
+    what it always was.
     """
-    prompt_str = format_tokens(prompt_tokens)
+    cached = (cache_read_tokens or 0) + (cache_write_tokens or 0)
+    prompt_str = format_tokens(prompt_tokens + cached)
     completion_str = format_tokens(completion_tokens)
-    tokens = f"{prompt_str}↓/{completion_str}↑"
+    if cached > 0:
+        tokens = f"{prompt_str}↓ ({format_tokens(cached)} cached)/{completion_str}↑"
+    else:
+        tokens = f"{prompt_str}↓/{completion_str}↑"
     if estimated_cost > 0:
         return f"{tokens} ${estimated_cost:.4f}"
     return tokens

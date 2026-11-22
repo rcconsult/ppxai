@@ -39,6 +39,8 @@ export interface CheckpointInfoData {
 export interface UsageData {
     prompt_tokens?: number;
     completion_tokens?: number;
+    cache_creation_input_tokens?: number;
+    cache_read_input_tokens?: number;
     total_tokens?: number;
     estimated_cost?: number;
     total_cost?: number;
@@ -243,10 +245,17 @@ export function formatUsageBadge(
     promptTokens: number,
     completionTokens: number,
     estimatedCost: number,
+    cacheReadTokens: number = 0,
+    cacheWriteTokens: number = 0,
 ): string {
-    const promptStr = formatTokens(promptTokens);
+    // promptTokens is UNCACHED input; with cached input the arrow shows ALL
+    // input and the cached part is broken out: "52.6K↓ (48.1K cached)/477↑".
+    const cached = (cacheReadTokens || 0) + (cacheWriteTokens || 0);
+    const promptStr = formatTokens(promptTokens + cached);
     const completionStr = formatTokens(completionTokens);
-    const tokens = `${promptStr}↓/${completionStr}↑`;
+    const tokens = cached > 0
+        ? `${promptStr}↓ (${formatTokens(cached)} cached)/${completionStr}↑`
+        : `${promptStr}↓/${completionStr}↑`;
     if (estimatedCost > 0) {
         return `${tokens} $${estimatedCost.toFixed(4)}`;
     }
@@ -265,6 +274,9 @@ export function formatUsageStats(data: UsageData, period: string | null = null):
     }
 
     text += `• Prompt tokens: ${data.prompt_tokens || 0}  \n`;
+    if (data.cache_read_input_tokens || data.cache_creation_input_tokens) {
+        text += `• Cached input tokens: ${data.cache_read_input_tokens || 0} read, ${data.cache_creation_input_tokens || 0} written  \n`;
+    }
     text += `• Completion tokens: ${data.completion_tokens || 0}  \n`;
     text += `• Total tokens: ${data.total_tokens || 0}  \n`;
     text += `• Estimated cost: $${(data.estimated_cost || data.total_cost || 0).toFixed(4)}  \n`;
@@ -430,8 +442,14 @@ function _formatUsageTableResult(result: CommandResultData, meta: Record<string,
     const promptTokens = (meta.prompt_tokens as number) || 0;
     const completionTokens = (meta.completion_tokens as number) || 0;
     const cost = (meta.estimated_cost as number) || 0;
+    // prompt_tokens is uncached input; show all input, cached part broken out.
+    const cachedTokens = ((meta.cache_read_input_tokens as number) || 0)
+        + ((meta.cache_creation_input_tokens as number) || 0);
+    const inputStr = cachedTokens > 0
+        ? `${(promptTokens + cachedTokens).toLocaleString()} (${cachedTokens.toLocaleString()} cached)`
+        : promptTokens.toLocaleString();
 
-    text += `• Total tokens: ${totalTokens.toLocaleString()} (${promptTokens.toLocaleString()}↓ / ${completionTokens.toLocaleString()}↑)  \n`;
+    text += `• Total tokens: ${totalTokens.toLocaleString()} (${inputStr}↓ / ${completionTokens.toLocaleString()}↑)  \n`;
     text += `• Estimated cost: $${cost.toFixed(4)}  \n`;
 
     // Display mode (session reports only)

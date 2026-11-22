@@ -559,7 +559,14 @@ def update_usage_display(app) -> None:
         status_bar.remove_badge("cost")
         return
 
-    total_tokens = usage_display.get("total_tokens", 0)
+    # get_usage_for_display() has no total_tokens key; the badge total is all
+    # input (uncached + cached) plus output.
+    total_tokens = usage_display.get("total_tokens") or (
+        usage_display.get("prompt_tokens", 0)
+        + usage_display.get("cache_read_input_tokens", 0)
+        + usage_display.get("cache_creation_input_tokens", 0)
+        + usage_display.get("completion_tokens", 0)
+    )
     if total_tokens > 0:
         if total_tokens >= 1_000_000:
             tokens_text = f"{total_tokens / 1_000_000:.1f}M"

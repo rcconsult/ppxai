@@ -77,6 +77,7 @@ a = Analysis(
         'ppxai.engine.providers.base',
         'ppxai.engine.providers.openai_native',
         'ppxai.engine.providers.openai_wire',
+        'ppxai.engine.providers.usage_parse',
         'ppxai.engine.providers.anthropic',
         'ppxai.engine.providers.openai_compat',
         'ppxai.engine.providers.gemini',

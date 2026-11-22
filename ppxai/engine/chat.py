@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from ..common.logger import get_logger
-from ..config import calculate_cost, get_agent_config, get_system_prompt, get_system_prompt_mode
+from ..config import get_agent_config, get_system_prompt, get_system_prompt_mode
 from ..config.defaults import DEFAULT_AGENT_ZOMBIE_THRESHOLD
 from .agent_runs import RunStopped
 from .call_stop import CallStop, current_interrupter
@@ -34,6 +34,7 @@ from .tools.manager import ToolManager
 from .tools.parser import detect_truncated_tool_call, parse_tool_call, strip_tool_json_from_text
 from .tools.validator import ResponseValidator, check_session_pollution
 from .types import AgentBeatState, Event, EventType, Message, ToolGuardReason, UsageStats
+from .usage_pricing import price_usage
 
 logger = get_logger("chat")
 
@@ -398,12 +399,7 @@ async def chat_simple(
 
         if response_metadata and response_metadata.get("usage"):
             usage = response_metadata["usage"]
-            usage.estimated_cost = calculate_cost(
-                usage.prompt_tokens,
-                usage.completion_tokens,
-                ctx.model,
-                ctx.provider_name
-            )
+            usage.estimated_cost = price_usage(usage, ctx.model, ctx.provider_name)
             ctx.session.update_usage(usage, ctx.provider_name, ctx.model)
             response_metadata["usage"] = asdict(usage)
 
@@ -960,10 +956,8 @@ async def chat_with_tools(
                 provider_grounding = (event.metadata or {}).get("grounding")
                 if event.metadata and event.metadata.get("usage"):
                     usage = event.metadata["usage"]
-                    accumulated_usage.prompt_tokens += usage.prompt_tokens
-                    accumulated_usage.completion_tokens += usage.completion_tokens
-                    accumulated_usage.total_tokens += usage.total_tokens
-                    last_request_tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0)
+                    accumulated_usage.add(usage)
+                    last_request_tokens = usage.context_tokens
                     _bump_live_run_tokens(ctx, usage.total_tokens)
 
         # Check interrupt after provider returns (stream=False blocks until complete)
@@ -1010,10 +1004,8 @@ async def chat_with_tools(
                         provider_grounding = (event.metadata or {}).get("grounding")
                         if event.metadata and event.metadata.get("usage"):
                             usage = event.metadata["usage"]
-                            accumulated_usage.prompt_tokens += usage.prompt_tokens
-                            accumulated_usage.completion_tokens += usage.completion_tokens
-                            accumulated_usage.total_tokens += usage.total_tokens
-                            last_request_tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0)
+                            accumulated_usage.add(usage)
+                            last_request_tokens = usage.context_tokens
                             _bump_live_run_tokens(ctx, usage.total_tokens)
 
         # Build list of parsed tool calls
@@ -1530,10 +1522,8 @@ async def chat_with_tools(
                         provider_grounding = (event.metadata or {}).get("grounding")
                         if event.metadata and event.metadata.get("usage"):
                             usage = event.metadata["usage"]
-                            accumulated_usage.prompt_tokens += usage.prompt_tokens
-                            accumulated_usage.completion_tokens += usage.completion_tokens
-                            accumulated_usage.total_tokens += usage.total_tokens
-                            last_request_tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0)
+                            accumulated_usage.add(usage)
+                            last_request_tokens = usage.context_tokens
                             _bump_live_run_tokens(ctx, usage.total_tokens)
 
                 full_response = full_response.strip() or "[Tool execution completed but no summary generated]"
@@ -1637,11 +1627,8 @@ async def chat_with_tools(
             # Calculate final cost
             metadata = None
             if accumulated_usage.total_tokens > 0 or accumulated_usage.tool_calls:
-                accumulated_usage.estimated_cost = calculate_cost(
-                    accumulated_usage.prompt_tokens,
-                    accumulated_usage.completion_tokens,
-                    ctx.model,
-                    ctx.provider_name
+                accumulated_usage.estimated_cost = price_usage(
+                    accumulated_usage, ctx.model, ctx.provider_name
                 )
                 ctx.session.update_usage(
                     accumulated_usage, ctx.provider_name, ctx.model,
@@ -1665,11 +1652,8 @@ async def chat_with_tools(
                 existing.estimated_cost += t_usage.estimated_cost
 
     if accumulated_usage.total_tokens > 0 or accumulated_usage.tool_calls:
-        accumulated_usage.estimated_cost = calculate_cost(
-            accumulated_usage.prompt_tokens,
-            accumulated_usage.completion_tokens,
-            ctx.model,
-            ctx.provider_name
+        accumulated_usage.estimated_cost = price_usage(
+            accumulated_usage, ctx.model, ctx.provider_name
         )
         ctx.session.update_usage(
             accumulated_usage, ctx.provider_name, ctx.model,

@@ -676,6 +676,21 @@ def _maybe_compose_with_errors(usage_table: TableResult) -> CommandResult:
     )
 
 
+def _input_cell(stats: dict) -> str:
+    """The "In" column: all input, with the cached part broken out.
+
+    `prompt_tokens` is uncached input only (see `UsageStats`), so the
+    column adds the two cache classes back and says how much of it was
+    cached: "52,640 (48,100 cached)". Without cache it is the bare number,
+    exactly as before.
+    """
+    cached = (stats.get("cache_read_input_tokens", 0) or 0) + (
+        stats.get("cache_creation_input_tokens", 0) or 0
+    )
+    total_in = stats.get("prompt_tokens", 0) + cached
+    return f"{total_in:,} ({cached:,} cached)" if cached else f"{total_in:,}"
+
+
 def _display_usage_report(context: CommandContext) -> CommandResult:
     """Display detailed usage report with per-model breakdown."""
     usage = context.engine_client.session.get_usage()
@@ -692,7 +707,7 @@ def _display_usage_report(context: CommandContext) -> CommandResult:
             rows.append([
                 provider,
                 model,
-                f"{stats['prompt_tokens']:,}",
+                _input_cell(stats),
                 f"{stats['completion_tokens']:,}",
                 f"${stats['estimated_cost']:.4f}"
             ])
@@ -701,7 +716,7 @@ def _display_usage_report(context: CommandContext) -> CommandResult:
         rows.append([
             "TOTAL",
             "",
-            f"{usage['prompt_tokens']:,}",
+            _input_cell(usage),
             f"{usage['completion_tokens']:,}",
             f"${usage['estimated_cost']:.4f}"
         ])
@@ -716,7 +731,7 @@ def _display_usage_report(context: CommandContext) -> CommandResult:
     # Build message with key stats
     message_parts = [
         f"Session Usage Statistics - Total: ${total_cost:.4f}",
-        f"({usage['total_tokens']:,} tokens: {usage['prompt_tokens']:,} in / {usage['completion_tokens']:,} out)",
+        f"({usage['total_tokens']:,} tokens: {_input_cell(usage)} in / {usage['completion_tokens']:,} out)",
         f"Display mode: {display_mode} - Change with /usage show <mode>"
     ]
 
@@ -731,6 +746,8 @@ def _display_usage_report(context: CommandContext) -> CommandResult:
             "total_tokens": usage['total_tokens'],
             "prompt_tokens": usage['prompt_tokens'],
             "completion_tokens": usage['completion_tokens'],
+            "cache_creation_input_tokens": usage.get('cache_creation_input_tokens', 0),
+            "cache_read_input_tokens": usage.get('cache_read_input_tokens', 0),
             "estimated_cost": total_cost,
             "display_mode": display_mode,
         }
@@ -770,7 +787,7 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
             rows.append([
                 provider,
                 model,
-                f"{stats['prompt_tokens']:,}",
+                _input_cell(stats),
                 f"{stats['completion_tokens']:,}",
                 f"${stats['estimated_cost']:.4f}"
             ])
@@ -779,7 +796,7 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
         rows.append([
             "TOTAL",
             "",
-            f"{report.get('prompt_tokens', 0):,}",
+            _input_cell(report),
             f"{report.get('completion_tokens', 0):,}",
             f"${report.get('total_cost', 0.0):.4f}"
         ])
@@ -805,7 +822,9 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
     }
     background_cost = sum(s["estimated_cost"] for s in background.values())
     background_tokens = sum(
-        s["prompt_tokens"] + s["completion_tokens"] for s in background.values()
+        s["prompt_tokens"] + s["completion_tokens"]
+        + s.get("cache_creation_input_tokens", 0) + s.get("cache_read_input_tokens", 0)
+        for s in background.values()
     )
 
     if background:
@@ -813,7 +832,7 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
             rows.append([
                 f"({tier})",
                 f"{stats['events']} run(s)",
-                f"{stats['prompt_tokens']:,}",
+                _input_cell(stats),
                 f"{stats['completion_tokens']:,}",
                 f"${stats['estimated_cost']:.4f}",
             ])
@@ -829,7 +848,7 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
     message = f"Usage Report: {period_labels.get(period, period)}"
     if report.get("start_date"):
         message += f" ({report['start_date']} to {report['end_date']})"
-    message += f" | {report.get('session_count', 0)} sessions | {report.get('total_tokens', 0):,} tokens ({report.get('prompt_tokens', 0):,}↓ / {report.get('completion_tokens', 0):,}↑) | ${report.get('total_cost', 0.0):.4f}"
+    message += f" | {report.get('session_count', 0)} sessions | {report.get('total_tokens', 0):,} tokens ({_input_cell(report)}↓ / {report.get('completion_tokens', 0):,}↑) | ${report.get('total_cost', 0.0):.4f}"
     if background:
         message += (
             f" | + background {background_tokens:,} tokens / "
@@ -855,6 +874,8 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
             "total_tokens": report.get("total_tokens", 0),
             "prompt_tokens": report.get("prompt_tokens", 0),
             "completion_tokens": report.get("completion_tokens", 0),
+            "cache_creation_input_tokens": report.get("cache_creation_input_tokens", 0),
+            "cache_read_input_tokens": report.get("cache_read_input_tokens", 0),
             "estimated_cost": report.get("total_cost", 0.0),
             "start_date": report.get("start_date"),
             "end_date": report.get("end_date"),

@@ -373,7 +373,7 @@ class EngineClient:
             self._last_known_message_tokens = context_tokens
             self._last_known_message_count = len(self.session.messages)
         elif usage_delta is not None:
-            delta_total = (usage_delta.prompt_tokens or 0) + (usage_delta.completion_tokens or 0)
+            delta_total = usage_delta.context_tokens  # incl. cached input
             if delta_total > 0:
                 self._last_known_message_tokens = delta_total
                 self._last_known_message_count = len(self.session.messages)

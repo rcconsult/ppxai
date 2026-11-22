@@ -129,10 +129,17 @@ class UsageEvent:
     estimated_cost: float
     owner: str | None = None
     run_id: str | None = None
+    #: Cached input classes (v1.19.5, additive). `prompt_tokens` is UNCACHED
+    #: input only; a line written before these existed reads back as 0.
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
 
     @property
     def total_tokens(self) -> int:
-        return self.prompt_tokens + self.completion_tokens
+        return (
+            self.prompt_tokens + self.completion_tokens
+            + self.cache_creation_input_tokens + self.cache_read_input_tokens
+        )
 
     @property
     def key(self) -> str:
@@ -157,6 +164,8 @@ def record_usage(
     owner: str | None = None,
     run_id: str | None = None,
     usage_dir: Path | None = None,
+    cache_creation_input_tokens: int = 0,
+    cache_read_input_tokens: int = 0,
 ) -> bool:
     """Append one usage event. Returns True when it was written.
 
@@ -168,7 +177,10 @@ def record_usage(
     emit their terminal usage unconditionally, and a run that spent nothing
     would otherwise fill the log with rows that move no total.
     """
-    if prompt_tokens <= 0 and completion_tokens <= 0 and estimated_cost <= 0:
+    if (
+        prompt_tokens <= 0 and completion_tokens <= 0 and estimated_cost <= 0
+        and cache_creation_input_tokens <= 0 and cache_read_input_tokens <= 0
+    ):
         return False
 
     if tier not in TIERS:
@@ -186,6 +198,8 @@ def record_usage(
         estimated_cost=float(estimated_cost or 0.0),
         owner=owner,
         run_id=run_id,
+        cache_creation_input_tokens=max(0, int(cache_creation_input_tokens or 0)),
+        cache_read_input_tokens=max(0, int(cache_read_input_tokens or 0)),
     )
 
     try:
@@ -278,6 +292,8 @@ def read_usage_events(
                         estimated_cost=float(raw["estimated_cost"]),
                         owner=raw.get("owner"),
                         run_id=raw.get("run_id"),
+                        cache_creation_input_tokens=int(raw.get("cache_creation_input_tokens") or 0),
+                        cache_read_input_tokens=int(raw.get("cache_read_input_tokens") or 0),
                     )
                 except (json.JSONDecodeError, KeyError, TypeError, ValueError):
                     skipped += 1
@@ -316,31 +332,44 @@ def summarize_usage(
 
     by_model: dict[str, dict[str, Any]] = {}
     by_tier: dict[str, dict[str, Any]] = {}
-    totals = {"prompt_tokens": 0, "completion_tokens": 0, "estimated_cost": 0.0}
+    totals = {
+        "prompt_tokens": 0, "completion_tokens": 0, "estimated_cost": 0.0,
+        "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0,
+    }
 
     for e in events:
         for bucket, key in ((by_model, e.key), (by_tier, e.tier)):
             slot = bucket.setdefault(
                 key,
                 {"prompt_tokens": 0, "completion_tokens": 0,
+                 "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0,
                  "estimated_cost": 0.0, "events": 0},
             )
             slot["prompt_tokens"] += e.prompt_tokens
             slot["completion_tokens"] += e.completion_tokens
+            slot["cache_creation_input_tokens"] += e.cache_creation_input_tokens
+            slot["cache_read_input_tokens"] += e.cache_read_input_tokens
             slot["estimated_cost"] += e.estimated_cost
             slot["events"] += 1
 
         totals["prompt_tokens"] += e.prompt_tokens
         totals["completion_tokens"] += e.completion_tokens
+        totals["cache_creation_input_tokens"] += e.cache_creation_input_tokens
+        totals["cache_read_input_tokens"] += e.cache_read_input_tokens
         totals["estimated_cost"] += e.estimated_cost
 
     return {
         "period": period,
         "by_model": by_model,
         "by_tier": by_tier,
-        "total_tokens": totals["prompt_tokens"] + totals["completion_tokens"],
+        "total_tokens": (
+            totals["prompt_tokens"] + totals["completion_tokens"]
+            + totals["cache_creation_input_tokens"] + totals["cache_read_input_tokens"]
+        ),
         "prompt_tokens": totals["prompt_tokens"],
         "completion_tokens": totals["completion_tokens"],
+        "cache_creation_input_tokens": totals["cache_creation_input_tokens"],
+        "cache_read_input_tokens": totals["cache_read_input_tokens"],
         "total_cost": totals["estimated_cost"],
         "event_count": len(events),
         "skipped_lines": skipped,

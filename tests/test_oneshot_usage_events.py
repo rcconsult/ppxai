@@ -23,6 +23,7 @@ from fastapi.testclient import TestClient
 import ppxai.server.http as http_module
 import ppxai.server.state as state
 from ppxai.config import execution as exec_mod
+from ppxai.engine import usage_pricing as pricing_mod
 from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 from ppxai.server.routes import agent_v1
 from ppxai.server.routes import oneshot as oneshot_mod
@@ -63,8 +64,8 @@ class TestPlainOneshot:
         calls: list = []
         monkeypatch.setattr(oneshot_mod, "_build_provider", lambda n, **kw: _provider())
         monkeypatch.setattr(oneshot_mod, "record_usage", lambda **kw: calls.append(kw) or True)
-        monkeypatch.setattr(oneshot_mod, "calculate_cost",
-                            lambda p, c, model, provider: 0.0123 if model == "gemini-3.8-flash" else -1)
+        monkeypatch.setattr(pricing_mod, "calculate_cost",
+                            lambda p, c, model, provider, **kw: 0.0123 if model == "gemini-3.8-flash" else -1)
         r = http_client.post("/v1/oneshot", json={"prompt": "Hi"})
         assert r.status_code == 200, r.text
         [ev] = calls
@@ -122,7 +123,7 @@ class TestToolFreeAgentRun:
                             lambda: {"web_search": False, "grounding": False})
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _provider())
         monkeypatch.setattr(oneshot_mod, "record_usage", lambda **kw: calls.append(kw) or True)
-        monkeypatch.setattr(oneshot_mod, "calculate_cost", lambda *a, **k: 0.5)
+        monkeypatch.setattr(pricing_mod, "calculate_cost", lambda *a, **k: 0.5)
 
         app = FastAPI()
         app.include_router(agent_v1.router)

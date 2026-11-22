@@ -4231,16 +4231,18 @@ class PpxaiApp {
             const prompt = data.prompt_tokens || 0;
             const completion = data.completion_tokens || 0;
             const cost = data.estimated_cost || 0;
+            const cacheRead = data.cache_read_input_tokens || 0;
+            const cacheWrite = data.cache_creation_input_tokens || 0;
 
             this.state.promptTokens = prompt;
             this.state.completionTokens = completion;
-            this.state.totalTokens = data.total_tokens || (prompt + completion);
+            this.state.totalTokens = data.total_tokens || (prompt + cacheRead + cacheWrite + completion);
             this.state.estimatedCost = cost;
 
             // Format badge — shared helper keeps the string identical
             // to the Rich TUI and VSCode extension (v1.18.0 Phase 4).
-            this.elements.usageBadge.textContent = SharedFormatters.formatUsageBadge(prompt, completion, cost);
-            this.elements.usageBadge.title = `Prompt: ${prompt}, Completion: ${completion}, Cost: $${cost.toFixed(4)}`;
+            this.elements.usageBadge.textContent = SharedFormatters.formatUsageBadge(prompt, completion, cost, cacheRead, cacheWrite);
+            this.elements.usageBadge.title = `Prompt: ${prompt}, Cache read: ${cacheRead}, Cache write: ${cacheWrite}, Completion: ${completion}, Cost: $${cost.toFixed(4)}`;
         } catch {}
     }
 

@@ -820,7 +820,7 @@ class Message:
         # uses in multimodal_ops, kept local here to avoid the import
         # cycle with engine.multimodal_ops).
 
-        ref_by_index: dict[int, "ArtifactRef"] = {
+        ref_by_index: dict[int, ArtifactRef] = {
             ref.block_index: ref
             for ref in self.attachments
             if hasattr(ref, "block_index")
@@ -931,14 +931,24 @@ class ToolUsage:
 class UsageStats:
     """Token usage and cost statistics.
 
-    `prompt_tokens` / `completion_tokens` are the two classes every provider
-    ppxai speaks today reports. The two cache fields exist because a
-    prompt-caching provider bills input in THREE classes, not one, and
-    collapsing them into `prompt_tokens` makes the cost wrong in the
-    expensive direction: a cache read is billed at a fraction of the input
-    rate, so counting it as ordinary input over-reports. They default to 0,
-    so a provider that does not cache produces byte-identical numbers to
-    before.
+    One meaning for every provider (v1.19.5): input is billed in THREE
+    classes and each lives in its own field.
+
+    - `prompt_tokens` = UNCACHED input only (what is billed at the plain
+      input rate).
+    - `cache_read_input_tokens` = input served from the provider's cache
+      (billed well below the input rate).
+    - `cache_creation_input_tokens` = input written to the cache (billed
+      above the input rate; only Anthropic reports it separately).
+    - `completion_tokens` = output.
+    - `total_tokens` = all input (all three classes) + output.
+
+    Providers whose wire reports cached input INSIDE their prompt count
+    (OpenAI, Gemini) subtract it before filling these fields, so the
+    numbers mean the same thing everywhere. Collapsing the classes into
+    `prompt_tokens` makes the cost wrong: a cache read is billed at a
+    fraction of the input rate. The cache fields default to 0, so a
+    provider that does not cache produces the numbers it always did.
     """
     prompt_tokens: int = 0
     completion_tokens: int = 0
@@ -950,6 +960,39 @@ class UsageStats:
     #: Tokens SERVED FROM the cache this turn (billed well below input).
     cache_read_input_tokens: int = 0
     tool_calls: dict[str, 'ToolUsage'] = field(default_factory=dict)
+
+    @property
+    def input_tokens(self) -> int:
+        """All input this turn: uncached + cache reads + cache writes."""
+        return (
+            (self.prompt_tokens or 0)
+            + (self.cache_read_input_tokens or 0)
+            + (self.cache_creation_input_tokens or 0)
+        )
+
+    @property
+    def context_tokens(self) -> int:
+        """Size of ONE request's context after it: all input + output.
+
+        This is the context-window badge's estimate for a single request.
+        """
+        return self.input_tokens + (self.completion_tokens or 0)
+
+    def add(self, other: 'UsageStats') -> None:
+        """Sum `other`'s five token counts into this one.
+
+        The ONE accumulate used by every site that sums usage (tool loop,
+        session totals, per-model stats), so a sixth counter cannot be
+        added to some of them and forgotten in the rest. `estimated_cost`
+        and `tool_calls` are deliberately NOT summed here: cost is
+        recomputed from the summed tokens by `price_usage`, and tool usage
+        has its own merge.
+        """
+        self.prompt_tokens += other.prompt_tokens or 0
+        self.completion_tokens += other.completion_tokens or 0
+        self.total_tokens += other.total_tokens or 0
+        self.cache_creation_input_tokens += other.cache_creation_input_tokens or 0
+        self.cache_read_input_tokens += other.cache_read_input_tokens or 0
 
 
 @dataclass

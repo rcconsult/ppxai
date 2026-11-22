@@ -23,6 +23,7 @@ from ..types import Event, EventType, Message, ProviderCapabilities
 from .base import BaseProvider
 from .facts import openai_compat as _facts
 from .openai_wire import OpenAIWireMixin, build_openai_client
+from .usage_parse import oneshot_usage_dict_from_sdk
 
 
 def _google_thought_signature(tool_call: Any) -> str | None:
@@ -676,11 +677,7 @@ class OpenAICompatibleProvider(OpenAIWireMixin, BaseProvider):
         usage_obj = getattr(response, "usage", None)
         usage_dict = None
         if usage_obj is not None:
-            usage_dict = {
-                "prompt_tokens": getattr(usage_obj, "prompt_tokens", 0) or 0,
-                "completion_tokens": getattr(usage_obj, "completion_tokens", 0) or 0,
-                "total_tokens": getattr(usage_obj, "total_tokens", 0) or 0,
-            }
+            usage_dict = oneshot_usage_dict_from_sdk(usage_obj)
 
         return {
             "content": msg.content or "",

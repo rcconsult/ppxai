@@ -1205,9 +1205,7 @@ class SessionManager:
                 the baseline, matching the pre-v1.19.3 behavior.
         """
         # Update session totals
-        self.usage.prompt_tokens += usage.prompt_tokens
-        self.usage.completion_tokens += usage.completion_tokens
-        self.usage.total_tokens += usage.total_tokens
+        self.usage.add(usage)
         self.usage.estimated_cost += usage.estimated_cost
 
         # Update per-model tracking
@@ -1217,9 +1215,7 @@ class SessionManager:
                 self.usage_by_model[key] = UsageStats()
 
             model_usage = self.usage_by_model[key]
-            model_usage.prompt_tokens += usage.prompt_tokens
-            model_usage.completion_tokens += usage.completion_tokens
-            model_usage.total_tokens += usage.total_tokens
+            model_usage.add(usage)
             model_usage.estimated_cost += usage.estimated_cost
 
         # Merge tool usage and add tool costs to session total (v1.16.0)
@@ -1261,6 +1257,8 @@ class SessionManager:
             "total_tokens": self.usage.total_tokens,
             "prompt_tokens": self.usage.prompt_tokens,
             "completion_tokens": self.usage.completion_tokens,
+            "cache_creation_input_tokens": self.usage.cache_creation_input_tokens,
+            "cache_read_input_tokens": self.usage.cache_read_input_tokens,
             "estimated_cost": self.usage.estimated_cost,
             # Add per-model breakdown
             "by_model": {
@@ -1268,6 +1266,8 @@ class SessionManager:
                     "total_tokens": stats.total_tokens,
                     "prompt_tokens": stats.prompt_tokens,
                     "completion_tokens": stats.completion_tokens,
+                    "cache_creation_input_tokens": stats.cache_creation_input_tokens,
+                    "cache_read_input_tokens": stats.cache_read_input_tokens,
                     "estimated_cost": stats.estimated_cost
                 }
                 for key, stats in self.usage_by_model.items()
@@ -1304,23 +1304,25 @@ class SessionManager:
                 "label": None,  # No label for session totals
                 "prompt_tokens": self.usage.prompt_tokens,
                 "completion_tokens": self.usage.completion_tokens,
+                "cache_creation_input_tokens": self.usage.cache_creation_input_tokens,
+                "cache_read_input_tokens": self.usage.cache_read_input_tokens,
                 "estimated_cost": self.usage.estimated_cost
             }
 
         if self.usage_display_mode == "provider" and current_provider:
             # Aggregate all models for current provider
-            prompt_tokens = 0
-            completion_tokens = 0
+            summed = UsageStats()
             estimated_cost = 0.0
             for key, stats in self.usage_by_model.items():
                 if key.startswith(f"{current_provider}/"):
-                    prompt_tokens += stats.prompt_tokens
-                    completion_tokens += stats.completion_tokens
+                    summed.add(stats)
                     estimated_cost += stats.estimated_cost
             return {
                 "label": current_provider[:4],  # Short provider label
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
+                "prompt_tokens": summed.prompt_tokens,
+                "completion_tokens": summed.completion_tokens,
+                "cache_creation_input_tokens": summed.cache_creation_input_tokens,
+                "cache_read_input_tokens": summed.cache_read_input_tokens,
                 "estimated_cost": estimated_cost
             }
 
@@ -1334,12 +1336,16 @@ class SessionManager:
                     "label": short_model,
                     "prompt_tokens": stats.prompt_tokens,
                     "completion_tokens": stats.completion_tokens,
+                    "cache_creation_input_tokens": stats.cache_creation_input_tokens,
+                    "cache_read_input_tokens": stats.cache_read_input_tokens,
                     "estimated_cost": stats.estimated_cost
                 }
             return {
                 "label": current_model.split("/")[-1][:12],
                 "prompt_tokens": 0,
                 "completion_tokens": 0,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0,
                 "estimated_cost": 0.0
             }
 
@@ -1348,6 +1354,8 @@ class SessionManager:
             "label": None,
             "prompt_tokens": self.usage.prompt_tokens,
             "completion_tokens": self.usage.completion_tokens,
+            "cache_creation_input_tokens": self.usage.cache_creation_input_tokens,
+            "cache_read_input_tokens": self.usage.cache_read_input_tokens,
             "estimated_cost": self.usage.estimated_cost
         }
 
@@ -1382,9 +1390,7 @@ class SessionManager:
             provider = key.split("/")[0]
             if provider not in by_provider:
                 by_provider[provider] = UsageStats()
-            by_provider[provider].prompt_tokens += stats.prompt_tokens
-            by_provider[provider].completion_tokens += stats.completion_tokens
-            by_provider[provider].total_tokens += stats.total_tokens
+            by_provider[provider].add(stats)
             by_provider[provider].estimated_cost += stats.estimated_cost
 
         return {
@@ -1392,6 +1398,8 @@ class SessionManager:
                 "total_tokens": stats.total_tokens,
                 "prompt_tokens": stats.prompt_tokens,
                 "completion_tokens": stats.completion_tokens,
+                "cache_creation_input_tokens": stats.cache_creation_input_tokens,
+                "cache_read_input_tokens": stats.cache_read_input_tokens,
                 "estimated_cost": stats.estimated_cost
             }
             for provider, stats in by_provider.items()
@@ -1786,6 +1794,8 @@ class SessionManager:
                 total_tokens=usage_data.get("total_tokens", 0),
                 prompt_tokens=usage_data.get("prompt_tokens", 0),
                 completion_tokens=usage_data.get("completion_tokens", 0),
+                cache_creation_input_tokens=usage_data.get("cache_creation_input_tokens", 0),
+                cache_read_input_tokens=usage_data.get("cache_read_input_tokens", 0),
                 estimated_cost=usage_data.get("estimated_cost", 0.0)
             )
             # v1.18.2: Restore per-model breakdown and tool usage. Without
@@ -1801,6 +1811,8 @@ class SessionManager:
                     total_tokens=stats_dict.get("total_tokens", 0),
                     prompt_tokens=stats_dict.get("prompt_tokens", 0),
                     completion_tokens=stats_dict.get("completion_tokens", 0),
+                    cache_creation_input_tokens=stats_dict.get("cache_creation_input_tokens", 0),
+                    cache_read_input_tokens=stats_dict.get("cache_read_input_tokens", 0),
                     estimated_cost=stats_dict.get("estimated_cost", 0.0),
                 )
             # Restore tool_calls into self.usage.tool_calls (separate
@@ -2234,6 +2246,8 @@ class SessionManager:
             key: {
                 "prompt_tokens": stats.prompt_tokens,
                 "completion_tokens": stats.completion_tokens,
+                "cache_creation_input_tokens": stats.cache_creation_input_tokens,
+                "cache_read_input_tokens": stats.cache_read_input_tokens,
                 "estimated_cost": stats.estimated_cost
             }
             for key, stats in self.usage_by_model.items()
@@ -2285,6 +2299,8 @@ class SessionManager:
                 prompt_tokens=stats.get("prompt_tokens", 0),
                 completion_tokens=stats.get("completion_tokens", 0),
                 estimated_cost=stats.get("estimated_cost", 0.0),
+                cache_creation_input_tokens=stats.get("cache_creation_input_tokens", 0),
+                cache_read_input_tokens=stats.get("cache_read_input_tokens", 0),
             )
 
     # =========================================================================

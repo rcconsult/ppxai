@@ -19,17 +19,24 @@ function formatTokens(count) {
 // Keeps the inline `has-cost` CSS-class fork the shared formatter doesn't handle.
 function renderUsageBadge(usage) {
     if (!usage || !usageBadge) { return; }
-    const promptStr = formatTokens(usage.promptTokens || 0);
+    // promptTokens is UNCACHED input; with cached input the arrow shows ALL
+    // input and the cached part is broken out: "52.6K↓ (48.1K cached)/477↑".
+    const cached = (usage.cacheReadTokens || 0) + (usage.cacheWriteTokens || 0);
+    const promptStr = formatTokens((usage.promptTokens || 0) + cached);
     const completionStr = formatTokens(usage.completionTokens || 0);
     const cost = usage.estimatedCost || 0;
+    const arrows = cached > 0
+        ? promptStr + '↓ (' + formatTokens(cached) + ' cached)/' + completionStr + '↑'
+        : promptStr + '↓/' + completionStr + '↑';
     if (cost > 0) {
-        usageBadge.textContent = promptStr + '↓/' + completionStr + '↑ $' + cost.toFixed(4);
+        usageBadge.textContent = arrows + ' $' + cost.toFixed(4);
         usageBadge.classList.add('has-cost');
     } else {
-        usageBadge.textContent = promptStr + '↓/' + completionStr + '↑';
+        usageBadge.textContent = arrows;
         usageBadge.classList.remove('has-cost');
     }
-    usageBadge.title = 'Session: ' + (usage.totalTokens || 0).toLocaleString() + ' tokens, $' + cost.toFixed(4);
+    usageBadge.title = 'Session: ' + (usage.totalTokens || 0).toLocaleString() + ' tokens, $' + cost.toFixed(4)
+        + (cached > 0 ? ' (cache read ' + (usage.cacheReadTokens || 0).toLocaleString() + ', cache write ' + (usage.cacheWriteTokens || 0).toLocaleString() + ')' : '');
 }
 
 const messagesContainer = document.getElementById('messages');
