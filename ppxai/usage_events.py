@@ -97,9 +97,12 @@ logger = get_logger("usage")
 _WRITE_LOCK = threading.Lock()
 
 #: How long an append waits for another process's lock before writing
-#: unlocked. Appends hold it for well under 1 ms, so this is only reached if
-#: a holder is stuck.
-_LOCK_DEADLINE_S = 30.0
+#: unlocked. Appends hold it for well under 1 ms (16 processes x 400 events
+#: never fell back), so this is only reached when a holder is stuck: a
+#: process suspended or paused in a debugger mid-append. Kept short because
+#: `record_usage` is synchronous and some callers run on the event loop
+#: (task_runner's `_runner`), which this wait blocks.
+_LOCK_DEADLINE_S = 2.0
 
 #: Text mode on Windows turns every "\n" into "\r\n"; the log is bytes.
 _O_BINARY = getattr(os, "O_BINARY", 0)
