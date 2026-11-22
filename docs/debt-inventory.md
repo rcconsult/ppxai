@@ -46,7 +46,7 @@ quoting them** — this table is a map, not a source.
 
 | # | Item | Status |
 |---|---|---|
-| **71** | the Anthropic provider has never made a live API call | **accepted + documented, NO ACTION** — marked untested on all five surfaces; ships as a known limitation. Not a release blocker |
+| **71** | the Anthropic provider is only partly tested live: first live run 2026-11-22 (`claude-haiku-5-5`, branch `experiment/run-cancel-option-b`) passed one-shot, streamed one-shot + mid-answer stop, a tool-free tool-loop call + cancel, and `/v1/agent/run` complete + cancel. **Tool calls are still untested live** | **accepted + documented, NO ACTION** — ships as a known limitation. Not a release blocker |
 | **72** | the additive-CA TLS guarantee is pinned only on cafile hosts | coverage ceiling; Linux CI cannot decide it offline |
 | **73** | `rendering.textual_renderer` ↔ `tui.app` import cycle, hidden by import order | **fenced 2026-09-20** — a module-wide standalone-import sweep now catches any NEW cycle; the cycle itself is still open |
 | **74** | `/preview --serve` cannot start ANY Node project on Windows | auto-detect returns `npm start`, which CreateProcess cannot launch because `npm` is a `.cmd`/`.ps1`, not an `.exe` |

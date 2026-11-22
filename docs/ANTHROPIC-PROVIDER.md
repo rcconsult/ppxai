@@ -1,19 +1,23 @@
 # Anthropic provider (Claude)
 
-> ## ⚠️ Status: UNTESTED against the live API
+> ## ⚠️ Status: PARTLY tested against the live API
 >
-> This provider has **never made a real API call.** Its tests shape requests
-> and read response objects; the Anthropic SDK is never invoked, and no
-> `ANTHROPIC_API_KEY` existed on the machine it was written on. It is
-> verified against the SDK surface and the published docs, not against
-> observed behaviour.
+> **First live run: 2026-11-22**, `claude-haiku-5-5`, anthropic SDK 1.4.0
+> (branch `experiment/run-cancel-option-b`). These worked: a plain one-shot
+> (content, `end_turn`, usage), the streamed one-shot run to the end and
+> stopped mid-answer, a tool-loop `chat` call with no tools offered (run to
+> the end and cancelled mid-call), and `POST /v1/agent/run` completed and
+> cancelled. Detail: section C of
+> [analysis-chat-streaming-and-interrupts.md](analysis-chat-streaming-and-interrupts.md).
 >
-> **Unproven, not broken.** It is inert unless you install the `[anthropic]`
-> extra and configure the provider, so it cannot affect an existing install.
-> If you are the first to point it at a real key, expect bugs — and the three
-> most likely are named under [Limits of Phase 1](#limits-of-phase-1).
+> **Still unproven: tool calls**, so `/task` and `/auto` with tools, along
+> with thinking with tools, prompt caching and the pricing rows. The likely
+> bugs are named under [Limits of Phase 1](#limits-of-phase-1); one is
+> already known, the tool-call shape (see the analysis doc, section B).
 >
-> Remove this banner once a live smoke test passes.
+> It is inert unless you install the `[anthropic]` extra and configure the
+> provider, so it cannot affect an existing install. Remove this banner once
+> a live tool-calling run passes.
 
 Native support for Claude over Anthropic's Messages API. Optional — install
 the extra to enable it:

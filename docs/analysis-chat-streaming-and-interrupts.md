@@ -226,6 +226,19 @@ On `experiment/run-cancel-option-b` (not merged, not pushed), 2026-11-22. Verifi
 | 14 | `tests/test_run_cancel_stops_call.py`: a local HTTP server that streams slowly (or answers late) in each provider's wire format and records the client hanging up. Mutation-checked: without the socket shutdown, the Gemini hook, the pool abort or the retry guard, the matching test fails. Stress-checked: 16 copies of the file at once beside 6 CPU-burning processes, all green |
 | 15 | The cancel route's docstring, `docs/api-gateway.md` (504 row), `docs/task-agent-guide.md`, `docs/agent-platform-call-graphs.md`, this section, CHANGELOG |
 
+**Live check on Anthropic (2026-11-22, owner's key, `claude-haiku-5-5`, anthropic SDK 1.4.0)**, the first live Anthropic call ppxai has made. A few cents of spend:
+
+| Check | Result |
+|---|---|
+| Plain `oneshot` | `pong`, `end_turn`, usage reported, 0.7 s |
+| `oneshot_stoppable` run to the end | same result and usage, 0.6 s |
+| `oneshot_stoppable` stopped 3 s into a 1,500-word essay | `CallAbortedError` at once, worker thread gone |
+| Tool-loop `chat` call (`_provider_events`, no tools) cancelled 3 s in | `RunCancelledDuringCall`, resumable, at once |
+| The same call run to the end | `stream_start` / `stream_chunk` / `stream_end`, content `pong` |
+| `POST /v1/agent/run` run to the end, then cancelled 3 s into the essay | `pong`; then `cancelled`, not resumable, result dropped, 0.01 s after the cancel |
+
+Not checked: whether Anthropic stops billing for the rest of an aborted answer (the API reports no usage for it), and tool calls (a multi-step `/task` with tools).
+
 **Decisions taken, for the owner to confirm or overturn:**
 
 - **1:** no paid probe. Whether a closed connection stops billing is still unverified per provider; the connection is closed either way.
