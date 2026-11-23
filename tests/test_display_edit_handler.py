@@ -116,6 +116,19 @@ class TestHandleEditMissingNoFlag:
         # Second item: cancel
         assert items[1]["label"] == "Cancel"
 
+    def test_choosing_cancel_ends_the_command(self, context, tmp_path):
+        """Resuming with the Cancel row's value ends the command: no
+        "File not found: --cancelled", no second create prompt, no file."""
+        prompt = handle_edit(context, "nonexistent.py")
+        se = next(s for s in prompt.side_effects
+                  if s.kind == SideEffectKind.PROMPT_QUICK_PICK)
+        result = handle_edit(context, se.payload["items"][1]["value"])
+        assert isinstance(result, NotificationResult)
+        assert result.status == ResultStatus.INFO
+        assert result.message == "Cancelled, no file created"
+        assert result.side_effects == []
+        assert list(tmp_path.iterdir()) == []
+
     def test_quick_pick_preserves_line_col_in_resume_value(self, context):
         """If the user typed `/edit foo.py:42:5` and confirms create,
         the resume value must keep the location — opening the new file

@@ -803,6 +803,10 @@ CommandFactory.register(CommandSpec(
 # ============================================================================
 
 
+#: The value of the Cancel row in /edit's missing-file prompt.
+EDIT_CANCEL_VALUE = "--cancelled"
+
+
 def handle_edit(context: CommandContext, args: str) -> CommandResult:
     """Handle /edit — open a file for editing.
 
@@ -831,6 +835,13 @@ def handle_edit(context: CommandContext, args: str) -> CommandResult:
         )
 
     raw = args.strip()
+    if raw == EDIT_CANCEL_VALUE:
+        # The missing-file prompt's Cancel row resumes `/edit --cancelled`.
+        # Without this it was read as a path: "File not found: --cancelled"
+        # and a new offer to create a file of that name.
+        return NotificationResult(
+            status=ResultStatus.INFO, message="Cancelled, no file created",
+        )
     if not raw:
         return ErrorResult(
             status=ResultStatus.ERROR,
@@ -970,7 +981,7 @@ def handle_edit(context: CommandContext, args: str) -> CommandResult:
         },
         {
             "label": "Cancel",
-            "value": "--cancelled",  # handler short-circuits below
+            "value": EDIT_CANCEL_VALUE,  # handle_edit returns at once
         },
     ]
     result = NotificationResult(
