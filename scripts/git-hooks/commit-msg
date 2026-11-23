@@ -21,6 +21,13 @@
 #
 # POSIX sh only (no bashisms) so this also runs under Git Bash on Windows.
 
+# Every pattern below is ASCII. Under a UTF-8 locale, Git Bash's (MSYS)
+# grep fails to match "[^A-Za-z0-9]*" against a leading emoji, so
+# "🤖 Generated with [Claude Code]" got through on Windows. In the C locale
+# the emoji is four non-alphanumeric bytes, and every grep matches it.
+LC_ALL=C
+export LC_ALL
+
 # Explicit, one-commit-at-a-time owner override.
 if [ "$PPXAI_ALLOW_ATTRIBUTION" = "1" ]; then
     exit 0
