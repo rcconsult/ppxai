@@ -8,6 +8,7 @@ v1.14.0: Added bootstrap context status to /status command
 v1.15.0: Migrated to type-based renderer dispatch
 """
 
+import re
 from pathlib import Path
 
 from ..config import get_provider_config, get_tui_config, set_tui_config
@@ -785,41 +786,131 @@ def handle_keys(context: CommandContext, args: str) -> CommandResult:
     return result
 
 
-def handle_terminal(context: CommandContext, args: str) -> CommandResult:
-    """Handle /terminal command - show terminal capabilities and configuration help.
+TERMINAL_NAME_RE = re.compile(
+    r"^(?:[1-9][0-9]*|(?=[a-z0-9-]*[a-z])[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$"
+)
+"""A terminal alias (ADR 0020): a terminal number from 1, or a Kubernetes
+DNS label (RFC 1123: 1-63 characters of `a-z`, `0-9` and `-`, starting and
+ending with a letter or digit) that contains a letter."""
 
-    Useful for users who use multiple terminals and need to configure
-    image rendering settings.
+TERMINAL_NAME_RULE = (
+    "a terminal number from 1, or 1-63 lowercase letters, digits and '-' "
+    "that starts and ends with a letter or digit and contains a letter"
+)
 
-    Args:
-        context: Command context providing access to engine client
-        args: Currently unused
 
-    Returns:
-        MarkdownResult with terminal info and configuration help
+def is_valid_terminal_name(name: str) -> bool:
+    """True if `name` is a terminal alias the clients accept (ADR 0020)."""
+    return bool(TERMINAL_NAME_RE.match(name))
+
+
+def parse_terminal_args(args: str) -> tuple[str | None, str | None]:
+    """Split `/terminal` arguments into `(name, command)`.
+
+    `""` → `(None, None)`; `"build"` → `("build", None)`;
+    `"build -- make test"` → `("build", "make test")`;
+    `"-- make test"` → `(None, "make test")`. Everything after the first
+    `--` is the command, kept verbatim (never shell-split), so quotes and
+    pipes reach the shell as typed.
+
+    Raises ValueError, with a message for the user, on a bad alias, an
+    empty command after `--`, or text after the alias without `--`.
     """
+    text = (args or "").strip()
+    if not text:
+        return None, None
+    if text == "--" or text.startswith(("-- ", "--\t")):
+        name, rest = None, text
+    else:
+        parts = text.split(None, 1)
+        name = parts[0]
+        rest = parts[1] if len(parts) > 1 else ""
+        if not is_valid_terminal_name(name):
+            raise ValueError(
+                f"'{name}' is not a terminal alias: use {TERMINAL_NAME_RULE}"
+            )
+        if not rest:
+            return name, None
+        if not (rest == "--" or rest.startswith(("-- ", "--\t"))):
+            raise ValueError(
+                f"put '--' before the command: /terminal {name} -- {rest}"
+            )
+    command = rest[2:].strip()
+    if not command:
+        raise ValueError("no command after '--'")
+    return name, command
+
+
+def handle_terminal(context: CommandContext, args: str) -> CommandResult:
+    """Handle /terminal [alias] [-- command] (ADR 0020).
+
+    - `/terminal` opens a terminal at the working directory
+      (`open_terminal {cwd}`).
+    - `/terminal <alias>` opens or focuses the terminal with that alias
+      (`open_terminal {cwd, name}`).
+    - `/terminal [<alias>] -- <command>` types the command into that
+      terminal, or the focused one without an alias, and leaves Enter to
+      the user (`run_shell {command, cwd, name?}`).
+
+    ppxai stores nothing about a client's terminals: the client keeps
+    the alias map. Over HTTP (web, VS Code, tai) the answer is a short
+    notification. The Rich and Textual TUIs have no terminals to
+    address, so there `/terminal` shows the image-protocol help and an
+    alias or command is an error.
+    """
+    try:
+        name, command = parse_terminal_args(args)
+    except ValueError as exc:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"/terminal: {exc}",
+            suggestions=["Usage: /terminal [alias] [-- command]"],
+        )
+
     cwd = ""
     if context.engine_client:
         cwd = context.engine_client.get_working_dir() or ""
 
-    try:
-        from ..tui.terminal import get_terminal_help
-        help_text = get_terminal_help()
-        result = MarkdownResult(
+    if not isinstance(context, ServerCommandContext):
+        if name is not None or command is not None:
+            return ErrorResult(
+                status=ResultStatus.ERROR,
+                message="/terminal: this client has no terminals to open or type into",
+                suggestions=[
+                    "Use the web UI, VS Code or tai for terminal aliases",
+                    "Run /terminal alone for terminal configuration help",
+                ],
+            )
+        try:
+            from ..tui.terminal import get_terminal_help
+        except ImportError:
+            return NotificationResult(
+                status=ResultStatus.INFO,
+                message="Terminal help is not available in this install",
+            )
+        result: CommandResult = MarkdownResult(
             status=ResultStatus.INFO,
             message="Terminal Configuration",
-            content=help_text
+            content=get_terminal_help(),
         )
-    except ImportError:
-        # No Rich terminal helper available (server-only install) — fall
-        # through to a notification result. Web/VSCode use the
-        # spawn_terminal side-effect to actually open a terminal.
+        result.add_side_effect(SideEffectKind.OPEN_TERMINAL, cwd=cwd)
+        return result
+
+    target = f"terminal {name}" if name else "terminal"
+    named = {"name": name} if name else {}
+    if command is None:
+        result = NotificationResult(
+            status=ResultStatus.SUCCESS, message=f"Opening {target}",
+        )
+        result.add_side_effect(SideEffectKind.OPEN_TERMINAL, cwd=cwd, **named)
+    else:
         result = NotificationResult(
             status=ResultStatus.SUCCESS,
-            message="Opening terminal",
+            message=f"Typed into {target}; press Enter to run it",
         )
-
-    result.add_side_effect(SideEffectKind.OPEN_TERMINAL, cwd=cwd)
+        result.add_side_effect(
+            SideEffectKind.RUN_SHELL, command=command, cwd=cwd, **named,
+        )
     return result
 
 
@@ -884,7 +975,7 @@ CommandFactory.register(CommandSpec(
     description="Open a terminal at the current working directory",
     handler=handle_terminal,
     category="system",
-    usage="/terminal",
+    usage="/terminal [alias] [-- command]",
     aliases=["term", "sh"],
 ))
 

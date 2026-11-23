@@ -79,6 +79,25 @@ function _resolvePath(filepath: string, workingDir?: string): string {
     return filepath;
 }
 
+/**
+ * The terminal for a side effect (ADR 0020). With `reuse` (the payload
+ * named a terminal alias), an open terminal of that name is returned;
+ * otherwise, or when none is open, a new one is created at `cwd`.
+ */
+function _terminalFor(name: string, cwd: string | undefined, reuse: boolean): vscode.Terminal {
+    if (reuse) {
+        const open = vscode.window.terminals.find(
+            t => t.name === name && t.exitStatus === undefined,
+        );
+        if (open) return open;
+    }
+    return vscode.window.createTerminal({
+        name,
+        cwd: cwd && cwd !== '.' ? cwd : undefined,
+        iconPath: new vscode.ThemeIcon('terminal'),
+    });
+}
+
 
 export class SideEffectsHandler {
     private _provider: SideEffectHost;
@@ -168,32 +187,26 @@ export class SideEffectsHandler {
             }
 
             case KIND.OPEN_TERMINAL: {
+                // ADR 0020: `name` is the terminal's alias. Reuse the
+                // terminal with that name, or create it.
                 const cwd = (se.cwd as string) || workingDir;
-                const term = vscode.window.createTerminal({
-                    name: 'ppxai',
-                    cwd: cwd && cwd !== '.' ? cwd : undefined,
-                    iconPath: new vscode.ThemeIcon('terminal'),
-                });
-                term.show();
+                const name = se.name as string | undefined;
+                _terminalFor(name || 'ppxai', cwd, !!name).show();
                 return;
             }
 
             case KIND.RUN_SHELL: {
-                // open_terminal AND pre-type a command. Mirrors the
-                // existing chatPanel.ts:runCommandInTerminal pattern
-                // (preserved through the migration per the audit
-                // table in docs/TODO-v1.18.1-command-unification.md).
+                // open_terminal, then TYPE the command: sendText(cmd,
+                // false) adds no newline, so the user presses Enter
+                // (ADR 0020, every client).
                 const cwd = (se.cwd as string) || workingDir;
                 const cmd = se.command as string;
                 if (!cmd) return;
+                const name = se.name as string | undefined;
                 const shortCmd = cmd.length > 30 ? cmd.substring(0, 30) + '...' : cmd;
-                const term = vscode.window.createTerminal({
-                    name: `ppxai: ${shortCmd}`,
-                    cwd: cwd && cwd !== '.' ? cwd : undefined,
-                    iconPath: new vscode.ThemeIcon('terminal'),
-                });
+                const term = _terminalFor(name || `ppxai: ${shortCmd}`, cwd, !!name);
                 term.show();
-                term.sendText(cmd);
+                term.sendText(cmd, false);
                 return;
             }
 

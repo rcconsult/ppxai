@@ -425,10 +425,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * Run a command in VSCode integrated terminal (v1.14.2).
+     * Type a command into a new VSCode integrated terminal (v1.14.2).
      * Used for interactive commands like kubectl exec -it, python REPL, etc.
+     * ADR 0020: the command is typed, not run — the user presses Enter.
      *
-     * @param command The shell command to execute
+     * @param command The shell command to type
      * @param workingDir Working directory for the command
      */
     private runCommandInTerminal(command: string, workingDir: string): void {
@@ -443,9 +444,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             iconPath: new vscode.ThemeIcon('terminal')
         });
 
-        // Show terminal and send command
+        // Show the terminal and type the command without a newline
         terminal.show();
-        terminal.sendText(command);
+        terminal.sendText(command, false);
 
         // Notify webview that command is running in terminal
         this._view?.webview.postMessage({

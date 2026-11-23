@@ -5,10 +5,15 @@
  * and renders the output via xterm.js.
  */
 class TerminalView extends BaseView {
-    constructor(serverUrl, sessionId) {
+    /** The stack path of the terminal with alias `name` (ADR 0020). */
+    static pathFor(name) { return `__terminal__/name/${name}`; }
+
+    constructor(serverUrl, sessionId, name = null) {
         super();
         this._serverUrl = serverUrl;
         this._sessionId = sessionId;
+        this._name = name || null;     // ADR 0020 alias; null = unnamed
+        this._pendingInput = [];       // typeText() before the socket opens
         this._terminal = null;
         this._fitAddon = null;
         this._websocket = null;
@@ -18,8 +23,24 @@ class TerminalView extends BaseView {
         this._instanceId = Date.now();  // Unique ID so multiple terminals aren't deduplicated
     }
 
-    getTitle()   { return '💻 Terminal'; }
-    getPath()    { return `__terminal__/${this._instanceId}`; }
+    getTitle()   { return this._name ? `💻 ${this._name}` : '💻 Terminal'; }
+    getPath()    {
+        return this._name ? TerminalView.pathFor(this._name) : `__terminal__/${this._instanceId}`;
+    }
+
+    /**
+     * Type `text` into the shell without pressing Enter (ADR 0020): the
+     * user runs it. Text sent before the socket opens is queued and
+     * sent on open, so it works right after mount().
+     */
+    typeText(text) {
+        if (!text) return;
+        if (this._websocket && this._websocket.readyState === WebSocket.OPEN) {
+            this._websocket.send(JSON.stringify({ type: 'input', data: text }));
+        } else {
+            this._pendingInput.push(text);
+        }
+    }
     getIcon()    { return '💻'; }
 
     mount(container) {
@@ -95,6 +116,9 @@ class TerminalView extends BaseView {
                 try { this._fitAddon.fit(); } catch {}
                 const { cols, rows } = this._terminal;
                 this._websocket.send(JSON.stringify({ type: 'resize', cols, rows }));
+            }
+            for (const data of this._pendingInput.splice(0)) {
+                this._websocket.send(JSON.stringify({ type: 'input', data }));
             }
         };
 

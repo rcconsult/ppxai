@@ -305,15 +305,20 @@ class SideEffect:
             panel. VSCode → executeCommand('vscode.open',
             preview=True, viewColumn=Beside).
 
-      - "open_terminal"      payload: {cwd}
-            User wants a terminal at this cwd. Web → xterm.js panel.
-            VSCode → window.createTerminal({cwd}).show() — user's
-            chosen shell, profile, history.
+      - "open_terminal"      payload: {cwd, name?}
+            User wants a terminal at this cwd. `name` is the terminal's
+            alias (ADR 0020: a number from 1, or a DNS label with a
+            letter); with it the client opens or focuses the terminal
+            with that alias, without it the focused or a new one. The
+            client keeps the alias map; ppxai stores none. Web →
+            xterm.js panel. VSCode → the terminal named `name`, else
+            window.createTerminal({name, cwd}).show().
 
-      - "run_shell"          payload: {command, cwd}
-            User wants a terminal AND a command pre-typed/executed.
-            Strict superset of open_terminal. Web → xterm.js with
-            command. VSCode → createTerminal + sendText(command).
+      - "run_shell"          payload: {command, cwd, name?}
+            open_terminal, then the command TYPED, never run: the user
+            presses Enter (ADR 0020, every client). `name` as above.
+            Web → TerminalView.typeText(command). VSCode →
+            sendText(command, false).
 
       - "open_html_preview"  payload: {filepath, url, served?, proxied?}
             User wants live HTML preview with reload. Web → iframe

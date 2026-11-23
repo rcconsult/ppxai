@@ -89,28 +89,35 @@ SideEffectsHandler._handlers = {
     },
 
     // ─── Terminal ────────────────────────────────────────────────────────
-    open_terminal() {
-        if (!this.app.rightPanelFrame) {
+    // ADR 0020: `name` is the terminal's alias. With it, focus the
+    // terminal panel of that alias or open one; without it, a new one.
+    // Returns the TerminalView, or null when none could be opened.
+    open_terminal({name} = {}) {
+        const frame = this.app.rightPanelFrame;
+        if (!frame) {
             this.app.showError('Right panel not available');
-            return;
+            return null;
         }
         if (typeof TerminalView === 'undefined') {
             this.app.showError('Terminal not available — xterm.js not loaded');
-            return;
+            return null;
         }
-        const view = new TerminalView(this.app.serverUrl, this.app.sessionId);
-        this.app.rightPanelFrame.push(view);
+        const existing = name ? frame.getViewByPath(TerminalView.pathFor(name)) : null;
+        if (existing) {
+            frame.activateByIndex(frame._stack.indexOf(existing));
+        } else {
+            frame.push(new TerminalView(this.app.serverUrl, this.app.sessionId, name));
+        }
         this.app.elements?.resizeHandle?.classList.remove('hidden');
+        return existing || frame.activeView || null;
     },
 
-    run_shell({command, cwd}) {
-        // Open a terminal with the command pre-typed. xterm.js
-        // doesn't have a public "send text" API exposed via
-        // TerminalView yet — for now, open the terminal and
-        // surface the command so the user can re-run it.
-        SideEffectsHandler._handlers.open_terminal.call(this, {});
-        if (command) {
-            this.app.showSystemMessage(`Run in terminal: \`${command}\``);
+    run_shell({command, cwd, name} = {}) {
+        // open_terminal, then TYPE the command without Enter: the user
+        // runs it (ADR 0020, every client).
+        const view = SideEffectsHandler._handlers.open_terminal.call(this, {name});
+        if (command && view && typeof view.typeText === 'function') {
+            view.typeText(command);
         }
     },
 

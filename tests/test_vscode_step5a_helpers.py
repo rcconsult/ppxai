@@ -172,8 +172,8 @@ class TestSideEffectsHandlerModule:
         )
         assert match
         body = match.group(0)
-        assert "createTerminal" in body, (
-            "open_terminal must use vscode.window.createTerminal"
+        assert "_terminalFor(" in body, (
+            "open_terminal must reuse or create its terminal through _terminalFor"
         )
 
     def test_run_shell_pre_types_command(self):
@@ -188,10 +188,14 @@ class TestSideEffectsHandlerModule:
         )
         assert match
         body = match.group(0)
-        assert "createTerminal" in body
-        assert "sendText" in body, (
-            "run_shell must call terminal.sendText to pre-type the command"
+        assert "_terminalFor(" in body, (
+            "run_shell must reuse or create its terminal through _terminalFor"
         )
+        # ADR 0020: typed, never run — no newline, the user presses Enter.
+        assert "sendText(cmd, false)" in body, (
+            "run_shell must type the command with sendText(cmd, false)"
+        )
+        assert not re.search(r"sendText\(cmd\)", body)
 
     def test_copy_to_clipboard_uses_vscode_clipboard(self):
         src = _read("sideEffectsHandler.ts")
