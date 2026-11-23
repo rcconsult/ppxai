@@ -906,7 +906,7 @@ def handle_terminal(context: CommandContext, args: str) -> CommandResult:
     else:
         result = NotificationResult(
             status=ResultStatus.SUCCESS,
-            message=f"Typed into {target}; press Enter to run it",
+            message=f"Sent to {target}",
         )
         result.add_side_effect(
             SideEffectKind.RUN_SHELL, command=command, cwd=cwd, **named,

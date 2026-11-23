@@ -129,7 +129,7 @@ def test_http_alias_and_command_types_into_that_terminal():
     assert _effects(result) == [
         ("run_shell", {"command": "make test", "cwd": "/work", "name": "build"}),
     ]
-    assert "Enter" in result.message
+    assert result.message == "Sent to terminal build"
 
 
 def test_http_command_without_alias_carries_no_name():
