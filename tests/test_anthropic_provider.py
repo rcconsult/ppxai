@@ -192,6 +192,55 @@ class TestRequestShape:
             "effort": "low"
         }
 
+    SCHEMA = {
+        "type": "object",
+        "properties": {"intent": {"type": "string"}},
+        "required": ["intent"],
+        "additionalProperties": False,
+    }
+
+    def test_an_openai_response_format_is_unwrapped_for_output_config(self, provider):
+        """Forwarded as-is, the OpenAI shape is a 400 on every call:
+        "output_config.format: Unexpected key 'json_schema'" (live, 2026-11-23)."""
+        req = provider._oneshot_request(
+            "classify", "claude-haiku-5-5", None,
+            {"type": "json_schema", "json_schema": {"name": "c", "schema": self.SCHEMA}},
+            None,
+        )
+
+        assert req["output_config"]["format"] == {"type": "json_schema", "schema": self.SCHEMA}
+
+    def test_effort_and_format_share_output_config(self):
+        p = AnthropicProvider(api_key="k", effort="low")
+        req = p._oneshot_request(
+            "x", "claude-opus-5", None,
+            {"type": "json_schema", "json_schema": {"schema": self.SCHEMA}}, None,
+        )
+
+        assert req["output_config"] == {
+            "effort": "low",
+            "format": {"type": "json_schema", "schema": self.SCHEMA},
+        }
+
+    def test_an_anthropic_shaped_format_passes_through(self, provider):
+        fmt = {"type": "json_schema", "schema": self.SCHEMA}
+        req = provider._oneshot_request("x", "claude-opus-5", None, fmt, None)
+
+        assert req["output_config"]["format"] == fmt
+
+    @pytest.mark.parametrize("response_format", [
+        {"type": "json_object"},
+        {"type": "text"},
+        {"type": "json_schema"},
+        {"type": "json_schema", "json_schema": {"name": "no-schema"}},
+        "json",
+        None,
+    ])
+    def test_a_format_this_wire_cannot_express_sends_none(self, provider, response_format):
+        req = provider._oneshot_request("x", "claude-opus-5", None, response_format, None)
+
+        assert "format" not in req.get("output_config", {})
+
     def test_tools_are_flattened_to_the_anthropic_shape(self, provider):
         out = provider._convert_tools([
             {"type": "function", "function": {

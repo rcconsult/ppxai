@@ -76,6 +76,32 @@ DEFAULT_MAX_TOKENS = _facts.DEFAULT_MAX_TOKENS
 DEFAULT_ONESHOT_MAX_TOKENS = 16000
 
 
+def response_format_to_anthropic(response_format: Any) -> dict[str, Any] | None:
+    """Map an OpenAI-shaped `response_format` onto `output_config.format`.
+
+    `/v1/oneshot` takes the OpenAI shape,
+    `{"type": "json_schema", "json_schema": {"name": ..., "schema": {...}}}`.
+    Anthropic wants `{"type": "json_schema", "schema": {...}}` and rejects the
+    nested block with a 400 ("Unexpected key 'json_schema'"), observed live
+    2026-11-23 against claude-haiku-5-5. An already-Anthropic-shaped value
+    (top-level `schema`) passes through.
+
+    Returns None — send no format — for `{"type": "json_object"}` (this wire
+    has no schemaless JSON mode; the prompt still asks for JSON) and for
+    anything unrecognised, so an unknown shape degrades to an unconstrained
+    answer instead of a 400.
+    """
+    if not isinstance(response_format, dict) or response_format.get("type") != "json_schema":
+        return None
+    if isinstance(response_format.get("schema"), dict):
+        return {"type": "json_schema", "schema": response_format["schema"]}
+    block = response_format.get("json_schema")
+    schema = block.get("schema") if isinstance(block, dict) else None
+    if not isinstance(schema, dict):
+        return None
+    return {"type": "json_schema", "schema": schema}
+
+
 class AnthropicProvider(BaseProvider):
     """Claude over `POST /v1/messages`.
 
@@ -410,12 +436,13 @@ class AnthropicProvider(BaseProvider):
         request["messages"] = wire_messages
         if sys_text:
             request["system"] = sys_text
-        if response_format:
+        fmt = response_format_to_anthropic(response_format)
+        if fmt:
             # Structured outputs go through output_config.format — never the
             # deprecated top-level output_format, and never an assistant
             # prefill (a 400 on every current Claude model).
             oc = dict(request.get("output_config") or {})
-            oc["format"] = response_format
+            oc["format"] = fmt
             request["output_config"] = oc
         return request
 
